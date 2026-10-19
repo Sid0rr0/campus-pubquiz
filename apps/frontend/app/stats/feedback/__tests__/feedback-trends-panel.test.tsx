@@ -30,6 +30,7 @@ const TRENDS: FeedbackTrends = {
       rating: null,
     },
   ],
+  topics: [{ topic: 'Geography', count: 4 }],
 };
 
 describe('FeedbackTrendsPanel', () => {
@@ -57,7 +58,7 @@ describe('FeedbackTrendsPanel', () => {
   });
 
   it('writes out an empty state when no session is in range', async () => {
-    mockFetchFeedbackTrends.mockResolvedValue({ sessions: [] });
+    mockFetchFeedbackTrends.mockResolvedValue({ sessions: [], topics: [] });
     renderWithQuery(<FeedbackTrendsPanel />);
 
     expect(
@@ -65,6 +66,12 @@ describe('FeedbackTrendsPanel', () => {
         'No finished sessions with feedback in this range.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('shows the topic suggestions with their counts', async () => {
+    renderWithQuery(<FeedbackTrendsPanel />);
+
+    expect(await screen.findByText('Geography ×4')).toBeInTheDocument();
   });
 
   it('asks for all time first, then for the chosen range', async () => {

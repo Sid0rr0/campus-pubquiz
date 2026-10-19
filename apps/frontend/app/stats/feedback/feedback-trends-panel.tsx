@@ -7,6 +7,7 @@ import { fetchFeedbackTrends, StatsApiError } from '@/app/lib/stats-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { RatingsOverTimeTable } from '@/app/stats/feedback/ratings-over-time-table';
+import { TopicSuggestionsList } from '@/app/stats/feedback/topic-suggestions-list';
 
 const DATE_INPUT_CLASS =
   'min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal';
@@ -88,6 +89,13 @@ export function FeedbackTrendsPanel() {
         </section>
       ) : (
         !error && <p className="font-display text-xl">Loading…</p>
+      )}
+
+      {data && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-display text-lg">Topic suggestions</h2>
+          <TopicSuggestionsList topics={data.topics} />
+        </section>
       )}
     </main>
   );

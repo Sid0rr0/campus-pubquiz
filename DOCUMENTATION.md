@@ -1323,10 +1323,15 @@ same guards as the other stats endpoints, open to admin and moderator).
   no range means all time. Anything else, or `from` after `to`, is a 400. The range
   applies to the session's date (when it was created), and it is parsed once by
   `feedbackTrendsQuerySchema` so every section of the page shares it.
-- The response is `{ sessions: [{ id, name, date, rating: { average, count } | null }] }`,
-  oldest to newest. `rating` is the average of every round rating the session got
+- The response is `{ sessions: [{ id, name, date, rating: { average, count } | null }], topics: [{ topic, count }] }`.
+  `sessions` run oldest to newest. `rating` is the average of every round rating the session got
   and how many ratings that was; `null` when nobody rated (the page shows "—", never
   zero).
+- `topics` are the topic suggestions of every session in the range, grouped by the
+  same function as a single session's (`groupTopics`: trim, collapse inner whitespace,
+  ignore case, most common spelling wins, the first submitted on a tie), sorted by
+  count, then alphabetically. The page shows them as "Geography ×4", or "No topic
+  suggestions in this range." when there are none.
 - Only **ended** sessions appear, and a session with `collectFeedback` off is left
   out (one stored without the setting counts as on), so it does not drag the trend
   down. The page writes out its empty state when no session is in range.

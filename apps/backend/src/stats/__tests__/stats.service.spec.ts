@@ -811,6 +811,90 @@ describe('StatsService (Postgres integration)', () => {
     });
   });
 
+  describe('getFeedbackTrends topics', () => {
+    async function endedAt(
+      joinCode: string,
+      playedAt: string,
+      feedbackOff = false,
+    ): Promise<GameSession> {
+      const { quiz } = await createQuiz(`Quiz ${joinCode}`, [[1]]);
+      const session = await createSession(quiz, joinCode, 'ended');
+      session.createdAt = new Date(playedAt);
+      if (feedbackOff) {
+        session.settings = {
+          ...DEFAULT_SESSION_SETTINGS,
+          collectFeedback: false,
+        };
+      }
+      await em.flush();
+      return session;
+    }
+
+    async function suggest(
+      session: GameSession,
+      teamName: string,
+      topics: string[],
+      sentAt: string,
+    ): Promise<void> {
+      const team = await joinTeam(session, teamName);
+      em.create(SessionFeedback, {
+        gameSession: session,
+        team,
+        comment: '',
+        topics,
+        createdAt: new Date(sentAt),
+        updatedAt: new Date(sentAt),
+      });
+      await em.flush();
+    }
+
+    it('merges the same topic from different sessions, showing the most common spelling, sorted by count then name', async () => {
+      const first = await endedAt('TT1', '2026-09-01T19:00:00Z');
+      const second = await endedAt('TT2', '2026-10-01T19:00:00Z');
+      await suggest(first, 'A1', ['geography', 'Film'], '2026-09-01T20:00:00Z');
+      await suggest(first, 'A2', ['Geography'], '2026-09-01T20:05:00Z');
+      await suggest(second, 'B1', [' Geography '], '2026-10-01T20:00:00Z');
+      await suggest(
+        second,
+        'B2',
+        ['GEOGRAPHY', 'film', 'Art'],
+        '2026-10-01T20:05:00Z',
+      );
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.topics).toEqual([
+        { topic: 'Geography', count: 4 },
+        { topic: 'Film', count: 2 },
+        { topic: 'Art', count: 1 },
+      ]);
+    });
+
+    it('counts only sessions in the range with feedback on, and carries no team', async () => {
+      const inRange = await endedAt('TT3', '2026-10-05T19:00:00Z');
+      const before = await endedAt('TT4', '2026-08-05T19:00:00Z');
+      const off = await endedAt('TT5', '2026-10-06T19:00:00Z', true);
+      await suggest(inRange, 'SecretSquad', ['Music'], '2026-10-05T20:00:00Z');
+      await suggest(before, 'B1', ['Sport'], '2026-08-05T20:00:00Z');
+      await suggest(off, 'C1', ['Cooking'], '2026-10-06T20:00:00Z');
+
+      const result = await statsService.getFeedbackTrends({
+        from: '2026-10-01',
+      });
+
+      expect(result.topics).toEqual([{ topic: 'Music', count: 1 }]);
+      expect(JSON.stringify(result)).not.toContain('SecretSquad');
+    });
+
+    it('is empty when nobody suggested a topic', async () => {
+      await endedAt('TT6', '2026-10-05T19:00:00Z');
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.topics).toEqual([]);
+    });
+  });
+
   describe('getSessionDetail feedback', () => {
     async function send(
       session: GameSession,

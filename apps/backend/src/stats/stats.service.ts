@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
+import type { Knex } from '@mikro-orm/postgresql';
 import { z } from 'zod';
 import type {
   BonusCategory,
   FeedbackTrends,
   PlayedSessionsListedPayload,
   QuestionType,
+  SessionDetailFeedbackTopic,
   SessionDetailStats,
   SessionSettings,
   Verdict,
@@ -16,6 +18,7 @@ import { PlayerCountService } from '@/player-count/player-count.service';
 import { StandingsService } from '@/standings/standings.service';
 import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import { computeSessionDetail } from '@/stats/session-detail.calc';
+import { groupTopics } from '@/stats/session-feedback.calc';
 import type {
   FeedbackTrendsQuery,
   PlayedSessionsQuery,
@@ -394,7 +397,23 @@ export class StatsService {
             ? null
             : { average: Number(row.average), count: Number(row.count) },
       })),
+      topics: await this.topicsAcross(sessionsInRange()),
     };
+  }
+
+  /** Topic suggestions of the given sessions, oldest submission first into the shared grouping. No team column is selected. */
+  private async topicsAcross(
+    sessions: Knex.QueryBuilder,
+  ): Promise<SessionDetailFeedbackTopic[]> {
+    const knex = this.gameSessions.getKnex();
+    const rows = (await knex('session_feedback as sf')
+      .whereIn('sf.game_session_id', sessions.select('gs.id'))
+      .orderBy([
+        { column: 'sf.updated_at', order: 'asc' },
+        { column: 'sf.id', order: 'asc' },
+      ])
+      .select('sf.topics')) as { topics: unknown }[];
+    return groupTopics(rows.map((row) => storedTopicsSchema.parse(row.topics)));
   }
 
   /** Deletes an ended session and, via DB cascade rules, every answer, bonus award, and roster row tied to it. */
