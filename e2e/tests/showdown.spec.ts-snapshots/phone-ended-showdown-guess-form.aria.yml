@@ -1,0 +1,14 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team [AB] [0-9a-f]{6}/
+  - paragraph: SHOWDOWN TIEBREAKER
+  - paragraph: Your turn!
+  - heading "How many seats does this room have?" [level=1]
+  - text: Your guess
+  - spinbutton "Your guess"
+  - button "Submit"
+  - button "Answer history (1)"
+  - button "Bonus points (0)"

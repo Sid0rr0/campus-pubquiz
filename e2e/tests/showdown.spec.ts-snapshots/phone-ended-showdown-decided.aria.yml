@@ -1,0 +1,23 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team [AB] [0-9a-f]{6}/
+  - paragraph: SHOWDOWN TIEBREAKER
+  - heading "How many seats does this room have?" [level=1]
+  - list:
+    - listitem: /Team [AB] [0-9a-f]{6} \d+/
+    - listitem: /Team [AB] [0-9a-f]{6} \d+/
+  - paragraph: /ANSWER\s+\d+/
+  - region "Rate the rounds":
+    - heading "Rate the rounds" [level=2]
+    - list:
+      - listitem:
+        - text: Tie night
+        - button "Rate Tie night 1 of 5"
+    - text: Anything else?
+    - textbox "Anything else?"
+    - button "Send"
+  - button "Answer history (1)"
+  - button "Bonus points (0)"

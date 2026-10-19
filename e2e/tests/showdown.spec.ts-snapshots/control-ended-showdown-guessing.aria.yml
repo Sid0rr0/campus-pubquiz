@@ -1,0 +1,21 @@
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: /Quiz:\s+Showdown night [0-9a-f]{6} [A-Z]+(-[A-Z]+){2}/
+    - paragraph: "Status: ended"
+    - paragraph: "Display: R1Q1"
+    - link "Open display"
+    - button "Advance"
+    - button "Leaderboard"
+    - heading "Showdown tiebreaker" [level=2]
+    - list:
+      - listitem: /Team [AB] [0-9a-f]{6} waiting for guess/
+      - listitem: /Team [AB] [0-9a-f]{6} waiting for guess/
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem:
+        - text: /Connected Team [AB] [0-9a-f]{6}/
+        - button "Kick"
+      - listitem:
+        - text: /Connected Team [AB] [0-9a-f]{6}/
+        - button "Kick"
