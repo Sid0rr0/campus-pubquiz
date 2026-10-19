@@ -38,3 +38,9 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ mergers polled for the commit with `sleep` and `until git …` loops, which the harness and sandbox block.
 - **code-review step 3 (2026-10-14 retro)**: names `CODING_STANDARDS.md` as this repo's standards source instead of the generic `CODING_STANDARDS.md` or `CONTRIBUTING.md` example.
   _Why:_ the orchestrator ran `ls CONTRIBUTING.md` on every review and got exit 1.
+- **Concurrency cap (2026-10-20 retro)**: at most 4 implementers run at once (intro paragraph and step 6), replacing "maximum concurrency".
+  _Why:_ e2e-journeys-2 started ~10 implementers together; all ten died in the same minute on the account's session rate limit (HTTP 429), and the user had to resume the run by hand.
+- **Step 4, e2e bullet (2026-10-20 retro)**: run `pnpm e2e` in the foreground with a 600000 ms timeout; `pnpm e2e` itself takes a run lock shared by every worktree (`e2e/support/run-lock.ts`).
+  _Why:_ the orchestrator pasted a hand-rolled `mkdir` lock into every brief, and while waiting, six implementers called `Monitor` with ToolSearch's arguments or tried a blocked `sleep`.
+- **Step 10 (2026-10-20 retro)**: remove every worktree holding the integration branch or a `ticket/*` branch, done when `git worktree list` shows none, and repeat after later conflict/review fixes; delete branches only after `git checkout main && git pull --ff-only`.
+  _Why:_ twice the user's `git checkout integration/…` failed with "already used by worktree" (a merger's and a conflict-fixer's worktree), and `git branch -d` refused merged ticket branches because local `main` hadn't caught up.

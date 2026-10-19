@@ -60,7 +60,7 @@ Completed-milestone history lives in `.claude/tdd/milestone-*.tdd.md` and git, n
 ```
 
 - Types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test` (matches the global git-workflow convention)
-- Scopes: `shared-types`, `backend`, `frontend`, `e2e`, `repo` (root-level/tooling changes not scoped to one workspace)
+- Scopes, with the folder each names: `shared-types` (`shared/types/src`), `backend` (`apps/backend/src`), `frontend` (`apps/frontend/app`: no `src/` or `components/`), `e2e` (`e2e/tests`, `e2e/support`), `repo` (root-level/tooling changes not scoped to one workspace)
 
 Examples: `feat(backend): implement GameGateway`, `test(shared-types): add reproducer for game state machine`, `docs(repo): update CLAUDE.md`.
 
