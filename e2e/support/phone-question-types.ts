@@ -34,7 +34,7 @@ export const PHONE_QUESTION_TYPES = {
     key: '206',
     /** The default 10% margin, as the screens print it. */
     marginText: 'within 10%',
-    acceptedRange: '206 · 185.4–226.6 accepted',
+    acceptedRange: '206 (anything from 185.4 to 226.6 counts)',
     /** Inside the margin. */
     rightGuess: '200',
     /** Outside the margin. */
