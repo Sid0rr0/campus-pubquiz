@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures';
 import { QUIZ_NIGHT } from '../support/quiz-night';
+import { snap } from '../support/snapshots';
 
 const { freeText, choice, audio } = QUIZ_NIGHT;
 
@@ -7,6 +8,9 @@ const { freeText, choice, audio } = QUIZ_NIGHT;
 const TEAM_A_POINTS = freeText.points + choice.points;
 // Team B's typed answer is graded half by the quiz master, and it picks the wrong planet.
 const TEAM_B_POINTS = freeText.halfPoints;
+
+// A longer lock countdown than the default, so all three screens can be snapshotted while it runs.
+test.use({ sessionSettings: { lockGraceSeconds: 5 } });
 
 test('a full block is played across the big screen, the laptop and two phones', async ({
   control,
@@ -22,13 +26,23 @@ test('a full block is played across the big screen, the laptop and two phones', 
   const teamNames = [phoneA.teamName, phoneB.teamName];
   await display.expectLobbyTeams(teamNames);
   await control.expectTeams(teamNames);
+  await snap(display, 'lobby');
+  await snap(phoneA, 'lobby');
+  await snap(control, 'lobby');
 
   // 3. Rules and the round intro, then each question on the big screen and the phones.
   await control.startQuiz();
   await display.expectText('No cheating.');
   await phoneA.expectText('No cheating.');
+  await snap(display, 'rules');
+  await snap(phoneA, 'rules');
+  await snap(control, 'rules');
   await control.advance('round_intro');
   await phoneA.expectText(QUIZ_NIGHT.roundOneTitle);
+  await display.expectText(QUIZ_NIGHT.roundOneTitle);
+  await snap(display, 'round_intro');
+  await snap(phoneA, 'round_intro');
+  await snap(control, 'round_intro');
 
   await control.advance('question_open');
   await display.expectQuestion(freeText.prompt);
@@ -42,6 +56,9 @@ test('a full block is played across the big screen, the laptop and two phones', 
   await control.expectTeamAnswered(phoneA.teamName);
   await control.expectTeamAnswered(phoneB.teamName);
   await display.expectAnsweredCount(2, 2);
+  await snap(display, 'question_open');
+  await snap(phoneA, 'question_open');
+  await snap(control, 'question_open');
 
   await control.advance('question_open');
   await display.expectQuestion(choice.prompt);
@@ -54,12 +71,19 @@ test('a full block is played across the big screen, the laptop and two phones', 
   await control.advance('question_open');
   await display.expectQuestion(audio.prompt);
   await display.expectAudioPlayer(audio.mediaUrl);
+  await display.expectAudioLoaded();
 
   // 5. The block locks after the short countdown, and the phones can no longer change their answers.
   await control.advance('locking');
   await display.expectLockCountdown();
+  await snap(display, 'locking');
+  await snap(phoneA, 'locking');
+  await snap(control, 'locking');
   await control.expectStatus('break_intro');
   await display.expectBreak(1);
+  await snap(display, 'break_intro');
+  await snap(phoneA, 'break_intro');
+  await snap(control, 'break_intro');
   await phoneB.openQuestion(1, 1);
   await phoneB.expectAnswersLocked();
   await phoneB.expectSubmitted('Marseille');
@@ -78,6 +102,10 @@ test('a full block is played across the big screen, the laptop and two phones', 
 
   // 7. The reveal shows the answers; the standings match the expected points.
   await control.advance('reveal_intro');
+  await display.expectText('REVEALING ANSWERS');
+  await snap(display, 'reveal_intro');
+  await snap(phoneA, 'reveal_intro');
+  await snap(control, 'reveal_intro');
   await control.advance('reveal');
   await display.expectQuestion(freeText.prompt);
   await display.expectRevealedAnswer(freeText.key);
@@ -85,6 +113,9 @@ test('a full block is played across the big screen, the laptop and two phones', 
   await phoneA.expectRevealedPoints(freeText.points, freeText.points);
   await phoneB.expectRevealedAnswer('Marseille');
   await phoneB.expectRevealedPoints(freeText.halfPoints, freeText.points);
+  await snap(display, 'reveal');
+  await snap(phoneA, 'reveal');
+  await snap(control, 'reveal');
 
   await control.advance('reveal');
   await display.expectQuestion(choice.prompt);
@@ -98,10 +129,10 @@ test('a full block is played across the big screen, the laptop and two phones', 
   await display.expectQuestion(audio.prompt);
 
   await control.toggleLeaderboard();
-  await control.pressAdvanceSlot();
+  await control.revealNextLeaderboardTeam();
   await display.expectLeaderboardRow(phoneB.teamName, TEAM_B_POINTS);
   await phoneB.expectOwnStanding(TEAM_B_POINTS);
-  await control.pressAdvanceSlot();
+  await control.revealNextLeaderboardTeam();
   await display.expectLeaderboardRow(phoneA.teamName, TEAM_A_POINTS);
   await phoneA.expectOwnStanding(TEAM_A_POINTS);
 });

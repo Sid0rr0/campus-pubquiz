@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { recordMove } from '../coverage';
 
 /** The Advance slot's label depends on the status (and on the leaderboard); this matches every one. */
 const ADVANCE_SLOT_LABEL =
@@ -14,6 +15,8 @@ export type GradeSize = '0 points' | 'half points' | 'full points';
 
 /** The quiz master's laptop: `/control` for one session. Acts and reads through role and visible text, like the quiz master. */
 export class ControlScreen {
+  readonly kind = 'control';
+
   constructor(
     readonly page: Page,
     private readonly joinCode: string,
@@ -134,6 +137,13 @@ export class ControlScreen {
     await this.sidebar
       .getByRole('button', { name: 'Leaderboard', exact: true })
       .click();
+    recordMove('leaderboard_toggle');
+  }
+
+  /** Presses the Advance slot while the leaderboard is up, which reveals the next team's rank. */
+  async revealNextLeaderboardTeam(): Promise<void> {
+    await this.pressAdvanceSlot();
+    recordMove('leaderboard_reveal');
   }
 
   /** Picks the question in the Grade Questions browser (1-based within its round). */

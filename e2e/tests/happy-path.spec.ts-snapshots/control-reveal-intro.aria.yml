@@ -1,0 +1,61 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - navigation:
+    - link "Guide"
+    - link "Sessions"
+    - link "Teams"
+    - link "Stats"
+    - link "Users"
+    - button "Log out"
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: /Quiz:\s+Quiz night [0-9a-f]{6} [A-Z]+(-[A-Z]+){2}/
+    - paragraph: "Status: reveal_intro"
+    - paragraph: /Display:\s+R\dQ\d \(T\)/
+    - link "Open display"
+    - button "Previous"
+    - button "Advance"
+    - button "Leaderboard"
+    - button "Fullscreen media"
+    - switch "Display sound" [checked]: "On"
+    - button "Join overlay"
+    - button "End Quiz"
+    - link "Edit quiz"
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem:
+        - text: /Connected Team A [0-9a-f]{6}/
+        - button "Kick"
+      - listitem:
+        - text: /Connected Team B [0-9a-f]{6}/
+        - button "Kick"
+  - heading "Grade Questions" [level=2]
+  - img "Round 1"
+  - navigation "Warm-up questions":
+    - img "Warm-up title card (live on display)": T
+    - button "Grade question 1 of Warm-up" [pressed]
+    - button "Grade question 2 of Warm-up"
+  - img "Round 2"
+  - navigation "Name that tune questions":
+    - img "Name that tune title card": T
+    - button "Grade question 1 of Name that tune"
+    - img "Name that tune break card": B
+  - paragraph: Round 1 (Warm-up) — Q1 of 2
+  - heading "What is the capital of France?" [level=2]
+  - paragraph: "Correct answer: Paris 2/2 answered 1 correct"
+  - list:
+    - listitem:
+      - text: /Team A [0-9a-f]{6} Paris/
+      - button /Grade Team A [0-9a-f]{6} full points/: ✓ Full (2)
+    - listitem:
+      - text: /Team B [0-9a-f]{6} Marseille/
+      - button /Grade Team B [0-9a-f]{6} half points/: ✓ Half (1)
+  - heading "Teams" [level=2]
+  - table:
+    - rowgroup:
+      - row "Position Team 1 2 Bonus Total Actions"
+    - rowgroup:
+      - row /Team A [0-9a-f]{6} 5 0 0 5 Actions for Team A [0-9a-f]{6}/
+      - row /Team B [0-9a-f]{6} 1 0 0 1 Actions for Team B [0-9a-f]{6}/

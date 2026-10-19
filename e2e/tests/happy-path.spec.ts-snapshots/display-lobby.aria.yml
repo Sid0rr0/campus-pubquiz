@@ -1,0 +1,13 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - heading "Waiting for the teams to join…" [level=1]
+  - img "Join QR code"
+  - paragraph: /SCAN TO JOIN — OR GO TO \/PLAY AND FIND A GAME WITH THE CODE [A-Z]+(-[A-Z]+){2}/
+  - paragraph: Make teams of up to 6 players, only one device connects per team. Every additional player costs the team −2 points.
+  - paragraph: 2 TEAMS JOINED
+  - list:
+    - listitem: /Team A [0-9a-f]{6}/
+    - listitem: /Team B [0-9a-f]{6}/
+  - button "Pick another game"

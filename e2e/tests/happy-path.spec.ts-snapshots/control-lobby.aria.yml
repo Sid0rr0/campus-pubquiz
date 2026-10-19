@@ -1,0 +1,52 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - navigation:
+    - link "Guide"
+    - link "Sessions"
+    - link "Teams"
+    - link "Stats"
+    - link "Users"
+    - button "Log out"
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: /Quiz:\s+Quiz night [0-9a-f]{6} [A-Z]+(-[A-Z]+){2}/
+    - paragraph: "Status: lobby"
+    - paragraph: "Display: R1Q1"
+    - link "Open display"
+    - button "Start Quiz"
+    - button "Leaderboard"
+    - button "Fullscreen media"
+    - switch "Display sound" [checked]: "On"
+    - button "End Quiz"
+    - text: Display text size
+    - button "Decrease display text size": A−
+    - text: /\d+%/
+    - button "Increase display text size": A+
+    - link "Edit quiz"
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem:
+        - text: /Connected Team A [0-9a-f]{6}/
+        - button "Kick"
+        - button /Edit player count for Team A [0-9a-f]{6}/
+      - listitem:
+        - text: /Connected Team B [0-9a-f]{6}/
+        - button "Kick"
+        - button /Edit player count for Team B [0-9a-f]{6}/
+  - heading "Session Settings" [level=2]
+  - spinbutton "Lock round after (seconds)"
+  - checkbox "Autoplay media" [checked]
+  - checkbox "Play countdown sound" [checked]
+  - checkbox "Show round overview after rules"
+  - checkbox "Collect feedback" [checked]
+  - checkbox "Fun facts on the break screen" [checked]
+  - spinbutton "Max players per team": "6"
+  - spinbutton "Extra player penalty (points)": "2"
+  - list:
+    - listitem:
+      - textbox "Rule 1": No cheating.
+      - button "Remove rule 1"
+  - button "Add rule"
+  - button "Save"

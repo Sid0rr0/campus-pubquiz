@@ -100,6 +100,7 @@ export function RosterMarquee({ items, renderItems }: RosterMarqueeProps) {
         >
           <div
             ref={rowRef}
+            role="list"
             className={`whitespace-nowrap pr-6 ${ROW_CLASSES} ${REDUCED_MOTION_FALLBACK_CLASSES}`}
           >
             {renderItems()}
@@ -114,6 +115,7 @@ export function RosterMarquee({ items, renderItems }: RosterMarqueeProps) {
       ) : (
         <div
           ref={rowRef}
+          role="list"
           className={`mx-auto w-max whitespace-nowrap ${ROW_CLASSES} ${REDUCED_MOTION_FALLBACK_CLASSES}`}
         >
           {renderItems()}

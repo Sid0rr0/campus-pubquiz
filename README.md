@@ -156,6 +156,21 @@ is substituted in.
 tests also keep a trace, screenshot and video in `e2e/test-results/`. Nothing is
 retried, and both folders are gitignored.
 
+**Coverage and snapshots:** every status × screen cell (big screen, phone,
+`/control`) and every move or overlay is listed in `e2e/support/coverage.ts`. A
+journey covers a cell with `await snap(screen, 'break_intro')`
+(`e2e/support/snapshots.ts`, API described at the top of that file), which
+compares the screen's ARIA structure with a snapshot file and records the cell;
+move helpers on the screen objects record their move. A full run fails, listing
+what no passing test visited; runs narrowed by file, `--project`, `--grep`,
+`--shard` or `--repeat-each` skip the check, and `E2E_COVERAGE=off` turns it off
+while journeys are still being written. `pnpm e2e --update-snapshots` writes
+snapshot files with this run's literal team names, codes and counters: replace
+each with a regex before committing (and set a long `--timeout`, since a
+rewritten snapshot waits out the 10 s assertion timeout). Media URLs on
+`example.invalid` and `youtube.com/embed/*` are served from stand-ins in
+`e2e/support/media-stub.ts`, so no journey needs the network.
+
 **Login throttle:** `POST /auth/login` allows 5 attempts per minute. Global
 setup logs the admin in once and every test reuses that saved login, and the one
 test that logs in through the UI waits for a free slot first, so

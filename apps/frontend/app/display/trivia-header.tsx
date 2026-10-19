@@ -14,14 +14,14 @@ export function TriviaHeader({ label, title, badge }: TriviaHeaderProps) {
   return (
     <Header
       center={
-        title && <span className="text-display-xl font-extrabold">{title}</span>
+        title && <p className="text-display-xl font-extrabold">{title}</p>
       }
     >
-      {label && <span className="text-display-sm">{label}</span>}
+      {label && <p className="text-display-sm">{label}</p>}
       {badge && (
-        <span className="rounded-lg bg-foreground px-3 py-1 text-display-sm text-background">
+        <p className="rounded-lg bg-foreground px-3 py-1 text-display-sm text-background">
           {badge}
-        </span>
+        </p>
       )}
     </Header>
   );

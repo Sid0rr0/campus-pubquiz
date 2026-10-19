@@ -110,12 +110,16 @@ export function QuestionBrowserPanel({
                 key={`${round.title}-${roundIndex}`}
                 className="flex flex-wrap items-center gap-1.5"
               >
-                <span>{roundIndex + 1}</span>
+                <span role="img" aria-label={`Round ${roundIndex + 1}`}>
+                  {roundIndex + 1}
+                </span>
                 <nav
                   aria-label={`${round.title} questions`}
                   className="flex flex-wrap items-center gap-1"
                 >
                   <span
+                    role="img"
+                    aria-label={`${round.title} title card${isTitleOnDisplay ? ' (live on display)' : ''}`}
                     title={`${round.title} title card${isTitleOnDisplay ? ' (live on display)' : ''}`}
                     className={displayMarkerClasses(
                       isTitleOnDisplay,
@@ -159,6 +163,8 @@ export function QuestionBrowserPanel({
                   })}
                   {round.breakAfter && (
                     <span
+                      role="img"
+                      aria-label={`${round.title} break card${isBreakOnDisplay ? ' (live on display)' : ''}`}
                       title={`${round.title} break card${isBreakOnDisplay ? ' (live on display)' : ''}`}
                       className={displayMarkerClasses(
                         isBreakOnDisplay,
