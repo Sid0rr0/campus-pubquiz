@@ -6,9 +6,9 @@ Parent spec: `.scratch/display-portrait-margin/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A tall portrait image (e.g. 1000×3000) with a long prompt stays below the header and above the teams-answered line, checked by hand on the running app (:8888 `/display`) — happy-dom can't verify layout.
 - [ ] The same holds at reveal and in break review.
-- [ ] Landscape images, video and fullscreen look as before.
-- [ ] Existing question-display tests pass.
+- [x] Landscape images, video and fullscreen look as before.
+- [x] Existing question-display tests pass.

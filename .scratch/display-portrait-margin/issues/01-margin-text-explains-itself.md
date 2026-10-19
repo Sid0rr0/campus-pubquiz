@@ -6,10 +6,10 @@ Parent spec: `.scratch/display-portrait-margin/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Percent, absolute and margin-0 wording while asked, on both the big screen and the phone.
-- [ ] Reveal line in the new wording; margin 0 shows the key alone.
-- [ ] Numbers still show at most 2 decimals with trailing zeros dropped; grading unchanged.
-- [ ] Margin formatter unit tests cover every case above; existing tests asserting the old wording are updated.
-- [ ] DOCUMENTATION.md's Number question section quotes the new wording (and `/guide` if it quotes the old).
+- [x] Percent, absolute and margin-0 wording while asked, on both the big screen and the phone.
+- [x] Reveal line in the new wording; margin 0 shows the key alone.
+- [x] Numbers still show at most 2 decimals with trailing zeros dropped; grading unchanged.
+- [x] Margin formatter unit tests cover every case above; existing tests asserting the old wording are updated.
+- [x] DOCUMENTATION.md's Number question section quotes the new wording (and `/guide` if it quotes the old).

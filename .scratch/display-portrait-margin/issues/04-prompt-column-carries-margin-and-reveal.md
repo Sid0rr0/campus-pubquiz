@@ -6,11 +6,11 @@ Parent spec: `.scratch/display-portrait-margin/spec.md`
 
 **Blocked by:** 03 (same layout code)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Two-column, asked: the margin renders inside the prompt column (question-display tests faking a portrait load).
-- [ ] Two-column, reveal: the answer line and choice/sort/match content render inside the prompt column.
-- [ ] Two-column reveal with an answer image: the answer image takes the image column; the question image is not shown.
-- [ ] Stacked layouts: the margin renders right after the prompt, before the media.
-- [ ] The phone's question views still render correctly (it has no media, so stacked).
+- [x] Two-column, asked: the margin renders inside the prompt column (question-display tests faking a portrait load).
+- [x] Two-column, reveal: the answer line and choice/sort/match content render inside the prompt column.
+- [x] Two-column reveal with an answer image: the answer image takes the image column; the question image is not shown.
+- [x] Stacked layouts: the margin renders right after the prompt, before the media.
+- [x] The phone's question views still render correctly (it has no media, so stacked).
 - [ ] Checked by hand on :8888 `/display` with the screenshot's Sagrada Família question, asked and revealed.
