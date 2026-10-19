@@ -1,0 +1,10 @@
+- main:
+  - paragraph: Quick fire
+  - paragraph: ROUND 1
+  - paragraph: QUESTION 1
+  - heading "Which planet is known as the Red Planet?" [level=1]
+  - list:
+    - listitem: A Venus
+    - listitem: B Mars
+    - listitem: C Jupiter
+  - paragraph: 2 OF 2 TEAMS ANSWERED

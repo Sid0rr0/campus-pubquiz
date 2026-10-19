@@ -1,0 +1,16 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - heading "Which planet is known as the Red Planet?" [level=1]
+  - paragraph: "Answer: Mars"
+  - list:
+    - listitem: A Venus
+    - listitem: B Mars
+    - listitem: C Jupiter
+  - paragraph: "Your answer: Mars"
+  - paragraph: /[\d.]+ \/ 3 points/
+  - button "Answer history (1)"
+  - button "Bonus points (0)"

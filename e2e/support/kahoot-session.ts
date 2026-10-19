@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expect, type APIRequestContext } from '@playwright/test';
 import type { ControlScreen } from './screens/control-screen';
+import type { PhoneScreen } from './screens/phone-screen';
 import { recordMove, type Move } from './coverage';
 import { PATHS } from './env';
 import type { SeededSession } from './api';
@@ -76,6 +77,15 @@ export async function seedKahootSession(
   ).toBe(true);
   const { joinCode } = (await sessionResponse.json()) as { joinCode: string };
   return { joinCode, quizId, quizTitle };
+}
+
+/** A kahoot choice is sent the moment it is tapped (there is no Submit button); resolves once the server has saved it. */
+export async function answerKahootChoice(
+  phone: PhoneScreen,
+  option: string,
+): Promise<void> {
+  await phone.page.getByRole('button', { name: option, exact: true }).click();
+  await phone.expectSubmitted(option);
 }
 
 /**

@@ -1,5 +1,6 @@
 import { test as base, expect } from '../fixtures';
 import {
+  answerKahootChoice,
   expectTimerMove,
   KAHOOT_ROUND,
   seedKahootSession,
@@ -50,8 +51,8 @@ test.describe('questions are locked, scored and revealed one at a time', () => {
     // 1. The first question: Team A is right, Team B is wrong.
     await control.advance('question_open');
     await display.expectQuestion(first.prompt);
-    await phoneA.submitChoice(first.right);
-    await phoneB.submitChoice(first.wrong);
+    await answerKahootChoice(phoneA, first.right);
+    await answerKahootChoice(phoneB, first.wrong);
     await display.expectAnsweredCount(2, 2);
     await snap(display, 'question_open');
     await snap(phoneA, 'question_open');
@@ -82,8 +83,8 @@ test.describe('questions are locked, scored and revealed one at a time', () => {
     await control.toggleLeaderboard();
     await display.expectQuestion(second.prompt);
     await phoneA.expectQuestion(second.prompt);
-    await phoneA.submitChoice(second.right);
-    await phoneB.submitChoice(second.wrong);
+    await answerKahootChoice(phoneA, second.right);
+    await answerKahootChoice(phoneB, second.wrong);
 
     // 4. The second question locks and reveals the same way, then the quiz ends.
     await control.advance('locking');
