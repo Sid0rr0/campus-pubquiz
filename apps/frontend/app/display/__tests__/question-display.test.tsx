@@ -338,6 +338,120 @@ describe('DisplayPage — question display', () => {
     );
   });
 
+  describe('prompt column', () => {
+    const NUMBER_PROMPT = 'How tall is Everest in metres?';
+    const margin = { value: 5, unit: 'percent' as const };
+
+    function renderQuestion(
+      question: Record<string, unknown>,
+      progress: Record<string, unknown>,
+    ) {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [{ questions: [question] }],
+          progress,
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+    }
+
+    function loadImage(testId: string, width: number, height: number) {
+      const image = screen.getByTestId(testId);
+      Object.defineProperty(image, 'naturalWidth', { value: width });
+      Object.defineProperty(image, 'naturalHeight', { value: height });
+      fireEvent.load(image);
+    }
+
+    const numberWithImage = {
+      type: 'number',
+      prompt: NUMBER_PROMPT,
+      margin,
+      mediaUrl: 'https://example.com/x.png',
+    };
+
+    it('puts the margin inside the prompt column of a two-column question', () => {
+      renderQuestion(numberWithImage, { status: 'question_open' });
+      loadImage('question-image', 600, 900);
+
+      const column = screen.getByTestId('question-prompt-column');
+      expect(column).toHaveTextContent(NUMBER_PROMPT);
+      expect(column).toHaveTextContent('5%');
+    });
+
+    it('puts the margin right after the prompt, before the media, in a stacked layout', () => {
+      renderQuestion(numberWithImage, { status: 'question_open' });
+      loadImage('question-image', 900, 600);
+
+      const column = screen.getByTestId('question-prompt-column');
+      expect(column).toHaveTextContent('5%');
+      const image = screen.getByTestId('question-image');
+      expect(
+        column.compareDocumentPosition(image) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('puts the margin under the prompt when the question has no media', () => {
+      renderQuestion(
+        { type: 'number', prompt: NUMBER_PROMPT, margin },
+        { status: 'question_open' },
+      );
+
+      expect(screen.getByTestId('question-prompt-column')).toHaveTextContent(
+        '5%',
+      );
+    });
+
+    it('puts the answer line inside the prompt column at reveal', () => {
+      renderQuestion(
+        { ...numberWithImage, answer: '8849', points: 3 },
+        { status: 'reveal', revealIndex: 0 },
+      );
+      loadImage('reveal-image', 600, 900);
+
+      const column = screen.getByTestId('reveal-prompt-column');
+      expect(column).toHaveTextContent('8849');
+    });
+
+    it('puts the highlighted choices inside the prompt column at reveal', () => {
+      renderQuestion(
+        {
+          ...capitalOfFrance,
+          mediaUrl: 'https://example.com/x.png',
+          answer: 'Paris',
+        },
+        { status: 'reveal', revealIndex: 0 },
+      );
+      loadImage('reveal-image', 600, 900);
+
+      const column = screen.getByTestId('reveal-prompt-column');
+      expect(column).toHaveTextContent('Paris');
+      expect(column).toHaveTextContent('London');
+    });
+
+    it('shows the answer image in the image column in place of the question image at reveal', () => {
+      renderQuestion(
+        {
+          ...capitalOfFrance,
+          mediaUrl: 'https://example.com/x.png',
+          answer: 'Paris',
+          answerMediaUrl: 'https://example.com/answer-landscape.jpg',
+        },
+        { status: 'reveal', revealIndex: 0 },
+      );
+      loadImage('reveal-image', 600, 900);
+
+      expect(screen.getByTestId('reveal-prompt-media-row')).toHaveAttribute(
+        'data-layout',
+        'two-column',
+      );
+      expect(screen.getByTestId('reveal-answer-image')).toBeInTheDocument();
+      expect(screen.queryByTestId('reveal-image')).not.toBeInTheDocument();
+    });
+  });
+
   it('shows how many teams have answered the open question', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
