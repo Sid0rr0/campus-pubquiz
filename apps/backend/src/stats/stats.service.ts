@@ -1,14 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { z } from 'zod';
-import type {
-  BonusCategory,
-  FeedbackTrends,
-  PlayedSessionsListedPayload,
-  QuestionType,
-  SessionDetailStats,
-  SessionSettings,
-  Verdict,
+import {
+  MIN_RATINGS_FOR_RANKING,
+  TREND_ROUNDS_LIMIT,
+  type BonusCategory,
+  type FeedbackTrends,
+  type FeedbackTrendsRound,
+  type PlayedSessionsListedPayload,
+  type QuestionType,
+  type SessionDetailStats,
+  type SessionSettings,
+  type Verdict,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
@@ -46,6 +49,15 @@ interface FeedbackTrendsRow {
   quizTitle: string;
   date: string | Date;
   average: string | number | null;
+  count: string | number;
+}
+
+interface RankedRoundRow {
+  sessionId: number;
+  name: string | null;
+  quizTitle: string;
+  roundTitle: string;
+  average: string | number;
   count: string | number;
 }
 
@@ -350,22 +362,7 @@ export class StatsService {
     to,
   }: FeedbackTrendsQuery): Promise<FeedbackTrends> {
     const knex = this.gameSessions.getKnex();
-
-    const sessionsInRange = () => {
-      const query = knex('game_sessions as gs')
-        .where('gs.status', 'ended')
-        .whereRaw(
-          `coalesce((gs.settings ->> 'collectFeedback')::boolean, true) = true`,
-        );
-      if (from) query.where('gs.created_at', '>=', `${from}T00:00:00Z`);
-      if (to) {
-        query.whereRaw(
-          `gs.created_at < (?::date + 1)::timestamp at time zone 'UTC'`,
-          [to],
-        );
-      }
-      return query;
-    };
+    const sessionsInRange = () => this.feedbackSessionsInRange({ from, to });
 
     const rows = (await sessionsInRange()
       .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
@@ -394,7 +391,76 @@ export class StatsService {
             ? null
             : { average: Number(row.average), count: Number(row.count) },
       })),
+      ...(await this.rankRounds({ from, to })),
     };
+  }
+
+  /** Ended sessions with feedback on whose date falls in the range (`gs` is the session table). */
+  private feedbackSessionsInRange({ from, to }: FeedbackTrendsQuery) {
+    const query = this.gameSessions
+      .getKnex()('game_sessions as gs')
+      .where('gs.status', 'ended')
+      .whereRaw(
+        `coalesce((gs.settings ->> 'collectFeedback')::boolean, true) = true`,
+      );
+    if (from) query.where('gs.created_at', '>=', `${from}T00:00:00Z`);
+    if (to) {
+      query.whereRaw(
+        `gs.created_at < (?::date + 1)::timestamp at time zone 'UTC'`,
+        [to],
+      );
+    }
+    return query;
+  }
+
+  /**
+   * The best and worst rounds by average rating in the range, counting only
+   * rounds with at least MIN_RATINGS_FOR_RANKING ratings. Ties: more ratings
+   * first, then the newer session. No team column is selected.
+   */
+  private async rankRounds(
+    range: FeedbackTrendsQuery,
+  ): Promise<Pick<FeedbackTrends, 'bestRounds' | 'worstRounds'>> {
+    const knex = this.gameSessions.getKnex();
+    const ranked = (direction: 'asc' | 'desc') =>
+      this.feedbackSessionsInRange(range)
+        .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
+        .join('round_ratings as rr', 'rr.game_session_id', 'gs.id')
+        .join('rounds as r', 'r.id', 'rr.round_id')
+        .groupBy('gs.id', 'qz.title', 'r.id')
+        .havingRaw('count(rr.id) >= ?', [MIN_RATINGS_FOR_RANKING])
+        .orderByRaw(`avg(rr.stars) ${direction}`)
+        .orderByRaw('count(rr.id) desc')
+        .orderBy([
+          { column: 'gs.created_at', order: 'desc' },
+          { column: 'gs.id', order: 'desc' },
+          { column: 'r.order_index', order: 'asc' },
+        ])
+        .limit(TREND_ROUNDS_LIMIT)
+        .select(
+          'gs.id as sessionId',
+          'gs.name as name',
+          'qz.title as quizTitle',
+          'r.title as roundTitle',
+        )
+        .select(knex.raw('avg(rr.stars) as average'))
+        .select(knex.raw('count(rr.id) as count'))
+        .then((rows) =>
+          (rows as RankedRoundRow[]).map(
+            (row): FeedbackTrendsRound => ({
+              sessionId: row.sessionId,
+              sessionName: row.name ?? row.quizTitle,
+              roundTitle: row.roundTitle,
+              average: Number(row.average),
+              count: Number(row.count),
+            }),
+          ),
+        );
+    const [bestRounds, worstRounds] = await Promise.all([
+      ranked('desc'),
+      ranked('asc'),
+    ]);
+    return { bestRounds, worstRounds };
   }
 
   /** Deletes an ended session and, via DB cascade rules, every answer, bonus award, and roster row tied to it. */

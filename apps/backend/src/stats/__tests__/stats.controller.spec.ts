@@ -113,7 +113,7 @@ describe('StatsController', () => {
   describe('getFeedbackTrends', () => {
     it('delegates to statsService.getFeedbackTrends with the parsed range', async () => {
       const { controller, statsService } = makeController();
-      const payload = { sessions: [] };
+      const payload = { sessions: [], bestRounds: [], worstRounds: [] };
       statsService.getFeedbackTrends.mockResolvedValue(payload);
 
       await expect(
@@ -127,7 +127,11 @@ describe('StatsController', () => {
 
     it('accepts no range at all', async () => {
       const { controller, statsService } = makeController();
-      statsService.getFeedbackTrends.mockResolvedValue({ sessions: [] });
+      statsService.getFeedbackTrends.mockResolvedValue({
+        sessions: [],
+        bestRounds: [],
+        worstRounds: [],
+      });
 
       await controller.getFeedbackTrends({});
 

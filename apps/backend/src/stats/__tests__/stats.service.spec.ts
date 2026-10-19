@@ -811,6 +811,159 @@ describe('StatsService (Postgres integration)', () => {
     });
   });
 
+  describe('getFeedbackTrends best and worst rounds', () => {
+    async function ratedRound(
+      joinCode: string,
+      playedAt: string,
+      stars: number[],
+      options: { sessionName?: string; feedbackOff?: boolean } = {},
+    ): Promise<GameSession> {
+      const { quiz, questions } = await createQuiz(`Quiz ${joinCode}`, [[1]]);
+      const round = questions[0][0].round;
+      round.title = `Round of ${joinCode}`;
+      const session = await createSession(
+        quiz,
+        joinCode,
+        'ended',
+        options.sessionName,
+      );
+      session.createdAt = new Date(playedAt);
+      if (options.feedbackOff) {
+        session.settings = {
+          ...DEFAULT_SESSION_SETTINGS,
+          collectFeedback: false,
+        };
+      }
+      await em.flush();
+      for (const [index, value] of stars.entries()) {
+        const team = await joinTeam(session, `${joinCode}-T${index}`);
+        em.create(RoundRating, {
+          gameSession: session,
+          round,
+          team,
+          stars: value,
+        });
+      }
+      await em.flush();
+      return session;
+    }
+
+    it('ranks rounds by average rating, best first and worst first', async () => {
+      const low = await ratedRound('BW1', '2026-10-01T19:00:00Z', [1, 2, 3]);
+      const mid = await ratedRound('BW2', '2026-10-02T19:00:00Z', [3, 3, 4]);
+      const high = await ratedRound('BW3', '2026-10-03T19:00:00Z', [5, 5, 4]);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.bestRounds.map((r) => r.sessionId)).toEqual([
+        high.id,
+        mid.id,
+        low.id,
+      ]);
+      expect(result.worstRounds.map((r) => r.sessionId)).toEqual([
+        low.id,
+        mid.id,
+        high.id,
+      ]);
+      expect(result.bestRounds[0]).toEqual({
+        sessionId: high.id,
+        sessionName: 'Quiz BW3',
+        roundTitle: 'Round of BW3',
+        average: 14 / 3,
+        count: 3,
+      });
+    });
+
+    it('counts only rounds with at least 3 ratings', async () => {
+      await ratedRound('BW4', '2026-10-01T19:00:00Z', [5, 5]);
+      const enough = await ratedRound('BW5', '2026-10-02T19:00:00Z', [2, 2, 2]);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.bestRounds.map((r) => r.sessionId)).toEqual([enough.id]);
+      expect(result.worstRounds.map((r) => r.sessionId)).toEqual([enough.id]);
+    });
+
+    it('keeps only 5 rounds in each list', async () => {
+      for (let i = 0; i < 7; i += 1) {
+        await ratedRound(`BW6${i}`, `2026-10-0${i + 1}T19:00:00Z`, [
+          1 + i * 0.5,
+          1 + i * 0.5,
+          1 + i * 0.5,
+        ]);
+      }
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.bestRounds.map((r) => r.average)).toEqual([
+        4, 3.5, 3, 2.5, 2,
+      ]);
+      expect(result.worstRounds.map((r) => r.average)).toEqual([
+        1, 1.5, 2, 2.5, 3,
+      ]);
+    });
+
+    it('breaks a tie by higher count first, then the newer session', async () => {
+      const fewer = await ratedRound('BW7', '2026-10-05T19:00:00Z', [4, 4, 4]);
+      const olderMore = await ratedRound(
+        'BW8',
+        '2026-10-01T19:00:00Z',
+        [4, 4, 4, 4],
+      );
+      const newerMore = await ratedRound(
+        'BW9',
+        '2026-10-02T19:00:00Z',
+        [4, 4, 4, 4],
+      );
+
+      const result = await statsService.getFeedbackTrends({});
+
+      const expected = [newerMore.id, olderMore.id, fewer.id];
+      expect(result.bestRounds.map((r) => r.sessionId)).toEqual(expected);
+      expect(result.worstRounds.map((r) => r.sessionId)).toEqual(expected);
+    });
+
+    it('uses the session name when set and honours the range and the feedback setting', async () => {
+      const named = await ratedRound(
+        'BW10',
+        '2026-10-10T19:00:00Z',
+        [3, 3, 3],
+        {
+          sessionName: 'Freshers night',
+        },
+      );
+      await ratedRound('BW11', '2026-08-10T19:00:00Z', [5, 5, 5]);
+      await ratedRound('BW12', '2026-10-11T19:00:00Z', [5, 5, 5], {
+        feedbackOff: true,
+      });
+
+      const result = await statsService.getFeedbackTrends({
+        from: '2026-10-01',
+      });
+
+      expect(result.bestRounds).toEqual([
+        {
+          sessionId: named.id,
+          sessionName: 'Freshers night',
+          roundTitle: 'Round of BW10',
+          average: 3,
+          count: 3,
+        },
+      ]);
+    });
+
+    it('returns empty lists when nothing qualifies and carries no team data', async () => {
+      const empty = await statsService.getFeedbackTrends({});
+      await ratedRound('BW13', '2026-10-01T19:00:00Z', [3, 3, 3]);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(empty.bestRounds).toEqual([]);
+      expect(empty.worstRounds).toEqual([]);
+      expect(JSON.stringify(result.bestRounds)).not.toMatch(/team|BW13-T/i);
+    });
+  });
+
   describe('getSessionDetail feedback', () => {
     async function send(
       session: GameSession,

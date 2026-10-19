@@ -30,6 +30,24 @@ const TRENDS: FeedbackTrends = {
       rating: null,
     },
   ],
+  bestRounds: [
+    {
+      sessionId: 1,
+      sessionName: 'Spring quiz',
+      roundTitle: 'Music round',
+      average: 4.75,
+      count: 6,
+    },
+  ],
+  worstRounds: [
+    {
+      sessionId: 2,
+      sessionName: 'Summer quiz',
+      roundTitle: 'Geography round',
+      average: 2.1,
+      count: 4,
+    },
+  ],
 };
 
 describe('FeedbackTrendsPanel', () => {
@@ -57,7 +75,11 @@ describe('FeedbackTrendsPanel', () => {
   });
 
   it('writes out an empty state when no session is in range', async () => {
-    mockFetchFeedbackTrends.mockResolvedValue({ sessions: [] });
+    mockFetchFeedbackTrends.mockResolvedValue({
+      sessions: [],
+      bestRounds: [],
+      worstRounds: [],
+    });
     renderWithQuery(<FeedbackTrendsPanel />);
 
     expect(
@@ -65,6 +87,30 @@ describe('FeedbackTrendsPanel', () => {
         'No finished sessions with feedback in this range.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('lists the best and worst rounds with their session, average and count', async () => {
+    renderWithQuery(<FeedbackTrendsPanel />);
+
+    const best = (await screen.findByText('Music round')).closest('li')!;
+    expect(best).toHaveTextContent('Spring quiz');
+    expect(best).toHaveTextContent('★ 4.8 · 6 ratings');
+    const worst = screen.getByText('Geography round').closest('li')!;
+    expect(worst).toHaveTextContent('Summer quiz');
+    expect(worst).toHaveTextContent('★ 2.1 · 4 ratings');
+  });
+
+  it('writes out "Not enough ratings yet" for empty round lists', async () => {
+    mockFetchFeedbackTrends.mockResolvedValue({
+      ...TRENDS,
+      bestRounds: [],
+      worstRounds: [],
+    });
+    renderWithQuery(<FeedbackTrendsPanel />);
+
+    expect(await screen.findAllByText('Not enough ratings yet')).toHaveLength(
+      2,
+    );
   });
 
   it('asks for all time first, then for the chosen range', async () => {
