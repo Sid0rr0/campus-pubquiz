@@ -40,7 +40,7 @@ const YOUTUBE_EMBED_URL =
   /^https:\/\/(www\.)?youtube(-nocookie)?\.com\/embed\//;
 const RANGE_HEADER = /^bytes=(\d*)-(\d*)$/;
 
-interface MediaFile {
+export interface MediaFile {
   body: Buffer;
   contentType: string;
 }
@@ -57,7 +57,7 @@ function mediaFileFor(url: string): MediaFile | null {
 }
 
 /** Media elements ask for byte ranges; answer them so seeking and replay behave. */
-async function fulfillMedia(
+export async function fulfillMedia(
   route: Route,
   { body, contentType }: MediaFile,
 ): Promise<void> {

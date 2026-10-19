@@ -8,9 +8,9 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each type can be answered on the phone with touch input.
-- [ ] Each type's reveal shows the team's answer and the key.
-- [ ] The closest-guess reveal move is recorded.
-- [ ] Passes `--repeat-each=5`.
+- [x] Each type can be answered on the phone with touch input.
+- [x] Each type's reveal shows the team's answer and the key.
+- [x] The closest-guess reveal move is recorded.
+- [x] Passes `--repeat-each=5`.

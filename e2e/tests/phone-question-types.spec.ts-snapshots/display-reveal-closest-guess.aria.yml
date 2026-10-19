@@ -1,0 +1,15 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Phone types
+  - paragraph: ROUND 1
+  - paragraph: REVEALING ANSWERS · QUESTION 4
+  - heading "How many metres tall is the Eiffel Tower?" [level=1]
+  - paragraph: /SMALLEST GUESS \d+/
+  - paragraph: /HIGHEST GUESS \d+/
+  - paragraph: /ANSWER \d+/
+  - list:
+    - listitem: /Team A [0-9a-f]{6} \d+/
+- region "Notifications alt+T"
+- alert
