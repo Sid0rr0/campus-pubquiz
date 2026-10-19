@@ -62,10 +62,11 @@ function formatNumber(value: number): string {
   return String(Number(value.toFixed(DISPLAY_DECIMALS)));
 }
 
-/** What teams are told about how precise they must be: "within 10%", "within 5". */
+/** What teams are told while a Number question is open: "Answers within 5% of the real number count as correct", or "Exact answer only" for margin 0. */
 export function formatMarginText(margin: Margin): string {
+  if (margin.value === 0) return 'Exact answer only';
   const suffix = margin.unit === 'percent' ? '%' : '';
-  return `within ${formatNumber(margin.value)}${suffix}`;
+  return `Answers within ${formatNumber(margin.value)}${suffix} of the real number count as correct`;
 }
 
 /** The accepted range as "low–high", or the single value when the margin is 0. */
@@ -76,12 +77,13 @@ export function formatAcceptedRange(key: number, margin: Margin): string {
   return low === high ? low : `${low}–${high}`;
 }
 
-/** The reveal line: the key followed by the accepted range, e.g. "200 · 180–220 accepted". */
+/** The reveal line: the key followed by what counts, e.g. "200 (anything from 180 to 220 counts)"; just the key when the margin is 0. */
 export function formatNumberReveal(answer: string, margin: Margin): string {
   const key = parseFiniteNumber(answer);
   if (key === null) return answer;
-  const range = formatAcceptedRange(key, margin);
-  return range === formatNumber(key)
-    ? range
-    : `${formatNumber(key)} · ${range} accepted`;
+  const distance = allowedDistance(key, margin);
+  const low = formatNumber(key - distance);
+  const high = formatNumber(key + distance);
+  if (low === high) return low;
+  return `${formatNumber(key)} (anything from ${low} to ${high} counts)`;
 }

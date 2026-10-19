@@ -9,20 +9,33 @@ import type { SeededQuestion } from '../question-views';
 
 describe('formatMarginText', () => {
   it('words a percent margin', () => {
-    expect(formatMarginText({ value: 10, unit: 'percent' })).toBe('within 10%');
+    expect(formatMarginText({ value: 5, unit: 'percent' })).toBe(
+      'Answers within 5% of the real number count as correct',
+    );
   });
 
   it('keeps up to two decimals', () => {
     expect(formatMarginText({ value: 2.5, unit: 'percent' })).toBe(
-      'within 2.5%',
+      'Answers within 2.5% of the real number count as correct',
     );
     expect(formatMarginText({ value: 2.456, unit: 'percent' })).toBe(
-      'within 2.46%',
+      'Answers within 2.46% of the real number count as correct',
     );
   });
 
   it('words an absolute margin without a unit sign', () => {
-    expect(formatMarginText({ value: 5, unit: 'absolute' })).toBe('within 5');
+    expect(formatMarginText({ value: 5, unit: 'absolute' })).toBe(
+      'Answers within 5 of the real number count as correct',
+    );
+  });
+
+  it('says only the exact answer counts for margin 0', () => {
+    expect(formatMarginText({ value: 0, unit: 'percent' })).toBe(
+      'Exact answer only',
+    );
+    expect(formatMarginText({ value: 0, unit: 'absolute' })).toBe(
+      'Exact answer only',
+    );
   });
 });
 
@@ -53,7 +66,7 @@ describe('formatAcceptedRange', () => {
 describe('formatNumberReveal', () => {
   it('shows the key and the accepted range', () => {
     expect(formatNumberReveal('200', { value: 10, unit: 'percent' })).toBe(
-      '200 · 180–220 accepted',
+      '200 (anything from 180 to 220 counts)',
     );
   });
 
