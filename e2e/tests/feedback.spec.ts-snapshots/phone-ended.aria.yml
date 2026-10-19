@@ -1,0 +1,49 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - heading "Quiz complete!" [level=1]
+  - paragraph: You finished Joint 1st of 2
+  - region "Rate the rounds":
+    - heading "Rate the rounds" [level=2]
+    - list:
+      - listitem:
+        - text: Warm-up
+        - button "Rate Warm-up 1 of 5" [pressed]
+        - button "Rate Warm-up 1.5 of 5" [pressed]
+        - button "Rate Warm-up 2 of 5" [pressed]
+        - button "Rate Warm-up 2.5 of 5" [pressed]
+        - button "Rate Warm-up 3 of 5" [pressed]
+        - button "Rate Warm-up 3.5 of 5" [pressed]
+        - button "Rate Warm-up 4 of 5" [pressed]
+        - button "Rate Warm-up 4.5 of 5"
+        - button "Rate Warm-up 5 of 5"
+        - text: Saved ✓
+      - listitem:
+        - text: Name that tune
+        - button "Rate Name that tune 1 of 5" [pressed]
+        - button "Rate Name that tune 1.5 of 5" [pressed]
+        - button "Rate Name that tune 2 of 5" [pressed]
+        - button "Rate Name that tune 2.5 of 5" [pressed]
+        - button "Rate Name that tune 3 of 5" [pressed]
+        - button "Rate Name that tune 3.5 of 5" [pressed]
+        - button "Rate Name that tune 4 of 5" [pressed]
+        - button "Rate Name that tune 4.5 of 5" [pressed]
+        - button "Rate Name that tune 5 of 5" [pressed]
+        - text: Saved ✓
+    - text: Anything else?
+    - textbox "Anything else?": More music rounds please
+    - group "Topics you'd like next time":
+      - text: ""
+      - textbox "Topic 1": Geography
+      - textbox "Topic 2": Film
+      - button "+ Add another"
+      - text: /Up to \d+ topics\./
+    - button "Send"
+    - text: Sent ✓
+  - button "Answer history (3)"
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert

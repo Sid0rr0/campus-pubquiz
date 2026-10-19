@@ -1,0 +1,11 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - list "Podium":
+    - listitem: /Team [AB] [0-9a-f]{6} 0 pts\s+1\.–2\./
+    - listitem: /Team [AB] [0-9a-f]{6} 0 pts\s+1\.–2\./
+  - heading "Quiz complete!" [level=1]
+  - paragraph: Thank you for playing today's pub quiz! Rate the rounds and help us make the quiz better - on your phones or talk to us. See you next week!
+- region "Notifications alt+T"
+- alert
