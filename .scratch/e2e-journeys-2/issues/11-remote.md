@@ -6,8 +6,8 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `/remote` is snapshotted at each status it passes through.
-- [ ] The big screen follows each press.
-- [ ] Passes `--repeat-each=5`.
+- [x] `/remote` is snapshotted at each status it passes through.
+- [x] The big screen follows each press.
+- [x] Passes `--repeat-each=5`.

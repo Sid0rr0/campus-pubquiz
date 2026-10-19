@@ -6,9 +6,11 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each media kind renders with the intercepted fixture or stub.
-- [ ] Pause, replay and fullscreen moves are recorded.
-- [ ] Phones show "🎧 Listen" for a hidden video.
-- [ ] Passes `--repeat-each=5`.
+- [x] Each media kind renders with the intercepted fixture or stub.
+- [x] Pause, replay and fullscreen moves are recorded.
+- [x] Phones show "🎧 Listen" for a hidden video.
+- [x] Passes `--repeat-each=5`.
+
+Note: video files are served as a decodable WebM recorded in code (`e2e/support/decodable-video.ts`), because the display drops a `<video>` that errors, which the header-only mp4 stand-in does.

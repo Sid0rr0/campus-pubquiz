@@ -6,8 +6,10 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The toast shows on the awarded team's phone only.
-- [ ] The standings include the bonus.
-- [ ] Passes `--repeat-each=5`.
+- [x] The toast shows on the awarded team's phone only.
+- [x] The standings include the bonus.
+- [x] Passes `--repeat-each=5`.
+
+Journey: `e2e/tests/bonus-award.spec.ts`, helpers in `e2e/support/bonus.ts`. It reuses `fixtures/quiz-night.csv` (no new CSV or snapshots needed: no status cell is new). The quiz has one break, which is its last, so the big screen's leaderboard there is the podium.

@@ -1,0 +1,21 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - region "On display":
+    - heading "On display" [level=2]
+    - text: Lobby
+    - paragraph: Teams joining
+  - region "Notes":
+    - heading "Notes" [level=2]
+    - paragraph: No notes for this question.
+  - region "Up next":
+    - heading "Up next" [level=2]
+    - text: Rules
+  - text: Display text size
+  - button "Decrease display text size": A−
+  - text: /\d+%/
+  - button "Increase display text size": A+
+- region "Notifications alt+T"
+- alert
