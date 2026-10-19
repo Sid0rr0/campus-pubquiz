@@ -1,0 +1,47 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - region "Rate these rounds":
+    - heading "Rate these rounds" [level=2]
+    - list:
+      - listitem:
+        - text: Warm-up
+        - button "Rate Warm-up 1 of 5" [pressed]
+        - button "Rate Warm-up 1.5 of 5" [pressed]
+        - button "Rate Warm-up 2 of 5" [pressed]
+        - button "Rate Warm-up 2.5 of 5" [pressed]
+        - button "Rate Warm-up 3 of 5" [pressed]
+        - button "Rate Warm-up 3.5 of 5" [pressed]
+        - button "Rate Warm-up 4 of 5" [pressed]
+        - button "Rate Warm-up 4.5 of 5"
+        - button "Rate Warm-up 5 of 5"
+        - text: Saved ✓
+      - listitem:
+        - text: Name that tune
+        - button "Rate Name that tune 1 of 5" [pressed]
+        - button "Rate Name that tune 1.5 of 5" [pressed]
+        - button "Rate Name that tune 2 of 5" [pressed]
+        - button "Rate Name that tune 2.5 of 5" [pressed]
+        - button "Rate Name that tune 3 of 5" [pressed]
+        - button "Rate Name that tune 3.5 of 5" [pressed]
+        - button "Rate Name that tune 4 of 5" [pressed]
+        - button "Rate Name that tune 4.5 of 5" [pressed]
+        - button "Rate Name that tune 5 of 5" [pressed]
+        - text: Saved ✓
+  - paragraph: Warm-up
+  - navigation "Round 1 questions":
+    - button "Question 1"
+    - button "Question 2"
+  - paragraph: Name that tune
+  - navigation "Round 2 questions":
+    - button "Question 1"
+  - heading "Which band recorded the song you hear?" [level=1]
+  - paragraph: 👀 Look at the screen
+  - paragraph: Answering is locked for this question
+  - button "Answer history (3)"
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert

@@ -6,7 +6,7 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Ratings and the suggestion submitted on phones show for the quiz master.
-- [ ] Passes `--repeat-each=5`.
+- [x] Ratings and the suggestion submitted on phones show for the quiz master (on the session's `/stats/<id>` page: round rating averages, comments, topic counts).
+- [x] Passes `--repeat-each=5`.
