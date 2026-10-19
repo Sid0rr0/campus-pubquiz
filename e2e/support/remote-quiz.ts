@@ -1,6 +1,6 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import { expect, type APIRequestContext } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
+import { importCsvQuiz } from './csv-session';
 import { PATHS } from './env';
 
 /**
@@ -27,31 +27,10 @@ export const REMOTE_QUIZ = {
 
 const REMOTE_CSV = path.join(PATHS.e2eRoot, 'fixtures', 'remote.csv');
 
-interface ImportPreviewResponse {
-  isImportable: boolean;
-  issues: unknown[];
-  rounds: unknown[];
-}
-
 /** Imports `fixtures/remote.csv` as a new quiz titled `quizTitle` and returns its id. */
-export async function importRemoteQuiz(
+export function importRemoteQuiz(
   api: APIRequestContext,
   quizTitle: string,
 ): Promise<number> {
-  const csvText = fs.readFileSync(REMOTE_CSV, 'utf8');
-  const previewResponse = await api.post('/import/preview', {
-    data: { csvText, quizTitle },
-  });
-  expect(previewResponse.ok(), 'import preview').toBe(true);
-  const preview = (await previewResponse.json()) as ImportPreviewResponse;
-  expect(preview.issues, 'import issues').toEqual([]);
-  expect(preview.isImportable).toBe(true);
-
-  const saveResponse = await api.post('/quizzes', {
-    data: { title: quizTitle, rounds: preview.rounds },
-  });
-  expect(saveResponse.ok(), `save quiz: ${await saveResponse.text()}`).toBe(
-    true,
-  );
-  return ((await saveResponse.json()) as { quizId: number }).quizId;
+  return importCsvQuiz(api, REMOTE_CSV, quizTitle);
 }

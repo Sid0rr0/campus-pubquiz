@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import {
   expect,
   type APIRequest,
@@ -9,7 +8,6 @@ import {
   ADMIN_STORAGE_STATE,
   ADMIN_USERNAME,
   BACKEND_URL,
-  PATHS,
 } from './env';
 import { takeLoginSlot } from './login-budget';
 
@@ -19,22 +17,14 @@ const CSRF_HEADERS = { 'x-requested-with': 'XMLHttpRequest' } as const;
 /** The settings a spec may choose when it creates a session; any other setting keeps the backend default. */
 export interface SessionSettingsInput {
   lockGraceSeconds?: number;
+  kahootQuestionTimerSeconds?: number | null;
+  showRoundOverview?: boolean;
 }
 
 export interface SeededSession {
   joinCode: string;
   quizId: number;
   quizTitle: string;
-}
-
-interface ImportPreviewResponse {
-  isImportable: boolean;
-  issues: unknown[];
-  rounds: unknown[];
-}
-
-interface QuizSavedResponse {
-  quizId: number;
 }
 
 interface SessionCreatedResponse {
@@ -68,29 +58,6 @@ export function newAdminApi(
     storageState: ADMIN_STORAGE_STATE,
     extraHTTPHeaders: CSRF_HEADERS,
   });
-}
-
-/** Imports the CSV fixture as a new quiz titled `quizTitle`: previews it (so a bad fixture fails here) and saves what the preview parsed. */
-export async function importQuizNight(
-  api: APIRequestContext,
-  quizTitle: string,
-): Promise<number> {
-  const csvText = fs.readFileSync(PATHS.csvFixture, 'utf8');
-  const previewResponse = await api.post('/import/preview', {
-    data: { csvText, quizTitle },
-  });
-  expect(previewResponse.ok(), 'import preview').toBe(true);
-  const preview = (await previewResponse.json()) as ImportPreviewResponse;
-  expect(preview.issues, 'import issues').toEqual([]);
-  expect(preview.isImportable).toBe(true);
-
-  const saveResponse = await api.post('/quizzes', {
-    data: { title: quizTitle, rounds: preview.rounds },
-  });
-  expect(saveResponse.ok(), `save quiz: ${await saveResponse.text()}`).toBe(
-    true,
-  );
-  return ((await saveResponse.json()) as QuizSavedResponse).quizId;
 }
 
 /** Creates a session on the quiz and returns its join code. */

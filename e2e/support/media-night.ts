@@ -2,9 +2,9 @@
  * What `fixtures/media.csv` holds, and how a session is made from it. One
  * round of six questions, each with a different kind of media.
  */
-import fs from 'node:fs';
 import path from 'node:path';
-import { expect, type APIRequestContext } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
+import { importCsvQuiz } from './csv-session';
 import { PATHS } from './env';
 
 const MEDIA_CSV = path.join(PATHS.e2eRoot, 'fixtures', 'media.csv');
@@ -45,31 +45,10 @@ export const MEDIA_NIGHT = {
   },
 } as const;
 
-interface ImportPreviewResponse {
-  isImportable: boolean;
-  issues: unknown[];
-  rounds: unknown[];
-}
-
 /** Imports `fixtures/media.csv` as a new quiz titled `quizTitle` and returns its id. */
-export async function importMediaNight(
+export function importMediaNight(
   api: APIRequestContext,
   quizTitle: string,
 ): Promise<number> {
-  const csvText = fs.readFileSync(MEDIA_CSV, 'utf8');
-  const previewResponse = await api.post('/import/preview', {
-    data: { csvText, quizTitle },
-  });
-  expect(previewResponse.ok(), 'import preview').toBe(true);
-  const preview = (await previewResponse.json()) as ImportPreviewResponse;
-  expect(preview.issues, 'import issues').toEqual([]);
-  expect(preview.isImportable).toBe(true);
-
-  const saveResponse = await api.post('/quizzes', {
-    data: { title: quizTitle, rounds: preview.rounds },
-  });
-  expect(saveResponse.ok(), `save quiz: ${await saveResponse.text()}`).toBe(
-    true,
-  );
-  return ((await saveResponse.json()) as { quizId: number }).quizId;
+  return importCsvQuiz(api, MEDIA_CSV, quizTitle);
 }

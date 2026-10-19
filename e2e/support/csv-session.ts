@@ -6,21 +6,27 @@ import {
   type SessionSettingsInput,
 } from './api';
 
+type QuizRound = Record<string, unknown>;
+
 interface ImportPreviewResponse {
   isImportable: boolean;
   issues: unknown[];
-  rounds: unknown[];
+  rounds: QuizRound[];
 }
 
 interface QuizSavedResponse {
   quizId: number;
 }
 
-/** Imports the CSV at `csvPath` as a new quiz titled `quizTitle`: previews it (so a bad fixture fails here) and saves what the preview parsed. */
+/**
+ * Imports the CSV at `csvPath` as a new quiz titled `quizTitle`: previews it (so a bad fixture fails here) and saves what the preview parsed.
+ * `mapRounds` changes a round before it is saved, for what no CSV column sets (e.g. `kahootMode`).
+ */
 export async function importCsvQuiz(
   api: APIRequestContext,
   csvPath: string,
   quizTitle: string,
+  mapRounds: (round: QuizRound, index: number) => QuizRound = (round) => round,
 ): Promise<number> {
   const csvText = fs.readFileSync(csvPath, 'utf8');
   const previewResponse = await api.post('/import/preview', {
@@ -32,7 +38,7 @@ export async function importCsvQuiz(
   expect(preview.isImportable).toBe(true);
 
   const saveResponse = await api.post('/quizzes', {
-    data: { title: quizTitle, rounds: preview.rounds },
+    data: { title: quizTitle, rounds: preview.rounds.map(mapRounds) },
   });
   expect(saveResponse.ok(), `save quiz: ${await saveResponse.text()}`).toBe(
     true,
@@ -46,8 +52,9 @@ export async function seedCsvSession(
   csvPath: string,
   quizTitle: string,
   settings: SessionSettingsInput,
+  mapRounds?: (round: QuizRound, index: number) => QuizRound,
 ): Promise<SeededSession> {
-  const quizId = await importCsvQuiz(api, csvPath, quizTitle);
+  const quizId = await importCsvQuiz(api, csvPath, quizTitle, mapRounds);
   const joinCode = await createSession(api, quizId, quizTitle, settings);
   return { joinCode, quizId, quizTitle };
 }
