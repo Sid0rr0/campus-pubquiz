@@ -6,7 +6,7 @@ Parent spec: `.scratch/display-portrait-margin/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The hint shows the accepted range for percent and absolute margins, using the shared accepted-range formatter.
 - [ ] Margin 0 shows "Accepts only <key>".

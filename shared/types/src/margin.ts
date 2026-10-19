@@ -77,6 +77,16 @@ export function formatAcceptedRange(key: number, margin: Margin): string {
   return low === high ? low : `${low}–${high}`;
 }
 
+/** The quiz form's live hint: the accepted range for the typed answer and margin. */
+export function formatMarginHint(answer: string, margin: Margin): string {
+  const key = parseFiniteNumber(answer);
+  if (key === null) return 'Enter the answer to see the accepted range';
+  const range = formatAcceptedRange(key, margin);
+  return range === formatNumber(key)
+    ? `Accepts only ${range}`
+    : `Accepts ${range}`;
+}
+
 /** The reveal line: the key followed by what counts, e.g. "200 (anything from 180 to 220 counts)"; just the key when the margin is 0. */
 export function formatNumberReveal(answer: string, margin: Margin): string {
   const key = parseFiniteNumber(answer);

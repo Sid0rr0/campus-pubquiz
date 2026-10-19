@@ -9,8 +9,10 @@ import {
 import {
   hasMarginType,
   type AnswerKind,
+  formatMarginHint,
   parseFiniteNumber,
   resolveAnswerKind,
+  type Margin,
   type MarginUnit,
   type MatchScoringMode,
   type QuizDraftIssue,
@@ -180,6 +182,11 @@ function MarginRow({ question, issues, onChange }: AnswerFieldsProps) {
   const isZeroKeyWithPercent =
     question.marginUnit === 'percent' &&
     parseFiniteNumber(question.correctText) === 0;
+  const marginValue = parseFiniteNumber(question.marginValue);
+  const margin: Margin | null =
+    marginValue !== null && marginValue >= 0
+      ? { value: marginValue, unit: question.marginUnit }
+      : null;
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2 text-xs font-extrabold text-foreground/60">
@@ -207,7 +214,9 @@ function MarginRow({ question, issues, onChange }: AnswerFieldsProps) {
             </Button>
           ))}
         </div>
-        <span>0 accepts only the exact answer</span>
+        {margin && (
+          <span>{formatMarginHint(question.correctText, margin)}</span>
+        )}
       </div>
       {isZeroKeyWithPercent && (
         <p className="text-xs font-extrabold text-foreground/60">
