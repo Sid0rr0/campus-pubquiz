@@ -101,6 +101,8 @@ test('a quiz built in the editor is saved, started as a session and played as au
 
   // 5. Round two plays as authored: the multiple-choice question offers the authored options.
   await control.advance('round_intro');
+  // A finished block's next round waits behind the leaderboard until it is hidden.
+  await control.toggleLeaderboard();
   await display.expectText(ROUND_TWO.title);
   await control.advance('question_open');
   await display.expectQuestion(PLANET.prompt);
