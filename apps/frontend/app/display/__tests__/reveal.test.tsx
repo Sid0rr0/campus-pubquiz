@@ -128,7 +128,9 @@ describe('DisplayPage — reveal', () => {
     });
     render(<DisplayPage />);
 
-    expect(screen.getByText('200 · 180–220 accepted')).toBeInTheDocument();
+    expect(
+      screen.getByText('200 (anything from 180 to 220 counts)'),
+    ).toBeInTheDocument();
   });
 
   it('shows the correct order for a sort question on reveal', () => {

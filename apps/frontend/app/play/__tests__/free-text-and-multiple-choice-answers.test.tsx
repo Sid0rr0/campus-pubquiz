@@ -167,7 +167,9 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     );
     renderWithQuery(<PlayPage />);
 
-    expect(screen.getByText('within 5')).toBeInTheDocument();
+    expect(
+      screen.getByText('Answers within 5 of the real number count as correct'),
+    ).toBeInTheDocument();
   });
 
   it('shows no margin text for an open closest-guess question', () => {

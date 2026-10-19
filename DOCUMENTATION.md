@@ -809,9 +809,11 @@ grading behavior. Media is not a type: any question can carry a
   key fix and re-scores its answers, discarding manual overrides.
   Allowed in kahoot rounds, where a correct answer is
   scaled by the speed multiplier. While the question is open, the phone (under
-  the prompt) and the big screen show the margin ("within 10%", "within 5");
-  on reveal both show the key and the accepted range ("200 · 180–220
-  accepted"; just the key when the margin is 0). The text comes from one
+  the prompt) and the big screen show the margin as a sentence ("Answers within 5% of the real number count
+  as correct", "Answers within 5 of the real number count as correct", or
+  "Exact answer only" when the margin is 0); on reveal both show the key and
+  what counts ("200 (anything from 180 to 220 counts)"; just the key when the
+  margin is 0). The text comes from one
   shared formatter (`formatMarginText`/`formatNumberReveal` in
   `shared/types/src/margin.ts`), numbers show at most 2 decimals with trailing
   zeros dropped, and grading always uses the exact range. A question view (the

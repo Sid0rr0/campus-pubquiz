@@ -76,7 +76,11 @@ describe('DisplayPage — question display', () => {
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);
-    expect(screen.getByText('within 2.5%')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Answers within 2.5% of the real number count as correct',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('shows no margin for a closest-guess question', () => {
