@@ -7,6 +7,7 @@ import type {
   TestInfo,
 } from '@playwright/test';
 import { FRONTEND_URL } from '../support/env';
+import { stubMedia } from '../support/media-stub';
 
 export type NewContext = (
   options?: BrowserContextOptions,
@@ -36,6 +37,7 @@ export class ContextRecorder {
       recordVideo: { dir: this.videoDir },
       ...options,
     });
+    await stubMedia(context);
     this.contexts.push(context);
     return context;
   };

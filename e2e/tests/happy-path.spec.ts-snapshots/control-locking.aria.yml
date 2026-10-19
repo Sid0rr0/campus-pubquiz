@@ -1,0 +1,62 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - navigation:
+    - link "Guide"
+    - link "Sessions"
+    - link "Teams"
+    - link "Stats"
+    - link "Users"
+    - button "Log out"
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: /Quiz:\s+Quiz night [0-9a-f]{6} [A-Z]+(-[A-Z]+){2}/
+    - paragraph: "Status: locking"
+    - paragraph: "Display: R2Q1"
+    - link "Open display"
+    - button "Previous"
+    - button "Advance"
+    - button "Leaderboard"
+    - button "Fullscreen media"
+    - switch "Display sound" [checked]: "On"
+    - button "Join overlay"
+    - button "End Quiz"
+    - text: Break ends at
+    - textbox "Break ends at"
+    - button "Set"
+    - link "Edit quiz"
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem /Team A [0-9a-f]{6} has not answered yet/:
+        - text: /Connected Team A [0-9a-f]{6}/
+        - button "Kick"
+      - listitem /Team B [0-9a-f]{6} has not answered yet/:
+        - text: /Connected Team B [0-9a-f]{6}/
+        - button "Kick"
+  - heading "Grade Questions" [level=2]
+  - img "Round 1"
+  - navigation "Warm-up questions":
+    - img "Warm-up title card": T
+    - button "Grade question 1 of Warm-up (not yet graded)"
+    - button "Grade question 2 of Warm-up"
+  - img "Round 2"
+  - navigation "Name that tune questions":
+    - img "Name that tune title card": T
+    - button "Grade question 1 of Name that tune (live on display)" [pressed]
+    - img "Name that tune break card": B
+  - paragraph: Round 2 (Name that tune) — Q1 of 1
+  - heading "Which band recorded the song you hear?" [level=2]
+  - paragraph: "Correct answer: Queen 0/2 answered 0 correct"
+  - list:
+    - listitem:
+      - text: /Team A [0-9a-f]{6} No answer yet/
+    - listitem:
+      - text: /Team B [0-9a-f]{6} No answer yet/
+  - heading "Teams" [level=2]
+  - table:
+    - rowgroup:
+      - row "Position Team 1 2 Bonus Total Actions"
+    - rowgroup:
+      - row /Team A [0-9a-f]{6} 5 0 0 5 Actions for Team A [0-9a-f]{6}/
+      - row /Team B [0-9a-f]{6} 0 0 0 0 Actions for Team B [0-9a-f]{6}/

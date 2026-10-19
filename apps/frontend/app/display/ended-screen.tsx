@@ -43,6 +43,7 @@ export function EndedScreen({
               otherTeams.map((entry, index) => (
                 <span
                   key={entry.teamId}
+                  role="listitem"
                   className={`font-display text-display-2xl whitespace-nowrap ${TEAM_TEXT_CLASSES[index % TEAM_TEXT_CLASSES.length]}`}
                 >
                   {`${formatRankLabel(entry)} ${entry.teamName}`}

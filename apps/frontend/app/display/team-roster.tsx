@@ -25,6 +25,7 @@ export function TeamRoster({ teams, isConnected }: TeamRosterProps) {
   const renderTeamName = (team: TeamView, index: number) => (
     <motion.span
       key={team.teamId}
+      role="listitem"
       initial={
         teamIdsAtLoad.has(team.teamId)
           ? false

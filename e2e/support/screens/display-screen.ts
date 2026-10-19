@@ -6,6 +6,8 @@ function escapeRegExp(text: string): string {
 
 /** The big screen: `/display` for one session. Reads what the room would see. */
 export class DisplayScreen {
+  readonly kind = 'display';
+
   constructor(
     readonly page: Page,
     private readonly joinCode: string,
@@ -70,6 +72,18 @@ export class DisplayScreen {
 
   async expectAudioPlayer(src: string): Promise<void> {
     await expect(this.page.locator('audio')).toHaveAttribute('src', src);
+  }
+
+  /** The audio element has loaded the intercepted fixture (metadata read, no error). */
+  async expectAudioLoaded(): Promise<void> {
+    await expect
+      .poll(() =>
+        this.page.locator('audio').evaluate((audio: HTMLAudioElement) => ({
+          hasError: audio.error !== null,
+          hasMetadata: audio.readyState >= HTMLMediaElement.HAVE_METADATA,
+        })),
+      )
+      .toEqual({ hasError: false, hasMetadata: true });
   }
 
   /** The locking countdown (the E2E grace period is only a couple of seconds, so it is already in its final warning). */

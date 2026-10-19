@@ -8,6 +8,8 @@ const CONNECTION_LOST = 'Connection lost — reconnecting…';
 
 /** A team's phone: `/play` in a mobile-emulated context with its own localStorage. */
 export class PhoneScreen {
+  readonly kind = 'phone';
+
   constructor(
     readonly page: Page,
     readonly teamName: string,
