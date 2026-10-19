@@ -23,6 +23,10 @@ const STATUS_NAMES: GameStatus[] = [
   'ended',
 ];
 
+const MIN_GUIDE_WORDS = 1000;
+const MAX_GUIDE_WORDS = 1200;
+const MAX_PARAGRAPH_CHARS = 300;
+
 function renderGuideText(): string {
   const { container } = render(<GuideContent />);
   return container.textContent ?? '';
@@ -50,8 +54,7 @@ describe('GuideContent', () => {
     const text = renderGuideText();
 
     for (const type of QUESTION_TYPES) {
-      expect(text).toContain(`${type} (${QUESTION_KINDS[type].label})`);
-      expect(text).toContain(QUESTION_KINDS[type].label);
+      expect(text).toContain(`${QUESTION_KINDS[type].label} — `);
       expect(text).toContain(QUESTION_KINDS[type].moderatorNote);
     }
   });
@@ -92,14 +95,54 @@ describe('GuideContent', () => {
     }
   });
 
-  it('stays short: about 1,200 words and no paragraph over 300 characters', () => {
+  it('stays short: 1,000 to 1,200 words and no paragraph over 300 characters', () => {
     const { container } = render(<GuideContent />);
-    const words = (container.textContent ?? '').split(/\s+/).filter(Boolean);
-    const paragraphs = Array.from(container.querySelectorAll('p'));
+    const blocks = Array.from(
+      container.querySelectorAll('h1, h2, p, li > span:last-child, a'),
+    );
+    const words = blocks
+      .map((block) => block.textContent ?? '')
+      .join(' ')
+      .split(/\s+/)
+      .filter(Boolean);
 
-    expect(words.length).toBeLessThanOrEqual(1200);
-    for (const paragraph of paragraphs) {
-      expect(paragraph.textContent?.length ?? 0).toBeLessThanOrEqual(300);
+    expect(words.length).toBeGreaterThanOrEqual(MIN_GUIDE_WORDS);
+    expect(words.length).toBeLessThanOrEqual(MAX_GUIDE_WORDS);
+    for (const paragraph of Array.from(container.querySelectorAll('p'))) {
+      expect(paragraph.textContent?.length ?? 0).toBeLessThanOrEqual(
+        MAX_PARAGRAPH_CHARS,
+      );
+    }
+  });
+
+  it('tells the moderator what a stuck phone and the big screen show when reconnecting', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Tap to reconnect');
+    expect(text).toContain('Reconnecting…');
+  });
+
+  it('says an over-cap penalty is a negative bonus', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('negative bonus');
+  });
+
+  it('names the CSV columns edited by hand and the CSV identifier of each type', () => {
+    const text = renderGuideText();
+
+    for (const column of [
+      'round_note',
+      'show_round_note',
+      'category',
+      'author',
+      'notes',
+      'break_after',
+    ]) {
+      expect(text).toContain(column);
+    }
+    for (const type of QUESTION_TYPES) {
+      expect(text).toContain(type);
     }
   });
 
