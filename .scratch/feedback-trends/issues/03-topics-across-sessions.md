@@ -6,9 +6,9 @@ Parent spec: `.scratch/feedback-trends/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres test: the same topic from different sessions merges; most common spelling wins
-- [ ] The session detail still uses the same grouping (its tests stay green)
-- [ ] Page list and empty state
-- [ ] `DOCUMENTATION.md` updated
+- [x] Real-Postgres test: the same topic from different sessions merges; most common spelling wins
+- [x] The session detail still uses the same grouping (its tests stay green)
+- [x] Page list and empty state
+- [x] `DOCUMENTATION.md` updated

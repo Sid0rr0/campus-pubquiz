@@ -176,6 +176,8 @@ export interface FeedbackTrendsSession {
 export interface FeedbackTrends {
   /** Oldest to newest. Sessions with feedback off are left out. */
   sessions: FeedbackTrendsSession[];
+  /** Topic suggestions from those sessions, grouped like a single session's; sorted by count, then alphabetically. */
+  topics: SessionDetailFeedbackTopic[];
 }
 
 /** Deep-dive stats for one ended session, behind `/stats/:id`. */
