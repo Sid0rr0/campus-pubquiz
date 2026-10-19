@@ -1,6 +1,7 @@
 import type {
   TeamCodeView,
   TeamDetail,
+  TeamPageHistory,
   TeamsListedPayload,
   TeamsSortColumn,
   TeamsSortOrder,
@@ -64,6 +65,21 @@ export async function fetchTeamDetail(
   });
   if (!response.ok) return throwApiError(response, 'Could not load team');
   return (await response.json()) as TeamDetail;
+}
+
+/** The public team page's history. The code goes in the POST body, never a URL, and no cookie is sent. */
+export async function fetchTeamPage(
+  teamCode: string,
+  signal?: AbortSignal,
+): Promise<TeamPageHistory> {
+  const response = await fetch(`${getBackendUrl()}/team-page`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamCode }),
+    signal,
+  });
+  if (!response.ok) return throwApiError(response, 'Could not load team page');
+  return (await response.json()) as TeamPageHistory;
 }
 
 export async function fetchTeamCode(

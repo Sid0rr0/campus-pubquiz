@@ -9,6 +9,7 @@ import { AuthModule } from '@/auth/auth.module';
 import { UsersController } from '@/auth/users.controller';
 import { GameModule } from '@/game/game.module';
 import { DbModule } from '@/db/db.module';
+import { TeamPageController } from '@/team/team-page.controller';
 import { TeamsController } from '@/team/teams.controller';
 import { AnswerController } from '@/answer/answer.controller';
 import {
@@ -49,6 +50,7 @@ import { StatsService } from '@/stats/stats.service';
     SessionsController,
     AnswerController,
     TeamsController,
+    TeamPageController,
     BonusAwardsController,
     BonusAwardMutationsController,
     StatsController,

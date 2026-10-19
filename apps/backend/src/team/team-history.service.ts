@@ -64,6 +64,12 @@ export class TeamHistoryService {
     };
   }
 
+  /** The history of the team that owns a team code (any case); null when no team does. */
+  async detailByCode(teamCode: string): Promise<TeamDetail | null> {
+    const team = await this.teams.findOne({ code: teamCode.toUpperCase() });
+    return team ? this.detail(team.id) : null;
+  }
+
   /** Every ended session each team took part in, newest first. A team with none maps to an empty list. */
   async resultsForTeams(
     teamIds: readonly number[],

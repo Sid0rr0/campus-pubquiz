@@ -84,6 +84,7 @@ management and authoring UI:
 | `/quizzes/[id]`  | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
 | `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
 | `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
+| `/team`          | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)    |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -112,7 +113,7 @@ behaviour of each status.
 | `lobby`             | QR code and join code; joined teams pop into the roster with a chime (at most one per 500 ms; teams present at load stay silent)                                                                                                                                                                                              | "You're in! Look for (the team's name) on the big screen", "Waiting for the quiz to start…" + the player count card + rules link                                                                                                                                     | Session created, or `PREVIOUS` from `rules`                                                                                        | — (`START_QUIZ` → `rules`)                                                                                             |
 | `rules`             | Rules: round/topic/break structure + house rules, shown once per quiz                                                                                                                                                                                                                                                         | The same rules                                                                                                                                                                                                                                                       | `START_QUIZ`                                                                                                                       | `round_overview`, or `round_intro` if the overview is turned off                                                       |
 | `round_overview`    | Every round's title (with category/author), shown once                                                                                                                                                                                                                                                                        | "Look at the screen — Rounds"                                                                                                                                                                                                                                        | `ADVANCE` from `rules`                                                                                                             | First round's `round_intro`                                                                                            |
-| `round_intro`       | Round title card: "ROUND N — category", title, author, and the round note when shown on screen                                                                                                                                                                                                                                                                    | "Look at the screen" + round title; the block browser instead if questions are already open                                                                                                                                                                          | `ADVANCE` from `round_overview`, from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
+| `round_intro`       | Round title card: "ROUND N — category", title, author, and the round note when shown on screen                                                                                                                                                                                                                                | "Look at the screen" + round title; the block browser instead if questions are already open                                                                                                                                                                          | `ADVANCE` from `round_overview`, from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
 | `question_open`     | The current question (prompt + media)                                                                                                                                                                                                                                                                                         | Block browser: every question opened so far in the block, answerable (last write wins)                                                                                                                                                                               | `ADVANCE` from `round_intro` or the previous question                                                                              | Next question; the next round's `round_intro` if the block continues; `locking` on the block's last question           |
 | `locking`           | Countdown on the block's last question                                                                                                                                                                                                                                                                                        | Still answerable, with a thin bar draining to the same lock deadline as the countdown; when the block locks the phone buzzes and stamps "Locked" (live moves only, not on reconnect or Previous)                                                                     | `ADVANCE` from the block's last question                                                                                           | `break_intro` — the block locks; a kahoot round goes straight to `reveal`                                              |
 | `break_intro`       | "BREAK N" card, break timer, bonus categories, and "Rate the rounds on your phone ★" when feedback is collected                                                                                                                                                                                                               | Block browser, read-only                                                                                                                                                                                                                                             | The block locking                                                                                                                  | `reveal_intro` — refused while any answer in the block is ungraded                                                     |
@@ -1236,7 +1237,8 @@ on an older schema version keep working without a data migration.
 - **Teams**: join with a team name + the session's join code (typed or via the
   QR code on the display), or reconnect via a saved token/recovery code — see
   [Teams](#teams-join-reconnect-and-kick). Names are unique per team, not per
-  session.
+  session. The team code also opens the public team page with no login — see
+  [Team page](#team-page).
 
 ## Sessions: Running Multiple Quizzes at Once
 
@@ -1339,6 +1341,25 @@ single Standings winner. A session the team was kicked from or left is listed
 with `hasLeft: true` and no placing: it counts in `sessionsPlayed` but not in
 wins, podiums, best or average placing. The response never carries feedback or
 the team code.
+
+### Team page
+
+`/team` is the public **team page**: a team's own history, opened with its team
+code and no login. The page calls `POST /team-page` with `{ teamCode }`
+(`TeamPageController`), which returns `{ name, summary, sessions }`: exactly what
+`TeamHistoryService.detail` gives staff, without the team `id`. It never carries
+feedback or the team code.
+
+- **The code never goes in a URL or query string**, so it stays out of logs and
+  browser history. It travels in the POST body, is validated with Zod (a missing,
+  blank or non-string code is a 400) and matched case-insensitively.
+- **An unknown code is a generic 404**, "No team with that code", which doesn't
+  reveal whether a team name exists.
+- **The route is public** (no session cookie, no CSRF header) and uses the
+  `ThrottlerGuard` (5 requests per minute per client) so team codes can't be guessed.
+- On a phone that stores a team code (`team-storage.ts`) the page opens directly;
+  otherwise it shows a code form. A typed code is kept in memory only and is not
+  saved.
 
 The `/teams` directory (`GET /teams`) shows the same figure: each list item
 carries `averagePlacing: number | null`, computed by `averagePlacingOf` over

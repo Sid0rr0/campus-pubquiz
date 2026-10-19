@@ -29,72 +29,86 @@ const features = tableFeatures({
 });
 const helper = createColumnHelper<typeof features, TeamSessionRow>();
 
+/** Where a session's name links to, or null for plain text. */
+export type SessionHref = (gameSessionId: number) => string | null;
+
 function sharePercent(row: TeamSessionRow): number {
   return row.maxPoints > 0 ? (row.totalPoints / row.maxPoints) * 100 : 0;
 }
 
-const columns = helper.columns([
-  helper.accessor((row) => new Date(row.playedAt).getTime(), {
-    id: 'playedAt',
-    header: 'Date',
-    sortFn: sortFn_basic,
-    cell: (context) =>
-      new Date(context.row.original.playedAt).toLocaleDateString(),
-  }),
-  helper.accessor('name', {
-    header: 'Session',
-    cell: (context) => (
-      <Link
-        href={`/stats/${context.row.original.gameSessionId}`}
-        className="underline-offset-2 hover:underline"
-      >
-        {context.getValue()}
-      </Link>
-    ),
-  }),
-  // A team that left has no placing; it sorts after every placed session.
-  helper.accessor((row) => row.placing ?? Infinity, {
-    id: 'placing',
-    header: 'Placing',
-    sortFn: sortFn_basic,
-    cell: (context) => {
-      const row = context.row.original;
-      if (row.placing === null || row.placingTo === null) return 'left';
-      const place = placingText(
-        { rank: row.placing, rankTo: row.placingTo },
-        (ordinalPlace) => ordinalPlace,
-      );
-      return `${place} of ${row.teamCount}`;
-    },
-  }),
-  helper.accessor('totalPoints', {
-    header: 'Points',
-    sortFn: sortFn_basic,
-  }),
-  helper.accessor(sharePercent, {
-    id: 'share',
-    header: 'Share of max',
-    sortFn: sortFn_basic,
-    cell: (context) => `${context.getValue().toFixed(0)}%`,
-  }),
-  helper.accessor('correctCount', {
-    header: 'Correct',
-    sortFn: sortFn_basic,
-  }),
-  helper.accessor((row) => row.playerCount ?? -1, {
-    id: 'playerCount',
-    header: 'Players',
-    sortFn: sortFn_basic,
-    cell: (context) => context.row.original.playerCount ?? '—',
-  }),
-]);
+const staffSessionHref: SessionHref = (id) => `/stats/${id}`;
+
+const buildColumns = (sessionHref: SessionHref) =>
+  helper.columns([
+    helper.accessor((row) => new Date(row.playedAt).getTime(), {
+      id: 'playedAt',
+      header: 'Date',
+      sortFn: sortFn_basic,
+      cell: (context) =>
+        new Date(context.row.original.playedAt).toLocaleDateString(),
+    }),
+    helper.accessor('name', {
+      header: 'Session',
+      cell: (context) => {
+        const href = sessionHref(context.row.original.gameSessionId);
+        return href === null ? (
+          context.getValue()
+        ) : (
+          <Link href={href} className="underline-offset-2 hover:underline">
+            {context.getValue()}
+          </Link>
+        );
+      },
+    }),
+    // A team that left has no placing; it sorts after every placed session.
+    helper.accessor((row) => row.placing ?? Infinity, {
+      id: 'placing',
+      header: 'Placing',
+      sortFn: sortFn_basic,
+      cell: (context) => {
+        const row = context.row.original;
+        if (row.placing === null || row.placingTo === null) return 'left';
+        const place = placingText(
+          { rank: row.placing, rankTo: row.placingTo },
+          (ordinalPlace) => ordinalPlace,
+        );
+        return `${place} of ${row.teamCount}`;
+      },
+    }),
+    helper.accessor('totalPoints', {
+      header: 'Points',
+      sortFn: sortFn_basic,
+    }),
+    helper.accessor(sharePercent, {
+      id: 'share',
+      header: 'Share of max',
+      sortFn: sortFn_basic,
+      cell: (context) => `${context.getValue().toFixed(0)}%`,
+    }),
+    helper.accessor('correctCount', {
+      header: 'Correct',
+      sortFn: sortFn_basic,
+    }),
+    helper.accessor((row) => row.playerCount ?? -1, {
+      id: 'playerCount',
+      header: 'Players',
+      sortFn: sortFn_basic,
+      cell: (context) => context.row.original.playerCount ?? '—',
+    }),
+  ]);
 
 interface TeamSessionsTableProps {
   sessions: TeamSessionRow[];
+  /** Defaults to the staff session stats page; the public team page passes none, as staff pages are closed to teams. */
+  sessionHref?: SessionHref;
 }
 
 /** A team's ended sessions, sortable and paginated in the browser (the server sends the whole history). */
-export function TeamSessionsTable({ sessions }: TeamSessionsTableProps) {
+export function TeamSessionsTable({
+  sessions,
+  sessionHref = staffSessionHref,
+}: TeamSessionsTableProps) {
+  const columns = useMemo(() => buildColumns(sessionHref), [sessionHref]);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'playedAt', desc: true },
   ]);

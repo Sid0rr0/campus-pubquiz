@@ -65,6 +65,9 @@ export interface TeamDetail {
   sessions: TeamSessionRow[];
 }
 
+/** A team's history as the team itself sees it, behind `POST /team-page`: the staff figures without the team id. Never carries feedback or the team code. */
+export type TeamPageHistory = Omit<TeamDetail, 'id'>;
+
 export const TEAMS_SORT_COLUMNS = [
   'joinedAt',
   'sessionsJoined',
