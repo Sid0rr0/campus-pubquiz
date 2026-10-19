@@ -29,17 +29,11 @@ const features = tableFeatures({
 });
 const helper = createColumnHelper<typeof features, TeamSessionRow>();
 
-/** Where a session's name links to, or null for plain text. */
-export type SessionHref = (gameSessionId: number) => string | null;
-
 function sharePercent(row: TeamSessionRow): number {
   return row.maxPoints > 0 ? (row.totalPoints / row.maxPoints) * 100 : 0;
 }
 
-const staffSessionHref: SessionHref = (id) => `/stats/${id}`;
-
 const buildColumns = (
-  sessionHref: SessionHref,
   onOpenSession: ((gameSessionId: number) => void) | undefined,
 ) =>
   helper.columns([
@@ -64,11 +58,11 @@ const buildColumns = (
             </button>
           );
         }
-        const href = sessionHref(context.row.original.gameSessionId);
-        return href === null ? (
-          context.getValue()
-        ) : (
-          <Link href={href} className="underline-offset-2 hover:underline">
+        return (
+          <Link
+            href={`/stats/${context.row.original.gameSessionId}`}
+            className="underline-offset-2 hover:underline"
+          >
             {context.getValue()}
           </Link>
         );
@@ -113,22 +107,16 @@ const buildColumns = (
 
 interface TeamSessionsTableProps {
   sessions: TeamSessionRow[];
-  /** Defaults to the staff session stats page. */
-  sessionHref?: SessionHref;
-  /** Makes each session name a button instead of a link; the public team page uses it, as staff pages are closed to teams and its team code stays out of URLs. */
+  /** Makes each session name a button instead of a link to the staff session stats page; the public team page uses it, as staff pages are closed to teams and its team code stays out of URLs. */
   onOpenSession?: (gameSessionId: number) => void;
 }
 
 /** A team's ended sessions, sortable and paginated in the browser (the server sends the whole history). */
 export function TeamSessionsTable({
   sessions,
-  sessionHref = staffSessionHref,
   onOpenSession,
 }: TeamSessionsTableProps) {
-  const columns = useMemo(
-    () => buildColumns(sessionHref, onOpenSession),
-    [sessionHref, onOpenSession],
-  );
+  const columns = useMemo(() => buildColumns(onOpenSession), [onOpenSession]);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'playedAt', desc: true },
   ]);

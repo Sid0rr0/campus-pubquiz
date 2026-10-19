@@ -68,38 +68,48 @@ export async function fetchTeamDetail(
   return (await response.json()) as TeamDetail;
 }
 
-/** The public team page's history. The code goes in the POST body, never a URL, and no cookie is sent. */
-export async function fetchTeamPage(
+/** POSTs a team code to the public team page. The code goes in the body, never a URL, and no cookie is sent. */
+async function postTeamCode<T>(
+  path: string,
   teamCode: string,
+  fallback: string,
   signal?: AbortSignal,
-): Promise<TeamPageHistory> {
-  const response = await fetch(`${getBackendUrl()}/team-page`, {
+): Promise<T> {
+  const response = await fetch(`${getBackendUrl()}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ teamCode }),
     signal,
   });
-  if (!response.ok) return throwApiError(response, 'Could not load team page');
-  return (await response.json()) as TeamPageHistory;
+  if (!response.ok) return throwApiError(response, fallback);
+  return (await response.json()) as T;
 }
 
-/** One ended night of the public team page. The code goes in the POST body, never a URL, and no cookie is sent. */
-export async function fetchTeamNight(
+/** The public team page's history. */
+export function fetchTeamPage(
+  teamCode: string,
+  signal?: AbortSignal,
+): Promise<TeamPageHistory> {
+  return postTeamCode(
+    '/team-page',
+    teamCode,
+    'Could not load team page',
+    signal,
+  );
+}
+
+/** One ended night of the public team page. */
+export function fetchTeamNight(
   teamCode: string,
   gameSessionId: number,
   signal?: AbortSignal,
 ): Promise<TeamNightDetail> {
-  const response = await fetch(
-    `${getBackendUrl()}/team-page/sessions/${gameSessionId}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teamCode }),
-      signal,
-    },
+  return postTeamCode(
+    `/team-page/sessions/${gameSessionId}`,
+    teamCode,
+    'Could not load this night',
+    signal,
   );
-  if (!response.ok) return throwApiError(response, 'Could not load this night');
-  return (await response.json()) as TeamNightDetail;
 }
 
 export async function fetchTeamCode(

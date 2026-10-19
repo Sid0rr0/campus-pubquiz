@@ -13,7 +13,7 @@ import {
   fetchTeamPage,
   TeamsApiError,
 } from '@/app/lib/teams-api';
-import { SummaryTiles } from '@/app/teams/[id]/team-detail-panel';
+import { SummaryTiles } from '@/app/teams/[id]/summary-tiles';
 import { TeamSessionsTable } from '@/app/teams/[id]/team-sessions-table';
 
 function CodeForm({
@@ -122,10 +122,12 @@ function NightDetail({
   code,
   gameSessionId,
   onBack,
+  onChangeCode,
 }: {
   code: string;
   gameSessionId: number;
   onBack: () => void;
+  onChangeCode: () => void;
 }) {
   const nightQuery = useQuery({
     queryKey: queryKeys.teams.night(code, gameSessionId),
@@ -148,9 +150,18 @@ function NightDetail({
         ← Back to history
       </button>
       {error && (
-        <p role="alert" className="font-extrabold text-magenta">
-          {error}
-        </p>
+        <>
+          <p role="alert" className="font-extrabold text-magenta">
+            {error}
+          </p>
+          <button
+            type="button"
+            onClick={onChangeCode}
+            className="self-start text-sm underline underline-offset-2"
+          >
+            Use a different team code
+          </button>
+        </>
       )}
       {nightQuery.data && (
         <>
@@ -219,6 +230,11 @@ export function TeamPagePanel() {
         code={code}
         gameSessionId={openSessionId}
         onBack={() => setOpenSessionId(null)}
+        onChangeCode={() => {
+          setOpenSessionId(null);
+          setEnteredCode(null);
+          setStoredCode(null);
+        }}
       />
     );
   }

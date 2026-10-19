@@ -254,6 +254,24 @@ describe('TeamPagePanel', () => {
         'No team with that code',
       );
     });
+
+    it('offers the code form again when the night cannot be loaded', async () => {
+      mockFetchTeamNight.mockRejectedValue(
+        new TeamsApiError('No team with that code', 404),
+      );
+      const user = userEvent.setup();
+      renderWithQuery(<TeamPagePanel />);
+      await user.click(
+        await screen.findByRole('button', { name: 'Winter Quiz' }),
+      );
+      await screen.findByRole('alert');
+
+      await user.click(
+        screen.getByRole('button', { name: /use a different team code/i }),
+      );
+
+      expect(await screen.findByLabelText('Team code')).toBeInTheDocument();
+    });
   });
 
   it('shows an empty state for a team with no ended session', async () => {
