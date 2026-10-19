@@ -293,21 +293,22 @@ export function QuestionDisplay({
         data-layout={showTwoColumnLayout ? 'two-column' : 'stacked'}
         className={
           showTwoColumnLayout
-            ? 'flex w-full min-h-0 flex-1 items-center gap-8'
+            ? 'flex w-full min-h-0 flex-1 items-stretch gap-8'
             : 'contents'
         }
       >
         <h1
           className={
             showTwoColumnLayout
-              ? `${promptClassName} flex-1 text-left`
+              ? `${promptClassName} flex-1 self-center text-left`
               : promptClassName
           }
         >
           {prompt}
         </h1>
         {showTwoColumnLayout && (
-          <div className="flex min-h-0 flex-1 items-center justify-center">
+          // Stretched (by the row's items-stretch) to a definite height, so the image's max-h-full caps against it.
+          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
             <img
               data-testid={`${mediaTestIdPrefix}-image`}
