@@ -107,7 +107,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Ties and showdowns',
     paragraphs: [
-      'When teams are tied for first place at a point where answers have been revealed, the Showdown panel becomes available. A showdown is a tiebreak between just the tied teams, who take turns in a fixed seat order.',
+      'When teams are tied for first place at a point where answers have been revealed, the Showdown panel becomes available. A showdown is a tiebreak between just the tied teams, who all guess at once on their phones; the guesses are then revealed one by one in a fixed seat order.',
     ],
   },
   {

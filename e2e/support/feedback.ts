@@ -1,5 +1,4 @@
 import { expect, type APIRequestContext } from '@playwright/test';
-import type { ControlScreen } from './screens/control-screen';
 import type { PhoneScreen } from './screens/phone-screen';
 
 /** The part of `GET /stats/sessions` a journey reads. */
@@ -66,19 +65,6 @@ export async function sendFeedback(
   }
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByText('Sent ✓')).toBeVisible();
-}
-
-/** Presses End Quiz in the sidebar and confirms the dialog; resolves once the session is `ended`. */
-export async function endQuiz(control: ControlScreen): Promise<void> {
-  await control.page
-    .locator('aside')
-    .getByRole('button', { name: 'End Quiz' })
-    .click();
-  await control.page
-    .getByRole('alertdialog', { name: 'End this quiz?' })
-    .getByRole('button', { name: 'End Quiz', exact: true })
-    .click();
-  await control.expectStatus('ended');
 }
 
 /** The stats id of the session with this join code (an ended session is listed there, newest first). */

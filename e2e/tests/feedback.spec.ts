@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures';
+import { endQuiz } from '../support/admin-pages';
 import {
-  endQuiz,
   expectRoundRating,
   findPlayedSessionId,
   rateRound,
