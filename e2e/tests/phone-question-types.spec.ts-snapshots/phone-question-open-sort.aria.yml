@@ -1,0 +1,40 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - navigation "Round 1 questions":
+    - button "Question 1"
+    - button "Question 2 (not open yet)" [disabled]
+    - button "Question 3 (not open yet)" [disabled]
+    - button "Question 4 (not open yet)" [disabled]
+  - heading "Put these planets in order from the Sun" [level=1]
+  - list:
+    - listitem:
+      - button "Drag to reorder Venus"
+      - text: Venus
+      - button "Move Venus up" [disabled]
+      - button "Move Venus down"
+    - listitem:
+      - button "Drag to reorder Mercury"
+      - text: Mercury
+      - button "Move Mercury up"
+      - button "Move Mercury down"
+    - listitem:
+      - button "Drag to reorder Earth"
+      - text: Earth
+      - button "Move Earth up"
+      - button "Move Earth down"
+    - listitem:
+      - button "Drag to reorder Mars"
+      - text: Mars
+      - button "Move Mars up"
+      - button "Move Mars down" [disabled]
+  - status
+  - button "Submit"
+  - button "I don't know"
+  - button "Answer history (1)"
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert
