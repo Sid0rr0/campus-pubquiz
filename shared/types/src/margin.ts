@@ -69,11 +69,21 @@ export function formatMarginText(margin: Margin): string {
   return `Answers within ${formatNumber(margin.value)}${suffix} of the real number count as correct`;
 }
 
-/** The accepted range as "low–high", or the single value when the margin is 0. */
-export function formatAcceptedRange(key: number, margin: Margin): string {
+/** The accepted bounds of `key` within `margin`, rounded for display. */
+function formatAcceptedBounds(
+  key: number,
+  margin: Margin,
+): { low: string; high: string } {
   const distance = allowedDistance(key, margin);
-  const low = formatNumber(key - distance);
-  const high = formatNumber(key + distance);
+  return {
+    low: formatNumber(key - distance),
+    high: formatNumber(key + distance),
+  };
+}
+
+/** The accepted range as "low–high", or the single value when both ends display the same. */
+export function formatAcceptedRange(key: number, margin: Margin): string {
+  const { low, high } = formatAcceptedBounds(key, margin);
   return low === high ? low : `${low}–${high}`;
 }
 
@@ -82,18 +92,14 @@ export function formatMarginHint(answer: string, margin: Margin): string {
   const key = parseFiniteNumber(answer);
   if (key === null) return 'Enter the answer to see the accepted range';
   const range = formatAcceptedRange(key, margin);
-  return range === formatNumber(key)
-    ? `Accepts only ${range}`
-    : `Accepts ${range}`;
+  return margin.value === 0 ? `Accepts only ${range}` : `Accepts ${range}`;
 }
 
 /** The reveal line: the key followed by what counts, e.g. "200 (anything from 180 to 220 counts)"; just the key when the margin is 0. */
 export function formatNumberReveal(answer: string, margin: Margin): string {
   const key = parseFiniteNumber(answer);
   if (key === null) return answer;
-  const distance = allowedDistance(key, margin);
-  const low = formatNumber(key - distance);
-  const high = formatNumber(key + distance);
-  if (low === high) return low;
+  if (margin.value === 0) return formatNumber(key);
+  const { low, high } = formatAcceptedBounds(key, margin);
   return `${formatNumber(key)} (anything from ${low} to ${high} counts)`;
 }

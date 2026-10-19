@@ -77,6 +77,12 @@ describe('formatNumberReveal', () => {
     );
   });
 
+  it('still shows the range for a tiny margin that rounds to the key', () => {
+    expect(formatNumberReveal('1', { value: 0.001, unit: 'percent' })).toBe(
+      '1 (anything from 1 to 1 counts)',
+    );
+  });
+
   it('shows the key as typed when it is not a number', () => {
     expect(formatNumberReveal('lots', { value: 10, unit: 'percent' })).toBe(
       'lots',
@@ -100,6 +106,12 @@ describe('formatMarginHint', () => {
   it('says only the key is accepted for margin 0', () => {
     expect(formatMarginHint('200', { value: 0, unit: 'percent' })).toBe(
       'Accepts only 200',
+    );
+  });
+
+  it('does not say only the key is accepted for a tiny nonzero margin', () => {
+    expect(formatMarginHint('1', { value: 0.001, unit: 'percent' })).toBe(
+      'Accepts 1',
     );
   });
 
