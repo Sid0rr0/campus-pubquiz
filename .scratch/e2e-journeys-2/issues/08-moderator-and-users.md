@@ -6,8 +6,8 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The moderator can advance and grade.
-- [ ] Whatever the docs say a moderator can't do is refused in the UI.
-- [ ] Passes `--repeat-each=5`.
+- [x] The moderator can advance and grade.
+- [x] Whatever the docs say a moderator can't do is refused in the UI.
+- [x] Passes `--repeat-each=5`.
