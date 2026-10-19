@@ -1,0 +1,26 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - region "On display":
+    - heading "On display" [level=2]
+    - text: Round 1 title
+    - paragraph: Remote round
+  - region "Notes":
+    - heading "Notes" [level=2]
+    - paragraph: Thank the sponsor.
+  - region "Up next":
+    - heading "Up next" [level=2]
+    - text: R1 Q1 free text — 1 pt
+    - paragraph: What is 2 + 2?
+    - paragraph: "Answer: 4"
+  - text: Display text size
+  - button "Decrease display text size": A−
+  - text: /\d+%/
+  - button "Increase display text size": A+
+  - button "Previous"
+  - button "Fullscreen media"
+  - button "Start Round"
+- region "Notifications alt+T"
+- alert

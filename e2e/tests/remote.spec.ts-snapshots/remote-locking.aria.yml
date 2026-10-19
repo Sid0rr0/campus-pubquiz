@@ -1,0 +1,22 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - region "On display":
+    - heading "On display" [level=2]
+    - text: Locking answers
+    - paragraph: R1 Q3 countdown
+  - region "Notes":
+    - heading "Notes" [level=2]
+  - region "Up next":
+    - heading "Up next" [level=2]
+  - text: Display text size
+  - button "Decrease display text size": A−
+  - text: /\d+%/
+  - button "Increase display text size": A+
+  - button "Previous"
+  - button "Fullscreen media"
+  - button "Advance"
+- region "Notifications alt+T"
+- alert

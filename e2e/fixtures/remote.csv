@@ -1,0 +1,4 @@
+round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after,category,author,round_note,show_round_note
+Remote round,free_text,What is 2 + 2?,,4,1,,,Read it slowly.,,,,,
+Remote round,free_text,Which band recorded the song you hear?,,Queen,1,https://example.invalid/e2e-clip.mp3,,,,,,,
+Remote round,free_text,Which singer is in this video?,,Rick Astley,2,https://www.youtube.com/watch?v=dQw4w9WgXcQ,,,1,,,Thank the sponsor.,

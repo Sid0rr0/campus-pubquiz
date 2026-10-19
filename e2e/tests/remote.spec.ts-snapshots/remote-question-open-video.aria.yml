@@ -1,0 +1,32 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: 0/1 teams answered
+  - paragraph: 0 correct
+  - text: /0:\d+/
+  - region "On display":
+    - heading "On display" [level=2]
+    - text: R1 Q3 free text — 2 pts
+    - paragraph: Which singer is in this video?
+    - paragraph: "Media: https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    - paragraph: "Answer: Rick Astley"
+  - region "Notes":
+    - heading "Notes" [level=2]
+    - paragraph: No notes for this question.
+  - region "Up next":
+    - heading "Up next" [level=2]
+    - text: Locking answers
+    - paragraph: R1 Q3 countdown
+  - text: Display text size
+  - button "Decrease display text size": A−
+  - text: /\d+%/
+  - button "Increase display text size": A+
+  - button "Play video again": Play again
+  - button "Pause"
+  - button "Previous"
+  - button "Fullscreen media"
+  - button "Advance"
+- region "Notifications alt+T"
+- alert
