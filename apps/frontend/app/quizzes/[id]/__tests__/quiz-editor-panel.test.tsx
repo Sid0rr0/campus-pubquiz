@@ -2002,6 +2002,25 @@ describe('QuizEditorPanel', () => {
       expect(screen.getByText('Accepts only 200')).toBeInTheDocument();
     });
 
+    it('asks for the answer, not a range, when the margin is blank and the answer is empty', async () => {
+      const user = userEvent.setup();
+      await startWithQuestion(user);
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+
+      await user.clear(screen.getByLabelText(/^margin$/i));
+
+      expect(
+        screen.getByText('Enter the answer to see the accepted range'),
+      ).toBeInTheDocument();
+
+      await user.type(screen.getByPlaceholderText(/accepted answer/i), '200');
+
+      expect(
+        screen.queryByText('Enter the answer to see the accepted range'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Accepts/)).not.toBeInTheDocument();
+    });
+
     it('keeps the prompt and a numeric answer when a Free text question becomes Number', async () => {
       const user = userEvent.setup();
       await startWithQuestion(user);

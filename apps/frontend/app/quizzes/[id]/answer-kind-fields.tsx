@@ -7,6 +7,7 @@ import {
   PlusIcon,
 } from '@radix-ui/react-icons';
 import {
+  DEFAULT_MARGIN,
   hasMarginType,
   type AnswerKind,
   formatMarginHint,
@@ -187,6 +188,10 @@ function MarginRow({ question, issues, onChange }: AnswerFieldsProps) {
     marginValue !== null && marginValue >= 0
       ? { value: marginValue, unit: question.marginUnit }
       : null;
+  // With no usable margin, a non-numeric answer still gets the "enter the answer" prompt (the margin passed is irrelevant to it).
+  const hintMargin =
+    margin ??
+    (parseFiniteNumber(question.correctText) === null ? DEFAULT_MARGIN : null);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2 text-xs font-extrabold text-foreground/60">
@@ -214,8 +219,8 @@ function MarginRow({ question, issues, onChange }: AnswerFieldsProps) {
             </Button>
           ))}
         </div>
-        {margin && (
-          <span>{formatMarginHint(question.correctText, margin)}</span>
+        {hintMargin && (
+          <span>{formatMarginHint(question.correctText, hintMargin)}</span>
         )}
       </div>
       {isZeroKeyWithPercent && (
