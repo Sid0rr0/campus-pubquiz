@@ -1,0 +1,3 @@
+round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after,category,author
+Key check,multiple_choice,Which planet is known as the Red Planet?,Venus|Mars|Jupiter,Venus,3,,,,,,
+Key check,free_text,What is the capital of France?,,Paris,2,,,,1,,
