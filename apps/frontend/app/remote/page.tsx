@@ -173,9 +173,15 @@ function RemotePageContent() {
         </div>
       </div>
 
-      <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">
+      <section
+        aria-labelledby="remote-on-display"
+        className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3"
+      >
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
+          <h2
+            id="remote-on-display"
+            className="text-xs font-extrabold tracking-wide text-magenta uppercase"
+          >
             On display
           </h2>
           {presenterContext && (
@@ -189,8 +195,14 @@ function RemotePageContent() {
         )}
       </section>
 
-      <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">
-        <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
+      <section
+        aria-labelledby="remote-notes"
+        className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3"
+      >
+        <h2
+          id="remote-notes"
+          className="text-xs font-extrabold tracking-wide text-magenta uppercase"
+        >
           Notes
         </h2>
         <NotesBody
@@ -199,9 +211,15 @@ function RemotePageContent() {
         />
       </section>
 
-      <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">
+      <section
+        aria-labelledby="remote-up-next"
+        className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3"
+      >
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
+          <h2
+            id="remote-up-next"
+            className="text-xs font-extrabold tracking-wide text-magenta uppercase"
+          >
             Up next
           </h2>
           {presenterContext?.nextScreen && (
