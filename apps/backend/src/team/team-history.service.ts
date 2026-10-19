@@ -1,6 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import type { TeamDetail, TeamSessionRow } from '@campus-pubquiz/types';
+import {
+  formatAnswer,
+  resolveAnswerKind,
+  type QuestionType,
+  type TeamDetail,
+  type TeamNightDetail,
+  type TeamNightQuestion,
+  type TeamSessionRow,
+  type Verdict,
+} from '@campus-pubquiz/types';
+import { readQuestionPayload } from '@/db/question-payload';
 import { Team } from '@/db/entities/team.entity';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
@@ -28,6 +38,24 @@ interface CorrectCountRow {
   gameSessionId: number;
   teamId: number;
   count: string | number;
+}
+
+interface NightQuestionRow {
+  id: number;
+  type: QuestionType;
+  prompt: string;
+  answer: string;
+  payload: unknown;
+  points: number;
+  roundId: number;
+  roundTitle: string;
+}
+
+interface NightAnswerRow {
+  questionId: number;
+  value: string;
+  verdict: Verdict | null;
+  pointsAwarded: string | number;
 }
 
 /** A team's session results, with every placing read from the session's Standings. */
@@ -68,6 +96,107 @@ export class TeamHistoryService {
   async detailByCode(teamCode: string): Promise<TeamDetail | null> {
     const team = await this.teams.findOne({ code: teamCode.toUpperCase() });
     return team ? this.detail(team.id) : null;
+  }
+
+  /**
+   * One ended night as the team that owns the code saw it: every question in
+   * order with the team's own answer and the key. Null for an unknown code, a
+   * session that hasn't ended or one the team took no part in (kicked teams
+   * did, so they still see their answers). Only this team's answers are read.
+   */
+  async nightByCode(
+    teamCode: string,
+    gameSessionId: number,
+  ): Promise<TeamNightDetail | null> {
+    const team = await this.teams.findOne({ code: teamCode.toUpperCase() });
+    if (!team) return null;
+    const knex = this.teams.getKnex();
+
+    const session = (await knex('game_sessions as gs')
+      .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
+      .where('gs.id', gameSessionId)
+      .where('gs.status', 'ended')
+      .select(
+        'gs.quiz_id as quizId',
+        'gs.name as name',
+        'qz.title as quizTitle',
+        'gs.created_at as playedAt',
+      )
+      .first()) as
+      | {
+          quizId: number;
+          name: string | null;
+          quizTitle: string;
+          playedAt: string | Date;
+        }
+      | undefined;
+    if (!session) return null;
+    if (!(await this.standings.hasTakenPart(gameSessionId, team.id))) {
+      return null;
+    }
+
+    const questions = (await knex('questions as q')
+      .join('rounds as r', 'r.id', 'q.round_id')
+      .where('r.quiz_id', session.quizId)
+      .orderBy([
+        { column: 'r.order_index', order: 'asc' },
+        { column: 'q.order_index', order: 'asc' },
+      ])
+      .select(
+        'q.id as id',
+        'q.type as type',
+        'q.prompt as prompt',
+        'q.answer as answer',
+        'q.payload as payload',
+        'q.points as points',
+        'r.id as roundId',
+        'r.title as roundTitle',
+      )) as NightQuestionRow[];
+    const answers = (await knex('answers')
+      .where('game_session_id', gameSessionId)
+      .where('team_id', team.id)
+      .select(
+        'question_id as questionId',
+        'value',
+        'verdict',
+        'points_awarded as pointsAwarded',
+      )) as NightAnswerRow[];
+    const answerByQuestion = new Map(answers.map((a) => [a.questionId, a]));
+
+    const roundNumberById = new Map<number, number>();
+    const questionCountByRound = new Map<number, number>();
+    const rows = questions.map((question): TeamNightQuestion => {
+      if (!roundNumberById.has(question.roundId)) {
+        roundNumberById.set(question.roundId, roundNumberById.size + 1);
+      }
+      const questionNumber =
+        (questionCountByRound.get(question.roundId) ?? 0) + 1;
+      questionCountByRound.set(question.roundId, questionNumber);
+
+      const { options } = readQuestionPayload(question);
+      const formattable = { type: question.type, options };
+      const answer = answerByQuestion.get(question.id);
+      return {
+        questionId: question.id,
+        roundTitle: question.roundTitle,
+        roundNumber: roundNumberById.get(question.roundId)!,
+        questionNumber,
+        prompt: question.prompt,
+        type: question.type,
+        answerKind: resolveAnswerKind(question),
+        points: question.points,
+        teamAnswer: answer ? formatAnswer(answer.value, formattable) : null,
+        verdict: answer?.verdict ?? null,
+        pointsAwarded: answer ? Number(answer.pointsAwarded) : 0,
+        correctAnswer: formatAnswer(question.answer, formattable),
+      };
+    });
+    return {
+      gameSessionId,
+      name: session.name ?? session.quizTitle,
+      playedAt: new Date(session.playedAt).toISOString(),
+      questions: rows,
+    };
   }
 
   /** Every ended session each team took part in, newest first. A team with none maps to an empty list. */

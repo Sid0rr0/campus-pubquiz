@@ -381,6 +381,21 @@ async function endTheNight(night: Night): Promise<void> {
   await phoneA.expectText('You finished 1st of 2');
   await phoneB.expectText('You finished 2nd of 2');
   await snapAllScreens(night, 'ended');
+  await openTeamPageFromPhone(phoneA);
+}
+
+/** The ended screen's "Our team page" link opens /team with the phone's stored code, showing the night just played. */
+async function openTeamPageFromPhone(phone: PhoneScreen): Promise<void> {
+  await phone.page.getByRole('link', { name: 'Our team page' }).click();
+  await expect(phone.page).toHaveURL(/\/team$/);
+  await expect(
+    phone.page.getByRole('heading', { name: phone.teamName, level: 1 }),
+  ).toBeVisible();
+  await expect(
+    phone.page.getByRole('heading', { name: 'Sessions', level: 2 }),
+  ).toBeVisible();
+  // The answer detail of this night arrives with the team page's night detail
+  // (ticket 02); extend here with its assertions once that is on the branch.
 }
 
 test('a whole quiz night is played across the big screen, the laptop and two phones', async ({

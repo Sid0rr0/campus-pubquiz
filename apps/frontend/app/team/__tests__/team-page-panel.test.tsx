@@ -131,6 +131,126 @@ describe('TeamPagePanel', () => {
     expect(screen.getByLabelText('Team code')).toBeInTheDocument();
   });
 
+  describe('a night in detail', () => {
+    const NIGHT: TeamNightDetail = {
+      gameSessionId: 2,
+      name: 'Winter Quiz',
+      playedAt: '2026-03-01T19:00:00.000Z',
+      questions: [
+        {
+          questionId: 1,
+          roundTitle: 'Warm-up',
+          roundNumber: 1,
+          questionNumber: 1,
+          prompt: 'Capital of France?',
+          type: 'free_text',
+          answerKind: 'text',
+          points: 10,
+          teamAnswer: 'Paris',
+          verdict: 'correct',
+          pointsAwarded: 10,
+          correctAnswer: 'Paris',
+        },
+        {
+          questionId: 2,
+          roundTitle: 'Finale',
+          roundNumber: 2,
+          questionNumber: 1,
+          prompt: 'Smallest first',
+          type: 'sort',
+          answerKind: 'sort',
+          points: 6,
+          teamAnswer: 'a → c → b',
+          verdict: 'incorrect',
+          pointsAwarded: 0,
+          correctAnswer: 'a → b → c',
+        },
+        {
+          questionId: 3,
+          roundTitle: 'Finale',
+          roundNumber: 2,
+          questionNumber: 2,
+          prompt: 'Pair up',
+          type: 'match',
+          answerKind: 'match',
+          points: 4,
+          teamAnswer: null,
+          verdict: null,
+          pointsAwarded: 0,
+          correctAnswer: 'one → x, two → y',
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, 'STORED1');
+      mockFetchTeamNight.mockReset();
+      mockFetchTeamNight.mockResolvedValue(NIGHT);
+    });
+
+    it("opens a session to show each question with the team's answer, verdict and the right answer", async () => {
+      const user = userEvent.setup();
+      renderWithQuery(<TeamPagePanel />);
+
+      await user.click(
+        await screen.findByRole('button', { name: 'Winter Quiz' }),
+      );
+
+      expect(await screen.findByText('Capital of France?')).toBeInTheDocument();
+      expect(mockFetchTeamNight).toHaveBeenCalledWith(
+        'STORED1',
+        2,
+        expect.anything(),
+      );
+      const first = screen.getByText('Capital of France?').closest('li')!;
+      expect(within(first).getByText('Warm-up')).toBeInTheDocument();
+      expect(within(first).getByText('Your answer')).toBeInTheDocument();
+      expect(within(first).getByText('Correct')).toBeInTheDocument();
+      expect(within(first).getByText('10 / 10')).toBeInTheDocument();
+      const second = screen.getByText('Smallest first').closest('li')!;
+      expect(within(second).getByText('a → c → b')).toBeInTheDocument();
+      expect(within(second).getByText('Incorrect')).toBeInTheDocument();
+      expect(within(second).getByText('a → b → c')).toBeInTheDocument();
+      expect(within(second).getByText('0 / 6')).toBeInTheDocument();
+      const third = screen.getByText('Pair up').closest('li')!;
+      expect(within(third).getByText('No answer')).toBeInTheDocument();
+      expect(within(third).getByText('one → x, two → y')).toBeInTheDocument();
+    });
+
+    it('goes back to the history', async () => {
+      const user = userEvent.setup();
+      renderWithQuery(<TeamPagePanel />);
+      await user.click(
+        await screen.findByRole('button', { name: 'Winter Quiz' }),
+      );
+      await screen.findByText('Capital of France?');
+
+      await user.click(
+        screen.getByRole('button', { name: /back to history/i }),
+      );
+
+      expect(
+        await screen.findByRole('button', { name: 'Winter Quiz' }),
+      ).toBeInTheDocument();
+    });
+
+    it('shows the error when the night cannot be loaded', async () => {
+      mockFetchTeamNight.mockRejectedValue(
+        new TeamsApiError('No team with that code', 404),
+      );
+      const user = userEvent.setup();
+      renderWithQuery(<TeamPagePanel />);
+
+      await user.click(
+        await screen.findByRole('button', { name: 'Winter Quiz' }),
+      );
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'No team with that code',
+      );
+    });
+  });
+
   it('shows an empty state for a team with no ended session', async () => {
     window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, 'STORED1');
     mockFetchTeamPage.mockResolvedValue({

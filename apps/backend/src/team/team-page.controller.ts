@@ -4,11 +4,13 @@ import {
   Controller,
   HttpCode,
   NotFoundException,
+  Param,
+  ParseIntPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import type { TeamPageHistory } from '@campus-pubquiz/types';
+import type { TeamNightDetail, TeamPageHistory } from '@campus-pubquiz/types';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { teamPageBodySchema } from '@/team/team-page.schema';
 
@@ -36,5 +38,24 @@ export class TeamPageController {
       summary: detail.summary,
       sessions: detail.sessions,
     };
+  }
+
+  /** One ended night: every question with the team's own answer and the key. */
+  @Post('sessions/:sessionId')
+  @HttpCode(200)
+  async night(
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Body() body: unknown,
+  ): Promise<TeamNightDetail> {
+    const parsed = teamPageBodySchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException('teamCode is required');
+    }
+    const detail = await this.teamHistory.nightByCode(
+      parsed.data.teamCode,
+      sessionId,
+    );
+    if (!detail) throw new NotFoundException('No team with that code');
+    return detail;
   }
 }

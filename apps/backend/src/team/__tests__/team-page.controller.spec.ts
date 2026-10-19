@@ -141,6 +141,197 @@ describe('TeamPageController (Postgres integration)', () => {
     );
   });
 
+  describe('a night in detail', () => {
+    /** A quiz of two rounds: a free-text question, then a sort and a match question. */
+    async function createNight(status: 'ended' | 'question_open' = 'ended') {
+      const quiz = em.create(Quiz, { title: 'Night quiz' });
+      const round1 = em.create(Round, {
+        quiz,
+        title: 'Warm-up',
+        orderIndex: 0,
+      });
+      const round2 = em.create(Round, { quiz, title: 'Finale', orderIndex: 1 });
+      const text = em.create(Question, {
+        round: round1,
+        orderIndex: 0,
+        type: 'free_text',
+        prompt: 'Capital of France?',
+        answer: 'Paris',
+        points: 10,
+      });
+      const sort = em.create(Question, {
+        round: round2,
+        orderIndex: 0,
+        type: 'sort',
+        prompt: 'Smallest first',
+        answer: 'a|b|c',
+        payload: { options: ['c', 'a', 'b'] },
+        points: 6,
+      });
+      const match = em.create(Question, {
+        round: round2,
+        orderIndex: 1,
+        type: 'match',
+        prompt: 'Pair up',
+        answer: 'x|y',
+        payload: { options: ['one', 'two'], matchTargets: ['y', 'x'] },
+        points: 4,
+      });
+      const session = em.create(GameSession, {
+        quiz,
+        joinCode: `NIGHT${(joinCounter += 1)}`,
+        status,
+      });
+      await em.flush();
+      return { session, text, sort, match };
+    }
+
+    async function joinTeam(
+      name: string,
+      session: GameSession,
+      onRoster = true,
+    ) {
+      const team = em.create(Team, {
+        name,
+        token: `${name}-token`,
+        code: `${name.toUpperCase()}1`,
+      });
+      if (onRoster) em.create(GameSessionTeam, { gameSession: session, team });
+      await em.flush();
+      return team;
+    }
+
+    it("returns every question in order with the team's own answers, verdicts and the right answers", async () => {
+      const night = await createNight();
+      const alpha = await joinTeam('Alpha', night.session);
+      const beta = await joinTeam('Beta', night.session);
+      const answer = (
+        team: Team,
+        question: Question,
+        value: string,
+        pointsAwarded: number,
+        verdict: 'correct' | 'partial' | 'incorrect',
+      ) =>
+        em.create(Answer, {
+          gameSession: night.session,
+          question,
+          team,
+          value,
+          pointsAwarded,
+          gradedAt: new Date(),
+          verdict,
+        });
+      answer(alpha, night.text, 'Paris', 10, 'correct');
+      answer(alpha, night.sort, 'a|c|b', 0, 'incorrect');
+      answer(beta, night.text, 'Lyon-secret-beta', 0, 'incorrect');
+      answer(beta, night.match, 'x|y', 4, 'correct');
+      await em.flush();
+
+      const detail = await controller.night(night.session.id, {
+        teamCode: alpha.code,
+      });
+
+      expect(detail.gameSessionId).toBe(night.session.id);
+      expect(detail.questions).toEqual([
+        {
+          questionId: night.text.id,
+          roundTitle: 'Warm-up',
+          roundNumber: 1,
+          questionNumber: 1,
+          prompt: 'Capital of France?',
+          type: 'free_text',
+          answerKind: 'text',
+          points: 10,
+          teamAnswer: 'Paris',
+          verdict: 'correct',
+          pointsAwarded: 10,
+          correctAnswer: 'Paris',
+        },
+        {
+          questionId: night.sort.id,
+          roundTitle: 'Finale',
+          roundNumber: 2,
+          questionNumber: 1,
+          prompt: 'Smallest first',
+          type: 'sort',
+          answerKind: 'sort',
+          points: 6,
+          teamAnswer: 'a → c → b',
+          verdict: 'incorrect',
+          pointsAwarded: 0,
+          correctAnswer: 'a → b → c',
+        },
+        {
+          questionId: night.match.id,
+          roundTitle: 'Finale',
+          roundNumber: 2,
+          questionNumber: 2,
+          prompt: 'Pair up',
+          type: 'match',
+          answerKind: 'match',
+          points: 4,
+          teamAnswer: null,
+          verdict: null,
+          pointsAwarded: 0,
+          correctAnswer: 'one → x, two → y',
+        },
+      ]);
+      expect(JSON.stringify(detail)).not.toContain('Lyon-secret-beta');
+    });
+
+    it('answers a session that has not ended with a 404', async () => {
+      const night = await createNight('question_open');
+      const alpha = await joinTeam('Alpha', night.session);
+
+      await expect(
+        controller.night(night.session.id, { teamCode: alpha.code }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('answers a session the team never joined, and an unknown session or code, with a 404', async () => {
+      const night = await createNight();
+      const outsider = await joinTeam('Outsider', night.session, false);
+      const alpha = await joinTeam('Alpha', night.session);
+
+      await expect(
+        controller.night(night.session.id, { teamCode: outsider.code }),
+      ).rejects.toThrow(new NotFoundException('No team with that code'));
+      await expect(
+        controller.night(night.session.id + 999, { teamCode: alpha.code }),
+      ).rejects.toThrow(new NotFoundException('No team with that code'));
+      await expect(
+        controller.night(night.session.id, { teamCode: 'NOPE99' }),
+      ).rejects.toThrow(new NotFoundException('No team with that code'));
+    });
+
+    it('still shows a kicked team its answers', async () => {
+      const night = await createNight();
+      const kicked = await joinTeam('Kicked', night.session, false);
+      em.create(Answer, {
+        gameSession: night.session,
+        question: night.text,
+        team: kicked,
+        value: 'Paris',
+        pointsAwarded: 10,
+        gradedAt: new Date(),
+        verdict: 'correct',
+      });
+      await em.flush();
+
+      const detail = await controller.night(night.session.id, {
+        teamCode: kicked.code,
+      });
+
+      expect(detail.questions[0].teamAnswer).toBe('Paris');
+    });
+
+    it('rejects a body without a usable team code', async () => {
+      await expect(controller.night(1, {})).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
   it('is throttled and open without a session cookie', () => {
     const guards = Reflect.getMetadata('__guards__', TeamPageController) as
       | unknown[]

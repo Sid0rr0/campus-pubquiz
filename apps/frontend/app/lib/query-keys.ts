@@ -27,6 +27,8 @@ export const queryKeys = {
     code: (teamId: number) => ['teams', 'code', teamId] as const,
     detail: (teamId: number) => ['teams', 'detail', teamId] as const,
     page: (teamCode: string) => ['teams', 'page', teamCode] as const,
+    night: (teamCode: string, gameSessionId: number) =>
+      ['teams', 'page', teamCode, 'night', gameSessionId] as const,
   },
   quizzes: {
     all: ['quizzes'] as const,
