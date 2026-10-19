@@ -1,3 +1,5 @@
+import type { FeedbackTrendsRange } from '@/app/lib/stats-api';
+
 /**
  * Single source of truth for every React Query key in the app. Invalidation
  * crosses component boundaries (starting a session from /sessions must
@@ -63,7 +65,7 @@ export const queryKeys = {
       sortBy: string;
       sortOrder: string;
     }) => ['stats', 'sessions', params] as const,
-    feedbackTrends: (range: { from: string; to: string }) =>
+    feedbackTrends: (range: FeedbackTrendsRange) =>
       ['stats', 'feedback-trends', range] as const,
     session: (gameSessionId: number) =>
       ['stats', 'sessions', gameSessionId] as const,

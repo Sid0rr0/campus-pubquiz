@@ -199,7 +199,7 @@ export class StatsService {
           gameSessionId: row.gameSessionId,
           joinCode: row.joinCode,
           quizTitle: row.quizTitle,
-          name: row.name ?? row.quizTitle,
+          name: this.displayName(row),
           playedAt: new Date(row.playedAt).toISOString(),
           teamCount: sessionStandings.participantCount,
           maxPoints: Number(row.maxPoints),
@@ -307,7 +307,7 @@ export class StatsService {
         gameSessionId: header.gameSessionId,
         joinCode: header.joinCode,
         quizTitle: header.quizTitle,
-        name: header.name ?? header.quizTitle,
+        name: this.displayName(header),
         playedAt: header.playedAt,
       },
       standings,
@@ -385,18 +385,31 @@ export class StatsService {
       .select(knex.raw('count(rr.id) as count'))) as FeedbackTrendsRow[];
 
     return {
-      sessions: rows.map((row) => ({
-        id: row.id,
-        name: row.name ?? row.quizTitle,
-        date: new Date(row.date).toISOString(),
-        rating:
-          Number(row.count) === 0
-            ? null
-            : { average: Number(row.average), count: Number(row.count) },
-      })),
+      sessions: rows.map((row) => {
+        const { average, count } = this.ratingOf(row);
+        return {
+          id: row.id,
+          name: this.displayName(row),
+          date: new Date(row.date).toISOString(),
+          rating: count === 0 ? null : { average, count },
+        };
+      }),
       topics: await this.topicsAcross(sessionsInRange()),
       ...(await this.rankRounds({ from, to })),
     };
+  }
+
+  /** A session's custom name if set, else its quiz's own title. */
+  private displayName(row: { name: string | null; quizTitle: string }): string {
+    return row.name ?? row.quizTitle;
+  }
+
+  /** A grouped rating row's average and count, as numbers (Postgres returns aggregates as strings). */
+  private ratingOf(row: {
+    average: string | number | null;
+    count: string | number;
+  }): { average: number; count: number } {
+    return { average: Number(row.average), count: Number(row.count) };
   }
 
   /** Topic suggestions of the given sessions, oldest submission first into the shared grouping. No team column is selected. */
@@ -468,10 +481,9 @@ export class StatsService {
           (rows as RankedRoundRow[]).map(
             (row): FeedbackTrendsRound => ({
               sessionId: row.sessionId,
-              sessionName: row.name ?? row.quizTitle,
+              sessionName: this.displayName(row),
               roundTitle: row.roundTitle,
-              average: Number(row.average),
-              count: Number(row.count),
+              ...this.ratingOf(row),
             }),
           ),
         );
