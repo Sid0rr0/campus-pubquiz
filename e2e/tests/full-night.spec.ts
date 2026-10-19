@@ -384,7 +384,7 @@ async function endTheNight(night: Night): Promise<void> {
   await openTeamPageFromPhone(phoneA);
 }
 
-/** The ended screen's "Our team page" link opens /team with the phone's stored code, showing the night just played. */
+/** The ended screen's "Our team page" link opens /team with the phone's stored code, showing the night just played and, opened, the team's own answers beside the right ones. */
 async function openTeamPageFromPhone(phone: PhoneScreen): Promise<void> {
   await phone.page.getByRole('link', { name: 'Our team page' }).click();
   await expect(phone.page).toHaveURL(/\/team$/);
@@ -394,8 +394,23 @@ async function openTeamPageFromPhone(phone: PhoneScreen): Promise<void> {
   await expect(
     phone.page.getByRole('heading', { name: 'Sessions', level: 2 }),
   ).toBeVisible();
-  // The answer detail of this night arrives with the team page's night detail
-  // (ticket 02); extend here with its assertions once that is on the branch.
+
+  // Team A is the only team that played here, so the table has one night.
+  await phone.page.getByRole('table').getByRole('button').first().click();
+  const capital = phone.page
+    .getByRole('listitem')
+    .filter({ hasText: warmUp.capital.prompt });
+  await expect(capital).toBeVisible();
+  await expect(capital.getByText('Your answer')).toBeVisible();
+  await expect(capital.getByText('Right answer')).toBeVisible();
+  // Team A typed the key, so its own answer and the right answer read the same.
+  await expect(
+    capital.getByText(warmUp.capital.key, { exact: true }),
+  ).toHaveCount(2);
+  await expect(capital.getByText('Correct', { exact: true })).toBeVisible();
+  await expect(
+    capital.getByText(`${warmUp.capital.points} / ${warmUp.capital.points}`),
+  ).toBeVisible();
 }
 
 test('a whole quiz night is played across the big screen, the laptop and two phones', async ({
