@@ -119,7 +119,6 @@ export function QuestionBrowserPanel({
                 >
                   <span
                     role="img"
-                    aria-label={`${round.title} title card${isTitleOnDisplay ? ' (live on display)' : ''}`}
                     title={`${round.title} title card${isTitleOnDisplay ? ' (live on display)' : ''}`}
                     className={displayMarkerClasses(
                       isTitleOnDisplay,
@@ -164,7 +163,6 @@ export function QuestionBrowserPanel({
                   {round.breakAfter && (
                     <span
                       role="img"
-                      aria-label={`${round.title} break card${isBreakOnDisplay ? ' (live on display)' : ''}`}
                       title={`${round.title} break card${isBreakOnDisplay ? ' (live on display)' : ''}`}
                       className={displayMarkerClasses(
                         isBreakOnDisplay,
