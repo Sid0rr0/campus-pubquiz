@@ -146,6 +146,11 @@ never touches your dev servers, `.next` or `campus_pubquiz`):
 | Backend  | :3000                | :3001 (`node dist/main`)                         |
 | Database | `campus_pubquiz`     | `campus_pubquiz_e2e` in the same Postgres server |
 
+One run at a time: every worktree shares those ports and that database, so a
+run waits on a lock (`.git/e2e-run.lock`, in the clone's git common dir) until
+the run holding it finishes. A lock left by a run that died is cleared
+automatically.
+
 Every run drops and recreates `campus_pubquiz_e2e` and applies the migrations.
 If your Postgres isn't the docker-compose one, set `E2E_POSTGRES_URL` to a URL
 for the server's maintenance database (default

@@ -13,6 +13,7 @@ import {
   SHOULD_SKIP_BUILD,
 } from './support/env';
 import { resetLoginRecord } from './support/login-budget';
+import { acquireRunLock, releaseRunLock } from './support/run-lock';
 import { backend, frontend } from './support/servers';
 
 const MAX_CAPTURED_OUTPUT_BYTES = 64 * 1024 * 1024;
@@ -99,8 +100,19 @@ function migrateDatabase(): void {
   });
 }
 
-/** Builds both apps, resets the E2E database, starts both servers and logs the quiz master in once. */
+/** Waits its turn, then builds both apps, resets the E2E database, starts both servers and logs the quiz master in once. */
 export default async function globalSetup(): Promise<void> {
+  await acquireRunLock();
+  try {
+    await startStack();
+  } catch (error) {
+    // A failed setup skips the teardown, so release the lock here.
+    releaseRunLock();
+    throw error;
+  }
+}
+
+async function startStack(): Promise<void> {
   // Stop servers a crashed earlier run left behind, then start from nothing.
   await Promise.all([backend.stop(), frontend.stop()]);
   fs.rmSync(PATHS.stateDir, { recursive: true, force: true });
