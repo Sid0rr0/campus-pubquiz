@@ -1,0 +1,33 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - navigation "Round 1 questions":
+    - button "Question 1 (answered)"
+    - button "Question 2"
+    - button "Question 3 (not open yet)" [disabled]
+    - button "Question 4 (not open yet)" [disabled]
+  - heading "Match each country to its capital" [level=1]
+  - list:
+    - listitem: France
+    - listitem: Spain
+    - listitem: Italy
+  - list:
+    - listitem:
+      - text: Madrid
+      - button "Drag to reorder Madrid"
+    - listitem:
+      - text: Paris
+      - button "Drag to reorder Paris"
+    - listitem:
+      - text: Rome
+      - button "Drag to reorder Rome"
+  - status
+  - button "Submit"
+  - button "I don't know"
+  - button "Answer history (2)"
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert

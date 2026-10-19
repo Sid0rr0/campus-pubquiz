@@ -1,0 +1,12 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Phone types
+  - paragraph: ROUND 1
+  - paragraph: REVEALING ANSWERS · QUESTION 3
+  - heading "How many bones are in an adult human body?" [level=1]
+  - paragraph: "/Answer: \\d+ · \\d+\\.\\d+–\\d+\\.\\d+ accepted/"
+  - paragraph: 1 of 2 teams
+- region "Notifications alt+T"
+- alert
