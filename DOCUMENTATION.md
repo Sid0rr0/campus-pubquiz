@@ -392,13 +392,16 @@ questions to it.
 Browsers block audio until a tap, so `/display` shows an "Enable sound" button
 until it is tapped, whenever any display sound can play (that is, unless the
 big-screen mute is on), whatever the lock-countdown setting says. The mute also
-silences the lock-countdown track.
+silences the lock-countdown track, and it silences every question's media as
+well (YouTube, audio and video, while the question is asked and at reveal).
+Muted media keeps playing, so unmuting brings the sound back where the clip has
+got to, and a mute that is already on applies to media that mounts later.
 
 **Fields that belong to one room's view:**
 
 | View                            | Fields                                                                                                                                                                                                                                |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry)                                                         |
+| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                                                         |
 | Display (`DisplayStatePayload`) | `screen` (the Display screen), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
 | Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                                            |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                                                                      |

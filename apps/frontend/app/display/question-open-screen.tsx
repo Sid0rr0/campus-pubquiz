@@ -10,6 +10,7 @@ interface QuestionOpenScreenProps {
   isFullscreen?: boolean;
   mediaReplayToken?: number;
   isMediaPaused?: boolean;
+  isDisplaySoundMuted?: boolean;
   /** Epoch-ms deadline when a kahootMode question auto-locks, or null/undefined when no timer is armed. */
   kahootQuestionEndsAt?: number | null;
 }
@@ -21,6 +22,7 @@ export function QuestionOpenScreen({
   isFullscreen,
   mediaReplayToken,
   isMediaPaused,
+  isDisplaySoundMuted,
   kahootQuestionEndsAt,
 }: QuestionOpenScreenProps) {
   const countClassName =
@@ -41,6 +43,7 @@ export function QuestionOpenScreen({
           isFullscreen={isFullscreen}
           mediaReplayToken={mediaReplayToken}
           isMediaPaused={isMediaPaused}
+          isDisplaySoundMuted={isDisplaySoundMuted}
         />
       </div>
       {teamCounts === undefined ? (

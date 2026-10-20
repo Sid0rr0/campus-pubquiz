@@ -17,6 +17,8 @@ interface ClosestGuessRevealScreenProps {
   closestGuess: ClosestGuessRevealData;
   mediaTestIdPrefix: string;
   autoplayMedia?: boolean;
+  /** The big-screen mute — silences the answer media. Left off on the phone. */
+  isDisplaySoundMuted?: boolean;
   /** The big screen's reveal: each step line slides in as it arrives. Left off on the phone. */
   hasEntrance?: boolean;
 }
@@ -50,6 +52,7 @@ export function ClosestGuessRevealScreen({
   closestGuess,
   mediaTestIdPrefix,
   autoplayMedia,
+  isDisplaySoundMuted,
   hasEntrance,
 }: ClosestGuessRevealScreenProps) {
   const { minGuess, maxGuess, closestGuesses } = closestGuess;
@@ -102,6 +105,7 @@ export function ClosestGuessRevealScreen({
             autoplayMedia={autoplayMedia}
             startSeconds={revealStartSeconds}
             endSeconds={revealEndSeconds}
+            isDisplaySoundMuted={isDisplaySoundMuted}
           />
         </>
       )}

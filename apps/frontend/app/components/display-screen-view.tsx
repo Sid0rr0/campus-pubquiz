@@ -41,6 +41,7 @@ export interface DisplayLiveContext {
   isConnected: boolean;
   isMediaFullscreen?: boolean;
   isMediaPaused?: boolean;
+  isDisplaySoundMuted?: boolean;
   mediaReplayToken?: number;
   kahootQuestionEndsAt: number | null;
   onPickAnotherGame: () => void;
@@ -137,6 +138,7 @@ export function DisplayScreenView({
           isFullscreen={live?.isMediaFullscreen}
           mediaReplayToken={live?.mediaReplayToken}
           isMediaPaused={live?.isMediaPaused}
+          isDisplaySoundMuted={live?.isDisplaySoundMuted}
           kahootQuestionEndsAt={live?.kahootQuestionEndsAt}
         />
       );
@@ -171,6 +173,7 @@ export function DisplayScreenView({
         <BreakReviewScreen
           question={screen.question}
           autoplayMedia={settings.autoplayMedia}
+          isDisplaySoundMuted={live?.isDisplaySoundMuted}
         />
       );
     case 'break_round_title':
@@ -201,6 +204,7 @@ export function DisplayScreenView({
                   closestGuess={revealQuestion.closestGuess}
                   mediaTestIdPrefix="reveal"
                   autoplayMedia={settings.autoplayMedia}
+                  isDisplaySoundMuted={live?.isDisplaySoundMuted}
                   hasEntrance
                   {...closestGuessAnswerProps(revealQuestion)}
                 />
@@ -218,6 +222,7 @@ export function DisplayScreenView({
                   mediaTestIdPrefix="reveal"
                   autoplayMedia={settings.autoplayMedia}
                   isFullscreen={live?.isMediaFullscreen}
+                  isDisplaySoundMuted={live?.isDisplaySoundMuted}
                   hasRevealEntrance
                 />
               </RevealEntranceConfig>

@@ -53,7 +53,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Media and sound',
     paragraphs: [
       'On a video or audio question, Pause and "Play again" sit below the Leaderboard row on Control. Moving to another question restarts the media.',
-      'The Display sound toggle mutes the big screen; phones never play sound.',
+      'The Display sound toggle mutes the big screen, clips included; phones stay silent.',
     ],
   },
   {
