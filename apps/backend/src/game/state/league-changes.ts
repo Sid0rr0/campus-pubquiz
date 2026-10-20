@@ -6,7 +6,6 @@ import type {
 } from '@campus-pubquiz/types';
 import type { SessionSettingsChanges } from '@/game/state/session-settings-changes';
 import type { SessionChange } from '@/game/state/session-write';
-import { withLeagueTop } from '@/game/state/session-updates.util';
 import type { LeagueTableService } from '@/league/league-table.service';
 import type { LeagueService } from '@/league/league.service';
 
@@ -45,10 +44,10 @@ export class LeagueChanges {
   /** Re-reads the lobby league after a league was edited, deleted or had a session added or removed. */
   async refreshTop(session: SessionState): Promise<SessionChange<void>> {
     return {
-      session: withLeagueTop(
-        session,
-        await this.topOrNull(session.seededGame.gameSessionId),
-      ),
+      session: {
+        ...session,
+        leagueTop: await this.topOrNull(session.seededGame.gameSessionId),
+      },
       outcome: undefined,
     };
   }

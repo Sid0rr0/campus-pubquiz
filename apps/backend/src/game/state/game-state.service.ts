@@ -29,6 +29,7 @@ import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { StandingsService } from '@/standings/standings.service';
+import { LiveResultsRead } from '@/game/state/live-results-read';
 import { SeedService } from '@/db/seed.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
@@ -117,7 +118,7 @@ export class GameStateService implements OnModuleInit {
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,
-      this.standingsService,
+      new LiveResultsRead(this.standingsService),
       this.showdownService,
       (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
     );

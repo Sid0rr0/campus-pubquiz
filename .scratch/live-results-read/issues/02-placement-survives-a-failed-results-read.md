@@ -10,7 +10,7 @@ See the spec's "Callers → Placement / League change module" and "Docs, in the 
 
 **Blocked by:** 01 (Session writes end with one live results read)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Placement (creation and restart) ends with the live results read, then gets the league top from the league change module. Its own four-way read and field spreads are gone.
 - [ ] The four one-line live result and league top helpers are deleted.
