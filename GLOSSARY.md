@@ -120,6 +120,10 @@ _Avoid_: title card note, intro text, round description
 The screen the big screen draws, named by the server in the display view as `screen` with a kind and the content that kind draws (the question, the round's title, category, author and note, the break number, the leaderboard board and whether it is final, the active showdown). `/display` switches on the kind and looks nothing up. Its kinds are the On-air screen's plus `blank`, which the server sends (and logs) when it can't find a screen's content, so the big screen is never silently empty. Not the same as the On-air screen, which only names the screen (with ids and indexes) for the admin room, the presenter preview and the round note rule.
 _Avoid_: display state, big-screen view
 
+**Quiz preview**:
+A saved quiz's display screens, stepped through by staff without a session, to check its content before the night. Nothing is played, stored or counted, and no team can join. Not the same as the presenter preview, which describes the next press in a live session.
+_Avoid_: rehearsal, test session, dry run
+
 **Phone screen**:
 The screen a team's phone shows, named by the server in the players view as a `phoneScreen` with a kind (`leaderboard`, `block`, `lobby`, `rules`, `round_overview`, `round_title`, `ended`, `showdown_guessing`, `showdown_reveal`). `/play` draws by that kind rather than working it out from the game state. The `block` kind is the block browser, shown while the block is answerable and through break and reveal, and carries its mode (`answering` while the block is answerable, `locked` in break and break review, `revealing` from the reveal intro through reveal) and the question the big screen is revealing; the block browser draws from the mode alone. It does not say which team a phone belongs to: on `showdown_guessing` the phone picks the guess form or the "Tiebreaker in progress" message from its own team id.
 
