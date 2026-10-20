@@ -217,7 +217,10 @@ function AdminPageContent() {
     previousState: snapshot?.previousState ?? 'unavailable',
     isLeaderboardVisible,
     canToggleJoinOverlay: controls?.canToggleJoinOverlay ?? false,
+    canPauseMedia: controls?.canPauseMedia ?? false,
+    isDisplaySoundMuted: snapshot?.isDisplaySoundMuted ?? false,
     sendAction,
+    setDisplaySoundMuted,
   });
 
   if (isLoading) {

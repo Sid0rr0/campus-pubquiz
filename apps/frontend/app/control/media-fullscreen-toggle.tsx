@@ -3,6 +3,7 @@
 import { EnterFullScreenIcon, ExitFullScreenIcon } from '@radix-ui/react-icons';
 import type { GameAction } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { ADMIN_SHORTCUTS } from '@/app/control/admin-keyboard-shortcuts';
 
 interface MediaFullscreenToggleProps {
   isMediaFullscreen: boolean;
@@ -17,7 +18,7 @@ interface MediaFullscreenToggleProps {
 }
 
 /**
- * Tappable equivalent of the spacebar shortcut (see useAdminKeyboardShortcuts)
+ * Tappable equivalent of the F shortcut (see useAdminKeyboardShortcuts)
  * for full-viewport question media on /display — /remote and touch-only
  * admin devices have no keyboard to trigger it from. No-op on /display when
  * the current question has no media to enlarge.
@@ -35,6 +36,7 @@ export function MediaFullscreenToggle({
       aria-label={
         isMediaFullscreen ? 'Exit fullscreen media' : 'Fullscreen media'
       }
+      title={`Fullscreen media (${ADMIN_SHORTCUTS.toggleMediaFullscreen.keyName})`}
       aria-pressed={isMediaFullscreen}
       onClick={() => onAction('TOGGLE_MEDIA_FULLSCREEN')}
       className={[

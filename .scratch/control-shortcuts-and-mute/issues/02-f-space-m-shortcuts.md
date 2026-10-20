@@ -1,6 +1,6 @@
 # 02: F / Space / M shortcuts on /control
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Control shortcuts and mute](../spec.md)
 

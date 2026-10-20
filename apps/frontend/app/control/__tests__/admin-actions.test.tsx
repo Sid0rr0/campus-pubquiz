@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminActions } from '@/app/control/admin-actions';
+import { ADMIN_SHORTCUTS } from '@/app/control/admin-keyboard-shortcuts';
 
 function renderActions(
   overrides: Partial<Parameters<typeof AdminActions>[0]> = {},
@@ -65,6 +66,27 @@ describe('AdminActions — media playback row', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
 
     expect(onAction).toHaveBeenCalledWith('TOGGLE_MEDIA_PAUSE');
+  });
+
+  it('names each media key in the button tooltips', () => {
+    renderActions({ canPauseMedia: true });
+
+    expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute(
+      'title',
+      `Pause or resume (${ADMIN_SHORTCUTS.toggleMediaPause.keyName})`,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Fullscreen media' }),
+    ).toHaveAttribute(
+      'title',
+      `Fullscreen media (${ADMIN_SHORTCUTS.toggleMediaFullscreen.keyName})`,
+    );
+    expect(
+      screen.getByRole('switch', { name: /display sound/i }),
+    ).toHaveAttribute(
+      'title',
+      `Mute or unmute the big screen (${ADMIN_SHORTCUTS.toggleDisplayMute.keyName})`,
+    );
   });
 
   it('shows Resume while the media is paused', () => {

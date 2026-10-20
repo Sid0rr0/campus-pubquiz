@@ -4,7 +4,9 @@ export type AdminShortcutId =
   | 'showLeaderboard'
   | 'hideLeaderboard'
   | 'toggleJoinOverlay'
-  | 'toggleMedia';
+  | 'toggleMediaFullscreen'
+  | 'toggleMediaPause'
+  | 'toggleDisplayMute';
 
 export interface AdminShortcut {
   /** The `KeyboardEvent.key` value that triggers it. */
@@ -22,7 +24,7 @@ export const ADMIN_SHORTCUTS: Readonly<Record<AdminShortcutId, AdminShortcut>> =
       key: 'ArrowRight',
       keyName: 'Right arrow',
       description:
-        'Advance to the next step of the quiz. While the leaderboard is showing, reveal the next team on it, then hide it once every team is revealed.',
+        'Advance to the next step. On the leaderboard, reveal the next team, then hide it once all are revealed.',
     },
     previous: {
       key: 'ArrowLeft',
@@ -46,10 +48,19 @@ export const ADMIN_SHORTCUTS: Readonly<Record<AdminShortcutId, AdminShortcut>> =
       description:
         'Show or hide the join code and QR code over the big screen, once the quiz has started and until it ends.',
     },
-    toggleMedia: {
+    toggleMediaFullscreen: {
+      key: 'f',
+      keyName: 'F',
+      description: "Toggle a fullscreen view of the question's media.",
+    },
+    toggleMediaPause: {
       key: ' ',
       keyName: 'Space',
-      description:
-        "Toggle a fullscreen view of the current question's image or video on the big screen.",
+      description: 'Pause or resume the clip, when Pause shows.',
+    },
+    toggleDisplayMute: {
+      key: 'm',
+      keyName: 'M',
+      description: 'Mute or unmute the big screen.',
     },
   };
