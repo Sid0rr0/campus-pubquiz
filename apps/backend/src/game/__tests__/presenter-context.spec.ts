@@ -472,12 +472,11 @@ describe('GameStateService — getPresenterContext', () => {
 
         const result = await previewWalk().walk(async ({ status }) => {
           await answer();
-          const {
-            closestGuessRevealStep: step,
-            progress,
-            leaderboardRevealCount,
-          } = game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
+          const { progress, leaderboardRevealCount, screenKey } =
+            game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
           if (status !== 'reveal') return;
+          // The reveal screen key ends with the closest-guess step.
+          const step = Number(screenKey.split('-').at(-1));
           if (
             phase === 'before_board' &&
             step > 0 &&

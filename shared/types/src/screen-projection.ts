@@ -27,6 +27,7 @@ import {
   buildAdminFields,
   buildDisplayFields,
   buildPlayersFields,
+  buildScreenOperatorFields,
   buildSnapshot,
   isBlockAnswerable,
 } from './session-snapshot';
@@ -104,17 +105,24 @@ export function projectScreen(
   audience: SocketRoomName,
 ): StateViewByRoom[SocketRoomName] {
   const snapshot = buildSnapshot(session);
-  const { screen, screenKey, header } = describeOnAirScreen(snapshot);
+  // The closest-guess step stays server-side: it only keys the reveal screen
+  // and trims the reveal questions; no view carries it.
+  const { closestGuessRevealStep } = session;
+  const { screen, screenKey, header } = describeOnAirScreen({
+    ...snapshot,
+    closestGuessRevealStep,
+  });
 
   switch (audience) {
     case SOCKET_ROOMS.DISPLAY:
       return {
         ...snapshot,
+        ...buildScreenOperatorFields(session),
         ...buildDisplayFields(session, screen),
         revealQuestions: trimOnAirQuestion(
           snapshot.revealQuestions,
           snapshot.progress,
-          snapshot.closestGuessRevealStep,
+          closestGuessRevealStep,
         ),
         onAirScreen: screen,
         screenKey,
@@ -130,6 +138,7 @@ export function projectScreen(
     case SOCKET_ROOMS.ADMIN:
       return {
         ...snapshot,
+        ...buildScreenOperatorFields(session),
         ...buildAdminFields(session),
         onAirScreen: screen,
         ...describeAdminIndicators(snapshot),
@@ -164,7 +173,7 @@ export function projectScreen(
             : trimToRevealWalk(
                 snapshot.revealQuestions,
                 snapshot.progress,
-                snapshot.closestGuessRevealStep,
+                closestGuessRevealStep,
               ),
       };
       return isQuestionHiddenBehindKahootLeaderboard(session)

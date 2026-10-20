@@ -3,6 +3,7 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type StateSnapshotPayload,
+  type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
@@ -59,8 +60,8 @@ describe('Re-importing the quiz behind a session', () => {
   it('broadcasts the re-imported rounds to every room, so the lobby screens show them without a press', async () => {
     await reimportActiveQuiz(REIMPORTED_CSV);
 
-    for (const room of [SOCKET_ROOMS.ADMIN, SOCKET_ROOMS.DISPLAY]) {
-      const snapshots = game.payloadsTo<StateSnapshotPayload>(
+    for (const room of [SOCKET_ROOMS.ADMIN, SOCKET_ROOMS.DISPLAY] as const) {
+      const snapshots = game.payloadsTo<StateViewByRoom[typeof room]>(
         room,
         SOCKET_EVENTS.STATE_UPDATED,
       );

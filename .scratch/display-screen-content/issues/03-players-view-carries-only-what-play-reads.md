@@ -13,12 +13,12 @@ Parent spec: `.scratch/display-screen-content/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The shared snapshot no longer carries text scale, sound mute, break end time, answered team ids or round titles. The display and admin views carry the ones each reads.
-- [ ] No room view carries the closest-guess reveal step. The projection still trims reveal questions with it.
-- [ ] The players view type has none of the moved fields, so a `/play` read of one fails typecheck.
-- [ ] Screen projection specs check that the players view carries none of the moved fields and that no view carries the closest-guess reveal step.
-- [ ] The room-view fixtures follow the projection, and display, control and remote tests pass with fixture updates only.
-- [ ] DOCUMENTATION.md's protocol section lists the moved fields under the display and admin views, not the players view.
-- [ ] Typecheck, lint and tests pass.
+- [x] The shared snapshot no longer carries text scale, sound mute, break end time, answered team ids or round titles. The display and admin views carry the ones each reads.
+- [x] No room view carries the closest-guess reveal step. The projection still trims reveal questions with it.
+- [x] The players view type has none of the moved fields, so a `/play` read of one fails typecheck.
+- [x] Screen projection specs check that the players view carries none of the moved fields and that no view carries the closest-guess reveal step.
+- [x] The room-view fixtures follow the projection, and display, control and remote tests pass with fixture updates only.
+- [x] DOCUMENTATION.md's protocol section lists the moved fields under the display and admin views, not the players view.
+- [x] Typecheck, lint and tests pass.

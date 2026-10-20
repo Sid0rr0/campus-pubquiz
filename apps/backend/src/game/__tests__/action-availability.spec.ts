@@ -35,16 +35,16 @@ describe('Screen projection — Advance/Previous availability', () => {
   }
 
   function position() {
-    const snapshot = game.gameState.getSnapshot(game.joinCode);
-    const { status, roundIndex, questionIndex, revealIndex } =
-      snapshot.progress;
+    // The reveal screen key ends with the closest-guess step.
+    const view = game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
+    const { status, roundIndex, questionIndex, revealIndex } = view.progress;
     return JSON.stringify([
       status,
       roundIndex,
       questionIndex,
       revealIndex,
-      snapshot.closestGuessRevealStep,
-      snapshot.showdownRevealStep,
+      view.screenKey,
+      view.showdownRevealStep,
     ]);
   }
 

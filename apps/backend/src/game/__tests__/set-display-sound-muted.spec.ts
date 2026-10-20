@@ -1,7 +1,7 @@
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
-  type StateSnapshotPayload,
+  type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
@@ -29,14 +29,12 @@ describe('GameGateway — set display sound muted', () => {
       isDisplaySoundMuted: true,
     });
 
-    for (const room of [
-      SOCKET_ROOMS.DISPLAY,
-      SOCKET_ROOMS.ADMIN,
-      SOCKET_ROOMS.PLAYERS,
-    ]) {
+    for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN] as const) {
       expect(
         game
-          .payloadsTo<StateSnapshotPayload>(room, SOCKET_EVENTS.STATE_UPDATED)
+          .payloadsTo<
+            StateViewByRoom[typeof room]
+          >(room, SOCKET_EVENTS.STATE_UPDATED)
           .at(-1)?.isDisplaySoundMuted,
       ).toBe(true);
     }

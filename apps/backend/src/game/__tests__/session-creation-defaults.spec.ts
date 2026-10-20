@@ -48,7 +48,6 @@ describe('GameGateway — a freshly created session', () => {
     expect(snapshot.kahootQuestionEndsAt).toBeNull();
     expect(snapshot.breakEndsAt).toBeNull();
     expect(snapshot.leaderboardRevealCount).toBe(0);
-    expect(snapshot.closestGuessRevealStep).toBe(0);
   });
 
   it('carries nothing over from the session that came before it', async () => {
@@ -63,7 +62,6 @@ describe('GameGateway — a freshly created session', () => {
     expect(snapshot.kahootQuestionEndsAt).toBeNull();
     expect(snapshot.breakEndsAt).toBeNull();
     expect(snapshot.leaderboardRevealCount).toBe(0);
-    expect(snapshot.closestGuessRevealStep).toBe(0);
     const admin = await game.resync('admin', created.joinCode);
     expect(admin.phaseStartedAt).toBeNull();
     expect(admin.phaseElapsedMs).toBeNull();
