@@ -6,9 +6,15 @@ import { FeedbackTrendsPanel } from '@/app/stats/feedback/feedback-trends-panel'
 import { StatsApiError } from '@/app/lib/stats-api';
 import { renderWithQuery } from '@/test-utils/query';
 
-const { mockFetchFeedbackTrends } = vi.hoisted(() => ({
+const { mockFetchFeedbackTrends, mockFetchLeagues } = vi.hoisted(() => ({
   mockFetchFeedbackTrends: vi.fn(),
+  mockFetchLeagues: vi.fn(),
 }));
+
+vi.mock('@/app/lib/leagues-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/leagues-api')>();
+  return { ...actual, fetchLeagues: mockFetchLeagues };
+});
 
 vi.mock('@/app/lib/stats-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/stats-api')>();
@@ -55,6 +61,8 @@ describe('FeedbackTrendsPanel', () => {
   beforeEach(() => {
     mockFetchFeedbackTrends.mockReset();
     mockFetchFeedbackTrends.mockResolvedValue(TRENDS);
+    mockFetchLeagues.mockReset();
+    mockFetchLeagues.mockResolvedValue({ items: [] });
   });
 
   it('lists each session with its average rating and rating count', async () => {
@@ -162,6 +170,40 @@ describe('FeedbackTrendsPanel', () => {
         expect.anything(),
       ),
     );
+  });
+
+  it('switches from a date range to a league and back', async () => {
+    mockFetchLeagues.mockResolvedValue({
+      items: [{ id: 7, name: 'Autumn league', sessions: [] }],
+    });
+    const user = userEvent.setup();
+    renderWithQuery(<FeedbackTrendsPanel />);
+    await screen.findByText('Autumn quiz');
+    await user.type(screen.getByLabelText('From'), '2026-09-01');
+
+    await user.selectOptions(
+      await screen.findByLabelText('League'),
+      'Autumn league',
+    );
+
+    await waitFor(() =>
+      expect(mockFetchFeedbackTrends).toHaveBeenLastCalledWith(
+        { from: '2026-09-01', to: '', leagueId: 7 },
+        expect.anything(),
+      ),
+    );
+    expect(screen.getByLabelText('From')).toBeDisabled();
+    expect(screen.getByLabelText('To')).toBeDisabled();
+
+    await user.selectOptions(screen.getByLabelText('League'), 'Date range');
+
+    await waitFor(() =>
+      expect(mockFetchFeedbackTrends).toHaveBeenLastCalledWith(
+        { from: '2026-09-01', to: '' },
+        expect.anything(),
+      ),
+    );
+    expect(screen.getByLabelText('From')).toBeEnabled();
   });
 
   it('shows the error when loading fails', async () => {

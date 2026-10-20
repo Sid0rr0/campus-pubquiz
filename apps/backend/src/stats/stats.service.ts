@@ -360,12 +360,17 @@ export class StatsService {
    * SQL so no row ever carries a team id. Sessions with "Collect feedback" off
    * are left out (stored-before-the-setting sessions count as on).
    */
-  async getFeedbackTrends({
-    from,
-    to,
-  }: FeedbackTrendsQuery): Promise<FeedbackTrends> {
+  async getFeedbackTrends(query: FeedbackTrendsQuery): Promise<FeedbackTrends> {
     const knex = this.gameSessions.getKnex();
-    const sessionsInRange = () => this.feedbackSessionsInRange({ from, to });
+    if (query.leagueId !== undefined) {
+      const league = await knex('leagues')
+        .where('id', query.leagueId)
+        .first('id');
+      if (!league) {
+        throw new NotFoundException(`League ${query.leagueId} does not exist`);
+      }
+    }
+    const sessionsInRange = () => this.feedbackSessionsInRange(query);
 
     const rows = (await sessionsInRange()
       .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
@@ -395,7 +400,7 @@ export class StatsService {
         };
       }),
       topics: await this.topicsAcross(sessionsInRange()),
-      ...(await this.rankRounds({ from, to })),
+      ...(await this.rankRounds(query)),
     };
   }
 
@@ -427,14 +432,22 @@ export class StatsService {
     return groupTopics(rows.map((row) => storedTopicsSchema.parse(row.topics)));
   }
 
-  /** Ended sessions with feedback on whose date falls in the range (`gs` is the session table). */
-  private feedbackSessionsInRange({ from, to }: FeedbackTrendsQuery) {
-    const query = this.gameSessions
-      .getKnex()('game_sessions as gs')
+  /** Ended sessions with feedback on that are members of the league, or else whose date falls in the range (`gs` is the session table). */
+  private feedbackSessionsInRange({ from, to, leagueId }: FeedbackTrendsQuery) {
+    const knex = this.gameSessions.getKnex();
+    const query = knex('game_sessions as gs')
       .where('gs.status', 'ended')
       .whereRaw(
         `coalesce((gs.settings ->> 'collectFeedback')::boolean, true) = true`,
       );
+    if (leagueId !== undefined) {
+      return query.whereIn(
+        'gs.id',
+        knex('league_sessions')
+          .where('league_id', leagueId)
+          .select('game_session_id'),
+      );
+    }
     if (from) query.where('gs.created_at', '>=', `${from}T00:00:00Z`);
     if (to) {
       query.whereRaw(

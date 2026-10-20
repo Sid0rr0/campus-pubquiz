@@ -71,10 +71,14 @@ export async function fetchSessionDetail(
   return (await response.json()) as SessionDetailStats;
 }
 
-/** Both bounds are `YYYY-MM-DD` dates (UTC); an empty string means no bound. */
+/**
+ * Both bounds are `YYYY-MM-DD` dates (UTC); an empty string means no bound.
+ * A `leagueId` means that league's member sessions and wins over the bounds.
+ */
 export interface FeedbackTrendsRange {
   from: string;
   to: string;
+  leagueId?: number;
 }
 
 export async function fetchFeedbackTrends(
@@ -82,8 +86,12 @@ export async function fetchFeedbackTrends(
   signal?: AbortSignal,
 ): Promise<FeedbackTrends> {
   const query = new URLSearchParams();
-  if (range.from) query.set('from', range.from);
-  if (range.to) query.set('to', range.to);
+  if (range.leagueId !== undefined) {
+    query.set('leagueId', String(range.leagueId));
+  } else {
+    if (range.from) query.set('from', range.from);
+    if (range.to) query.set('to', range.to);
+  }
   const response = await fetch(
     `${getBackendUrl()}/stats/feedback-trends?${query}`,
     { credentials: 'include', signal },
