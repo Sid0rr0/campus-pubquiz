@@ -832,8 +832,9 @@ grading behavior. Media is not a type: any question can carry a
   toggle, 10% on a new question) and a live hint of the accepted range
   ("Accepts 180–220", "Accepts only 200" at margin 0, or a prompt to enter the
   answer while it isn't a number); a key of 0 with a percentage margin shows an
-  advisory hint, not an error. Switching Free text to Number keeps the prompt
-  and keeps the answer only if it parses as a number. **CSV:** there is no
+  advisory hint, not an error. Switching a question's type to Number or
+  Closest guess keeps the prompt and keeps the answer only if it parses as a
+  number; any other type keeps the answer. **CSV:** there is no
   margin column (like match's scoring mode): an imported Number question is
   stored with no margin and grades with the default (10%) the Answer key fills
   in when it is read; export writes no margin, so a custom margin is lost on
@@ -961,9 +962,10 @@ asks the question type. The team's own answer view carries no grading state.
 
 Every question also has one **answer kind** — `text`, `number`, `choice`,
 `sort` or `match` — resolved from its type alone by `resolveAnswerKind`
-(`shared/types/src/answer-kind.ts`). `multiple_choice` is the only type that
-carries choices and is always `choice`; every other type takes its registry
-input kind, whatever `options` it carries. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
+(`shared/types/src/answer-kind.ts`): a type's answer kind is its registry
+input kind, whatever `options` it carries. A type needs a numeric answer
+(`hasNumericAnswerKey`) when its answer kind is `number`: Number and Closest
+guess. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
 encodes, formats and scores a stored answer, and Scoring takes its base score
 from it. `closest_guess` shares the `number` kind but is never scored one
 answer at a time: the Grading policy's `gradeAtSubmit` gives a batch type no

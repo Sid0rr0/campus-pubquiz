@@ -51,8 +51,6 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   /** One moderator-facing sentence for the `/guide` page: how to author the question and how it is graded. */
   moderatorNote: string;
   inputKind: AnswerInputKind;
-  /** Whether the question carries a list of choices: never, or always (the answer is one of them). */
-  choices: 'none' | 'required';
   /** The one validation for an ImportQuestionPreview — import (via `decodeSheetRow`) and draft save both use it. */
   schema: z.ZodType;
   /** The payload codec: stored JSON is parsed against this (via `parseQuestionPayload`), never cast. */
@@ -81,7 +79,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'No options. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it, and you can override any mark by hand.',
     inputKind: 'text',
-    choices: 'none',
     schema: freeTextPreviewSchema,
     payload: freeTextPayloadSchema,
     csv: answerOnlyCsv,
@@ -97,7 +94,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'Options are separated by pipes (Paris|London|Berlin) and the answer must match one option exactly. Graded automatically when a team submits; you can override by hand.',
     inputKind: 'choice',
-    choices: 'required',
     schema: multipleChoicePreviewSchema,
     payload: multipleChoicePayloadSchema,
     csv: choicesCsv,
@@ -113,7 +109,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'Options are pipe-separated in any order and the answer lists them in the correct order. Graded automatically when a team submits; you can override by hand.',
     inputKind: 'sort',
-    choices: 'none',
     schema: sortPreviewSchema,
     payload: sortPayloadSchema,
     csv: sortCsv,
@@ -129,7 +124,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'Options hold both lists as left1|left2+right1|right2 and the answer pairs them (Paris+France|Tokyo+Japan). Graded automatically when a team submits; you can override by hand.',
     inputKind: 'match',
-    choices: 'none',
     schema: matchPreviewSchema,
     payload: matchPayloadSchema,
     csv: matchCsv,
@@ -145,7 +139,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'The answer is a number. Graded in one batch once the block locks: every team tied for the closest guess gets full points and everyone else gets zero. From then on you can override any mark by hand.',
     inputKind: 'number',
-    choices: 'none',
     schema: closestGuessPreviewSchema,
     payload: closestGuessPayloadSchema,
     csv: answerOnlyCsv,
@@ -161,7 +154,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'The answer is a number, and the question carries a margin (10% of the answer unless the editor says otherwise). An answer within the margin, edges included, is graded correct when a team submits; anything else is graded incorrect. Teams answer on a number keypad, and you can override any mark by hand.',
     inputKind: 'number',
-    choices: 'none',
     schema: numberPreviewSchema,
     payload: numberPayloadSchema,
     csv: answerOnlyCsv,
@@ -170,10 +162,6 @@ export const QUESTION_KINDS: {
     gradingSettings: ['margin'],
   },
 };
-
-export function answerInputKind(type: QuestionType): AnswerInputKind {
-  return QUESTION_KINDS[type].inputKind;
-}
 
 export interface QuestionIssue {
   path: PropertyKey[];

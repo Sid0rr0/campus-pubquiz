@@ -585,14 +585,48 @@ describe('changeQuestionType', () => {
     expect(switched.correctText).toBe('');
   });
 
-  it('leaves the answer alone when switching to any other type', () => {
+  it('clears an answer that is not a number when switching to Closest guess', () => {
     const switched = changeQuestionType(
-      freeTextQuestion('about 200'),
+      freeTextQuestion('Paris'),
       'closest_guess',
     );
 
-    expect(switched.correctText).toBe('about 200');
+    expect(switched.type).toBe('closest_guess');
+    expect(switched.prompt).toBe('How many bones?');
+    expect(switched.correctText).toBe('');
   });
+
+  it('keeps a numeric answer when switching Free text to Closest guess', () => {
+    const switched = changeQuestionType(
+      freeTextQuestion('206'),
+      'closest_guess',
+    );
+
+    expect(switched.correctText).toBe('206');
+  });
+
+  it('keeps a numeric answer when switching between Number and Closest guess and back', () => {
+    const toClosest = changeQuestionType(
+      { ...freeTextQuestion('206'), type: 'number' },
+      'closest_guess',
+    );
+    const backToNumber = changeQuestionType(toClosest, 'number');
+
+    expect(toClosest.correctText).toBe('206');
+    expect(backToNumber.correctText).toBe('206');
+  });
+
+  it.each(['free_text', 'multiple_choice', 'sort', 'match'] as const)(
+    'leaves the answer alone when switching to %s',
+    (type) => {
+      const switched = changeQuestionType(
+        { ...freeTextQuestion('about 200'), type: 'number' },
+        type,
+      );
+
+      expect(switched.correctText).toBe('about 200');
+    },
+  );
 
   it('does not mutate the question it was given', () => {
     const original = freeTextQuestion('about 200');

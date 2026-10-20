@@ -6,7 +6,7 @@ import {
   parseFiniteNumber,
   parseTimecode,
   PARTIAL_MATCH_SCORING,
-  hasMarginType,
+  hasNumericAnswerKey,
   type ClipFields,
   type MarginUnit,
   type ImportPreview,
@@ -139,13 +139,14 @@ export function makeRound(id: string, title = ''): EditorRound {
   };
 }
 
-/** Switches a question's type. Moving to Number keeps the prompt, and the answer only if it reads as a number, since a Number key must be one. */
+/** Switches a question's type. Moving to a type with a numeric answer key (Number, Closest guess) keeps the prompt, and the answer only if it reads as a number. */
 export function changeQuestionType(
   question: EditorQuestion,
   type: QuestionType,
 ): EditorQuestion {
   const keepsAnswer =
-    !hasMarginType(type) || parseFiniteNumber(question.correctText) !== null;
+    !hasNumericAnswerKey(type) ||
+    parseFiniteNumber(question.correctText) !== null;
   return {
     ...question,
     type,

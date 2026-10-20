@@ -58,6 +58,11 @@ export function hasMarginType(type: QuestionType): boolean {
   return QUESTION_KINDS[type].gradingSettings.includes('margin');
 }
 
+/** Whether the type's answer key is a number (derived from its answer kind): Number and Closest guess. */
+export function hasNumericAnswerKey(type: QuestionType): boolean {
+  return resolveAnswerKind({ type }) === 'number';
+}
+
 export function isKahootAllowedType(type: QuestionType): boolean {
   return KAHOOT_ALLOWED_TYPES.includes(type);
 }
