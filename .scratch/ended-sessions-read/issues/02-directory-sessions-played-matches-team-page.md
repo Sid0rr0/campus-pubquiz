@@ -8,7 +8,7 @@ See the spec's "Readers → Team directory" and "Docs, in the same change".
 
 **Blocked by:** 01 (Ended-sessions read owns "took part")
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A team kicked from an ended night after answering, or after receiving a bonus award, has that night counted in the directory's Sessions played.
 - [ ] A team on the roster of a lobby or running session doesn't have it counted until it ends.

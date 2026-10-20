@@ -68,6 +68,22 @@ export class EndedSessionsRead {
       .select(knex.raw('(roster.team_id is not null) as is_on_roster'));
   }
 
+  /**
+   * Sessions played per team as a query to join, sort by and page:
+   * `team_id` and `sessions_played`, the count of ended sessions the team took
+   * part in. Teams that took part in none have no row; join with a coalesce.
+   */
+  sessionsPlayedQuery() {
+    const knex: Knex = this.gameSessionTeams.getKnex();
+    return this.participantsQuery()
+      .join('game_sessions as ended_gs', 'ended_gs.id', 'p.game_session_id')
+      .where('ended_gs.status', 'ended')
+      .groupBy('p.team_id')
+      .clearSelect()
+      .select('p.team_id as team_id')
+      .select(knex.raw('count(*) as sessions_played'));
+  }
+
   /** Every team that took part in the given sessions, or in any session for the given teams. */
   async participants(scope: ParticipantScope): Promise<ParticipantRow[]> {
     const rows = (await this.participantsQuery(scope)) as {
