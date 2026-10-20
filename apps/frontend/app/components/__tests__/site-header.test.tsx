@@ -183,12 +183,44 @@ describe('SiteHeader', () => {
     expect(mockUseAuth).not.toHaveBeenCalled();
   });
 
-  it('shows no mobile hamburger when neither an account nor a team is present', () => {
+  it('links the public league table for visitors, from the nav and the mobile hamburger', async () => {
+    const user = userEvent.setup();
     render(<SiteHeader />);
 
+    expect(screen.getByRole('link', { name: /^league$/i })).toHaveAttribute(
+      'href',
+      '/league',
+    );
+    await user.click(screen.getByRole('button', { name: /open menu/i }));
+    const drawer = within(screen.getByRole('dialog'));
+    expect(drawer.getByRole('link', { name: /^league$/i })).toHaveAttribute(
+      'href',
+      '/league',
+    );
+  });
+
+  it('links the league table for signed-in staff, next to Manage leagues for admins only', () => {
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'authenticated', user: MODERATOR_USER }),
+    );
+    const { unmount } = render(<SiteHeader />);
+    expect(screen.getByRole('link', { name: /^league$/i })).toHaveAttribute(
+      'href',
+      '/league',
+    );
     expect(
-      screen.queryByRole('button', { name: /open menu/i }),
+      screen.queryByRole('link', { name: /manage leagues/i }),
     ).not.toBeInTheDocument();
+    unmount();
+
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'authenticated', user: ADMIN_USER }),
+    );
+    render(<SiteHeader />);
+    expect(screen.getByRole('link', { name: /^league$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /manage leagues/i }),
+    ).toHaveAttribute('href', '/leagues');
   });
 
   it('reveals the admin account links from the mobile hamburger in the app header', async () => {

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { TeamNightDetail, TeamPageHistory } from '@campus-pubquiz/types';
+import { LeagueTableService } from '@/league/league-table.service';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { teamPageBodySchema } from '@/team/team-page.schema';
 
@@ -24,7 +25,10 @@ const NIGHT_LIMIT_PER_MINUTE = 30;
 @Controller('team-page')
 @UseGuards(ThrottlerGuard)
 export class TeamPageController {
-  constructor(private readonly teamHistory: TeamHistoryService) {}
+  constructor(
+    private readonly teamHistory: TeamHistoryService,
+    private readonly leagueTable: LeagueTableService,
+  ) {}
 
   /** Opening the page is the guessing surface, so it keeps the strict default limit. */
   @Post()
@@ -36,6 +40,7 @@ export class TeamPageController {
       name: detail.name,
       summary: detail.summary,
       sessions: detail.sessions,
+      leagues: await this.leagueTable.positionsOf(detail.id),
     };
   }
 

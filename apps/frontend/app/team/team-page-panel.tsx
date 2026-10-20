@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/app/components/button';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
+import { ordinal } from '@/app/lib/placing-text';
 import { queryKeys } from '@/app/lib/query-keys';
 import { readStoredIdentity } from '@/app/lib/team-storage';
 import type { TeamNightQuestion, Verdict } from '@campus-pubquiz/types';
@@ -250,6 +251,27 @@ export function TeamPagePanel() {
         </Link>
         <h1 className="font-display text-2xl">{data.name}</h1>
       </div>
+
+      {data.leagues.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-display text-lg">Leagues</h2>
+          <ul className="flex flex-col gap-2">
+            {data.leagues.map((league) => (
+              <li
+                key={league.leagueId}
+                className="flex flex-col rounded-2xl border-2 border-foreground/15 bg-white p-4"
+              >
+                <span className="font-bold">{league.leagueName}</span>
+                <span>
+                  {league.shared ? 'Joint ' : ''}
+                  {ordinal(league.position)} of {league.teamCount} ·{' '}
+                  {league.leaguePoints} pts
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {data.sessions.length === 0 ? (
         <p className="text-foreground/60">

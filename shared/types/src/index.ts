@@ -35,6 +35,7 @@ export * from './media';
 export * from './round-category';
 export * from './round-note';
 export * from './stats';
+export * from './league';
 export * from './scoring';
 export * from './on-air-screen';
 export * from './question-types';

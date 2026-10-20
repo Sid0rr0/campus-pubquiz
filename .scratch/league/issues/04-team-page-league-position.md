@@ -6,7 +6,7 @@ Parent spec: `.scratch/league/spec.md`
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres test: positions match the public table; shared positions read "Joint 3rd"; leagues that aren't current are omitted
-- [ ] Page renders zero, one or several leagues
+- [x] Real-Postgres test: positions match the public table; shared positions read "Joint 3rd"; leagues that aren't current are omitted
+- [x] Page renders zero, one or several leagues

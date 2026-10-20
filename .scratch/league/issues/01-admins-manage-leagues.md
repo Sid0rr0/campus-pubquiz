@@ -6,9 +6,9 @@ Parent spec: `.scratch/league/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres tests: add and remove an ended session; adding a live session via this route is refused; delete cascades only league rows; `current` uses `endsOn ≥ today`
-- [ ] Zod validation (`endsOn ≥ startsOn`, non-empty name); moderator writes → 403
-- [ ] Admin page with empty states
-- [ ] `DOCUMENTATION.md` gains a League section; `GLOSSARY.md` already has the terms
+- [x] Real-Postgres tests: add and remove an ended session; adding a live session via this route is refused; delete cascades only league rows; `current` uses `endsOn ≥ today`
+- [x] Zod validation (`endsOn ≥ startsOn`, non-empty name); moderator writes → 403
+- [x] Admin page with empty states
+- [x] `DOCUMENTATION.md` gains a League section; `GLOSSARY.md` already has the terms

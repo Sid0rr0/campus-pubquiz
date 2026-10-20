@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { SOCKET_ROOMS, type LeagueTop } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
 import { displaySounds } from '@/app/lib/display-sounds';
 
@@ -181,6 +181,75 @@ describe('DisplayPage — lobby', () => {
     render(<DisplayPage />);
 
     expect(screen.getByText('1 TEAM JOINED')).toBeInTheDocument();
+  });
+
+  describe('league top five', () => {
+    const row = (position: number, teamName: string, leaguePoints: number) => ({
+      teamId: position,
+      teamName,
+      leaguePoints,
+      nightsPlayed: 3,
+      nightsWon: 1,
+      averagePlacing: 2,
+      position,
+    });
+
+    function lobbyWithLeague(leagueTop: LeagueTop | null) {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          progress: { status: 'lobby' },
+          leagueTop,
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+    }
+
+    it('shows the league name and its top rows beside the join details', () => {
+      lobbyWithLeague({
+        name: 'Autumn 2026',
+        rows: [row(1, 'Quizzards', 21), row(2, 'Beer Necessities', 17)],
+      });
+
+      const league = screen.getByRole('region', { name: 'Autumn 2026' });
+      expect(within(league).getByText('Quizzards')).toBeInTheDocument();
+      expect(within(league).getByText('21 pts')).toBeInTheDocument();
+      expect(within(league).getByText('Beer Necessities')).toBeInTheDocument();
+      expect(screen.getByTestId('qr-code')).toBeInTheDocument();
+    });
+
+    it('shows tied teams at the same position', () => {
+      lobbyWithLeague({
+        name: 'Autumn 2026',
+        rows: [row(1, 'Alpha', 9), row(1, 'Beta', 9), row(3, 'Gamma', 4)],
+      });
+
+      const league = screen.getByRole('region', { name: 'Autumn 2026' });
+      expect(
+        within(within(league).getByText('Beta').closest('li')!).getByText('1'),
+      ).toBeInTheDocument();
+      expect(
+        within(within(league).getByText('Gamma').closest('li')!).getByText('3'),
+      ).toBeInTheDocument();
+    });
+
+    it('says nobody has scored yet for a league with no rows', () => {
+      lobbyWithLeague({ name: 'Autumn 2026', rows: [] });
+
+      expect(
+        within(screen.getByRole('region', { name: 'Autumn 2026' })).getByText(
+          /no points yet/i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('shows nothing when the session is in no league', () => {
+      lobbyWithLeague(null);
+
+      expect(screen.queryByRole('region')).not.toBeInTheDocument();
+      expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
+    });
   });
 
   describe('join chime', () => {

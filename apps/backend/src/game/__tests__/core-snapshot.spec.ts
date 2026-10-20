@@ -30,6 +30,8 @@ describe('GameStateService — core snapshot', () => {
       game.playerCountService,
       new SessionWrite(game.standingsService),
       new BlockGradingService(game.answerService),
+      game.leagueTableService,
+      game.leagueService,
     );
 
     await expect(

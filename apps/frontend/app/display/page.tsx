@@ -192,6 +192,7 @@ function DisplayPageContent() {
     kahootQuestionEndsAt,
     teamsCorrect,
     funFacts,
+    leagueTop,
     breakEndsAt,
     displayTextScale,
     settings,
@@ -242,6 +243,7 @@ function DisplayPageContent() {
         return (
           <LobbyScreen
             teams={teams}
+            leagueTop={leagueTop}
             isConnected={isConnected}
             joinCode={codeFromUrl}
             maxPlayersPerTeam={settings.maxPlayersPerTeam}

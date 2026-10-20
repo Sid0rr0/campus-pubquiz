@@ -25,6 +25,7 @@ laptop. This document describes the system as currently built.
   - [Authentication](#authentication)
   - [Sessions: Running Multiple Quizzes at Once](#sessions-running-multiple-quizzes-at-once)
   - [Session Stats](#session-stats)
+  - [Leagues](#leagues)
   - [Deploy and CI](#deploy-and-ci)
 
 ## System Overview
@@ -85,6 +86,8 @@ management and authoring UI:
 | `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
 | `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
 | `/team`          | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)    |
+| `/leagues`       | Admin only                  | Create, edit and delete leagues; add or remove ended sessions (see Leagues)     |
+| `/league`        | Anyone                      | The public league tables (see Leagues)                                          |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -372,11 +375,11 @@ silences the lock-countdown track.
 
 **Fields that belong to one room's view:**
 
-| View                            | Fields                                                                                                                                                              |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect`, `funFacts` |
-| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                        |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                    |
+| View                            | Fields                                                                                                                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect`, `funFacts`, `leagueTop` |
+| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                     |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                 |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -1247,8 +1250,13 @@ The backend can run several `GameSession`s concurrently, each bound to one
 admin/moderator landing page for managing them:
 
 - `GET /sessions` — list running sessions (auth-gated).
-- `POST /sessions` (`{ quizId }`) — start a new session, producing a fresh
-  join code.
+- `POST /sessions` (`{ quizId, name?, settings?, leagueIds? }`) — start a new
+  session, producing a fresh join code. `leagueIds` (default none) are the
+  leagues the session counts towards (see Leagues).
+- `PATCH /sessions/:joinCode/settings` — settings (lobby only, 409 once
+  started) and/or `leagueIds`, which replaces the session's leagues and is
+  accepted until the session ends. A body of only `leagueIds` leaves settings
+  untouched.
 - `DELETE /sessions/:joinCode` — close a session; blocked mid-game (409) via
   a dedicated guard.
 - `GET /sessions/public` — **unauthenticated**, so `/display` (venue TV, no
@@ -1325,6 +1333,11 @@ same guards as the other stats endpoints, open to admin and moderator).
   no range means all time. Anything else, or `from` after `to`, is a 400. The range
   applies to the session's date (when it was created), and it is parsed once by
   `feedbackTrendsQuerySchema` so every section of the page shares it.
+- `leagueId` is an optional league id: the endpoint then reads only that league's
+  member sessions (still ended, still with feedback on) and ignores `from`/`to`, so
+  it wins over the date range. An unknown league id is a 404. The page's "League"
+  picker switches between a date range and a league; picking a league disables the
+  date inputs, and "Date range" switches back.
 - The response is `{ sessions, topics, bestRounds, worstRounds }`, where each session is
   `{ id, name, date, rating: { average, count } | null }`. `sessions` runs oldest to newest. `rating` is the
   average of every round rating the session got and how many ratings that was;
@@ -1381,7 +1394,13 @@ the team code.
 code and no login. The page calls `POST /team-page` with `{ teamCode }`
 (`TeamPageController`), which returns `{ name, summary, sessions }`: exactly what
 `TeamHistoryService.detail` gives staff, without the team `id`. It never carries
-feedback or the team code.
+feedback or the team code. It also carries `leagues`: the team's position in each
+**current** league where it has league points (`LeagueTableService.positionsOf`, built
+on the public table so the positions always agree), newest league first, each with
+`leagueId`, `leagueName`, `position`, `shared`, `teamCount` and `leaguePoints`. A league
+that is not current, or where the team has no points, is left out; the array is empty
+when there are none. The page lists them under "Leagues" as "3rd of 18 · 14 pts", or
+"Joint 3rd of 18 · 14 pts" when `shared`.
 
 - **The code never goes in a URL or query string**, so it stays out of logs and
   browser history. It travels in the POST body, is validated with Zod (a missing,
@@ -1431,6 +1450,98 @@ placing** column). `sortBy=averagePlacing` is a sort column alongside `joinedAt`
 and `sessionsJoined`; teams with no placing sort last in both directions. Because
 placings are not SQL ranks, this sort loads every team's results and orders and
 pages them in memory; the other sorts only compute the figure for the visible page.
+
+## Leagues
+
+A **league** (see `GLOSSARY.md`) is a named competition, such as a semester's, that
+ended sessions are added to. This section covers storage, the admin side, league
+points, the table and the public page.
+
+- **Storage.** `leagues` (`id`, `name`, `startsOn`, `endsOn`, timestamps; a check
+  constraint keeps `endsOn >= startsOn`) and the `league_sessions` join table (league,
+  game session; unique pair, `on delete cascade` on both sides). Deleting a league
+  removes only its league rows and memberships, never a session, team or answer.
+  Deleting a session removes its memberships.
+- **Dates are a label.** They never decide membership. They decide which leagues are
+  **current**: `endsOn` is today or later, where "today" is the date at the venue
+  (`Europe/Prague`, `league/venue-date.ts`, since no time-zone setting exists).
+- **Admin REST** (`LeaguesController`, `@Roles('admin')`, validated with Zod in
+  `league.schema.ts`; a blank name, a malformed date or `endsOn` before `startsOn` is a
+  400; a moderator gets 403):
+  - `POST /leagues` and `PATCH /leagues/:id` with `{ name, startsOn, endsOn }`
+    (the name is trimmed), `DELETE /leagues/:id`;
+  - `POST /leagues/:id/move` with `{ direction: 'up' | 'down' }` swaps the league with its
+    neighbour in the admin order (`leagues.sort_order`, higher first, ties newest first;
+    a new league goes to the top; at either end nothing changes). The staff list and the
+    public list both follow it, the public list with current leagues always before ended
+    ones;
+  - `POST /leagues/:id/sessions` with `{ gameSessionId }` and
+    `DELETE /leagues/:id/sessions/:gameSessionId`. Only an **ended** session can be
+    added (a lobby or live session is a 409, an unknown league or session a 404).
+    Adding twice changes nothing; removing a session that is not in the league is a
+    no-op. Both work for any league, current or not.
+- **Staff read** (admin and moderator): `GET /leagues` lists leagues, newest first, each
+  with `current` and its `sessions` (id, join code, display name, played-at).
+  `GET /leagues?current=true` keeps only current leagues, which feeds the session
+  form's checkboxes.
+- **Sessions opt in** (admin and moderator, the same roles that create a session):
+  `POST /sessions` and `PATCH /sessions/:joinCode/settings` take `leagueIds: number[]`
+  (Zod-validated: positive integers). A write replaces the session's whole set of
+  memberships; `[]` clears it. Every id must be an existing **current** league, except
+  that a league the session is already in may stay after it stops being current;
+  otherwise it is a 400 and nothing is written (on create, before the session exists).
+  A session that has ended is a 409. The form's checkboxes (session-create dialog and
+  the `/control` Session Settings panel) list current leagues, plus any league the
+  session is already in; with none to show the section is hidden.
+- **`/leagues` page** (admin only, "Leagues" in the account menu): a create form, and
+  per league an edit form, delete (behind a confirmation), its sessions each with
+  Remove, and "Add a session" choosing from ended sessions not yet in it (the latest
+  100). Each list has an empty state. Up/down arrows on each league set the order the
+  public `/league` page shows.
+- **League points** (pure module `league/league-table.calc.ts`; the scale is
+  `LEAGUE_PLACING_POINTS = [5, 4, 3, 2, 1]` and `PARTICIPATION_POINTS = 1`). Per ended
+  member session a team earns the points for its Standings **placing** (tied teams each
+  get their shared place's full points; nothing below 5th) plus one participation point
+  for having answered at least one question. A team that left has no placing, so it gets
+  the participation point only. A team that never answered earns nothing and does not
+  count as having played the night. Placings come from `StandingsService`, never
+  recomputed.
+- **League table.** Teams are ranked by league points, then more **nights won** (every
+  team whose Standings placing is 1 in a session, so a tie for first credits each tied
+  team), then better **average placing** (compared unrounded and shown to one decimal; a
+  team with no placing sorts last); teams level on all three
+  share the position (1, 1, 3). Each row has `teamId`, `teamName`, `leaguePoints`,
+  `nightsPlayed`, `nightsWon`, `averagePlacing` and `position`. Only **ended** member
+  sessions count, a session in two leagues counts in both, and non-members never count.
+  `LeagueTableService.table(leagueId)` returns a league's table for any caller (the team
+  page's position and the lobby's top 5 reuse it).
+- **The lobby's league (`leagueTop`).** The display view (and only it) carries
+  `leagueTop: { name, rows } | null`: the league the session is in (the one created
+  most recently when it is in several; `null` when it is in none) and the first
+  `LEAGUE_TOP_SIZE` (5) rows of its table, from `LeagueTableService.topFor`. The
+  session being played has not ended, so it is not in the rows. The server keeps it in
+  the live session as a cache, read when the session is created or restored after a
+  restart and re-read whenever the session's `leagueIds` change (`POST /sessions` and
+  `PATCH /sessions/:joinCode/settings` do it inside the session write, in the league
+  change module `game/state/league-changes.ts`, which checks every ticked id before it
+  writes the settings or the memberships, so a refused PATCH stores nothing) and
+  whenever an admin edits or deletes a league or adds or removes one of its sessions
+  (`LeaguesController` re-reads every live session, then broadcasts the state of those
+  whose league changed), so a reconnecting or second big screen gets it in its first
+  snapshot. It is not re-read per broadcast. A failed read is logged and leaves the
+  lobby without a league. The lobby screen draws it beside the join details, and nothing when
+  it is `null`; a league with no finished night shows "No points yet".
+- **Public REST** (`PublicLeaguesController`, no login; no team codes, tokens or feedback
+  are exposed):
+  - `GET /leagues/public` lists every league (`id`, `name`, `startsOn`, `endsOn`,
+    `current`), current ones first, then the rest, each newest first;
+  - `GET /leagues/:id/table` returns the league's fields plus `rows` (the table above);
+    an unknown league is a 404.
+- **`/league` page** (public, no login): current leagues first as buttons, then the
+  rest (marked "ended"), and the selected league's table. Empty states for no leagues
+  and for a league with no finished night yet. Everyone gets a "League" link to it in the
+  site header (inline on desktop, in the hamburger drawer on mobile). A "How league points work" section at the
+  bottom states the scale, the participation point and the tie-breaks.
 
 ## Deploy and CI
 

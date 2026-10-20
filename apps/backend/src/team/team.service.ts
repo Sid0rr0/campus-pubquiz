@@ -151,7 +151,7 @@ export class TeamService {
     }));
   }
 
-  /** Every team that has ever registered, paginated and sorted server-side — the full league roster, not scoped to one session. */
+  /** Every team that has ever registered, paginated and sorted server-side — the team directory, not scoped to one session. */
   async listAll({
     page,
     pageSize,

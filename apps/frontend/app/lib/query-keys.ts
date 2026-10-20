@@ -18,6 +18,12 @@ export const queryKeys = {
     all: ['users'] as const,
     list: () => ['users', 'list'] as const,
   },
+  leagues: {
+    all: ['leagues'] as const,
+    list: (current?: boolean) => ['leagues', 'list', current ?? false] as const,
+    publicList: () => ['leagues', 'public'] as const,
+    table: (leagueId: number) => ['leagues', 'table', leagueId] as const,
+  },
   teams: {
     all: ['teams'] as const,
     list: (params: {

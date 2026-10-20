@@ -14,7 +14,9 @@ const {
   mockFetchQuizzes,
   mockDeleteQuiz,
   mockUseAuth,
+  mockFetchLeagues,
 } = vi.hoisted(() => ({
+  mockFetchLeagues: vi.fn(),
   mockFetchSessions: vi.fn(),
   mockCreateSession: vi.fn(),
   mockCloseSession: vi.fn(),
@@ -41,6 +43,11 @@ vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
     fetchQuizzes: mockFetchQuizzes,
     deleteQuiz: mockDeleteQuiz,
   };
+});
+
+vi.mock('@/app/lib/leagues-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/leagues-api')>();
+  return { ...actual, fetchLeagues: mockFetchLeagues };
 });
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
@@ -80,6 +87,8 @@ describe('SessionPickerPanel', () => {
     mockFetchQuizzes.mockReset();
     mockDeleteQuiz.mockReset();
     mockUseAuth.mockReset();
+    mockFetchLeagues.mockReset();
+    mockFetchLeagues.mockResolvedValue({ items: [] });
     mockFetchSessions.mockResolvedValue([]);
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
     mockUseAuth.mockReturnValue(authResult());
@@ -523,6 +532,7 @@ describe('SessionPickerPanel', () => {
       2,
       DEFAULT_SESSION_SETTINGS,
       'Imported Quiz',
+      [],
     );
     await waitFor(() => expect(onOpenSession).toHaveBeenCalledWith('GHIJKL'));
   });
@@ -568,6 +578,7 @@ describe('SessionPickerPanel', () => {
       2,
       DEFAULT_SESSION_SETTINGS,
       'Week 3 Social',
+      [],
     );
   });
 
@@ -598,6 +609,7 @@ describe('SessionPickerPanel', () => {
       2,
       { ...DEFAULT_SESSION_SETTINGS, lockGraceSeconds: 15 },
       'Imported Quiz',
+      [],
     );
   });
 
@@ -637,6 +649,7 @@ describe('SessionPickerPanel', () => {
       2,
       { ...DEFAULT_SESSION_SETTINGS, kahootQuestionTimerSeconds: 30 },
       'Speed Quiz',
+      [],
     );
   });
 
@@ -663,7 +676,67 @@ describe('SessionPickerPanel', () => {
       2,
       DEFAULT_SESSION_SETTINGS,
       'Imported Quiz',
+      [],
     );
+  });
+
+  it('passes the ticked current leagues through to createSession', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    mockFetchLeagues.mockResolvedValue({
+      items: [
+        {
+          id: 7,
+          name: 'Autumn',
+          startsOn: '2026-09-01',
+          endsOn: '2026-12-20',
+          current: true,
+          sessions: [],
+        },
+      ],
+    });
+    mockCreateSession.mockResolvedValue({
+      joinCode: 'GHIJKL',
+      quizId: 2,
+      quizTitle: 'Imported Quiz',
+      status: 'lobby',
+      teamCount: 0,
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^start$/i }),
+    );
+    await userEvent.click(await screen.findByLabelText('Autumn'));
+    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
+
+    expect(mockFetchLeagues).toHaveBeenCalledWith(
+      { current: true },
+      expect.anything(),
+    );
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      2,
+      DEFAULT_SESSION_SETTINGS,
+      'Imported Quiz',
+      [7],
+    );
+  });
+
+  it('hides the leagues section when there is no current league', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^start$/i }),
+    );
+    await waitFor(() => expect(mockFetchLeagues).toHaveBeenCalled());
+
+    expect(screen.queryByText('Leagues')).not.toBeInTheDocument();
   });
 
   it('does not create a session when the confirmation modal is cancelled', async () => {

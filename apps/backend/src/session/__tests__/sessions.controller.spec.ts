@@ -2,7 +2,9 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  type ExecutionContext,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
@@ -18,6 +20,11 @@ import {
   SessionSettingsUpdateBlockedError,
   type GameStateService,
 } from '@/game/state/game-state.service';
+import {
+  InvalidLeagueIdsError,
+  SessionEndedError,
+  type LeagueService,
+} from '@/league/league.service';
 import type { QuizService } from '@/quiz/quiz.service';
 import { SessionsController } from '@/session/sessions.controller';
 
@@ -38,13 +45,24 @@ function makeController() {
     findStartedAtByJoinCodes: jest.fn().mockResolvedValue(new Map()),
     findNamesByJoinCodes: jest.fn().mockResolvedValue(new Map()),
   };
+  const leagues = {
+    assertAssignable: jest.fn().mockResolvedValue(undefined),
+  };
   const controller = new SessionsController(
     gameState as unknown as GameStateService,
     quizService as unknown as QuizService,
     broadcaster as unknown as SessionBroadcaster,
     seedService as unknown as SeedService,
+    leagues as unknown as LeagueService,
   );
-  return { controller, gameState, quizService, broadcaster, seedService };
+  return {
+    controller,
+    gameState,
+    quizService,
+    broadcaster,
+    seedService,
+    leagues,
+  };
 }
 
 function snapshot(
@@ -107,6 +125,19 @@ describe('SessionsController', () => {
       const guards = methodGuards(method);
       expect(guards).toContain(SessionGuard);
       expect(guards).toContain(RolesGuard);
+    }
+  });
+
+  it('lets a moderator create sessions and tick leagues', () => {
+    for (const handler of ['create', 'updateSettings'] as const) {
+      const context = {
+        getHandler: () => SessionsController.prototype[handler],
+        getClass: () => SessionsController,
+        switchToHttp: () => ({
+          getRequest: () => ({ user: { id: 1, role: 'moderator' } }),
+        }),
+      } as unknown as ExecutionContext;
+      expect(new RolesGuard(new Reflector()).canActivate(context)).toBe(true);
     }
   });
 
@@ -266,6 +297,7 @@ describe('SessionsController', () => {
         2,
         DEFAULT_SESSION_SETTINGS,
         undefined,
+        [],
       );
       expect(seedService.findStartedAtByJoinCodes).toHaveBeenCalledWith([
         'GHIJKL',
@@ -297,6 +329,7 @@ describe('SessionsController', () => {
         2,
         DEFAULT_SESSION_SETTINGS,
         'Week 3 Social',
+        [],
       );
       expect(result.name).toBe('Week 3 Social');
     });
@@ -314,6 +347,7 @@ describe('SessionsController', () => {
         2,
         DEFAULT_SESSION_SETTINGS,
         undefined,
+        [],
       );
       expect(result.name).toBe('Imported Quiz');
     });
@@ -334,6 +368,7 @@ describe('SessionsController', () => {
         2,
         { ...DEFAULT_SESSION_SETTINGS, lockGraceSeconds: 15 },
         undefined,
+        [],
       );
     });
 
@@ -352,6 +387,67 @@ describe('SessionsController', () => {
         BadRequestException,
       );
     });
+
+    it('ticks the requested leagues on the new session', async () => {
+      const { controller, gameState, quizService, leagues } = makeController();
+      gameState.createSession.mockResolvedValue(
+        snapshot({ joinCode: 'GHIJKL' }),
+      );
+      quizService.findTitles.mockResolvedValue(new Map([[2, 'Imported Quiz']]));
+
+      await controller.create({ quizId: 2, leagueIds: [4, 5] });
+
+      expect(leagues.assertAssignable).toHaveBeenCalledWith([4, 5]);
+      expect(gameState.createSession).toHaveBeenCalledWith(
+        2,
+        expect.anything(),
+        undefined,
+        [4, 5],
+      );
+    });
+
+    it('ticks no league when none is ticked', async () => {
+      const { controller, gameState, quizService } = makeController();
+      gameState.createSession.mockResolvedValue(
+        snapshot({ joinCode: 'GHIJKL' }),
+      );
+      quizService.findTitles.mockResolvedValue(new Map([[2, 'Imported Quiz']]));
+
+      await controller.create({ quizId: 2 });
+
+      expect(gameState.createSession).toHaveBeenCalledWith(
+        2,
+        expect.anything(),
+        undefined,
+        [],
+      );
+    });
+
+    it('400s on an unknown or non-current league before creating the session', async () => {
+      const { controller, gameState, leagues } = makeController();
+      leagues.assertAssignable.mockRejectedValue(
+        new InvalidLeagueIdsError([9]),
+      );
+
+      await expect(
+        controller.create({ quizId: 2, leagueIds: [9] }),
+      ).rejects.toThrow(BadRequestException);
+      expect(gameState.createSession).not.toHaveBeenCalled();
+    });
+
+    it('400s on a malformed leagueIds', async () => {
+      const { controller, gameState } = makeController();
+
+      for (const leagueIds of ['3', [1.5], [0], [-1], [1, 'x']]) {
+        await expect(
+          controller.create({
+            quizId: 2,
+            leagueIds: leagueIds as unknown as number[],
+          }),
+        ).rejects.toThrow(BadRequestException);
+      }
+      expect(gameState.createSession).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateSettings', () => {
@@ -361,9 +457,11 @@ describe('SessionsController', () => {
 
       await controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 });
 
-      expect(gameState.updateSessionSettings).toHaveBeenCalledWith('GHIJKL', {
-        lockGraceSeconds: 15,
-      });
+      expect(gameState.updateSessionSettings).toHaveBeenCalledWith(
+        'GHIJKL',
+        { lockGraceSeconds: 15 },
+        undefined,
+      );
       expect(broadcaster.broadcastState).toHaveBeenCalledWith('GHIJKL');
     });
 
@@ -398,6 +496,67 @@ describe('SessionsController', () => {
         controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 }),
       ).rejects.toThrow(ConflictException);
       expect(broadcaster.broadcastState).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateSettings with leagueIds', () => {
+    it('hands only leagueIds to the one session write when only leagueIds is sent', async () => {
+      const { controller, gameState, broadcaster } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+
+      await controller.updateSettings('GHIJKL', { leagueIds: [4] });
+
+      expect(gameState.updateSessionSettings).toHaveBeenCalledWith(
+        'GHIJKL',
+        {},
+        [4],
+      );
+      expect(broadcaster.broadcastState).toHaveBeenCalledWith('GHIJKL');
+    });
+
+    it('applies settings and leagues in the same session write', async () => {
+      const { controller, gameState } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+
+      await controller.updateSettings('GHIJKL', {
+        lockGraceSeconds: 15,
+        leagueIds: [],
+      });
+
+      expect(gameState.updateSessionSettings).toHaveBeenCalledTimes(1);
+      expect(gameState.updateSessionSettings).toHaveBeenCalledWith(
+        'GHIJKL',
+        { lockGraceSeconds: 15 },
+        [],
+      );
+    });
+
+    it('400s on a bad league id without telling clients', async () => {
+      const { controller, gameState, broadcaster } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+      gameState.updateSessionSettings.mockRejectedValue(
+        new InvalidLeagueIdsError([9]),
+      );
+
+      await expect(
+        controller.updateSettings('GHIJKL', {
+          lockGraceSeconds: 15,
+          leagueIds: [9],
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(broadcaster.broadcastState).not.toHaveBeenCalled();
+    });
+
+    it('409s once the session has ended', async () => {
+      const { controller, gameState } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+      gameState.updateSessionSettings.mockRejectedValue(
+        new SessionEndedError('G'),
+      );
+
+      await expect(
+        controller.updateSettings('GHIJKL', { leagueIds: [4] }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 

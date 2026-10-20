@@ -38,6 +38,10 @@ vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   return { ...actual, fetchQuizzes: mockFetchQuizzes };
 });
 
+vi.mock('@/app/lib/leagues-api', () => ({
+  fetchLeagues: () => Promise.resolve({ items: [] }),
+}));
+
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParamsRef.current,
   useRouter: () => routerRef,

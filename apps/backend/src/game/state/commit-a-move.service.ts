@@ -3,6 +3,7 @@ import {
   effectiveActionOf,
   type GameAction,
   type GameProgress,
+  type LeagueTop,
   type MoveStep,
   planMove,
   type SessionState,
@@ -26,6 +27,7 @@ import {
 import {
   withFunFactData,
   withLeaderboard,
+  withLeagueTop,
   withVerdictTallies,
 } from '@/game/state/session-updates.util';
 import type { StandingsService } from '@/standings/standings.service';
@@ -69,6 +71,9 @@ export class MoveCommitter {
     private readonly progressRepository: GameProgressRepository,
     private readonly standingsService: StandingsService,
     private readonly showdownService: ShowdownService,
+    private readonly readLeagueTop: (
+      gameSessionId: number,
+    ) => Promise<LeagueTop | null>,
   ) {}
 
   /**
@@ -142,14 +147,22 @@ export class MoveCommitter {
       savedPhaseTimer: saved,
     });
     const { gameSessionId } = placed.seededGame;
-    const [leaderboard, verdictTallies, funFactData] = await Promise.all([
-      this.standingsService.leaderboard(gameSessionId),
-      this.standingsService.verdictTallies(gameSessionId),
-      this.standingsService.funFactData(gameSessionId),
-    ]);
-    return withFunFactData(
-      withVerdictTallies(withLeaderboard(placed, leaderboard), verdictTallies),
-      funFactData,
+    const [leaderboard, verdictTallies, funFactData, leagueTop] =
+      await Promise.all([
+        this.standingsService.leaderboard(gameSessionId),
+        this.standingsService.verdictTallies(gameSessionId),
+        this.standingsService.funFactData(gameSessionId),
+        this.readLeagueTop(gameSessionId),
+      ]);
+    return withLeagueTop(
+      withFunFactData(
+        withVerdictTallies(
+          withLeaderboard(placed, leaderboard),
+          verdictTallies,
+        ),
+        funFactData,
+      ),
+      leagueTop,
     );
   }
 

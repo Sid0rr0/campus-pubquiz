@@ -6,8 +6,8 @@ Parent spec: `.scratch/league/spec.md`
 
 **Blocked by:** 01, feedback-trends 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres test: only member sessions; an unknown `leagueId` → 404
-- [ ] Filter UI switches between a date range and a league
-- [ ] `DOCUMENTATION.md` updated
+- [x] Real-Postgres test: only member sessions; an unknown `leagueId` → 404
+- [x] Filter UI switches between a date range and a league
+- [x] `DOCUMENTATION.md` updated

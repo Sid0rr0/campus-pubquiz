@@ -5,6 +5,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
   NotFoundException,
   Param,
   Patch,
@@ -25,6 +26,9 @@ import {
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
 } from '@/game/state/game-state.service';
+import { leagueIdsSchema } from '@/league/league.schema';
+import { mapLeagueErrors } from '@/league/league-http';
+import { LeagueService } from '@/league/league.service';
 import { QuizService } from '@/quiz/quiz.service';
 import {
   resolveSessionSettings,
@@ -55,6 +59,27 @@ function parseSettingsPartial(raw: unknown): Partial<SessionSettings> {
   return parsed.data;
 }
 
+/** Pulls `leagueIds` out of a settings patch: it is not a session setting and has its own rules. */
+function splitLeagueIds(body: unknown): {
+  settingsBody: unknown;
+  leagueIds: number[] | undefined;
+} {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return { settingsBody: body, leagueIds: undefined };
+  }
+  const { leagueIds, ...settingsBody } = body as Record<string, unknown>;
+  return { settingsBody, leagueIds: parseLeagueIds(leagueIds) };
+}
+
+function parseLeagueIds(raw: unknown): number[] | undefined {
+  if (raw === undefined) return undefined;
+  const parsed = leagueIdsSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new BadRequestException('leagueIds must be a list of league ids');
+  }
+  return parsed.data;
+}
+
 @Controller('sessions')
 export class SessionsController {
   constructor(
@@ -62,6 +87,7 @@ export class SessionsController {
     private readonly quizService: QuizService,
     private readonly broadcaster: SessionBroadcaster,
     private readonly seedService: SeedService,
+    private readonly leagues: LeagueService,
   ) {}
 
   /**
@@ -92,7 +118,14 @@ export class SessionsController {
       parseSettingsPartial(body.settings),
     );
     const name = parseName(body.name);
-    const snapshot = await this.gameState.createSession(quizId, settings, name);
+    const leagueIds = parseLeagueIds(body.leagueIds) ?? [];
+    await mapLeagueErrors(() => this.leagues.assertAssignable(leagueIds));
+    const snapshot = await this.gameState.createSession(
+      quizId,
+      settings,
+      name,
+      leagueIds,
+    );
     const titles = await this.quizService.findTitles([quizId]);
     const quizTitle = titles.get(quizId) ?? UNKNOWN_QUIZ_TITLE;
     const startedAtByJoinCode = await this.seedService.findStartedAtByJoinCodes(
@@ -120,13 +153,17 @@ export class SessionsController {
     if (!this.gameState.hasSession(joinCode)) {
       throw new NotFoundException(`Unknown session "${joinCode}"`);
     }
-    const partial = parseSettingsPartial(body);
+    const { settingsBody, leagueIds } = splitLeagueIds(body);
+    const partial = parseSettingsPartial(settingsBody);
     try {
-      await this.gameState.updateSessionSettings(joinCode, partial);
+      await mapLeagueErrors(() =>
+        this.gameState.updateSessionSettings(joinCode, partial, leagueIds),
+      );
     } catch (error) {
       if (error instanceof SessionSettingsUpdateBlockedError) {
         throw new ConflictException(error.message);
       }
+      if (error instanceof HttpException) throw error;
       this.throwIfClosedMeanwhile(joinCode);
       throw error;
     }

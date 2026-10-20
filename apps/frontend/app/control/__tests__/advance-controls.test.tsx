@@ -47,6 +47,10 @@ vi.mock('@/app/lib/answer-api', async () =>
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
+vi.mock('@/app/lib/leagues-api', () => ({
+  fetchLeagues: () => Promise.resolve({ items: [] }),
+}));
+
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParamsRef.current,
   useRouter: () => routerRef,

@@ -125,6 +125,7 @@ export function projectScreen(
           session.seededGame.settings.funFactsEnabled
             ? describeFunFacts(session)
             : [],
+        leagueTop: session.leagueTop,
       };
     case SOCKET_ROOMS.ADMIN:
       return {
