@@ -20,11 +20,10 @@ import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import {
   BonusAwardNotFoundError,
-  BonusService,
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
-import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
-import { GameStateService } from '@/game/state/game-state.service';
+import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
+import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
 
 /**
  * Nested under teams/:teamId (rather than living on BonusAwardMutationsController
@@ -35,24 +34,16 @@ import { GameStateService } from '@/game/state/game-state.service';
 @Controller('sessions/:joinCode/teams/:teamId/bonus-awards')
 @UseGuards(SessionGuard, RolesGuard)
 export class BonusAwardsController {
-  constructor(
-    private readonly bonusService: BonusService,
-    private readonly gameState: GameStateService,
-  ) {}
+  constructor(private readonly liveSession: LiveSessionRest) {}
 
   @Get()
   async list(
     @Param('joinCode') joinCode: string,
     @Param('teamId', ParseIntPipe) teamId: number,
   ): Promise<BonusAwardsListedPayload> {
-    if (!this.gameState.hasSession(joinCode)) {
-      throw new NotFoundException(`Unknown session "${joinCode}"`);
-    }
-    const awards = await this.bonusService.listForTeamAdmin(
-      this.gameState.getGameSessionId(joinCode),
-      teamId,
+    return mapUnknownLiveSession(() =>
+      this.liveSession.listBonusAwards(joinCode, teamId),
     );
-    return { teamId, awards };
   }
 }
 
@@ -64,11 +55,7 @@ export class BonusAwardsController {
 @Controller('sessions/:joinCode/bonus-awards')
 @UseGuards(SessionGuard, RolesGuard)
 export class BonusAwardMutationsController {
-  constructor(
-    private readonly bonusService: BonusService,
-    private readonly gameState: GameStateService,
-    private readonly broadcaster: SessionBroadcaster,
-  ) {}
+  constructor(private readonly liveSession: LiveSessionRest) {}
 
   @Patch(':awardId')
   async update(
@@ -76,18 +63,26 @@ export class BonusAwardMutationsController {
     @Param('awardId', ParseIntPipe) awardId: number,
     @Body() body: UpdateBonusAwardRequest,
   ): Promise<BonusAwardAdminView> {
-    if (!this.gameState.hasSession(joinCode)) {
-      throw new NotFoundException(`Unknown session "${joinCode}"`);
-    }
+    return mapBonusErrors(() =>
+      this.liveSession.editBonus(joinCode, awardId, body.points, body.reason),
+    );
+  }
 
-    let updated: BonusAwardAdminView;
+  @Delete(':awardId')
+  @HttpCode(204)
+  async remove(
+    @Param('joinCode') joinCode: string,
+    @Param('awardId', ParseIntPipe) awardId: number,
+  ): Promise<void> {
+    await mapBonusErrors(() => this.liveSession.removeBonus(joinCode, awardId));
+  }
+}
+
+/** Maps the bonus service's refusals, and an unknown join code, to HTTP. */
+function mapBonusErrors<T>(run: () => Promise<T>): Promise<T> {
+  return mapUnknownLiveSession(async () => {
     try {
-      updated = await this.bonusService.update(
-        this.gameState.getGameSessionId(joinCode),
-        awardId,
-        body.points,
-        body.reason,
-      );
+      return await run();
     } catch (error) {
       if (error instanceof BonusAwardNotFoundError) {
         throw new NotFoundException(error.message);
@@ -97,39 +92,5 @@ export class BonusAwardMutationsController {
       }
       throw error;
     }
-
-    await this.broadcaster.deliver(
-      joinCode,
-      await this.gameState.bonusChanged(joinCode),
-    );
-    return updated;
-  }
-
-  @Delete(':awardId')
-  @HttpCode(204)
-  async remove(
-    @Param('joinCode') joinCode: string,
-    @Param('awardId', ParseIntPipe) awardId: number,
-  ): Promise<void> {
-    if (!this.gameState.hasSession(joinCode)) {
-      throw new NotFoundException(`Unknown session "${joinCode}"`);
-    }
-
-    try {
-      await this.bonusService.remove(
-        this.gameState.getGameSessionId(joinCode),
-        awardId,
-      );
-    } catch (error) {
-      if (error instanceof BonusAwardNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      throw error;
-    }
-
-    await this.broadcaster.deliver(
-      joinCode,
-      await this.gameState.bonusChanged(joinCode),
-    );
-  }
+  });
 }

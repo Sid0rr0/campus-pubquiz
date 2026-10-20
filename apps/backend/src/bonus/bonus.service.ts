@@ -146,13 +146,13 @@ export class BonusService {
     return award;
   }
 
-  /** Edits an existing award's points/reason. Category is not editable — see UpdateBonusAwardRequest. */
+  /** Edits an existing award's points/reason and returns its admin view with the id of the team that holds it. Category is not editable — see UpdateBonusAwardRequest. */
   async update(
     gameSessionId: number,
     awardId: number,
     points: number,
     reason?: string,
-  ): Promise<BonusAwardAdminView> {
+  ): Promise<{ award: BonusAwardAdminView; teamId: number }> {
     const award = await this.findOwnedAward(gameSessionId, awardId);
 
     if (!Number.isFinite(points) || points === 0) {
@@ -169,11 +169,17 @@ export class BonusService {
     award.reason = award.category === 'custom' ? trimmedReason : undefined;
     await this.bonusAwards.getEntityManager().flush();
 
-    return toAdminView(award);
+    return { award: toAdminView(award), teamId: award.team.id };
   }
 
-  async remove(gameSessionId: number, awardId: number): Promise<void> {
+  /** Deletes an award and returns the id of the team that held it. */
+  async remove(
+    gameSessionId: number,
+    awardId: number,
+  ): Promise<{ teamId: number }> {
     const award = await this.findOwnedAward(gameSessionId, awardId);
+    const teamId = award.team.id;
     await this.bonusAwards.getEntityManager().removeAndFlush(award);
+    return { teamId };
   }
 }

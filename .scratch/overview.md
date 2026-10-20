@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                  | Title                                                                                                 | Tickets | Blocked by |
 | --------------------- | ----------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| live-session-rest     | [Every REST change to a live session goes through the Live session module](live-session-rest/spec.md) | 4       | —          |
 | display-screen-sounds | [Big-screen sounds follow the Display screen](display-screen-sounds/spec.md)                          | 2       | —          |
 | stepped-reveal        | [One stepped reveal for the showdown and the closest guess](stepped-reveal/spec.md)                   | 3       | —          |
 | control-round-points  | [The control panel's teams table reads rounds from the snapshot](control-round-points/spec.md)        | 1       | —          |

@@ -43,3 +43,8 @@ export interface UpdateBonusAwardRequest {
 
 /** Pushed privately to a team's own connected socket the moment the admin awards it a bonus — mirrors ANSWER_RECEIVED's single-item, append-don't-replace shape. */
 export type BonusAwardedPayload = TeamBonusAwardView;
+
+/** Pushed privately to a team's own connected socket when the admin edits or deletes one of its awards — the team's full list, in award order, which replaces the phone's list (no toast). */
+export interface TeamBonusAwardsSyncedPayload {
+  bonusAwards: TeamBonusAwardView[];
+}

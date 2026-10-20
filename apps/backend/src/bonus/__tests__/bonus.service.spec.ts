@@ -280,6 +280,7 @@ describe('BonusService', () => {
     it('updates points for a predefined-category award', async () => {
       const award = {
         id: 9,
+        team: { id: 31 },
         category: 'shot',
         points: 1,
         reason: undefined,
@@ -293,17 +294,21 @@ describe('BonusService', () => {
       expect(award.points).toBe(3);
       expect(repo.flush).toHaveBeenCalled();
       expect(result).toEqual({
-        id: 9,
-        category: 'shot',
-        points: 3,
-        reason: undefined,
-        createdAt: '2026-01-01T00:00:00.000Z',
+        teamId: 31,
+        award: {
+          id: 9,
+          category: 'shot',
+          points: 3,
+          reason: undefined,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
       });
     });
 
     it('trims and stores an updated reason for a custom-category award', async () => {
       const award = {
         id: 10,
+        team: { id: 31 },
         category: 'custom',
         points: 3,
         reason: 'Old reason',
@@ -314,7 +319,7 @@ describe('BonusService', () => {
       const result = await service.update(101, 10, 5, '  New reason  ');
 
       expect(award.reason).toBe('New reason');
-      expect(result.reason).toBe('New reason');
+      expect(result.award.reason).toBe('New reason');
     });
 
     it('rejects an update with zero or non-finite points', async () => {
@@ -366,6 +371,7 @@ describe('BonusService', () => {
         category: 'shot',
         points: 1,
         createdAt: new Date(),
+        team: { id: 31 },
       };
       const repo = createFakeBonusAwardRepository(0, [], award);
       const gameSessionTeams = createFakeGameSessionTeamRepository();
@@ -374,7 +380,7 @@ describe('BonusService', () => {
         gameSessionTeams as unknown as GameSessionTeamRepository,
       );
 
-      await service.remove(101, 9);
+      await expect(service.remove(101, 9)).resolves.toEqual({ teamId: 31 });
 
       expect(repo.findOne).toHaveBeenCalledWith({ id: 9, gameSession: 101 });
       expect(repo.removeAndFlush).toHaveBeenCalledWith(award);

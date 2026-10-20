@@ -183,6 +183,7 @@ export type TeamLinkInput =
   | { type: 'answerReceived'; payload: AnswerReceivedPayload }
   | { type: 'teamAnswersSynced'; answers: TeamAnswerView[] }
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
+  | { type: 'bonusAwardsSynced'; bonusAwards: TeamBonusAwardView[] }
   | { type: 'answerResult'; attempt: number; result: AckResult }
   // The answer never left the socket (not connected, or no acknowledgement in time).
   | { type: 'answerNotDelivered'; attempt: number }
@@ -714,6 +715,8 @@ export function teamLink(
       });
     case 'bonusAwarded':
       return awardBonus(state, input.payload);
+    case 'bonusAwardsSynced':
+      return unchanged({ ...state, myBonusAwards: input.bonusAwards });
     case 'answerResult':
       return receiveAnswerResult(state, input.attempt, input.result);
     case 'answerNotDelivered':

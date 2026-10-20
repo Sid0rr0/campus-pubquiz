@@ -20,7 +20,7 @@ See the spec's "The phone's bonus list syncs live".
 
 **Blocked by:** 02 (Bonus edits and deletions inside the Session write)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Through the real-store harness: after an edit, the awarded team's socket gets the sync with the new points and reason; no other socket gets it; no `BONUS_AWARDED` notice goes out
 - [ ] After a deletion, the awarded team's socket gets a sync without the award

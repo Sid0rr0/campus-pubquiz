@@ -72,6 +72,26 @@ function reportDeadlineChange<T>(
 }
 
 /**
+ * The Session write's league report: `outcome` flagged `leagueTablesChanged`
+ * when the write entered or left `ended`, or refreshed standings on a session
+ * that was `ended` before and after (a grade, bonus or showdown result after
+ * the end). Results that aren't a SessionOutcome pass through: a join's team
+ * has no delivery to carry the flag.
+ */
+function reportLeagueTablesChange<T>(
+  started: SessionState,
+  stored: SessionState,
+  refreshedStandings: boolean,
+  outcome: T,
+): T {
+  const wasEnded = started.progress.status === 'ended';
+  const isEnded = stored.progress.status === 'ended';
+  const changed = wasEnded !== isEnded || (wasEnded && refreshedStandings);
+  if (!changed || !isSessionOutcome(outcome)) return outcome;
+  return { ...outcome, leagueTablesChanged: true };
+}
+
+/**
  * The Session write module: the only holder of the in-memory sessions (keyed
  * by joinCode, one backend instance — see CLAUDE.md) and the only way a
  * session is stored. Owns the per-session queue, the final live results read,
@@ -242,6 +262,12 @@ export class SessionWrite {
         ? await this.liveResultsRead.read(sessionToStore)
         : sessionToStore,
     );
-    return reportDeadlineChange(started, this.read(joinCode), outcome);
+    const stored = this.read(joinCode);
+    return reportLeagueTablesChange(
+      started,
+      stored,
+      refreshStandings,
+      reportDeadlineChange(started, stored, outcome),
+    );
   }
 }

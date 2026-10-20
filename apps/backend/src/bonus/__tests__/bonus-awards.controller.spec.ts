@@ -8,41 +8,19 @@ import {
 } from '@/bonus/bonus-awards.controller';
 import {
   BonusAwardNotFoundError,
-  BonusService,
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
-import type { SessionBroadcaster } from '@/game/socket/session-broadcaster';
-import type { SessionOutcome } from '@/game/state/session-outcome';
-import type { GameStateService } from '@/game/state/game-state.service';
+import {
+  UnknownLiveSessionError,
+  type LiveSessionRest,
+} from '@/game/rest/live-session-rest.service';
 
-function makeListController() {
-  const bonusService = { listForTeamAdmin: jest.fn() };
-  const gameState = { hasSession: jest.fn(), getGameSessionId: jest.fn() };
-  const controller = new BonusAwardsController(
-    bonusService as unknown as BonusService,
-    gameState as unknown as GameStateService,
-  );
-  return { controller, bonusService, gameState };
-}
-
-const BONUS_CHANGED_OUTCOME = {
-  marker: 'bonus-changed',
-} as unknown as SessionOutcome;
-
-function makeMutationsController() {
-  const bonusService = { update: jest.fn(), remove: jest.fn() };
-  const gameState = {
-    hasSession: jest.fn(),
-    getGameSessionId: jest.fn(),
-    bonusChanged: jest.fn().mockResolvedValue(BONUS_CHANGED_OUTCOME),
+function makeRest() {
+  return {
+    listBonusAwards: jest.fn(),
+    editBonus: jest.fn(),
+    removeBonus: jest.fn(),
   };
-  const broadcaster = { deliver: jest.fn().mockResolvedValue(undefined) };
-  const controller = new BonusAwardMutationsController(
-    bonusService as unknown as BonusService,
-    gameState as unknown as GameStateService,
-    broadcaster as unknown as SessionBroadcaster,
-  );
-  return { controller, bonusService, gameState, broadcaster };
 }
 
 const award: BonusAwardAdminView = {
@@ -62,31 +40,43 @@ describe('BonusAwardsController', () => {
     expect(guards).toContain(RolesGuard);
   });
 
-  it('returns the awards list for a known session/team', async () => {
-    const { controller, bonusService, gameState } = makeListController();
-    gameState.hasSession.mockReturnValue(true);
-    gameState.getGameSessionId.mockReturnValue(101);
-    bonusService.listForTeamAdmin.mockResolvedValue([award]);
+  it('returns what the REST entry lists for the team', async () => {
+    const rest = makeRest();
+    rest.listBonusAwards.mockResolvedValue({ teamId: 31, awards: [award] });
+    const controller = new BonusAwardsController(
+      rest as unknown as LiveSessionRest,
+    );
 
     const result = await controller.list('ABCDEF', 31);
 
-    expect(gameState.getGameSessionId).toHaveBeenCalledWith('ABCDEF');
-    expect(bonusService.listForTeamAdmin).toHaveBeenCalledWith(101, 31);
+    expect(rest.listBonusAwards).toHaveBeenCalledWith('ABCDEF', 31);
     expect(result).toEqual({ teamId: 31, awards: [award] });
   });
 
   it('404s for an unknown join code', async () => {
-    const { controller, gameState, bonusService } = makeListController();
-    gameState.hasSession.mockReturnValue(false);
+    const rest = makeRest();
+    rest.listBonusAwards.mockRejectedValue(
+      new UnknownLiveSessionError('NOPE12'),
+    );
+    const controller = new BonusAwardsController(
+      rest as unknown as LiveSessionRest,
+    );
 
     await expect(controller.list('NOPE12', 31)).rejects.toThrow(
-      NotFoundException,
+      new NotFoundException('Unknown session "NOPE12"'),
     );
-    expect(bonusService.listForTeamAdmin).not.toHaveBeenCalled();
   });
 });
 
 describe('BonusAwardMutationsController', () => {
+  function makeController() {
+    const rest = makeRest();
+    const controller = new BonusAwardMutationsController(
+      rest as unknown as LiveSessionRest,
+    );
+    return { controller, rest };
+  }
+
   it('is protected by SessionGuard + RolesGuard', () => {
     const guards = Reflect.getMetadata(
       '__guards__',
@@ -98,118 +88,79 @@ describe('BonusAwardMutationsController', () => {
   });
 
   describe('update', () => {
-    it('updates the award and runs the bonus-changed write and delivers its outcome', async () => {
-      const { controller, bonusService, gameState, broadcaster } =
-        makeMutationsController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.getGameSessionId.mockReturnValue(101);
-      bonusService.update.mockResolvedValue(award);
+    it('makes one edit call and returns the updated award', async () => {
+      const { controller, rest } = makeController();
+      rest.editBonus.mockResolvedValue(award);
 
       const result = await controller.update('ABCDEF', 9, {
         points: 3,
         reason: undefined,
       });
 
-      expect(bonusService.update).toHaveBeenCalledWith(101, 9, 3, undefined);
-      expect(gameState.bonusChanged).toHaveBeenCalledWith('ABCDEF');
-      expect(broadcaster.deliver).toHaveBeenCalledWith(
-        'ABCDEF',
-        BONUS_CHANGED_OUTCOME,
-      );
+      expect(rest.editBonus).toHaveBeenCalledWith('ABCDEF', 9, 3, undefined);
       expect(result).toEqual(award);
     });
 
     it('404s for an unknown join code', async () => {
-      const { controller, gameState, bonusService, broadcaster } =
-        makeMutationsController();
-      gameState.hasSession.mockReturnValue(false);
+      const { controller, rest } = makeController();
+      rest.editBonus.mockRejectedValue(new UnknownLiveSessionError('NOPE12'));
 
       await expect(
         controller.update('NOPE12', 9, { points: 3 }),
-      ).rejects.toThrow(NotFoundException);
-      expect(bonusService.update).not.toHaveBeenCalled();
-      expect(gameState.bonusChanged).not.toHaveBeenCalled();
-      expect(broadcaster.deliver).not.toHaveBeenCalled();
+      ).rejects.toThrow(new NotFoundException('Unknown session "NOPE12"'));
     });
 
     it('maps BonusAwardNotFoundError to a 404', async () => {
-      const { controller, gameState, bonusService, broadcaster } =
-        makeMutationsController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.getGameSessionId.mockReturnValue(101);
-      bonusService.update.mockRejectedValue(
+      const { controller, rest } = makeController();
+      rest.editBonus.mockRejectedValue(
         new BonusAwardNotFoundError('Bonus award 999 not found'),
       );
 
       await expect(
         controller.update('ABCDEF', 999, { points: 3 }),
       ).rejects.toThrow(NotFoundException);
-      expect(gameState.bonusChanged).not.toHaveBeenCalled();
-      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
 
     it('maps InvalidBonusAwardError to a 400', async () => {
-      const { controller, gameState, bonusService, broadcaster } =
-        makeMutationsController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.getGameSessionId.mockReturnValue(101);
-      bonusService.update.mockRejectedValue(
+      const { controller, rest } = makeController();
+      rest.editBonus.mockRejectedValue(
         new InvalidBonusAwardError('Bonus points must be a non-zero number'),
       );
 
       await expect(
         controller.update('ABCDEF', 9, { points: 0 }),
       ).rejects.toThrow(BadRequestException);
-      expect(gameState.bonusChanged).not.toHaveBeenCalled();
-      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
   });
 
   describe('remove', () => {
-    it('deletes the award and runs the bonus-changed write and delivers its outcome', async () => {
-      const { controller, bonusService, gameState, broadcaster } =
-        makeMutationsController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.getGameSessionId.mockReturnValue(101);
-      bonusService.remove.mockResolvedValue(undefined);
+    it('makes one remove call', async () => {
+      const { controller, rest } = makeController();
+      rest.removeBonus.mockResolvedValue(undefined);
 
       await controller.remove('ABCDEF', 9);
 
-      expect(bonusService.remove).toHaveBeenCalledWith(101, 9);
-      expect(gameState.bonusChanged).toHaveBeenCalledWith('ABCDEF');
-      expect(broadcaster.deliver).toHaveBeenCalledWith(
-        'ABCDEF',
-        BONUS_CHANGED_OUTCOME,
-      );
+      expect(rest.removeBonus).toHaveBeenCalledWith('ABCDEF', 9);
     });
 
     it('404s for an unknown join code', async () => {
-      const { controller, gameState, bonusService, broadcaster } =
-        makeMutationsController();
-      gameState.hasSession.mockReturnValue(false);
+      const { controller, rest } = makeController();
+      rest.removeBonus.mockRejectedValue(new UnknownLiveSessionError('NOPE12'));
 
       await expect(controller.remove('NOPE12', 9)).rejects.toThrow(
-        NotFoundException,
+        new NotFoundException('Unknown session "NOPE12"'),
       );
-      expect(bonusService.remove).not.toHaveBeenCalled();
-      expect(gameState.bonusChanged).not.toHaveBeenCalled();
-      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
 
     it('maps BonusAwardNotFoundError to a 404', async () => {
-      const { controller, gameState, bonusService, broadcaster } =
-        makeMutationsController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.getGameSessionId.mockReturnValue(101);
-      bonusService.remove.mockRejectedValue(
+      const { controller, rest } = makeController();
+      rest.removeBonus.mockRejectedValue(
         new BonusAwardNotFoundError('Bonus award 999 not found'),
       );
 
       await expect(controller.remove('ABCDEF', 999)).rejects.toThrow(
         NotFoundException,
       );
-      expect(gameState.bonusChanged).not.toHaveBeenCalled();
-      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
   });
 });

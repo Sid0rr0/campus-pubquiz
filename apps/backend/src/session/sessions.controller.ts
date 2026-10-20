@@ -5,8 +5,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpException,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -20,7 +18,7 @@ import type {
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { SeedService } from '@/db/seed.service';
-import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
+import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import {
   GameStateService,
   SessionCloseBlockedError,
@@ -28,6 +26,7 @@ import {
 } from '@/game/state/game-state.service';
 import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 import { leagueIdsSchema } from '@/league/league.schema';
+import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
 import { mapLeagueErrors } from '@/league/league-http';
 import { LeagueService } from '@/league/league.service';
 import { QuizService } from '@/quiz/quiz.service';
@@ -86,9 +85,9 @@ export class SessionsController {
   constructor(
     private readonly gameState: GameStateService,
     private readonly quizService: QuizService,
-    private readonly broadcaster: SessionBroadcaster,
     private readonly seedService: SeedService,
     private readonly leagues: LeagueService,
+    private readonly liveSession: LiveSessionRest,
   ) {}
 
   /**
@@ -151,48 +150,35 @@ export class SessionsController {
     @Param('joinCode') joinCode: string,
     @Body() body: unknown,
   ): Promise<void> {
-    if (!this.gameState.hasSession(joinCode)) {
-      throw new NotFoundException(`Unknown session "${joinCode}"`);
-    }
-    const { settingsBody, leagueIds } = splitLeagueIds(body);
-    const partial = parseSettingsPartial(settingsBody);
     try {
-      await mapLeagueErrors(() =>
-        this.gameState.updateSessionSettings(joinCode, partial, leagueIds),
+      await mapUnknownLiveSession(() =>
+        mapLeagueErrors(() =>
+          this.liveSession.updateSettingsAndLeagues(joinCode, () => {
+            const { settingsBody, leagueIds } = splitLeagueIds(body);
+            return { partial: parseSettingsPartial(settingsBody), leagueIds };
+          }),
+        ),
       );
     } catch (error) {
       if (error instanceof SessionSettingsUpdateBlockedError) {
         throw new ConflictException(error.message);
       }
-      if (error instanceof HttpException) throw error;
-      this.throwIfClosedMeanwhile(joinCode);
       throw error;
     }
-    await this.broadcaster.broadcastState(joinCode);
   }
 
   @Delete(':joinCode')
   @UseGuards(SessionGuard, RolesGuard)
   async close(@Param('joinCode') joinCode: string): Promise<void> {
-    if (!this.gameState.hasSession(joinCode)) {
-      throw new NotFoundException(`Unknown session "${joinCode}"`);
-    }
     try {
-      await this.gameState.closeSession(joinCode);
+      await mapUnknownLiveSession(() =>
+        this.liveSession.closeSession(joinCode),
+      );
     } catch (error) {
       if (error instanceof SessionCloseBlockedError) {
         throw new ConflictException(error.message);
       }
-      this.throwIfClosedMeanwhile(joinCode);
       throw error;
-    }
-    this.broadcaster.notifySessionClosed(joinCode);
-  }
-
-  /** A write queued behind another session's close fails with the store's unknown-session error — that is a 404, not a 500. */
-  private throwIfClosedMeanwhile(joinCode: string): void {
-    if (!this.gameState.hasSession(joinCode)) {
-      throw new NotFoundException(`Unknown session "${joinCode}"`);
     }
   }
 

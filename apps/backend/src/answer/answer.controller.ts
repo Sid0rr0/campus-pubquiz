@@ -9,38 +9,25 @@ import {
 import type { AnswersUpdatedPayload } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
-import { AnswerService } from '@/answer/answer.service';
-import { GameStateService } from '@/game/state/game-state.service';
+import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
+import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
 
 @Controller('sessions/:joinCode/answers')
 @UseGuards(SessionGuard, RolesGuard)
 export class AnswerController {
-  constructor(
-    private readonly answerService: AnswerService,
-    private readonly gameState: GameStateService,
-  ) {}
+  constructor(private readonly liveSession: LiveSessionRest) {}
 
   @Get(':questionId')
   async list(
     @Param('joinCode') joinCode: string,
     @Param('questionId', ParseIntPipe) questionId: number,
   ): Promise<AnswersUpdatedPayload> {
-    if (!this.gameState.hasSession(joinCode)) {
-      throw new NotFoundException(`Unknown session "${joinCode}"`);
-    }
-
-    const question = this.gameState.getAdminQuestionContext(
-      joinCode,
-      questionId,
+    const listed = await mapUnknownLiveSession(() =>
+      this.liveSession.listAnswers(joinCode, questionId),
     );
-    if (!question) {
+    if (!listed) {
       throw new NotFoundException(`Unknown question ${questionId}`);
     }
-
-    const answers = await this.answerService.listForQuestion(
-      this.gameState.getGameSessionId(joinCode),
-      questionId,
-    );
-    return { questionId, question, answers };
+    return listed;
   }
 }

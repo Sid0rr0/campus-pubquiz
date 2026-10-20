@@ -545,7 +545,12 @@ Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED
 on every other screen including the reveal intro, decided from the on-air
 screen in `screen-preview.util.ts`),
 `TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
-team's own phone only), `BONUS_AWARDED`, `SESSION_CLOSED`, `TEAM_KICKED` (no
+team's own phone only), `BONUS_AWARDED` (one fresh award, appended on the
+phone with a toast), `TEAM_BONUS_AWARDS_SYNCED` (`{ bonusAwards }`, the team's
+full list in award order as `TeamBonusAwardView[]`, to the awarded team's own
+phone only when the quiz master edits or deletes an award; it replaces the
+phone's list with no toast, and a disconnected team catches up on rejoin),
+`SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
 Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `AWARD_BONUS`,

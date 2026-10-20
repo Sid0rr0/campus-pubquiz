@@ -24,7 +24,7 @@ See the spec's "League tops refresh when a league table may have changed".
 
 **Blocked by:** 01 (REST entry to the Live session module), 03 (The phone's bonus list syncs live: both change the session outcome's shape and the delivery step)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Real-store harness, two sessions in one league: ending the first through the admin action redraws the second's lobby with the new league top
 - [ ] Previous from `ended` redraws it again

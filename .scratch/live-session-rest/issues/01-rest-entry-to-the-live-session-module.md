@@ -24,7 +24,7 @@ See the spec's "A REST entry to the Live session module".
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Each of the bonus awards, bonus award mutations, answer, sessions (settings, close) and leagues (update, remove, add and remove session) routes makes exactly one call into the REST entry
 - [ ] No controller calls `hasSession`, `getGameSessionId` or the broadcaster directly
