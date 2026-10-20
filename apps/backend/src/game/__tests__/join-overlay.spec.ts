@@ -195,6 +195,17 @@ describe('GameGateway — TOGGLE_JOIN_OVERLAY', () => {
       expect(displayView().screen).toEqual({ kind: 'join_overlay' });
     });
 
+    it('starts the leaderboard reveal over when it comes back after the overlay', async () => {
+      await actAll(['TOGGLE_LEADERBOARD', 'ADVANCE', 'TOGGLE_JOIN_OVERLAY']);
+
+      await game.act('TOGGLE_LEADERBOARD');
+
+      expect(displayView().screen).toMatchObject({
+        kind: 'leaderboard',
+        revealCount: 0,
+      });
+    });
+
     it('turns the overlay off when the leaderboard is shown', async () => {
       await game.act('TOGGLE_JOIN_OVERLAY');
 

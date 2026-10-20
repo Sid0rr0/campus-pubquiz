@@ -7,10 +7,7 @@ import type {
   QuestionView,
   Verdict,
 } from '@campus-pubquiz/types';
-import {
-  describeVerdictCard,
-  VERDICT_TONE_TEXT_CLASS,
-} from '@/app/play/verdict-card';
+import { yourAnswerTextClass } from '@/app/play/verdict-card';
 import { NumberMarginText } from '@/app/components/number-margin-text';
 import { QuestionDisplay } from '@/app/display/question-display';
 import {
@@ -152,17 +149,11 @@ export function QuestionBrowser({
             myAnswer={myAnswer ?? ''}
           />
           <p
-            className={`font-display text-2xl ${
-              VERDICT_TONE_TEXT_CLASS[
-                myAnswer
-                  ? describeVerdictCard({
-                      myAnswer,
-                      pointsAwarded: myAnswerPoints,
-                      verdict: myAnswerVerdict,
-                    }).tone
-                  : 'incorrect'
-              ]
-            }`}
+            className={`font-display text-2xl ${yourAnswerTextClass({
+              myAnswer: myAnswer || null,
+              pointsAwarded: myAnswerPoints,
+              verdict: myAnswerVerdict,
+            })}`}
           >
             <span className="font-body text-md font-extrabold text-foreground/55">
               Your answer{': '}

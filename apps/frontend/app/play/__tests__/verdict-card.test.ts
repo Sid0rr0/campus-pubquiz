@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { describeVerdictCard } from '@/app/play/verdict-card';
+import {
+  describeVerdictCard,
+  yourAnswerTextClass,
+} from '@/app/play/verdict-card';
 
 describe('describeVerdictCard', () => {
   it('reads "Correct" with the points for a correct verdict, and vibrates', () => {
@@ -66,5 +69,31 @@ describe('describeVerdictCard', () => {
     });
 
     expect(card.text).toBe('Close! +2.5');
+  });
+});
+
+describe('yourAnswerTextClass', () => {
+  it('colours the answer by its verdict', () => {
+    const answered = { myAnswer: 'a', pointsAwarded: 1 };
+
+    expect(yourAnswerTextClass({ ...answered, verdict: 'correct' })).toBe(
+      'text-green',
+    );
+    expect(yourAnswerTextClass({ ...answered, verdict: 'partial' })).toBe(
+      'text-cyan',
+    );
+    expect(yourAnswerTextClass({ ...answered, verdict: 'incorrect' })).toBe(
+      'text-magenta',
+    );
+  });
+
+  it('draws no answer in the incorrect colour', () => {
+    expect(
+      yourAnswerTextClass({
+        myAnswer: null,
+        pointsAwarded: null,
+        verdict: null,
+      }),
+    ).toBe('text-magenta');
   });
 });

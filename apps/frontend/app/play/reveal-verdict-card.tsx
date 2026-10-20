@@ -9,18 +9,12 @@ import { vibrate } from '@/app/lib/vibrate';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import {
   describeVerdictCard,
+  VERDICT_TONE_BORDER_CLASS,
+  VERDICT_TONE_TEXT_CLASS,
   type VerdictCardContent,
-  type VerdictCardTone,
 } from '@/app/play/verdict-card';
 
 const VERDICT_CARD_VISIBLE_MS = 3_000;
-
-const TONE_CLASS: Record<VerdictCardTone, string> = {
-  correct: 'border-green text-green',
-  partial: 'border-cyan text-cyan',
-  incorrect: 'border-magenta text-magenta',
-  none: 'border-foreground/30 text-foreground/65',
-};
 
 interface RevealVerdictCardProps {
   view: Pick<
@@ -108,7 +102,7 @@ export function RevealVerdictCard(props: RevealVerdictCardProps) {
           initial={{ opacity: 0, y: -24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className={`pointer-events-none fixed inset-x-5 top-16 z-30 mx-auto max-w-sm rounded-2xl border-4 bg-white px-6 py-4 text-center font-display text-3xl shadow-lg ${TONE_CLASS[card.content.tone]}`}
+          className={`pointer-events-none fixed inset-x-5 top-16 z-30 mx-auto max-w-sm rounded-2xl border-4 bg-white px-6 py-4 text-center font-display text-3xl shadow-lg ${VERDICT_TONE_BORDER_CLASS[card.content.tone]} ${VERDICT_TONE_TEXT_CLASS[card.content.tone]}`}
         >
           {card.content.text}
         </motion.div>
