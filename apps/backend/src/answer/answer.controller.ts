@@ -10,7 +10,7 @@ import type { AnswersUpdatedPayload } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
-import { mapUnknownLiveSession } from '@/league/league-http';
+import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
 
 @Controller('sessions/:joinCode/answers')
 @UseGuards(SessionGuard, RolesGuard)

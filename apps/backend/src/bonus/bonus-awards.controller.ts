@@ -23,7 +23,7 @@ import {
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
 import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
-import { mapUnknownLiveSession } from '@/league/league-http';
+import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
 
 /**
  * Nested under teams/:teamId (rather than living on BonusAwardMutationsController

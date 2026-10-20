@@ -26,7 +26,8 @@ import {
 } from '@/game/state/game-state.service';
 import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 import { leagueIdsSchema } from '@/league/league.schema';
-import { mapLeagueErrors, mapUnknownLiveSession } from '@/league/league-http';
+import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
+import { mapLeagueErrors } from '@/league/league-http';
 import { LeagueService } from '@/league/league.service';
 import { QuizService } from '@/quiz/quiz.service';
 import {
