@@ -6,9 +6,9 @@ Parent spec: `.scratch/league/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Unit tests: scale, shared places, left team → participation only, zero answers → nothing, each tie-break step, empty league
-- [ ] Real-Postgres test: only ended member sessions count; a session in two leagues counts in both; the response carries no codes or feedback
-- [ ] Public page with an empty state
-- [ ] `DOCUMENTATION.md` documents the endpoints and the scoring
+- [x] Unit tests: scale, shared places, left team → participation only, zero answers → nothing, each tie-break step, empty league
+- [x] Real-Postgres test: only ended member sessions count; a session in two leagues counts in both; the response carries no codes or feedback
+- [x] Public page with an empty state
+- [x] `DOCUMENTATION.md` documents the endpoints and the scoring

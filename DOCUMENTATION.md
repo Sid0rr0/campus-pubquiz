@@ -87,6 +87,7 @@ management and authoring UI:
 | `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
 | `/team`          | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)    |
 | `/leagues`       | Admin only                  | Create, edit and delete leagues; add or remove ended sessions (see Leagues)     |
+| `/league`        | Anyone                      | The public league tables (see Leagues)                                          |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -1437,8 +1438,8 @@ pages them in memory; the other sorts only compute the figure for the visible pa
 ## Leagues
 
 A **league** (see `GLOSSARY.md`) is a named competition, such as a semester's, that
-ended sessions are added to. This section covers storage and the admin side; league
-points and the table are described where they ship.
+ended sessions are added to. This section covers storage, the admin side, league
+points, the table and the public page.
 
 - **Storage.** `leagues` (`id`, `name`, `startsOn`, `endsOn`, timestamps; a check
   constraint keeps `endsOn >= startsOn`) and the `league_sessions` join table (league,
@@ -1466,6 +1467,31 @@ points and the table are described where they ship.
   per league an edit form, delete (behind a confirmation), its sessions each with
   Remove, and "Add a session" choosing from ended sessions not yet in it (the latest
   100). Each list has an empty state.
+- **League points** (pure module `league/league-table.calc.ts`; the scale is
+  `LEAGUE_PLACING_POINTS = [5, 4, 3, 2, 1]` and `PARTICIPATION_POINTS = 1`). Per ended
+  member session a team earns the points for its Standings **placing** (tied teams each
+  get their shared place's full points; nothing below 5th) plus one participation point
+  for having answered at least one question. A team that left has no placing, so it gets
+  the participation point only. A team that never answered earns nothing and does not
+  count as having played the night. Placings come from `StandingsService`, never
+  recomputed.
+- **League table.** Teams are ranked by league points, then more **nights won** (the
+  session's single Standings winner, as on the team page), then better **average
+  placing** (to one decimal; a team with no placing sorts last); teams level on all three
+  share the position (1, 1, 3). Each row has `teamId`, `teamName`, `leaguePoints`,
+  `nightsPlayed`, `nightsWon`, `averagePlacing` and `position`. Only **ended** member
+  sessions count, a session in two leagues counts in both, and non-members never count.
+  `LeagueTableService.table(leagueId)` returns a league's table for any caller (the team
+  page's position and the lobby's top 5 reuse it).
+- **Public REST** (`PublicLeaguesController`, no login; no team codes, tokens or feedback
+  are exposed):
+  - `GET /leagues/public` lists every league (`id`, `name`, `startsOn`, `endsOn`,
+    `current`), current ones first, then the rest, each newest first;
+  - `GET /leagues/:id/table` returns the league's fields plus `rows` (the table above);
+    an unknown league is a 404.
+- **`/league` page** (public, no login): current leagues first as buttons, then the
+  rest (marked "ended"), and the selected league's table. Empty states for no leagues
+  and for a league with no finished night yet.
 
 ## Deploy and CI
 

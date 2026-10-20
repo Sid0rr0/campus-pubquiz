@@ -25,6 +25,8 @@ import { MediaController } from '@/media/media.controller';
 import { MediaService } from '@/media/media.service';
 import { LeaguesController } from '@/league/leagues.controller';
 import { LeagueService } from '@/league/league.service';
+import { LeagueTableService } from '@/league/league-table.service';
+import { PublicLeaguesController } from '@/league/public-leagues.controller';
 import { SessionsController } from '@/session/sessions.controller';
 import { StatsController } from '@/stats/stats.controller';
 import { StatsService } from '@/stats/stats.service';
@@ -57,6 +59,7 @@ import { StatsService } from '@/stats/stats.service';
     BonusAwardMutationsController,
     StatsController,
     LeaguesController,
+    PublicLeaguesController,
   ],
   providers: [
     // Must be registered before any other exception filters so Sentry sees
@@ -68,6 +71,7 @@ import { StatsService } from '@/stats/stats.service';
     MediaService,
     StatsService,
     LeagueService,
+    LeagueTableService,
   ],
 })
 export class AppModule {}

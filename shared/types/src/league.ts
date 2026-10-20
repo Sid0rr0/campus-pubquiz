@@ -31,6 +31,45 @@ export interface LeagueFields {
   endsOn: string;
 }
 
+/** One team's line in a league table. */
+export interface LeagueTableRow {
+  teamId: number;
+  teamName: string;
+  leaguePoints: number;
+  /** Ended member sessions the team answered in. */
+  nightsPlayed: number;
+  /** Sessions where the team was the single Standings winner. */
+  nightsWon: number;
+  /** Mean placing to one decimal; null when the team never held a placing (it left every night). */
+  averagePlacing: number | null;
+  /** 1-based competition position: teams level on every tie-break share it (1, 1, 3). */
+  position: number;
+}
+
+/** A league's table, as `GET /leagues/:id/table` returns it. No codes, no feedback. */
+export interface LeagueTable {
+  id: number;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  current: boolean;
+  rows: LeagueTableRow[];
+}
+
+/** A league as the public page lists it: no sessions. */
+export interface PublicLeague {
+  id: number;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  current: boolean;
+}
+
+/** Response of `GET /leagues/public`: current leagues first, then the rest. */
+export interface PublicLeaguesPayload {
+  items: PublicLeague[];
+}
+
 /** Request body for POST /leagues/:id/sessions. */
 export interface AddLeagueSessionPayload {
   gameSessionId: number;
