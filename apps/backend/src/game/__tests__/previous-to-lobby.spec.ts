@@ -32,7 +32,7 @@ describe('GameGateway — PREVIOUS from the rules goes back to the lobby', () =>
     await game.act('PREVIOUS');
 
     expect(displayView().progress.status).toBe('lobby');
-    expect(displayView().onAirScreen).toEqual({ kind: 'lobby' });
+    expect(displayView().screen).toEqual({ kind: 'lobby' });
     expect(playersView().progress.status).toBe('lobby');
     expect(playersView().phoneScreen).toEqual({ kind: 'lobby' });
     await expect(

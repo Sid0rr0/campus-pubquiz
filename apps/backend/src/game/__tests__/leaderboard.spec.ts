@@ -19,6 +19,11 @@ describe('GameGateway — leaderboard', () => {
     game = await harness.createGateway({ teamNames: ['First', 'Second'] });
   });
 
+  /** Ranks revealed on the board on the big screen; 0 whenever the board isn't what it is showing. */
+  function revealCountOf(view: StateViewByRoom['display']): number {
+    return view.screen.kind === 'leaderboard' ? view.screen.revealCount : 0;
+  }
+
   /** Runs an admin action and returns the view the big screen is then sent — the room that owns the reveal count. */
   async function displayAfter(
     action: GameAction,
@@ -62,16 +67,16 @@ describe('GameGateway — leaderboard', () => {
   it('reveals teams one at a time via ADVANCE, bottom-up and bounded by team count', async () => {
     await scoreFirstTeamOnFirstQuestion();
     await game.act('TOGGLE_LEADERBOARD');
-    expect((await game.resync('display')).leaderboardRevealCount).toBe(0);
+    expect(revealCountOf(await game.resync('display'))).toBe(0);
 
-    expect((await displayAfter('ADVANCE')).leaderboardRevealCount).toBe(1);
-    expect((await displayAfter('ADVANCE')).leaderboardRevealCount).toBe(2);
+    expect(revealCountOf(await displayAfter('ADVANCE'))).toBe(1);
+    expect(revealCountOf(await displayAfter('ADVANCE'))).toBe(2);
 
     // Bounded: with every rank shown, a further press hides the board
     // instead of revealing past the number of teams.
     const hidden = await displayAfter('ADVANCE');
     expect(hidden.progress.isLeaderboardVisible).toBe(false);
-    expect(hidden.leaderboardRevealCount).toBe(0);
+    expect(revealCountOf(hidden)).toBe(0);
   });
 
   it('also advances the leaderboard reveal on ADVANCE while the board is visible', async () => {
@@ -81,20 +86,16 @@ describe('GameGateway — leaderboard', () => {
 
     const afterAdvance = await displayAfter('ADVANCE'); // -> r1q1, board still visible
 
-    expect(afterAdvance.leaderboardRevealCount).toBe(1);
+    expect(revealCountOf(afterAdvance)).toBe(1);
   });
 
   it('resets the reveal count whenever the leaderboard is toggled', async () => {
     await game.act('START_QUIZ');
     await game.act('TOGGLE_LEADERBOARD');
-    expect((await displayAfter('ADVANCE')).leaderboardRevealCount).toBe(1);
+    expect(revealCountOf(await displayAfter('ADVANCE'))).toBe(1);
 
-    expect(
-      (await displayAfter('TOGGLE_LEADERBOARD')).leaderboardRevealCount,
-    ).toBe(0); // hide
-    expect(
-      (await displayAfter('TOGGLE_LEADERBOARD')).leaderboardRevealCount,
-    ).toBe(0); // show again, fresh
+    expect(revealCountOf(await displayAfter('TOGGLE_LEADERBOARD'))).toBe(0); // hide
+    expect(revealCountOf(await displayAfter('TOGGLE_LEADERBOARD'))).toBe(0); // show again, fresh
   });
 
   it('shows "Quiz complete!" rather than the leaderboard when the End Quiz button ends the quiz, until the admin reveals it', async () => {
@@ -104,14 +105,14 @@ describe('GameGateway — leaderboard', () => {
 
     expect(ended.progress.status).toBe('ended');
     expect(ended.progress.isLeaderboardVisible).toBe(false);
-    expect(ended.leaderboardRevealCount).toBe(0);
+    expect(revealCountOf(ended)).toBe(0);
 
     const withLeaderboard = await displayAfter('TOGGLE_LEADERBOARD');
     expect(withLeaderboard.progress.isLeaderboardVisible).toBe(true);
-    expect(withLeaderboard.leaderboardRevealCount).toBe(0);
+    expect(revealCountOf(withLeaderboard)).toBe(0);
 
     const afterFirstReveal = await displayAfter('ADVANCE');
-    expect(afterFirstReveal.leaderboardRevealCount).toBe(1);
+    expect(revealCountOf(afterFirstReveal)).toBe(1);
   });
 
   it('shows the leaderboard screen when advancing past the last reveal question ends the quiz naturally', async () => {
@@ -134,7 +135,7 @@ describe('GameGateway — leaderboard', () => {
     // Unlike a mid-game TOGGLE_LEADERBOARD reveal, crossing into 'ended'
     // starts the final leaderboard empty rather than counting itself as the
     // first reveal step — same as the explicit End Quiz button.
-    expect(snapshot.leaderboardRevealCount).toBe(0);
+    expect(revealCountOf(snapshot)).toBe(0);
   });
 
   it('shows the leaderboard between reveal blocks, before the next round intro card is revealed', async () => {
@@ -173,7 +174,7 @@ describe('GameGateway — leaderboard', () => {
     expect(afterReveal.progress.isLeaderboardVisible).toBe(true);
     // A fresh mid-quiz reveal, same as the final leaderboard on 'ended' —
     // never inherits a stale count from an earlier reveal.
-    expect(afterReveal.leaderboardRevealCount).toBe(0);
+    expect(revealCountOf(afterReveal)).toBe(0);
 
     const afterClose = await twoBlocks.act('TOGGLE_LEADERBOARD');
     expect(afterClose.progress.status).toBe('round_intro');

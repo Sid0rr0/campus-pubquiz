@@ -69,11 +69,20 @@ describe('room view fields', () => {
 
       expect(view.displayTextScale).toBe(1.25);
       expect(view.isDisplaySoundMuted).toBe(true);
-      expect(view.breakEndsAt).toBe(123);
       expect(view.roundTitles).toEqual(['Alpha', 'Beta']);
       expect(view.answeredTeamIds).toEqual([]);
     },
   );
+
+  it('sends the admin view the break end time', () => {
+    expect(projectScreen(session(), SOCKET_ROOMS.ADMIN).breakEndsAt).toBe(123);
+  });
+
+  it('keeps the break end time off the top of the display view (it rides its break screen)', () => {
+    const view = projectScreen(session(), SOCKET_ROOMS.DISPLAY);
+
+    expect(view).not.toHaveProperty('breakEndsAt');
+  });
 
   it.each([SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN, SOCKET_ROOMS.PLAYERS])(
     'sends no closest-guess reveal step to the %s view',

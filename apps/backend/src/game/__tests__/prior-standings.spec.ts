@@ -49,9 +49,17 @@ describe('GameGateway — prior standings behind the display count-up board', ()
     return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
   }
 
+  /** The board the big screen draws; fails unless the leaderboard is on air. */
+  function boardOf(view: ReturnType<typeof displayView>) {
+    if (view.screen.kind !== 'leaderboard') {
+      throw new Error(`Expected the leaderboard, got ${view.screen.kind}`);
+    }
+    return view.screen.board;
+  }
+
   /** The board the big screen counts up from between kahoot questions. */
   function countUpBoard() {
-    const { countUpBoard: board } = displayView().leaderboardBoard;
+    const { countUpBoard: board } = boardOf(displayView());
     if (board === undefined) throw new Error('no count-up board was sent');
     return board;
   }
@@ -97,8 +105,8 @@ describe('GameGateway — prior standings behind the display count-up board', ()
 
     const resynced = await game.resync('display');
 
-    expect(resynced.leaderboardBoard).toEqual(displayView().leaderboardBoard);
-    expect(resynced.leaderboardBoard.countUpBoard).toBeDefined();
+    expect(boardOf(resynced)).toEqual(boardOf(displayView()));
+    expect(boardOf(resynced).countUpBoard).toBeDefined();
   });
 
   it('counts a bonus awarded while the question is on air into the count-up board', async () => {
@@ -125,7 +133,7 @@ describe('GameGateway — prior standings behind the display count-up board', ()
 
     const restarted = await game.restart();
 
-    const { leaderboardBoard } = await restarted.resync('display');
+    const leaderboardBoard = boardOf(await restarted.resync('display'));
     expect(leaderboardBoard.countUpBoard).toBeUndefined();
     expect(leaderboardBoard.entries).toHaveLength(2);
   });

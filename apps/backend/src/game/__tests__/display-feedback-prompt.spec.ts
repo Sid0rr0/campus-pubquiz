@@ -60,9 +60,8 @@ describe('Screen projection — the big-screen feedback prompt flag', () => {
       await game.act('START_QUIZ');
       await advanceUntilStatus(game, 'break_intro');
 
-      expect(displayView(game).onAirScreen).toEqual({
+      expect(displayView(game).screen).toMatchObject({
         kind: 'break_intro',
-        roundIndex: 1,
         isFeedbackPromptShown: collectFeedback,
       });
     },
@@ -78,7 +77,7 @@ describe('Screen projection — the big-screen feedback prompt flag', () => {
       await game.act('START_QUIZ');
       await game.act('END_QUIZ');
 
-      expect(displayView(game).onAirScreen).toEqual({
+      expect(displayView(game).screen).toEqual({
         kind: 'ended',
         isFeedbackPromptShown: collectFeedback,
       });

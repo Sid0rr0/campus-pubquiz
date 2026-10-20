@@ -250,7 +250,12 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
       game: RealStoreGateway,
       room: typeof SOCKET_ROOMS.DISPLAY | typeof SOCKET_ROOMS.PLAYERS,
     ) {
-      const view = await game.resync(room);
+      if (room === SOCKET_ROOMS.DISPLAY) {
+        const { screen } = await game.resync(SOCKET_ROOMS.DISPLAY);
+        if (screen.kind !== 'reveal') throw new Error('not on a reveal screen');
+        return screen.question;
+      }
+      const view = await game.resync(SOCKET_ROOMS.PLAYERS);
       return view.revealQuestions[view.progress.revealIndex];
     }
 

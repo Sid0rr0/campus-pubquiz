@@ -261,7 +261,7 @@ leaves the timers as they were.
 
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `shared/types/src/screen-projection.ts`, a pure module the backend calls):
-the display view names the screen on air; the admin view adds what `/control`
+the display view carries the **Display screen** (`screen`: the screen on air with the content it draws, or `blank` when that content can't be found, which the server logs); the admin view names the **On-air screen** (`onAirScreen`) and adds what `/control`
 marks as on air plus server-decided Advance/Previous availability, and gives each
 roster team its player count and over-cap flag; the
 players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state; its `block` kind carries a mode of `answering`, `locked` or `revealing`), and drops anything teams haven't been shown
@@ -328,7 +328,7 @@ shared `describeFeedback`) and is used both to build the field and to accept a
 rating, so the two can't disagree; the phone draws from it and never decides for
 itself.
 
-The display view's `onAirScreen` carries the same setting for the big screen: the
+The display view's `screen` carries the same setting for the big screen: the
 `break_intro` and `ended` screens have an `isFeedbackPromptShown` flag (true when
 `collectFeedback` is on). `/display` draws "Rate the rounds on your phone ★" and
 the invitation to rate the rounds in the final thank-you from it, and nothing otherwise.
@@ -375,16 +375,16 @@ silences the lock-countdown track.
 
 **Fields that belong to one room's view:**
 
-| View                            | Fields                                                                                                                                                                           |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `breakEndsAt`, `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry) |
-| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect`, `funFacts`, `leagueTop` |
-| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                     |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                 |
+| View                            | Fields                                                                                                                                                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry)                                                         |
+| Display (`DisplayStatePayload`) | `screen` (the Display screen), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
+| Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                                            |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                                                                      |
 
 A field only one room reads is added to that room's view type, not the base.
 
-**The display's leaderboard (`leaderboardBoard`).** The server describes the
+**The display's leaderboard (`screen.board` on the `leaderboard` Display screen).** The server describes the
 board once and `/display` draws it as sent (the Screen projection builds it
 from the session, so a reloaded or second big screen draws the same thing):
 
@@ -436,20 +436,20 @@ and when a session is placed (creation, restart), so they follow hand grades,
 lock grading and key fixes.
 
 **The break's fun facts (`funFacts`).** While the break screen is on air
-(`onAirScreen.kind === 'break_intro'`; not over the leaderboard, not while
-stepping through the block in break review) the display view carries
-`funFacts: FunFact[]`; on every other screen it is `[]`, and the players and
+(`screen.kind === 'break_intro'`; not over the leaderboard, not while
+stepping through the block in break review) the Display screen carries
+`funFacts: FunFact[]`; no other screen has the field, and the players and
 admin views have no such field. Each fact is a typed object, not a sentence:
 `/display` words it. The server builds the list in the shared `describeFunFacts`
 module, in this order, and skips a fact with no data:
 
 | `kind`                   | Fields                               | Meaning                                                                                                                                                         |
 | ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fastest_correct_answer` | `teamName`, `responseMs`, `question` | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the first team in leaderboard name order                                   |
+| `fastest_correct_answer` | `teamName`, `responseMs`, `question` | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the first team in leaderboard name order                        |
 | `toughest_question`      | `correctRate` (0-1), `question`      | Lowest correct rate above 0 of the revealed questions, never the question `nobody_got_it` names; skipped when none is below 1; never a `closest_guess` question |
 | `room_split`             | `correctRate` (0-1), `question`      | Revealed question whose correct rate is closest to one half (strictly between 0 and 1); never a `closest_guess` question                                        |
 | `nobody_got_it`          | `question`                           | First revealed question with no `correct` answer (a question nobody answered is skipped); never a `closest_guess` question                                      |
-| `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted                        |
+| `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted           |
 | `bonus_awards_so_far`    | `counts: { category, count }[]`      | Positive bonus awards per category, in category order (`shot`, `selfie`, `custom`)                                                                              |
 
 `question` is `{ questionId, roundNumber, questionNumberInRound, prompt }`. The
@@ -973,8 +973,8 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   note is blank) also puts the note on the big screen's round intro and break
   round intro, drawn as text (line breaks kept, display text scale applied)
   under the title, category and author. The server decides this once, in the
-  display view's `roundNote`: the note only when that round's intro or break
-  round intro is on air, the setting is on and the note is non-empty, else `''`.
+  Display screen's `note` (on the `round_title` and `break_round_title` kinds): the note
+  only when the setting is on and the note is non-empty, else `''`.
   Phones and the reveal intro never get it. It can be edited for
   any round while live — `findLiveEditViolations` ignores it, and the live edit
   re-seeds running sessions.

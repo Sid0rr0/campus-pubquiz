@@ -47,7 +47,10 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
       expect(adminView().advanceStep).toBe('reveal_next_rank');
 
       await game.act('ADVANCE');
-      expect(displayView().leaderboardRevealCount).toBe(1);
+      expect(displayView().screen).toMatchObject({
+        kind: 'leaderboard',
+        revealCount: 1,
+      });
       expect(adminView().advanceStep).toBe('hide_leaderboard');
       expect(adminView().progress.isLeaderboardVisible).toBe(true);
       expect(underneath()).toEqual(before);
@@ -75,7 +78,10 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
 
     it('lets the Leaderboard toggle hide a board whose ranks are partly shown', async () => {
       await game.act('ADVANCE');
-      expect(displayView().leaderboardRevealCount).toBe(1);
+      expect(displayView().screen).toMatchObject({
+        kind: 'leaderboard',
+        revealCount: 1,
+      });
 
       await game.act('TOGGLE_LEADERBOARD');
       expect(adminView().progress.isLeaderboardVisible).toBe(false);

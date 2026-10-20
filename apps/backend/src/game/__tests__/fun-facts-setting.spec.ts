@@ -36,6 +36,10 @@ describe('Fun facts session setting', () => {
     return game.resync('display');
   }
 
+  function funFactsOf(view: DisplayStatePayload) {
+    return view.screen.kind === 'break_intro' ? view.screen.funFacts : [];
+  }
+
   async function advanceUntil(
     game: RealStoreGateway,
     isReached: (view: DisplayStatePayload) => boolean,
@@ -70,7 +74,7 @@ describe('Fun facts session setting', () => {
         v.progress.status === 'question_open' && v.progress.roundIndex === 1,
     );
     await answerWrong(game, 1);
-    await advanceUntil(game, (v) => v.onAirScreen.kind === 'break_intro');
+    await advanceUntil(game, (v) => v.screen.kind === 'break_intro');
     return displayView(game);
   }
 
@@ -88,7 +92,8 @@ describe('Fun facts session setting', () => {
     const view = await secondBreakView(game);
 
     expect(DEFAULT_SESSION_SETTINGS.funFactsEnabled).toBe(true);
-    expect(view.funFacts.length).toBeGreaterThan(0);
+    expect(view.screen.kind).toBe('break_intro');
+    expect(funFactsOf(view).length).toBeGreaterThan(0);
   });
 
   it('leaves funFacts empty on the break screen when it is off', async () => {
@@ -96,8 +101,8 @@ describe('Fun facts session setting', () => {
 
     const view = await secondBreakView(game);
 
-    expect(view.onAirScreen.kind).toBe('break_intro');
-    expect(view.funFacts).toEqual([]);
+    expect(view.screen.kind).toBe('break_intro');
+    expect(funFactsOf(view)).toEqual([]);
   });
 
   it('reads a stored settings JSON without the field as on', async () => {

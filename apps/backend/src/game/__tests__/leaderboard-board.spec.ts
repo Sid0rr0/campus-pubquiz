@@ -1,6 +1,7 @@
 import {
   KAHOOT_LEADERBOARD_TOP_N,
   SOCKET_ROOMS,
+  type DisplayStatePayload,
   type GameAction,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
@@ -54,14 +55,23 @@ describe('GameGateway — the leaderboard description on the display view', () =
     await game.act('ADVANCE'); // -> question_open q0
   }
 
+  function leaderboardScreen(view: DisplayStatePayload) {
+    if (view.screen.kind !== 'leaderboard') {
+      throw new Error(`Expected the leaderboard, got ${view.screen.kind}`);
+    }
+    return view.screen;
+  }
+
   function board() {
-    return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY)
-      .leaderboardBoard;
+    return leaderboardScreen(
+      game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY),
+    ).board;
   }
 
   function revealCount() {
-    return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY)
-      .leaderboardRevealCount;
+    return leaderboardScreen(
+      game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY),
+    ).revealCount;
   }
 
   async function awardBonus(teamIndex: number, points = BONUS_POINTS) {
@@ -156,7 +166,9 @@ describe('GameGateway — the leaderboard description on the display view', () =
       await awardBonus(1, BIG_BONUS_POINTS);
       await game.act('ADVANCE');
 
-      expect((await game.resync('display')).leaderboardBoard).toEqual(board());
+      expect(leaderboardScreen(await game.resync('display')).board).toEqual(
+        board(),
+      );
     });
   });
 
