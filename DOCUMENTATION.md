@@ -83,6 +83,7 @@ management and authoring UI:
 | `/sessions`      | Admin/moderator (any)       | Lists/starts/closes game sessions; opening one routes to `/control?code=...`    |
 | `/control/users` | Admin only                  | Approve pending accounts, deactivate active ones                                |
 | `/quizzes/[id]`  | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
+| `/quizzes/[id]/preview` | Admin/moderator (any) | Quiz preview: a saved quiz's big-screen screens in a 16:9 frame, no session (see Quiz preview) |
 | `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
 | `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
 | `/team`          | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)    |
@@ -1004,6 +1005,38 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated
   server-side, surfacing structured issues per round/question on failure.
 - Export the quiz's questions with **Export CSV** in the header bar.
+- **Preview** in the header bar (once the quiz is saved) opens the saved quiz's
+  [Quiz preview](#quiz-preview) in a new tab. With unsaved changes the editor
+  asks first, because the preview shows the saved quiz, not the draft.
+
+### Quiz preview
+
+A **Quiz preview** shows a saved quiz's big-screen screens without a session:
+no `game_sessions` row, no in-memory session, no socket room, nothing written
+or counted. It is a read of the quiz.
+
+- **Route** `/quizzes/[id]/preview` (admin or moderator): draws each step with
+  the same `DisplayScreenView` as `/display`, in a letterboxed 16:9 frame, with
+  Prev/Next buttons and the arrow keys (one step, stopping at both ends), a
+  "Block ends here" marker after each block's last answer, and a not-found
+  state for an unknown quiz. Media plays as on the night (clip bounds, YouTube,
+  `hideVideo`).
+- **Order** `answer_after_question` (the default and, for now, the only one):
+  each round's title card, then each question followed by its revealed answer.
+  Kahoot rounds look the same. Live-only content is empty: no team counts,
+  guesses, fun facts or break deadline, and a closest_guess reveal shows just
+  its correct answer.
+- **Endpoint** `GET /quizzes/:id/preview?mode=answer_after_question` returns a
+  `QuizPreviewPayload` (`shared/types/src/quiz-preview.ts`): the quiz-level
+  display context (`quiz`) and the ordered `steps`, each with its
+  `DisplayScreen`, its `roundIndex` / `questionIndex` (`questionIndex` is
+  `null` on a title card) and `isBlockEnd`. Same session and role guards as the
+  other quiz reads (admin and moderator). An unknown quiz is a `404`, a `mode`
+  that isn't a preview mode a `400`; `mode` defaults to `answer_after_question`.
+- **How it is built**: `buildQuizPreview` puts a team-less, in-memory
+  `SessionState` built from the quiz's seeded rounds (`SeedService.loadQuizRounds`)
+  at each screen and takes the `DisplayScreen` from the display projection, so
+  the preview can't draw anything `/display` wouldn't.
 
 **Editing a live quiz**: a quiz can be edited at any time, including while a
 session on it is running (any status other than `lobby`/`ended`). Five rules
