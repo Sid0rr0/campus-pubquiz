@@ -191,6 +191,28 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(mockToastSuccess.mock.calls[0][0]).toContain('+2 points');
   });
 
+  it('replaces the bonus list on a bonus awards sync, without a toast', () => {
+    const { result, socket } = renderPlayingTeam();
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.BONUS_AWARDED, {
+        category: 'shot',
+        points: 1,
+      }),
+    );
+    mockToastSuccess.mockClear();
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED, {
+        bonusAwards: [{ category: 'selfie', points: 3 }],
+      }),
+    );
+
+    expect(result.current.game?.myBonusAwards).toEqual([
+      { category: 'selfie', points: 3 },
+    ]);
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+
   it('emits the answer and resolves once the server acknowledges it, without reconnecting', async () => {
     const { result, socket } = renderPlayingTeam();
 
