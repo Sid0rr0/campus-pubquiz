@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DEFAULT_MARGIN, MARGIN_UNITS, parseFiniteNumber } from './margin';
+import { MARGIN_UNITS, parseFiniteNumber } from './margin';
 import { isSameMultiset, splitPipeList } from './sort-match';
 
 /**
@@ -98,7 +98,7 @@ export const numberPreviewSchema = z.object({
   type: z.literal('number'),
   ...baseQuestionFields,
   answer: numberAnswer,
-  margin: marginSchema.default(DEFAULT_MARGIN),
+  margin: marginSchema.optional(),
   mediaUrl: httpUrl.optional(),
 });
 

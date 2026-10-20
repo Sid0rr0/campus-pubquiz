@@ -6,7 +6,7 @@ Parent spec: `.scratch/question-record-module/spec.md`
 
 **Blocked by:** None (can start immediately; can run in parallel with 01–03)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Number preview schema has no default margin. A Number preview with no margin validates and comes back with none.
 - [ ] CSV import stores the validated input, never the schema's parsed output, the same as the quiz save.

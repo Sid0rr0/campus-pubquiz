@@ -61,8 +61,6 @@ const QUESTION_BY_TYPE: Record<QuestionType, ImportQuestionPreview> = {
     answer: '1989',
     points: 2,
     mediaUrl: 'https://example.com/wall.jpg',
-    // CSV carries no margin: an imported Number question gets the default.
-    margin: { value: 10, unit: 'percent' },
   },
 };
 
