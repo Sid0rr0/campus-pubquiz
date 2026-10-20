@@ -276,10 +276,12 @@ export function computeSessionDetail(
       title: round.title,
       category: round.category,
       rating: rating ? { average: rating.average, count: rating.count } : null,
+      // The mean of the questions' own rates, so a partial answer counts the
+      // same way here as it does on the question row.
       correctRate:
-        teamCount > 0 && ratedResults.length > 0
-          ? ratedResults.reduce((sum, r) => sum + r.correctCount, 0) /
-            (teamCount * ratedResults.length)
+        ratedResults.length > 0
+          ? ratedResults.reduce((sum, r) => sum + (r.correctRate ?? 0), 0) /
+            ratedResults.length
           : null,
       pointsPercent:
         achievablePoints > 0

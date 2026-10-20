@@ -317,6 +317,58 @@ describe('computeSessionDetail', () => {
     expect(result.questions[0].correctRate).toBeCloseTo(0.5);
   });
 
+  it('rates a round at the mean of its questions, so partial credit counts', () => {
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'Team A' },
+          { teamId: 2, teamName: 'Team B' },
+        ],
+        rounds: [
+          {
+            roundId: 100,
+            title: 'Round 1',
+            category: 'History',
+            orderIndex: 0,
+          },
+        ],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Match Q',
+            type: 'match',
+            points: 4,
+          },
+        ],
+        answers: [
+          {
+            questionId: 10,
+            teamId: 1,
+            teamName: 'Team A',
+            pointsAwarded: 1,
+            gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'partial',
+            responseMs: null,
+          },
+          {
+            questionId: 10,
+            teamId: 2,
+            teamName: 'Team B',
+            pointsAwarded: 3,
+            gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'partial',
+            responseMs: null,
+          },
+        ],
+      }),
+    );
+
+    expect(result.rounds[0].correctRate).toBeCloseTo(0.5);
+    expect(result.rounds[0].correctRate).toBe(result.questions[0].correctRate);
+  });
+
   it('rates a free_text question at the summed shares of hand-graded partial marks', () => {
     const answer = (teamId: number, pointsAwarded: number) => ({
       questionId: 10,
