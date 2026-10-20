@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| live-session-rest | [Every REST change to a live session goes through the Live session module](live-session-rest/spec.md) | 4 |
 | control-shortcuts-and-mute | [Control shortcuts F / Space / M, and a big-screen mute that silences media](control-shortcuts-and-mute/spec.md) | 2 |
 | quiz-preview | [Quiz preview](quiz-preview/spec.md) | 6 |
 | question-kind-derived-lists | [The question type registry derives every per-type list](question-kind-derived-lists/spec.md) | 3 |
