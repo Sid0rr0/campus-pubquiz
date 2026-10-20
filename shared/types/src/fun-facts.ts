@@ -1,10 +1,8 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import type { Verdict } from './answer-kind';
-import {
-  answerCredit,
-  hasMeaningfulCorrectRate,
-} from './question-correct-rate';
+import { answerCredit } from './question-correct-rate';
+import { QUESTION_KINDS } from './question-kind';
 import { compareTeamNames } from './ranking-rule';
 import type { SessionState } from './session-state';
 
@@ -95,7 +93,8 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
       questionNumberInRound: questionIndex + 1,
       prompt: question.prompt,
       isKahoot: round.kahootMode ?? false,
-      isClosestGuess: !hasMeaningfulCorrectRate(question.type),
+      isClosestGuess:
+        QUESTION_KINDS[question.type].revealKind === 'closest_guess',
       points: question.points,
     })),
   );
