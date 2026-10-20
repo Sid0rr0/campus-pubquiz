@@ -149,16 +149,13 @@ export class SessionsController {
     @Param('joinCode') joinCode: string,
     @Body() body: unknown,
   ): Promise<void> {
-    const { settingsBody, leagueIds } = splitLeagueIds(body);
-    const partial = parseSettingsPartial(settingsBody);
     try {
       await mapUnknownLiveSession(() =>
         mapLeagueErrors(() =>
-          this.liveSession.updateSettingsAndLeagues(
-            joinCode,
-            partial,
-            leagueIds,
-          ),
+          this.liveSession.updateSettingsAndLeagues(joinCode, () => {
+            const { settingsBody, leagueIds } = splitLeagueIds(body);
+            return { partial: parseSettingsPartial(settingsBody), leagueIds };
+          }),
         ),
       );
     } catch (error) {

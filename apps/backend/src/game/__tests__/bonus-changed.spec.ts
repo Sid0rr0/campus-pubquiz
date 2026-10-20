@@ -17,6 +17,7 @@ import {
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
 import { UnknownLiveSessionError } from '@/game/rest/live-session-rest.service';
+import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 
 describe('GameGateway — bonus changed and leaderboard toggle', () => {
   const harness = setupRealStoreGatewayTest();
@@ -263,6 +264,21 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     expect(game.roomEmits()).toEqual([]);
   });
 
+  it('lets a session refusal that is not about the bonus award pass through a REST bonus edit or deletion unchanged', async () => {
+    const refusal = new SessionRefusal('Something else was refused');
+    jest.spyOn(game.gameState, 'editBonus').mockRejectedValue(refusal);
+    jest.spyOn(game.gameState, 'removeBonus').mockRejectedValue(refusal);
+
+    await expect(
+      game.inRequestContext(() =>
+        game.rest.editBonus(game.joinCode, 1, 3, undefined),
+      ),
+    ).rejects.toBe(refusal);
+    await expect(
+      game.inRequestContext(() => game.rest.removeBonus(game.joinCode, 1)),
+    ).rejects.toBe(refusal);
+  });
+
   it('lists a team’s awards for the bonus drawer', async () => {
     const awardId = await awardShot(1);
 
@@ -282,7 +298,10 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
       () => game.rest.editBonus('NOPE12', 1, 3, undefined),
       () => game.rest.removeBonus('NOPE12', 1),
       () => game.rest.listAnswers('NOPE12', game.questionIds.multipleChoice),
-      () => game.rest.updateSettingsAndLeagues('NOPE12', {}, undefined),
+      () =>
+        game.rest.updateSettingsAndLeagues('NOPE12', () => {
+          throw new Error('an unknown session never parses the request');
+        }),
       () => game.rest.closeSession('NOPE12'),
     ];
 

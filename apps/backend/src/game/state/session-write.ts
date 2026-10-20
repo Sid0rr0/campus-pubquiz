@@ -86,8 +86,7 @@ function reportLeagueTablesChange<T>(
 ): T {
   const wasEnded = started.progress.status === 'ended';
   const isEnded = stored.progress.status === 'ended';
-  const changed =
-    wasEnded !== isEnded || (wasEnded && isEnded && refreshedStandings);
+  const changed = wasEnded !== isEnded || (wasEnded && refreshedStandings);
   if (!changed || !isSessionOutcome(outcome)) return outcome;
   return { ...outcome, leagueTablesChanged: true };
 }

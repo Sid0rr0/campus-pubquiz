@@ -30,15 +30,28 @@ import {
 import type { QuizService } from '@/quiz/quiz.service';
 import { SessionsController } from '@/session/sessions.controller';
 
+type LiveSessionRestParse = Parameters<
+  LiveSessionRest['updateSettingsAndLeagues']
+>[1];
+
 function makeController() {
   const gameState = {
     listSessions: jest.fn(),
     createSession: jest.fn(),
   };
   const quizService = { findTitles: jest.fn() };
+  // The real REST entry parses the request body once the session is known to
+  // be live; this stand-in does the same, then records what it parsed.
+  const settingsApplied = jest.fn();
   const rest = {
     closeSession: jest.fn(),
-    updateSettingsAndLeagues: jest.fn(),
+    updateSettingsAndLeagues: jest.fn(
+      (joinCode: string, parseRequest: LiveSessionRestParse) => {
+        const { partial, leagueIds } = parseRequest();
+        settingsApplied(joinCode, partial, leagueIds);
+        return Promise.resolve();
+      },
+    ),
   };
   const seedService = {
     findStartedAtByJoinCodes: jest.fn().mockResolvedValue(new Map()),
@@ -59,6 +72,7 @@ function makeController() {
     gameState,
     quizService,
     rest,
+    settingsApplied,
     seedService,
     leagues,
   };
@@ -445,11 +459,11 @@ describe('SessionsController', () => {
 
   describe('updateSettings', () => {
     it('makes one update call with the parsed settings', async () => {
-      const { controller, rest } = makeController();
+      const { controller, settingsApplied } = makeController();
 
       await controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 });
 
-      expect(rest.updateSettingsAndLeagues).toHaveBeenCalledWith(
+      expect(settingsApplied).toHaveBeenCalledWith(
         'GHIJKL',
         { lockGraceSeconds: 15 },
         undefined,
@@ -467,13 +481,25 @@ describe('SessionsController', () => {
       ).rejects.toThrow(new NotFoundException('Unknown session "NOPE12"'));
     });
 
-    it('rejects an invalid settings body without calling the REST entry', async () => {
-      const { controller, rest } = makeController();
+    it('400s on an invalid settings body for a live session, applying nothing', async () => {
+      const { controller, settingsApplied } = makeController();
 
       await expect(
         controller.updateSettings('GHIJKL', { lockGraceSeconds: 0 }),
       ).rejects.toThrow(BadRequestException);
-      expect(rest.updateSettingsAndLeagues).not.toHaveBeenCalled();
+      expect(settingsApplied).not.toHaveBeenCalled();
+    });
+
+    it('404s for an unknown join code even when the body is invalid', async () => {
+      const { controller, rest } = makeController();
+      // The real REST entry refuses an unknown session before it parses the body.
+      rest.updateSettingsAndLeagues.mockRejectedValue(
+        new UnknownLiveSessionError('NOPE12'),
+      );
+
+      await expect(
+        controller.updateSettings('NOPE12', { lockGraceSeconds: 0 }),
+      ).rejects.toThrow(new NotFoundException('Unknown session "NOPE12"'));
     });
 
     it('maps a blocked update (game already started) to 409', async () => {
@@ -490,19 +516,15 @@ describe('SessionsController', () => {
 
   describe('updateSettings with leagueIds', () => {
     it('hands only leagueIds when only leagueIds is sent', async () => {
-      const { controller, rest } = makeController();
+      const { controller, settingsApplied } = makeController();
 
       await controller.updateSettings('GHIJKL', { leagueIds: [4] });
 
-      expect(rest.updateSettingsAndLeagues).toHaveBeenCalledWith(
-        'GHIJKL',
-        {},
-        [4],
-      );
+      expect(settingsApplied).toHaveBeenCalledWith('GHIJKL', {}, [4]);
     });
 
     it('hands settings and leagues in the same call', async () => {
-      const { controller, rest } = makeController();
+      const { controller, rest, settingsApplied } = makeController();
 
       await controller.updateSettings('GHIJKL', {
         lockGraceSeconds: 15,
@@ -510,7 +532,7 @@ describe('SessionsController', () => {
       });
 
       expect(rest.updateSettingsAndLeagues).toHaveBeenCalledTimes(1);
-      expect(rest.updateSettingsAndLeagues).toHaveBeenCalledWith(
+      expect(settingsApplied).toHaveBeenCalledWith(
         'GHIJKL',
         { lockGraceSeconds: 15 },
         [],

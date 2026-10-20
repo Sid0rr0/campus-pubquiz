@@ -13,11 +13,17 @@ import {
 } from '@/bonus/bonus.service';
 import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { BonusAwardNotFoundRefusal } from '@/game/state/errors/bonus-award-not-found-refusal.error';
-import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
+import { InvalidBonusAwardRefusal } from '@/game/state/errors/invalid-bonus-award-refusal.error';
 import { UnknownLiveSessionError } from '@/game/state/errors/unknown-live-session.error';
 import { GameStateService } from '@/game/state/game-state.service';
 
 export { UnknownLiveSessionError } from '@/game/state/errors/unknown-live-session.error';
+
+/** A parsed settings patch: the lobby settings to merge and the leagues to replace (undefined leaves them). */
+export interface SettingsAndLeaguesUpdate {
+  partial: Partial<SessionSettings>;
+  leagueIds: number[] | undefined;
+}
 
 /** Turns the session refusals a bonus change throws back into the bonus service's error types, which the controllers map to 400 / 404. */
 async function asBonusErrors<T>(run: () => Promise<T>): Promise<T> {
@@ -27,7 +33,7 @@ async function asBonusErrors<T>(run: () => Promise<T>): Promise<T> {
     if (error instanceof BonusAwardNotFoundRefusal) {
       throw new BonusAwardNotFoundError(error.message);
     }
-    if (error instanceof SessionRefusal) {
+    if (error instanceof InvalidBonusAwardRefusal) {
       throw new InvalidBonusAwardError(error.message);
     }
     throw error;
@@ -112,13 +118,18 @@ export class LiveSessionRest {
     });
   }
 
-  /** Merges lobby settings and/or replaces the session's leagues, then redraws its clients. */
+  /**
+   * Merges lobby settings and/or replaces the session's leagues, then redraws
+   * its clients. `parseRequest` reads the request body and runs only once the
+   * session is known to be live, so an unknown join code answers as unknown
+   * before a bad body answers as invalid.
+   */
   updateSettingsAndLeagues(
     joinCode: string,
-    partial: Partial<SessionSettings>,
-    leagueIds: number[] | undefined,
+    parseRequest: () => SettingsAndLeaguesUpdate,
   ): Promise<void> {
     return this.inLiveSession(joinCode, async () => {
+      const { partial, leagueIds } = parseRequest();
       await this.gameState.updateSessionSettings(joinCode, partial, leagueIds);
       await this.broadcaster.broadcastState(joinCode);
     });

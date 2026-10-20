@@ -11,7 +11,7 @@ import {
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
 import { BonusAwardNotFoundRefusal } from '@/game/state/errors/bonus-award-not-found-refusal.error';
-import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
+import { InvalidBonusAwardRefusal } from '@/game/state/errors/invalid-bonus-award-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
 import {
   BROADCAST_STATE_OUTCOME,
@@ -99,7 +99,7 @@ export class BonusAwardsChanges {
         throw new BonusAwardNotFoundRefusal(error.message);
       }
       if (error instanceof InvalidBonusAwardError) {
-        throw new SessionRefusal(error.message);
+        throw new InvalidBonusAwardRefusal(error.message);
       }
       throw error;
     }
