@@ -15,7 +15,11 @@ import { Team } from '@/db/entities/team.entity';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { StandingsService } from '@/standings/standings.service';
-import { summarizeTeamHistory } from '@/team/team-history.calc';
+import {
+  summarizeTeamHistory,
+  teamHistoryOf,
+  type TeamHistorySession,
+} from '@/team/team-history.calc';
 
 interface ParticipationRow {
   gameSessionId: number;
@@ -216,30 +220,22 @@ export class TeamHistoryService {
       this.playerCountService.listForSessions(sessionIds, teamIds),
     ]);
 
-    for (const participation of participations) {
-      const session = sessionResults.get(participation.gameSessionId);
-      const team = session?.teams.find(
-        (t) => t.teamId === participation.teamId,
-      );
-      if (!session || !team) continue;
-      const result = results.get(participation.teamId)!;
-      result.rows.push({
-        gameSessionId: participation.gameSessionId,
-        name: participation.name ?? participation.quizTitle,
-        playedAt: new Date(participation.playedAt).toISOString(),
-        placing: team.placing,
-        placingTo: team.placingTo,
-        teamCount: session.participantCount,
-        hasLeft: team.hasLeft,
-        totalPoints: team.totalPoints,
-        maxPoints: session.maxPoints,
-        correctCount: team.correctCount,
-        playerCount:
-          playerCounts
-            .get(participation.gameSessionId)
-            ?.get(participation.teamId) ?? null,
-      });
-      if (team.wonNight) result.nightsWon += 1;
+    for (const teamId of teamIds) {
+      const sessions: TeamHistorySession[] = [];
+      for (const participation of participations) {
+        if (participation.teamId !== teamId) continue;
+        const result = sessionResults.get(participation.gameSessionId);
+        if (!result) continue;
+        sessions.push({
+          gameSessionId: participation.gameSessionId,
+          name: participation.name ?? participation.quizTitle,
+          playedAt: new Date(participation.playedAt).toISOString(),
+          result,
+          playerCount:
+            playerCounts.get(participation.gameSessionId)?.get(teamId) ?? null,
+        });
+      }
+      results.set(teamId, teamHistoryOf(teamId, sessions));
     }
     return results;
   }

@@ -6,7 +6,7 @@ Parent spec: `.scratch/session-result-module/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The league builds team nights from the Standings results read. The league's separate "answered" query and its leaderboard/departed lookup are deleted.
 - [ ] The league table counts nights won from `wonNight`, and its average placing uses the shared average placing over the nights that count towards the league (the team answered at least one question).

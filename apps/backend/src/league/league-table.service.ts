@@ -12,15 +12,14 @@ import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
-import { buildLeagueTable, type TeamNight } from '@/league/league-table.calc';
+import {
+  buildLeagueTable,
+  teamNightsOf,
+  type TeamNight,
+} from '@/league/league-table.calc';
 import { LEAGUE_ORDER } from '@/league/league.service';
 import { isCurrentLeague, venueToday } from '@/league/venue-date';
 import { StandingsService } from '@/standings/standings.service';
-
-interface AnsweredRow {
-  gameSessionId: number;
-  teamId: number;
-}
 
 function publicView(league: League, today: string): PublicLeague {
   return {
@@ -34,8 +33,9 @@ function publicView(league: League, today: string): PublicLeague {
 
 /**
  * Owns the league table: which sessions count (ended members only), and the
- * public league list. Placings and who left come from {@link StandingsService}
- * and are never recomputed here; the scoring is the pure `buildLeagueTable`.
+ * public league list. Each team's night (placing, answered, night won) comes
+ * from the Session result via {@link StandingsService.resultsForSessions} and
+ * is never recomputed here; the scoring is the pure `buildLeagueTable`.
  * Anything that needs a team's league position or a league's top rows (team
  * page, lobby) calls {@link table} and reads `rows`.
  */
@@ -136,41 +136,7 @@ export class LeagueTableService {
     const sessionIds = sessionRows.map((row) => row.gameSessionId);
     if (sessionIds.length === 0) return [];
 
-    const [standings, answered] = await Promise.all([
-      this.standings.forSessions(sessionIds),
-      knex('answers')
-        .whereIn('game_session_id', sessionIds)
-        .distinct(
-          'game_session_id as gameSessionId',
-          'team_id as teamId',
-        ) as Promise<AnsweredRow[]>,
-    ]);
-    const answeredKeys = new Set(
-      answered.map((row) => `${row.gameSessionId}:${row.teamId}`),
-    );
-
-    const nights: TeamNight[] = [];
-    for (const gameSessionId of sessionIds) {
-      const session = standings.get(gameSessionId)!;
-      const base = (teamId: number) => ({
-        teamId,
-        answered: answeredKeys.has(`${gameSessionId}:${teamId}`),
-      });
-      for (const entry of session.leaderboard) {
-        nights.push({
-          ...base(entry.teamId),
-          teamName: entry.teamName,
-          placing: entry.rank,
-        });
-      }
-      for (const entry of session.departed) {
-        nights.push({
-          ...base(entry.teamId),
-          teamName: entry.teamName,
-          placing: null,
-        });
-      }
-    }
-    return nights;
+    const results = await this.standings.resultsForSessions(sessionIds);
+    return sessionIds.flatMap((id) => teamNightsOf(results.get(id)!));
   }
 }

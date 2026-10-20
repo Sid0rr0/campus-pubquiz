@@ -4,6 +4,7 @@ import {
   displayedAveragePlacing,
   type LeagueTableRow,
 } from '@campus-pubquiz/types';
+import type { SessionResult } from '@/standings/session-result';
 
 /** Points for placing 1st to 5th in a session; nothing below 5th. */
 export const LEAGUE_PLACING_POINTS = [5, 4, 3, 2, 1] as const;
@@ -13,7 +14,7 @@ export const PARTICIPATION_POINTS = 1;
 /**
  * One team's night in a league session. `placing` comes straight from the
  * session's Standings (`rank` of the team's leaderboard entry); this module
- * never recomputes it. A night is won by every team whose placing is 1.
+ * never recomputes it. A night is won as the Session result says (`wonNight`).
  */
 export interface TeamNight {
   teamId: number;
@@ -22,6 +23,19 @@ export interface TeamNight {
   placing: number | null;
   /** Whether the team answered at least one question in the session. */
   answered: boolean;
+  /** Night won, as the Session result says it (placing 1, ties included). */
+  wonNight: boolean;
+}
+
+/** Every team's night in one ended session, read from its Session result. */
+export function teamNightsOf(result: SessionResult): TeamNight[] {
+  return result.teams.map((team) => ({
+    teamId: team.teamId,
+    teamName: team.teamName,
+    placing: team.placing,
+    answered: team.answered,
+    wonNight: team.wonNight,
+  }));
 }
 
 /** League points one night gives a team: placing points plus participation, or nothing when it never answered. */
@@ -74,7 +88,7 @@ export function buildLeagueTable(
     };
     tally.leaguePoints += leaguePointsFor(night);
     tally.nightsPlayed += 1;
-    if (night.placing === 1) tally.nightsWon += 1;
+    if (night.wonNight) tally.nightsWon += 1;
     if (night.placing !== null) tally.placings.push(night.placing);
     tallies.set(night.teamId, tally);
   }
