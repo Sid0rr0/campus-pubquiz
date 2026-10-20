@@ -11,7 +11,10 @@ import {
 } from '@radix-ui/react-icons';
 import Link from 'next/link';
 import type { AuthUser } from '@campus-pubquiz/types';
-import { AccountMenuLinks } from '@/app/components/account-menu-links';
+import {
+  AccountMenuLinks,
+  LeagueLink,
+} from '@/app/components/account-menu-links';
 import { Button } from '@/app/components/button';
 import { CopyButton } from '@/app/components/copy-button';
 import type { PlayerMenuState } from '@/app/lib/player-menu-context';
@@ -83,12 +86,16 @@ export function MobileHeaderMenu({
                 </Button>
               </Dialog.Close>
             </div>
-            {accountUser && (
+            {accountUser ? (
               <div className="flex flex-col items-center gap-4 font-extrabold">
                 <AccountMenuLinks
                   user={accountUser}
                   onLogout={handleAccountLogout}
                 />
+              </div>
+            ) : (
+              <div className="text-sm font-extrabold">
+                <LeagueLink onClick={() => setIsDrawerOpen(false)} />
               </div>
             )}
             {playerMenu && (
