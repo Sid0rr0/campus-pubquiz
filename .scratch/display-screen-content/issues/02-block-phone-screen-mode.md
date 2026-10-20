@@ -12,16 +12,16 @@ Parent spec: `.scratch/display-screen-content/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The `block` Phone screen carries `mode`:
+- [x] The `block` Phone screen carries `mode`:
   - `answering` while the block is answerable;
   - `locked` in break and break review;
   - `revealing` from the reveal intro through reveal.
   It keeps the question the big screen is revealing.
-- [ ] The block browser chooses the reveal body, the answer form, and the locked and revealing lines from the mode. It no longer checks game status, the break status group or the revealing status group.
-- [ ] Screen projection specs cover the mode in answering, break, break review, reveal intro and reveal, including a kahoot question hidden behind the leaderboard.
-- [ ] `/play` specs render the block browser in each mode from projected fixtures.
-- [ ] If the phone's block-review status group has no callers left, it is deleted.
-- [ ] GLOSSARY.md **Phone screen** says the `block` kind carries its mode.
-- [ ] Typecheck, lint and tests pass.
+- [x] The block browser chooses the reveal body, the answer form, and the locked and revealing lines from the mode. It no longer checks game status, the break status group or the revealing status group.
+- [x] Screen projection specs cover the mode in answering, break, break review, reveal intro and reveal, including a kahoot question hidden behind the leaderboard.
+- [x] `/play` specs render the block browser in each mode from projected fixtures.
+- [x] If the phone's block-review status group has no callers left, it is deleted.
+- [x] GLOSSARY.md **Phone screen** says the `block` kind carries its mode.
+- [x] Typecheck, lint and tests pass.
