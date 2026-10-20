@@ -3,6 +3,7 @@ import {
   getBlockPositionForQuestion,
   isBreakPointQuestion,
 } from './game-state-block-position';
+import { planNextPress } from './move-plan';
 import type { QuizStructureSummary } from './game-state-structure';
 import type { GameProgress } from './game-state-types';
 import { projectScreen } from './screen-projection';
@@ -20,7 +21,7 @@ import {
 import { SOCKET_ROOMS } from './socket-events';
 
 /** The orders a Quiz preview can show its screens in. */
-export const QUIZ_PREVIEW_MODES = ['answer_after_question'] as const;
+export const QUIZ_PREVIEW_MODES = ['answer_after_question', 'night'] as const;
 export type QuizPreviewMode = (typeof QUIZ_PREVIEW_MODES)[number];
 export const DEFAULT_QUIZ_PREVIEW_MODE: QuizPreviewMode =
   'answer_after_question';
@@ -58,6 +59,8 @@ export type QuizPreviewPayload = QuizPreview;
 const PREVIEW_SETTINGS: SessionSettings = {
   ...DEFAULT_SESSION_SETTINGS,
   funFactsEnabled: false,
+  // The night order opens on the overview; a session only does when its settings ask.
+  showRoundOverview: true,
 };
 
 function displayScreenAt(
@@ -66,6 +69,19 @@ function displayScreenAt(
 ): DisplayScreen {
   return projectScreen({ ...session, progress }, SOCKET_ROOMS.DISPLAY).screen;
 }
+
+/** The screen kinds the "like the night" order keeps; every other kind needs a live session. */
+const NIGHT_SCREEN_KINDS: readonly DisplayScreen['kind'][] = [
+  'round_overview',
+  'round_title',
+  'question',
+  'break_intro',
+  'reveal_intro',
+  'reveal',
+];
+
+/** Safety stop for the dry run; a real quiz ends long before. */
+const MAX_NIGHT_PRESSES = 5000;
 
 /**
  * The Quiz preview: a team-less, in-memory session is put at each screen the
@@ -83,7 +99,132 @@ export function buildQuizPreview(
     rounds: [...rounds],
     settings: PREVIEW_SETTINGS,
   });
+  const overview = projectScreen(fullSession, SOCKET_ROOMS.DISPLAY);
+  return {
+    mode,
+    quiz: {
+      settings: overview.settings,
+      quizStructure: overview.quizStructure,
+      roundTitles: overview.roundTitles,
+      roundCategories: overview.roundCategories,
+      roundAuthors: overview.roundAuthors,
+    },
+    steps:
+      mode === 'night'
+        ? buildNightSteps(fullSession)
+        : buildAnswerAfterQuestionSteps(fullSession, rounds),
+  };
+}
 
+/** Where each question sits, by its seeded id. */
+function questionPositions(rounds: readonly SeededRound[]) {
+  const positions = new Map<
+    number,
+    { roundIndex: number; questionIndex: number }
+  >();
+  rounds.forEach((round, roundIndex) =>
+    round.questions.forEach((question, questionIndex) =>
+      positions.set(question.id, { roundIndex, questionIndex }),
+    ),
+  );
+  return positions;
+}
+
+/**
+ * The order the room sees: the real Advance plan is walked as a dry run
+ * (Start quiz, then Advance until nothing moves; no grading writes, nothing
+ * saved) and only the screens with quiz content are kept.
+ */
+function buildNightSteps(fullSession: SessionState): QuizPreviewStep[] {
+  const positions = questionPositions(fullSession.seededGame.rounds);
+  const steps: QuizPreviewStep[] = [];
+  // A quiz with no rounds has nothing to show, not even an overview of nothing.
+  if (fullSession.seededGame.rounds.length === 0) return steps;
+
+  let session = fullSession;
+  for (let press = 0; press <= MAX_NIGHT_PRESSES; press += 1) {
+    const { screen } = projectScreen(session, SOCKET_ROOMS.DISPLAY);
+    if (NIGHT_SCREEN_KINDS.includes(screen.kind)) {
+      steps.push(nightStep(screen, session, positions));
+    }
+    const next = dryRunPress(session);
+    if (!next) break;
+    session = next;
+  }
+
+  // A block ends at its last reveal: the next screen is neither another
+  // reveal nor the next round's reveal title card.
+  const continuesReveals = (step: QuizPreviewStep | undefined) =>
+    step?.screen.kind === 'reveal' || step?.screen.kind === 'reveal_intro';
+  return steps.map((step, index) => ({
+    ...step,
+    isBlockEnd:
+      step.screen.kind === 'reveal' && !continuesReveals(steps[index + 1]),
+  }));
+}
+
+/** The session after the next Advance press, or null when a press would move nothing (the end of the quiz). Nothing is graded or saved. */
+function dryRunPress(session: SessionState): SessionState | null {
+  const move = planNextPress(session);
+  switch (move.kind) {
+    case 'transition':
+    case 'leaderboard_hide':
+    case 'join_overlay_hide':
+      return { ...session, progress: move.progress };
+    case 'leaderboard_reveal':
+      return {
+        ...session,
+        leaderboardRevealCount: session.leaderboardRevealCount + 1,
+      };
+    case 'closest_guess_step':
+      return move.session;
+    case 'showdown_step':
+    case 'showdown_waiting':
+    case 'grading_pending':
+    case 'blocked':
+      return null;
+  }
+}
+
+function nightStep(
+  screen: DisplayScreen,
+  session: SessionState,
+  positions: ReturnType<typeof questionPositions>,
+): QuizPreviewStep {
+  const { roundIndex } = session.progress;
+  switch (screen.kind) {
+    case 'question':
+    case 'reveal': {
+      const position = positions.get(screen.question.id) ?? {
+        roundIndex,
+        questionIndex: null,
+      };
+      return { screen, ...position, isBlockEnd: false };
+    }
+    case 'reveal_intro':
+      return {
+        screen,
+        roundIndex: screen.roundNumber - 1,
+        questionIndex: null,
+        isBlockEnd: false,
+      };
+    case 'break_intro':
+      // The feedback prompt belongs to the live final break, not to content.
+      return {
+        screen: { ...screen, isFeedbackPromptShown: false },
+        roundIndex,
+        questionIndex: null,
+        isBlockEnd: false,
+      };
+    default:
+      return { screen, roundIndex, questionIndex: null, isBlockEnd: false };
+  }
+}
+
+function buildAnswerAfterQuestionSteps(
+  fullSession: SessionState,
+  rounds: readonly SeededRound[],
+): QuizPreviewStep[] {
   // The block helpers can't place a round with no questions, so questions are
   // placed in a session without such rounds; title cards come from the full one.
   const questionRoundIndexes = rounds.flatMap((round, index) =>
@@ -147,16 +288,5 @@ export function buildQuizPreview(
     });
   });
 
-  const overview = projectScreen(fullSession, SOCKET_ROOMS.DISPLAY);
-  return {
-    mode,
-    quiz: {
-      settings: overview.settings,
-      quizStructure: overview.quizStructure,
-      roundTitles: overview.roundTitles,
-      roundCategories: overview.roundCategories,
-      roundAuthors: overview.roundAuthors,
-    },
-    steps,
-  };
+  return steps;
 }

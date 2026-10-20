@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { planNextPress } from '../move-plan';
 import { buildQuizPreview } from '../quiz-preview';
-import type { SeededRound } from '../session-state';
+import { projectScreen } from '../screen-projection';
+import { DEFAULT_SESSION_SETTINGS } from '../session-settings';
+import { freshSessionState, type SeededRound } from '../session-state';
+import { SOCKET_ROOMS } from '../socket-events';
 import type { SeededQuestion } from '../question-views';
 
 function question(
@@ -48,6 +52,137 @@ function labels(rounds: SeededRound[]): string[] {
     },
   );
 }
+
+const NIGHT_KINDS = [
+  'round_overview',
+  'round_title',
+  'question',
+  'break_intro',
+  'reveal_intro',
+  'reveal',
+];
+
+/** The display screens a real session reaches pressing Start quiz, then Advance, to the end. */
+function screensByAdvancing(rounds: SeededRound[]) {
+  let session = freshSessionState({
+    quizId: 0,
+    gameSessionId: 0,
+    joinCode: '',
+    rounds,
+    settings: {
+      ...DEFAULT_SESSION_SETTINGS,
+      funFactsEnabled: false,
+      showRoundOverview: true,
+    },
+  });
+  const screens = [projectScreen(session, SOCKET_ROOMS.DISPLAY).screen];
+  for (let press = 0; press < 200; press += 1) {
+    const step = planNextPress(session);
+    if (step.kind === 'transition' || step.kind === 'leaderboard_hide') {
+      session = { ...session, progress: step.progress };
+    } else if (step.kind === 'leaderboard_reveal') {
+      session = {
+        ...session,
+        leaderboardRevealCount: session.leaderboardRevealCount + 1,
+      };
+    } else if (step.kind === 'closest_guess_step') {
+      session = step.session;
+    } else {
+      break;
+    }
+    screens.push(projectScreen(session, SOCKET_ROOMS.DISPLAY).screen);
+  }
+  return screens;
+}
+
+describe('buildQuizPreview, night', () => {
+  const multiBlockQuiz = () => [
+    round(1, [question(1), question(2)]),
+    round(2, [question(3), question(4)], { kahootMode: true }),
+    round(3, [question(5)], { breakAfter: false }),
+    round(4, [question(6)]),
+  ];
+
+  it('shows the screens a real session reaches by Advance, kind for kind, minus the left-out kinds', () => {
+    const rounds = multiBlockQuiz();
+    const expected = screensByAdvancing(rounds)
+      .filter(({ kind }) => NIGHT_KINDS.includes(kind))
+      .map(({ kind }) => kind);
+    const { steps } = buildQuizPreview(rounds, 'night');
+    expect(steps.map(({ screen }) => screen.kind)).toEqual(expected);
+    // The quiz really passes through the kinds the preview leaves out.
+    expect(screensByAdvancing(rounds).length).toBeGreaterThan(expected.length);
+  });
+
+  it('orders a block as questions, break intro, reveal intro, then its reveals', () => {
+    const { steps } = buildQuizPreview(
+      [round(1, [question(1), question(2)])],
+      'night',
+    );
+    expect(steps.map(({ screen }) => screen.kind)).toEqual([
+      'round_overview',
+      'round_title',
+      'question',
+      'question',
+      'break_intro',
+      'reveal_intro',
+      'reveal',
+      'reveal',
+    ]);
+  });
+
+  it('leaves out lobby, rules, join overlay, locking, break review, leaderboard, showdown and ended', () => {
+    const { steps } = buildQuizPreview(multiBlockQuiz(), 'night');
+    expect(steps.every(({ screen }) => NIGHT_KINDS.includes(screen.kind))).toBe(
+      true,
+    );
+  });
+
+  it('gives the break intro no deadline, no feedback prompt and no fun facts', () => {
+    const { steps } = buildQuizPreview(multiBlockQuiz(), 'night');
+    const intros = steps.flatMap(({ screen }) =>
+      screen.kind === 'break_intro' ? [screen] : [],
+    );
+    expect(intros.length).toBeGreaterThan(0);
+    for (const intro of intros) {
+      expect(intro.breakEndsAt).toBeNull();
+      expect(intro.isFeedbackPromptShown).toBe(false);
+      expect(intro.funFacts).toEqual([]);
+    }
+  });
+
+  it('marks a block end after the last reveal of each block', () => {
+    const { steps } = buildQuizPreview(multiBlockQuiz(), 'night');
+    const ends = steps.flatMap((step) =>
+      step.isBlockEnd && step.screen.kind === 'reveal'
+        ? [step.screen.question.id]
+        : [],
+    );
+    // Every kahoot question is its own block; round 3 has no break, so it
+    // shares a block with round 4.
+    expect(ends).toEqual([2, 3, 4, 6]);
+    expect(steps.filter((step) => step.isBlockEnd)).toHaveLength(4);
+  });
+
+  it('records round and question positions on the steps', () => {
+    const { steps } = buildQuizPreview(
+      [round(1, [question(1)]), round(2, [question(2)])],
+      'night',
+    );
+    const at = steps.map(({ screen, roundIndex, questionIndex }) => [
+      screen.kind,
+      roundIndex,
+      questionIndex,
+    ]);
+    expect(at).toContainEqual(['question', 1, 0]);
+    expect(at).toContainEqual(['reveal', 0, 0]);
+    expect(at).toContainEqual(['round_title', 1, null]);
+  });
+
+  it('gives no steps and no error for an empty quiz', () => {
+    expect(buildQuizPreview([], 'night').steps).toEqual([]);
+  });
+});
 
 describe('buildQuizPreview, answer_after_question', () => {
   it('gives each round a title card, then every question followed by its answer', () => {
