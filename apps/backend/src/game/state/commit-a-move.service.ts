@@ -24,13 +24,7 @@ import {
   settleSession,
   type SavedPhaseTimer,
 } from '@/game/state/session-settle.util';
-import {
-  withFunFactData,
-  withLeaderboard,
-  withLeagueTop,
-  withVerdictTallies,
-} from '@/game/state/session-updates.util';
-import type { StandingsService } from '@/standings/standings.service';
+import type { LiveResultsRead } from '@/game/state/live-results-read';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
 /** What a restart restores besides the progress: the phase timer and the opened questions (null for a session saved before they were tracked). */
@@ -69,7 +63,7 @@ export class MoveCommitter {
   constructor(
     private readonly grading: BlockGradingService,
     private readonly progressRepository: GameProgressRepository,
-    private readonly standingsService: StandingsService,
+    private readonly liveResultsRead: LiveResultsRead,
     private readonly showdownService: ShowdownService,
     private readonly readLeagueTop: (
       gameSessionId: number,
@@ -117,9 +111,10 @@ export class MoveCommitter {
    * Places a session at a starting point — the lobby for a new session, the
    * saved progress and phase timer for a restart restore. Rebuilds the
    * closest_guess summaries and refreshes the ungraded set inside the break,
-   * settles and ends with the standings read
-   * (the same last step a session write takes), so the first snapshot a
-   * client receives already has its leaderboard. Nothing is saved.
+   * settles and ends with the live results read (the same last step a session
+   * write takes, with the same fallback: a failed read keeps the empty value),
+   * then the league top, so the first snapshot a client receives already has
+   * its live results and league. Nothing is saved.
    */
   async place(
     session: SessionState,
@@ -146,24 +141,11 @@ export class MoveCommitter {
       now: Date.now(),
       savedPhaseTimer: saved,
     });
-    const { gameSessionId } = placed.seededGame;
-    const [leaderboard, verdictTallies, funFactData, leagueTop] =
-      await Promise.all([
-        this.standingsService.leaderboard(gameSessionId),
-        this.standingsService.verdictTallies(gameSessionId),
-        this.standingsService.funFactData(gameSessionId),
-        this.readLeagueTop(gameSessionId),
-      ]);
-    return withLeagueTop(
-      withFunFactData(
-        withVerdictTallies(
-          withLeaderboard(placed, leaderboard),
-          verdictTallies,
-        ),
-        funFactData,
-      ),
-      leagueTop,
-    );
+    const withResults = await this.liveResultsRead.read(placed);
+    // The league top is not a live result (see LiveResultsRead): placement
+    // asks the league change module for it by name.
+    const leagueTop = await this.readLeagueTop(placed.seededGame.gameSessionId);
+    return { ...withResults, leagueTop };
   }
 
   private async commitProgressMove(

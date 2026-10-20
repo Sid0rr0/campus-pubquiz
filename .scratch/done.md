@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| live-results-read | [One live results read in place of the with* helpers](live-results-read/spec.md) | 2 |
 | ended-sessions-read | [One Ended-sessions read for which nights count and who took part](ended-sessions-read/spec.md) | 4 |
 | display-screen-content | [The big screen and the phones draw what they are sent](display-screen-content/spec.md) | 5 |
 | question-record-module | [One Question record codec for every shape a question takes](question-record-module/spec.md) | 5 |

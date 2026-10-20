@@ -249,10 +249,12 @@ against that session and stores nothing when it is refused: a team's last-second
 answer is either stored (and seen by the press that follows, so a closest_guess
 answer is graded by the break) or refused with "Answers are locked for this
 question", never stored unseen. Sessions don't wait for
-each other. If that final standings read fails, the write still counts as done
-(a press has already saved its progress, so memory must match the database and
-clients must hear about it): the failure is logged, the session keeps its
-earlier leaderboard, and the next write catches it up. A write that moves an
+each other. The final read covers every **live result** (the leaderboard, verdict
+tallies and fun fact data; see Live results in the glossary). If a read fails,
+the write still counts as done (a press has already saved its progress, so
+memory must match the database and clients must hear about it): the failure is
+logged, that figure keeps its earlier value (the others still update), and the
+next write catches it up. A write that moves an
 auto-lock deadline (the question lock or the kahoot question timer) reports the
 new deadlines with its outcome, and the delivery step re-arms that session's
 timers from them before anything is emitted, so the timers follow the
@@ -449,9 +451,8 @@ the roster teams whose answer has that verdict (see Verdict in the glossary);
 `teamCount` is every roster team, so teams that did not answer are in the
 total. It is `null` outside a reveal and on a closest_guess question, whose
 reveal already names the closest teams. The session holds the per-question
-tallies and re-reads them with the standings at the end of every session write
-and when a session is placed (creation, restart), so they follow hand grades,
-lock grading and key fixes.
+tallies as one of its **Live results** (see the glossary for when they are
+read), so they follow hand grades, lock grading and key fixes.
 
 **The break's fun facts (`funFacts`).** While the break screen is on air
 (`screen.kind === 'break_intro'`; not over the leaderboard, not while
@@ -1249,6 +1250,13 @@ means roughly ten seconds of frozen sockets, then every client resyncs from
 its automatic reconnect. Answers, teams, and grades survive because they were
 never only in memory.
 
+Placing a session (creating it, or restoring it after a restart) ends with the
+same live results read, and the same fallback, as a session write: a failed
+read is logged and no longer stops a session being created or restored. That
+figure stays at its empty default until the next write (an answer, grade, bonus
+or press) catches it up. A new session would have read an empty leaderboard
+anyway; a restored one may briefly show empty figures.
+
 `GameProgressRepository.load()` normalizes any row still carrying the
 retired `locked` status back to `question_open`, so quiz nights that started
 on an older schema version keep working without a data migration.
@@ -1573,7 +1581,9 @@ points, the table and the public page.
   whenever an admin edits or deletes a league or adds or removes one of its sessions
   (`LeaguesController` re-reads every live session, then broadcasts the state of those
   whose league changed), so a reconnecting or second big screen gets it in its first
-  snapshot. It is not re-read per broadcast. A failed read is logged and leaves the
+  snapshot. It is read at placement and on league changes only, never on score writes
+  (an answer, grade or bonus), because a league table counts only ended sessions and so
+  can't change from this session's scoring; it is not one of the **Live results**. A failed read is logged and leaves the
   lobby without a league. The lobby screen draws it beside the join details, and nothing when
   it is `null`; a league with no finished night shows "No points yet".
 - **Public REST** (`PublicLeaguesController`, no login; no team codes, tokens or feedback

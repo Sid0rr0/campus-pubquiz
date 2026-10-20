@@ -1,7 +1,6 @@
 import {
   isQuestionOnAirStatus,
   type ActiveShowdownRoundState,
-  type LeaderboardEntry,
   type SessionState,
   type TeamRosterEntry,
 } from '@campus-pubquiz/types';
@@ -12,34 +11,6 @@ import {
  * so nothing outside the module can change one field without the derived
  * caches that depend on it.
  */
-
-export function withLeaderboard(
-  session: SessionState,
-  leaderboard: LeaderboardEntry[],
-): SessionState {
-  return { ...session, leaderboard };
-}
-
-export function withVerdictTallies(
-  session: SessionState,
-  verdictTallies: SessionState['verdictTallies'],
-): SessionState {
-  return { ...session, verdictTallies };
-}
-
-export function withFunFactData(
-  session: SessionState,
-  funFactData: SessionState['funFactData'],
-): SessionState {
-  return { ...session, funFactData };
-}
-
-export function withLeagueTop(
-  session: SessionState,
-  leagueTop: SessionState['leagueTop'],
-): SessionState {
-  return { ...session, leagueTop };
-}
 
 /**
  * The session a write ends with, its prior standings brought up to date: when

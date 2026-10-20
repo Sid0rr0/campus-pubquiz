@@ -10,7 +10,7 @@ See the spec's "The live results read" and "Callers → Session write".
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The live results read exists in the live session module with the interface and failure policy above.
 - [ ] The session write ends with it when a write touches scores. Its own reads, its fallback helper and its field spreads for the leaderboard, verdict tallies and fun fact data are gone.

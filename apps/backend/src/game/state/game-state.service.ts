@@ -117,7 +117,7 @@ export class GameStateService implements OnModuleInit {
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,
-      this.standingsService,
+      this.sessionWrite.liveResultsRead,
       this.showdownService,
       (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
     );
