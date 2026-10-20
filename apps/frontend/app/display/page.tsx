@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, type ReactNode } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -18,32 +18,11 @@ import {
 import { useDisplayGame } from '@/app/lib/use-display-game';
 import { revealPosition } from '@/app/lib/reveal-position';
 import { useDisplaySoundMuted } from '@/app/lib/use-display-sound-muted';
-import { EndedScreen } from '@/app/display/ended-screen';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { useRoundTitleSting } from '@/app/lib/use-round-title-sting';
-import {
-  ClosestGuessRevealScreen,
-  closestGuessAnswerProps,
-} from '@/app/components/closest-guess-reveal-screen';
+import { DisplayScreenView } from '@/app/components/display-screen-view';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
-import { DisplayShowdown } from '@/app/display/display-showdown';
-import { Leaderboard } from '@/app/components/leaderboard';
-import { RulesContent } from '@/app/components/rules-content';
-import { BreakIntroScreen } from '@/app/display/break-intro-screen';
-import { BreakReviewScreen } from '@/app/display/break-review-screen';
 import { DisplaySessionPicker } from '@/app/display/display-session-picker';
-import { JoinOverlayScreen } from '@/app/display/join-overlay-screen';
-import { LobbyScreen } from '@/app/display/lobby-screen';
-import { QuestionDisplay } from '@/app/display/question-display';
-import {
-  QuestionLockCountdown,
-  QuestionLockHeading,
-} from '@/app/display/question-lock-countdown';
-import { QuestionOpenScreen } from '@/app/display/question-open-screen';
-import { RoundTitleCard } from '@/app/display/round-title-card';
-import { RevealEntranceConfig } from '@/app/display/reveal-entrance';
-import { RoundOverviewScreen } from '@/app/display/round-overview-screen';
-import { TeamsCorrectCount } from '@/app/display/teams-correct-count';
 import { TriviaHeader } from '@/app/display/trivia-header';
 
 function DisplayPageContent() {
@@ -186,198 +165,6 @@ function DisplayPageContent() {
     header: headerContent,
   } = snapshot;
 
-  function renderScreen(): ReactNode {
-    switch (screen.kind) {
-      case 'leaderboard':
-        return (
-          <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
-            <h1 className="text-center font-display text-display-4xl">
-              <span className="text-magenta">Leaderboard</span>
-            </h1>
-            <Leaderboard
-              board={screen.board}
-              revealCount={screen.revealCount}
-              isConnected={isConnected}
-              isFinal={screen.isFinal}
-              onWinnerCelebrated={() => {
-                hasWinnerBeenCelebratedRef.current = true;
-              }}
-            />
-          </div>
-        );
-      case 'lobby':
-        return (
-          <LobbyScreen
-            teams={teams}
-            leagueTop={leagueTop}
-            isConnected={isConnected}
-            joinCode={codeFromUrl}
-            maxPlayersPerTeam={settings.maxPlayersPerTeam}
-            extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
-            onPickAnotherGame={pickAnotherGame}
-          />
-        );
-      case 'join_overlay':
-        return (
-          <JoinOverlayScreen
-            joinCode={codeFromUrl}
-            maxPlayersPerTeam={settings.maxPlayersPerTeam}
-            extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
-          />
-        );
-      case 'rules':
-        return (
-          <div className="flex flex-1 items-center justify-center px-16 py-10">
-            <RulesContent quizStructure={quizStructure} settings={settings} />
-          </div>
-        );
-      case 'round_overview':
-        return (
-          <RoundOverviewScreen
-            roundTitles={roundTitles}
-            roundCategories={roundCategories}
-            roundAuthors={roundAuthors}
-          />
-        );
-      case 'round_title':
-        return (
-          <RoundTitleCard
-            label={`ROUND ${screen.roundNumber}${screen.category ? ` — ${screen.category}` : ''}`}
-            roundTitle={screen.title}
-            author={screen.author}
-            note={screen.note}
-          />
-        );
-      case 'question':
-        return (
-          <QuestionOpenScreen
-            question={screen.question}
-            answeredCount={answeredTeamIds.length}
-            totalTeams={teams.length}
-            autoplayMedia={settings.autoplayMedia}
-            isFullscreen={progress.isMediaFullscreen}
-            mediaReplayToken={progress.mediaReplayToken}
-            isMediaPaused={progress.isMediaPaused}
-            kahootQuestionEndsAt={kahootQuestionEndsAt}
-          />
-        );
-      case 'locking':
-        return (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
-            <QuestionLockHeading
-              key={`heading-${screen.lockAt}`}
-              lockAt={screen.lockAt}
-            />
-            <QuestionLockCountdown
-              key={`ring-${screen.lockAt}`}
-              lockAt={screen.lockAt}
-            />
-          </div>
-        );
-      case 'break_intro':
-        return (
-          <BreakIntroScreen
-            roundNumber={screen.roundNumber}
-            breakNumber={screen.breakNumber}
-            enabledBonusCategories={settings.enabledBonusCategories}
-            breakEndsAt={screen.breakEndsAt}
-            quizStructure={quizStructure}
-            showBonusList={!screen.isFinalBreak}
-            isFeedbackPromptShown={screen.isFeedbackPromptShown}
-            funFacts={screen.funFacts}
-          />
-        );
-      case 'break_review':
-        return (
-          <BreakReviewScreen
-            question={screen.question}
-            autoplayMedia={settings.autoplayMedia}
-          />
-        );
-      case 'break_round_title':
-        return (
-          <RoundTitleCard
-            label={`ROUND ${screen.roundNumber}`}
-            roundTitle={screen.title}
-            note={screen.note}
-          />
-        );
-      case 'reveal_intro':
-        return (
-          <RoundTitleCard
-            label={`REVEALING ANSWERS · ROUND ${screen.roundNumber}`}
-            roundTitle={screen.title}
-          />
-        );
-      case 'reveal': {
-        const revealQuestion = screen.question;
-        switch (revealQuestion.revealKind) {
-          case 'closest_guess':
-          case 'closest_guess_pending': {
-            return (
-              <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                <RevealEntranceConfig>
-                  <ClosestGuessRevealScreen
-                    prompt={revealQuestion.prompt}
-                    closestGuess={revealQuestion.closestGuess}
-                    mediaTestIdPrefix="reveal"
-                    autoplayMedia={settings.autoplayMedia}
-                    hasEntrance
-                    {...closestGuessAnswerProps(revealQuestion)}
-                  />
-                </RevealEntranceConfig>
-              </div>
-            );
-          }
-          case 'answer':
-            return (
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                <RevealEntranceConfig>
-                  <QuestionDisplay
-                    question={revealQuestion}
-                    mediaTestIdPrefix="reveal"
-                    autoplayMedia={settings.autoplayMedia}
-                    isFullscreen={progress.isMediaFullscreen}
-                    hasRevealEntrance
-                  />
-                </RevealEntranceConfig>
-                {teamsCorrect && teamsCorrect.teamCount > 0 && (
-                  <TeamsCorrectCount {...teamsCorrect} />
-                )}
-              </div>
-            );
-          default: {
-            const unhandled: never = revealQuestion;
-            return unhandled;
-          }
-        }
-      }
-      case 'ended':
-        return (
-          <EndedScreen
-            leaderboard={leaderboard}
-            isFeedbackPromptShown={screen.isFeedbackPromptShown}
-          />
-        );
-      case 'showdown':
-        return (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
-            <DisplayShowdown
-              activeShowdown={screen.showdown}
-              step={screen.step}
-              isConnected={isConnected}
-            />
-          </div>
-        );
-      case 'blank':
-        return null;
-      default: {
-        const unhandled: never = screen;
-        return unhandled;
-      }
-    }
-  }
-
   return (
     <main
       className="flex h-dvh flex-col bg-background text-foreground"
@@ -408,7 +195,33 @@ function DisplayPageContent() {
           transition={{ duration: 0.35, ease: 'easeInOut' }}
           className="flex min-h-0 flex-1 flex-col"
         >
-          {renderScreen()}
+          <DisplayScreenView
+            screen={screen}
+            quiz={{
+              settings,
+              quizStructure,
+              roundTitles,
+              roundCategories,
+              roundAuthors,
+            }}
+            live={{
+              teams,
+              answeredTeamIds,
+              leaderboard,
+              leagueTop,
+              teamsCorrect,
+              joinCode: codeFromUrl,
+              isConnected,
+              isMediaFullscreen: progress.isMediaFullscreen,
+              isMediaPaused: progress.isMediaPaused,
+              mediaReplayToken: progress.mediaReplayToken,
+              kahootQuestionEndsAt,
+              onPickAnotherGame: pickAnotherGame,
+              onWinnerCelebrated: () => {
+                hasWinnerBeenCelebratedRef.current = true;
+              },
+            }}
+          />
         </motion.div>
       </AnimatePresence>
     </main>
