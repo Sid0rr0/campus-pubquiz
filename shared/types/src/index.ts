@@ -66,3 +66,4 @@ export * from './showdown-guesses-pending-error';
 export * from './move-plan';
 export * from './session-snapshot';
 export * from './screen-projection';
+export * from './quiz-preview';

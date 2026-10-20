@@ -1,0 +1,252 @@
+import { describe, expect, it } from 'vitest';
+import { buildQuizPreview } from '../quiz-preview';
+import type { SeededRound } from '../session-state';
+import type { SeededQuestion } from '../question-views';
+
+function question(
+  id: number,
+  extra: Partial<SeededQuestion> = {},
+): SeededQuestion {
+  return {
+    id,
+    type: 'free_text',
+    prompt: `Question ${id}?`,
+    answer: `Answer ${id}`,
+    points: 1000,
+    ...extra,
+  };
+}
+
+function round(
+  id: number,
+  questions: SeededQuestion[],
+  extra: Partial<SeededRound> = {},
+): SeededRound {
+  return {
+    id,
+    title: `Round ${id}`,
+    breakAfter: true,
+    questions,
+    ...extra,
+  };
+}
+
+/** Compact label for each step: 'title:1', 'q:3', 'a:3'. */
+function labels(rounds: SeededRound[]): string[] {
+  return buildQuizPreview(rounds, 'answer_after_question').steps.map(
+    ({ screen }) => {
+      switch (screen.kind) {
+        case 'round_title':
+          return `title:${screen.roundNumber}`;
+        case 'question':
+          return `q:${screen.question.id}`;
+        case 'reveal':
+          return `a:${screen.question.id}`;
+        default:
+          return `unexpected:${screen.kind}`;
+      }
+    },
+  );
+}
+
+describe('buildQuizPreview, answer_after_question', () => {
+  it('gives each round a title card, then every question followed by its answer', () => {
+    const rounds = [
+      round(1, [question(1), question(2)], { breakAfter: false }),
+      round(2, [question(3), question(4)]),
+    ];
+    expect(labels(rounds)).toEqual([
+      'title:1',
+      'q:1',
+      'a:1',
+      'q:2',
+      'a:2',
+      'title:2',
+      'q:3',
+      'a:3',
+      'q:4',
+      'a:4',
+    ]);
+  });
+
+  it('marks a block end after the last question of each block, answer included', () => {
+    const rounds = [
+      round(1, [question(1), question(2)]),
+      round(2, [question(3)], { breakAfter: false }),
+      round(3, [question(4)]),
+    ];
+    const { steps } = buildQuizPreview(rounds, 'answer_after_question');
+    const blockEnds = steps
+      .filter((step) => step.isBlockEnd)
+      .map(({ screen }) =>
+        screen.kind === 'reveal' ? screen.question.id : screen.kind,
+      );
+    // Round 2 has no break, so its question shares a block with round 3's.
+    expect(blockEnds).toEqual([2, 4]);
+  });
+
+  it('puts the answer step, not the question step, at the block end', () => {
+    const { steps } = buildQuizPreview(
+      [round(1, [question(1)])],
+      'answer_after_question',
+    );
+    expect(steps.map((step) => step.isBlockEnd)).toEqual([false, false, true]);
+  });
+
+  it('records each step position as round and question indexes', () => {
+    const { steps } = buildQuizPreview(
+      [round(1, [question(1)]), round(2, [question(2), question(3)])],
+      'answer_after_question',
+    );
+    expect(
+      steps.map(({ roundIndex, questionIndex }) => [roundIndex, questionIndex]),
+    ).toEqual([
+      [0, null],
+      [0, 0],
+      [0, 0],
+      [1, null],
+      [1, 0],
+      [1, 0],
+      [1, 1],
+      [1, 1],
+    ]);
+  });
+
+  it('shows a kahoot round like any other: question then answer', () => {
+    const rounds = [
+      round(1, [question(1), question(2)], { kahootMode: true }),
+      round(2, [question(3)]),
+    ];
+    expect(labels(rounds)).toEqual([
+      'title:1',
+      'q:1',
+      'a:1',
+      'q:2',
+      'a:2',
+      'title:2',
+      'q:3',
+      'a:3',
+    ]);
+    const { steps } = buildQuizPreview(rounds, 'answer_after_question');
+    // Every kahoot question is its own block.
+    expect(steps.map((step) => step.isBlockEnd)).toEqual([
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  it("shows a closest_guess question's correct answer with no team guesses", () => {
+    const { steps } = buildQuizPreview(
+      [round(1, [question(1, { type: 'closest_guess', answer: '1969' })])],
+      'answer_after_question',
+    );
+    const reveal = steps[2].screen;
+    expect(reveal.kind).toBe('reveal');
+    if (reveal.kind !== 'reveal') return;
+    expect(reveal.question.revealKind).toBe('closest_guess');
+    if (reveal.question.revealKind !== 'closest_guess') return;
+    expect(reveal.question.answer).toBe('1969');
+    expect(reveal.question.closestGuess).toEqual({
+      hasSubmissions: false,
+      closestGuesses: [],
+    });
+  });
+
+  it('carries hideVideo and clip bounds through to the question and its reveal', () => {
+    const { steps } = buildQuizPreview(
+      [
+        round(1, [
+          question(1, {
+            mediaUrl: 'https://example.com/clip.mp4',
+            mediaStartSeconds: 5,
+            mediaEndSeconds: 12,
+            isVideoHidden: true,
+            answerMediaUrl: 'https://example.com/answer.mp4',
+            revealStartSeconds: 3,
+            revealEndSeconds: 9,
+          }),
+        ]),
+      ],
+      'answer_after_question',
+    );
+    const [, open, reveal] = steps.map((step) => step.screen);
+    expect(open).toMatchObject({
+      kind: 'question',
+      question: {
+        mediaStartSeconds: 5,
+        mediaEndSeconds: 12,
+        isVideoHidden: true,
+      },
+    });
+    expect(reveal).toMatchObject({
+      kind: 'reveal',
+      question: {
+        mediaStartSeconds: 5,
+        isVideoHidden: true,
+        answerMediaUrl: 'https://example.com/answer.mp4',
+        revealStartSeconds: 3,
+        revealEndSeconds: 9,
+      },
+    });
+  });
+
+  it("shows the round's title, category, author and on-screen note on its title card", () => {
+    const { steps } = buildQuizPreview(
+      [
+        round(1, [question(1)], {
+          category: 'Film',
+          author: 'Sam',
+          note: 'Host only text',
+          showNoteOnScreen: true,
+        }),
+        round(2, [question(2)], { note: 'Hidden note' }),
+      ],
+      'answer_after_question',
+    );
+    expect(steps[0].screen).toEqual({
+      kind: 'round_title',
+      roundNumber: 1,
+      title: 'Round 1',
+      category: 'Film',
+      author: 'Sam',
+      note: 'Host only text',
+    });
+    expect(steps[3].screen).toMatchObject({ kind: 'round_title', note: '' });
+  });
+
+  it('carries no live-only content: no teams, no fun facts, no break deadline', () => {
+    const { steps, quiz } = buildQuizPreview(
+      [round(1, [question(1)])],
+      'answer_after_question',
+    );
+    expect(quiz.settings.funFactsEnabled).toBe(false);
+    expect(quiz.roundTitles).toEqual(['Round 1']);
+    expect(quiz.roundCategories).toEqual(['']);
+    expect(quiz.roundAuthors).toEqual(['']);
+    expect(
+      steps.every(({ screen }) =>
+        ['round_title', 'question', 'reveal'].includes(screen.kind),
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(steps)).not.toContain('breakEndsAt');
+  });
+
+  it('gives no steps and no error for an empty quiz', () => {
+    expect(buildQuizPreview([], 'answer_after_question').steps).toEqual([]);
+  });
+
+  it('keeps the title card of a round with no questions and previews the rest', () => {
+    expect(labels([round(1, []), round(2, [question(1)])])).toEqual([
+      'title:1',
+      'title:2',
+      'q:1',
+      'a:1',
+    ]);
+  });
+});
