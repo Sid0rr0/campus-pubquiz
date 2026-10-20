@@ -40,7 +40,14 @@ export interface CreateSessionPayload {
   name?: string;
   /** Any fields omitted are filled in from DEFAULT_SESSION_SETTINGS by the server. */
   settings?: Partial<SessionSettings>;
+  /** Current leagues the session counts towards. Omitted means none. */
+  leagueIds?: number[];
 }
+
+/** Request body for PATCH /sessions/:joinCode/settings. `leagueIds` replaces the session's leagues and is accepted until the session ends; the other fields only while it is in the lobby. */
+export type UpdateSessionSettingsPayload = Partial<SessionSettings> & {
+  leagueIds?: number[];
+};
 
 /** One running GameSession, as listed by GET /sessions for the admin session picker. */
 export interface ActiveSessionSummary {

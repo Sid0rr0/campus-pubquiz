@@ -21,6 +21,13 @@ export const addLeagueSessionSchema = z.object({
   gameSessionId: z.number().int().positive(),
 });
 
+const MAX_LEAGUES_PER_SESSION = 100;
+
+/** The leagues ticked for a session: a set of league ids, replacing what was there. */
+export const leagueIdsSchema = z
+  .array(z.number().int().positive())
+  .max(MAX_LEAGUES_PER_SESSION);
+
 export const leaguesQuerySchema = z.object({
   current: z
     .enum(['true', 'false'])

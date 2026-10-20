@@ -1,9 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { SessionSettings } from '@campus-pubquiz/types';
+import type {
+  SessionSettings,
+  UpdateSessionSettingsPayload,
+} from '@campus-pubquiz/types';
+import {
+  LeagueCheckboxes,
+  useTickableLeagues,
+} from '@/app/components/league-checkboxes';
+import { queryKeys } from '@/app/lib/query-keys';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { SessionApiError, updateSessionSettings } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
@@ -19,7 +27,12 @@ export function SessionSettingsPanel({
   joinCode,
   settings,
 }: SessionSettingsPanelProps) {
+  const queryClient = useQueryClient();
   const [value, setValue] = useState<SessionSettings>(settings);
+  // Leagues ticked by hand; null until the first tick, so an untouched panel
+  // shows (and saves) the session's existing memberships unchanged.
+  const [pickedLeagueIds, setPickedLeagueIds] = useState<number[] | null>(null);
+  const { leagues, memberOf } = useTickableLeagues(joinCode);
 
   // Re-seeds local edits from the live settings whenever the admin switches
   // sessions, or whenever the settings reference itself changes (e.g. saved
@@ -34,11 +47,15 @@ export function SessionSettingsPanel({
     setPrevJoinCode(joinCode);
     setPrevSettings(settings);
     setValue(settings);
+    if (joinCode !== prevJoinCode) setPickedLeagueIds(null);
   }
 
   const saveMutation = useMutation({
-    mutationFn: (next: SessionSettings) =>
+    mutationFn: (next: UpdateSessionSettingsPayload) =>
       updateSessionSettings(joinCode, next),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
+    },
     onError: (error) =>
       toast.error(
         apiErrorMessage(error, SessionApiError, 'Could not save settings') ??
@@ -50,12 +67,23 @@ export function SessionSettingsPanel({
     <section className="flex flex-col gap-3 rounded-xl border border-foreground/15 bg-white p-4">
       <h2 className="font-display text-xl">Session Settings</h2>
       <SessionSettingsForm value={value} onChange={setValue} />
+      <LeagueCheckboxes
+        leagues={leagues}
+        selected={pickedLeagueIds ?? memberOf}
+        onChange={setPickedLeagueIds}
+      />
       <Button
         type="button"
         disabled={saveMutation.isPending}
         variant="solid-flat"
         size="md"
-        onClick={() => saveMutation.mutate(value)}
+        onClick={() =>
+          saveMutation.mutate(
+            pickedLeagueIds === null
+              ? value
+              : { ...value, leagueIds: pickedLeagueIds },
+          )
+        }
         className="w-fit self-end disabled:opacity-40"
       >
         {saveMutation.isPending ? 'Saving…' : 'Save'}

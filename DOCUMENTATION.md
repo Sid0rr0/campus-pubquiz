@@ -1249,8 +1249,13 @@ The backend can run several `GameSession`s concurrently, each bound to one
 admin/moderator landing page for managing them:
 
 - `GET /sessions` — list running sessions (auth-gated).
-- `POST /sessions` (`{ quizId }`) — start a new session, producing a fresh
-  join code.
+- `POST /sessions` (`{ quizId, name?, settings?, leagueIds? }`) — start a new
+  session, producing a fresh join code. `leagueIds` (default none) are the
+  leagues the session counts towards (see Leagues).
+- `PATCH /sessions/:joinCode/settings` — settings (lobby only, 409 once
+  started) and/or `leagueIds`, which replaces the session's leagues and is
+  accepted until the session ends. A body of only `leagueIds` leaves settings
+  untouched.
 - `DELETE /sessions/:joinCode` — close a session; blocked mid-game (409) via
   a dedicated guard.
 - `GET /sessions/public` — **unauthenticated**, so `/display` (venue TV, no
@@ -1462,6 +1467,15 @@ points and the table are described where they ship.
   with `current` and its `sessions` (id, join code, display name, played-at).
   `GET /leagues?current=true` keeps only current leagues, which feeds the session
   form's checkboxes.
+- **Sessions opt in** (admin and moderator, the same roles that create a session):
+  `POST /sessions` and `PATCH /sessions/:joinCode/settings` take `leagueIds: number[]`
+  (Zod-validated: positive integers). A write replaces the session's whole set of
+  memberships; `[]` clears it. Every id must be an existing **current** league, except
+  that a league the session is already in may stay after it stops being current;
+  otherwise it is a 400 and nothing is written (on create, before the session exists).
+  A session that has ended is a 409. The form's checkboxes (session-create dialog and
+  the `/control` Session Settings panel) list current leagues, plus any league the
+  session is already in; with none to show the section is hidden.
 - **`/leagues` page** (admin only, "Leagues" in the account menu): a create form, and
   per league an edit form, delete (behind a confirmation), its sessions each with
   Remove, and "Add a session" choosing from ended sessions not yet in it (the latest

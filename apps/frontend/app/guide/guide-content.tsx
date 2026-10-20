@@ -38,6 +38,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Starting a session',
     paragraphs: [
       'In the lobby, Session Settings sets the quiz, rules text and bonus categories. Then press Start Quiz.',
+      'If any leagues are current, tick the ones this session counts towards when you start it, or later under Session Settings; you can change the ticks until the session ends. A session only counts towards a league once it has ended. With no current leagues the Leagues section is hidden.',
       'Advance shows the rules, the round overview, then the first round title card. While the rules show, Previous returns to the lobby.',
     ],
   },

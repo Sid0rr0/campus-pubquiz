@@ -8,7 +8,9 @@ import type { GameSessionRepository } from '@/db/repositories/game-session.repos
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
 import {
+  InvalidLeagueIdsError,
   LeagueNotFoundError,
+  SessionEndedError,
   LeagueService,
   SessionNotEndedError,
   SessionNotFoundError,
@@ -179,6 +181,117 @@ describe('LeagueService (Postgres integration)', () => {
     expect(memberships.map((m) => m.league.id)).toEqual([other.id]);
     expect(await check.findOne(GameSession, session.id)).not.toBeNull();
     expect(await check.findOne(Quiz, quiz.id)).not.toBeNull();
+  });
+
+  describe('a session opting into leagues', () => {
+    const now = new Date('2026-11-15T12:00:00Z');
+    const currentFields = {
+      name: 'Current',
+      startsOn: '2026-09-01',
+      endsOn: '2026-12-20',
+    };
+    const pastFields = {
+      name: 'Past',
+      startsOn: '2026-01-01',
+      endsOn: '2026-06-01',
+    };
+
+    async function leagueIdsOf(session: GameSession): Promise<number[]> {
+      const { items } = await service.list({ now });
+      return items
+        .filter((l) => l.sessions.some((s) => s.gameSessionId === session.id))
+        .map((l) => l.id)
+        .sort();
+    }
+
+    it('ticks several current leagues for a live session', async () => {
+      const a = await service.create(currentFields);
+      const b = await service.create(currentFields);
+      const session = await createSession('lobby');
+
+      await service.setSessionLeagues(session.joinCode, [a.id, b.id], now);
+
+      expect(await leagueIdsOf(session)).toEqual([a.id, b.id].sort());
+    });
+
+    it('replaces the set on each write, and an empty list clears it', async () => {
+      const a = await service.create(currentFields);
+      const b = await service.create(currentFields);
+      const session = await createSession('lobby');
+      await service.setSessionLeagues(session.joinCode, [a.id], now);
+
+      await service.setSessionLeagues(session.joinCode, [b.id], now);
+      expect(await leagueIdsOf(session)).toEqual([b.id]);
+
+      await service.setSessionLeagues(session.joinCode, [], now);
+      expect(await leagueIdsOf(session)).toEqual([]);
+    });
+
+    it('rejects an unknown league id and writes nothing', async () => {
+      const a = await service.create(currentFields);
+      const session = await createSession('lobby');
+
+      await expect(
+        service.setSessionLeagues(session.joinCode, [a.id, 9999], now),
+      ).rejects.toThrow(InvalidLeagueIdsError);
+      expect(await leagueIdsOf(session)).toEqual([]);
+    });
+
+    it('rejects a league that is no longer current', async () => {
+      const past = await service.create(pastFields);
+      const session = await createSession('lobby');
+
+      await expect(
+        service.setSessionLeagues(session.joinCode, [past.id], now),
+      ).rejects.toThrow(InvalidLeagueIdsError);
+    });
+
+    it('lets a session stay in a league that has since stopped being current', async () => {
+      const past = await service.create(pastFields);
+      const session = await createSession('lobby');
+      em.create(LeagueSession, {
+        league: em.getReference(League, past.id),
+        gameSession: session,
+      });
+      await em.flush();
+      const current = await service.create(currentFields);
+
+      await service.setSessionLeagues(
+        session.joinCode,
+        [past.id, current.id],
+        now,
+      );
+
+      expect(await leagueIdsOf(session)).toEqual([past.id, current.id].sort());
+    });
+
+    it('refuses a write once the session has ended', async () => {
+      const a = await service.create(currentFields);
+      const session = await createSession('ended');
+
+      await expect(
+        service.setSessionLeagues(session.joinCode, [a.id], now),
+      ).rejects.toThrow(SessionEndedError);
+      expect(await leagueIdsOf(session)).toEqual([]);
+    });
+
+    it('rejects an unknown session', async () => {
+      await expect(
+        service.setSessionLeagues('NOPE12', [], now),
+      ).rejects.toThrow(SessionNotFoundError);
+    });
+
+    it('checks ids before a session exists', async () => {
+      const a = await service.create(currentFields);
+      const past = await service.create(pastFields);
+
+      await expect(
+        service.assertAssignable([a.id], now),
+      ).resolves.toBeUndefined();
+      await expect(service.assertAssignable([past.id], now)).rejects.toThrow(
+        InvalidLeagueIdsError,
+      );
+    });
   });
 
   describe('the current filter', () => {
