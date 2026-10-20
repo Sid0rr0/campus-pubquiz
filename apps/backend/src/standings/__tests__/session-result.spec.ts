@@ -34,12 +34,15 @@ function departedTeam(
   teamName: string,
   totalPoints: number,
 ): DepartedTeam {
-  const {
-    rank: _rank,
-    rankTo: _rankTo,
-    ...rest
-  } = ranked(teamId, teamName, totalPoints, 1);
-  return rest;
+  return {
+    teamId,
+    teamName,
+    totalPoints,
+    bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
+    roundPoints: [],
+  };
 }
 
 function standingsOf(
@@ -166,7 +169,7 @@ describe('sessionResult', () => {
     );
 
     // (0.25 + 1) credit over two participants
-    expect(result.questions[0]!.correctRate).toBeCloseTo(0.625);
+    expect(result.questions[0].correctRate).toBeCloseTo(0.625);
   });
 
   it('has no rates when nobody took part', () => {

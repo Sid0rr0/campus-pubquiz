@@ -68,7 +68,7 @@ describe('StandingsService.resultsForSessions (Postgres integration)', () => {
     expect(result.questions.map((q) => q.questionId)).toEqual([
       state.question.id,
     ]);
-    expect(result.questions[0]!.answeredCount).toBe(2);
+    expect(result.questions[0].answeredCount).toBe(2);
     expect(result.teams.map((t) => t.teamName)).toEqual(['Stays', 'Leaves']);
     expect(result.teams[1]).toMatchObject({
       hasLeft: true,
