@@ -101,6 +101,24 @@ export class SeedService {
     joinCode: string,
   ): Promise<SeededGame> {
     const gameSessionRow = await this.gameSessions.findOneOrFail(gameSessionId);
+    const rounds = await this.loadQuizRounds(quizId);
+
+    return {
+      quizId,
+      gameSessionId,
+      joinCode,
+      rounds,
+      // Sessions stored before the "Collect feedback" / "Fun facts" settings have no such field: they count as on.
+      settings: {
+        ...gameSessionRow.settings,
+        collectFeedback: gameSessionRow.settings.collectFeedback ?? true,
+        funFactsEnabled: gameSessionRow.settings.funFactsEnabled ?? true,
+      },
+    };
+  }
+
+  /** A quiz's rounds as a session's seeded game holds them — read-only and needing no session row, so a quiz preview and a session can't hold the quiz differently. */
+  async loadQuizRounds(quizId: number): Promise<SeededRound[]> {
     const roundRows = await this.rounds.find(
       { quiz: quizId },
       { orderBy: { orderIndex: 'asc' } },
@@ -131,18 +149,7 @@ export class SeedService {
       });
     }
 
-    return {
-      quizId,
-      gameSessionId,
-      joinCode,
-      rounds,
-      // Sessions stored before the "Collect feedback" / "Fun facts" settings have no such field: they count as on.
-      settings: {
-        ...gameSessionRow.settings,
-        collectFeedback: gameSessionRow.settings.collectFeedback ?? true,
-        funFactsEnabled: gameSessionRow.settings.funFactsEnabled ?? true,
-      },
-    };
+    return rounds;
   }
 
   private async createSeededGame(): Promise<SeededGame> {

@@ -1,6 +1,6 @@
 # 01: Load a quiz's seeded rounds without a session
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Quiz preview](../spec.md)
 

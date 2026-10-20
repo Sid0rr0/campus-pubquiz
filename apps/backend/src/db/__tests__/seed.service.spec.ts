@@ -159,6 +159,99 @@ describe('SeedService (Postgres integration)', () => {
     expect(reloaded.rounds[0].questions[0].answer).toBe(fixtureQuestion.answer);
   });
 
+  describe('loadQuizRounds', () => {
+    async function buildQuiz() {
+      const quiz = em.create(Quiz, { title: 'Preview quiz' });
+      const second = em.create(Round, {
+        quiz,
+        title: 'Second',
+        orderIndex: 1,
+        kahootMode: true,
+      });
+      const first = em.create(Round, {
+        quiz,
+        title: 'First',
+        orderIndex: 0,
+        breakAfter: true,
+        category: 'Music',
+        author: 'Sam',
+        note: 'Say hi',
+        showNoteOnScreen: true,
+      });
+      em.create(Question, {
+        round: first,
+        orderIndex: 1,
+        type: 'multiple_choice',
+        prompt: 'Pick one',
+        answer: 'B',
+        notes: 'Host note',
+        payload: { options: ['A', 'B', 'C'] },
+        points: 2,
+      });
+      em.create(Question, {
+        round: first,
+        orderIndex: 0,
+        type: 'free_text',
+        prompt: 'Name it',
+        answer: 'Paris',
+        payload: {
+          mediaUrl: 'https://example.com/clip.mp4',
+          mediaStartSeconds: 5,
+          mediaEndSeconds: 12,
+          isVideoHidden: true,
+        },
+      });
+      em.create(Question, {
+        round: second,
+        orderIndex: 0,
+        type: 'free_text',
+        prompt: 'Look',
+        answer: 'Cat',
+        payload: { mediaUrl: 'https://example.com/cat.png' },
+      });
+      await em.flush();
+      return quiz;
+    }
+
+    it('loads a quiz in round and question order without a session row', async () => {
+      const quiz = await buildQuiz();
+
+      const rounds = await seedService.loadQuizRounds(quiz.id);
+
+      expect(rounds.map((round) => round.title)).toEqual(['First', 'Second']);
+      expect(rounds[0].questions.map((q) => q.prompt)).toEqual([
+        'Name it',
+        'Pick one',
+      ]);
+      expect(rounds[0]).toMatchObject({
+        breakAfter: true,
+        category: 'Music',
+        author: 'Sam',
+        note: 'Say hi',
+        showNoteOnScreen: true,
+      });
+      expect(rounds[1].kahootMode).toBe(true);
+      expect(Object.values(rounds[0].questionNotesById ?? {})).toContain(
+        'Host note',
+      );
+      expect(await em.count(GameSession, {})).toBe(0);
+    });
+
+    it('holds the quiz exactly as a session on it does', async () => {
+      const quiz = await buildQuiz();
+      const created = await seedService.createSession(quiz.id);
+
+      const rounds = await seedService.loadQuizRounds(quiz.id);
+      const game = await seedService.loadGame(
+        quiz.id,
+        created.gameSessionId,
+        created.joinCode,
+      );
+
+      expect(rounds).toEqual(game.rounds);
+    });
+  });
+
   describe('findStartedAtByJoinCodes', () => {
     it('maps each join code to its session row createdAt', async () => {
       const first = await seedService.seed();
