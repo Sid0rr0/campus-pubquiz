@@ -182,6 +182,87 @@ describe('buildQuizPreview, night', () => {
   it('gives no steps and no error for an empty quiz', () => {
     expect(buildQuizPreview([], 'night').steps).toEqual([]);
   });
+
+  describe('a round with no questions', () => {
+    /** Compact label per step: 'overview', 'title:N', 'q:id', 'a:id', or the kind. */
+    const nightLabels = (rounds: SeededRound[]) =>
+      buildQuizPreview(rounds, 'night').steps.map(({ screen }) => {
+        switch (screen.kind) {
+          case 'round_title':
+            return `title:${screen.roundNumber}`;
+          case 'question':
+            return `q:${screen.question.id}`;
+          case 'reveal':
+            return `a:${screen.question.id}`;
+          default:
+            return screen.kind;
+        }
+      });
+
+    it('previews without errors when it comes first', () => {
+      expect(nightLabels([round(1, []), round(2, [question(1)])])).toEqual([
+        'round_overview',
+        'title:1',
+        'title:2',
+        'q:1',
+        'break_intro',
+        'reveal_intro',
+        'a:1',
+      ]);
+    });
+
+    it('previews without errors when it sits between two rounds', () => {
+      const rounds = [
+        round(1, [question(1)]),
+        round(2, []),
+        round(3, [question(2)]),
+      ];
+      expect(nightLabels(rounds)).toEqual([
+        'round_overview',
+        'title:1',
+        'q:1',
+        'break_intro',
+        'reveal_intro',
+        'a:1',
+        'title:2',
+        'title:3',
+        'q:2',
+        'break_intro',
+        'reveal_intro',
+        'a:2',
+      ]);
+    });
+
+    it('previews without errors when it comes last', () => {
+      expect(nightLabels([round(1, [question(1)]), round(2, [])])).toEqual([
+        'round_overview',
+        'title:1',
+        'q:1',
+        'break_intro',
+        'reveal_intro',
+        'a:1',
+        'title:2',
+      ]);
+    });
+
+    it('numbers the rounds after it by their place in the quiz', () => {
+      const { steps } = buildQuizPreview(
+        [round(1, []), round(2, [question(1)])],
+        'night',
+      );
+      const numbers = steps.flatMap(({ screen }) =>
+        screen.kind === 'reveal_intro' || screen.kind === 'break_intro'
+          ? [screen.roundNumber]
+          : screen.kind === 'reveal'
+            ? [screen.question.roundNumber]
+            : [],
+      );
+      expect(numbers.every((number) => number === 2)).toBe(true);
+      expect(
+        steps.filter(({ screen }) => screen.kind === 'question')[0].roundIndex,
+      ).toBe(1);
+    });
+  });
 });
 
 describe('buildQuizPreview, answer_after_question', () => {

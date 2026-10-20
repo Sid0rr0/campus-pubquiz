@@ -183,21 +183,56 @@ function questionPositions(rounds: readonly SeededRound[]) {
  * saved) and only the screens with quiz content are kept.
  */
 function buildNightSteps(fullSession: SessionState): BareStep[] {
-  const positions = questionPositions(fullSession.seededGame.rounds);
-  const steps: BareStep[] = [];
+  const { rounds } = fullSession.seededGame;
   // A quiz with no rounds has nothing to show, not even an overview of nothing.
-  if (fullSession.seededGame.rounds.length === 0) return steps;
+  if (rounds.length === 0) return [];
 
-  let session = fullSession;
-  for (let press = 0; press <= MAX_NIGHT_PRESSES; press += 1) {
-    const { screen } = projectScreen(session, SOCKET_ROOMS.DISPLAY);
-    if (NIGHT_SCREEN_KINDS.includes(screen.kind)) {
-      steps.push(nightStep(screen, session, positions));
+  // The real Advance plan can't place a round with no questions, so the dry
+  // run walks a session without such rounds. Their title cards are put back
+  // in front of the next round's, and the walked rounds' numbers are mapped
+  // back to their place in the full quiz.
+  const placed = rounds.flatMap((round, index) =>
+    round.questions.length > 0 ? [index] : [],
+  );
+  const emptyRounds = rounds.flatMap((round, index) =>
+    round.questions.length === 0 ? [index] : [],
+  );
+  const walked: BareStep[] =
+    placed.length === 0
+      ? [
+          {
+            screen: { kind: 'round_overview' },
+            roundIndex: 0,
+            questionIndex: null,
+            isBlockEnd: false,
+          },
+        ]
+      : walkNightSteps(
+          freshSessionState({
+            ...fullSession.seededGame,
+            rounds: placed.map((index) => rounds[index]),
+          }),
+          placed,
+          questionPositions(rounds),
+        );
+
+  const steps: BareStep[] = [];
+  let nextEmpty = 0;
+  const pushEmptyTitlesBefore = (roundIndex: number) => {
+    while (
+      nextEmpty < emptyRounds.length &&
+      emptyRounds[nextEmpty] < roundIndex
+    ) {
+      steps.push(emptyRoundTitle(fullSession, emptyRounds[nextEmpty]));
+      nextEmpty += 1;
     }
-    const next = dryRunPress(session);
-    if (!next) break;
-    session = next;
+  };
+  for (const step of walked) {
+    if (step.screen.kind === 'round_title')
+      pushEmptyTitlesBefore(step.roundIndex);
+    steps.push(step);
   }
+  pushEmptyTitlesBefore(rounds.length);
 
   // A block ends at its last reveal: the next screen is neither another
   // reveal nor the next round's reveal title card.
@@ -208,6 +243,73 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
     isBlockEnd:
       step.screen.kind === 'reveal' && !continuesReveals(steps[index + 1]),
   }));
+}
+
+/** The title card of a round with no questions, as the full quiz numbers it. */
+function emptyRoundTitle(
+  fullSession: SessionState,
+  roundIndex: number,
+): BareStep {
+  return {
+    screen: displayScreenAt(fullSession, {
+      ...LOBBY_PROGRESS,
+      status: 'round_intro',
+      roundIndex,
+    }),
+    roundIndex,
+    questionIndex: null,
+    isBlockEnd: false,
+  };
+}
+
+/** Dry-runs Advance over a session whose rounds all have questions; `placed` maps its round indexes back to the full quiz. */
+function walkNightSteps(
+  start: SessionState,
+  placed: readonly number[],
+  positions: ReturnType<typeof questionPositions>,
+): BareStep[] {
+  const steps: BareStep[] = [];
+  let session = start;
+  for (let press = 0; press <= MAX_NIGHT_PRESSES; press += 1) {
+    const { screen } = projectScreen(session, SOCKET_ROOMS.DISPLAY);
+    if (NIGHT_SCREEN_KINDS.includes(screen.kind)) {
+      steps.push(
+        nightStep(
+          renumberRounds(screen, placed),
+          placed[session.progress.roundIndex],
+          positions,
+        ),
+      );
+    }
+    const next = dryRunPress(session);
+    if (!next) break;
+    session = next;
+  }
+  return steps;
+}
+
+/** The screen with its round numbers mapped from the walked session's rounds to the full quiz's. */
+function renumberRounds(
+  screen: DisplayScreen,
+  placed: readonly number[],
+): DisplayScreen {
+  const numberOf = (walkedNumber: number) => placed[walkedNumber - 1] + 1;
+  switch (screen.kind) {
+    case 'round_title':
+    case 'break_intro':
+    case 'reveal_intro':
+      return { ...screen, roundNumber: numberOf(screen.roundNumber) };
+    case 'reveal':
+      return {
+        ...screen,
+        question: {
+          ...screen.question,
+          roundNumber: numberOf(screen.question.roundNumber),
+        },
+      };
+    default:
+      return screen;
+  }
 }
 
 /** The session after the next Advance press, or null when a press would move nothing (the end of the quiz). Nothing is graded or saved. */
@@ -235,10 +337,9 @@ function dryRunPress(session: SessionState): SessionState | null {
 
 function nightStep(
   screen: DisplayScreen,
-  session: SessionState,
+  roundIndex: number,
   positions: ReturnType<typeof questionPositions>,
 ): BareStep {
-  const { roundIndex } = session.progress;
   switch (screen.kind) {
     case 'question':
     case 'reveal': {
