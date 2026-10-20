@@ -41,12 +41,17 @@ export class LeagueChanges {
     }
   }
 
-  /** Re-reads the lobby league after a league was edited, deleted or had a session added or removed. */
+  /**
+   * Re-reads the lobby league after a league was edited, deleted or had a
+   * session added or removed, or when another session's league table may have
+   * changed. A failed read throws, so the write stores nothing and the lobby
+   * keeps the league top it had; the caller logs it.
+   */
   async refreshTop(session: SessionState): Promise<SessionChange<void>> {
     return {
       session: {
         ...session,
-        leagueTop: await this.topOrNull(session.seededGame.gameSessionId),
+        leagueTop: await this.table.topFor(session.seededGame.gameSessionId),
       },
       outcome: undefined,
     };

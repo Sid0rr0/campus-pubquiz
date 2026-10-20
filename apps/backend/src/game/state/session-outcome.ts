@@ -80,6 +80,15 @@ export interface SessionOutcome {
    * reports nothing.
    */
   deadlineChange?: DeadlineChange;
+  /**
+   * True when the write may have changed a league table: the session entered
+   * or left `ended`, or it was `ended` before and after and refreshed
+   * standings. Like `deadlineChange`, only the Session write's commit step
+   * sets it, from a before/after comparison of the stored session, so no event
+   * sets it by hand. The delivery step then re-reads every other live
+   * session's league top.
+   */
+  leagueTablesChanged?: boolean;
 }
 
 export const BROADCAST_STATE_OUTCOME: SessionOutcome = {

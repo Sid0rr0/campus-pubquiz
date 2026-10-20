@@ -128,12 +128,15 @@ export class GameStateService implements OnModuleInit {
    * Re-reads the lobby league of every live session after an admin edited or
    * deleted a league, or added or removed one of its sessions. Returns the
    * join codes whose league changed, for the caller to broadcast: this pushes
-   * nothing itself. A session closed meanwhile is skipped.
+   * nothing itself. A session closed meanwhile is skipped, and so is
+   * `exceptJoinCode` (the session whose own change set the refresh off). A
+   * failed league read leaves that session's league top as it was and is logged.
    */
-  async refreshLeagueTops(): Promise<string[]> {
+  async refreshLeagueTops(exceptJoinCode?: string): Promise<string[]> {
     const changed: string[] = [];
     for (const { seededGame } of this.sessionWrite.list()) {
       const { joinCode } = seededGame;
+      if (joinCode === exceptJoinCode) continue;
       try {
         const before = this.sessionWrite.read(joinCode).leagueTop;
         await this.sessionWrite.write(

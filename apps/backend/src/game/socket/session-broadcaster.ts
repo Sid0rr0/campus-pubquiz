@@ -89,19 +89,57 @@ export class SessionBroadcaster
 
   /** Delivers an outcome (see `deliverOutcome` for the order); `sender` is absent for outcomes no socket sent. */
   readonly deliver: DeliverFn = async (joinCode, outcome, sender) => {
-    await deliverOutcome(
-      {
-        gameState: this.gameState,
-        answerService: this.answerService,
-        bonusService: this.bonusService,
-        server: this.requireServer(),
-        rearmTimers: (code, deadlines) => this.phaseTimers.arm(code, deadlines),
-      },
-      joinCode,
-      outcome,
-      sender,
-    );
+    try {
+      await deliverOutcome(
+        {
+          gameState: this.gameState,
+          answerService: this.answerService,
+          bonusService: this.bonusService,
+          server: this.requireServer(),
+          rearmTimers: (code, deadlines) =>
+            this.phaseTimers.arm(code, deadlines),
+        },
+        joinCode,
+        outcome,
+        sender,
+      );
+    } finally {
+      // After the session's own delivery: when a league table may have
+      // changed, every other live lobby re-reads its league top. Never fails
+      // the delivery that set it off.
+      if (outcome.leagueTablesChanged) {
+        await this.refreshLeagueLobbies(joinCode);
+      }
+    }
   };
+
+  /**
+   * Re-reads every live session's league top (except `exceptJoinCode`) and
+   * redraws the sessions whose league top changed. A failed read leaves that
+   * session as it was (logged by the game state); a failed broadcast is
+   * logged and does not stop the others. Never throws.
+   */
+  async refreshLeagueLobbies(exceptJoinCode?: string): Promise<void> {
+    try {
+      for (const code of await this.gameState.refreshLeagueTops(
+        exceptJoinCode,
+      )) {
+        try {
+          await this.broadcastState(code);
+        } catch (error) {
+          this.logger.error(
+            `League top broadcast failed for session ${code}`,
+            error instanceof Error ? error.stack : String(error),
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        'League top refresh failed',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
 
   /** Rebroadcasts the session state to /display, /control and /rules (after a REST settings change). */
   async broadcastState(joinCode: string): Promise<void> {

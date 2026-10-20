@@ -133,10 +133,8 @@ export class LiveSessionRest {
   }
 
   /** Re-reads each live session's league top after a league write and redraws the lobbies whose league top changed. */
-  async refreshLeagueLobbies(): Promise<void> {
-    for (const joinCode of await this.gameState.refreshLeagueTops()) {
-      await this.broadcaster.broadcastState(joinCode);
-    }
+  refreshLeagueLobbies(): Promise<void> {
+    return this.broadcaster.refreshLeagueLobbies();
   }
 
   /** Runs `run` for a live session; a session missing up front, or closed while `run` waited its turn, is an UnknownLiveSessionError. */
