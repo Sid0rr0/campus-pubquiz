@@ -6,7 +6,7 @@ import {
   kahootTypeNames,
 } from '@campus-pubquiz/types';
 import { Toaster } from 'sonner';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuizDraftApiError } from '@/app/lib/quiz-draft-api';
 import { ImportApiError } from '@/app/lib/import-api';
 import { QuizEditorPanel } from '@/app/quizzes/[id]/quiz-editor-panel';
@@ -855,6 +855,103 @@ describe('QuizEditorPanel', () => {
     ).toBeInTheDocument();
     expect(await screen.findByText(/quiz saved/i)).toBeInTheDocument();
     expect(routerRef.replace).not.toHaveBeenCalled();
+  });
+
+  describe('Preview', () => {
+    const SAVED_QUIZ = {
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [{ title: 'History', breakAfter: true, questions: [] }],
+    };
+
+    beforeEach(() => {
+      vi.spyOn(window, 'open').mockReturnValue(null);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('opens the preview of the saved quiz without asking when nothing has changed', async () => {
+      const user = userEvent.setup();
+      const confirm = vi.spyOn(window, 'confirm');
+      mockFetchQuizDraft.mockResolvedValue(SAVED_QUIZ);
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Trivia Night');
+
+      await user.click(screen.getByRole('button', { name: /preview/i }));
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(window.open).toHaveBeenCalledWith(
+        '/quizzes/5/preview',
+        '_blank',
+        'noopener',
+      );
+    });
+
+    it('asks before opening when there are unsaved changes, and stays put if declined', async () => {
+      const user = userEvent.setup();
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      mockFetchQuizDraft.mockResolvedValue(SAVED_QUIZ);
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      const title = await screen.findByDisplayValue('Trivia Night');
+      await user.type(title, ' II');
+
+      await user.click(screen.getByRole('button', { name: /preview/i }));
+
+      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(window.open).not.toHaveBeenCalled();
+    });
+
+    it('opens the saved version when the prompt is accepted', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      mockFetchQuizDraft.mockResolvedValue(SAVED_QUIZ);
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      const title = await screen.findByDisplayValue('Trivia Night');
+      await user.type(title, ' II');
+
+      await user.click(screen.getByRole('button', { name: /preview/i }));
+
+      expect(window.open).toHaveBeenCalledWith(
+        '/quizzes/5/preview',
+        '_blank',
+        'noopener',
+      );
+    });
+
+    it('stops asking once the changes are saved', async () => {
+      const user = userEvent.setup();
+      const confirm = vi.spyOn(window, 'confirm');
+      mockFetchQuizDraft.mockResolvedValue(SAVED_QUIZ);
+      mockUpdateQuiz.mockResolvedValue({
+        quizId: 5,
+        roundCount: 1,
+        questionCount: 0,
+      });
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      const title = await screen.findByDisplayValue('Trivia Night');
+      await user.type(title, ' II');
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
+      await screen.findByRole('button', { name: /saved/i });
+
+      await user.click(screen.getByRole('button', { name: /preview/i }));
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(window.open).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not offered for a quiz that has never been saved', async () => {
+      const user = userEvent.setup();
+      renderWithQuery(<QuizEditorPanel quizId="new" />);
+      await user.click(
+        screen.getByRole('button', { name: /start from scratch/i }),
+      );
+
+      expect(
+        screen.queryByRole('button', { name: /preview/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('keeps in-progress edits and lets a second save go through after the post-save background refetch lands', async () => {
