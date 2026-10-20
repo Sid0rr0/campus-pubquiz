@@ -3,6 +3,7 @@ import { QUESTION_KINDS, type AnswerInputKind } from './question-kind';
 import type { QuestionType } from './question-types';
 import type { ResolvedAnswerKey } from './answer-key';
 import { isWithinMargin, parseFiniteNumber } from './margin';
+import { ALL_OR_NOTHING_MATCH_SCORING } from './match-scoring-mode';
 import { halfPoints, nearestHalfPoint } from './score-math';
 import { splitPipeList } from './sort-match';
 
@@ -144,7 +145,7 @@ const matchFormat: AnswerFormat<string[]> = {
     ).length;
     const wrongPairCount = answerPairs.length - correctPairCount;
     if (wrongPairCount === 0) return correct(question);
-    if (question.matchScoringMode === 'all_or_nothing') {
+    if (question.matchScoringMode === ALL_OR_NOTHING_MATCH_SCORING) {
       return wrongPairCount === 1
         ? { points: halfPoints(question.points), verdict: 'partial' }
         : INCORRECT;

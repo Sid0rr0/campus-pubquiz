@@ -5,6 +5,7 @@ import {
   clipFieldsFor,
   parseFiniteNumber,
   parseTimecode,
+  PARTIAL_MATCH_SCORING,
   hasMarginType,
   type ClipFields,
   type MarginUnit,
@@ -196,7 +197,7 @@ function clipFieldsFrom(
 
 /** The grading draft fields of a question that has no stored setting: the one place the editor's defaults are written. */
 const GRADING_DRAFT_DEFAULTS = {
-  matchScoringMode: 'partial',
+  matchScoringMode: PARTIAL_MATCH_SCORING,
   marginValue: String(DEFAULT_MARGIN.value),
   marginUnit: DEFAULT_MARGIN.unit,
 } satisfies Pick<

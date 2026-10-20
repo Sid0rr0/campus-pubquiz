@@ -7,7 +7,9 @@ import {
   PlusIcon,
 } from '@radix-ui/react-icons';
 import {
+  ALL_OR_NOTHING_MATCH_SCORING,
   DEFAULT_MARGIN,
+  PARTIAL_MATCH_SCORING,
   hasMarginType,
   type AnswerKind,
   formatMarginHint,
@@ -426,10 +428,10 @@ function MatchFields({
           disabled={isOpened}
           className="w-full rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
         >
-          <option value="partial">
+          <option value={PARTIAL_MATCH_SCORING}>
             Partial credit — points split evenly across correct pairs
           </option>
-          <option value="all_or_nothing">
+          <option value={ALL_OR_NOTHING_MATCH_SCORING}>
             All or nothing — full points, or half if exactly one pair is wrong,
             else zero
           </option>
