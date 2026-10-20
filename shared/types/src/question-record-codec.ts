@@ -123,18 +123,30 @@ function carries(
   }
 }
 
+/** Whether a field value is one to carry: unset, `false` and `''` all mean "no value". */
+function hasValue(value: unknown): boolean {
+  return value !== undefined && value !== false && value !== '';
+}
+
+/** The values of the source that have one and whose table row passes the check; the one loop both field pickers share. */
+function pickCarried(
+  source: QuestionPayload,
+  isCarried: (row: FieldTableRow) => boolean,
+): QuestionPayload {
+  const carried: Record<string, unknown> = {};
+  for (const row of FIELD_TABLE) {
+    const value = source[row.field];
+    if (hasValue(value) && isCarried(row)) carried[row.field] = value;
+  }
+  return carried;
+}
+
 /** The fields of the source the question's type and media carry; a field without a value is left out. */
 function carriedFields(
   type: QuestionType,
   source: QuestionPayload,
 ): QuestionPayload {
-  const carried: Record<string, unknown> = {};
-  for (const row of FIELD_TABLE) {
-    const value = source[row.field];
-    const isValue = value !== undefined && value !== false && value !== '';
-    if (isValue && carries(row, type, source)) carried[row.field] = value;
-  }
-  return carried;
+  return pickCarried(source, (row) => carries(row, type, source));
 }
 
 /** The clip fields a preview carries for a question media link and an answer media link, taken from the candidate; a candidate field without a value is left out. */
@@ -142,14 +154,12 @@ export function clipFieldsFor(
   links: MediaLinks,
   candidate: ClipFields,
 ): ClipFields {
-  const carried: Record<string, unknown> = {};
-  for (const row of FIELD_TABLE) {
-    if (row.when !== 'question-video' && row.when !== 'either-video') continue;
-    const value = candidate[row.field as keyof ClipFields];
-    const isValue = value !== undefined && value !== false;
-    if (isValue && mediaRuleHolds(row.when, links)) carried[row.field] = value;
-  }
-  return carried;
+  return pickCarried(
+    candidate,
+    (row) =>
+      (row.when === 'question-video' || row.when === 'either-video') &&
+      mediaRuleHolds(row.when, links),
+  );
 }
 
 /** The notes-group fields a sheet row carries for a question: the preview's clip fields the field table allows for its media, renamed to the group's. */
