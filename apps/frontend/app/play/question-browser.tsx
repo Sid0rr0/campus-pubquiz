@@ -5,7 +5,12 @@ import type {
   PlayersRevealQuestionView,
   JoinAcceptedPayload,
   QuestionView,
+  Verdict,
 } from '@campus-pubquiz/types';
+import {
+  describeVerdictCard,
+  VERDICT_TONE_TEXT_CLASS,
+} from '@/app/play/verdict-card';
 import { NumberMarginText } from '@/app/components/number-margin-text';
 import { QuestionDisplay } from '@/app/display/question-display';
 import {
@@ -40,6 +45,8 @@ interface QuestionBrowserProps {
   myAnswers: Record<number, string>;
   /** Points awarded for the selected question's answer, null until graded. */
   myAnswerPoints: number | null;
+  /** How the selected question's answer was judged, null until graded; colours "Your answer" on the reveal. */
+  myAnswerVerdict: Verdict | null;
   onSelectQuestion: (questionId: BlockQuestionView['id']) => void;
   onSubmitAnswer: (
     questionId: BlockQuestionView['id'],
@@ -97,6 +104,7 @@ export function QuestionBrowser({
   isKahootMode,
   myAnswers,
   myAnswerPoints,
+  myAnswerVerdict,
   onSelectQuestion,
   onSubmitAnswer,
   navigation,
@@ -145,9 +153,15 @@ export function QuestionBrowser({
           />
           <p
             className={`font-display text-2xl ${
-              myAnswerPoints === revealQuestion.points
-                ? 'text-green'
-                : 'text-magenta'
+              VERDICT_TONE_TEXT_CLASS[
+                myAnswer
+                  ? describeVerdictCard({
+                      myAnswer,
+                      pointsAwarded: myAnswerPoints,
+                      verdict: myAnswerVerdict,
+                    }).tone
+                  : 'incorrect'
+              ]
             }`}
           >
             <span className="font-body text-md font-extrabold text-foreground/55">

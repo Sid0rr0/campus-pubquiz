@@ -490,6 +490,11 @@ phone shows a card for about three seconds that never blocks input: "✓ Correct
 built from the team's own answer data; only a `correct` verdict vibrates. For a
 closest_guess question it appears when the answer step comes on air.
 
+On the phone's block browser, a revealed question's "Your answer" is coloured by
+the same Verdict: green for `correct` (even when speed scoring scaled the points
+down), cyan for `partial`, magenta for `incorrect`, no answer or not yet graded.
+The "n / max points" line is unchanged.
+
 ### Events
 
 Every event is declared once, in the **protocol map**
