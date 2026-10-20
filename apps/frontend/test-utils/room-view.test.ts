@@ -9,7 +9,7 @@ describe('room view fixture builder', () => {
       const view = roomView(room, {});
 
       expect(view.progress.status).toBe('lobby');
-      expect(view.blockQuestions).toEqual([]);
+      expect(view.teams).toEqual([]);
     },
   );
 

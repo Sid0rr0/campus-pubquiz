@@ -5,7 +5,7 @@ import {
   type FunFactData,
 } from '../fun-facts';
 import type { GameProgress } from '../game-state-types';
-import type { LeaderboardEntry } from '../room-views';
+import type { DisplayStatePayload, LeaderboardEntry } from '../room-views';
 import { projectScreen } from '../screen-projection';
 import { SOCKET_ROOMS } from '../socket-events';
 import {
@@ -595,6 +595,11 @@ describe('describeFunFacts', () => {
   });
 
   describe('the display view', () => {
+    /** The facts the big screen's break screen carries; none on any other screen. */
+    function funFactsOn(view: DisplayStatePayload) {
+      return view.screen.kind === 'break_intro' ? view.screen.funFacts : [];
+    }
+
     const data: Partial<FunFactData> = {
       answers: [answer(1, 0, 'correct'), answer(2, 1, 'incorrect')],
     };
@@ -608,9 +613,11 @@ describe('describeFunFacts', () => {
 
       const view = projectScreen(onBreak, SOCKET_ROOMS.DISPLAY);
 
-      expect(view.onAirScreen.kind).toBe('break_intro');
-      expect(view.funFacts).toEqual(describeFunFacts(onBreak));
-      expect(view.funFacts.length).toBeGreaterThan(0);
+      expect(view.screen).toMatchObject({
+        kind: 'break_intro',
+        funFacts: describeFunFacts(onBreak),
+      });
+      expect(funFactsOn(view).length).toBeGreaterThan(0);
     });
 
     it.each(['lobby', 'question_open', 'break', 'reveal', 'ended'] as const)(
@@ -622,9 +629,9 @@ describe('describeFunFacts', () => {
           progress: { ...session.progress, status },
         };
 
-        expect(projectScreen(elsewhere, SOCKET_ROOMS.DISPLAY).funFacts).toEqual(
-          [],
-        );
+        expect(
+          funFactsOn(projectScreen(elsewhere, SOCKET_ROOMS.DISPLAY)),
+        ).toEqual([]);
       },
     );
 
@@ -635,7 +642,9 @@ describe('describeFunFacts', () => {
         progress: { ...session.progress, isLeaderboardVisible: true },
       };
 
-      expect(projectScreen(covered, SOCKET_ROOMS.DISPLAY).funFacts).toEqual([]);
+      expect(funFactsOn(projectScreen(covered, SOCKET_ROOMS.DISPLAY))).toEqual(
+        [],
+      );
     });
 
     it('is not on the players or admin views', () => {

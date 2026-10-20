@@ -5,7 +5,7 @@ import {
 } from './admin-view-flags';
 import { getBlockSeededQuestions } from './block-questions';
 import { getFeedbackField } from './feedback-rounds';
-import { describeFunFacts } from './fun-facts';
+import { describeDisplayScreen } from './display-screen';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
@@ -13,6 +13,7 @@ import { describeLeaderboardBoard } from './leaderboard-board';
 import { FULLY_REVEALED_STEP, shownAtStep } from './closest-guess-reveal';
 import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
+  type OnAirScreen,
   describeAdminIndicators,
   describeOnAirScreen,
   describePlayersScreen,
@@ -89,6 +90,12 @@ function endedRevealWalk(session: SessionState): PlayersRevealQuestionView[] {
   );
 }
 
+/** Hooks the caller can hand the projection; the projection itself stays pure. */
+export interface ProjectScreenOptions {
+  /** Called when the display view had to send `blank` because the On-air screen's content couldn't be resolved, so the caller can log it. */
+  onBlankScreen?: (onAirScreen: OnAirScreen) => void;
+}
+
 /**
  * The Screen projection: the view of a live session that one audience (a
  * socket room) is sent on every state broadcast and on connect/reconnect.
@@ -99,10 +106,12 @@ function endedRevealWalk(session: SessionState): PlayersRevealQuestionView[] {
 export function projectScreen<Room extends SocketRoomName>(
   session: SessionState,
   audience: Room,
+  options?: ProjectScreenOptions,
 ): StateViewByRoom[Room];
 export function projectScreen(
   session: SessionState,
   audience: SocketRoomName,
+  options?: ProjectScreenOptions,
 ): StateViewByRoom[SocketRoomName] {
   const snapshot = buildSnapshot(session);
   // The closest-guess step stays server-side: it only keys the reveal screen
@@ -114,27 +123,43 @@ export function projectScreen(
   });
 
   switch (audience) {
-    case SOCKET_ROOMS.DISPLAY:
+    case SOCKET_ROOMS.DISPLAY: {
+      const revealQuestions = trimOnAirQuestion(
+        snapshot.revealQuestions,
+        snapshot.progress,
+        closestGuessRevealStep,
+      );
+      const displayScreen = describeDisplayScreen({
+        session,
+        onAir: screen,
+        snapshot,
+        revealQuestions,
+      });
+      if (displayScreen.kind === 'blank') options?.onBlankScreen?.(screen);
+      // The content the Display screen carries is not sent a second time.
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      const {
+        currentQuestion: _currentQuestion,
+        blockQuestions: _blockQuestions,
+        revealQuestions: _revealQuestions,
+        activeShowdown: _activeShowdown,
+        showdownRevealStep: _showdownRevealStep,
+        roundTitle: _roundTitle,
+        ...shared
+      } = snapshot;
+      const { breakEndsAt: _breakEndsAt, ...operatorFields } =
+        buildScreenOperatorFields(session);
+      /* eslint-enable @typescript-eslint/no-unused-vars */
       return {
-        ...snapshot,
-        ...buildScreenOperatorFields(session),
-        ...buildDisplayFields(session, screen),
-        revealQuestions: trimOnAirQuestion(
-          snapshot.revealQuestions,
-          snapshot.progress,
-          closestGuessRevealStep,
-        ),
-        onAirScreen: screen,
+        ...shared,
+        ...operatorFields,
+        ...buildDisplayFields(session),
+        screen: displayScreen,
         screenKey,
         header,
-        leaderboardBoard: describeLeaderboardBoard(session),
-        funFacts:
-          screen.kind === 'break_intro' &&
-          session.seededGame.settings.funFactsEnabled
-            ? describeFunFacts(session)
-            : [],
         leagueTop: session.leagueTop,
       };
+    }
     case SOCKET_ROOMS.ADMIN:
       return {
         ...snapshot,

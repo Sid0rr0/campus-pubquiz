@@ -58,15 +58,13 @@ describe('GameGateway — per-room state delivery with a hidden kahoot question'
     return JSON.stringify(syncs[0]);
   }
 
-  it('sends the players room a STATE_UPDATED without the hidden prompt, and display and admin one with it', () => {
+  it('sends the players room a STATE_UPDATED without the hidden prompt, and the admin one with it', () => {
     expect(lastStateUpdatedTo('players')).not.toContain(HIDDEN_PROMPT);
-    expect(lastStateUpdatedTo('display')).toContain(HIDDEN_PROMPT);
     expect(lastStateUpdatedTo('admin')).toContain(HIDDEN_PROMPT);
   });
 
-  it('resyncs a connecting players socket without the hidden prompt, and display and admin sockets with it', async () => {
+  it('resyncs a connecting players socket without the hidden prompt, and the admin socket with it', async () => {
     expect(await stateSyncFor('players')).not.toContain(HIDDEN_PROMPT);
-    expect(await stateSyncFor('display')).toContain(HIDDEN_PROMPT);
     expect(await stateSyncFor('admin')).toContain(HIDDEN_PROMPT);
   });
 

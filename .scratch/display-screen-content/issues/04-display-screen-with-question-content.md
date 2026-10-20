@@ -14,16 +14,16 @@ Parent spec: `.scratch/display-screen-content/spec.md`
 
 **Blocked by:** 03 (both reshape the display view)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The display view carries the Display screen and no longer carries the On-air screen. `screenKey` and the header are unchanged.
-- [ ] `question`, `locking`, `break_review` and `reveal` carry their content. Content that moves into the Display screen isn't also sent elsewhere in the display view.
-- [ ] `blank` is sent and logged when a question screen's content can't be resolved.
-- [ ] `/display` switches on the Display screen with no lookup by id and no guard for missing content on these kinds.
-- [ ] The admin view, the presenter preview and the round note rule still read the On-air screen and are unchanged.
-- [ ] Screen projection specs:
+- [x] The display view carries the Display screen and no longer carries the On-air screen. `screenKey` and the header are unchanged.
+- [x] `question`, `locking`, `break_review` and `reveal` carry their content. Content that moves into the Display screen isn't also sent elsewhere in the display view.
+- [x] `blank` is sent and logged when a question screen's content can't be resolved.
+- [x] `/display` switches on the Display screen with no lookup by id and no guard for missing content on these kinds.
+- [x] The admin view, the presenter preview and the round note rule still read the On-air screen and are unchanged.
+- [x] Screen projection specs:
   - one case per question screen kind, checking its content;
   - `blank` when a reveal or break review question can't be found.
-- [ ] `/display` render tests for these kinds render from projected views. Tests that only checked a lookup move to the projection spec.
-- [ ] GLOSSARY.md gains **Display screen**, as distinct from the On-air screen.
-- [ ] Typecheck, lint and tests pass.
+- [x] `/display` render tests for these kinds render from projected views. Tests that only checked a lookup move to the projection spec.
+- [x] GLOSSARY.md gains **Display screen**, as distinct from the On-air screen.
+- [x] Typecheck, lint and tests pass.

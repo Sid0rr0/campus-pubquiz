@@ -373,7 +373,12 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     room: Room,
   ): StateViewByRoom[Room] {
-    return projectScreen(this.sessionWrite.read(joinCode), room);
+    return projectScreen(this.sessionWrite.read(joinCode), room, {
+      onBlankScreen: (onAirScreen) =>
+        this.logger.warn(
+          `Session ${joinCode}: big screen sent blank, content for on-air screen "${onAirScreen.kind}" not found`,
+        ),
+    });
   }
 
   /** Both auto-lock deadlines (epoch-ms, or null when none is armed). */

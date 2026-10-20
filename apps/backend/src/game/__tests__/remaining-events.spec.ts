@@ -83,11 +83,13 @@ describe('GameGateway — connection presence and display settings', () => {
       breakEndsAt: 1_900_000_000_000,
     });
 
-    for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN] as const) {
-      expect(operatorFieldsTo(room).at(-1)?.breakEndsAt).toBe(
-        1_900_000_000_000,
-      );
-    }
+    expect(operatorFieldsTo(SOCKET_ROOMS.ADMIN).at(-1)?.breakEndsAt).toBe(
+      1_900_000_000_000,
+    );
+    // The big screen draws it from its break screen, not from a top-level field.
+    expect(snapshotsTo(SOCKET_ROOMS.DISPLAY).at(-1)).not.toHaveProperty(
+      'breakEndsAt',
+    );
     expect(snapshotsTo(SOCKET_ROOMS.PLAYERS).at(-1)).not.toHaveProperty(
       'breakEndsAt',
     );

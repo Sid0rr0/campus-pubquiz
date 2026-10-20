@@ -1,13 +1,13 @@
 'use client';
 
-import type { GameStatus, OnAirScreen } from '@campus-pubquiz/types';
+import type { DisplayScreen, GameStatus } from '@campus-pubquiz/types';
 import { displaySounds } from '@/app/lib/display-sounds';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
 
 export interface RoundTitleStingFrame {
   status: GameStatus;
   roundIndex: number;
-  screenKind: OnAirScreen['kind'];
+  screenKind: DisplayScreen['kind'];
 }
 
 const BEFORE_FIRST_ROUND = -1;

@@ -46,8 +46,10 @@ describe('GameGateway — a freshly created session', () => {
     expect(snapshot.progress.status).toBe('lobby');
     expect(snapshot.questionLockAt).toBeNull();
     expect(snapshot.kahootQuestionEndsAt).toBeNull();
-    expect(snapshot.breakEndsAt).toBeNull();
-    expect(snapshot.leaderboardRevealCount).toBe(0);
+    expect(snapshot.screen.kind).toBe('lobby');
+    expect(
+      (await game.resync('admin', created.joinCode)).breakEndsAt,
+    ).toBeNull();
   });
 
   it('carries nothing over from the session that came before it', async () => {
@@ -60,8 +62,10 @@ describe('GameGateway — a freshly created session', () => {
     const snapshot = await game.resync('display', created.joinCode);
     expect(snapshot.progress.status).toBe('lobby');
     expect(snapshot.kahootQuestionEndsAt).toBeNull();
-    expect(snapshot.breakEndsAt).toBeNull();
-    expect(snapshot.leaderboardRevealCount).toBe(0);
+    expect(snapshot.screen.kind).toBe('lobby');
+    expect(
+      (await game.resync('admin', created.joinCode)).breakEndsAt,
+    ).toBeNull();
     const admin = await game.resync('admin', created.joinCode);
     expect(admin.phaseStartedAt).toBeNull();
     expect(admin.phaseElapsedMs).toBeNull();

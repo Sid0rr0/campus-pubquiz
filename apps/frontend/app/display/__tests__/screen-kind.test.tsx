@@ -171,26 +171,7 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
     });
   });
 
-  it('draws nothing for a question screen with no current question yet', () => {
-    mockUseGame.mockReturnValue({
-      snapshot: {
-        ...roomView(SOCKET_ROOMS.DISPLAY, {
-          rounds: [{ questions: [{ prompt: 'Capital of France?' }] }],
-          progress: { status: 'question_open' },
-        }),
-        // A quiz round always has its question, so the real rules never send
-        // an open question screen without one; this pins the page's guard.
-        currentQuestion: null,
-      },
-      connectionError: null,
-      sendAction: vi.fn(),
-    });
-
-    expect(() => render(<DisplayPage />)).not.toThrow();
-    expect(screen.queryByText('Capital of France?')).not.toBeInTheDocument();
-  });
-
-  it('draws nothing for a locking screen with no lock deadline yet', () => {
+  it('draws an empty area for a blank screen (a locking screen the server could not resolve)', () => {
     showDisplay({
       rounds: [{ questions: [{ prompt: 'Capital of France?' }] }],
       progress: { status: 'locking' },

@@ -30,6 +30,10 @@ describe('Display view — fun facts on the break screen', () => {
     return game.resync('display');
   }
 
+  function funFactsOf(view: DisplayStatePayload) {
+    return view.screen.kind === 'break_intro' ? view.screen.funFacts : [];
+  }
+
   async function answer(roundIndex: number, values: string[]) {
     for (const [index, value] of values.entries()) {
       const { socket, teamId } = game.teams[index];
@@ -63,16 +67,17 @@ describe('Display view — fun facts on the break screen', () => {
   it('is empty while a question is on air', async () => {
     await answer(0, ['right', 'wrong']);
 
-    expect((await displayView()).funFacts).toEqual([]);
+    expect(funFactsOf(await displayView())).toEqual([]);
   });
 
   it('carries no fun facts on the first break when no bonus was awarded', async () => {
     await answer(0, ['right', 'wrong']);
-    await advanceUntil((view) => view.onAirScreen.kind === 'break_intro');
+    await advanceUntil((view) => view.screen.kind === 'break_intro');
 
     const view = await displayView();
 
-    expect(view.funFacts).toEqual([]);
+    expect(view.screen.kind).toBe('break_intro');
+    expect(funFactsOf(view)).toEqual([]);
   });
 
   it('reads revealed blocks on the next break but never the block in play', async () => {
@@ -83,9 +88,9 @@ describe('Display view — fun facts on the break screen', () => {
         view.progress.roundIndex === 1,
     );
     await answer(1, ['wrong', 'wrong']);
-    await advanceUntil((view) => view.onAirScreen.kind === 'break_intro');
+    await advanceUntil((view) => view.screen.kind === 'break_intro');
 
-    const { funFacts } = await displayView();
+    const funFacts = funFactsOf(await displayView());
 
     const firstQuestionId = game.rounds[0].questionIds[0];
     const secondQuestionId = game.rounds[1].questionIds[0];

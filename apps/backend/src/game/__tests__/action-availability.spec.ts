@@ -52,20 +52,20 @@ describe('Screen projection — Advance/Previous availability', () => {
       questionIndex,
       revealIndex,
       closestGuessStep,
-      view.showdownRevealStep,
+      view.screen.kind === 'showdown' ? view.screen.step : null,
     ]);
   }
 
   /** Where the quiz is, including the leaderboard: a revealed rank or a hidden board counts as moving. */
   function positionWithBoard() {
-    const { leaderboardRevealCount, progress } = game.gameState.getView(
+    const { screen, progress } = game.gameState.getView(
       game.joinCode,
       SOCKET_ROOMS.DISPLAY,
     );
     return JSON.stringify([
       position(),
       progress.isLeaderboardVisible,
-      leaderboardRevealCount,
+      screen.kind === 'leaderboard' ? screen.revealCount : 0,
     ]);
   }
 
@@ -297,6 +297,12 @@ describe('Screen projection — Advance/Previous availability', () => {
       return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
     }
 
+    /** Ranks revealed on the board, 0 while the board isn't on the big screen. */
+    function boardRevealCount(): number {
+      const { screen } = displayView();
+      return screen.kind === 'leaderboard' ? screen.revealCount : 0;
+    }
+
     function announcedAdvanceSlot(): AdvanceSlotStep {
       return adminView().advanceStep;
     }
@@ -310,7 +316,7 @@ describe('Screen projection — Advance/Previous availability', () => {
       return {
         position: position(),
         isBoardUp: view.progress.isLeaderboardVisible,
-        revealCount: displayView().leaderboardRevealCount,
+        revealCount: boardRevealCount(),
       };
     }
 
@@ -352,7 +358,7 @@ describe('Screen projection — Advance/Previous availability', () => {
           slot,
           status: view.progress.status,
           isBoardUp: view.progress.isLeaderboardVisible,
-          revealCount: displayView().leaderboardRevealCount,
+          revealCount: boardRevealCount(),
           stepCount: getLeaderboardRevealStepCount(
             view.leaderboard,
             view.isCurrentRoundKahoot ?? false,

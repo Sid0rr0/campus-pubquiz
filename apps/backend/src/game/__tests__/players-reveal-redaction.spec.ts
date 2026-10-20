@@ -114,18 +114,14 @@ describe('Screen projection — players view reveal redaction', () => {
     expect(playerRevealIds(state)).toEqual([10, 11]);
   });
 
-  it.each([SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN])(
-    'keeps the full block in the %s view',
-    (room) => {
-      const view = projectScreen(
-        session(BLOCK, { status: 'reveal', revealIndex: 0 }),
-        room,
-      );
+  it('keeps the full block in the admin view', () => {
+    const view = projectScreen(
+      session(BLOCK, { status: 'reveal', revealIndex: 0 }),
+      SOCKET_ROOMS.ADMIN,
+    );
 
-      const revealed: readonly { id: number }[] = view.revealQuestions;
-      expect(revealed.map((q) => q.id)).toEqual([10, 11, 20, 21]);
-    },
-  );
+    expect(view.revealQuestions.map((q) => q.id)).toEqual([10, 11, 20, 21]);
+  });
 
   it('keeps trimmed questions in the block questions, without their answers', () => {
     const view = projectScreen(
@@ -350,20 +346,18 @@ describe('Screen projection — players view closest-guess steps', () => {
     });
   });
 
-  it('trims only the on-air question in the display view, like the players view', () => {
-    const view = projectScreen(
+  it('carries the on-air reveal question trimmed to its step on the display reveal screen', () => {
+    const { screen } = projectScreen(
       closestGuessSession(0, SUMMARY, { revealIndex: 1 }),
       SOCKET_ROOMS.DISPLAY,
     );
 
-    expect(view.revealQuestions[0]).toMatchObject({
-      revealKind: 'closest_guess',
-      closestGuess: SUMMARY,
+    expect(screen).toMatchObject({
+      kind: 'reveal',
+      question: { revealKind: 'closest_guess_pending' },
     });
-    expect(view.revealQuestions[1]).toMatchObject({
-      revealKind: 'closest_guess_pending',
-    });
-    expect(view.revealQuestions[1]).not.toHaveProperty('answer');
+    if (screen.kind !== 'reveal') throw new Error('not a reveal screen');
+    expect(screen.question).not.toHaveProperty('answer');
   });
 
   it('carries the ended walk fully revealed in the players view', () => {

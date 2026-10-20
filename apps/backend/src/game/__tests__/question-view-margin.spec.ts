@@ -71,18 +71,21 @@ describe('Screen projection — a question view carries a margin only for types 
   });
 
   it('sends the on-air question with the default margin when none is stored', () => {
-    const view = projectScreen(
+    const { screen } = projectScreen(
       session({ questionIndex: 1 }),
       SOCKET_ROOMS.DISPLAY,
     );
 
-    expect(view.currentQuestion?.margin).toEqual(DEFAULT_MARGIN);
+    expect(screen).toMatchObject({
+      kind: 'question',
+      question: { margin: DEFAULT_MARGIN },
+    });
   });
 
   it('sends the reveal view with the resolved margin', () => {
     const view = projectScreen(
       session({ status: 'reveal', questionIndex: 3 }),
-      SOCKET_ROOMS.DISPLAY,
+      SOCKET_ROOMS.ADMIN,
     );
 
     expect(view.revealQuestions.map((q) => q.margin)).toEqual(EXPECTED_MARGINS);

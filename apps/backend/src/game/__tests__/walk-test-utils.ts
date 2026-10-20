@@ -148,7 +148,8 @@ export function createPreviewWalk(
     return {
       currentHeading: currentScreen.heading,
       next: nextScreen,
-      kind: view.onAirScreen.kind,
+      kind: game.gameState.getView(game.joinCode, SOCKET_ROOMS.ADMIN)
+        .onAirScreen.kind,
       key: view.screenKey,
       status: progress.status,
       position: JSON.stringify([
@@ -157,9 +158,9 @@ export function createPreviewWalk(
         progress.questionIndex,
         progress.revealIndex,
         view.screenKey,
-        view.showdownRevealStep,
+        view.screen.kind === 'showdown' ? view.screen.step : null,
         progress.isLeaderboardVisible,
-        view.leaderboardRevealCount,
+        view.screen.kind === 'leaderboard' ? view.screen.revealCount : null,
       ]),
     };
   }
