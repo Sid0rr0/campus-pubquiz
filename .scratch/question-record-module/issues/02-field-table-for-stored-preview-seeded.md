@@ -17,7 +17,7 @@ Parent spec: `.scratch/question-record-module/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] One field table, internal to the codec, lists each payload and preview field with its condition. Grading settings refer to the registry's list for the type rather than copying it.
 - [ ] Stored row → preview, preview → stored fields and stored row → seeded question copy media, clip and grading setting fields only through the table. None of them names such a field outside it.

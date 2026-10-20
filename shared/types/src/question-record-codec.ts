@@ -1,4 +1,5 @@
 import type { ImportQuestionPreview } from './import';
+import { resolveAnswerKind, type AnswerKind } from './answer-kind';
 import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
@@ -9,10 +10,11 @@ import { parseClipNotes, type ClipNotesFields } from './youtube';
 /**
  * The question record codec: a question's stored row (columns plus a payload
  * already parsed by `parseQuestionPayload`) to and from its preview, the shape
- * the quiz editor and import work with. Pure (no I/O). Options, match targets
- * and media are copied once here; grading settings are spread from the
- * registry's list for the type, so a setting the type doesn't carry never
- * crosses. Unset stays unset: defaults belong to the Answer key.
+ * the quiz editor and import work with, and to the seeded question a session
+ * holds. Pure (no I/O). Every conversion copies options, match targets, media,
+ * clip and grading setting fields through one field table, so a field the type
+ * or media doesn't allow never crosses. Unset stays unset: defaults belong to
+ * the Answer key.
  */
 
 /** The columns of a stored question row the codec reads. */
@@ -35,43 +37,130 @@ export interface StoredQuestionFields {
   payload: QuestionPayload;
 }
 
-type GradingSettingFields = Pick<QuestionPayload, GradingSettingName>;
+/** The links a question's media fields are decided from. */
+interface MediaLinks {
+  mediaUrl?: string;
+  answerMediaUrl?: string;
+}
 
-/** The grading settings the type's registry entry lists, copied from the source; unset ones are left out. */
-function gradingSettingsFrom(
+/** The payload and preview fields the field table decides. */
+type TableField = keyof QuestionPayload;
+
+/**
+ * When a question carries a field:
+ * - `set`: whenever it has a value;
+ * - `answer-kind`: when the type's answer kind uses it;
+ * - `grading-setting`: when the type's registry entry lists it;
+ * - `question-video`: when the question media is a video;
+ * - `either-video`: when the question media or the answer media is a video.
+ */
+type FieldRule =
+  | { when: 'set' }
+  | { when: 'answer-kind'; kinds: readonly AnswerKind[] }
+  | { when: 'grading-setting' }
+  | { when: 'question-video' }
+  | { when: 'either-video' };
+
+type FieldTableRow = { field: TableField } & FieldRule;
+
+/** Every grading setting name, checked against the registry's type so a new one cannot be missed. */
+const GRADING_SETTING_FIELDS = {
+  matchScoringMode: true,
+  margin: true,
+} satisfies Record<GradingSettingName, true>;
+
+/**
+ * The one field table: each payload and preview field and the condition under
+ * which a question carries it. Every conversion copies through it. The grading
+ * settings refer to the registry's list for the type, never copy it.
+ */
+const FIELD_TABLE: readonly FieldTableRow[] = [
+  {
+    field: 'options',
+    when: 'answer-kind',
+    kinds: ['choice', 'sort', 'match'],
+  },
+  { field: 'matchTargets', when: 'answer-kind', kinds: ['match'] },
+  { field: 'mediaUrl', when: 'set' },
+  { field: 'answerMediaUrl', when: 'set' },
+  { field: 'mediaStartSeconds', when: 'question-video' },
+  { field: 'mediaEndSeconds', when: 'question-video' },
+  { field: 'isVideoHidden', when: 'question-video' },
+  { field: 'revealStartSeconds', when: 'either-video' },
+  { field: 'revealEndSeconds', when: 'either-video' },
+  ...(Object.keys(GRADING_SETTING_FIELDS) as GradingSettingName[]).map(
+    (field): FieldTableRow => ({ field, when: 'grading-setting' }),
+  ),
+];
+
+/** Whether a rule that depends only on the media links holds for them. */
+function mediaRuleHolds(
+  when: 'question-video' | 'either-video',
+  links: MediaLinks,
+): boolean {
+  return when === 'question-video'
+    ? isVideoUrl(links.mediaUrl)
+    : hasVideoMedia(links);
+}
+
+function carries(
+  row: FieldTableRow,
   type: QuestionType,
-  source: GradingSettingFields,
-): GradingSettingFields {
-  return QUESTION_KINDS[type].gradingSettings.reduce<GradingSettingFields>(
-    (settings, name) =>
-      source[name] === undefined
-        ? settings
-        : { ...settings, [name]: source[name] },
-    {},
-  );
+  links: MediaLinks,
+): boolean {
+  switch (row.when) {
+    case 'set':
+      return true;
+    case 'answer-kind':
+      return row.kinds.includes(resolveAnswerKind({ type }));
+    case 'grading-setting':
+      return QUESTION_KINDS[type].gradingSettings.some(
+        (name) => name === row.field,
+      );
+    case 'question-video':
+    case 'either-video':
+      return mediaRuleHolds(row.when, links);
+  }
 }
 
-/** The fields the preview and the payload both carry, each present only when set. */
-function sharedFieldsFrom(source: QuestionPayload) {
-  return {
-    ...(source.options ? { options: source.options } : {}),
-    ...(source.matchTargets ? { matchTargets: source.matchTargets } : {}),
-    ...(source.mediaUrl ? { mediaUrl: source.mediaUrl } : {}),
-    ...(source.answerMediaUrl ? { answerMediaUrl: source.answerMediaUrl } : {}),
-  };
+/** The fields of the source the question's type and media carry; a field without a value is left out. */
+function carriedFields(
+  type: QuestionType,
+  source: QuestionPayload,
+): QuestionPayload {
+  const carried: Record<string, unknown> = {};
+  for (const row of FIELD_TABLE) {
+    const value = source[row.field];
+    const isValue = value !== undefined && value !== false && value !== '';
+    if (isValue && carries(row, type, source)) carried[row.field] = value;
+  }
+  return carried;
 }
 
-/** The reveal clip fields of the source, each present only when set. */
-function revealClipFrom(source: QuestionPayload) {
-  return {
-    ...(source.revealStartSeconds !== undefined
-      ? { revealStartSeconds: source.revealStartSeconds }
-      : {}),
-    ...(source.revealEndSeconds !== undefined
-      ? { revealEndSeconds: source.revealEndSeconds }
-      : {}),
-  };
+/** The clip fields a preview carries for a question media link and an answer media link, taken from the candidate; a candidate field without a value is left out. */
+export function clipFieldsFor(
+  links: MediaLinks,
+  candidate: ClipFields,
+): ClipFields {
+  const carried: Record<string, unknown> = {};
+  for (const row of FIELD_TABLE) {
+    if (row.when !== 'question-video' && row.when !== 'either-video') continue;
+    const value = candidate[row.field as keyof ClipFields];
+    const isValue = value !== undefined && value !== false;
+    if (isValue && mediaRuleHolds(row.when, links)) carried[row.field] = value;
+  }
+  return carried;
 }
+
+/** The clip fields of a preview: the clip, the hidden-video flag and the reveal clip. */
+export type ClipFields = Pick<
+  ImportQuestionPreview,
+  | 'mediaStartSeconds'
+  | 'mediaEndSeconds'
+  | 'isVideoHidden'
+  | 'revealStartSeconds'
+  | 'revealEndSeconds'
+>;
 
 /** A stored row and its parsed payload as the preview the editor and import work with. */
 export function rowToPreview(
@@ -83,12 +172,6 @@ export function rowToPreview(
   const { freeNotes, clip } = hasVideoMedia(payload)
     ? parseClipNotes(row.notes ?? undefined)
     : { freeNotes: row.notes ?? '', clip: {} as ClipNotesFields };
-  const startSeconds = payload.mediaStartSeconds ?? clip.startSeconds;
-  const endSeconds = payload.mediaEndSeconds ?? clip.endSeconds;
-  const isVideoHidden = payload.isVideoHidden || clip.isVideoHidden;
-  const revealStartSeconds =
-    payload.revealStartSeconds ?? clip.revealStartSeconds;
-  const revealEndSeconds = payload.revealEndSeconds ?? clip.revealEndSeconds;
   return {
     questionId: row.id,
     type: row.type,
@@ -96,12 +179,14 @@ export function rowToPreview(
     answer: row.answer,
     points: row.points,
     ...(freeNotes ? { notes: freeNotes } : {}),
-    ...sharedFieldsFrom(payload),
-    ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
-    ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
-    ...(isVideoHidden ? { isVideoHidden: true } : {}),
-    ...revealClipFrom({ revealStartSeconds, revealEndSeconds }),
-    ...gradingSettingsFrom(row.type, payload),
+    ...carriedFields(row.type, {
+      ...payload,
+      mediaStartSeconds: payload.mediaStartSeconds ?? clip.startSeconds,
+      mediaEndSeconds: payload.mediaEndSeconds ?? clip.endSeconds,
+      isVideoHidden: payload.isVideoHidden || clip.isVideoHidden,
+      revealStartSeconds: payload.revealStartSeconds ?? clip.revealStartSeconds,
+      revealEndSeconds: payload.revealEndSeconds ?? clip.revealEndSeconds,
+    }),
   };
 }
 
@@ -122,16 +207,7 @@ export function rowToSeededQuestion(
     prompt: row.prompt,
     points: row.points,
     answer: row.answer,
-    ...sharedFieldsFrom(payload),
-    ...gradingSettingsFrom(row.type, payload),
-    ...(payload.mediaStartSeconds !== undefined
-      ? { mediaStartSeconds: payload.mediaStartSeconds }
-      : {}),
-    ...(payload.mediaEndSeconds !== undefined
-      ? { mediaEndSeconds: payload.mediaEndSeconds }
-      : {}),
-    ...(payload.isVideoHidden ? { isVideoHidden: true } : {}),
-    ...revealClipFrom(payload),
+    ...carriedFields(row.type, payload),
   };
 }
 
@@ -139,24 +215,12 @@ export function rowToSeededQuestion(
 export function previewToStoredFields(
   preview: ImportQuestionPreview,
 ): StoredQuestionFields {
-  const clip = isVideoUrl(preview.mediaUrl) ? preview : undefined;
   return {
     type: preview.type,
     prompt: preview.prompt,
     answer: preview.answer,
     points: preview.points,
     notes: preview.notes ?? null,
-    payload: {
-      ...sharedFieldsFrom(preview),
-      ...gradingSettingsFrom(preview.type, preview),
-      ...(clip?.mediaStartSeconds !== undefined
-        ? { mediaStartSeconds: clip.mediaStartSeconds }
-        : {}),
-      ...(clip?.mediaEndSeconds !== undefined
-        ? { mediaEndSeconds: clip.mediaEndSeconds }
-        : {}),
-      ...(clip?.isVideoHidden ? { isVideoHidden: true } : {}),
-      ...(hasVideoMedia(preview) ? revealClipFrom(preview) : {}),
-    },
+    payload: carriedFields(preview.type, preview),
   };
 }
