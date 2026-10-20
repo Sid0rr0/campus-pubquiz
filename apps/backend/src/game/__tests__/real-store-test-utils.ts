@@ -35,6 +35,7 @@ import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { GameModule } from '@/game/game.module';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { LeagueTableService } from '@/league/league-table.service';
+import { LeagueService } from '@/league/league.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { ManualTimerScheduler } from '@/game/__tests__/manual-timer-scheduler';
 import {
@@ -188,6 +189,7 @@ export interface RealStoreGateway extends PlayableQuiz {
   answerService: AnswerService;
   standingsService: StandingsService;
   leagueTableService: LeagueTableService;
+  leagueService: LeagueService;
   teamService: TeamService;
   bonusService: BonusService;
   feedbackService: FeedbackService;
@@ -529,6 +531,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       answerService: moduleRef.get(AnswerService),
       standingsService: moduleRef.get(StandingsService),
       leagueTableService: moduleRef.get(LeagueTableService),
+      leagueService: moduleRef.get(LeagueService),
       teamService: moduleRef.get(TeamService),
       bonusService: moduleRef.get(BonusService),
       feedbackService: moduleRef.get(FeedbackService),

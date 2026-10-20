@@ -1,12 +1,9 @@
 import {
-  BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
   HttpCode,
-  NotFoundException,
   Param,
   ParseIntPipe,
   Patch,
@@ -18,54 +15,34 @@ import type { LeaguesListedPayload, LeagueView } from '@campus-pubquiz/types';
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
+import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
+import { GameStateService } from '@/game/state/game-state.service';
 import {
   addLeagueSessionSchema,
   leagueFieldsSchema,
   leaguesQuerySchema,
 } from '@/league/league.schema';
-import {
-  LeagueNotFoundError,
-  LeagueService,
-  SessionNotEndedError,
-  SessionNotFoundError,
-} from '@/league/league.service';
-
-function parseOrThrow<T>(
-  result:
-    | { success: true; data: T }
-    | { success: false; error: { issues: { message: string }[] } },
-  fallback: string,
-): T {
-  if (!result.success) {
-    throw new BadRequestException(result.error.issues[0]?.message ?? fallback);
-  }
-  return result.data;
-}
-
-/** Maps the service's domain errors to HTTP; anything else is a real failure. */
-async function mapErrors<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    if (
-      error instanceof LeagueNotFoundError ||
-      error instanceof SessionNotFoundError
-    ) {
-      throw new NotFoundException(error.message);
-    }
-    if (error instanceof SessionNotEndedError) {
-      throw new ConflictException(error.message);
-    }
-    throw error;
-  }
-}
+import { mapLeagueErrors, parseOrThrow } from '@/league/league-http';
+import { LeagueService } from '@/league/league.service';
 
 // Reads are open to admin and moderator (the session form lists current
-// leagues); every write is admin-only.
+// leagues); every write is admin-only. A write that can change a league table
+// refreshes the lobby league of every live session afterwards.
 @Controller('leagues')
 @UseGuards(SessionGuard, RolesGuard)
 export class LeaguesController {
-  constructor(private readonly leagueService: LeagueService) {}
+  constructor(
+    private readonly leagueService: LeagueService,
+    private readonly gameState: GameStateService,
+    private readonly broadcaster: SessionBroadcaster,
+  ) {}
+
+  /** Re-reads each live session's lobby league and tells the clients of those that changed. */
+  private async refreshLobbies(): Promise<void> {
+    for (const joinCode of await this.gameState.refreshLeagueTops()) {
+      await this.broadcaster.broadcastState(joinCode);
+    }
+  }
 
   @Get()
   async list(
@@ -98,14 +75,19 @@ export class LeaguesController {
       leagueFieldsSchema.safeParse(body),
       'Invalid league',
     );
-    return mapErrors(() => this.leagueService.update(id, fields));
+    const league = await mapLeagueErrors(() =>
+      this.leagueService.update(id, fields),
+    );
+    await this.refreshLobbies();
+    return league;
   }
 
   @Delete(':id')
   @Roles('admin')
   @HttpCode(204)
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    await mapErrors(() => this.leagueService.remove(id));
+    await mapLeagueErrors(() => this.leagueService.remove(id));
+    await this.refreshLobbies();
   }
 
   @Post(':id/sessions')
@@ -119,7 +101,10 @@ export class LeaguesController {
       addLeagueSessionSchema.safeParse(body),
       'gameSessionId is required',
     );
-    await mapErrors(() => this.leagueService.addSession(id, gameSessionId));
+    await mapLeagueErrors(() =>
+      this.leagueService.addSession(id, gameSessionId),
+    );
+    await this.refreshLobbies();
   }
 
   @Delete(':id/sessions/:gameSessionId')
@@ -129,6 +114,9 @@ export class LeaguesController {
     @Param('id', ParseIntPipe) id: number,
     @Param('gameSessionId', ParseIntPipe) gameSessionId: number,
   ): Promise<void> {
-    await mapErrors(() => this.leagueService.removeSession(id, gameSessionId));
+    await mapLeagueErrors(() =>
+      this.leagueService.removeSession(id, gameSessionId),
+    );
+    await this.refreshLobbies();
   }
 }

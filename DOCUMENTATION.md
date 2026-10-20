@@ -1516,9 +1516,14 @@ points, the table and the public page.
   session being played has not ended, so it is not in the rows. The server keeps it in
   the live session as a cache, read when the session is created or restored after a
   restart and re-read whenever the session's `leagueIds` change (`POST /sessions` and
-  `PATCH /sessions/:joinCode/settings` refresh it before the state broadcast), so a
-  reconnecting or second big screen gets it in its first snapshot. It is not re-read
-  per broadcast. The lobby screen draws it beside the join details, and nothing when
+  `PATCH /sessions/:joinCode/settings` do it inside the session write, in the league
+  change module `game/state/league-changes.ts`, which checks every ticked id before it
+  writes the settings or the memberships, so a refused PATCH stores nothing) and
+  whenever an admin edits or deletes a league or adds or removes one of its sessions
+  (`LeaguesController` re-reads every live session, then broadcasts the state of those
+  whose league changed), so a reconnecting or second big screen gets it in its first
+  snapshot. It is not re-read per broadcast. A failed read is logged and leaves the
+  lobby without a league. The lobby screen draws it beside the join details, and nothing when
   it is `null`; a league with no finished night shows "No points yet".
 - **Public REST** (`PublicLeaguesController`, no login; no team codes, tokens or feedback
   are exposed):

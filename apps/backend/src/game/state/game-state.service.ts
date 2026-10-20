@@ -11,7 +11,6 @@ import {
   freshSessionState,
   type GameAction,
   type JoinPlayersPayload,
-  type LeagueTop,
   LOBBY_PROGRESS,
   type PresenterContextPayload,
   projectScreen,
@@ -51,8 +50,9 @@ import {
   deadlinesOf,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import { withLeagueTop } from '@/game/state/session-updates.util';
+import { LeagueChanges } from '@/game/state/league-changes';
 import { LeagueTableService } from '@/league/league-table.service';
+import { LeagueService } from '@/league/league.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 
@@ -75,6 +75,7 @@ export class GameStateService implements OnModuleInit {
   private readonly feedbackChanges: TeamFeedbackChanges;
   private readonly playerCountChanges: TeamPlayerCountChanges;
   private readonly showdownsChanges: ShowdownsChanges;
+  private readonly leagueChanges: LeagueChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -90,6 +91,7 @@ export class GameStateService implements OnModuleInit {
     private readonly sessionWrite: SessionWrite,
     private readonly grading: BlockGradingService,
     private readonly leagueTableService: LeagueTableService,
+    private readonly leagueService: LeagueService,
   ) {
     this.settingsChanges = new SessionSettingsChanges(this.seedService);
     this.answersChanges = new AnswersChanges(this.answerService, this.grading);
@@ -107,48 +109,50 @@ export class GameStateService implements OnModuleInit {
       this.standingsService,
     );
     this.showdownsChanges = new ShowdownsChanges(this.showdownService);
+    this.leagueChanges = new LeagueChanges(
+      this.leagueService,
+      this.leagueTableService,
+      this.settingsChanges,
+    );
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,
       this.standingsService,
       this.showdownService,
-      (gameSessionId) => this.readLeagueTopOrNull(gameSessionId),
+      (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
     );
-  }
-
-  /** The lobby league of a session being placed; a failed read leaves the lobby without one rather than failing the placement. */
-  private async readLeagueTopOrNull(
-    gameSessionId: number,
-  ): Promise<LeagueTop | null> {
-    try {
-      return await this.leagueTableService.topFor(gameSessionId);
-    } catch (error) {
-      this.logger.error(
-        `League top read failed for session ${gameSessionId}; the lobby shows no league`,
-        error instanceof Error ? error.stack : String(error),
-      );
-      return null;
-    }
   }
 
   /**
-   * Re-reads the league the big screen lobby shows, after the session's
-   * leagues changed. Pushes nothing: the caller broadcasts the state.
+   * Re-reads the lobby league of every live session after an admin edited or
+   * deleted a league, or added or removed one of its sessions. Returns the
+   * join codes whose league changed, for the caller to broadcast: this pushes
+   * nothing itself. A session closed meanwhile is skipped.
    */
-  async refreshLeagueTop(joinCode: string): Promise<void> {
-    await this.sessionWrite.write(
-      joinCode,
-      async (session) => ({
-        session: withLeagueTop(
-          session,
-          await this.leagueTableService.topFor(
-            session.seededGame.gameSessionId,
-          ),
-        ),
-        outcome: undefined,
-      }),
-      NOT_TOUCHING_SCORES,
-    );
+  async refreshLeagueTops(): Promise<string[]> {
+    const changed: string[] = [];
+    for (const { seededGame } of this.sessionWrite.list()) {
+      const { joinCode } = seededGame;
+      try {
+        const before = this.sessionWrite.read(joinCode).leagueTop;
+        await this.sessionWrite.write(
+          joinCode,
+          (session) => this.leagueChanges.refreshTop(session),
+          NOT_TOUCHING_SCORES,
+        );
+        const after = this.sessionWrite.read(joinCode).leagueTop;
+        if (JSON.stringify(before) !== JSON.stringify(after)) {
+          changed.push(joinCode);
+        }
+      } catch (error) {
+        if (!this.sessionWrite.has(joinCode)) continue;
+        this.logger.error(
+          `League top refresh failed for session ${joinCode}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
+    return changed;
   }
 
   // onModuleInit runs at bootstrap, before any HTTP/socket request has
@@ -227,12 +231,14 @@ export class GameStateService implements OnModuleInit {
    * Allocates a brand-new GameSession/joinCode for `quizId`, leaving any
    * other session's state untouched. Not blocked by another session's
    * progress — `POST /sessions` lets an admin start additional concurrent
-   * games regardless of how far along any other session is.
+   * games regardless of how far along any other session is. `leagueIds`
+   * (already checked by the caller) are ticked inside a session write.
    */
   async createSession(
     quizId: number,
     settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
     name?: string,
+    leagueIds: number[] = [],
   ): Promise<StateSnapshotPayload> {
     const created = await this.seedService.createSession(
       quizId,
@@ -252,6 +258,13 @@ export class GameStateService implements OnModuleInit {
         ...LOBBY_PROGRESS,
       }),
     );
+    if (leagueIds.length > 0) {
+      await this.sessionWrite.write(
+        seededGame.joinCode,
+        (session) => this.leagueChanges.setLeagues(session, leagueIds),
+        NOT_TOUCHING_SCORES,
+      );
+    }
     return this.getSnapshot(seededGame.joinCode);
   }
 
@@ -441,14 +454,20 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /** Merges `partial` over the session's settings, lobby-only: the check runs against the session the previous write left. */
+  /**
+   * Merges `partial` over the session's settings, lobby-only, and/or replaces
+   * the session's leagues when `leagueIds` is given. The checks run against
+   * the session the previous write left, before anything is written.
+   */
   async updateSessionSettings(
     joinCode: string,
     partial: Partial<SessionSettings>,
+    leagueIds?: number[],
   ): Promise<void> {
     await this.sessionWrite.write(
       joinCode,
-      (session) => this.settingsChanges.lobbySettings(session, partial),
+      (session) =>
+        this.leagueChanges.settingsAndLeagues(session, partial, leagueIds),
       NOT_TOUCHING_SCORES,
     );
   }

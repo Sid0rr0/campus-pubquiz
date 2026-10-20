@@ -8,6 +8,8 @@ import { Reflector } from '@nestjs/core';
 import type { UserRole } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
+import type { SessionBroadcaster } from '@/game/socket/session-broadcaster';
+import type { GameStateService } from '@/game/state/game-state.service';
 import { LeaguesController } from '@/league/leagues.controller';
 import {
   LeagueNotFoundError,
@@ -24,8 +26,18 @@ function makeController() {
     addSession: jest.fn(),
     removeSession: jest.fn(),
   };
-  const controller = new LeaguesController(service as unknown as LeagueService);
-  return { controller, service };
+  const gameState = {
+    refreshLeagueTops: jest.fn().mockResolvedValue([]),
+  };
+  const broadcaster = {
+    broadcastState: jest.fn().mockResolvedValue(undefined),
+  };
+  const controller = new LeaguesController(
+    service as unknown as LeagueService,
+    gameState as unknown as GameStateService,
+    broadcaster as unknown as SessionBroadcaster,
+  );
+  return { controller, service, gameState, broadcaster };
 }
 
 const valid = { name: 'Autumn', startsOn: '2026-09-01', endsOn: '2026-12-20' };
@@ -121,6 +133,42 @@ describe('LeaguesController', () => {
       await controller.create({ ...valid, endsOn: valid.startsOn });
 
       expect(service.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('lobby league refresh', () => {
+    it.each([
+      ['update', (c: LeaguesController) => c.update(1, valid)],
+      ['remove', (c: LeaguesController) => c.remove(1)],
+      [
+        'addSession',
+        (c: LeaguesController) => c.addSession(1, { gameSessionId: 4 }),
+      ],
+      ['removeSession', (c: LeaguesController) => c.removeSession(1, 4)],
+    ])(
+      'tells the sessions whose league changed after %s',
+      async (_name, act) => {
+        const { controller, gameState, broadcaster } = makeController();
+        gameState.refreshLeagueTops.mockResolvedValue(['AAAAAA', 'BBBBBB']);
+
+        await act(controller);
+
+        expect(broadcaster.broadcastState.mock.calls).toEqual([
+          ['AAAAAA'],
+          ['BBBBBB'],
+        ]);
+      },
+    );
+
+    it('refreshes nothing when the change was refused', async () => {
+      const { controller, service, gameState } = makeController();
+      service.addSession.mockRejectedValue(new SessionNotEndedError(4));
+
+      await expect(
+        controller.addSession(1, { gameSessionId: 4 }),
+      ).rejects.toThrow(ConflictException);
+
+      expect(gameState.refreshLeagueTops).not.toHaveBeenCalled();
     });
   });
 

@@ -5,6 +5,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
   NotFoundException,
   Param,
   Patch,
@@ -26,12 +27,8 @@ import {
   SessionSettingsUpdateBlockedError,
 } from '@/game/state/game-state.service';
 import { leagueIdsSchema } from '@/league/league.schema';
-import {
-  InvalidLeagueIdsError,
-  LeagueService,
-  SessionEndedError,
-  SessionNotFoundError,
-} from '@/league/league.service';
+import { mapLeagueErrors } from '@/league/league-http';
+import { LeagueService } from '@/league/league.service';
 import { QuizService } from '@/quiz/quiz.service';
 import {
   resolveSessionSettings,
@@ -83,24 +80,6 @@ function parseLeagueIds(raw: unknown): number[] | undefined {
   return parsed.data;
 }
 
-/** Maps the league service's refusals to HTTP; anything else is a real failure. */
-async function mapLeagueErrors<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    if (error instanceof InvalidLeagueIdsError) {
-      throw new BadRequestException(error.message);
-    }
-    if (error instanceof SessionEndedError) {
-      throw new ConflictException(error.message);
-    }
-    if (error instanceof SessionNotFoundError) {
-      throw new NotFoundException(error.message);
-    }
-    throw error;
-  }
-}
-
 @Controller('sessions')
 export class SessionsController {
   constructor(
@@ -141,11 +120,12 @@ export class SessionsController {
     const name = parseName(body.name);
     const leagueIds = parseLeagueIds(body.leagueIds) ?? [];
     await mapLeagueErrors(() => this.leagues.assertAssignable(leagueIds));
-    const snapshot = await this.gameState.createSession(quizId, settings, name);
-    if (leagueIds.length > 0) {
-      await this.leagues.setSessionLeagues(snapshot.joinCode, leagueIds);
-      await this.gameState.refreshLeagueTop(snapshot.joinCode);
-    }
+    const snapshot = await this.gameState.createSession(
+      quizId,
+      settings,
+      name,
+      leagueIds,
+    );
     const titles = await this.quizService.findTitles([quizId]);
     const quizTitle = titles.get(quizId) ?? UNKNOWN_QUIZ_TITLE;
     const startedAtByJoinCode = await this.seedService.findStartedAtByJoinCodes(
@@ -175,27 +155,17 @@ export class SessionsController {
     }
     const { settingsBody, leagueIds } = splitLeagueIds(body);
     const partial = parseSettingsPartial(settingsBody);
-    if (leagueIds) {
+    try {
       await mapLeagueErrors(() =>
-        this.leagues.assertSessionAssignable(joinCode, leagueIds),
+        this.gameState.updateSessionSettings(joinCode, partial, leagueIds),
       );
-    }
-    if (Object.keys(partial).length > 0 || !leagueIds) {
-      try {
-        await this.gameState.updateSessionSettings(joinCode, partial);
-      } catch (error) {
-        if (error instanceof SessionSettingsUpdateBlockedError) {
-          throw new ConflictException(error.message);
-        }
-        this.throwIfClosedMeanwhile(joinCode);
-        throw error;
+    } catch (error) {
+      if (error instanceof SessionSettingsUpdateBlockedError) {
+        throw new ConflictException(error.message);
       }
-    }
-    if (leagueIds) {
-      await mapLeagueErrors(() =>
-        this.leagues.setSessionLeagues(joinCode, leagueIds),
-      );
-      await this.gameState.refreshLeagueTop(joinCode);
+      if (error instanceof HttpException) throw error;
+      this.throwIfClosedMeanwhile(joinCode);
+      throw error;
     }
     await this.broadcaster.broadcastState(joinCode);
   }
