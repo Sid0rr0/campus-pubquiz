@@ -119,8 +119,8 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     roundAuthor: author ?? '',
     roundNote: round_note ?? '',
     showRoundNote: show_round_note,
-    question: (checkedQuestion as { data: unknown })
-      .data as ImportQuestionPreview,
+    // The validated input, never the schema's parsed output (see checkQuestion).
+    question: candidate as unknown as ImportQuestionPreview,
   };
 }
 
