@@ -46,7 +46,7 @@ export const ADMIN_SHORTCUTS: Readonly<Record<AdminShortcutId, AdminShortcut>> =
       key: 'j',
       keyName: 'J',
       description:
-        'Show or hide the join code and QR code over the big screen, once the quiz has started and until it ends.',
+        'Show or hide the join code and QR code on the big screen, while the quiz runs.',
     },
     toggleMediaFullscreen: {
       key: 'f',
