@@ -46,6 +46,13 @@ import {
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
 import type { SessionWriteQueue } from '@/game/state/session-write-queue';
+import { SessionWrite } from '@/game/state/session-write';
+import { WRITE_GATE, type WriteStep } from '@/game/state/write-gate';
+import {
+  TestWriteGate,
+  type GateFilter,
+  type HeldWrite,
+} from '@/game/__tests__/test-write-gate';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 import {
@@ -187,6 +194,26 @@ export interface RealStoreGateway extends PlayableQuiz {
   /** Everything pushed to clients goes through it; the mock server is attached to it. */
   broadcaster: SessionBroadcaster;
   server: MockServer;
+  /** The Session write behind the game state service — for a spec that drives a write directly instead of casting to a private field. */
+  sessionWrite: SessionWrite;
+  /**
+   * Forces an overlap at a named step of the Session write, in the module's own
+   * terms: holds the next write to reach `step` (for `joinCode` when given).
+   * Start the first event, `await held.reached`, send the second, then
+   * `held.release()`. Later writes pass through. Steps: `hold` (a Live edit
+   * hold owns its queues, before its task runs), `change` (the change has
+   * returned, nothing is stored yet), `standings` (just before the live results
+   * read; a write that opts out never reaches it). Outstanding holds are
+   * released when the test ends, and a hold no write reached fails the test.
+   */
+  holdAt: (step: WriteStep, filter?: GateFilter) => HeldWrite;
+  /**
+   * Call before sending the event under test: resolves when the next write is
+   * handed to the Session write (for `joinCode` when given). The queue is
+   * first-in first-out, so a write queued while another is held is waiting
+   * behind it: await this before releasing the held write.
+   */
+  nextQueued: (filter?: GateFilter) => Promise<void>;
   answerService: AnswerService;
   standingsService: StandingsService;
   leagueTableService: LeagueTableService;
@@ -389,6 +416,18 @@ function phaseTimerSchedulersModule(
   return { module: PhaseTimerSchedulersModule };
 }
 
+/** Provides the Session write's Write gate, which production leaves unprovided (the pass-through gate is used). */
+function writeGateModule(gate: TestWriteGate): DynamicModule {
+  @Global()
+  @Module({
+    providers: [{ provide: WRITE_GATE, useValue: gate }],
+    exports: [WRITE_GATE],
+  })
+  class WriteGateModule {}
+
+  return { module: WriteGateModule };
+}
+
 /**
  * Gateway test harness backed by the real answer, team, bonus, showdown,
  * seed and game-progress modules on a Postgres testcontainer — the only way
@@ -400,10 +439,18 @@ function phaseTimerSchedulersModule(
  */
 export function setupRealStoreGatewayTest(): RealStoreHarness {
   let modules: TestingModule[] = [];
+  let gates: TestWriteGate[] = [];
 
   // Registered before useTestDatabase() so the modules are closed before its
   // afterEach empties the tables (hooks run in definition order).
   afterEach(async () => {
+    // Held writes are let go first so closing never waits on one; a hold that
+    // no write reached fails the test instead of hanging it.
+    const finishing = gates;
+    gates = [];
+    const unreached = finishing
+      .map((gate) => gate.finish())
+      .filter((message): message is string => message !== undefined);
     // Closing runs module destroy, which clears armed lock/kahoot timers that
     // would otherwise fire into truncated tables and keep the worker alive.
     // It never closes the worker's ORM: the test database module only hands
@@ -411,6 +458,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const closing = modules;
     modules = [];
     await Promise.all(closing.map((module) => module.close()));
+    if (unreached.length > 0) throw new Error(unreached.join('\n'));
   });
 
   const db = useTestDatabase();
@@ -509,6 +557,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const sessionService = createFakeSessionService();
     const lockScheduler = new ManualTimerScheduler();
     const kahootScheduler = new ManualTimerScheduler();
+    const gate = new TestWriteGate();
+    gates.push(gate);
     // Nest runs module init (the session store loads), then application
     // bootstrap (timers re-arm), the way the app boots.
     const moduleRef = await Test.createTestingModule({
@@ -519,6 +569,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
           lock: lockScheduler,
           kahoot: kahootScheduler,
         }),
+        writeGateModule(gate),
       ],
     })
       .overrideProvider(SessionService)
@@ -696,6 +747,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       ...services,
       gateway,
       broadcaster,
+      sessionWrite: moduleRef.get(SessionWrite),
+      holdAt: (step, filter) => gate.holdAt(step, filter),
+      nextQueued: (filter) => gate.nextQueued(filter),
       liveEdit,
       rest,
       saveQuizEdit,

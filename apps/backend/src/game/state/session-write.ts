@@ -1,7 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
 import { SessionWriteQueue } from '@/game/state/session-write-queue';
+import {
+  PASS_THROUGH_WRITE_GATE,
+  WRITE_GATE,
+  type WriteGate,
+} from '@/game/state/write-gate';
 import { LiveResultsRead } from '@/game/state/live-results-read';
 import { withPriorStandings } from '@/game/state/session-updates.util';
 import { deadlinesOf, type SessionOutcome } from '@/game/state/session-outcome';
@@ -108,8 +113,14 @@ export class SessionWrite {
   /** The one live results read: every session write ends with it, and placement (via the Move committer) shares this instance. */
   readonly liveResultsRead: LiveResultsRead;
 
-  constructor(standingsService: StandingsService) {
+  private readonly gate: WriteGate;
+
+  constructor(
+    standingsService: StandingsService,
+    @Optional() @Inject(WRITE_GATE) gate?: WriteGate,
+  ) {
     this.liveResultsRead = new LiveResultsRead(standingsService);
+    this.gate = gate ?? PASS_THROUGH_WRITE_GATE;
   }
 
   markInitialized(): void {
@@ -169,6 +180,7 @@ export class SessionWrite {
     options?: SessionWriteOptions,
   ): Promise<T> {
     const refreshStandings = shouldRefreshStandings(options);
+    this.gate.queued(joinCode);
     return this.queue.run(joinCode, () =>
       this.writeNow(joinCode, change, refreshStandings),
     );
@@ -183,6 +195,7 @@ export class SessionWrite {
     joinCode: string,
     check: (session: SessionState) => void,
   ): Promise<void> {
+    this.gate.queued(joinCode);
     return this.queue.run(joinCode, () => {
       check(this.read(joinCode));
       this.sessions.delete(joinCode);
@@ -218,8 +231,12 @@ export class SessionWrite {
         return this.writeNow(joinCode, change, shouldRefreshStandings(options));
       },
     };
+    for (const joinCode of heldCodes) this.gate.queued(joinCode);
     return this.queue.hold(joinCodes, async () => {
       try {
+        for (const joinCode of [...heldCodes].sort()) {
+          await this.gate.reached('hold', joinCode);
+        }
         return await task(held);
       } finally {
         isReleased = true;
@@ -233,12 +250,9 @@ export class SessionWrite {
     refreshStandings: boolean,
   ): Promise<T> {
     const started = this.read(joinCode);
-    return this.commit(
-      joinCode,
-      started,
-      await change(started),
-      refreshStandings,
-    );
+    const changed = await change(started);
+    await this.gate.reached('change', joinCode);
+    return this.commit(joinCode, started, changed, refreshStandings);
   }
 
   /**
@@ -256,6 +270,7 @@ export class SessionWrite {
     // progress), so it counts as done even if a live result read fails: the
     // live results read keeps that live result's earlier value.
     const sessionToStore = withPriorStandings(started, changedSession);
+    if (refreshStandings) await this.gate.reached('standings', joinCode);
     this.sessions.set(
       joinCode,
       refreshStandings

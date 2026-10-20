@@ -23,7 +23,7 @@ See the spec's "The Write gate" and "The test gate".
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A gate spec through the real-store harness: holding at `change` stops a press before its session is stored (snapshot unchanged), and release finishes it
 - [ ] Holding at `standings` stops a bonus award after its change, before its leaderboard changes

@@ -168,7 +168,9 @@ Key seams:
   queued per join code, applied to the session as the previous write left it,
   ends with a standings read, then stored. A Live edit save holds a quiz's
   sessions through its `hold`, whose held writer is valid only while the hold
-  lasts.
+  lasts. It reports to an optional Write gate (`hold`, `change`, `standings`
+  steps) that is a pass-through in production; the real-store harness's test
+  gate uses it to hold a write at a step.
 - **`MoveCommitter`** is the only place a press (admin action, timer expiry,
   session creation, restart restore) is planned, graded, settled and saved.
   A press grades through `BlockGradingService.gradeForMove`; placing a session
