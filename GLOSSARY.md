@@ -120,6 +120,10 @@ _Avoid_: title card note, intro text, round description
 The screen the big screen draws, named by the server in the display view as `screen` with a kind and the content that kind draws (the question, the round's title, category, author and note, the break number, the leaderboard board and whether it is final, the active showdown). `/display` switches on the kind and looks nothing up. Its kinds are the On-air screen's plus `blank`, which the server sends (and logs) when it can't find a screen's content, so the big screen is never silently empty. Not the same as the On-air screen, which only names the screen (with ids and indexes) for the admin room, the presenter preview and the round note rule.
 _Avoid_: display state, big-screen view
 
+**Big-screen mute**:
+The quiz master's switch that silences everything the big screen plays: the quiz's own sounds and every question's media. Media keeps playing while muted, just without sound. It belongs to the session, so a reloaded big screen comes back muted.
+_Avoid_: display sound (sounds like only the quiz's own effects), media pause (stops the picture too)
+
 **Quiz preview**:
 A saved quiz's display screens, stepped through by staff without a session, to check its content before the night. Nothing is played, stored or counted, and no team can join. Not the same as the presenter preview, which describes the next press in a live session.
 _Avoid_: rehearsal, test session, dry run
