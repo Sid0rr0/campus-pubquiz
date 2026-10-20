@@ -13,7 +13,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "db:migrate": "mikro-orm migration:up",
+    "db:migrate": "MIKRO_ORM_MIGRATIONS_SNAPSHOT=false mikro-orm migration:up",
     "db:migrate:create": "mikro-orm migration:create",
     "db:migrate:prod": "node dist/scripts/migrate.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",

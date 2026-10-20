@@ -4,7 +4,10 @@ import { LeagueRepository } from '@/db/repositories/league.repository';
 
 /** A named competition (a semester's) that ended sessions are added to; the dates are a label and decide which leagues are current. */
 @Entity({ tableName: 'leagues', repository: () => LeagueRepository })
-@Check({ expression: '"ends_on" >= "starts_on"' })
+@Check({
+  name: 'leagues_ends_on_check',
+  expression: '"ends_on" >= "starts_on"',
+})
 export class League extends BaseEntity {
   [OptionalProps]?: 'createdAt' | 'updatedAt' | 'sortOrder';
 

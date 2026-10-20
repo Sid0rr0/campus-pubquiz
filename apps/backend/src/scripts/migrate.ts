@@ -3,7 +3,11 @@ import { MikroORM } from '@mikro-orm/postgresql';
 import config from '@/mikro-orm.config';
 
 async function runMigrations(): Promise<void> {
-  const orm = await MikroORM.init(config);
+  // Migrating never rewrites the snapshot: only `migration:create` owns it.
+  const orm = await MikroORM.init({
+    ...config,
+    migrations: { ...config.migrations, snapshot: false },
+  });
   try {
     await orm.migrator.up();
   } finally {
