@@ -263,7 +263,15 @@ export function PlayedSessionsPanel() {
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
-      <h1 className="font-display text-2xl">Stats</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-display text-2xl">Stats</h1>
+        <Link
+          href="/stats/feedback"
+          className="text-sm font-extrabold underline-offset-2 hover:underline"
+        >
+          Feedback trends
+        </Link>
+      </div>
       {error && (
         <p role="alert" className="font-extrabold text-magenta">
           {error}

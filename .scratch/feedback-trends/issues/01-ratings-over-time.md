@@ -6,9 +6,9 @@ Parent spec: `.scratch/feedback-trends/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres test: per-session averages and counts, range filter, feedback-off sessions skipped, ended sessions only
-- [ ] Query params validated (bad dates → 400)
-- [ ] Page: filter, table, empty state
-- [ ] `DOCUMENTATION.md` (Session Stats) documents the endpoint
+- [x] Real-Postgres test: per-session averages and counts, range filter, feedback-off sessions skipped, ended sessions only
+- [x] Query params validated (bad dates → 400)
+- [x] Page: filter, table, empty state
+- [x] `DOCUMENTATION.md` (Session Stats) documents the endpoint

@@ -6,8 +6,8 @@ Parent spec: `.scratch/feedback-trends/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres test: threshold, ordering, ties (higher count first, then newer session)
-- [ ] Page lists and empty state ("Not enough ratings yet")
-- [ ] `DOCUMENTATION.md` updated
+- [x] Real-Postgres test: threshold, ordering, ties (higher count first, then newer session)
+- [x] Page lists and empty state ("Not enough ratings yet")
+- [x] `DOCUMENTATION.md` updated

@@ -5,6 +5,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | team-page | [A team page opened with the team code](team-page/spec.md) | 3 |
+| feedback-trends | [Feedback trends across sessions](feedback-trends/spec.md) | 3 |
 | e2e-journeys-2 | [E2E coverage of a whole quiz night](e2e-journeys-2/spec.md) | 15 |
 | display-portrait-margin | [Portrait question images that fit, and a margin that explains itself](display-portrait-margin/spec.md) | 4 |
 | guide-trim | [A shorter moderator guide](guide-trim/spec.md) | 1 |

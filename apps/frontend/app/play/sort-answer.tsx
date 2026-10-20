@@ -41,7 +41,9 @@ interface SortItemProps {
   animatePositionChange: boolean;
 }
 
-/** Tracks whether the referenced element's content has wrapped onto more than one line, e.g. a long sort/match option on a narrow phone screen. Guarded for environments without `ResizeObserver` (older browsers), where it degrades to always-false rather than throwing. */
+/** Tracks whether the referenced element's content has wrapped onto more than one line, e.g. a long sort/match option on a narrow phone screen. Guarded for environments without `ResizeObserver` (older browsers), where it degrades to always-false rather than throwing.
+ *
+ * The multiline layout gives the text more width, which can un-wrap it; switching back on that alone flips the layout every frame (the row jitters and can't be dragged). So once multiline, it stays multiline until the parent row itself gets wider than when it wrapped, e.g. on rotation to landscape. */
 function useIsMultiline<T extends HTMLElement>(): [
   React.RefObject<T | null>,
   boolean,
@@ -51,18 +53,27 @@ function useIsMultiline<T extends HTMLElement>(): [
 
   useEffect(() => {
     const element = ref.current;
-    if (!element || typeof ResizeObserver === 'undefined') return;
+    const row = element?.parentElement;
+    if (!element || !row || typeof ResizeObserver === 'undefined') return;
+    let wrappedAtRowWidth: number | null = null;
 
     function measure() {
-      if (!element) return;
+      if (!element || !row) return;
       const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
       if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
-      setIsMultiline(element.scrollHeight > lineHeight * 1.5);
+      const rowWidth = row.clientWidth;
+      if (element.scrollHeight > lineHeight * 1.5) {
+        wrappedAtRowWidth = rowWidth;
+      } else if (wrappedAtRowWidth !== null && rowWidth > wrappedAtRowWidth) {
+        wrappedAtRowWidth = null;
+      }
+      setIsMultiline(wrappedAtRowWidth !== null);
     }
 
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
+    observer.observe(row);
     return () => observer.disconnect();
   }, []);
 

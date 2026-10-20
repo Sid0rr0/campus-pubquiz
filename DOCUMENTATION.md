@@ -1315,6 +1315,39 @@ The session detail also carries a `feedback` section, shown on the page as
 - The team is never selected: no team id or name reaches the response or the page.
   Comment and topic order uses when the team last sent its feedback.
 
+### Feedback trends
+
+`/stats/feedback` (linked from `/stats`) reads feedback across many ended sessions
+at once: `GET /stats/feedback-trends?from=&to=` (`StatsService.getFeedbackTrends`,
+same guards as the other stats endpoints, open to admin and moderator).
+
+- `from` and `to` are optional `YYYY-MM-DD` dates, both inclusive, read as UTC days;
+  no range means all time. Anything else, or `from` after `to`, is a 400. The range
+  applies to the session's date (when it was created), and it is parsed once by
+  `feedbackTrendsQuerySchema` so every section of the page shares it.
+- The response is `{ sessions, topics, bestRounds, worstRounds }`, where each session is
+  `{ id, name, date, rating: { average, count } | null }`. `sessions` runs oldest to newest. `rating` is the
+  average of every round rating the session got and how many ratings that was;
+  `null` when nobody rated (the page shows "—", never zero).
+- `topics` are the topic suggestions of every session in the range, grouped by the
+  same function as a single session's (`groupTopics`: trim, collapse inner whitespace,
+  ignore case, most common spelling wins, the first submitted on a tie), sorted by
+  count, then alphabetically. The page shows them as "Geography ×4", or "No topic
+  suggestions in this range." when there are none.
+- `bestRounds` and `worstRounds` are each up to `TREND_ROUNDS_LIMIT` (5) entries of
+  `{ sessionId, sessionName, roundTitle, average, count }`: the highest and lowest
+  rounds by average rating across the range (a round is one round in one session).
+  Only rounds with at least `MIN_RATINGS_FOR_RANKING` (3) ratings count. Ties go to
+  the round with more ratings, then to the newer session. The page shows them as two
+  short lists, with "Not enough ratings yet" when a list is empty. With fewer than
+  10 qualifying rounds the two lists can overlap: a round with at least 3 ratings
+  may appear in both.
+- Only **ended** sessions appear, and a session with `collectFeedback` off is left
+  out (one stored without the setting counts as on), so it does not drag the trend
+  down. The page writes out its empty state when no session is in range.
+- Everything is aggregated in SQL and no team column is selected: no team id or name
+  reaches the response or the page.
+
 ### Team stats
 
 `/teams/:id` shows one team's history across its **ended** sessions, from
