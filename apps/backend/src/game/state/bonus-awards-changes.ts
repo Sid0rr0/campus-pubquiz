@@ -15,6 +15,7 @@ import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
 import {
   BROADCAST_STATE_OUTCOME,
+  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 
@@ -51,8 +52,7 @@ export class BonusAwardsChanges {
       ),
     );
     return bonusChange(session, {
-      teamId,
-      notice: { category, points, reason },
+      noticeFor: { teamId, notice: { category, points, reason } },
     });
   }
 
@@ -68,7 +68,7 @@ export class BonusAwardsChanges {
     points: number,
     reason: string | undefined,
   ): Promise<SessionChange<SessionOutcome> & { award: BonusAwardAdminView }> {
-    const award = await this.refusing(() =>
+    const { award, teamId } = await this.refusing(() =>
       this.bonusService.update(
         session.seededGame.gameSessionId,
         awardId,
@@ -76,18 +76,18 @@ export class BonusAwardsChanges {
         reason,
       ),
     );
-    return { ...bonusChange(session), award };
+    return { ...bonusChange(session, { syncTeamId: teamId }), award };
   }
 
-  /** An admin deletes an award; a missing award is a BonusAwardNotFoundRefusal. Carries no BONUS_AWARDED notice. */
+  /** An admin deletes an award; a missing award is a BonusAwardNotFoundRefusal. Carries no BONUS_AWARDED notice; the awarded team's list is synced. */
   async remove(
     session: SessionState,
     awardId: number,
   ): Promise<SessionChange<SessionOutcome>> {
-    await this.refusing(() =>
+    const { teamId } = await this.refusing(() =>
       this.bonusService.remove(session.seededGame.gameSessionId, awardId),
     );
-    return bonusChange(session);
+    return bonusChange(session, { syncTeamId: teamId });
   }
 
   /** Runs a bonus service call, turning its refusals into session refusals. */
@@ -107,29 +107,38 @@ export class BonusAwardsChanges {
 }
 
 /**
- * The change a bonus award makes, shared by both events and private to this
- * module. `awarded` (a fresh award only) carries its BONUS_AWARDED notice for
- * that team's socket, if it is connected.
+ * The change a bonus award makes, shared by all three events and private to
+ * this module. `noticeFor` (a fresh award only) carries its BONUS_AWARDED
+ * notice for that team's socket, if it is connected. `syncTeamId` (an edit or
+ * deletion) lists the team for a bonus awards sync instead, if it is connected.
  */
 function bonusChange(
   session: SessionState,
-  awarded?: { teamId: number; notice: TeamBonusAwardView },
+  {
+    noticeFor,
+    syncTeamId,
+  }: {
+    noticeFor?: { teamId: number; notice: TeamBonusAwardView };
+    syncTeamId?: number;
+  } = {},
 ): SessionChange<SessionOutcome> {
-  const socketId = awarded
-    ? session.connectedTeamSockets[awarded.teamId]
+  const socketId = noticeFor
+    ? session.connectedTeamSockets[noticeFor.teamId]
     : undefined;
   const notices =
-    awarded && socketId
+    noticeFor && socketId
       ? [
           {
             socketId,
             event: SOCKET_EVENTS.BONUS_AWARDED,
-            payload: awarded.notice,
+            payload: noticeFor.notice,
           },
         ]
       : [];
+  const bonusSyncs =
+    syncTeamId === undefined ? [] : connectedTeamSyncs(session, [syncTeamId]);
   return {
     session,
-    outcome: { ...BROADCAST_STATE_OUTCOME, notices },
+    outcome: { ...BROADCAST_STATE_OUTCOME, notices, bonusSyncs },
   };
 }

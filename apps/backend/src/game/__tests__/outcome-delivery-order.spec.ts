@@ -77,6 +77,27 @@ describe('GameGateway — outcome delivery order', () => {
     expect(log).toEqual([SOCKET_EVENTS.JOIN_ACCEPTED, ...ROOM_PUSH]);
   });
 
+  it('sends the bonus awards sync to the awarded team after the room pushes, with no notice', async () => {
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const admin = await game.connectAdmin();
+    const [{ socket, teamId }] = game.teams;
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId,
+      category: 'shot',
+      points: 1,
+    });
+    const [award] = await game.inRequestContext(() =>
+      game.bonusService.listForTeamAdmin(game.gameSessionId, teamId),
+    );
+    const log = recordDeliveryOrder(game, [socket]);
+
+    await game.inRequestContext(() =>
+      game.rest.editBonus(game.joinCode, award.id, 3, undefined),
+    );
+
+    expect(log).toEqual([...ROOM_PUSH, SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED]);
+  });
+
   it('sends the kicked notice after the room pushes and closes the socket last', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const admin = await game.connectAdmin();

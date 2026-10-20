@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { MikroORM, RequestContext } from '@mikro-orm/core';
 import { AnswerService } from '@/answer/answer.service';
+import { BonusService } from '@/bonus/bonus.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import type { GameServer } from '@/game/socket/game-socket.types';
 import {
@@ -44,6 +45,7 @@ export class SessionBroadcaster
   constructor(
     private readonly gameState: GameStateService,
     private readonly answerService: AnswerService,
+    private readonly bonusService: BonusService,
     private readonly orm: MikroORM,
     @Optional()
     @Inject(PHASE_TIMER_SCHEDULERS)
@@ -91,6 +93,7 @@ export class SessionBroadcaster
       {
         gameState: this.gameState,
         answerService: this.answerService,
+        bonusService: this.bonusService,
         server: this.requireServer(),
         rearmTimers: (code, deadlines) => this.phaseTimers.arm(code, deadlines),
       },

@@ -21,7 +21,7 @@ export type SocketReply = EventEmit<
   typeof SOCKET_EVENTS.ANSWER_RECEIVED | typeof SOCKET_EVENTS.JOIN_ACCEPTED
 >;
 
-/** A connected team whose own graded-answer list needs a sync, with the socket it is on. */
+/** A connected team whose own graded-answer or bonus award list needs a sync, with the socket it is on. */
 export interface TeamSync {
   teamId: number;
   socketId: string;
@@ -64,6 +64,8 @@ export interface SessionOutcome {
   teamSyncs: readonly TeamSync[];
   /** Connected teams whose own player count changed, each told its new number (never sent room-wide). */
   playerCountSyncs: readonly PlayerCountSync[];
+  /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
+  bonusSyncs: readonly TeamSync[];
   notices: readonly SocketNotice[];
   /** Sockets to disconnect, last of all, after the notices. */
   socketsToClose: readonly string[];
@@ -87,6 +89,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   answerListQuestionIds: [],
   teamSyncs: [],
   playerCountSyncs: [],
+  bonusSyncs: [],
   notices: [],
   socketsToClose: [],
 };

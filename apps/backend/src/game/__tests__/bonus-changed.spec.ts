@@ -9,6 +9,7 @@ import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   holdNextCall,
   setupRealStoreGatewayTest,
+  type JoinedTeam,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 import {
@@ -21,8 +22,8 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
   let admin: MockSocket;
-  let scorer: { socket: MockSocket; teamId: number };
-  let idle: { socket: MockSocket; teamId: number };
+  let scorer: JoinedTeam;
+  let idle: JoinedTeam;
 
   beforeEach(async () => {
     game = await harness.createGateway({
@@ -103,6 +104,84 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     );
 
     expect(bonusOf(scorer.teamId)).toBe(0);
+  });
+
+  function bonusSyncs() {
+    return game
+      .roomEmits()
+      .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED);
+  }
+
+  it('syncs an edited award to the awarded team’s socket only, without a toast', async () => {
+    const awardId = await awardShot(1);
+
+    await game.inRequestContext(() =>
+      game.rest.editBonus(game.joinCode, awardId, 3, undefined),
+    );
+
+    expect(bonusSyncs()).toEqual([
+      expect.objectContaining({
+        rooms: [scorer.socket.id],
+        payload: {
+          bonusAwards: [{ category: 'shot', points: 3, reason: null }],
+        },
+      }),
+    ]);
+    expect(game.roomEmits().map((emit) => emit.event)).not.toContain(
+      SOCKET_EVENTS.BONUS_AWARDED,
+    );
+  });
+
+  it('syncs a deletion to the awarded team’s socket with the award gone', async () => {
+    const awardId = await awardShot(1);
+
+    await game.inRequestContext(() =>
+      game.rest.removeBonus(game.joinCode, awardId),
+    );
+
+    expect(bonusSyncs()).toEqual([
+      expect.objectContaining({
+        rooms: [scorer.socket.id],
+        payload: { bonusAwards: [] },
+      }),
+    ]);
+  });
+
+  it('sends a disconnected team no sync, and its rejoin carries the current list', async () => {
+    const awardId = await awardShot(1);
+    await game.gateway.handleDisconnect(asSocket(scorer.socket));
+    game.clearEmits();
+
+    await game.inRequestContext(() =>
+      game.rest.editBonus(game.joinCode, awardId, 3, undefined),
+    );
+    expect(bonusSyncs()).toEqual([]);
+
+    const rejoined = await game.connectPlayer();
+    await game.gateway.handleJoinPlayers(asSocket(rejoined), {
+      teamName: 'The Quizzards',
+      joinCode: game.joinCode,
+      teamCode: scorer.teamCode,
+    });
+    expect(rejoined.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.JOIN_ACCEPTED,
+      expect.objectContaining({
+        bonusAwards: [{ category: 'shot', points: 3, reason: null }],
+      }),
+    );
+  });
+
+  it('keeps the toast and sends no sync for a fresh award', async () => {
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: scorer.teamId,
+      category: 'shot',
+      points: 1,
+    });
+
+    expect(game.roomEmits().map((emit) => emit.event)).toContain(
+      SOCKET_EVENTS.BONUS_AWARDED,
+    );
+    expect(bonusSyncs()).toEqual([]);
   });
 
   it('applies a REST bonus edit queued behind a held write after that write, and the next snapshot reflects both', async () => {
