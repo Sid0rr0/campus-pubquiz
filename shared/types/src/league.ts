@@ -56,6 +56,15 @@ export interface LeagueTable {
   rows: LeagueTableRow[];
 }
 
+/** How many rows the big screen lobby shows of the session league's table. */
+export const LEAGUE_TOP_SIZE = 5;
+
+/** The lobby's league: its name and the top rows of its table. */
+export interface LeagueTop {
+  name: string;
+  rows: LeagueTableRow[];
+}
+
 /** A league as the public page lists it: no sessions. */
 export interface PublicLeague {
   id: number;

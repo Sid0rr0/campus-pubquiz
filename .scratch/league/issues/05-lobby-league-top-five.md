@@ -6,8 +6,8 @@ Parent spec: `.scratch/league/spec.md`
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Backend test: league selection (none, one, several), and a settings change updates it
-- [ ] Lobby renders the top 5 and nothing when `null`
-- [ ] `DOCUMENTATION.md` (snapshot) documents `leagueTop`
+- [x] Backend test: league selection (none, one, several), and a settings change updates it
+- [x] Lobby renders the top 5 and nothing when `null`
+- [x] `DOCUMENTATION.md` (snapshot) documents `leagueTop`

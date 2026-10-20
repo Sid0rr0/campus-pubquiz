@@ -144,6 +144,7 @@ export class SessionsController {
     const snapshot = await this.gameState.createSession(quizId, settings, name);
     if (leagueIds.length > 0) {
       await this.leagues.setSessionLeagues(snapshot.joinCode, leagueIds);
+      await this.gameState.refreshLeagueTop(snapshot.joinCode);
     }
     const titles = await this.quizService.findTitles([quizId]);
     const quizTitle = titles.get(quizId) ?? UNKNOWN_QUIZ_TITLE;
@@ -194,6 +195,7 @@ export class SessionsController {
       await mapLeagueErrors(() =>
         this.leagues.setSessionLeagues(joinCode, leagueIds),
       );
+      await this.gameState.refreshLeagueTop(joinCode);
     }
     await this.broadcaster.broadcastState(joinCode);
   }

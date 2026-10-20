@@ -11,6 +11,7 @@ import {
   freshSessionState,
   type GameAction,
   type JoinPlayersPayload,
+  type LeagueTop,
   LOBBY_PROGRESS,
   type PresenterContextPayload,
   projectScreen,
@@ -50,6 +51,8 @@ import {
   deadlinesOf,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
+import { withLeagueTop } from '@/game/state/session-updates.util';
+import { LeagueTableService } from '@/league/league-table.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 
@@ -86,6 +89,7 @@ export class GameStateService implements OnModuleInit {
     private readonly playerCountService: PlayerCountService,
     private readonly sessionWrite: SessionWrite,
     private readonly grading: BlockGradingService,
+    private readonly leagueTableService: LeagueTableService,
   ) {
     this.settingsChanges = new SessionSettingsChanges(this.seedService);
     this.answersChanges = new AnswersChanges(this.answerService, this.grading);
@@ -108,6 +112,42 @@ export class GameStateService implements OnModuleInit {
       this.progressRepository,
       this.standingsService,
       this.showdownService,
+      (gameSessionId) => this.readLeagueTopOrNull(gameSessionId),
+    );
+  }
+
+  /** The lobby league of a session being placed; a failed read leaves the lobby without one rather than failing the placement. */
+  private async readLeagueTopOrNull(
+    gameSessionId: number,
+  ): Promise<LeagueTop | null> {
+    try {
+      return await this.leagueTableService.topFor(gameSessionId);
+    } catch (error) {
+      this.logger.error(
+        `League top read failed for session ${gameSessionId}; the lobby shows no league`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Re-reads the league the big screen lobby shows, after the session's
+   * leagues changed. Pushes nothing: the caller broadcasts the state.
+   */
+  async refreshLeagueTop(joinCode: string): Promise<void> {
+    await this.sessionWrite.write(
+      joinCode,
+      async (session) => ({
+        session: withLeagueTop(
+          session,
+          await this.leagueTableService.topFor(
+            session.seededGame.gameSessionId,
+          ),
+        ),
+        outcome: undefined,
+      }),
+      NOT_TOUCHING_SCORES,
     );
   }
 

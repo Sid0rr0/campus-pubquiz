@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import type {
-  LeagueTable,
-  PublicLeague,
-  PublicLeaguesPayload,
+import {
+  LEAGUE_TOP_SIZE,
+  type LeagueTable,
+  type LeagueTop,
+  type PublicLeague,
+  type PublicLeaguesPayload,
 } from '@campus-pubquiz/types';
 import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';
@@ -69,6 +71,29 @@ export class LeagueTableService {
       ...publicView(league, venueToday(now)),
       rows: buildLeagueTable(nights),
     };
+  }
+
+  /**
+   * The league the big screen lobby shows for a session: the most recently
+   * created league it is in, with its top rows; null when it is in none.
+   */
+  async topFor(
+    gameSessionId: number,
+    now = new Date(),
+  ): Promise<LeagueTop | null> {
+    const newest = (await this.memberships
+      .getKnex()('league_sessions as ls')
+      .join('leagues as l', 'l.id', 'ls.league_id')
+      .where('ls.game_session_id', gameSessionId)
+      .orderBy([
+        { column: 'l.created_at', order: 'desc' },
+        { column: 'l.id', order: 'desc' },
+      ])
+      .first('l.id as leagueId')) as { leagueId: number } | undefined;
+    if (!newest) return null;
+    const table = await this.table(newest.leagueId, now);
+    if (!table) return null;
+    return { name: table.name, rows: table.rows.slice(0, LEAGUE_TOP_SIZE) };
   }
 
   private async nightsOf(leagueId: number): Promise<TeamNight[]> {

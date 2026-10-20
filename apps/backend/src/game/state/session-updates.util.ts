@@ -34,6 +34,13 @@ export function withFunFactData(
   return { ...session, funFactData };
 }
 
+export function withLeagueTop(
+  session: SessionState,
+  leagueTop: SessionState['leagueTop'],
+): SessionState {
+  return { ...session, leagueTop };
+}
+
 /**
  * The session a write ends with, its prior standings brought up to date: when
  * the write started from a session whose question was on air with the

@@ -95,6 +95,8 @@ export interface SessionDescription {
   >;
   showdown?: { round: ActiveShowdownRoundState; revealStep?: number };
   settings?: Partial<SessionSettings>;
+  /** The league the lobby shows beside the roster; omit for a session in no league. */
+  leagueTop?: SessionState['leagueTop'];
 }
 
 const DEFAULT_ROUNDS: RoundDescription[] = [{ questions: [{}, {}] }];
@@ -262,6 +264,7 @@ export function buildSessionState(
     answeredTeamIdsByQuestion: description.answeredTeams ?? {},
     activeShowdownRound: description.showdown?.round ?? null,
     showdownRevealStep: description.showdown?.revealStep ?? 0,
+    leagueTop: description.leagueTop ?? null,
   };
   return { ...state, ...buildPhaseTimer(state, description.phaseTimer) };
 }

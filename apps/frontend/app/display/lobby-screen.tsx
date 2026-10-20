@@ -1,9 +1,11 @@
-import type { TeamView } from '@campus-pubquiz/types';
+import type { LeagueTop, TeamView } from '@campus-pubquiz/types';
 import { JoinDetails } from '@/app/display/join-details';
+import { LeagueTopCard } from '@/app/display/league-top';
 import { TeamRoster } from '@/app/display/team-roster';
 
 interface LobbyScreenProps {
   teams: TeamView[];
+  leagueTop: LeagueTop | null;
   isConnected: boolean;
   joinCode: string | null | undefined;
   maxPlayersPerTeam: number;
@@ -13,6 +15,7 @@ interface LobbyScreenProps {
 
 export function LobbyScreen({
   teams,
+  leagueTop,
   isConnected,
   joinCode,
   maxPlayersPerTeam,
@@ -25,13 +28,16 @@ export function LobbyScreen({
         <h1 className="font-display text-display-xl">
           Waiting for the teams to join…
         </h1>
-        {joinCode && (
-          <JoinDetails
-            joinCode={joinCode}
-            maxPlayersPerTeam={maxPlayersPerTeam}
-            extraPlayerPenaltyPoints={extraPlayerPenaltyPoints}
-          />
-        )}
+        <div className="flex items-start justify-center gap-12">
+          {joinCode && (
+            <JoinDetails
+              joinCode={joinCode}
+              maxPlayersPerTeam={maxPlayersPerTeam}
+              extraPlayerPenaltyPoints={extraPlayerPenaltyPoints}
+            />
+          )}
+          {leagueTop && <LeagueTopCard leagueTop={leagueTop} />}
+        </div>
       </div>
       <TeamRoster teams={teams} isConnected={isConnected} />
       <button

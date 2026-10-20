@@ -237,6 +237,59 @@ describe('LeagueTableService (Postgres integration)', () => {
     ]);
   });
 
+  describe('top of the session league', () => {
+    it('is null when the session is in no league', async () => {
+      await newLeague();
+      const lobby = await newSession('lobby');
+
+      expect(await service.topFor(lobby.id)).toBeNull();
+    });
+
+    it('is the league name with its top five rows, ended nights only', async () => {
+      const league = await newLeague('Autumn');
+      const night = await newSession();
+      await join(league, night);
+      const lobby = await newSession('lobby');
+      await join(league, lobby);
+      for (let rank = 1; rank <= 6; rank += 1) {
+        await play(night, await newTeam(`Team ${rank}`), 100 - rank);
+      }
+
+      const top = await service.topFor(lobby.id);
+
+      expect(top?.name).toBe('Autumn');
+      expect(top?.rows.map((row) => row.teamName)).toEqual([
+        'Team 1',
+        'Team 2',
+        'Team 3',
+        'Team 4',
+        'Team 5',
+      ]);
+      expect(Object.keys(top!).sort()).toEqual(['name', 'rows']);
+    });
+
+    it('is the most recently created league when the session is in several', async () => {
+      const older = await newLeague('Older');
+      const newer = await newLeague('Newer');
+      const lobby = await newSession('lobby');
+      await join(newer, lobby);
+      await join(older, lobby);
+
+      expect((await service.topFor(lobby.id))?.name).toBe('Newer');
+    });
+
+    it('is an empty list for a league nobody has played in yet', async () => {
+      const league = await newLeague('Fresh');
+      const lobby = await newSession('lobby');
+      await join(league, lobby);
+
+      expect(await service.topFor(lobby.id)).toEqual({
+        name: 'Fresh',
+        rows: [],
+      });
+    });
+  });
+
   describe('public leagues', () => {
     it('lists current leagues first, then the rest, without sessions', async () => {
       await newLeague('Old', '2020-01-31');

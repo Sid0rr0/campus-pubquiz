@@ -1,5 +1,6 @@
 import type { FunFactData } from './fun-facts';
 import type { GameContext, GameProgress } from './game-state-types';
+import type { LeagueTop } from './league';
 import type { ClosestGuessRevealData, SeededQuestion } from './question-views';
 import type { LeaderboardEntry } from './room-views';
 import {
@@ -138,6 +139,12 @@ export interface SessionState {
    * Ephemeral.
    */
   funFactData: FunFactData;
+  /**
+   * The league the big screen lobby shows (name and top rows), or null when the
+   * session is in none. A cache: read when the session is placed and again
+   * whenever its leagues change, never recomputed per broadcast. Ephemeral.
+   */
+  leagueTop: LeagueTop | null;
   teams: TeamRosterEntry[];
   /** teamId -> the team's player count this session, for teams that have one. A cache of the stored counts, filled as teams join and as counts are set, so the admin view stays synchronous. */
   playerCounts: Record<number, number>;
@@ -209,6 +216,7 @@ export function freshSessionState(
     priorStandings: [],
     verdictTallies: {},
     funFactData: { answers: [], bonusAwards: [] },
+    leagueTop: null,
     teams: [],
     playerCounts: {},
     answeredTeamIdsByQuestion: {},

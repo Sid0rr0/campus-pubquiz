@@ -189,6 +189,9 @@ _Avoid_: season points, ranking points
 The teams of a league ranked by league points; teams level on points are split by more nights won, then by better average placing, and otherwise share the position.
 _Avoid_: league leaderboard, standings (that's one session)
 
+**League top**:
+The name and top five rows of the league table of a session's league (the most recently created one if it is in several), shown on the big screen lobby. Sent to the display only, and `null` when the session is in no league.
+
 ## Game status
 
 **Status groups**:

@@ -375,11 +375,11 @@ silences the lock-countdown track.
 
 **Fields that belong to one room's view:**
 
-| View                            | Fields                                                                                                                                                              |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect`, `funFacts` |
-| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                        |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                    |
+| View                            | Fields                                                                                                                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect`, `funFacts`, `leagueTop` |
+| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                     |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                 |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -1502,6 +1502,17 @@ points, the table and the public page.
   sessions count, a session in two leagues counts in both, and non-members never count.
   `LeagueTableService.table(leagueId)` returns a league's table for any caller (the team
   page's position and the lobby's top 5 reuse it).
+- **The lobby's league (`leagueTop`).** The display view (and only it) carries
+  `leagueTop: { name, rows } | null`: the league the session is in (the one created
+  most recently when it is in several; `null` when it is in none) and the first
+  `LEAGUE_TOP_SIZE` (5) rows of its table, from `LeagueTableService.topFor`. The
+  session being played has not ended, so it is not in the rows. The server keeps it in
+  the live session as a cache, read when the session is created or restored after a
+  restart and re-read whenever the session's `leagueIds` change (`POST /sessions` and
+  `PATCH /sessions/:joinCode/settings` refresh it before the state broadcast), so a
+  reconnecting or second big screen gets it in its first snapshot. It is not re-read
+  per broadcast. The lobby screen draws it beside the join details, and nothing when
+  it is `null`; a league with no finished night shows "No points yet".
 - **Public REST** (`PublicLeaguesController`, no login; no team codes, tokens or feedback
   are exposed):
   - `GET /leagues/public` lists every league (`id`, `name`, `startsOn`, `endsOn`,

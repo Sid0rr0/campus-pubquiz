@@ -7,6 +7,7 @@ import type {
   PlayersScreenFields,
 } from './on-air-screen';
 import type { GameProgress, QuizStructureSummary } from './game-state';
+import type { LeagueTop } from './league';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
@@ -194,6 +195,8 @@ export interface DisplayStatePayload extends Omit<
    * on every other screen and when there is nothing worth saying.
    */
   funFacts: FunFact[];
+  /** The session's league for the lobby screen: its name and top rows, or null when the session is in no league. */
+  leagueTop: LeagueTop | null;
 }
 
 /** How many teams got the revealed question right (`correct`), partly right (`partial`), out of every team in the session (no-answers included). */

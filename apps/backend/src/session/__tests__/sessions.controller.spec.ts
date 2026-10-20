@@ -35,6 +35,7 @@ function makeController() {
     hasSession: jest.fn(),
     closeSession: jest.fn(),
     updateSessionSettings: jest.fn(),
+    refreshLeagueTop: jest.fn().mockResolvedValue(undefined),
   };
   const quizService = { findTitles: jest.fn() };
   const broadcaster = {
@@ -397,6 +398,7 @@ describe('SessionsController', () => {
 
       expect(leagues.assertAssignable).toHaveBeenCalledWith([4, 5]);
       expect(leagues.setSessionLeagues).toHaveBeenCalledWith('GHIJKL', [4, 5]);
+      expect(gameState.refreshLeagueTop).toHaveBeenCalledWith('GHIJKL');
     });
 
     it('touches no league when none is ticked', async () => {
@@ -495,6 +497,27 @@ describe('SessionsController', () => {
       expect(leagues.setSessionLeagues).toHaveBeenCalledWith('GHIJKL', [4]);
       expect(gameState.updateSessionSettings).not.toHaveBeenCalled();
       expect(broadcaster.broadcastState).toHaveBeenCalledWith('GHIJKL');
+    });
+
+    it('refreshes the lobby league top before telling clients', async () => {
+      const { controller, gameState, broadcaster } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+
+      await controller.updateSettings('GHIJKL', { leagueIds: [4] });
+
+      expect(gameState.refreshLeagueTop).toHaveBeenCalledWith('GHIJKL');
+      expect(
+        gameState.refreshLeagueTop.mock.invocationCallOrder[0],
+      ).toBeLessThan(broadcaster.broadcastState.mock.invocationCallOrder[0]);
+    });
+
+    it('leaves the lobby league top alone when leagueIds is omitted', async () => {
+      const { controller, gameState } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+
+      await controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 });
+
+      expect(gameState.refreshLeagueTop).not.toHaveBeenCalled();
     });
 
     it('applies settings and leagues together', async () => {
