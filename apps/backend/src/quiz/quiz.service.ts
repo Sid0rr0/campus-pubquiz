@@ -128,6 +128,10 @@ export class QuizService {
     }));
   }
 
+  async exists(quizId: number): Promise<boolean> {
+    return (await this.quizzes.count({ id: quizId })) > 0;
+  }
+
   /** Full editable quiz for the quiz editor page, or null if the id doesn't exist. */
   async findDraftById(quizId: number): Promise<QuizDraft | null> {
     const quiz = await this.quizzes.findByIdWithRoundsAndQuestions(quizId);
