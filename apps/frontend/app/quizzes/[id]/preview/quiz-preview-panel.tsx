@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   DEFAULT_QUIZ_PREVIEW_MODE,
   QUIZ_PREVIEW_MODES,
+  type QuizPreviewHostOnly,
   type QuizPreviewMode,
   type QuizPreviewPayload,
   type QuizPreviewStep,
@@ -148,7 +149,7 @@ function JumpList({
   return (
     <nav
       aria-label="Jump to"
-      className="flex w-64 shrink-0 flex-col gap-2 overflow-y-auto rounded-xl border-2 border-background/30 p-2"
+      className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-xl border-2 border-background/30 p-2"
     >
       {jumpRounds(steps).map((round) => (
         <div key={round.roundIndex} className="flex flex-col gap-0.5">
@@ -187,6 +188,34 @@ function JumpList({
         </div>
       ))}
     </nav>
+  );
+}
+
+/** The text the room never sees for the current step. */
+function HostOnlyPanel({ hostOnly }: { hostOnly: QuizPreviewHostOnly }) {
+  const entries = [
+    { label: 'Round note', text: hostOnly.roundNote },
+    { label: 'Question notes', text: hostOnly.questionNote },
+  ].filter((entry) => entry.text !== null);
+  return (
+    <aside
+      aria-label="Host only"
+      className="flex shrink-0 flex-col gap-2 rounded-xl border-2 border-cyan p-3 text-xs"
+    >
+      <h2 className="font-extrabold uppercase tracking-wide text-cyan">
+        Host only
+      </h2>
+      {entries.length === 0 ? (
+        <p className="text-background/70">Nothing host-only on this screen.</p>
+      ) : (
+        entries.map((entry) => (
+          <div key={entry.label} className="flex flex-col gap-0.5">
+            <h3 className="font-bold text-background/70">{entry.label}</h3>
+            <p className="whitespace-pre-wrap wrap-break-word">{entry.text}</p>
+          </div>
+        ))
+      )}
+    </aside>
   );
 }
 
@@ -240,6 +269,7 @@ function PreviewStepper({
 }) {
   const { steps, quiz } = preview;
   const [index, setIndex] = useState(() => stepIndexAt(steps, initialAt));
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const lastIndex = steps.length - 1;
   const positionAt = (stepIndex: number) =>
     stepIndex === 0 ? null : stepPosition(steps[stepIndex]);
@@ -255,6 +285,7 @@ function PreviewStepper({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'ArrowRight') goTo(index + 1);
       else if (event.key === 'ArrowLeft') goTo(index - 1);
+      else if (event.key === 'Escape') setIsFullscreen(false);
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -273,53 +304,74 @@ function PreviewStepper({
   const step = steps[index];
 
   return (
-    <main className="flex h-dvh flex-col gap-3 bg-foreground p-4 text-background">
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          size="md"
-          onClick={() => goTo(index - 1)}
-          disabled={index === 0}
-          className="rounded-xl border-2 border-background/50 text-xs font-extrabold disabled:opacity-50"
-        >
-          Prev
-        </Button>
-        <Button
-          type="button"
-          size="md"
-          onClick={() => goTo(index + 1)}
-          disabled={index === lastIndex}
-          className="rounded-xl bg-magenta text-xs font-extrabold text-white disabled:opacity-50"
-        >
-          Next
-        </Button>
-        <span className="text-xs font-bold text-background/70">
-          Step {index + 1} of {steps.length}
-        </span>
-        {step.isBlockEnd && (
-          <span className="rounded-full bg-cyan px-4 py-1 text-xs font-extrabold uppercase tracking-wide text-foreground">
-            Block ends here
+    <main
+      className={`flex h-dvh flex-col gap-3 bg-foreground text-background ${
+        isFullscreen ? 'fixed inset-0 z-50 p-0' : 'p-4'
+      }`}
+    >
+      {!isFullscreen && (
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            size="md"
+            onClick={() => goTo(index - 1)}
+            disabled={index === 0}
+            className="rounded-xl border-2 border-background/50 text-xs font-extrabold disabled:opacity-50"
+          >
+            Prev
+          </Button>
+          <Button
+            type="button"
+            size="md"
+            onClick={() => goTo(index + 1)}
+            disabled={index === lastIndex}
+            className="rounded-xl bg-magenta text-xs font-extrabold text-white disabled:opacity-50"
+          >
+            Next
+          </Button>
+          <span className="text-xs font-bold text-background/70">
+            Step {index + 1} of {steps.length}
           </span>
-        )}
-        <ModeToggle
-          mode={mode}
-          onModeChange={(next) => onModeChange(next, positionAt(index))}
-        />
-      </div>
-      <div className="flex min-h-0 flex-1 gap-3">
+          {step.isBlockEnd && (
+            <span className="rounded-full bg-cyan px-4 py-1 text-xs font-extrabold uppercase tracking-wide text-foreground">
+              Block ends here
+            </span>
+          )}
+          <ModeToggle
+            mode={mode}
+            onModeChange={(next) => onModeChange(next, positionAt(index))}
+          />
+          <Button
+            type="button"
+            size="md"
+            onClick={() => setIsFullscreen(true)}
+            className="rounded-xl border-2 border-background/50 text-xs font-extrabold"
+          >
+            Fullscreen
+          </Button>
+        </div>
+      )}
+      <div className={`flex min-h-0 flex-1 ${isFullscreen ? '' : 'gap-3'}`}>
         <div className="flex min-w-0 flex-1 items-center justify-center">
           <div
             className="flex aspect-video max-h-full max-w-full flex-col overflow-hidden bg-background text-foreground"
             style={{
               height: '100%',
-              maxWidth: 'calc((100dvh - 6rem) * 16 / 9)',
+              maxWidth: isFullscreen
+                ? 'calc(100dvh * 16 / 9)'
+                : 'calc((100dvh - 6rem) * 16 / 9)',
             }}
             data-testid="preview-frame"
           >
             <DisplayScreenView screen={step.screen} quiz={quiz} />
           </div>
         </div>
-        <JumpList steps={steps} currentIndex={index} onJump={goTo} />
+        {!isFullscreen && (
+          <div className="flex w-64 shrink-0 flex-col gap-3">
+            <HostOnlyPanel hostOnly={step.hostOnly} />
+            <JumpList steps={steps} currentIndex={index} onJump={goTo} />
+          </div>
+        )}
       </div>
     </main>
   );

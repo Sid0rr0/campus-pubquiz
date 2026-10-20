@@ -330,4 +330,115 @@ describe('QuizPreviewPanel', () => {
 
     expect(await screen.findByText(/nothing to preview/i)).toBeInTheDocument();
   });
+
+  describe('host-only panel', () => {
+    const NOTED_ROUNDS: SeededRound[] = [
+      {
+        id: 1,
+        title: 'Geography',
+        breakAfter: true,
+        note: 'Warm the room up',
+        showNoteOnScreen: false,
+        questions: [question(1, 'Capital of France?', 'Paris')],
+        questionNotesById: { 1: 'Accept Paris, France' },
+      },
+    ];
+
+    async function renderNoted() {
+      mockFetchQuizPreview.mockResolvedValue(
+        buildQuizPreview(NOTED_ROUNDS, 'answer_after_question'),
+      );
+      renderWithQuery(<QuizPreviewPanel quizId="7" />);
+      await screen.findByRole('button', { name: /next/i });
+    }
+
+    it('shows the round note on the title card and the question note on the question', async () => {
+      const user = userEvent.setup();
+      await renderNoted();
+
+      const panel = screen.getByRole('complementary', { name: /host only/i });
+      expect(within(panel).getByText('Warm the room up')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /next/i }));
+      expect(
+        within(panel).getByText('Accept Paris, France'),
+      ).toBeInTheDocument();
+      expect(
+        within(panel).queryByText('Warm the room up'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('says there is nothing host-only when the step has no text', async () => {
+      await renderPreview();
+
+      const panel = screen.getByRole('complementary', { name: /host only/i });
+      expect(within(panel).getByText(/nothing host-only/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('fullscreen', () => {
+    async function enterFullscreen() {
+      const user = userEvent.setup();
+      mockFetchQuizPreview.mockResolvedValue(
+        buildQuizPreview(
+          [
+            {
+              ...ROUNDS[0],
+              questionNotesById: { 1: 'Accept Paris, France' },
+            },
+          ],
+          'answer_after_question',
+        ),
+      );
+      renderWithQuery(<QuizPreviewPanel quizId="7" />);
+      await screen.findByRole('button', { name: /next/i });
+      await user.click(screen.getByRole('button', { name: /fullscreen/i }));
+      return user;
+    }
+
+    it('shows the frame alone: no host-only panel, jump list or controls', async () => {
+      await enterFullscreen();
+
+      expect(screen.getByTestId('preview-frame')).toBeInTheDocument();
+      expect(screen.getByText('Geography')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('complementary', { name: /host only/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('navigation', { name: /jump to/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /next/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /like the night/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('still steps with the arrow keys', async () => {
+      const user = await enterFullscreen();
+
+      await user.keyboard('{ArrowRight}');
+      expect(screen.getByText('Capital of France?')).toBeInTheDocument();
+      await user.keyboard('{ArrowRight}');
+      expect(screen.getAllByText('Paris').length).toBeGreaterThan(0);
+      await user.keyboard('{ArrowLeft}');
+      expect(screen.queryByText('Paris')).not.toBeInTheDocument();
+    });
+
+    it('leaves on Escape, back to the panel, list and controls at the same step', async () => {
+      const user = await enterFullscreen();
+      await user.keyboard('{ArrowRight}');
+
+      await user.keyboard('{Escape}');
+
+      expect(
+        screen.getByRole('complementary', { name: /host only/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('navigation', { name: /jump to/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Step 2 of 5')).toBeInTheDocument();
+    });
+  });
 });
