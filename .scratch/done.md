@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| quiz-preview | [Quiz preview](quiz-preview/spec.md) | 6 |
 | question-kind-derived-lists | [The question type registry derives every per-type list](question-kind-derived-lists/spec.md) | 3 |
 | live-results-read | [One live results read in place of the with* helpers](live-results-read/spec.md) | 2 |
 | ended-sessions-read | [One Ended-sessions read for which nights count and who took part](ended-sessions-read/spec.md) | 4 |

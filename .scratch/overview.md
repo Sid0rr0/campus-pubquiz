@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec         | Title                                                                                            | Tickets | Blocked by |
 | ------------ | ------------------------------------------------------------------------------------------------ | ------- | ---------- |
-| quiz-preview | [Quiz preview: step through a quiz's big-screen screens without a session](quiz-preview/spec.md) | 6       | —          |
 
 ## Won't do
 
