@@ -155,4 +155,122 @@ describe('EndedSessionsRead (Postgres integration)', () => {
       expect(await playedBy(team)).toBe(0);
     });
   });
+
+  describe('ended sessions, participations and the one-ended-session read', () => {
+    async function setStatus(
+      gameSessionId: number,
+      status: GameSession['status'],
+    ) {
+      await state.em.nativeUpdate(
+        GameSession,
+        { id: gameSessionId },
+        { status },
+      );
+    }
+
+    async function otherSession(
+      joinCode: string,
+      fields: { name?: string; playedAt?: Date } = {},
+    ) {
+      const session = state.em.create(GameSession, {
+        quiz: state.session.quiz,
+        joinCode,
+        status: 'ended',
+        ...(fields.name ? { name: fields.name } : {}),
+      });
+      await state.em.flush();
+      if (fields.playedAt) {
+        await state.em.nativeUpdate(
+          GameSession,
+          { id: session.id },
+          { createdAt: fields.playedAt },
+        );
+      }
+      return session;
+    }
+
+    async function endedIds() {
+      const rows = (await read.endedSessionsQuery()) as {
+        game_session_id: number;
+      }[];
+      return rows.map((row) => row.game_session_id).sort((a, b) => a - b);
+    }
+
+    it('leaves lobby and running sessions out of the ended sessions and participations', async () => {
+      const team = await insertTeam('Early', 'token-e');
+      const running = await otherSession('RUNNIN');
+      await setStatus(running.id, 'question_open');
+      state.em.create(GameSessionTeam, { gameSession: running, team });
+      await state.em.flush();
+
+      expect(await endedIds()).toEqual([]);
+      expect(await read.participations([team.id])).toEqual([]);
+
+      await setStatus(state.session.id, 'ended');
+      expect(await endedIds()).toEqual([state.session.id]);
+      expect(
+        (await read.participations([team.id])).map((p) => p.gameSessionId),
+      ).toEqual([state.session.id]);
+    });
+
+    it('names a session by its custom name when set, else its quiz title, in the header and as the sort column', async () => {
+      const named = await otherSession('NAMEDX', { name: 'Zebra night' });
+      await setStatus(state.session.id, 'ended');
+
+      expect(await read.endedSession(named.id)).toMatchObject({
+        displayName: 'Zebra night',
+        customName: 'Zebra night',
+        quizTitle: 'Answer Test Quiz',
+      });
+      expect(await read.endedSession(state.session.id)).toMatchObject({
+        displayName: 'Answer Test Quiz',
+        customName: null,
+      });
+      const sorted = (await read
+        .endedSessionsQuery()
+        .orderBy('display_name', 'desc')) as { game_session_id: number }[];
+      expect(sorted.map((row) => row.game_session_id)).toEqual([
+        named.id,
+        state.session.id,
+      ]);
+    });
+
+    it('lists participations newest first, session id breaking a tie on date', async () => {
+      const team = await insertTeam('Regular', 'token-r');
+      const played = new Date('2026-03-01T20:00:00Z');
+      const older = await otherSession('OLDERX', {
+        playedAt: new Date('2026-01-01T20:00:00Z'),
+      });
+      const tieA = await otherSession('TIEAAA', { playedAt: played });
+      const tieB = await otherSession('TIEBBB', { playedAt: played });
+      for (const session of [older, tieA, tieB]) {
+        state.em.create(GameSessionTeam, { gameSession: session, team });
+      }
+      await state.em.flush();
+      await setStatus(state.session.id, 'ended');
+      await state.em.nativeUpdate(
+        GameSession,
+        { id: state.session.id },
+        { createdAt: new Date('2026-02-01T20:00:00Z') },
+      );
+
+      const rows = await read.participations([team.id]);
+      expect(rows.map((row) => row.gameSessionId)).toEqual([
+        tieB.id,
+        tieA.id,
+        state.session.id,
+        older.id,
+      ]);
+      expect(rows[0]).toMatchObject({
+        teamId: team.id,
+        joinCode: 'TIEBBB',
+        playedAt: played,
+      });
+    });
+
+    it('returns nothing for an unknown session and for one that has not ended', async () => {
+      expect(await read.endedSession(state.session.id)).toBeNull();
+      expect(await read.endedSession(999_999)).toBeNull();
+    });
+  });
 });

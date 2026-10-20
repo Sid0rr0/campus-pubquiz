@@ -8,8 +8,8 @@ import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
-import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
 import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
@@ -40,7 +40,7 @@ describe('TeamService (Postgres integration)', () => {
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
       gameSessionTeams,
       buildHistory(),
-      new EndedSessionsRead(gameSessionTeams),
+      buildEndedSessionsRead(em),
     );
     const quiz = em.create(Quiz, { title: 'Team Test Quiz' });
     const session = em.create(GameSession, { quiz, joinCode: 'ABCDEF' });
@@ -57,6 +57,7 @@ describe('TeamService (Postgres integration)', () => {
           SessionPlayerCount,
         ),
       ),
+      buildEndedSessionsRead(em),
     );
   }
 

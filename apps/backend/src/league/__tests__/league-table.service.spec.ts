@@ -12,6 +12,7 @@ import { Team } from '@/db/entities/team.entity';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
 import { LeagueTableService } from '@/league/league-table.service';
+import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
 import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { useTestDatabase } from '@/test-db/test-database';
 
@@ -30,6 +31,7 @@ describe('LeagueTableService (Postgres integration)', () => {
       em.getRepository<League, LeagueRepository>(League),
       em.getRepository<LeagueSession, LeagueSessionRepository>(LeagueSession),
       buildStandingsService(em),
+      buildEndedSessionsRead(em),
     );
     quiz = em.create(Quiz, { title: 'Movie Night' });
     const round = em.create(Round, { quiz, orderIndex: 0, title: 'Round 1' });

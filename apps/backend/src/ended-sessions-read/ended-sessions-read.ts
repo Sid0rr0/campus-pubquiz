@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import { DISPLAY_NAME_SQL } from '@/ended-sessions-read/session-display-name';
 
 type Knex = ReturnType<GameSessionTeamRepository['getKnex']>;
 
@@ -14,6 +15,44 @@ export interface ParticipantRow {
   gameSessionId: number;
   teamId: number;
   isOnRoster: boolean;
+}
+
+/** An ended session's header: what every screen about a past night shows. */
+export interface EndedSessionHeader {
+  gameSessionId: number;
+  joinCode: string;
+  quizId: number;
+  displayName: string;
+  customName: string | null;
+  quizTitle: string;
+  playedAt: Date;
+}
+
+/** An ended session a team took part in. */
+export interface ParticipationRow extends EndedSessionHeader {
+  teamId: number;
+}
+
+interface HeaderRow {
+  game_session_id: number;
+  join_code: string;
+  quiz_id: number;
+  display_name: string;
+  custom_name: string | null;
+  quiz_title: string;
+  played_at: string | Date;
+}
+
+function headerOf(row: HeaderRow): EndedSessionHeader {
+  return {
+    gameSessionId: row.game_session_id,
+    joinCode: row.join_code,
+    quizId: row.quiz_id,
+    displayName: row.display_name,
+    customName: row.custom_name,
+    quizTitle: row.quiz_title,
+    playedAt: new Date(row.played_at),
+  };
 }
 
 function scoped<Q extends { whereIn(column: string, ids: number[]): Q }>(
@@ -82,6 +121,53 @@ export class EndedSessionsRead {
       .clearSelect()
       .select('p.team_id as team_id')
       .select(knex.raw('count(*) as sessions_played'));
+  }
+
+  /**
+   * Ended sessions as a query to narrow, join, order and page. Tables are
+   * aliased `gs` (game_sessions) and `qz` (quizzes); columns: `game_session_id`,
+   * `join_code`, `quiz_id`, `display_name`, `custom_name`, `quiz_title` and
+   * `played_at`.
+   */
+  endedSessionsQuery() {
+    const knex: Knex = this.gameSessionTeams.getKnex();
+    return knex('game_sessions as gs')
+      .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
+      .where('gs.status', 'ended')
+      .select('gs.id as game_session_id')
+      .select('gs.join_code as join_code')
+      .select('gs.quiz_id as quiz_id')
+      .select(knex.raw(`${DISPLAY_NAME_SQL} as display_name`))
+      .select('gs.name as custom_name')
+      .select('qz.title as quiz_title')
+      .select('gs.created_at as played_at');
+  }
+
+  /** One session's header by id; null if it doesn't exist or hasn't ended. */
+  async endedSession(
+    gameSessionId: number,
+  ): Promise<EndedSessionHeader | null> {
+    const row = (await this.endedSessionsQuery()
+      .where('gs.id', gameSessionId)
+      .first()) as HeaderRow | undefined;
+    return row ? headerOf(row) : null;
+  }
+
+  /** Every ended session each team took part in, newest first, session id breaking a tie. */
+  async participations(
+    teamIds: readonly number[],
+  ): Promise<ParticipationRow[]> {
+    if (teamIds.length === 0) return [];
+    const rows = (await this.endedSessionsQuery()
+      .join(
+        this.participantsQuery({ teamIds }).as('p'),
+        'p.game_session_id',
+        'gs.id',
+      )
+      .select('p.team_id as team_id')
+      .orderBy('gs.created_at', 'desc')
+      .orderBy('gs.id', 'desc')) as (HeaderRow & { team_id: number })[];
+    return rows.map((row) => ({ ...headerOf(row), teamId: row.team_id }));
   }
 
   /** Every team that took part in the given sessions, or in any session for the given teams. */

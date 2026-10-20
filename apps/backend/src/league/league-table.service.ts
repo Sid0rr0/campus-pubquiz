@@ -8,6 +8,7 @@ import {
   type PublicLeaguesPayload,
   type TeamLeaguePosition,
 } from '@campus-pubquiz/types';
+import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
@@ -46,6 +47,7 @@ export class LeagueTableService {
     @InjectRepository(LeagueSession)
     private readonly memberships: LeagueSessionRepository,
     private readonly standings: StandingsService,
+    private readonly endedSessions: EndedSessionsRead,
   ) {}
 
   /** Public league list: current leagues first, then the rest, each in the admin's order. */
@@ -127,13 +129,11 @@ export class LeagueTableService {
   }
 
   private async nightsOf(leagueId: number): Promise<TeamNight[]> {
-    const knex = this.memberships.getKnex();
-    const sessionRows = (await knex('league_sessions as ls')
-      .join('game_sessions as gs', 'gs.id', 'ls.game_session_id')
-      .where('ls.league_id', leagueId)
-      .where('gs.status', 'ended')
-      .select('gs.id as gameSessionId')) as { gameSessionId: number }[];
-    const sessionIds = sessionRows.map((row) => row.gameSessionId);
+    const sessionRows = (await this.endedSessions
+      .endedSessionsQuery()
+      .join('league_sessions as ls', 'ls.game_session_id', 'gs.id')
+      .where('ls.league_id', leagueId)) as { game_session_id: number }[];
+    const sessionIds = sessionRows.map((row) => row.game_session_id);
     if (sessionIds.length === 0) return [];
 
     const results = await this.standings.resultsForSessions(sessionIds);

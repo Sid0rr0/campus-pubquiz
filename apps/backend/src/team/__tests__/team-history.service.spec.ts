@@ -13,6 +13,7 @@ import { Team } from '@/db/entities/team.entity';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
 import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { useTestDatabase } from '@/test-db/test-database';
@@ -34,6 +35,7 @@ describe('TeamHistoryService (Postgres integration)', () => {
           SessionPlayerCount,
         ),
       ),
+      buildEndedSessionsRead(em),
     );
   });
 
