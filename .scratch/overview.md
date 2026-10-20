@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                            | Title                                                                                                                                                                      | Tickets | Blocked by |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| question-kind-derived-lists | [The question type registry derives every per-type list](question-kind-derived-lists/spec.md) | 3 | — |
 
 ## Won't do
 

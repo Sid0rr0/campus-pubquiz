@@ -3,7 +3,13 @@ import type { ImportQuestionPreview, SheetRow } from '../import';
 import { QUESTION_KINDS, checkQuestion } from '../question-kind';
 import { decodeSheetRow } from '../question-row-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
-import { BATCH_GRADED_TYPES, KAHOOT_ALLOWED_TYPES } from '../scoring';
+import { resolveAnswerKind } from '../answer-kind';
+import {
+  BATCH_GRADED_TYPES,
+  KAHOOT_ALLOWED_TYPES,
+  hasNumericAnswerKey,
+  kahootTypeNames,
+} from '../scoring';
 
 type Verdict = 'valid' | 'invalid';
 
@@ -312,9 +318,35 @@ describe('question kind grading flags', () => {
     }
   });
 
+  it('has a numeric answer key for exactly the types whose answer kind is a number', () => {
+    const numeric = QUESTION_TYPES.filter(hasNumericAnswerKey);
+    expect([...numeric].sort()).toEqual(['closest_guess', 'number']);
+    for (const type of QUESTION_TYPES) {
+      expect(hasNumericAnswerKey(type)).toBe(
+        resolveAnswerKind({ type }) === 'number',
+      );
+    }
+  });
+
+  it.each(QUESTION_TYPES)('%s answer kind equals its input kind', (type) => {
+    expect(resolveAnswerKind({ type })).toBe(QUESTION_KINDS[type].inputKind);
+  });
+
   it.each(QUESTION_TYPES)('%s declares how it is revealed', (type) => {
     expect(QUESTION_KINDS[type].revealKind).toBe(
       type === 'closest_guess' ? 'closest_guess' : 'answer',
+    );
+  });
+
+  it('names the kahoot-accepted types by lowercased label, in picker order, with "and" before the last', () => {
+    expect(kahootTypeNames()).toBe(
+      'multiple choice, sort / order, match pairs and number',
+    );
+    const names = QUESTION_TYPES.filter(
+      (type) => QUESTION_KINDS[type].kahootAllowed,
+    ).map((type) => QUESTION_KINDS[type].label.toLowerCase());
+    expect(kahootTypeNames()).toBe(
+      `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`,
     );
   });
 

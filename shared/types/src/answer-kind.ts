@@ -20,14 +20,9 @@ export interface AnswerKindQuestion {
   type: QuestionType;
 }
 
-/**
- * A `required`-choices type is always `choice`; every other type takes its
- * registry input kind.
- */
+/** A type's answer kind is its registry input kind. */
 export function resolveAnswerKind(question: AnswerKindQuestion): AnswerKind {
-  const entry = QUESTION_KINDS[question.type];
-  if (entry.choices === 'required') return 'choice';
-  return entry.inputKind;
+  return QUESTION_KINDS[question.type].inputKind;
 }
 
 export type Verdict = 'correct' | 'partial' | 'incorrect';

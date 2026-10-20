@@ -8,6 +8,7 @@ import {
 } from '@radix-ui/react-icons';
 import {
   isKahootAllowedType,
+  kahootTypeNames,
   ROUND_CATEGORIES,
   ROUND_NOTE_MAX_LENGTH,
   type QuizDraftIssue,
@@ -223,8 +224,8 @@ export function QuizRoundEditor({
             id={kahootBlockedHintId}
             className="text-xs font-bold text-foreground/60"
           >
-            Kahoot rounds only hold multiple choice, sort, match and number —
-            change or remove {formatPositions(blockingPositions)} first.
+            Kahoot rounds only hold {kahootTypeNames()} questions — change or
+            remove {formatPositions(blockingPositions)} first.
           </span>
         )}
         <FieldErrors issues={fieldIssues(roundLevelIssues, 'kahootMode')} />

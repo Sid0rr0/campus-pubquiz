@@ -10,7 +10,7 @@ See the spec's "Registry facts" and "Lists derived from the registry → The edi
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The registry entry has no choices field, the answer kind resolver reads the input kind only, and the unused input-kind helper is gone.
 - [ ] The numeric-answer-key helper exists, derived from the answer kind.
