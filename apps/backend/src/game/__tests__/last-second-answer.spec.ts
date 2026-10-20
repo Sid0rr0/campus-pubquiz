@@ -1,7 +1,6 @@
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
-  holdNextCall,
   setupRealStoreGatewayTest,
   type QuizRoundSpec,
   type RealStoreGateway,
@@ -119,13 +118,14 @@ describe('GameGateway — a last-second answer either counts or is refused', () 
       it('refuses the answer and stores nothing when the press was queued first', async () => {
         const locked = await toLocking();
         const { game, questionId } = locked;
-        const held = holdNextCall(game.progressRepository, 'save');
+        const held = game.holdAt('change');
         const moving = startPress(locked, pressing);
-        await held.started;
+        await held.reached;
 
-        const waiting = game.nextWriteWaiting();
+        const waiting = game.nextQueued();
         const submitting = submit(game, 1, questionId, '990');
         await waiting;
+        await game.letOthersRun();
         held.release();
         const [, ack] = await Promise.all([moving, submitting]);
 
@@ -142,13 +142,14 @@ describe('GameGateway — a last-second answer either counts or is refused', () 
       it('stores the answer and has the break grade it when the answer was queued first', async () => {
         const locked = await toLocking();
         const { game, questionId } = locked;
-        const held = holdNextCall(game.answerService, 'submit');
+        const held = game.holdAt('change');
         const submitting = submit(game, 1, questionId, '990');
-        await held.started;
+        await held.reached;
 
-        const waiting = game.nextWriteWaiting();
+        const waiting = game.nextQueued();
         const moving = startPress(locked, pressing);
         await waiting;
+        await game.letOthersRun();
         held.release();
         const [ack] = await Promise.all([submitting, moving]);
 
@@ -176,13 +177,14 @@ describe('GameGateway — a last-second answer either counts or is refused', () 
     it('refuses an answer sent while the lock’s press is held', async () => {
       const locked = await toLocking();
       const { game, questionId } = locked;
-      const held = holdNextCall(game.progressRepository, 'save');
+      const held = game.holdAt('change');
       const moving = startPress(locked, 'press');
-      await held.started;
+      await held.reached;
 
-      const waiting = game.nextWriteWaiting();
+      const waiting = game.nextQueued();
       const submitting = submit(game, 1, questionId, 'Paris');
       await waiting;
+      await game.letOthersRun();
       held.release();
       const [, ack] = await Promise.all([moving, submitting]);
 
@@ -193,13 +195,14 @@ describe('GameGateway — a last-second answer either counts or is refused', () 
     it('speed-scores an answer that was queued before the lock’s press', async () => {
       const locked = await toLocking();
       const { game, questionId } = locked;
-      const held = holdNextCall(game.answerService, 'submit');
+      const held = game.holdAt('change');
       const submitting = submit(game, 1, questionId, 'Paris');
-      await held.started;
+      await held.reached;
 
-      const waiting = game.nextWriteWaiting();
+      const waiting = game.nextQueued();
       const moving = startPress(locked, 'press');
       await waiting;
+      await game.letOthersRun();
       held.release();
       await Promise.all([submitting, moving]);
 

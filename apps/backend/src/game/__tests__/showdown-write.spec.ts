@@ -1,6 +1,5 @@
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  holdNextCall,
   setupRealStoreGatewayTest,
   tieOnFirstQuestion,
   type RealStoreGateway,
@@ -45,13 +44,14 @@ describe('GameGateway — showdown guesses and rounds are checked inside the ses
     await createRound();
     await guess(0, '40');
     await guess(1, '50');
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const pressing = game.act('ADVANCE');
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const guessing = guess(1, '42');
     await waiting;
+    await game.letOthersRun();
     held.release();
     const [, reply] = await Promise.all([pressing, guessing]);
 
@@ -63,13 +63,14 @@ describe('GameGateway — showdown guesses and rounds are checked inside the ses
   it('counts a guess held on its store when the reveal is pressed behind it', async () => {
     await createRound();
     await guess(0, '40');
-    const held = holdNextCall(game.showdownService, 'submitGuess');
+    const held = game.holdAt('change');
     const guessing = guess(1, '42');
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const pressing = game.act('ADVANCE');
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([guessing, pressing]);
 
@@ -80,17 +81,18 @@ describe('GameGateway — showdown guesses and rounds are checked inside the ses
 
   it('creates no round when a bonus held on its save breaks the tie first', async () => {
     const admin = await game.connectAdmin();
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: game.teams[0].teamId,
       category: 'shot',
       points: BREAKING_BONUS_POINTS,
     });
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const creating = createRound();
     await waiting;
+    await game.letOthersRun();
     held.release();
     const [, reply] = await Promise.all([awarding, creating]);
 

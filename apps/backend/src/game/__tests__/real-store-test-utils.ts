@@ -286,6 +286,14 @@ export interface RealStoreGateway extends PlayableQuiz {
    */
   nextWriteWaiting: () => Promise<void>;
   /**
+   * Lets a write that is not held run as far as it can, for the moment between
+   * `await game.nextQueued()` and `held.release()`. `settled` cannot do this:
+   * it waits for the held write. A queued write runs nothing here, so a write
+   * that overtakes the held one (the queue broken) has finished by the time
+   * the spec releases, and the spec's ordering assertion fails.
+   */
+  letOthersRun: () => Promise<void>;
+  /**
    * The auto-lock timer and the kahoot question timer of the seeded session
    * (or another by `joinCode`). Nothing waits in real time: read `isArmed` /
    * `dueAt`, or `fireNow` to expire one. Armed timers are cleared when the
@@ -730,6 +738,12 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       // A macrotask turn: every microtask queued by the last write has run.
       await new Promise<void>((resolve) => setImmediate(resolve));
     };
+    const letOthersRun = async () => {
+      // Database work takes several macrotask turns to finish.
+      for (let turn = 0; turn < 25; turn++) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+    };
     const controlTimer = (
       scheduler: ManualTimerScheduler,
       joinCode: string,
@@ -782,6 +796,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       inRequestContext: (work) => RequestContext.create(db.orm.em, work),
       nextWriteWaiting,
       settled,
+      letOthersRun,
       timers: (joinCode = quiz.joinCode) => ({
         lock: controlTimer(lockScheduler, joinCode),
         kahoot: controlTimer(kahootScheduler, joinCode),

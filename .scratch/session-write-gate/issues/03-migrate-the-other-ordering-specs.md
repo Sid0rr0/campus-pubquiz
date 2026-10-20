@@ -16,7 +16,7 @@ See the spec's "Migrating the specs".
 
 **Blocked by:** 01 (The Write gate and the test gate)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] No `holdNextCall` or `nextWriteWaiting` left in any of the six spec files
 - [ ] No spec casts the game state service to reach its Session write (action-availability and real-store-smoke use the harness's)

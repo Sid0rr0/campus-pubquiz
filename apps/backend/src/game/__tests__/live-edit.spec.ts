@@ -5,7 +5,6 @@ import type {
 } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
-  holdNextCall,
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -98,16 +97,17 @@ describe('Live edit — saving a quiz while sessions play it', () => {
 
   it('refuses a save that deletes the next question when the press opening it lands first, leaving the on-air question alone', async () => {
     const request = await draftEdited(withoutQuestion(0, 1)); // drop Q2
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = press('ADVANCE'); // opens Q2
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const saving = save(request);
     const refused = expect(saving).rejects.toBeInstanceOf(
       QuizLiveEditBlockedError,
     );
     await waiting;
 
+    await game.letOthersRun();
     held.release();
     await pressing;
     await refused;
@@ -118,13 +118,14 @@ describe('Live edit — saving a quiz while sessions play it', () => {
 
   it('opens the question that follows when the save deleting the next question lands before the press', async () => {
     const request = await draftEdited(withoutQuestion(0, 1)); // drop Q2
-    const held = holdNextCall(game.quizService, 'update');
+    const held = game.holdAt('hold');
     const saving = save(request);
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const pressing = press('ADVANCE');
     await waiting;
 
+    await game.letOthersRun();
     held.release();
     await Promise.all([saving, pressing]);
 
@@ -134,13 +135,14 @@ describe('Live edit — saving a quiz while sessions play it', () => {
 
   it('lands a save the frontier allows during a press, and the session carries on from the same opened question', async () => {
     const request = await draftEdited(withPrompt(1, 'Q4 reworded'));
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = press('ADVANCE'); // opens Q2
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const saving = save(request);
     await waiting;
 
+    await game.letOthersRun();
     held.release();
     await Promise.all([pressing, saving]);
 
@@ -172,15 +174,16 @@ describe('Live edit — saving a quiz while sessions play it', () => {
       ),
     );
 
-    const held = holdNextCall(game.seedService, 'loadGame');
+    const held = game.holdAt('change');
     const saving = save(request);
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const grading = game.gateway.handleGradeAnswer(asSocket(admin), {
       answerId: answer.answerId,
       pointsAwarded: 2,
     });
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([saving, grading]);
 
@@ -224,20 +227,21 @@ describe('Live edit — saving a quiz while sessions play it', () => {
     it('waits for a press held on the other session', async () => {
       const request = await draftEdited(withPrompt(1, 'Q4 reworded'));
       const updateSpy = jest.spyOn(game.quizService, 'update');
-      const held = holdNextCall(game.progressRepository, 'save');
+      const held = game.holdAt('change');
       const pressing = press('ADVANCE', otherAdmin);
-      await held.started;
+      await held.reached;
       // The save claims each session's queue in join-code order; only the claim
       // on the session with the press in flight has to wait.
       const claims = [game.joinCode, otherJoinCode]
         .sort()
-        .map(() => game.nextWriteWaiting());
+        .map(() => game.nextQueued());
       const saving = save(request);
       await claims[
         [game.joinCode, otherJoinCode].sort().indexOf(otherJoinCode)
       ];
 
       expect(updateSpy).not.toHaveBeenCalled();
+      await game.letOthersRun();
       held.release();
       await Promise.all([pressing, saving]);
 
@@ -268,10 +272,11 @@ describe('Live edit — saving a quiz while sessions play it', () => {
       other.quizId,
     );
 
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = press('ADVANCE'); // on the first quiz
-    await held.started;
+    await held.reached;
     await save(request, other.quizId);
+    await game.letOthersRun();
     held.release();
     await pressing;
 
