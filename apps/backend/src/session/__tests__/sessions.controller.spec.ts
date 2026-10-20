@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import {
-  DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
   type ActiveSessionSummary,
   type StateSnapshotPayload,
@@ -87,19 +86,13 @@ function snapshot(
     },
     roundTitle: '',
     isCurrentRoundKahoot: false,
-    roundTitles: [],
     currentQuestion: null,
     blockQuestions: [],
     revealQuestions: [],
-    answeredTeamIds: [],
     leaderboard: [],
     joinCode: 'GHIJKL',
     teams: [],
     questionLockAt: null,
-    closestGuessRevealStep: 0,
-    breakEndsAt: null,
-    displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
-    isDisplaySoundMuted: false,
     settings: DEFAULT_SESSION_SETTINGS,
     activeShowdown: null,
     showdownRevealStep: 0,

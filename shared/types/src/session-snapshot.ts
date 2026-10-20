@@ -22,6 +22,7 @@ import type {
   AdminStatePayload,
   DisplayStatePayload,
   PlayersStatePayload,
+  ScreenOperatorFields,
   StateSnapshotPayload,
   TeamsCorrect,
   TeamView,
@@ -79,6 +80,19 @@ function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
     // The leaderboard lists every roster team (re-read with each write and on
     // restore); `session.teams` is only filled as teams join.
     teamCount: session.leaderboard.length,
+  };
+}
+
+/** The fields only the big screen and /control (and /remote) read — added to the display and admin views, never the players view. */
+export function buildScreenOperatorFields(
+  session: SessionState,
+): ScreenOperatorFields {
+  return {
+    roundTitles: session.seededGame.rounds.map((round) => round.title),
+    answeredTeamIds: getAnsweredTeamIds(session),
+    breakEndsAt: session.breakEndsAt,
+    displayTextScale: session.displayTextScale,
+    isDisplaySoundMuted: session.isDisplaySoundMuted,
   };
 }
 
@@ -154,11 +168,9 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     isCurrentRoundKahoot:
       session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ??
       false,
-    roundTitles: session.seededGame.rounds.map((round) => round.title),
     currentQuestion: getCurrentQuestion(session),
     blockQuestions: getBlockQuestions(session),
     revealQuestions: getRevealQuestions(session),
-    answeredTeamIds: getAnsweredTeamIds(session),
     leaderboard: session.leaderboard,
     joinCode: session.seededGame.joinCode,
     teams: session.teams.map(
@@ -168,10 +180,6 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
       }),
     ),
     questionLockAt: session.questionLockAt,
-    closestGuessRevealStep: session.closestGuessRevealStep,
-    breakEndsAt: session.breakEndsAt,
-    displayTextScale: session.displayTextScale,
-    isDisplaySoundMuted: session.isDisplaySoundMuted,
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,

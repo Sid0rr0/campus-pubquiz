@@ -156,7 +156,8 @@ For a `closest_guess` question with at least one submitted guess,
 one question (smallest guess → highest guess → correct answer → closest
 team(s)) before falling through to the normal transition — see
 [Question Types](#question-types) below. This sub-walk is ephemeral
-(`closestGuessRevealStep` on the snapshot), not part of `GameProgress`.
+(`closestGuessRevealStep` on the session, in no room view), not part of
+`GameProgress`.
 
 There is **no per-question locking** — locking is purely a consequence of
 finishing a `breakAfter` round. A `locked` status existed in an earlier
@@ -358,15 +359,14 @@ view for a room.
 | `progress`        | Status + round/question indices + leaderboard flag                                                                                     |
 | `currentQuestion` | What the big screen shows (only while `question_open`)                                                                                 |
 | `blockQuestions`  | Questions open for answering (revealed-so-far during `question_open`; the whole locked block during `break`/`reveal`; empty otherwise) |
-| `answeredTeamIds` | Teams that have answered the current question — drives all response indicators                                                         |
 | `leaderboard`     | Graded totals, recomputed after every grade or bonus award                                                                             |
 | `joinCode`        | Six-character code for this game session                                                                                               |
 | `teams`           | Connected/registered teams                                                                                                             |
 
-The base also holds the other fields two or more rooms read (round titles,
-quiz structure, `questionLockAt`, `breakEndsAt`, `displayTextScale`,
-`isDisplaySoundMuted` (the big-screen mute; ephemeral like `displayTextScale`,
-and `/display` hands it to its sound registry), settings, showdown state, the closest_guess reveal step, `revealQuestions`).
+The base also holds the other fields every room reads (quiz structure,
+`questionLockAt`, settings, showdown state, `revealQuestions`). The closest_guess
+reveal step is in no view: it stays on the server, which trims the reveal
+questions to it.
 
 Browsers block audio until a tap, so `/display` shows an "Enable sound" button
 until it is tapped, whenever any display sound can play (that is, unless the
@@ -377,6 +377,7 @@ silences the lock-countdown track.
 
 | View                            | Fields                                                                                                                                                                           |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `breakEndsAt`, `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry) |
 | Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect`, `funFacts`, `leagueTop` |
 | Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                     |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                 |

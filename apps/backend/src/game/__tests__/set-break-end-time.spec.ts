@@ -3,7 +3,7 @@ import {
   SOCKET_ROOMS,
   type GameAction,
   type SocketRoomName,
-  type StateSnapshotPayload,
+  type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
@@ -18,9 +18,9 @@ describe('GameGateway — set break end time', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
-  function lastState(room: SocketRoomName) {
+  function lastState<Room extends SocketRoomName>(room: Room) {
     return game
-      .payloadsTo<StateSnapshotPayload>(room, SOCKET_EVENTS.STATE_UPDATED)
+      .payloadsTo<StateViewByRoom[Room]>(room, SOCKET_EVENTS.STATE_UPDATED)
       .at(-1);
   }
 
@@ -29,7 +29,7 @@ describe('GameGateway — set break end time', () => {
       game = await harness.createGateway();
     });
 
-    it('sets breakEndsAt and broadcasts it to every room', async () => {
+    it('sets breakEndsAt and broadcasts it to the big screen and the quiz master', async () => {
       const admin = await game.connectAdmin();
       game.clearEmits();
 
@@ -37,11 +37,7 @@ describe('GameGateway — set break end time', () => {
         breakEndsAt: BREAK_ENDS_AT,
       });
 
-      for (const room of [
-        SOCKET_ROOMS.DISPLAY,
-        SOCKET_ROOMS.ADMIN,
-        SOCKET_ROOMS.PLAYERS,
-      ]) {
+      for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN] as const) {
         expect(lastState(room)?.breakEndsAt).toBe(BREAK_ENDS_AT);
       }
     });

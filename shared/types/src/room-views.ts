@@ -85,8 +85,6 @@ export interface StateSnapshotPayload {
   roundTitle: string;
   /** Whether the round at `progress.roundIndex` has kahootMode set. */
   isCurrentRoundKahoot: boolean;
-  /** Title of every round in the quiz, in order — always populated (like `quizStructure`), used by the `round_overview` screen. */
-  roundTitles: string[];
   currentQuestion: QuestionView | null;
   /**
    * Questions open for (re-)answering: everything revealed so far in the
@@ -96,20 +94,37 @@ export interface StateSnapshotPayload {
   blockQuestions: BlockQuestionView[];
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. The players view carries only the reveal walk so far (see the Screen projection). */
   revealQuestions: BlockRevealQuestionView[];
-  /** Teams that have answered the current question. Empty when none is open. */
-  answeredTeamIds: number[];
   leaderboard: LeaderboardEntry[];
   joinCode: string;
   teams: TeamView[];
   /** Epoch-ms deadline when the current (last-of-round) question auto-locks, or null if no lock is armed. */
   questionLockAt: number | null;
+  /** This session's configurable settings — see SessionSettings. */
+  settings: SessionSettings;
   /**
-   * closest_guess only — which reveal sub-step (0-indexed) is shown for the
-   * question currently at revealIndex. Ephemeral, like leaderboardRevealCount:
-   * not part of GameProgress, not persisted, meaningless for every other
-   * status/type. 0 whenever the current reveal question isn't closest_guess.
+   * The in-progress/just-resolved showdown tiebreaker round, or null between
+   * rounds. Only ever set while progress.status === 'ended' — see
+   * ActiveShowdownView. Fields are progressively included based on
+   * showdownRevealStep, the same secrecy technique already used for
+   * ClosestGuessRevealData.
    */
-  closestGuessRevealStep: number;
+  activeShowdown: ActiveShowdownView | null;
+  /**
+   * Showdown reveal sub-step (0-indexed): 0..(participants.length + 1).
+   * Ephemeral. Meaningless whenever activeShowdown is null.
+   */
+  showdownRevealStep: number;
+}
+
+/**
+ * The fields only the big screen and the quiz master's /control (and /remote)
+ * read, added to the display and admin views and kept off the players view.
+ */
+export interface ScreenOperatorFields {
+  /** Title of every round in the quiz, in order — used by the `round_overview` screen and /control's score table. */
+  roundTitles: string[];
+  /** Teams that have answered the current question. Empty when none is open. */
+  answeredTeamIds: number[];
   /**
    * Epoch-ms time the admin expects the break to end, or null when unset —
    * shown as a "back at HH:MM" line on the display's break screen. Ephemeral
@@ -129,22 +144,6 @@ export interface StateSnapshotPayload {
    * SET_DISPLAY_SOUND_MUTED. Ephemeral (not persisted), defaults to false.
    */
   isDisplaySoundMuted: boolean;
-  /** This session's configurable settings — see SessionSettings. */
-  settings: SessionSettings;
-  /**
-   * The in-progress/just-resolved showdown tiebreaker round, or null between
-   * rounds. Only ever set while progress.status === 'ended' — see
-   * ActiveShowdownView. Fields are progressively included based on
-   * showdownRevealStep, the same secrecy technique already used for
-   * ClosestGuessRevealData.
-   */
-  activeShowdown: ActiveShowdownView | null;
-  /**
-   * Showdown reveal sub-step (0-indexed), ephemeral like
-   * closestGuessRevealStep: 0..(participants.length + 1). Meaningless
-   * whenever activeShowdown is null.
-   */
-  showdownRevealStep: number;
 }
 
 /**
@@ -155,10 +154,8 @@ export interface StateSnapshotPayload {
  * read what its own room is sent.
  */
 /** What /display renders: the snapshot plus the screen on air, resolved once by the server. */
-export interface DisplayStatePayload extends Omit<
-  StateSnapshotPayload,
-  'revealQuestions'
-> {
+export interface DisplayStatePayload
+  extends Omit<StateSnapshotPayload, 'revealQuestions'>, ScreenOperatorFields {
   /** The reveal questions of the block; the one on air is shown only as far as its closest-guess step has got (see the Screen projection). */
   revealQuestions: PlayersRevealQuestionView[];
   /** The named screen on air, and the question or round it is about. */
@@ -221,7 +218,10 @@ export type PreviousState =
 
 /** The quiz master's view: the snapshot plus the screen on air and what /control's question browser marks as on air. */
 export interface AdminStatePayload
-  extends Omit<StateSnapshotPayload, 'teams'>, AdminIndicators {
+  extends
+    Omit<StateSnapshotPayload, 'teams'>,
+    AdminIndicators,
+    ScreenOperatorFields {
   /** The roster, each team with its player count and over-cap flag. */
   teams: AdminTeamView[];
   onAirScreen: OnAirScreen;

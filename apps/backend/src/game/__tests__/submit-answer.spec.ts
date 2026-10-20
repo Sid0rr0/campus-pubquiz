@@ -1,7 +1,7 @@
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
-  type StateSnapshotPayload,
+  type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
@@ -93,8 +93,8 @@ describe('GameGateway — submit answer', () => {
 
     await submit(team.socket, team.teamId);
 
-    for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.PLAYERS]) {
-      const snapshots = game.payloadsTo<StateSnapshotPayload>(
+    for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN] as const) {
+      const snapshots = game.payloadsTo<StateViewByRoom[typeof room]>(
         room,
         SOCKET_EVENTS.STATE_UPDATED,
       );

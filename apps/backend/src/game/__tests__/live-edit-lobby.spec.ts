@@ -3,7 +3,7 @@ import {
   SOCKET_ROOMS,
   type ImportRoundPreview,
   type SocketRoomName,
-  type StateSnapshotPayload,
+  type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
@@ -60,9 +60,9 @@ describe('Live edit — saving a quiz while a session waits in the lobby', () =>
     game.clearEmits();
   });
 
-  const lastSnapshot = (room: SocketRoomName) =>
+  const lastSnapshot = <Room extends SocketRoomName>(room: Room) =>
     game
-      .payloadsTo<StateSnapshotPayload>(room, SOCKET_EVENTS.STATE_UPDATED)
+      .payloadsTo<StateViewByRoom[Room]>(room, SOCKET_EVENTS.STATE_UPDATED)
       .at(-1);
 
   it('plays the saved quiz once Start quiz is pressed: titles, added and deleted questions, the corrected answer', async () => {

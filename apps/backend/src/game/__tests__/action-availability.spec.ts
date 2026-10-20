@@ -35,16 +35,24 @@ describe('Screen projection — Advance/Previous availability', () => {
   }
 
   function position() {
-    const snapshot = game.gameState.getSnapshot(game.joinCode);
-    const { status, roundIndex, questionIndex, revealIndex } =
-      snapshot.progress;
+    const view = game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
+    const { status, roundIndex, questionIndex, revealIndex } = view.progress;
+    // No view carries the closest-guess step; the key of an uncovered reveal
+    // screen ends with it (any other key would change with the board).
+    const isRevealUncovered =
+      status === 'reveal' &&
+      !view.progress.isLeaderboardVisible &&
+      !view.progress.isJoinOverlayVisible;
+    const closestGuessStep = isRevealUncovered
+      ? view.screenKey.split('-').at(-1)
+      : null;
     return JSON.stringify([
       status,
       roundIndex,
       questionIndex,
       revealIndex,
-      snapshot.closestGuessRevealStep,
-      snapshot.showdownRevealStep,
+      closestGuessStep,
+      view.showdownRevealStep,
     ]);
   }
 

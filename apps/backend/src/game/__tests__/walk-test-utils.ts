@@ -156,7 +156,7 @@ export function createPreviewWalk(
         progress.roundIndex,
         progress.questionIndex,
         progress.revealIndex,
-        view.closestGuessRevealStep,
+        view.screenKey,
         view.showdownRevealStep,
         progress.isLeaderboardVisible,
         view.leaderboardRevealCount,
