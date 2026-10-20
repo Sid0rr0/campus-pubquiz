@@ -231,14 +231,14 @@ describe('TeamHistoryService (Postgres integration)', () => {
     });
   });
 
-  it('gives a win only to the single Standings winner of a tie for first', async () => {
+  it('counts a tie for first as a win for every tied team', async () => {
     const { teams } = await playSession({ Zed: 10, Amy: 10 });
 
     const amy = await history.detail(teams.Amy.id);
     const zed = await history.detail(teams.Zed.id);
 
     expect(amy!.summary.wins).toBe(1);
-    expect(zed!.summary.wins).toBe(0);
+    expect(zed!.summary.wins).toBe(1);
     expect(zed!.sessions[0]).toMatchObject({ placing: 1, placingTo: 2 });
     expect(zed!.summary.podiums).toBe(1);
   });

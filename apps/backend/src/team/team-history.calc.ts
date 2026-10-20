@@ -28,12 +28,12 @@ export function averagePlacingOf(
 }
 
 /**
- * A win is placing 1 *and* being the session's single Standings winner, so a
- * tie for first gives the win to one team only, matching the standings table.
+ * `nightsWon` is how many of the rows were a night won (placing 1, ties
+ * included), counted by the Session result module.
  */
 export function summarizeTeamHistory(
   rows: readonly TeamSessionRow[],
-  winningSessionIds: ReadonlySet<number>,
+  nightsWon: number,
 ): TeamStatsSummary {
   const placings = placingsOf(rows);
   // A session with no points to win has no share, so it stays out of the mean.
@@ -45,9 +45,7 @@ export function summarizeTeamHistory(
   );
   return {
     sessionsPlayed: rows.length,
-    wins: rows.filter(
-      (row) => row.placing === 1 && winningSessionIds.has(row.gameSessionId),
-    ).length,
+    wins: nightsWon,
     podiums: placings.filter((placing) => placing <= PODIUM_PLACES).length,
     bestPlacing: placings.length > 0 ? Math.min(...placings) : null,
     averagePlacing: averagePlacingOf(rows),

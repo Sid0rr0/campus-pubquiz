@@ -1382,8 +1382,8 @@ non-numeric id a 400. The response is `{ id, name, summary, sessions }`:
 
 Placings come from the Standings service for each session, never from SQL ranks,
 so the page agrees with each session's standings table; a tie shares the
-competition rank ("Joint 2nd"). A **win** is placing 1 and being the session's
-single Standings winner. A session the team was kicked from or left is listed
+competition rank ("Joint 2nd"). A **win** is placing 1, ties included: every
+team tied for first wins the night, matching the league's nights won. A session the team was kicked from or left is listed
 with `hasLeft: true` and no placing: it counts in `sessionsPlayed` but not in
 wins, podiums, best or average placing. The response never carries feedback or
 the team code.

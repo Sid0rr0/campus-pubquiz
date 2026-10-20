@@ -149,8 +149,21 @@ Where a team finished in one ended session, with tied teams sharing a place (joi
 _Avoid_: position, rank (on its own)
 
 **Average placing**:
-The mean of a team's placings across the ended sessions it played, leaving out the sessions it left. A team with no placing has no average placing.
+The mean of a team's placings across the ended sessions it played, leaving out the sessions it left. A team with no placing has no average placing. The team page averages every night the team has a placing for; the league averages only the nights that count towards the league (the team answered at least one question).
 _Avoid_: average position, average rank
+
+**Session result**:
+What one ended session's results mean, computed by a pure module beside Standings from the session's Standings and its stored questions and answers. Per team: placing, whether it left, totals, whether it answered, its correct count, whether it won the night and whether it is the session winner. Per question: how many teams answered, how many were correct and its correct rate. For the session: the participant count and the max points. It never ranks or re-sums; placing, ties and participation stay with Standings.
+
+**Night won**:
+Placing 1st in an ended session. Every team tied for first wins the night, and a team that left never does. The league's nights won and the team page's Wins both count it.
+_Avoid_: win (on its own; see **Session winner**)
+
+**Session winner**:
+The single team Standings picks as winner of an ended session, by showdown or else name order. It is the trophy row on the stats page. It is not the same as a **night won**: a team tied for first wins the night without being the session winner.
+
+**Correct rate**:
+How much of a question the room got right: the summed credit of its answers (a correct answer counts 1, a partial answer its share of the question's points) divided by the participant count. A closest_guess question has no correct rate, since it has one winner by design; it is left out of every rate-based figure.
 
 **Team page**:
 A team's own public page at `/team`, opened with its team code instead of a login. It shows the team's history across ended sessions (the same figures staff see on the team stats page, minus anything staff-only), and for each ended session every question with the team's own answer, its verdict and the right answer. It never shows other teams' answers or feedback.
@@ -186,7 +199,7 @@ What a team earns towards a league from one session: 5, 4, 3, 2 or 1 for placing
 _Avoid_: season points, ranking points
 
 **League table**:
-The teams of a league ranked by league points; teams level on points are split by more nights won (a night is won by every team placed 1st, so tied teams each win it), then by better average placing (compared unrounded), and otherwise share the position.
+The teams of a league ranked by league points; teams level on points are split by more nights won (see **Night won**), then by better average placing (compared unrounded), and otherwise share the position.
 _Avoid_: league leaderboard, standings (that's one session)
 
 **League top**:

@@ -10,6 +10,12 @@ import type {
 import { compareTeamNames, rankTeams } from '@campus-pubquiz/types';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import {
+  sessionResult,
+  type SessionResult,
+  type SessionResultAnswer,
+  type SessionResultQuestion,
+} from '@/standings/session-result';
 
 /** A team's points with no place in the ranking — one that took part but is no longer on the roster. */
 export type DepartedTeam = Omit<LeaderboardEntry, 'rank' | 'rankTo'>;
@@ -281,6 +287,64 @@ export class StandingsService {
       });
     }
     return result;
+  }
+
+  /**
+   * The Session result of each ended session among the given ids (other
+   * sessions are skipped, so they have no entry). Questions come from the
+   * session's quiz; answers include those of teams that have left.
+   */
+  async resultsForSessions(
+    gameSessionIds: readonly number[],
+  ): Promise<Map<number, SessionResult>> {
+    const results = new Map<number, SessionResult>();
+    if (gameSessionIds.length === 0) return results;
+    const knex = this.gameSessionTeams.getKnex();
+
+    const endedRows = (await knex('game_sessions')
+      .whereIn('id', [...gameSessionIds])
+      .where('status', 'ended')
+      .select('id')) as { id: number }[];
+    const endedIds = endedRows.map((row) => row.id);
+    if (endedIds.length === 0) return results;
+
+    const [standings, questionRows, answerRows] = await Promise.all([
+      this.forSessions(endedIds),
+      knex('game_sessions as gs')
+        .join('rounds as r', 'r.quiz_id', 'gs.quiz_id')
+        .join('questions as q', 'q.round_id', 'r.id')
+        .whereIn('gs.id', endedIds)
+        .select('gs.id as gameSessionId', 'q.id as id', 'q.type as type')
+        .select('q.points as points', 'r.id as roundId') as Promise<
+        (SessionResultQuestion & { gameSessionId: number })[]
+      >,
+      knex('answers')
+        .whereIn('game_session_id', endedIds)
+        .select('game_session_id as gameSessionId')
+        .select('question_id as questionId', 'team_id as teamId')
+        .select('verdict', 'points_awarded as pointsAwarded') as Promise<
+        (SessionResultAnswer & { gameSessionId: number })[]
+      >,
+    ]);
+
+    for (const gameSessionId of endedIds) {
+      results.set(
+        gameSessionId,
+        sessionResult({
+          standings: standings.get(gameSessionId)!,
+          questions: questionRows.filter(
+            (row) => row.gameSessionId === gameSessionId,
+          ),
+          answers: answerRows
+            .filter((row) => row.gameSessionId === gameSessionId)
+            .map((row) => ({
+              ...row,
+              pointsAwarded: Number(row.pointsAwarded),
+            })),
+        }),
+      );
+    }
+    return results;
   }
 
   /**
