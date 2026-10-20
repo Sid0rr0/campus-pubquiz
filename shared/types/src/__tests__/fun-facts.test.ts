@@ -168,6 +168,20 @@ describe('describeFunFacts', () => {
       });
     });
 
+    it('breaks a time tie in the leaderboard name order (capitals before lowercase)', () => {
+      const session = sessionOf(kahootRounds, afterSecondKahoot, {
+        answers: [
+          answer(2, 0, 'correct', { responseMs: 2000, teamName: 'apple' }),
+          answer(2, 1, 'correct', { responseMs: 2000, teamName: 'Zed' }),
+        ],
+      });
+
+      expect(describeFunFacts(session)[0]).toMatchObject({
+        kind: 'fastest_correct_answer',
+        teamName: 'Zed',
+      });
+    });
+
     it('ignores response times on questions that are not kahoot', () => {
       const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
         answers: [answer(1, 0, 'correct', { responseMs: 1500 })],
@@ -394,6 +408,25 @@ describe('describeFunFacts', () => {
       expect(sweep).toEqual({
         kind: 'clean_sweep',
         teamNames: ['Alpha', 'Charlie'],
+      });
+    });
+
+    it('lists the swept teams in the leaderboard name order (capitals before lowercase)', () => {
+      const session = sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+        answers: [
+          answer(3, 0, 'correct', { teamName: 'apple' }),
+          answer(4, 0, 'correct', { teamName: 'apple' }),
+          answer(3, 1, 'correct', { teamName: 'Zed' }),
+          answer(4, 1, 'correct', { teamName: 'Zed' }),
+        ],
+      });
+
+      const sweep = describeFunFacts(session).find(
+        (fact) => fact.kind === 'clean_sweep',
+      );
+      expect(sweep).toEqual({
+        kind: 'clean_sweep',
+        teamNames: ['Zed', 'apple'],
       });
     });
 

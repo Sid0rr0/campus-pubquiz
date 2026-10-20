@@ -8,7 +8,7 @@ Parent spec: `.scratch/session-result-module/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Shared types has one question correct-rate rule:
   - an answer's verdict credit: `correct` counts 1, `partial` counts its points' share clamped to 0–1, anything else counts 0;

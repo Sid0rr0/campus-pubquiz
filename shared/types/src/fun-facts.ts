@@ -1,6 +1,11 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import type { Verdict } from './answer-kind';
+import {
+  answerCredit,
+  hasMeaningfulCorrectRate,
+} from './question-correct-rate';
+import { compareTeamNames } from './ranking-rule';
 import type { SessionState } from './session-state';
 
 /** One submitted answer, as far as fun facts need it. */
@@ -90,17 +95,10 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
       questionNumberInRound: questionIndex + 1,
       prompt: question.prompt,
       isKahoot: round.kahootMode ?? false,
-      isClosestGuess: question.type === 'closest_guess',
+      isClosestGuess: !hasMeaningfulCorrectRate(question.type),
       points: question.points,
     })),
   );
-}
-
-/** How much of a question one answer counts: `correct` in full, `partial` as its points' share (0-1), else none — the stats page's definition. */
-function answerCredit(answer: FunFactAnswer, questionPoints: number): number {
-  if (answer.verdict === 'correct') return 1;
-  if (answer.verdict !== 'partial' || questionPoints <= 0) return 0;
-  return Math.min(1, Math.max(0, answer.pointsAwarded / questionPoints));
 }
 
 /** First element with the smallest score; ties keep the earlier one. */
@@ -137,7 +135,7 @@ function fastestCorrectAnswer(
       kahootById.has(a.questionId),
   );
   const fastest = pickLowest(
-    [...timed].sort((a, b) => a.teamName.localeCompare(b.teamName)),
+    [...timed].sort((a, b) => compareTeamNames(a.teamName, b.teamName)),
     (a) => a.responseMs ?? Infinity,
   );
   if (fastest === null || fastest.responseMs === null) return null;
@@ -204,7 +202,7 @@ function cleanSweep(
   const names = [...correctCounts]
     .filter(([, count]) => count === blockIds.size)
     .map(([teamId]) => teamNames.get(teamId)!)
-    .sort((a, b) => a.localeCompare(b));
+    .sort(compareTeamNames);
   return names.length === 0 ? null : { kind: 'clean_sweep', teamNames: names };
 }
 

@@ -647,6 +647,40 @@ describe('computeSessionDetail', () => {
     });
   });
 
+  it('breaks fastest answer and fastest team ties in the leaderboard name order (capitals before lowercase)', () => {
+    const answerBy = (teamId: number, teamName: string) => ({
+      questionId: 10,
+      teamId,
+      teamName,
+      pointsAwarded: 1,
+      gradedAt: '2026-01-01T00:00:01.000Z',
+      verdict: 'correct' as const,
+      responseMs: 2000,
+    });
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'apple' },
+          { teamId: 2, teamName: 'Zed' },
+        ],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Q',
+            type: 'free_text',
+            points: 1,
+          },
+        ],
+        answers: [answerBy(1, 'apple'), answerBy(2, 'Zed')],
+      }),
+    );
+
+    expect(result.highlights.fastestAnswer?.teamName).toBe('Zed');
+    expect(result.highlights.fastestTeam?.teamName).toBe('Zed');
+  });
+
   it('sums bonus points by category', () => {
     const result = computeSessionDetail(
       buildInput({

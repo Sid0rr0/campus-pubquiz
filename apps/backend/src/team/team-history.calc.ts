@@ -1,14 +1,14 @@
-import type { TeamSessionRow, TeamStatsSummary } from '@campus-pubquiz/types';
+import {
+  displayedAveragePlacing,
+  type TeamSessionRow,
+  type TeamStatsSummary,
+} from '@campus-pubquiz/types';
 
 const PODIUM_PLACES = 3;
 
 function mean(values: readonly number[]): number | null {
   if (values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function roundToOneDecimal(value: number): number {
-  return Math.round(value * 10) / 10;
 }
 
 /** The placings a team earned: sessions it left have none. */
@@ -24,8 +24,7 @@ function placingsOf(rows: readonly TeamSessionRow[]): number[] {
 export function averagePlacingOf(
   rows: readonly TeamSessionRow[],
 ): number | null {
-  const average = mean(placingsOf(rows));
-  return average === null ? null : roundToOneDecimal(average);
+  return displayedAveragePlacing(placingsOf(rows));
 }
 
 /**

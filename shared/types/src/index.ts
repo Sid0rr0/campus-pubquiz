@@ -13,6 +13,8 @@ export * from './showdown';
 export * from './admin-actions';
 export * from './rest';
 export * from './ranking-rule';
+export * from './question-correct-rate';
+export * from './average-placing';
 export * from './leaderboard-tiebreak';
 export * from './leaderboard-board';
 export * from './import';

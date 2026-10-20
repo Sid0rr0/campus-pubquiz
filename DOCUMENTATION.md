@@ -444,11 +444,11 @@ module, in this order, and skips a fact with no data:
 
 | `kind`                   | Fields                               | Meaning                                                                                                                                                         |
 | ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fastest_correct_answer` | `teamName`, `responseMs`, `question` | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the alphabetically first team                                   |
+| `fastest_correct_answer` | `teamName`, `responseMs`, `question` | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the first team in leaderboard name order                                   |
 | `toughest_question`      | `correctRate` (0-1), `question`      | Lowest correct rate above 0 of the revealed questions, never the question `nobody_got_it` names; skipped when none is below 1; never a `closest_guess` question |
 | `room_split`             | `correctRate` (0-1), `question`      | Revealed question whose correct rate is closest to one half (strictly between 0 and 1); never a `closest_guess` question                                        |
 | `nobody_got_it`          | `question`                           | First revealed question with no `correct` answer (a question nobody answered is skipped); never a `closest_guess` question                                      |
-| `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, alphabetical; `closest_guess` questions of the block are not counted                        |
+| `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted                        |
 | `bonus_awards_so_far`    | `counts: { category, count }[]`      | Positive bonus awards per category, in category order (`shot`, `selfie`, `custom`)                                                                              |
 
 `question` is `{ questionId, roundNumber, questionNumberInRound, prompt }`. The

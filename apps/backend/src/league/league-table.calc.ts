@@ -1,4 +1,9 @@
-import { compareTeamNames, type LeagueTableRow } from '@campus-pubquiz/types';
+import {
+  averagePlacing,
+  compareTeamNames,
+  displayedAveragePlacing,
+  type LeagueTableRow,
+} from '@campus-pubquiz/types';
 
 /** Points for placing 1st to 5th in a session; nothing below 5th. */
 export const LEAGUE_PLACING_POINTS = [5, 4, 3, 2, 1] as const;
@@ -37,17 +42,6 @@ interface Tally {
   nightsPlayed: number;
   nightsWon: number;
   placings: number[];
-}
-
-/** The unrounded mean placing: what the tie-break compares. */
-function averageOf(placings: readonly number[]): number | null {
-  if (placings.length === 0) return null;
-  return placings.reduce((sum, p) => sum + p, 0) / placings.length;
-}
-
-/** The mean as the table shows it, to one decimal. */
-function displayed(average: number | null): number | null {
-  return average === null ? null : Math.round(average * 10) / 10;
 }
 
 /** Lower is better; a team with no placing sorts after any team with one. */
@@ -92,7 +86,8 @@ export function buildLeagueTable(
       leaguePoints: tally.leaguePoints,
       nightsPlayed: tally.nightsPlayed,
       nightsWon: tally.nightsWon,
-      mean: averageOf(tally.placings),
+      mean: averagePlacing(tally.placings),
+      displayedMean: displayedAveragePlacing(tally.placings),
     }))
     .sort(
       (a, b) =>
@@ -108,14 +103,18 @@ export function buildLeagueTable(
     a.nightsWon === b.nightsWon &&
     a.mean === b.mean;
 
-  return ordered.map(({ mean, ...row }, index) => {
+  return ordered.map((team, index) => {
     let groupStart = index;
-    while (groupStart > 0 && level(ordered[groupStart - 1], ordered[index])) {
+    while (groupStart > 0 && level(ordered[groupStart - 1], team)) {
       groupStart--;
     }
     return {
-      ...row,
-      averagePlacing: displayed(mean),
+      teamId: team.teamId,
+      teamName: team.teamName,
+      leaguePoints: team.leaguePoints,
+      nightsPlayed: team.nightsPlayed,
+      nightsWon: team.nightsWon,
+      averagePlacing: team.displayedMean,
       position: groupStart + 1,
     };
   });

@@ -1,5 +1,7 @@
 import {
+  answerCredit,
   BONUS_CATEGORIES,
+  compareTeamNames,
   type BonusCategory,
   type QuestionType,
   type QuizDifficultyLabel,
@@ -115,18 +117,6 @@ function isCorrect(answer: SessionDetailAnswerInputRow): boolean {
   return answer.verdict === 'correct';
 }
 
-/** How much of a question one answer counts toward its correct rate, read
- * from the verdict alone: `correct` in full, `partial` as its points' share
- * of the question's points (0–1), anything else (incorrect, ungraded) none. */
-function answerCredit(
-  answer: SessionDetailAnswerInputRow,
-  questionPoints: number,
-): number {
-  if (answer.verdict === 'correct') return 1;
-  if (answer.verdict !== 'partial' || questionPoints <= 0) return 0;
-  return Math.min(1, Math.max(0, answer.pointsAwarded / questionPoints));
-}
-
 /** First row achieving the min/max of `getValue` — ties keep the earlier
  * row, so callers relying on `rows` already being in display order get the
  * "ties go to the earlier question/round" rule for free. */
@@ -160,7 +150,7 @@ function pickFastestAnswer(
   const fastest = timed.reduce((current, row) =>
     row.responseMs < current.responseMs ||
     (row.responseMs === current.responseMs &&
-      row.teamName.localeCompare(current.teamName) < 0)
+      compareTeamNames(row.teamName, current.teamName) < 0)
       ? row
       : current,
   );
@@ -182,7 +172,7 @@ function pickFastestTeam(
   const fastest = timed.reduce((current, row) =>
     row.avgResponseMs < current.avgResponseMs ||
     (row.avgResponseMs === current.avgResponseMs &&
-      row.teamName.localeCompare(current.teamName) < 0)
+      compareTeamNames(row.teamName, current.teamName) < 0)
       ? row
       : current,
   );
