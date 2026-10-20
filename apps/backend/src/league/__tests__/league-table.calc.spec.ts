@@ -15,7 +15,6 @@ function night(
     teamId: overrides.teamId ?? idOf(teamName),
     teamName,
     placing,
-    won: placing === 1,
     answered: true,
     ...overrides,
   };
@@ -41,7 +40,7 @@ describe('leaguePointsFor', () => {
   });
 
   it('gives a team that left only the participation point', () => {
-    expect(leaguePointsFor(night('A', null, { won: false }))).toBe(1);
+    expect(leaguePointsFor(night('A', null))).toBe(1);
   });
 
   it('gives a team that answered nothing no points, whatever its placing', () => {
@@ -90,8 +89,14 @@ describe('buildLeagueTable', () => {
     expect(table.map((row) => row.leaguePoints)).toEqual([5, 5]);
   });
 
+  it('credits a night won to every team tied for first', () => {
+    const table = buildLeagueTable([night('A', 1), night('B', 1)]);
+
+    expect(table.map((row) => row.nightsWon)).toEqual([1, 1]);
+  });
+
   it('counts a left team as played with the participation point and no placing', () => {
-    const [row] = buildLeagueTable([night('A', null, { won: false })]);
+    const [row] = buildLeagueTable([night('A', null)]);
 
     expect(row).toMatchObject({
       leaguePoints: 1,
@@ -149,6 +154,27 @@ describe('buildLeagueTable', () => {
       expect(table.map((row) => [row.teamName, row.averagePlacing])).toEqual([
         ['C', 4],
         ['D', 5],
+      ]);
+      expect(table.map((row) => row.position)).toEqual([1, 2]);
+    });
+
+    it('compares the unrounded average, rounding only for display', () => {
+      // Both: 4 nights, 4 points (nothing placed in the top 5), displayed 6.3.
+      // X: 6th, 6th, 7th and one night left -> 6.333; Y: 6th, 6th, 6th, 7th -> 6.25.
+      const table = buildLeagueTable([
+        night('X', 6),
+        night('X', 6),
+        night('X', 7),
+        night('X', null),
+        night('Y', 6),
+        night('Y', 6),
+        night('Y', 6),
+        night('Y', 7),
+      ]);
+
+      expect(table.map((row) => [row.teamName, row.averagePlacing])).toEqual([
+        ['Y', 6.3],
+        ['X', 6.3],
       ]);
       expect(table.map((row) => row.position)).toEqual([1, 2]);
     });

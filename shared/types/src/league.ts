@@ -8,15 +8,8 @@ export interface LeagueSessionView {
   playedAt: string;
 }
 
-/** A league as staff see it: its label dates, whether it is current, and the ended sessions in it. */
-export interface LeagueView {
-  id: number;
-  name: string;
-  /** Calendar date, `YYYY-MM-DD`: a label, never a membership rule. */
-  startsOn: string;
-  /** Calendar date, `YYYY-MM-DD`; a league is current while this is today or later. */
-  endsOn: string;
-  current: boolean;
+/** A league as staff see it (a {@link PublicLeague} plus its sessions): its label dates, whether it is current, and the ended sessions in it. */
+export interface LeagueView extends PublicLeague {
   sessions: LeagueSessionView[];
 }
 
@@ -38,7 +31,7 @@ export interface LeagueTableRow {
   leaguePoints: number;
   /** Ended member sessions the team answered in. */
   nightsPlayed: number;
-  /** Sessions where the team was the single Standings winner. */
+  /** Sessions where the team's Standings placing was 1 (every team tied for first counts). */
   nightsWon: number;
   /** Mean placing to one decimal; null when the team never held a placing (it left every night). */
   averagePlacing: number | null;
@@ -47,12 +40,7 @@ export interface LeagueTableRow {
 }
 
 /** A league's table, as `GET /leagues/:id/table` returns it. No codes, no feedback. */
-export interface LeagueTable {
-  id: number;
-  name: string;
-  startsOn: string;
-  endsOn: string;
-  current: boolean;
+export interface LeagueTable extends PublicLeague {
   rows: LeagueTableRow[];
 }
 
@@ -82,7 +70,9 @@ export interface TeamLeaguePosition {
 export interface PublicLeague {
   id: number;
   name: string;
+  /** Calendar date, `YYYY-MM-DD`: a label, never a membership rule. */
   startsOn: string;
+  /** Calendar date, `YYYY-MM-DD`; a league is current while this is today or later. */
   endsOn: string;
   current: boolean;
 }

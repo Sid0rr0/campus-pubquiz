@@ -1500,9 +1500,10 @@ points, the table and the public page.
   the participation point only. A team that never answered earns nothing and does not
   count as having played the night. Placings come from `StandingsService`, never
   recomputed.
-- **League table.** Teams are ranked by league points, then more **nights won** (the
-  session's single Standings winner, as on the team page), then better **average
-  placing** (to one decimal; a team with no placing sorts last); teams level on all three
+- **League table.** Teams are ranked by league points, then more **nights won** (every
+  team whose Standings placing is 1 in a session, so a tie for first credits each tied
+  team), then better **average placing** (compared unrounded and shown to one decimal; a
+  team with no placing sorts last); teams level on all three
   share the position (1, 1, 3). Each row has `teamId`, `teamName`, `leaguePoints`,
   `nightsPlayed`, `nightsWon`, `averagePlacing` and `position`. Only **ended** member
   sessions count, a session in two leagues counts in both, and non-members never count.

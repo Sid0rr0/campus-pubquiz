@@ -12,3 +12,8 @@ const venueDateFormat = new Intl.DateTimeFormat('en-CA', {
 export function venueToday(now: Date): string {
   return venueDateFormat.format(now);
 }
+
+/** Whether a league ending on `endsOn` is still current on the venue date `today`. */
+export function isCurrentLeague(endsOn: string, today: string): boolean {
+  return endsOn >= today;
+}

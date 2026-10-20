@@ -13,7 +13,7 @@ import { LeagueSession } from '@/db/entities/league-session.entity';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
 import { buildLeagueTable, type TeamNight } from '@/league/league-table.calc';
-import { venueToday } from '@/league/venue-date';
+import { isCurrentLeague, venueToday } from '@/league/venue-date';
 import { StandingsService } from '@/standings/standings.service';
 
 interface AnsweredRow {
@@ -27,7 +27,7 @@ function publicView(league: League, today: string): PublicLeague {
     name: league.name,
     startsOn: league.startsOn,
     endsOn: league.endsOn,
-    current: league.endsOn >= today,
+    current: isCurrentLeague(league.endsOn, today),
   };
 }
 
@@ -163,7 +163,6 @@ export class LeagueTableService {
           ...base(entry.teamId),
           teamName: entry.teamName,
           placing: entry.rank,
-          won: session.winner?.teamId === entry.teamId,
         });
       }
       for (const entry of session.departed) {
@@ -171,7 +170,6 @@ export class LeagueTableService {
           ...base(entry.teamId),
           teamName: entry.teamName,
           placing: null,
-          won: false,
         });
       }
     }

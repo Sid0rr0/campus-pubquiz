@@ -11,7 +11,7 @@ import { LeagueSession } from '@/db/entities/league-session.entity';
 import type { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
-import { venueToday } from '@/league/venue-date';
+import { isCurrentLeague, venueToday } from '@/league/venue-date';
 
 export class LeagueNotFoundError extends Error {
   constructor(id: number) {
@@ -188,7 +188,10 @@ export class LeagueService {
     const found = await this.leagues.find({ id: { $in: wanted } });
     const tickable = new Set(
       found
-        .filter((league) => league.endsOn >= today || alreadyIn.has(league.id))
+        .filter(
+          (league) =>
+            isCurrentLeague(league.endsOn, today) || alreadyIn.has(league.id),
+        )
         .map((league) => league.id),
     );
     const bad = wanted.filter((id) => !tickable.has(id));
@@ -218,7 +221,7 @@ export class LeagueService {
       name: league.name,
       startsOn: league.startsOn,
       endsOn: league.endsOn,
-      current: league.endsOn >= today,
+      current: isCurrentLeague(league.endsOn, today),
       sessions: rows.map(({ gameSession }) => ({
         gameSessionId: gameSession.id,
         joinCode: gameSession.joinCode,

@@ -6,16 +6,15 @@ export const LEAGUE_PLACING_POINTS = [5, 4, 3, 2, 1] as const;
 export const PARTICIPATION_POINTS = 1;
 
 /**
- * One team's night in a league session. `placing` and `won` come straight
- * from the session's Standings (`rank` of the team's leaderboard entry, and
- * whether it is the single `winner`); this module never recomputes them.
+ * One team's night in a league session. `placing` comes straight from the
+ * session's Standings (`rank` of the team's leaderboard entry); this module
+ * never recomputes it. A night is won by every team whose placing is 1.
  */
 export interface TeamNight {
   teamId: number;
   teamName: string;
   /** Standings placing (shared among tied teams); null for a team that left. */
   placing: number | null;
-  won: boolean;
   /** Whether the team answered at least one question in the session. */
   answered: boolean;
 }
@@ -40,10 +39,15 @@ interface Tally {
   placings: number[];
 }
 
+/** The unrounded mean placing: what the tie-break compares. */
 function averageOf(placings: readonly number[]): number | null {
   if (placings.length === 0) return null;
-  const mean = placings.reduce((sum, p) => sum + p, 0) / placings.length;
-  return Math.round(mean * 10) / 10;
+  return placings.reduce((sum, p) => sum + p, 0) / placings.length;
+}
+
+/** The mean as the table shows it, to one decimal. */
+function displayed(average: number | null): number | null {
+  return average === null ? null : Math.round(average * 10) / 10;
 }
 
 /** Lower is better; a team with no placing sorts after any team with one. */
@@ -76,7 +80,7 @@ export function buildLeagueTable(
     };
     tally.leaguePoints += leaguePointsFor(night);
     tally.nightsPlayed += 1;
-    if (night.won) tally.nightsWon += 1;
+    if (night.placing === 1) tally.nightsWon += 1;
     if (night.placing !== null) tally.placings.push(night.placing);
     tallies.set(night.teamId, tally);
   }
@@ -88,13 +92,13 @@ export function buildLeagueTable(
       leaguePoints: tally.leaguePoints,
       nightsPlayed: tally.nightsPlayed,
       nightsWon: tally.nightsWon,
-      averagePlacing: averageOf(tally.placings),
+      mean: averageOf(tally.placings),
     }))
     .sort(
       (a, b) =>
         b.leaguePoints - a.leaguePoints ||
         b.nightsWon - a.nightsWon ||
-        compareAverages(a.averagePlacing, b.averagePlacing) ||
+        compareAverages(a.mean, b.mean) ||
         compareTeamNames(a.teamName, b.teamName) ||
         a.teamId - b.teamId,
     );
@@ -102,11 +106,17 @@ export function buildLeagueTable(
   const level = (a: (typeof ordered)[number], b: (typeof ordered)[number]) =>
     a.leaguePoints === b.leaguePoints &&
     a.nightsWon === b.nightsWon &&
-    a.averagePlacing === b.averagePlacing;
+    a.mean === b.mean;
 
-  return ordered.map((row, index) => {
+  return ordered.map(({ mean, ...row }, index) => {
     let groupStart = index;
-    while (groupStart > 0 && level(ordered[groupStart - 1], row)) groupStart--;
-    return { ...row, position: groupStart + 1 };
+    while (groupStart > 0 && level(ordered[groupStart - 1], ordered[index])) {
+      groupStart--;
+    }
+    return {
+      ...row,
+      averagePlacing: displayed(mean),
+      position: groupStart + 1,
+    };
   });
 }

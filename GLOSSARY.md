@@ -186,7 +186,7 @@ What a team earns towards a league from one session: 5, 4, 3, 2 or 1 for placing
 _Avoid_: season points, ranking points
 
 **League table**:
-The teams of a league ranked by league points; teams level on points are split by more nights won, then by better average placing, and otherwise share the position.
+The teams of a league ranked by league points; teams level on points are split by more nights won (a night is won by every team placed 1st, so tied teams each win it), then by better average placing (compared unrounded), and otherwise share the position.
 _Avoid_: league leaderboard, standings (that's one session)
 
 **League top**:
