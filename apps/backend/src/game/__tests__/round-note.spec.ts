@@ -97,12 +97,16 @@ describe('Round note — host-only context for a round intro', () => {
   });
 
   describe('on the big screen (show on screen)', () => {
-    const displayNote = () =>
-      (
-        game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY) as {
-          roundNote: string;
-        }
-      ).roundNote;
+    const displayNote = () => {
+      const { screen } = game.gameState.getView(
+        game.joinCode,
+        SOCKET_ROOMS.DISPLAY,
+      );
+      return screen.kind === 'round_title' ||
+        screen.kind === 'break_round_title'
+        ? screen.note
+        : '';
+    };
     const playersCarryNote = () =>
       JSON.stringify(
         game.gameState.getView(game.joinCode, SOCKET_ROOMS.PLAYERS),

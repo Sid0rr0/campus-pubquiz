@@ -5,10 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   DEFAULT_SESSION_SETTINGS,
-  getBreakNumber,
   isGradedStatus,
-  isShowingLastBreak,
-  type OnAirScreen,
 } from '@campus-pubquiz/types';
 import { fireConfetti } from '@/app/lib/confetti';
 import { displaySounds } from '@/app/lib/display-sounds';
@@ -78,7 +75,7 @@ function DisplayPageContent() {
   // Confetti and the fanfare only when the quiz is seen ending live: not on a
   // reloaded display, not on Previous.
   useOnLiveForwardMove(
-    snapshot?.onAirScreen.kind === 'ended' ? 1 : 0,
+    snapshot?.screen.kind === 'ended' ? 1 : 0,
     isConnected,
     () => {
       if (hasWinnerBeenCelebratedRef.current) return;
@@ -111,7 +108,7 @@ function DisplayPageContent() {
       ? {
           status: snapshot.progress.status,
           roundIndex: snapshot.progress.roundIndex,
-          screenKind: snapshot.onAirScreen.kind,
+          screenKind: snapshot.screen.kind,
         }
       : null,
     isConnected,
@@ -172,55 +169,24 @@ function DisplayPageContent() {
 
   const {
     progress,
-    currentQuestion,
     quizStructure,
     leaderboard,
-    leaderboardBoard,
-    leaderboardRevealCount,
     teams,
     answeredTeamIds,
-    blockQuestions,
-    revealQuestions,
-    roundTitle,
-    roundCategory,
-    roundAuthor,
     roundTitles,
     roundCategories,
     roundAuthors,
-    roundNote,
-    questionLockAt,
     kahootQuestionEndsAt,
     teamsCorrect,
-    funFacts,
     leagueTop,
-    breakEndsAt,
     displayTextScale,
     settings,
-    activeShowdown,
-    showdownRevealStep,
-    onAirScreen,
+    screen,
     screenKey,
     header: headerContent,
   } = snapshot;
 
-  // The question each break/reveal screen is about was resolved by the
-  // server (progress.roundIndex stays pinned to the block's last round
-  // there), so it is looked up by id rather than worked out here.
-  const screenQuestionId =
-    'questionId' in onAirScreen ? onAirScreen.questionId : null;
-  const screenBlockQuestion = blockQuestions.find(
-    (question) => question.id === screenQuestionId,
-  );
-  const revealQuestion = revealQuestions.find(
-    (question) => question.id === screenQuestionId,
-  );
-  const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
-  const showBonusList = !isShowingLastBreak(progress, quizStructure);
-  // The board shown once the quiz is over, or during its last break, crowns the winners.
-  const isFinalLeaderboard =
-    progress.status === 'ended' || isShowingLastBreak(progress, quizStructure);
-
-  function renderScreen(screen: OnAirScreen): ReactNode {
+  function renderScreen(): ReactNode {
     switch (screen.kind) {
       case 'leaderboard':
         return (
@@ -229,10 +195,10 @@ function DisplayPageContent() {
               <span className="text-magenta">Leaderboard</span>
             </h1>
             <Leaderboard
-              board={leaderboardBoard}
-              revealCount={leaderboardRevealCount}
+              board={screen.board}
+              revealCount={screen.revealCount}
               isConnected={isConnected}
-              isFinal={isFinalLeaderboard}
+              isFinal={screen.isFinal}
               onWinnerCelebrated={() => {
                 hasWinnerBeenCelebratedRef.current = true;
               }}
@@ -276,17 +242,16 @@ function DisplayPageContent() {
       case 'round_title':
         return (
           <RoundTitleCard
-            label={`ROUND ${progress.roundIndex + 1}${roundCategory ? ` — ${roundCategory}` : ''}`}
-            roundTitle={roundTitle}
-            author={roundAuthor}
-            note={roundNote}
+            label={`ROUND ${screen.roundNumber}${screen.category ? ` — ${screen.category}` : ''}`}
+            roundTitle={screen.title}
+            author={screen.author}
+            note={screen.note}
           />
         );
       case 'question':
-        if (!currentQuestion) return null;
         return (
           <QuestionOpenScreen
-            question={currentQuestion}
+            question={screen.question}
             answeredCount={answeredTeamIds.length}
             totalTeams={teams.length}
             autoplayMedia={settings.autoplayMedia}
@@ -297,59 +262,55 @@ function DisplayPageContent() {
           />
         );
       case 'locking':
-        if (questionLockAt === null) return null;
         return (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
             <QuestionLockHeading
-              key={`heading-${questionLockAt}`}
-              lockAt={questionLockAt}
+              key={`heading-${screen.lockAt}`}
+              lockAt={screen.lockAt}
             />
             <QuestionLockCountdown
-              key={`ring-${questionLockAt}`}
-              lockAt={questionLockAt}
+              key={`ring-${screen.lockAt}`}
+              lockAt={screen.lockAt}
             />
           </div>
         );
       case 'break_intro':
         return (
           <BreakIntroScreen
-            roundNumber={progress.roundIndex + 1}
-            breakNumber={breakNumber}
+            roundNumber={screen.roundNumber}
+            breakNumber={screen.breakNumber}
             enabledBonusCategories={settings.enabledBonusCategories}
-            breakEndsAt={breakEndsAt}
+            breakEndsAt={screen.breakEndsAt}
             quizStructure={quizStructure}
-            showBonusList={showBonusList}
+            showBonusList={!screen.isFinalBreak}
             isFeedbackPromptShown={screen.isFeedbackPromptShown}
-            funFacts={funFacts}
+            funFacts={screen.funFacts}
           />
         );
       case 'break_review':
-        if (!screenBlockQuestion) return null;
         return (
           <BreakReviewScreen
-            question={screenBlockQuestion}
+            question={screen.question}
             autoplayMedia={settings.autoplayMedia}
           />
         );
       case 'break_round_title':
-        if (!screenBlockQuestion) return null;
         return (
           <RoundTitleCard
-            label={`ROUND ${screenBlockQuestion.roundNumber}`}
-            roundTitle={screenBlockQuestion.roundTitle}
-            note={roundNote}
+            label={`ROUND ${screen.roundNumber}`}
+            roundTitle={screen.title}
+            note={screen.note}
           />
         );
       case 'reveal_intro':
-        if (!revealQuestion) return null;
         return (
           <RoundTitleCard
-            label={`REVEALING ANSWERS · ROUND ${revealQuestion.roundNumber}`}
-            roundTitle={revealQuestion.roundTitle}
+            label={`REVEALING ANSWERS · ROUND ${screen.roundNumber}`}
+            roundTitle={screen.title}
           />
         );
-      case 'reveal':
-        if (!revealQuestion) return null;
+      case 'reveal': {
+        const revealQuestion = screen.question;
         switch (revealQuestion.revealKind) {
           case 'closest_guess':
           case 'closest_guess_pending': {
@@ -390,6 +351,7 @@ function DisplayPageContent() {
             return unhandled;
           }
         }
+      }
       case 'ended':
         return (
           <EndedScreen
@@ -398,16 +360,17 @@ function DisplayPageContent() {
           />
         );
       case 'showdown':
-        if (!activeShowdown) return null;
         return (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
             <DisplayShowdown
-              activeShowdown={activeShowdown}
-              step={showdownRevealStep}
+              activeShowdown={screen.showdown}
+              step={screen.step}
               isConnected={isConnected}
             />
           </div>
         );
+      case 'blank':
+        return null;
       default: {
         const unhandled: never = screen;
         return unhandled;
@@ -445,7 +408,7 @@ function DisplayPageContent() {
           transition={{ duration: 0.35, ease: 'easeInOut' }}
           className="flex min-h-0 flex-1 flex-col"
         >
-          {renderScreen(onAirScreen)}
+          {renderScreen()}
         </motion.div>
       </AnimatePresence>
     </main>

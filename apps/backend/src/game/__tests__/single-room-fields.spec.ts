@@ -11,17 +11,18 @@ import {
 /** Fields exactly one room's page reads: each is in that room's view and no other. */
 const SINGLE_ROOM_FIELDS: Record<SocketRoomName, readonly string[]> = {
   display: [
-    'roundCategory',
-    'roundAuthor',
+    'screen',
     'roundCategories',
     'roundAuthors',
-    'roundNote',
-    'leaderboardRevealCount',
-    'leaderboardBoard',
     'kahootQuestionEndsAt',
     'teamsCorrect',
   ],
-  admin: ['ungradedQuestionIds', 'phaseStartedAt', 'phaseElapsedMs'],
+  admin: [
+    'onAirScreen',
+    'ungradedQuestionIds',
+    'phaseStartedAt',
+    'phaseElapsedMs',
+  ],
   players: ['upcomingQuestions', 'pastRevealedQuestions', 'phoneLeaderboard'],
 };
 

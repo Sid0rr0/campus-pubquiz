@@ -58,6 +58,17 @@ function pointsByTeam(snapshot: StateSnapshotPayload): Record<string, number> {
   );
 }
 
+/**
+ * The closest-guess step on air. No view carries it; the big screen's reveal
+ * screen key ends with it, so it is read from there.
+ */
+async function stepOn(game: RealStoreGateway): Promise<number> {
+  const { screenKey } = await game.resync(SOCKET_ROOMS.DISPLAY);
+  const match = /^reveal-\d+-\d+-(\d+)$/.exec(screenKey);
+  if (!match) throw new Error(`Not a reveal screen key: ${screenKey}`);
+  return Number(match[1]);
+}
+
 describe('GameGateway — closest_guess reveal-step gating', () => {
   const harness = setupRealStoreGatewayTest();
 
@@ -140,7 +151,7 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
 
     // Step 0: just the question, nothing revealed yet.
     expect(step0.progress.revealIndex).toBe(0);
-    expect(step0.closestGuessRevealStep).toBe(0);
+    expect(await stepOn(game)).toBe(0);
     expect(step0.revealQuestions[0].revealKind).toBe('closest_guess');
     expect(step0.revealQuestions[0]).toHaveProperty('closestGuess', {
       hasSubmissions: true,
@@ -152,18 +163,18 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     const step1 = await game.act('ADVANCE');
     expect(step1.progress.status).toBe('reveal');
     expect(step1.progress.revealIndex).toBe(0);
-    expect(step1.closestGuessRevealStep).toBe(1);
+    expect(await stepOn(game)).toBe(1);
 
     const step2 = await game.act('ADVANCE');
-    expect(step2.closestGuessRevealStep).toBe(2);
+    expect(await stepOn(game)).toBe(2);
     expect(step2.progress.revealIndex).toBe(0);
 
     const step3 = await game.act('ADVANCE');
-    expect(step3.closestGuessRevealStep).toBe(3);
+    expect(await stepOn(game)).toBe(3);
     expect(step3.progress.revealIndex).toBe(0);
 
     const step4 = await game.act('ADVANCE');
-    expect(step4.closestGuessRevealStep).toBe(4);
+    expect(await stepOn(game)).toBe(4);
     expect(step4.progress.revealIndex).toBe(0);
 
     // The admin and display views keep the closest_guess kind at every step.
@@ -174,7 +185,7 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     // A 6th ADVANCE finally moves on to the block's next question.
     const nextQuestion = await game.act('ADVANCE');
     expect(nextQuestion.progress.revealIndex).toBe(1);
-    expect(nextQuestion.closestGuessRevealStep).toBe(0);
+    expect(await stepOn(game)).toBe(0);
   });
 
   it("walks PREVIOUS backward symmetrically, landing on the previous question's last step", async () => {
@@ -190,11 +201,11 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
 
     const backToQ1 = await game.act('PREVIOUS');
     expect(backToQ1.progress.revealIndex).toBe(0);
-    expect(backToQ1.closestGuessRevealStep).toBe(4);
+    expect(await stepOn(game)).toBe(4);
 
     const backToStep3 = await game.act('PREVIOUS');
     expect(backToStep3.progress.revealIndex).toBe(0);
-    expect(backToStep3.closestGuessRevealStep).toBe(3);
+    expect(await stepOn(game)).toBe(3);
 
     await game.act('PREVIOUS'); // step 2
     await game.act('PREVIOUS'); // step 1
@@ -209,7 +220,7 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
 
     const step0 = await actAll(game, TO_REVEAL);
 
-    expect(step0.closestGuessRevealStep).toBe(0);
+    expect(await stepOn(game)).toBe(0);
     expect(step0.revealQuestions[0].revealKind).toBe('closest_guess');
     expect(step0.revealQuestions[0]).toHaveProperty('closestGuess', {
       hasSubmissions: false,
@@ -239,7 +250,12 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
       game: RealStoreGateway,
       room: typeof SOCKET_ROOMS.DISPLAY | typeof SOCKET_ROOMS.PLAYERS,
     ) {
-      const view = await game.resync(room);
+      if (room === SOCKET_ROOMS.DISPLAY) {
+        const { screen } = await game.resync(SOCKET_ROOMS.DISPLAY);
+        if (screen.kind !== 'reveal') throw new Error('not on a reveal screen');
+        return screen.question;
+      }
+      const view = await game.resync(SOCKET_ROOMS.PLAYERS);
       return view.revealQuestions[view.progress.revealIndex];
     }
 
@@ -354,7 +370,7 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
       [{ teamName: 'Team B', value: '950' }],
     );
     expect(step1.progress.revealIndex).toBe(0);
-    expect(step1.closestGuessRevealStep).toBe(1);
+    expect(await stepOn(restarted)).toBe(1);
   });
 
   describe('grading by hand', () => {

@@ -13,15 +13,14 @@ import { isAnsweringStatus } from './game-state-groups';
 import { getQuizStructureSummary } from './game-state-structure';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
-import type { OnAirScreen } from './on-air-screen';
 import type { SeededQuestion } from './question-views';
-import { getDisplayRoundNote } from './round-note';
 import type {
   AdminQuestionContext,
   AdminTeamView,
   AdminStatePayload,
   DisplayStatePayload,
   PlayersStatePayload,
+  ScreenOperatorFields,
   StateSnapshotPayload,
   TeamsCorrect,
   TeamView,
@@ -82,30 +81,30 @@ function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
   };
 }
 
+/** The fields only the big screen and /control (and /remote) read — added to the display and admin views, never the players view. */
+export function buildScreenOperatorFields(
+  session: SessionState,
+): ScreenOperatorFields {
+  return {
+    roundTitles: session.seededGame.rounds.map((round) => round.title),
+    answeredTeamIds: getAnsweredTeamIds(session),
+    breakEndsAt: session.breakEndsAt,
+    displayTextScale: session.displayTextScale,
+    isDisplaySoundMuted: session.isDisplaySoundMuted,
+  };
+}
+
 /** The fields only /display reads — added to its view alone by the Screen projection. */
 export function buildDisplayFields(
   session: SessionState,
-  onAirScreen: OnAirScreen,
 ): Pick<
   DisplayStatePayload,
-  | 'roundCategory'
-  | 'roundAuthor'
-  | 'roundCategories'
-  | 'roundAuthors'
-  | 'roundNote'
-  | 'leaderboardRevealCount'
-  | 'kahootQuestionEndsAt'
-  | 'teamsCorrect'
+  'roundCategories' | 'roundAuthors' | 'kahootQuestionEndsAt' | 'teamsCorrect'
 > {
   const { rounds } = session.seededGame;
-  const currentRound = rounds[session.progress.roundIndex];
   return {
-    roundCategory: currentRound?.category ?? '',
-    roundAuthor: currentRound?.author ?? '',
     roundCategories: rounds.map((round) => round.category ?? ''),
     roundAuthors: rounds.map((round) => round.author ?? ''),
-    roundNote: getDisplayRoundNote(session, onAirScreen),
-    leaderboardRevealCount: session.leaderboardRevealCount,
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
     teamsCorrect: describeTeamsCorrect(session),
   };
@@ -154,11 +153,9 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     isCurrentRoundKahoot:
       session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ??
       false,
-    roundTitles: session.seededGame.rounds.map((round) => round.title),
     currentQuestion: getCurrentQuestion(session),
     blockQuestions: getBlockQuestions(session),
     revealQuestions: getRevealQuestions(session),
-    answeredTeamIds: getAnsweredTeamIds(session),
     leaderboard: session.leaderboard,
     joinCode: session.seededGame.joinCode,
     teams: session.teams.map(
@@ -168,10 +165,6 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
       }),
     ),
     questionLockAt: session.questionLockAt,
-    closestGuessRevealStep: session.closestGuessRevealStep,
-    breakEndsAt: session.breakEndsAt,
-    displayTextScale: session.displayTextScale,
-    isDisplaySoundMuted: session.isDisplaySoundMuted,
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,

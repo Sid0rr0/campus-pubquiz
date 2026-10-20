@@ -29,6 +29,19 @@ describe('Screen projection — the named on-air screen', () => {
     return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
   }
 
+  function adminView() {
+    return game.gameState.getView(game.joinCode, SOCKET_ROOMS.ADMIN);
+  }
+
+  /** The board the big screen draws; fails unless the leaderboard is on air. */
+  function leaderboardBoardOnAir() {
+    const { screen } = displayView();
+    if (screen.kind !== 'leaderboard') {
+      throw new Error(`Expected the leaderboard, got ${screen.kind}`);
+    }
+    return screen.board;
+  }
+
   /** Runs each action and returns the screen on air after it. */
   async function screensAfter(
     actions: GameAction[],
@@ -36,8 +49,8 @@ describe('Screen projection — the named on-air screen', () => {
     const seen: { screen: OnAirScreen; screenKey: string }[] = [];
     for (const action of actions) {
       await game.act(action);
-      const { onAirScreen, screenKey } = displayView();
-      seen.push({ screen: onAirScreen, screenKey });
+      const { screenKey } = displayView();
+      seen.push({ screen: adminView().onAirScreen, screenKey });
     }
     return seen;
   }
@@ -318,7 +331,7 @@ describe('Screen projection — the named on-air screen', () => {
     });
 
     it('is not between questions while a question is simply open', () => {
-      expect(displayView().leaderboardBoard.countUpBoard).toBeUndefined();
+      expect(displayView().screen.kind).toBe('question');
     });
 
     it('shows the leaderboard over the next, already-open question and counts it up between kahoot questions', async () => {
@@ -329,9 +342,9 @@ describe('Screen projection — the named on-air screen', () => {
       const view = displayView();
 
       expect(view.progress.status).toBe('question_open');
-      expect(view.onAirScreen).toEqual({ kind: 'leaderboard' });
+      expect(adminView().onAirScreen).toEqual({ kind: 'leaderboard' });
       expect(view.screenKey).toBe('leaderboard');
-      expect(view.leaderboardBoard.countUpBoard).toBeDefined();
+      expect(leaderboardBoardOnAir().countUpBoard).toBeDefined();
     });
 
     it('brings the question on air and drops the count-up board once the leaderboard is dismissed', async () => {
@@ -342,11 +355,11 @@ describe('Screen projection — the named on-air screen', () => {
       await game.act('TOGGLE_LEADERBOARD');
 
       const view = displayView();
-      expect(view.onAirScreen).toMatchObject({
+      expect(adminView().onAirScreen).toMatchObject({
         kind: 'question',
         questionIndex: 1,
       });
-      expect(view.leaderboardBoard.countUpBoard).toBeUndefined();
+      expect(view.screen.kind).toBe('question');
     });
 
     it('is not between questions when the leaderboard is shown over a reveal', async () => {
@@ -355,7 +368,7 @@ describe('Screen projection — the named on-air screen', () => {
 
       await game.act('TOGGLE_LEADERBOARD');
 
-      expect(displayView().leaderboardBoard.countUpBoard).toBeUndefined();
+      expect(leaderboardBoardOnAir().countUpBoard).toBeUndefined();
     });
   });
 
@@ -439,7 +452,7 @@ describe('Screen projection — the named on-air screen', () => {
     });
 
     it('names the ended screen until a showdown round exists', () => {
-      expect(displayView().onAirScreen).toEqual({
+      expect(adminView().onAirScreen).toEqual({
         kind: 'ended',
         isFeedbackPromptShown: true,
       });
@@ -455,13 +468,14 @@ describe('Screen projection — the named on-air screen', () => {
       });
 
       const view = displayView();
+      const { onAirScreen, activeShowdown, showdownRevealStep } = adminView();
 
-      expect(view.onAirScreen).toEqual({
+      expect(onAirScreen).toEqual({
         kind: 'showdown',
-        showdownId: view.activeShowdown!.id,
+        showdownId: activeShowdown!.id,
       });
       expect(view.screenKey).toBe(
-        `ended-showdown-${view.activeShowdown!.id}-${view.showdownRevealStep}`,
+        `ended-showdown-${activeShowdown!.id}-${showdownRevealStep}`,
       );
     });
   });

@@ -1,4 +1,4 @@
-import type { FunFact } from './fun-facts';
+import type { DisplayScreen } from './display-screen';
 import type {
   AdminIndicators,
   FeedbackField,
@@ -85,8 +85,6 @@ export interface StateSnapshotPayload {
   roundTitle: string;
   /** Whether the round at `progress.roundIndex` has kahootMode set. */
   isCurrentRoundKahoot: boolean;
-  /** Title of every round in the quiz, in order — always populated (like `quizStructure`), used by the `round_overview` screen. */
-  roundTitles: string[];
   currentQuestion: QuestionView | null;
   /**
    * Questions open for (re-)answering: everything revealed so far in the
@@ -96,20 +94,37 @@ export interface StateSnapshotPayload {
   blockQuestions: BlockQuestionView[];
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. The players view carries only the reveal walk so far (see the Screen projection). */
   revealQuestions: BlockRevealQuestionView[];
-  /** Teams that have answered the current question. Empty when none is open. */
-  answeredTeamIds: number[];
   leaderboard: LeaderboardEntry[];
   joinCode: string;
   teams: TeamView[];
   /** Epoch-ms deadline when the current (last-of-round) question auto-locks, or null if no lock is armed. */
   questionLockAt: number | null;
+  /** This session's configurable settings — see SessionSettings. */
+  settings: SessionSettings;
   /**
-   * closest_guess only — which reveal sub-step (0-indexed) is shown for the
-   * question currently at revealIndex. Ephemeral, like leaderboardRevealCount:
-   * not part of GameProgress, not persisted, meaningless for every other
-   * status/type. 0 whenever the current reveal question isn't closest_guess.
+   * The in-progress/just-resolved showdown tiebreaker round, or null between
+   * rounds. Only ever set while progress.status === 'ended' — see
+   * ActiveShowdownView. Fields are progressively included based on
+   * showdownRevealStep, the same secrecy technique already used for
+   * ClosestGuessRevealData.
    */
-  closestGuessRevealStep: number;
+  activeShowdown: ActiveShowdownView | null;
+  /**
+   * Showdown reveal sub-step (0-indexed): 0..(participants.length + 1).
+   * Ephemeral. Meaningless whenever activeShowdown is null.
+   */
+  showdownRevealStep: number;
+}
+
+/**
+ * The fields only the big screen and the quiz master's /control (and /remote)
+ * read, added to the display and admin views and kept off the players view.
+ */
+export interface ScreenOperatorFields {
+  /** Title of every round in the quiz, in order — used by the `round_overview` screen and /control's score table. */
+  roundTitles: string[];
+  /** Teams that have answered the current question. Empty when none is open. */
+  answeredTeamIds: number[];
   /**
    * Epoch-ms time the admin expects the break to end, or null when unset —
    * shown as a "back at HH:MM" line on the display's break screen. Ephemeral
@@ -129,22 +144,6 @@ export interface StateSnapshotPayload {
    * SET_DISPLAY_SOUND_MUTED. Ephemeral (not persisted), defaults to false.
    */
   isDisplaySoundMuted: boolean;
-  /** This session's configurable settings — see SessionSettings. */
-  settings: SessionSettings;
-  /**
-   * The in-progress/just-resolved showdown tiebreaker round, or null between
-   * rounds. Only ever set while progress.status === 'ended' — see
-   * ActiveShowdownView. Fields are progressively included based on
-   * showdownRevealStep, the same secrecy technique already used for
-   * ClosestGuessRevealData.
-   */
-  activeShowdown: ActiveShowdownView | null;
-  /**
-   * Showdown reveal sub-step (0-indexed), ephemeral like
-   * closestGuessRevealStep: 0..(participants.length + 1). Meaningless
-   * whenever activeShowdown is null.
-   */
-  showdownRevealStep: number;
 }
 
 /**
@@ -154,47 +153,33 @@ export interface StateSnapshotPayload {
  * computed fields added). Keep them as separate names so a page can only
  * read what its own room is sent.
  */
-/** What /display renders: the snapshot plus the screen on air, resolved once by the server. */
-export interface DisplayStatePayload extends Omit<
-  StateSnapshotPayload,
-  'revealQuestions'
-> {
-  /** The reveal questions of the block; the one on air is shown only as far as its closest-guess step has got (see the Screen projection). */
-  revealQuestions: PlayersRevealQuestionView[];
-  /** The named screen on air, and the question or round it is about. */
-  onAirScreen: OnAirScreen;
+/** What /display renders: the snapshot minus the content the Display screen carries, plus the screen on air with that content, resolved once by the server. */
+export interface DisplayStatePayload
+  extends
+    Omit<
+      StateSnapshotPayload,
+      | 'revealQuestions'
+      | 'currentQuestion'
+      | 'blockQuestions'
+      | 'activeShowdown'
+      | 'showdownRevealStep'
+      | 'roundTitle'
+    >,
+    Omit<ScreenOperatorFields, 'breakEndsAt'> {
+  /** The screen on air and the content it draws; `blank` when the server couldn't resolve that content. */
+  screen: DisplayScreen;
   /** Transition key — changes only when what's on screen changes. */
   screenKey: string;
   /** Header label/title/badge for the screen on air. */
   header: HeaderContent;
-  /** The leaderboard to draw: capped entries, the count-up board when there is one, and each team's trend. */
-  leaderboardBoard: LeaderboardBoard;
-  /** Category/topic of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
-  roundCategory: string;
-  /** Author of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
-  roundAuthor: string;
   /** Category of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
   roundCategories: string[];
   /** Author of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
   roundAuthors: string[];
-  /** The note of the round whose intro or break round intro is on air, only when that round shows it on screen and it is non-empty; '' on every other screen (the reveal intro included). Drawn as text under the round title card. */
-  roundNote: string;
-  /**
-   * How many teams (counting up from last place) are currently revealed on
-   * the leaderboard, driven by ADVANCE while the board is
-   * up. Ephemeral — resets to 0 whenever TOGGLE_LEADERBOARD fires.
-   */
-  leaderboardRevealCount: number;
   /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
   kahootQuestionEndsAt: number | null;
   /** The revealed question's teams-correct count; null outside a reveal and on closest_guess, whose reveal names the closest teams. */
   teamsCorrect: TeamsCorrect | null;
-  /**
-   * The fun facts to rotate through on the break screen, already filtered by
-   * the server to revealed blocks and figures that give nothing away. Empty
-   * on every other screen and when there is nothing worth saying.
-   */
-  funFacts: FunFact[];
   /** The session's league for the lobby screen: its name and top rows, or null when the session is in no league. */
   leagueTop: LeagueTop | null;
 }
@@ -221,7 +206,10 @@ export type PreviousState =
 
 /** The quiz master's view: the snapshot plus the screen on air and what /control's question browser marks as on air. */
 export interface AdminStatePayload
-  extends Omit<StateSnapshotPayload, 'teams'>, AdminIndicators {
+  extends
+    Omit<StateSnapshotPayload, 'teams'>,
+    AdminIndicators,
+    ScreenOperatorFields {
   /** The roster, each team with its player count and over-cap flag. */
   teams: AdminTeamView[];
   onAirScreen: OnAirScreen;

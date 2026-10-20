@@ -18,14 +18,14 @@ Parent spec: `.scratch/display-screen-content/spec.md`
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `round_title`, `break_round_title`, `reveal_intro`, `break_intro` and `leaderboard` carry their content. Fields that move in (fun facts, leaderboard board, break end time, the shown round's title, category, author and note) are no longer sent at the top of the display view. Fields several screens draw (teams, settings, quiz structure, text scale) stay at the top.
-- [ ] `/display` reads none of: game progress's round index for a label, the break number helper, the last-break check, or a final-board rule.
-- [ ] Screen projection specs cover:
+- [x] `round_title`, `break_round_title`, `reveal_intro`, `break_intro` and `leaderboard` carry their content. Fields that move in (fun facts, leaderboard board, break end time, the shown round's title, category, author and note) are no longer sent at the top of the display view. Fields several screens draw (teams, settings, quiz structure, text scale) stay at the top.
+- [x] `/display` reads none of: game progress's round index for a label, the break number helper, the last-break check, or a final-board rule.
+- [x] Screen projection specs cover:
   - a round title card in each of its three places names the right round;
   - break number and final-break flag on the first and last break;
   - the final board after `ended` and in the last break, and not in an earlier break.
-- [ ] `/display` render tests for these kinds render from projected views.
-- [ ] DOCUMENTATION.md's protocol section describes the Display screen and what each kind carries.
-- [ ] Typecheck, lint and tests pass. Run `pnpm e2e` once before the PR (the full-night, kahoot, showdown and media journeys cross every Display screen kind).
+- [x] `/display` render tests for these kinds render from projected views.
+- [x] DOCUMENTATION.md's protocol section describes the Display screen and what each kind carries.
+- [x] Typecheck, lint and tests pass. Run `pnpm e2e` once before the PR (the full-night, kahoot, showdown and media journeys cross every Display screen kind).

@@ -81,12 +81,12 @@ describe('GameGateway — TOGGLE_JOIN_OVERLAY', () => {
 
       await game.act('TOGGLE_JOIN_OVERLAY');
       const covered = displayView();
-      expect(covered.onAirScreen).toEqual({ kind: 'join_overlay' });
+      expect(covered.screen).toEqual({ kind: 'join_overlay' });
       expect(covered.screenKey).toBe('join_overlay');
       expect(adminView().onAirScreen).toEqual({ kind: 'join_overlay' });
 
       await game.act('TOGGLE_JOIN_OVERLAY');
-      expect(displayView().onAirScreen).toEqual(before.onAirScreen);
+      expect(displayView().screen).toEqual(before.screen);
       expect(displayView().screenKey).toBe(before.screenKey);
     });
 
@@ -181,15 +181,29 @@ describe('GameGateway — TOGGLE_JOIN_OVERLAY', () => {
       await actAll(['START_QUIZ', 'ADVANCE']);
     });
 
-    it('turns the leaderboard off and resets its reveal when the overlay is shown', async () => {
+    it('turns the leaderboard off when the overlay is shown', async () => {
       await actAll(['TOGGLE_LEADERBOARD', 'ADVANCE']);
-      expect(displayView().leaderboardRevealCount).toBe(1);
+      expect(displayView().screen).toMatchObject({
+        kind: 'leaderboard',
+        revealCount: 1,
+      });
 
       await game.act('TOGGLE_JOIN_OVERLAY');
 
       expect(adminView().progress.isLeaderboardVisible).toBe(false);
       expect(adminView().progress.isJoinOverlayVisible).toBe(true);
-      expect(displayView().leaderboardRevealCount).toBe(0);
+      expect(displayView().screen).toEqual({ kind: 'join_overlay' });
+    });
+
+    it('starts the leaderboard reveal over when it comes back after the overlay', async () => {
+      await actAll(['TOGGLE_LEADERBOARD', 'ADVANCE', 'TOGGLE_JOIN_OVERLAY']);
+
+      await game.act('TOGGLE_LEADERBOARD');
+
+      expect(displayView().screen).toMatchObject({
+        kind: 'leaderboard',
+        revealCount: 0,
+      });
     });
 
     it('turns the overlay off when the leaderboard is shown', async () => {

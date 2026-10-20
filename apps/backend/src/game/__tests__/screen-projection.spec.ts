@@ -45,16 +45,31 @@ describe('Screen projection — a kahoot round, per audience', () => {
     expect(serializedView(SOCKET_ROOMS.PLAYERS)).not.toContain(HIDDEN_PROMPT);
   });
 
-  it('keeps the hidden question in the display and admin views', async () => {
+  it('keeps the hidden question in the admin view', async () => {
     await openSecondQuestionBehindLeaderboard();
 
-    for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN]) {
-      const view = game.gameState.getView(game.joinCode, room);
-      expect(view.currentQuestion?.prompt).toBe(HIDDEN_PROMPT);
-      expect(view.blockQuestions?.map((question) => question.prompt)).toEqual([
-        HIDDEN_PROMPT,
-      ]);
-    }
+    const view = game.gameState.getView(game.joinCode, SOCKET_ROOMS.ADMIN);
+
+    expect(view.currentQuestion?.prompt).toBe(HIDDEN_PROMPT);
+    expect(view.blockQuestions.map((question) => question.prompt)).toEqual([
+      HIDDEN_PROMPT,
+    ]);
+  });
+
+  it('draws the leaderboard on the display view, and the question once the board is dismissed', async () => {
+    await openSecondQuestionBehindLeaderboard();
+    expect(
+      game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY).screen.kind,
+    ).toBe('leaderboard');
+
+    await game.act('TOGGLE_LEADERBOARD');
+
+    expect(
+      game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY).screen,
+    ).toMatchObject({
+      kind: 'question',
+      question: { prompt: HIDDEN_PROMPT },
+    });
   });
 
   it('gives the players view the question again once the leaderboard is dismissed', async () => {

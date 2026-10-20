@@ -143,7 +143,9 @@ describe('GameGateway — persistence and quiz selection', () => {
       revealIndex: 0,
       furthestOpenIndex: -1,
     });
-    expect(snapshot.roundTitles).toEqual(['Imported Round']);
+    expect((await game.snapshot(snapshot.joinCode)).roundTitles).toEqual([
+      'Imported Round',
+    ]);
   });
 
   it('creates a session from the lobby: allocates a new session, loads its rounds, starts fresh', async () => {
@@ -172,7 +174,9 @@ describe('GameGateway — persistence and quiz selection', () => {
       revealIndex: 0,
       furthestOpenIndex: -1,
     });
-    expect(snapshot.roundTitles).toEqual(['Imported Round']);
+    expect((await game.snapshot(snapshot.joinCode)).roundTitles).toEqual([
+      'Imported Round',
+    ]);
     expect(snapshot.leaderboard).toEqual([]);
     expect(game.gameState.getActiveQuizId(snapshot.joinCode)).toBe(
       other.quizId,

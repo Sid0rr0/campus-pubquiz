@@ -1,6 +1,7 @@
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
+  type ScreenOperatorFields,
   type SocketRoomName,
   type StateSnapshotPayload,
   sessionRoom,
@@ -42,6 +43,10 @@ describe('GameGateway — connection presence and display settings', () => {
       .map((emit) => emit.payload as StateSnapshotPayload);
   }
 
+  function operatorFieldsTo(room: SocketRoomName): ScreenOperatorFields[] {
+    return snapshotsTo(room) as unknown as ScreenOperatorFields[];
+  }
+
   it('shows a joining team as connected to every room in one snapshot', async () => {
     await game.joinTeam('Latecomers');
 
@@ -78,18 +83,28 @@ describe('GameGateway — connection presence and display settings', () => {
       breakEndsAt: 1_900_000_000_000,
     });
 
-    for (const room of ALL_ROOMS) {
-      expect(snapshotsTo(room).at(-1)?.breakEndsAt).toBe(1_900_000_000_000);
-    }
+    expect(operatorFieldsTo(SOCKET_ROOMS.ADMIN).at(-1)?.breakEndsAt).toBe(
+      1_900_000_000_000,
+    );
+    // The big screen draws it from its break screen, not from a top-level field.
+    expect(snapshotsTo(SOCKET_ROOMS.DISPLAY).at(-1)).not.toHaveProperty(
+      'breakEndsAt',
+    );
+    expect(snapshotsTo(SOCKET_ROOMS.PLAYERS).at(-1)).not.toHaveProperty(
+      'breakEndsAt',
+    );
   });
 
-  it('broadcasts the admin-set display text scale to every room', async () => {
+  it('broadcasts the admin-set display text scale to the big screen and the quiz master only', async () => {
     await game.gateway.handleSetDisplayTextScale(asSocket(admin), {
       displayTextScale: 1.5,
     });
 
-    for (const room of ALL_ROOMS) {
-      expect(snapshotsTo(room).at(-1)?.displayTextScale).toBe(1.5);
+    for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN] as const) {
+      expect(operatorFieldsTo(room).at(-1)?.displayTextScale).toBe(1.5);
     }
+    expect(snapshotsTo(SOCKET_ROOMS.PLAYERS).at(-1)).not.toHaveProperty(
+      'displayTextScale',
+    );
   });
 });

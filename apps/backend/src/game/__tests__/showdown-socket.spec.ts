@@ -25,10 +25,10 @@ describe('GameGateway — showdown', () => {
   let game: RealStoreGateway;
 
   /** The state the display room was last sent. */
-  function lastDisplayState(): StateSnapshotPayload | undefined {
+  function lastBroadcastState(): StateSnapshotPayload | undefined {
     return game
       .payloadsTo<StateSnapshotPayload>(
-        SOCKET_ROOMS.DISPLAY,
+        SOCKET_ROOMS.ADMIN,
         SOCKET_EVENTS.STATE_UPDATED,
       )
       .at(-1);
@@ -91,7 +91,7 @@ describe('GameGateway — showdown', () => {
       );
 
       // Only the tied teams are seated, in leaderboard order.
-      const state = lastDisplayState();
+      const state = lastBroadcastState();
       expect(state?.showdownRevealStep).toBe(0);
       expect(state?.activeShowdown).toMatchObject({
         question: 'How many?',
@@ -139,7 +139,7 @@ describe('GameGateway — showdown', () => {
         value: '95',
       });
 
-      const state = lastDisplayState();
+      const state = lastBroadcastState();
       const broadcastParticipants = state?.activeShowdown?.participants;
       expect(broadcastParticipants).toEqual([
         {
