@@ -119,6 +119,7 @@ describe('Screen projection — the players view phone screen', () => {
 
     expect(phoneScreen(state)).toEqual({
       kind: 'block',
+      mode: 'answering',
       onScreenQuestionId: null,
     });
   });
@@ -147,19 +148,44 @@ describe('Screen projection — the players view phone screen', () => {
 
     expect(phoneScreen(state)).toEqual({
       kind: 'block',
+      mode: 'answering',
       onScreenQuestionId: null,
     });
   });
 
   it.each(['break_intro', 'break'] as const)(
-    'names the block in %s, with no question on the big screen',
+    'names the block locked in %s, with no question on the big screen',
     (status) => {
       expect(phoneScreen(session(BLOCK, { status }))).toEqual({
         kind: 'block',
+        mode: 'locked',
         onScreenQuestionId: null,
       });
     },
   );
+
+  it('names the block locked in break review when the round title is unknown', () => {
+    const state = session(BLOCK, {
+      status: 'break_round_intro',
+      revealIndex: 99,
+    });
+
+    expect(phoneScreen(state)).toEqual({
+      kind: 'block',
+      mode: 'locked',
+      onScreenQuestionId: null,
+    });
+  });
+
+  it('names the block revealing in a reveal intro whose round title is unknown', () => {
+    const state = session(BLOCK, { status: 'reveal_intro', revealIndex: 99 });
+
+    expect(phoneScreen(state)).toEqual({
+      kind: 'block',
+      mode: 'revealing',
+      onScreenQuestionId: null,
+    });
+  });
 
   it('names the round title card when break steps through a round intro', () => {
     const state = session(BLOCK, {
@@ -187,6 +213,7 @@ describe('Screen projection — the players view phone screen', () => {
 
     expect(phoneScreen(state)).toEqual({
       kind: 'block',
+      mode: 'revealing',
       onScreenQuestionId: 20,
     });
   });

@@ -1,4 +1,4 @@
-import { isBreakStatus } from './game-state-groups';
+import { isBreakStatus, isRevealingStatus } from './game-state-groups';
 import type { GameProgress } from './game-state-types';
 import type {
   BlockQuestionView,
@@ -303,6 +303,20 @@ export function describeAdminIndicators(input: OnAirInput): AdminIndicators {
 }
 
 /**
+ * What the block browser does: `answering` while the block is answerable,
+ * `locked` in break and break review, `revealing` from the reveal intro
+ * through reveal.
+ */
+export type BlockMode = 'answering' | 'locked' | 'revealing';
+
+function blockModeOf(input: PlayersScreenInput): BlockMode {
+  if (input.isAnswerable) return 'answering';
+  if (isBreakStatus(input.progress.status)) return 'locked';
+  if (isRevealingStatus(input.progress.status)) return 'revealing';
+  return 'answering';
+}
+
+/**
  * The screen a team's phone shows, named once by the server. The players
  * room is one broadcast for every team, so which team a phone belongs to is
  * not here: on `showdown_guessing` the phone picks the guess form or the
@@ -310,8 +324,8 @@ export function describeAdminIndicators(input: OnAirInput): AdminIndicators {
  */
 export type PhoneScreen =
   | { kind: 'leaderboard' }
-  /** The block browser; carries the question the big screen is revealing (else null) for the phone to follow. */
-  | { kind: 'block'; onScreenQuestionId: number | null }
+  /** The block browser; carries its mode and the question the big screen is revealing (else null) for the phone to follow. */
+  | { kind: 'block'; mode: BlockMode; onScreenQuestionId: number | null }
   | { kind: 'lobby' }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
@@ -380,7 +394,10 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
   if (input.progress.isLeaderboardVisible && !input.isAnswerable) {
     return { kind: 'leaderboard' };
   }
-  if (input.isAnswerable) return { kind: 'block', onScreenQuestionId: null };
+  const mode = blockModeOf(input);
+  if (input.isAnswerable) {
+    return { kind: 'block', mode, onScreenQuestionId: null };
+  }
 
   const { screen } = describeOnAirScreen({
     ...input,
@@ -398,7 +415,7 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
     case 'round_title':
       return { kind: 'round_title', title: input.roundTitle ?? '' };
     case 'reveal':
-      return { kind: 'block', onScreenQuestionId: screen.questionId };
+      return { kind: 'block', mode, onScreenQuestionId: screen.questionId };
     case 'reveal_intro':
     case 'break_round_title': {
       const title = roundTitleOf(
@@ -408,7 +425,7 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
         screen.questionId,
       );
       return title === null
-        ? { kind: 'block', onScreenQuestionId: null }
+        ? { kind: 'block', mode, onScreenQuestionId: null }
         : { kind: 'round_title', title };
     }
     case 'ended':
@@ -424,7 +441,7 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
           : 'showdown_reveal',
       };
     default:
-      return { kind: 'block', onScreenQuestionId: null };
+      return { kind: 'block', mode, onScreenQuestionId: null };
   }
 }
 

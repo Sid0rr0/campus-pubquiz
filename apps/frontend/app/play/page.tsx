@@ -311,10 +311,10 @@ function PlayPageContent() {
         )}
       </div>
       <div className="order-3 md:order-4 flex flex-col items-center gap-6 lg:flex-row lg:items-start">
-        {selectedQuestion && (
+        {phoneScreen.kind === 'block' && selectedQuestion && (
           <div className="md:min-w-0 md:flex-1">
             <QuestionBrowser
-              progress={progress}
+              mode={phoneScreen.mode}
               isAnswerable={isAnswerable}
               team={team}
               pickerRounds={pickerRounds}
