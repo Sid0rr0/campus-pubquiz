@@ -6,7 +6,7 @@ Parent spec: `.scratch/session-result-module/spec.md`
 
 **Blocked by:** 02 (can run in parallel with 03)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The stats session detail calc reads per-team and per-question figures from the Session result. Response times, the bonus summary, feedback and ratings stay in the stats calc.
 - [ ] The trophy row is still the single session winner (`isSessionWinner`), never every team tied for first.

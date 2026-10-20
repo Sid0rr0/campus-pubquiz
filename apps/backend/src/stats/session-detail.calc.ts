@@ -1,5 +1,4 @@
 import {
-  answerCredit,
   BONUS_CATEGORIES,
   compareTeamNames,
   type BonusCategory,
@@ -14,10 +13,8 @@ import {
   type SessionDetailStandingRow,
   type SessionDetailStats,
 } from '@campus-pubquiz/types';
-import type {
-  DepartedTeam,
-  SessionStandings,
-} from '@/standings/standings.service';
+import { sessionResult, type TeamResult } from '@/standings/session-result';
+import type { SessionStandings } from '@/standings/standings.service';
 import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import { computeSessionFeedback } from '@/stats/session-feedback.calc';
 
@@ -108,13 +105,6 @@ function getDifficultyLabel(averagePercent: number): QuizDifficultyLabel {
     DIFFICULTY_THRESHOLDS.find((t) => averagePercent >= t.min)?.label ??
     'Brutal'
   );
-}
-
-/** A correct answer is one whose stored verdict is `correct` — the same
- * verdict the grading panel counted live, so a speed-scaled kahoot answer
- * counts while partial `match` credit and ungraded answers (null) don't. */
-function isCorrect(answer: SessionDetailAnswerInputRow): boolean {
-  return answer.verdict === 'correct';
 }
 
 /** First row achieving the min/max of `getValue` — ties keep the earlier
@@ -215,27 +205,38 @@ export function computeSessionDetail(
     answers,
     bonusAwards,
   } = input;
-  const teamCount = sessionStandings.participantCount;
-  const maxPoints = questions.reduce((sum, q) => sum + q.points, 0);
+  const result = sessionResult({
+    standings: sessionStandings,
+    questions: questions.map((q) => ({
+      id: q.questionId,
+      roundId: q.roundId,
+      type: q.type,
+      points: q.points,
+    })),
+    answers,
+  });
+  const { participantCount: teamCount, maxPoints } = result;
+  const questionResultById = new Map(
+    result.questions.map((q) => [q.questionId, q]),
+  );
 
-  const toRow = (
-    team: DepartedTeam,
-    placement: Pick<SessionDetailStandingRow, 'rank' | 'rankTo' | 'hasLeft'>,
-  ): SessionDetailStandingRow => {
-    const teamAnswers = answers.filter((a) => a.teamId === team.teamId);
-    const timedResponses = teamAnswers
+  const toRow = (team: TeamResult): SessionDetailStandingRow => {
+    const timedResponses = answers
+      .filter((a) => a.teamId === team.teamId)
       .map((a) => a.responseMs)
       .filter((ms): ms is number => ms !== null);
     return {
-      ...placement,
-      isWinner: sessionStandings.winner?.teamId === team.teamId,
+      rank: team.placing,
+      rankTo: team.placingTo,
+      hasLeft: team.hasLeft,
+      isWinner: team.isSessionWinner,
       teamId: team.teamId,
       teamName: team.teamName,
       playerCount: playerCounts.get(team.teamId) ?? null,
-      answerPoints: team.totalPoints - team.bonusPoints,
+      answerPoints: team.answerPoints,
       bonusPoints: team.bonusPoints,
       total: team.totalPoints,
-      correctCount: teamAnswers.filter(isCorrect).length,
+      correctCount: team.correctCount,
       avgResponseMs:
         timedResponses.length > 0
           ? timedResponses.reduce((sum, ms) => sum + ms, 0) /
@@ -243,16 +244,9 @@ export function computeSessionDetail(
           : null,
     };
   };
-  // Ranked teams first, in the order Standings gave them, then the ones that
-  // left — this function never sorts or ranks.
-  const standings: SessionDetailStandingRow[] = [
-    ...sessionStandings.leaderboard.map((team) =>
-      toRow(team, { rank: team.rank, rankTo: team.rankTo, hasLeft: false }),
-    ),
-    ...sessionStandings.departed.map((team) =>
-      toRow(team, { rank: null, rankTo: null, hasLeft: true }),
-    ),
-  ];
+  // Ranked teams first, in the order the Session result gives them, then the
+  // ones that left — this function never sorts or ranks.
+  const standings: SessionDetailStandingRow[] = result.teams.map(toRow);
 
   const sortedRounds = [...rounds].sort((a, b) => a.orderIndex - b.orderIndex);
   const roundTitleById = new Map(
@@ -272,16 +266,21 @@ export function computeSessionDetail(
     );
     const achievablePoints = teamCount * roundMaxPoints;
     const rating = ratingByRoundId.get(round.roundId);
+    // Only the questions that have a correct rate count towards the round's.
+    const ratedResults = roundQuestions.flatMap((q) => {
+      const r = questionResultById.get(q.questionId);
+      return r && r.correctRate !== null ? [r] : [];
+    });
     return {
       roundId: round.roundId,
       title: round.title,
       category: round.category,
       rating: rating ? { average: rating.average, count: rating.count } : null,
       correctRate:
-        teamCount > 0 && roundQuestions.length > 0
-          ? roundAnswers.filter(isCorrect).length /
-            (teamCount * roundQuestions.length)
-          : 0,
+        teamCount > 0 && ratedResults.length > 0
+          ? ratedResults.reduce((sum, r) => sum + r.correctCount, 0) /
+            (teamCount * ratedResults.length)
+          : null,
       pointsPercent:
         achievablePoints > 0
           ? (roundAnswers.reduce((sum, a) => sum + a.pointsAwarded, 0) /
@@ -308,10 +307,7 @@ export function computeSessionDetail(
       const timedResponses = questionAnswers
         .map((a) => a.responseMs)
         .filter((ms): ms is number => ms !== null);
-      const credit = questionAnswers.reduce(
-        (sum, a) => sum + answerCredit(a, question.points),
-        0,
-      );
+      const questionResult = questionResultById.get(question.questionId);
       return {
         questionId: question.questionId,
         roundTitle: roundTitleById.get(question.roundId) ?? '',
@@ -319,13 +315,24 @@ export function computeSessionDetail(
         prompt: question.prompt,
         type: question.type,
         points: question.points,
-        answeredCount: questionAnswers.length,
-        correctCount: questionAnswers.filter(isCorrect).length,
-        correctRate: teamCount > 0 ? credit / teamCount : 0,
+        answeredCount: questionResult?.answeredCount ?? 0,
+        correctCount: questionResult?.correctCount ?? 0,
+        correctRate: questionResult?.correctRate ?? null,
         fastestResponseMs:
           timedResponses.length > 0 ? Math.min(...timedResponses) : null,
       };
     },
+  );
+
+  // Highlights consider only rows that have a correct rate (none do when the
+  // session has no participants).
+  const ratedQuestions = questionRows.filter(
+    (row): row is SessionDetailQuestionRow & { correctRate: number } =>
+      row.correctRate !== null,
+  );
+  const ratedRounds = roundRows.filter(
+    (row): row is SessionDetailRoundRow & { correctRate: number } =>
+      row.correctRate !== null,
   );
 
   const avgAnswerPoints =
@@ -354,32 +361,20 @@ export function computeSessionDetail(
     questions: questionRows,
     highlights: {
       hardestQuestionId:
-        teamCount > 0
-          ? (pickExtreme(questionRows, (row) => row.correctRate, 'min')
-              ?.questionId ?? null)
-          : null,
+        pickExtreme(ratedQuestions, (row) => row.correctRate, 'min')
+          ?.questionId ?? null,
       easiestQuestionId:
-        teamCount > 0
-          ? (pickExtreme(questionRows, (row) => row.correctRate, 'max')
-              ?.questionId ?? null)
-          : null,
+        pickExtreme(ratedQuestions, (row) => row.correctRate, 'max')
+          ?.questionId ?? null,
       hardestRoundId:
-        teamCount > 0
-          ? (pickExtreme(roundRows, (row) => row.correctRate, 'min')?.roundId ??
-            null)
-          : null,
-      allCorrectQuestionIds:
-        teamCount > 0
-          ? questionRows
-              .filter((row) => row.correctCount === teamCount)
-              .map((row) => row.questionId)
-          : [],
-      noneCorrectQuestionIds:
-        teamCount > 0
-          ? questionRows
-              .filter((row) => row.correctCount === 0)
-              .map((row) => row.questionId)
-          : [],
+        pickExtreme(ratedRounds, (row) => row.correctRate, 'min')?.roundId ??
+        null,
+      allCorrectQuestionIds: ratedQuestions
+        .filter((row) => row.correctCount === teamCount)
+        .map((row) => row.questionId),
+      noneCorrectQuestionIds: ratedQuestions
+        .filter((row) => row.correctCount === 0)
+        .map((row) => row.questionId),
       fastestAnswer: pickFastestAnswer(answers),
       fastestTeam: pickFastestTeam(standings),
       bonus: computeBonusSummary(bonusAwards),
