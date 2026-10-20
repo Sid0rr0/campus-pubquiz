@@ -183,8 +183,9 @@ export class StandingsService {
   async hasTakenPart(gameSessionId: number, teamId: number): Promise<boolean> {
     const participants = await this.endedSessionsRead.participants({
       gameSessionIds: [gameSessionId],
+      teamIds: [teamId],
     });
-    return participants.some((row) => row.teamId === teamId);
+    return participants.length > 0;
   }
 
   async forSession(gameSessionId: number): Promise<SessionStandings> {
@@ -269,11 +270,10 @@ export class StandingsService {
     if (gameSessionIds.length === 0) return results;
     const knex = this.gameSessionTeams.getKnex();
 
-    const endedRows = (await knex('game_sessions')
-      .whereIn('id', [...gameSessionIds])
-      .where('status', 'ended')
-      .select('id')) as { id: number }[];
-    const endedIds = endedRows.map((row) => row.id);
+    const endedRows = (await this.endedSessionsRead
+      .endedSessionsQuery()
+      .whereIn('gs.id', [...gameSessionIds])) as { game_session_id: number }[];
+    const endedIds = endedRows.map((row) => row.game_session_id);
     if (endedIds.length === 0) return results;
 
     const [standings, questionRows, answerRows] = await Promise.all([

@@ -124,7 +124,7 @@ export class StatsService {
     const sessionTotals = this.standings.sessionTotalsQuery();
 
     const baseQuery = this.endedSessions
-      .endedSessionsQuery()
+      .endedSessionsQuery({ withMaxPoints: true })
       .leftJoin(sessionTotals.as('st'), 'st.game_session_id', 'gs.id');
 
     // `winner` sorts on the winning total, with a session that has no

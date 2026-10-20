@@ -6,10 +6,11 @@ import { DISPLAY_NAME_SQL } from '@/ended-sessions-read/session-display-name';
 
 type Knex = ReturnType<GameSessionTeamRepository['getKnex']>;
 
-/** Narrows participants to some sessions or some teams; everything when omitted. */
-export type ParticipantScope =
-  | { gameSessionIds: readonly number[] }
-  | { teamIds: readonly number[] };
+/** Narrows participants to some sessions and/or some teams; everything when omitted. */
+export interface ParticipantScope {
+  gameSessionIds?: readonly number[];
+  teamIds?: readonly number[];
+}
 
 export interface ParticipantRow {
   gameSessionId: number;
@@ -62,10 +63,14 @@ function scoped<Q extends { whereIn(column: string, ids: number[]): Q }>(
   query: Q,
   scope: ParticipantScope | undefined,
 ): Q {
-  if (!scope) return query;
-  return 'gameSessionIds' in scope
-    ? query.whereIn('game_session_id', [...scope.gameSessionIds])
-    : query.whereIn('team_id', [...scope.teamIds]);
+  let narrowed = query;
+  if (scope?.gameSessionIds) {
+    narrowed = narrowed.whereIn('game_session_id', [...scope.gameSessionIds]);
+  }
+  if (scope?.teamIds) {
+    narrowed = narrowed.whereIn('team_id', [...scope.teamIds]);
+  }
+  return narrowed;
 }
 
 /**
@@ -118,8 +123,11 @@ export class EndedSessionsRead {
   sessionsPlayedQuery() {
     const knex: Knex = this.gameSessionTeams.getKnex();
     return this.participantsQuery()
-      .join('game_sessions as ended_gs', 'ended_gs.id', 'p.game_session_id')
-      .where('ended_gs.status', 'ended')
+      .join(
+        this.endedSessionsQuery().clearSelect().select('gs.id').as('ended_gs'),
+        'ended_gs.id',
+        'p.game_session_id',
+      )
       .groupBy('p.team_id')
       .clearSelect()
       .select('p.team_id as team_id')
@@ -130,12 +138,13 @@ export class EndedSessionsRead {
    * Ended sessions as a query to narrow, join, order and page. Tables are
    * aliased `gs` (game_sessions) and `qz` (quizzes); columns: `game_session_id`,
    * `join_code`, `quiz_id`, `display_name`, `custom_name`, `quiz_title` and
-   * `played_at` and `max_points` (the sum of the points of the session's quiz
-   * questions, 0 for none).
+   * `played_at`. With `withMaxPoints`, also `max_points` (the sum of the points
+   * of the session's quiz questions, 0 for none): a correlated subquery, so
+   * only ask for it when it is read or sorted by.
    */
-  endedSessionsQuery() {
+  endedSessionsQuery({ withMaxPoints = false } = {}) {
     const knex: Knex = this.gameSessionTeams.getKnex();
-    return knex('game_sessions as gs')
+    const query = knex('game_sessions as gs')
       .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
       .where('gs.status', 'ended')
       .select('gs.id as game_session_id')
@@ -144,19 +153,21 @@ export class EndedSessionsRead {
       .select(knex.raw(`${DISPLAY_NAME_SQL} as display_name`))
       .select('gs.name as custom_name')
       .select('qz.title as quiz_title')
-      .select('gs.created_at as played_at')
-      .select(
-        knex.raw(
-          `(select coalesce(sum(mq.points), 0) from rounds mr join questions mq on mq.round_id = mr.id where mr.quiz_id = gs.quiz_id) as max_points`,
-        ),
-      );
+      .select('gs.created_at as played_at');
+    return withMaxPoints
+      ? query.select(
+          knex.raw(
+            `(select coalesce(sum(mq.points), 0) from rounds mr join questions mq on mq.round_id = mr.id where mr.quiz_id = gs.quiz_id) as max_points`,
+          ),
+        )
+      : query;
   }
 
   /** One session's header by id; null if it doesn't exist or hasn't ended. */
   async endedSession(
     gameSessionId: number,
   ): Promise<EndedSessionHeader | null> {
-    const row = (await this.endedSessionsQuery()
+    const row = (await this.endedSessionsQuery({ withMaxPoints: true })
       .where('gs.id', gameSessionId)
       .first()) as HeaderRow | undefined;
     return row ? headerOf(row) : null;
@@ -167,7 +178,7 @@ export class EndedSessionsRead {
     teamIds: readonly number[],
   ): Promise<ParticipationRow[]> {
     if (teamIds.length === 0) return [];
-    const rows = (await this.endedSessionsQuery()
+    const rows = (await this.endedSessionsQuery({ withMaxPoints: true })
       .join(
         this.participantsQuery({ teamIds }).as('p'),
         'p.game_session_id',
