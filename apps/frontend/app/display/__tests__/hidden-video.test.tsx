@@ -43,7 +43,10 @@ describe('hidden video on the big screen', () => {
 
   it('covers the mounted video while the question is asked', () => {
     render(
-      <QuestionOpenScreen question={HIDDEN} answeredCount={0} totalTeams={0} />,
+      <QuestionOpenScreen
+        question={HIDDEN}
+        teamCounts={{ answeredCount: 0, totalTeams: 0 }}
+      />,
     );
 
     expect(screen.getByTestId('question-youtube')).toBeInTheDocument();
@@ -108,8 +111,7 @@ describe('hidden video on the big screen', () => {
     render(
       <QuestionOpenScreen
         question={QUESTION}
-        answeredCount={0}
-        totalTeams={0}
+        teamCounts={{ answeredCount: 0, totalTeams: 0 }}
       />,
     );
 

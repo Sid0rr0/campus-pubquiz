@@ -60,6 +60,8 @@ interface QuizRoundEditorProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onMoveQuestionToRound: (questionId: string, roundId: string) => void;
+  /** Opens the quiz preview at the question with this index in the round; absent for a quiz that was never saved, which has no preview. */
+  onPreviewQuestion?: (questionIndex: number) => void;
 }
 
 /** 1-based positions, within the round, of the questions whose type a kahoot round can't hold. */
@@ -105,6 +107,7 @@ export function QuizRoundEditor({
   onMoveUp,
   onMoveDown,
   onMoveQuestionToRound,
+  onPreviewQuestion,
 }: QuizRoundEditorProps) {
   const roundLevelIssues = issues.filter(
     (issue) => issue.questionIndex === null,
@@ -345,6 +348,9 @@ export function QuizRoundEditor({
             onDelete={() => deleteQuestion(question.id)}
             onMoveUp={() => moveQuestion(question.id, -1)}
             onMoveDown={() => moveQuestion(question.id, 1)}
+            onPreviewFromHere={
+              onPreviewQuestion && (() => onPreviewQuestion(index))
+            }
             onMoveToRound={(roundId) =>
               onMoveQuestionToRound(question.id, roundId)
             }

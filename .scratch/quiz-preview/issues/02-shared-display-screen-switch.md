@@ -1,6 +1,6 @@
 # 02: Share the display screen switch outside `/display`
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Quiz preview](../spec.md)
 

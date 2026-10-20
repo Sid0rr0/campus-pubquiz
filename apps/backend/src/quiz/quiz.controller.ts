@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -17,6 +18,7 @@ import {
   type QuizDraft,
   type QuizDraftSaveRequest,
   type QuizDraftSaveResult,
+  type QuizPreviewPayload,
   type QuizzesListedPayload,
 } from '@campus-pubquiz/types';
 import { Roles } from '@/auth/roles.decorator';
@@ -25,6 +27,8 @@ import { SessionGuard } from '@/auth/session.guard';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { toQuizHttpError } from '@/quiz/quiz-http-errors';
+import { QuizPreviewService } from '@/quiz/quiz-preview.service';
+import { quizPreviewQuerySchema } from '@/quiz/quiz-preview-query.schema';
 import { QuizService } from '@/quiz/quiz.service';
 
 @Controller('quizzes')
@@ -34,6 +38,7 @@ export class QuizController {
     private readonly quizService: QuizService,
     private readonly gameState: GameStateService,
     private readonly liveEdit: LiveEditService,
+    private readonly quizPreview: QuizPreviewService,
   ) {}
 
   @Get()
@@ -55,6 +60,25 @@ export class QuizController {
     }
     const frontier = this.liveEdit.getFrontier(id);
     return frontier ? { ...draft, liveEdit: frontier } : draft;
+  }
+
+  /** A read of the saved quiz: no session row, no in-memory session, nothing written. */
+  @Get(':id/preview')
+  async preview(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: Record<string, unknown>,
+  ): Promise<QuizPreviewPayload> {
+    const parsed = quizPreviewQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException(
+        parsed.error.issues[0]?.message ?? 'Invalid query',
+      );
+    }
+    try {
+      return await this.quizPreview.preview(id, parsed.data.mode);
+    } catch (error) {
+      throw toQuizHttpError(error);
+    }
   }
 
   @Post()

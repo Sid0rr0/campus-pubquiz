@@ -3,11 +3,16 @@
 import {
   CheckIcon,
   DownloadIcon,
+  EyeOpenIcon,
   FilePlusIcon,
   PlusIcon,
 } from '@radix-ui/react-icons';
 import { type QuizDraftIssue } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import {
+  previewPosition,
+  quizPreviewHref,
+} from '@/app/lib/quiz-preview-position';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
   addRound,
@@ -36,6 +41,15 @@ function issueLabel(issue: QuizDraftIssue): string {
   const questionLabel =
     issue.questionIndex !== null ? `, Q${issue.questionIndex + 1}` : '';
   return `Round ${issue.roundIndex + 1}${questionLabel} (${issue.field}): ${issue.message}`;
+}
+
+const UNSAVED_PREVIEW_PROMPT =
+  'You have unsaved changes. The preview shows the saved quiz, without them. Open it anyway?';
+
+/** Opens the saved quiz's preview in a new tab, so the draft here stays; asks first when the draft has unsaved changes. */
+function openPreview(quizId: number, isDirty: boolean, at?: string): void {
+  if (isDirty && !window.confirm(UNSAVED_PREVIEW_PROMPT)) return;
+  window.open(quizPreviewHref(quizId, { at }), '_blank', 'noopener');
 }
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
@@ -148,6 +162,17 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           <DownloadIcon aria-hidden="true" />
           Export CSV
         </Button>
+        {draft.savedQuizId !== null && (
+          <Button
+            type="button"
+            onClick={() => openPreview(draft.savedQuizId!, draft.isDirty)}
+            size="md"
+            className="rounded-xl border-2 border-background/50 text-xs font-extrabold text-background whitespace-nowrap"
+          >
+            <EyeOpenIcon aria-hidden="true" />
+            Preview
+          </Button>
+        )}
         <Button
           type="button"
           onClick={draft.save}
@@ -234,6 +259,16 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   pinnedQuestionCount={pinnedQuestionCount}
                   structureNote={roundEditing && structureNoteFor(roundEditing)}
                   moveTargetRounds={moveTargetRounds(rounds, index, described)}
+                  onPreviewQuestion={
+                    draft.savedQuizId === null
+                      ? undefined
+                      : (questionIndex) =>
+                          openPreview(
+                            draft.savedQuizId!,
+                            draft.isDirty,
+                            previewPosition(index, questionIndex),
+                          )
+                  }
                   openedQuestionIds={openedQuestionIds}
                   issues={saveIssues.filter(
                     (issue) => issue.roundIndex === index,

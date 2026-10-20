@@ -15,6 +15,7 @@ import { SessionWrite } from '@/game/state/session-write';
 import { LeagueTableService } from '@/league/league-table.service';
 import { LeagueService } from '@/league/league.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { QuizPreviewService } from '@/quiz/quiz-preview.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { StandingsService } from '@/standings/standings.service';
@@ -43,6 +44,7 @@ import { TeamService } from '@/team/team.service';
     FeedbackService,
     PlayerCountService,
     QuizService,
+    QuizPreviewService,
     ShowdownService,
     GameProgressRepository,
     SessionWrite,
@@ -63,6 +65,7 @@ import { TeamService } from '@/team/team.service';
     TeamHistoryService,
     PlayerCountService,
     QuizService,
+    QuizPreviewService,
     SeedService,
     EndedSessionsRead,
     StandingsService,

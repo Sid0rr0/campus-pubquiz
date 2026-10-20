@@ -1,6 +1,6 @@
 # 05: Jump list, position in the URL, and the other entry points
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Quiz preview](../spec.md)
 

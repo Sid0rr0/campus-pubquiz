@@ -29,6 +29,13 @@ import {
 
 export type QuizDraftPhase = 'empty' | 'editor';
 
+/** What a save would send, minus the ids the server assigns, so a refetch that backfills them doesn't read as an edit. */
+function fingerprintOf(request: ReturnType<typeof toSaveRequest>): string {
+  return JSON.stringify(request, (key, value: unknown) =>
+    key === 'questionId' ? undefined : value,
+  );
+}
+
 const EMPTY_ISSUES: QuizDraftIssue[] = [];
 const SAVED_FLASH_MS = 1600;
 const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
@@ -63,6 +70,10 @@ export interface QuizDraft {
   isRefreshingLockState: boolean;
   save: () => void;
   isSaving: boolean;
+  /** The id of the saved quiz this draft edits, or null until a new quiz is first saved. */
+  savedQuizId: number | null;
+  /** Whether the draft differs from the last saved or loaded copy. */
+  isDirty: boolean;
   savedFlash: boolean;
   exportCsv: () => void;
   saveError: string | null;
@@ -103,6 +114,8 @@ export function useQuizDraft(quizId: string): QuizDraft {
   const [title, setTitle] = useState('');
   const [rounds, setRounds] = useState<EditorRound[]>([]);
   const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
+  // The draft as last loaded or saved, to tell whether the editor has unsaved changes.
+  const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [savedFlashRun, setSavedFlashRun] = useState(0);
   const [liveEdit, setLiveEdit] = useState<LiveEditFrontier | undefined>(
@@ -124,11 +137,13 @@ export function useQuizDraft(quizId: string): QuizDraft {
   if (draftQuery.data && hydratedQuizId !== numericQuizId) {
     setHydratedQuizId(numericQuizId);
     setMergedDraft(draftQuery.data);
+    const hydratedRounds = draftQuery.data.rounds.map((round) =>
+      roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
+    );
     setTitle(draftQuery.data.title);
-    setRounds(
-      draftQuery.data.rounds.map((round) =>
-        roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
-      ),
+    setRounds(hydratedRounds);
+    setSavedFingerprint(
+      fingerprintOf(toSaveRequest(draftQuery.data.title, hydratedRounds)),
     );
     setLiveEdit(draftQuery.data.liveEdit);
     setPhase('editor');
@@ -161,7 +176,8 @@ export function useQuizDraft(quizId: string): QuizDraft {
       savedQuizId === null
         ? createQuiz(request)
         : updateQuiz(savedQuizId, request),
-    onSuccess: (result) => {
+    onSuccess: (result, request) => {
+      setSavedFingerprint(fingerprintOf(request));
       if (savedQuizId === null) {
         setSavedQuizId(result.quizId);
         router.replace(`/quizzes/${result.quizId}`);
@@ -215,6 +231,8 @@ export function useQuizDraft(quizId: string): QuizDraft {
     isRefreshingLockState: refreshLockStateMutation.isPending,
     save: () => saveMutation.mutate(toSaveRequest(title, rounds)),
     isSaving: saveMutation.isPending,
+    savedQuizId,
+    isDirty: fingerprintOf(toSaveRequest(title, rounds)) !== savedFingerprint,
     savedFlash,
     exportCsv,
     saveError: saveMutation.error ? saveErrorMessage(saveMutation.error) : null,

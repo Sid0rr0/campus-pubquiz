@@ -1,6 +1,6 @@
 # 06: Host-only panel and fullscreen
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Quiz preview](../spec.md)
 

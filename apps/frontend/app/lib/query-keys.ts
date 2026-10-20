@@ -1,3 +1,4 @@
+import type { QuizPreviewMode } from '@campus-pubquiz/types';
 import type { FeedbackTrendsRange } from '@/app/lib/stats-api';
 
 /**
@@ -44,6 +45,8 @@ export const queryKeys = {
     // JSON-stable across calls with and without a joinCode.
     list: (joinCode?: string) => ['quizzes', 'list', joinCode ?? null] as const,
     draft: (quizId: number) => ['quizzes', 'draft', quizId] as const,
+    preview: (quizId: number, mode: QuizPreviewMode) =>
+      ['quizzes', 'preview', quizId, mode] as const,
   },
   sessions: {
     all: ['sessions'] as const,

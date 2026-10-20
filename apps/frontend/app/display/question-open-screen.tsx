@@ -4,8 +4,8 @@ import { QuestionLockCountdown } from '@/app/display/question-lock-countdown';
 
 interface QuestionOpenScreenProps {
   question: QuestionView;
-  answeredCount: number;
-  totalTeams: number;
+  /** The live answered count; left out, its line keeps its place but draws empty. */
+  teamCounts?: { answeredCount: number; totalTeams: number };
   autoplayMedia?: boolean;
   isFullscreen?: boolean;
   mediaReplayToken?: number;
@@ -16,14 +16,15 @@ interface QuestionOpenScreenProps {
 
 export function QuestionOpenScreen({
   question,
-  answeredCount,
-  totalTeams,
+  teamCounts,
   autoplayMedia,
   isFullscreen,
   mediaReplayToken,
   isMediaPaused,
   kahootQuestionEndsAt,
 }: QuestionOpenScreenProps) {
+  const countClassName =
+    'pt-8 text-display-2xl font-extrabold tracking-wide text-foreground/55';
   return (
     <div className="flex min-h-0 flex-1 flex-col px-16 py-8 text-center">
       {kahootQuestionEndsAt != null && (
@@ -42,10 +43,16 @@ export function QuestionOpenScreen({
           isMediaPaused={isMediaPaused}
         />
       </div>
-      {totalTeams > 0 && (
-        <p className="pt-8 text-display-2xl font-extrabold tracking-wide text-foreground/55">
-          {answeredCount} OF {totalTeams} TEAMS ANSWERED
+      {teamCounts === undefined ? (
+        <p aria-hidden className={`${countClassName} invisible`}>
+          &nbsp;
         </p>
+      ) : (
+        teamCounts.totalTeams > 0 && (
+          <p className={countClassName}>
+            {teamCounts.answeredCount} OF {teamCounts.totalTeams} TEAMS ANSWERED
+          </p>
+        )
       )}
     </div>
   );

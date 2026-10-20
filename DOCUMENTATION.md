@@ -83,6 +83,7 @@ management and authoring UI:
 | `/sessions`      | Admin/moderator (any)       | Lists/starts/closes game sessions; opening one routes to `/control?code=...`    |
 | `/control/users` | Admin only                  | Approve pending accounts, deactivate active ones                                |
 | `/quizzes/[id]`  | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
+| `/quizzes/[id]/preview` | Admin/moderator (any) | Quiz preview: a saved quiz's big-screen screens in a 16:9 frame, no session (see Quiz preview) |
 | `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
 | `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
 | `/team`          | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)    |
@@ -1004,6 +1005,74 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated
   server-side, surfacing structured issues per round/question on failure.
 - Export the quiz's questions with **Export CSV** in the header bar.
+- **Preview** in the header bar (once the quiz is saved) opens the saved quiz's
+  [Quiz preview](#quiz-preview) in a new tab. With unsaved changes the editor
+  asks first, because the preview shows the saved quiz, not the draft.
+- **Preview from here** on each question (once the quiz is saved) opens the
+  preview in a new tab at that question (`?at=`), with the same unsaved-changes
+  prompt.
+
+### Quiz preview
+
+A **Quiz preview** shows a saved quiz's big-screen screens without a session:
+no `game_sessions` row, no in-memory session, no socket room, nothing written
+or counted. It is a read of the quiz.
+
+- **Route** `/quizzes/[id]/preview` (admin or moderator): draws each step with
+  the same `DisplayScreenView` as `/display`, in a letterboxed 16:9 frame, with
+  Prev/Next buttons and the arrow keys (one step, stopping at both ends), a
+  "Block ends here" marker after each block's last answer, and a not-found
+  state for an unknown quiz. Media plays as on the night (clip bounds, YouTube,
+  `hideVideo`).
+- **Jump list and position**: a side list of the rounds and their questions
+  moves straight to the chosen one. The position is kept in the URL as
+  `?at=` (rounds and questions numbered from 1: `r2` is round 2's title card,
+  `r2q3` its third question; a suffix names the other screens that share a
+  position: `-answer`, `-reveals`, `-break`, `-overview`). It is read once on
+  load, written while stepping (the first step is left out), and kept when the
+  order is switched; a position the order doesn't have opens the first step.
+- **Host-only panel and fullscreen**: a panel labelled "Host only" beside the
+  frame shows the current step's text the room never sees: the question's
+  notes (on its question and answer screens) and the round note on a round's
+  title card when the round doesn't show it on the big screen (a note shown on
+  screen is on the card and isn't repeated). An empty state shows when there is
+  none. The Fullscreen button shows the frame alone at full size, hiding the
+  panel, jump list and controls; arrow keys still step and Escape leaves.
+- **Entry points**: the quiz editor's Preview and "Preview from here", a
+  Preview item in each quiz's actions menu on `/sessions`, and a Preview link on
+  each session still in the lobby there (it opens that session's quiz).
+- **Orders**, switched with a toggle on the page and kept in the URL as
+  `?mode=night` (the default is left out, and the choice survives a refresh):
+  - `answer_after_question` (the default): each round's title card, then each
+    question followed by its revealed answer. Kahoot rounds look the same.
+  - `night` ("like the night"): the screens in the order the room sees them:
+    the round overview, round title cards, a block's questions, the break
+    intro, the reveal intro, then that block's reveals, block after block. The
+    order is a dry run of the real Advance plan over the team-less session (no
+    grading writes, nothing saved), keeping only `round_overview`,
+    `round_title`, `question`, `break_intro`, `reveal_intro` and `reveal`;
+    lobby, rules, join overlay, locking, break review, break round title,
+    leaderboard, showdown and ended never appear. The break intro has no
+    deadline, no feedback prompt and no fun facts. A round with no questions
+    can't be walked by the real Advance plan, so the dry run skips it and its
+    title card is shown in front of the next round's (or last, when no round
+    follows); the other rounds keep their place in the quiz's numbering.
+
+  In both, live-only content is empty: no team counts, guesses, fun facts or
+  break deadline, and a closest_guess reveal shows just its correct answer.
+- **Endpoint** `GET /quizzes/:id/preview?mode=answer_after_question|night` returns a
+  `QuizPreviewPayload` (`shared/types/src/quiz-preview.ts`): the quiz-level
+  display context (`quiz`) and the ordered `steps`, each with its
+  `DisplayScreen`, its `roundIndex` / `questionIndex` (`questionIndex` is
+  `null` on a title card), `isBlockEnd` and `hostOnly` (`roundNote` and
+  `questionNote`, each `null` when there is none). Same session and role guards as the
+  other quiz reads (admin and moderator). An unknown quiz is a `404`, a `mode`
+  that isn't a preview mode a `400`; `mode` defaults to `answer_after_question`.
+- **How it is built**: `QuizPreviewService` checks the quiz exists, loads its
+  seeded rounds (`SeedService.loadQuizRounds`) and hands them to
+  `buildQuizPreview`, which puts a team-less, in-memory `SessionState`
+  at each screen and takes the `DisplayScreen` from the display projection, so
+  the preview can't draw anything `/display` wouldn't.
 
 **Editing a live quiz**: a quiz can be edited at any time, including while a
 session on it is running (any status other than `lobby`/`ended`). Five rules

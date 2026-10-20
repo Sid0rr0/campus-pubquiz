@@ -1,6 +1,6 @@
 # 03: Quiz preview, question → answer order, end to end
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Quiz preview](../spec.md)
 
