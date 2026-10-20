@@ -1470,6 +1470,11 @@ points, the table and the public page.
   400; a moderator gets 403):
   - `POST /leagues` and `PATCH /leagues/:id` with `{ name, startsOn, endsOn }`
     (the name is trimmed), `DELETE /leagues/:id`;
+  - `POST /leagues/:id/move` with `{ direction: 'up' | 'down' }` swaps the league with its
+    neighbour in the admin order (`leagues.sort_order`, higher first, ties newest first;
+    a new league goes to the top; at either end nothing changes). The staff list and the
+    public list both follow it, the public list with current leagues always before ended
+    ones;
   - `POST /leagues/:id/sessions` with `{ gameSessionId }` and
     `DELETE /leagues/:id/sessions/:gameSessionId`. Only an **ended** session can be
     added (a lobby or live session is a 409, an unknown league or session a 404).
@@ -1491,7 +1496,8 @@ points, the table and the public page.
 - **`/leagues` page** (admin only, "Leagues" in the account menu): a create form, and
   per league an edit form, delete (behind a confirmation), its sessions each with
   Remove, and "Add a session" choosing from ended sessions not yet in it (the latest
-  100). Each list has an empty state.
+  100). Each list has an empty state. Up/down arrows on each league set the order the
+  public `/league` page shows.
 - **League points** (pure module `league/league-table.calc.ts`; the scale is
   `LEAGUE_PLACING_POINTS = [5, 4, 3, 2, 1]` and `PARTICIPATION_POINTS = 1`). Per ended
   member session a team earns the points for its Standings **placing** (tied teams each

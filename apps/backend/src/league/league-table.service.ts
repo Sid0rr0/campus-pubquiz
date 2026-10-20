@@ -13,6 +13,7 @@ import { LeagueSession } from '@/db/entities/league-session.entity';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
 import { buildLeagueTable, type TeamNight } from '@/league/league-table.calc';
+import { LEAGUE_ORDER } from '@/league/league.service';
 import { isCurrentLeague, venueToday } from '@/league/venue-date';
 import { StandingsService } from '@/standings/standings.service';
 
@@ -47,13 +48,10 @@ export class LeagueTableService {
     private readonly standings: StandingsService,
   ) {}
 
-  /** Public league list: current leagues first, then the rest, each newest first. */
+  /** Public league list: current leagues first, then the rest, each in the admin's order. */
   async publicLeagues(now = new Date()): Promise<PublicLeaguesPayload> {
     const today = venueToday(now);
-    const leagues = await this.leagues.find(
-      {},
-      { orderBy: { startsOn: 'desc', id: 'desc' } },
-    );
+    const leagues = await this.leagues.find({}, { orderBy: LEAGUE_ORDER });
     const items = leagues.map((league) => publicView(league, today));
     return {
       items: [

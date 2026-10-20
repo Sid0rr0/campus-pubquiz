@@ -90,6 +90,20 @@ export async function updateLeague(
   return (await response.json()) as LeagueView;
 }
 
+/** Moves a league one place up or down in the admin order (the public page's order within current/ended). */
+export async function moveLeague(
+  leagueId: number,
+  direction: 'up' | 'down',
+): Promise<void> {
+  const response = await fetch(`${getBackendUrl()}/leagues/${leagueId}/move`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ direction }),
+  });
+  if (!response.ok) return throwApiError(response, 'Could not move league');
+}
+
 export async function deleteLeague(leagueId: number): Promise<void> {
   const response = await fetch(`${getBackendUrl()}/leagues/${leagueId}`, {
     method: 'DELETE',

@@ -21,6 +21,7 @@ import {
   addLeagueSessionSchema,
   leagueFieldsSchema,
   leaguesQuerySchema,
+  moveLeagueSchema,
 } from '@/league/league.schema';
 import { mapLeagueErrors, parseOrThrow } from '@/league/league-http';
 import { LeagueService } from '@/league/league.service';
@@ -80,6 +81,20 @@ export class LeaguesController {
     );
     await this.refreshLobbies();
     return league;
+  }
+
+  @Post(':id/move')
+  @Roles('admin')
+  @HttpCode(204)
+  async move(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: unknown,
+  ): Promise<void> {
+    const { direction } = parseOrThrow(
+      moveLeagueSchema.safeParse(body),
+      'direction must be "up" or "down"',
+    );
+    await mapLeagueErrors(() => this.leagueService.move(id, direction));
   }
 
   @Delete(':id')

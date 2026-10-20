@@ -17,6 +17,10 @@ export const leagueFieldsSchema = z
     path: ['endsOn'],
   });
 
+export const moveLeagueSchema = z.object({
+  direction: z.enum(['up', 'down']),
+});
+
 export const addLeagueSessionSchema = z.object({
   gameSessionId: z.number().int().positive(),
 });

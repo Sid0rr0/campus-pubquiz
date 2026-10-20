@@ -10,6 +10,7 @@ import {
   deleteLeague,
   fetchLeagues,
   LeaguesApiError,
+  moveLeague,
   removeLeagueSession,
   updateLeague,
 } from '@/app/lib/leagues-api';
@@ -107,9 +108,13 @@ function LeagueForm({
 function LeagueCard({
   league,
   endedSessions,
+  isFirst,
+  isLast,
 }: {
   league: LeagueView;
   endedSessions: { gameSessionId: number; name: string; playedAt: string }[];
+  isFirst: boolean;
+  isLast: boolean;
 }) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
@@ -124,6 +129,11 @@ function LeagueCard({
       return invalidate();
     },
     onError: toastError('Could not update league'),
+  });
+  const moveMutation = useMutation({
+    mutationFn: (direction: 'up' | 'down') => moveLeague(league.id, direction),
+    onSuccess: invalidate,
+    onError: toastError('Could not move league'),
   });
   const deleteMutation = useMutation({
     mutationFn: () => deleteLeague(league.id),
@@ -170,6 +180,24 @@ function LeagueCard({
             {league.current ? 'Current' : 'Ended'}
           </span>
           <div className="ml-auto flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              aria-label={`Move ${league.name} up`}
+              disabled={isFirst || moveMutation.isPending}
+              onClick={() => moveMutation.mutate('up')}
+            >
+              ↑
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              aria-label={`Move ${league.name} down`}
+              disabled={isLast || moveMutation.isPending}
+              onClick={() => moveMutation.mutate('down')}
+            >
+              ↓
+            </Button>
             <Button
               type="button"
               size="sm"
@@ -334,16 +362,24 @@ export function LeaguesPanel() {
 
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-lg">All leagues</h2>
+        {leagues.length > 1 && (
+          <p className="text-sm text-foreground/60">
+            Use the arrows to put a league first. The public league page shows
+            this order, with current leagues always before ended ones.
+          </p>
+        )}
         {leagues.length === 0 ? (
           <p className="text-sm text-foreground/60">
             No leagues yet. Create one above.
           </p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {leagues.map((league) => (
+            {leagues.map((league, index) => (
               <LeagueCard
                 key={league.id}
                 league={league}
+                isFirst={index === 0}
+                isLast={index === leagues.length - 1}
                 endedSessions={endedSessions}
               />
             ))}

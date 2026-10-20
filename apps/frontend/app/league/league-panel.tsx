@@ -143,8 +143,7 @@ function LeagueRules() {
         </li>
         <li>
           <strong>1 participation point</strong> for answering at least one
-          question. A team that leaves early gets only this point; a team that
-          never answers gets nothing.
+          question.
         </li>
       </ul>
       <p className="text-foreground/80">

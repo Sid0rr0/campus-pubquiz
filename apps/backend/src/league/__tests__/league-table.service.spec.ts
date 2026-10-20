@@ -374,6 +374,21 @@ describe('LeagueTableService (Postgres integration)', () => {
   });
 
   describe('public leagues', () => {
+    it('follows the admin order within current and ended leagues', async () => {
+      const older = await newLeague('Older', '2999-06-30');
+      await newLeague('Newer', '2999-12-31');
+      const ended = await newLeague('Ended', '2020-01-31');
+      await em.nativeUpdate(League, { id: older.id }, { sortOrder: 5 });
+      await em.nativeUpdate(League, { id: ended.id }, { sortOrder: 9 });
+      em.clear();
+
+      const { items } = await service.publicLeagues(
+        new Date('2026-11-15T12:00:00Z'),
+      );
+
+      expect(items.map((l) => l.name)).toEqual(['Older', 'Newer', 'Ended']);
+    });
+
     it('lists current leagues first, then the rest, without sessions', async () => {
       await newLeague('Old', '2020-01-31');
       await newLeague('Now', '2999-12-31');

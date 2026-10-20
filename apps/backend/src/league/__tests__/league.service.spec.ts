@@ -65,6 +65,63 @@ describe('LeagueService (Postgres integration)', () => {
     expect(items.map((league) => league.id)).toEqual([created.id]);
   });
 
+  describe('the order of leagues', () => {
+    const names = async () =>
+      (await service.list({})).items.map((league) => league.name);
+
+    async function three() {
+      const a = await service.create({ ...fields, name: 'A' });
+      const b = await service.create({ ...fields, name: 'B' });
+      const c = await service.create({ ...fields, name: 'C' });
+      return { a, b, c };
+    }
+
+    it('puts a new league at the top', async () => {
+      await three();
+      expect(await names()).toEqual(['C', 'B', 'A']);
+    });
+
+    it('moves a league up and down one place', async () => {
+      const { a } = await three();
+
+      await service.move(a.id, 'up');
+      expect(await names()).toEqual(['C', 'A', 'B']);
+
+      await service.move(a.id, 'up');
+      expect(await names()).toEqual(['A', 'C', 'B']);
+
+      await service.move(a.id, 'down');
+      expect(await names()).toEqual(['C', 'A', 'B']);
+    });
+
+    it('leaves a league at either end where it is', async () => {
+      const { a, c } = await three();
+
+      await service.move(c.id, 'up');
+      await service.move(a.id, 'down');
+
+      expect(await names()).toEqual(['C', 'B', 'A']);
+    });
+
+    it('moves leagues that share a sort order (rows from before the order existed)', async () => {
+      const { a, b, c } = await three();
+      for (const league of [a, b, c]) {
+        await em.nativeUpdate(League, { id: league.id }, { sortOrder: 0 });
+      }
+      em.clear();
+
+      await service.move(a.id, 'up');
+
+      expect(await names()).toEqual(['C', 'A', 'B']);
+    });
+
+    it('treats an unknown league as not found', async () => {
+      await expect(service.move(9999, 'up')).rejects.toThrow(
+        LeagueNotFoundError,
+      );
+    });
+  });
+
   it('updates a league name and dates', async () => {
     const created = await service.create(fields);
 

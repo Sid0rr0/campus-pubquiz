@@ -25,6 +25,7 @@ function makeController() {
     remove: jest.fn(),
     addSession: jest.fn(),
     removeSession: jest.fn(),
+    move: jest.fn(),
   };
   const gameState = {
     refreshLeagueTops: jest.fn().mockResolvedValue([]),
@@ -72,6 +73,7 @@ describe('LeaguesController', () => {
       'remove',
       'addSession',
       'removeSession',
+      'move',
     ] as const) {
       expect(allows(write, 'moderator')).toBe(false);
       expect(allows(write, 'admin')).toBe(true);
@@ -94,6 +96,35 @@ describe('LeaguesController', () => {
       const { controller } = makeController();
       await expect(controller.list({ current: 'maybe' })).rejects.toThrow(
         BadRequestException,
+      );
+    });
+  });
+
+  describe('move', () => {
+    it('passes the direction to the service', async () => {
+      const { controller, service } = makeController();
+
+      await controller.move(3, { direction: 'up' });
+
+      expect(service.move).toHaveBeenCalledWith(3, 'up');
+    });
+
+    it('rejects a missing or unknown direction', async () => {
+      const { controller, service } = makeController();
+
+      await expect(controller.move(3, {})).rejects.toThrow(BadRequestException);
+      await expect(controller.move(3, { direction: 'left' })).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(service.move).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 for an unknown league', async () => {
+      const { controller, service } = makeController();
+      service.move.mockRejectedValue(new LeagueNotFoundError(9));
+
+      await expect(controller.move(9, { direction: 'down' })).rejects.toThrow(
+        NotFoundException,
       );
     });
   });

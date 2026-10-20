@@ -6,7 +6,7 @@ import { LeagueRepository } from '@/db/repositories/league.repository';
 @Entity({ tableName: 'leagues', repository: () => LeagueRepository })
 @Check({ expression: '"ends_on" >= "starts_on"' })
 export class League extends BaseEntity {
-  [OptionalProps]?: 'createdAt' | 'updatedAt';
+  [OptionalProps]?: 'createdAt' | 'updatedAt' | 'sortOrder';
 
   @Property({ type: 'text' })
   name!: string;
@@ -18,4 +18,8 @@ export class League extends BaseEntity {
   /** Calendar date, `YYYY-MM-DD`. */
   @Property({ type: 'date' })
   endsOn!: string;
+
+  /** Admin-chosen order: higher shows first (within current / ended) on the public page and in the staff list. */
+  @Property({ type: 'integer', default: 0 })
+  sortOrder: number = 0;
 }

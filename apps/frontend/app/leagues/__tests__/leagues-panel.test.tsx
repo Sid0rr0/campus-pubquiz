@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   createLeague: vi.fn(),
   updateLeague: vi.fn(),
   deleteLeague: vi.fn(),
+  moveLeague: vi.fn(),
   addLeagueSession: vi.fn(),
   removeLeagueSession: vi.fn(),
   fetchPlayedSessions: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('@/app/lib/leagues-api', async (importOriginal) => ({
   createLeague: api.createLeague,
   updateLeague: api.updateLeague,
   deleteLeague: api.deleteLeague,
+  moveLeague: api.moveLeague,
   addLeagueSession: api.addLeagueSession,
   removeLeagueSession: api.removeLeagueSession,
 }));
@@ -131,6 +133,29 @@ describe('LeaguesPanel', () => {
         endsOn: '2026-12-20',
       }),
     );
+  });
+
+  it('moves a league up or down, with the ends disabled', async () => {
+    const user = userEvent.setup();
+    api.moveLeague.mockResolvedValue(undefined);
+    api.fetchLeagues.mockResolvedValue({
+      items: [LEAGUE, { ...LEAGUE, id: 2, name: 'Spring 2027' }],
+    });
+    renderWithQuery(<LeaguesPanel />);
+    await screen.findByText('Spring 2027');
+
+    expect(
+      screen.getByRole('button', { name: 'Move Autumn 2026 up' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Move Spring 2027 down' }),
+    ).toBeDisabled();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Move Spring 2027 up' }),
+    );
+
+    await waitFor(() => expect(api.moveLeague).toHaveBeenCalledWith(2, 'up'));
   });
 
   it('deletes a league after confirming', async () => {

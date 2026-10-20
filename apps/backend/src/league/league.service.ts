@@ -44,6 +44,13 @@ export class InvalidLeagueIdsError extends Error {
   }
 }
 
+/** The admin's order: higher `sortOrder` first, ties newest first. */
+export const LEAGUE_ORDER = {
+  sortOrder: 'desc',
+  startsOn: 'desc',
+  id: 'desc',
+} as const;
+
 export interface ListLeaguesOptions {
   /** Keep only leagues whose end date is today (at the venue) or later. */
   current?: boolean;
@@ -67,7 +74,7 @@ export class LeagueService {
     const today = venueToday(now);
     const leagues = await this.leagues.find(
       current ? { endsOn: { $gte: today } } : {},
-      { orderBy: { startsOn: 'desc', id: 'desc' } },
+      { orderBy: LEAGUE_ORDER },
     );
     const items: LeagueView[] = [];
     for (const league of leagues) {
@@ -76,10 +83,34 @@ export class LeagueService {
     return { items };
   }
 
+  /** A new league goes to the top of the order. */
   async create(fields: LeagueFields): Promise<LeagueView> {
-    const league = this.leagues.create(fields);
+    const [top] = await this.leagues.find(
+      {},
+      { orderBy: { sortOrder: 'desc' }, limit: 1 },
+    );
+    const league = this.leagues.create({
+      ...fields,
+      sortOrder: (top?.sortOrder ?? 0) + 1,
+    });
     await this.em().flush();
     return this.view(league, venueToday(new Date()));
+  }
+
+  /** Swaps the league with its neighbour in the admin order; at either end it stays put. */
+  async move(id: number, direction: 'up' | 'down'): Promise<void> {
+    const ordered = await this.leagues.find({}, { orderBy: LEAGUE_ORDER });
+    const index = ordered.findIndex((league) => league.id === id);
+    if (index === -1) throw new LeagueNotFoundError(id);
+    const target = index + (direction === 'up' ? -1 : 1);
+    if (target < 0 || target >= ordered.length) return;
+    // Re-number the whole list so equal sort orders can never make a swap a no-op.
+    const [moved] = ordered.splice(index, 1);
+    ordered.splice(target, 0, moved);
+    ordered.forEach((league, position) => {
+      league.sortOrder = ordered.length - position;
+    });
+    await this.em().flush();
   }
 
   async update(id: number, fields: LeagueFields): Promise<LeagueView> {
