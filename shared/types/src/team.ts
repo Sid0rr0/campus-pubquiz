@@ -1,3 +1,6 @@
+import type { AnswerKind, Verdict } from './answer-kind';
+import type { QuestionType } from './question-types';
+
 export interface TeamListItem {
   id: number;
   name: string;
@@ -63,6 +66,41 @@ export interface TeamDetail {
   summary: TeamStatsSummary;
   /** Newest first. */
   sessions: TeamSessionRow[];
+}
+
+/** A team's history as the team itself sees it, behind `POST /team-page`: the staff figures without the team id. Never carries feedback or the team code. */
+export type TeamPageHistory = Omit<TeamDetail, 'id'>;
+
+/** One question of an ended night as the team that played it sees it: its own answer, the verdict and the right answer. Never another team's answer. */
+export interface TeamNightQuestion {
+  questionId: number;
+  roundTitle: string;
+  /** 1-based position of the question's round in the quiz. */
+  roundNumber: number;
+  /** 1-based position of the question within its round. */
+  questionNumber: number;
+  prompt: string;
+  type: QuestionType;
+  /** How the question is answered, so the page renders both answers by kind. */
+  answerKind: AnswerKind;
+  /** The question's points. */
+  points: number;
+  /** The team's answer as readable text; null when it gave none. */
+  teamAnswer: string | null;
+  /** Null while the answer is ungraded (or when there is no answer). */
+  verdict: Verdict | null;
+  pointsAwarded: number;
+  /** The key as readable text. */
+  correctAnswer: string;
+}
+
+/** One ended night in a team's history, behind `POST /team-page/sessions/:sessionId`. */
+export interface TeamNightDetail {
+  gameSessionId: number;
+  name: string;
+  playedAt: string; // ISO
+  /** In quiz order: round by round. */
+  questions: TeamNightQuestion[];
 }
 
 export const TEAMS_SORT_COLUMNS = [

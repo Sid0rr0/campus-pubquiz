@@ -7,7 +7,9 @@ import {
   ExitIcon,
   GearIcon,
   HamburgerMenuIcon,
+  PersonIcon,
 } from '@radix-ui/react-icons';
+import Link from 'next/link';
 import type { AuthUser } from '@campus-pubquiz/types';
 import { AccountMenuLinks } from '@/app/components/account-menu-links';
 import { Button } from '@/app/components/button';
@@ -100,6 +102,16 @@ export function MobileHeaderMenu({
                     />{' '}
                     (save it to play as this team another night)
                   </p>
+                )}
+                {playerMenu.team && (
+                  <Link
+                    href="/team"
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="flex items-center gap-1 text-sm font-extrabold underline"
+                  >
+                    <PersonIcon aria-hidden="true" />
+                    Our team page
+                  </Link>
                 )}
                 <Button
                   type="button"

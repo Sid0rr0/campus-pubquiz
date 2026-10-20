@@ -6,10 +6,10 @@ Parent spec: `.scratch/team-page/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres test: figures equal the staff endpoint's for the same team; unknown code → 404
-- [ ] Throttle applied (test or explicit decorator check)
-- [ ] The code never appears in a URL or query string
-- [ ] Page: form, stored-code path, history, empty state, error state
-- [ ] `DOCUMENTATION.md` (Team stats / Authentication) documents the public endpoint
+- [x] Real-Postgres test: figures equal the staff endpoint's for the same team; unknown code → 404
+- [x] Throttle applied (test or explicit decorator check)
+- [x] The code never appears in a URL or query string
+- [x] Page: form, stored-code path, history, empty state, error state
+- [x] `DOCUMENTATION.md` (Team stats / Authentication) documents the public endpoint

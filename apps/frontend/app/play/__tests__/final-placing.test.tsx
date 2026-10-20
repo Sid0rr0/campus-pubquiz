@@ -108,6 +108,25 @@ describe('PlayPage — final placing', () => {
     expect(screen.getByText('You finished Joint 2nd of 5')).toBeInTheDocument();
   });
 
+  it('links to the team page on the ended screen when a team code is stored', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
+    show({ ...ENDED, leaderboard: leaderboardWith(4) });
+    renderWithQuery(<PlayPage />);
+
+    expect(
+      await screen.findByRole('link', { name: 'Our team page' }),
+    ).toHaveAttribute('href', '/team');
+  });
+
+  it('shows no team page link on the ended screen without a stored team code', () => {
+    show({ ...ENDED, leaderboard: leaderboardWith(4) });
+    renderWithQuery(<PlayPage />);
+
+    expect(
+      screen.queryByRole('link', { name: 'Our team page' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('waits while a showdown is still being played', () => {
     show({
       ...ENDED,

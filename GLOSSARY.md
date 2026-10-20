@@ -152,6 +152,10 @@ _Avoid_: position, rank (on its own)
 The mean of a team's placings across the ended sessions it played, leaving out the sessions it left. A team with no placing has no average placing.
 _Avoid_: average position, average rank
 
+**Team page**:
+A team's own public page at `/team`, opened with its team code instead of a login. It shows the team's history across ended sessions (the same figures staff see on the team stats page, minus anything staff-only), and for each ended session every question with the team's own answer, its verdict and the right answer. It never shows other teams' answers or feedback.
+_Avoid_: team profile, team stats page (that is the staff page at `/teams/[id]`)
+
 **Team link**:
 A phone's link to its team in a live session: who the team is, whether the server has this connection registered as the team's, and the team's own answers, grades, bonus awards and ratings. It's made by a join, remade after every reconnect and after a session restart, and ended by a kick, the session closing or logging out. A phone is linked only while the server confirms this connection holds the team's seat; until then it offers no answer form, and a rejoin refused because an older socket still holds the seat is retried quietly rather than shown.
 

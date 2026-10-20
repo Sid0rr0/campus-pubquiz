@@ -1,6 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import Link from 'next/link';
+import { readStoredIdentity } from '@/app/lib/team-storage';
 import type {
   ActiveShowdownView,
   LeaderboardEntry,
@@ -41,6 +43,22 @@ interface GameStatusScreensProps {
     teamId: number,
     value: string,
   ) => void;
+}
+
+/** "Our team page" — only on a phone that has a stored team code to open it with. */
+function TeamPageLink() {
+  const [hasCode, setHasCode] = useState(false);
+  useEffect(() => {
+    // Reading localStorage is only possible in the browser, after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHasCode(Boolean(readStoredIdentity().teamCode));
+  }, []);
+  if (!hasCode) return null;
+  return (
+    <Link href="/team" className="text-sm font-extrabold text-cyan underline">
+      Our team page
+    </Link>
+  );
 }
 
 function LookAtTheScreen({
@@ -162,6 +180,7 @@ export function GameStatusScreens({
           {placing && (
             <p className="font-display text-xl text-magenta">{placing.text}</p>
           )}
+          <TeamPageLink />
         </div>
       );
     case 'showdown_reveal':
