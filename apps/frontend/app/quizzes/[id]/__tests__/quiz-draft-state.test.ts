@@ -177,6 +177,34 @@ describe('YouTube clip fields in the editor draft', () => {
     expect(questionToPreview(question)).toEqual(imageWithAnswerVideo);
   });
 
+  it.each(['https://example.com/a.jpg', 'https://example.com/a.mp3'])(
+    'sends no clip or hidden-video flag for %s media, and keeps the typed times in the draft',
+    (mediaUrl) => {
+      const draft = {
+        ...questionFromPreview('q1', preview),
+        mediaUrl,
+        isVideoHidden: true,
+      };
+
+      const saved = questionToPreview(draft);
+
+      expect(saved).not.toHaveProperty('mediaStartSeconds');
+      expect(saved).not.toHaveProperty('mediaEndSeconds');
+      expect(saved).not.toHaveProperty('isVideoHidden');
+      expect([draft.clipStart, draft.clipEnd]).toEqual(['55', '1:28']);
+      expect(
+        questionToPreview({
+          ...draft,
+          mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        }),
+      ).toMatchObject({
+        mediaStartSeconds: 55,
+        mediaEndSeconds: 88,
+        isVideoHidden: true,
+      });
+    },
+  );
+
   it('drops the reveal clip when neither media is a YouTube link', () => {
     const question = {
       ...questionFromPreview('q1', preview),
