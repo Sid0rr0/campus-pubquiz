@@ -49,6 +49,15 @@ export const BATCH_GRADED_TYPES = typesWhere(
  */
 export const KAHOOT_ALLOWED_TYPES = typesWhere((kind) => kind.kahootAllowed);
 
+/** The kahoot-accepted types as people read them: lowercased labels in type-picker order, commas and "and" before the last ("multiple choice, sort / order and number"). */
+export function kahootTypeNames(): string {
+  const names = KAHOOT_ALLOWED_TYPES.map((type) =>
+    QUESTION_KINDS[type].label.toLowerCase(),
+  );
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 export function isBatchGradedType(type: QuestionType): boolean {
   return QUESTION_KINDS[type].gradingMode === 'batch';
 }

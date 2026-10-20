@@ -1,6 +1,10 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { checkQuestion, decodeSheetRow } from '@campus-pubquiz/types';
+import {
+  checkQuestion,
+  decodeSheetRow,
+  kahootTypeNames,
+} from '@campus-pubquiz/types';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuizDraftApiError } from '@/app/lib/quiz-draft-api';
@@ -1770,6 +1774,9 @@ describe('QuizEditorPanel', () => {
       const toggle = screen.getByLabelText(/kahoot mode/i);
       expect(toggle).toBeDisabled();
       const hint = screen.getByText(/change or remove questions 2, 3 first/i);
+      expect(hint).toHaveTextContent(
+        `Kahoot rounds only hold ${kahootTypeNames()} questions`,
+      );
       expect(toggle.getAttribute('aria-describedby')?.split(' ')).toContain(
         hint.id,
       );

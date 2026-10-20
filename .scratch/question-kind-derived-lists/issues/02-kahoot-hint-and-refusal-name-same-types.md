@@ -8,7 +8,7 @@ See the spec's "Lists derived from the registry → Kahoot type names".
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] One shared function produces the kahoot type names list from the registry.
 - [ ] The round editor's kahoot hint uses it and has no hand-typed type names, and still names the blocking positions.

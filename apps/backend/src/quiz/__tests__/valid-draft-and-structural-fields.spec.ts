@@ -199,6 +199,8 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
             roundIndex: 0,
             questionIndex: 0,
             field: 'type',
+            message:
+              'Kahoot rounds only support multiple choice, sort / order, match pairs and number questions',
           }),
         );
       },
