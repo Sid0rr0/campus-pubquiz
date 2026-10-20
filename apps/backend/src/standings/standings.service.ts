@@ -12,24 +12,14 @@ import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import {
   sessionResult,
+  type DepartedTeam,
   type SessionResult,
   type SessionResultAnswer,
   type SessionResultQuestion,
+  type SessionStandings,
 } from '@/standings/session-result';
 
-/** A team's points with no place in the ranking — one that took part but is no longer on the roster. */
-export type DepartedTeam = Omit<LeaderboardEntry, 'rank' | 'rankTo'>;
-
-export interface SessionStandings {
-  /** Every roster team, already in final order with `rank`/`rankTo`. */
-  leaderboard: LeaderboardEntry[];
-  /** Teams that took part but were kicked or left: points only, never ranked, highest total first. */
-  departed: DepartedTeam[];
-  /** Ranked plus departed teams — the team count every stats denominator uses. */
-  participantCount: number;
-  /** The one winner: the first ranked team (undefined for an empty roster). Never a departed team. */
-  winner: LeaderboardEntry | undefined;
-}
+export type { DepartedTeam, SessionStandings };
 
 interface TeamTotalsRow {
   gameSessionId: number;
