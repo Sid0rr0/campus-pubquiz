@@ -192,6 +192,25 @@ describe('sessions-api', () => {
     });
   });
 
+  describe('createSession leagues', () => {
+    it('includes the ticked league ids in the POST body', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await createSession(2, undefined, undefined, [4, 5]);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/sessions',
+        expect.objectContaining({
+          body: JSON.stringify({ quizId: 2, leagueIds: [4, 5] }),
+        }),
+      );
+    });
+  });
+
   describe('updateSessionSettings', () => {
     it('patches /sessions/:joinCode/settings with the session cookie', async () => {
       const fetchMock = vi.fn().mockResolvedValue({ ok: true });

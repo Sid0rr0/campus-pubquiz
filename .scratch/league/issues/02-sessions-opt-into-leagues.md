@@ -6,9 +6,9 @@ Parent spec: `.scratch/league/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres test: create with leagues, patch to change them, unknown or non-current id → 400, patch after end refused
-- [ ] Moderator can tick leagues
-- [ ] Form and settings-panel checkboxes, including "no current leagues" (section hidden)
-- [ ] `DOCUMENTATION.md` (Sessions) and the `/guide` page updated
+- [x] Real-Postgres test: create with leagues, patch to change them, unknown or non-current id → 400, patch after end refused
+- [x] Moderator can tick leagues
+- [x] Form and settings-panel checkboxes, including "no current leagues" (section hidden)
+- [x] `DOCUMENTATION.md` (Sessions) and the `/guide` page updated

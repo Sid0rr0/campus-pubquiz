@@ -38,6 +38,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Starting a session',
     paragraphs: [
       'In the lobby, Session Settings sets the quiz, rules text and bonus categories. Then press Start Quiz.',
+      'Tick the leagues this session counts towards when you start it, or in Session Settings until it ends.',
       'Advance shows the rules, the round overview, then the first round title card. While the rules show, Previous returns to the lobby.',
     ],
   },
@@ -66,7 +67,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'The break and break review',
     paragraphs: [
-      'When a block ends, answers close and the big screen shows a break card with a timer; finish grading now. Break End Time sets or extends it.',
+      'When a block ends, answers close and the big screen shows a break card with a timer. Break End Time sets or extends it.',
       'Fun facts rotate on the card; switch them off in Session Settings (lobby only).',
       "Previous steps back through the block's questions with answers hidden: the break review.",
     ],
@@ -81,7 +82,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Leaderboard, late joiners and ties',
     paragraphs: [
       'Show or hide the leaderboard any time. While it shows, Advance reveals one rank at a time, from last place up.',
-      'Join overlay on Control covers the big screen with the QR code and join code for late teams while the quiz carries on; press it again to hide it.',
+      'Join overlay on Control covers the big screen with the QR code and join code for late teams while the quiz carries on.',
       'When teams tie for first place after a reveal, the Showdown panel offers a tiebreak between them.',
     ],
   },
@@ -90,7 +91,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'The Teams panel shows who is connected and has answered; kick a team here to remove it.',
       'Phones and the big screen pick up where the quiz is on reconnecting. A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…" meanwhile.',
-      'Each team shows its player count, entered by the team. Above the "max players per team" setting it is flagged as over the player cap; nothing is deducted automatically, so give a negative bonus for a house-rules penalty.',
+      'Each team shows its player count. Above the "max players per team" setting it is flagged as over the player cap; nothing is deducted automatically, so give a negative bonus for a house-rules penalty.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
       "Bonus points: open the team's actions menu, choose Award bonus, pick a category, set the points (negative is a penalty) and press Award.",
     ],

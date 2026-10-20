@@ -15,6 +15,10 @@ import { createSession, SessionApiError } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
+import {
+  LeagueCheckboxes,
+  useTickableLeagues,
+} from '@/app/components/league-checkboxes';
 import { RoundsList } from '@/app/components/rounds-list';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 
@@ -37,6 +41,8 @@ export function StartSessionDialog({
     DEFAULT_SESSION_SETTINGS,
   );
   const [name, setName] = useState('');
+  const [leagueIds, setLeagueIds] = useState<number[]>([]);
+  const { leagues } = useTickableLeagues();
   // Resets the form whenever a different (or no) quiz becomes pending —
   // adjusted during render rather than in an Effect.
   const [prevQuizId, setPrevQuizId] = useState(quiz?.id ?? null);
@@ -49,6 +55,7 @@ export function StartSessionDialog({
         : null,
     });
     setName(quiz?.title ?? '');
+    setLeagueIds([]);
   }
 
   const createMutation = useMutation({
@@ -56,7 +63,14 @@ export function StartSessionDialog({
       quizId: number;
       settings: SessionSettings;
       name: string;
-    }) => createSession(variables.quizId, variables.settings, variables.name),
+      leagueIds: number[];
+    }) =>
+      createSession(
+        variables.quizId,
+        variables.settings,
+        variables.name,
+        variables.leagueIds,
+      ),
     onSuccess: (session) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
       onCreated(session.joinCode);
@@ -74,7 +88,7 @@ export function StartSessionDialog({
 
   function handleConfirm(): void {
     if (!quiz) return;
-    createMutation.mutate({ quizId: quiz.id, settings, name });
+    createMutation.mutate({ quizId: quiz.id, settings, name, leagueIds });
   }
 
   return (
@@ -100,6 +114,11 @@ export function StartSessionDialog({
               className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
             />
           </label>
+          <LeagueCheckboxes
+            leagues={leagues}
+            selected={leagueIds}
+            onChange={setLeagueIds}
+          />
           <Tabs.Root defaultValue="overview" className="flex flex-col gap-3">
             <Tabs.List className="flex gap-1 border-b border-foreground/15">
               <Tabs.Trigger

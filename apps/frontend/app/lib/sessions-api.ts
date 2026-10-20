@@ -2,6 +2,7 @@ import type {
   ActiveSessionSummary,
   CreateSessionPayload,
   SessionSettings,
+  UpdateSessionSettingsPayload,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
@@ -44,8 +45,9 @@ export async function createSession(
   quizId: number,
   settings?: Partial<SessionSettings>,
   name?: string,
+  leagueIds?: number[],
 ): Promise<ActiveSessionSummary> {
-  const payload: CreateSessionPayload = { quizId, settings, name };
+  const payload: CreateSessionPayload = { quizId, settings, name, leagueIds };
   const response = await fetch(`${getBackendUrl()}/sessions`, {
     method: 'POST',
     credentials: 'include',
@@ -60,7 +62,7 @@ export async function createSession(
 
 export async function updateSessionSettings(
   joinCode: string,
-  settings: Partial<SessionSettings>,
+  settings: UpdateSessionSettingsPayload,
 ): Promise<void> {
   const response = await fetch(
     `${getBackendUrl()}/sessions/${joinCode}/settings`,

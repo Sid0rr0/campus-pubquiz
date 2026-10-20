@@ -20,7 +20,7 @@ export class LeagueNotFoundError extends Error {
 }
 
 export class SessionNotFoundError extends Error {
-  constructor(id: number) {
+  constructor(id: number | string) {
     super(`Session ${id} does not exist`);
   }
 }
@@ -28,6 +28,19 @@ export class SessionNotFoundError extends Error {
 export class SessionNotEndedError extends Error {
   constructor(id: number) {
     super(`Session ${id} has not ended: only ended sessions can be added`);
+  }
+}
+
+export class SessionEndedError extends Error {
+  constructor(joinCode: string) {
+    super(`Session ${joinCode} has ended: its leagues can no longer be ticked`);
+  }
+}
+
+/** Some ticked league does not exist, or is no longer current and the session is not already in it. */
+export class InvalidLeagueIdsError extends Error {
+  constructor(ids: number[]) {
+    super(`Not a current league: ${ids.join(', ')}`);
   }
 }
 
@@ -104,6 +117,82 @@ export class LeagueService {
       league: leagueId,
       gameSession: gameSessionId,
     });
+  }
+
+  /** Checks ticked ids for a session that does not exist yet: each must be a current league. */
+  async assertAssignable(
+    leagueIds: number[],
+    now: Date = new Date(),
+  ): Promise<void> {
+    await this.assertTickable(leagueIds, new Set(), now);
+  }
+
+  /**
+   * Replaces the leagues a live session counts towards. Every id must be an
+   * existing current league (one the session is already in may stay); a
+   * session that has ended is refused. Nothing is written when any id is bad.
+   */
+  async setSessionLeagues(
+    joinCode: string,
+    leagueIds: number[],
+    now: Date = new Date(),
+  ): Promise<void> {
+    const { session, current, alreadyIn, wanted } = await this.checkSession(
+      joinCode,
+      leagueIds,
+      now,
+    );
+    const em = this.em();
+    for (const row of current) {
+      if (!wanted.includes(row.league.id)) em.remove(row);
+    }
+    for (const id of wanted) {
+      if (!alreadyIn.has(id)) {
+        this.memberships.create({
+          league: em.getReference(League, id),
+          gameSession: session,
+        });
+      }
+    }
+    await em.flush();
+  }
+
+  /** The checks of `setSessionLeagues`, without writing: for a caller that must know the write will be accepted first. */
+  async assertSessionAssignable(
+    joinCode: string,
+    leagueIds: number[],
+    now: Date = new Date(),
+  ): Promise<void> {
+    await this.checkSession(joinCode, leagueIds, now);
+  }
+
+  private async checkSession(joinCode: string, leagueIds: number[], now: Date) {
+    const session = await this.gameSessions.findOne({ joinCode });
+    if (!session) throw new SessionNotFoundError(joinCode);
+    if (session.status === 'ended') throw new SessionEndedError(joinCode);
+    const wanted = [...new Set(leagueIds)];
+    const current = await this.memberships.find({ gameSession: session.id });
+    const alreadyIn = new Set(current.map((row) => row.league.id));
+    await this.assertTickable(wanted, alreadyIn, now);
+    return { session, current, alreadyIn, wanted };
+  }
+
+  private async assertTickable(
+    leagueIds: number[],
+    alreadyIn: ReadonlySet<number>,
+    now: Date,
+  ): Promise<void> {
+    const wanted = [...new Set(leagueIds)];
+    if (wanted.length === 0) return;
+    const today = venueToday(now);
+    const found = await this.leagues.find({ id: { $in: wanted } });
+    const tickable = new Set(
+      found
+        .filter((league) => league.endsOn >= today || alreadyIn.has(league.id))
+        .map((league) => league.id),
+    );
+    const bad = wanted.filter((id) => !tickable.has(id));
+    if (bad.length > 0) throw new InvalidLeagueIdsError(bad);
   }
 
   private em() {
