@@ -8,7 +8,7 @@ See the spec's "Lists derived from the registry → The lint rule's type list".
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The lint rule gets its type list by parsing the shared type list module when the config loads. The hand copy is gone.
 - [ ] Loading throws with a message naming the module when the list can't be read or isn't a list of plain strings.
