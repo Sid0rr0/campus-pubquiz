@@ -123,6 +123,39 @@ function SelectedLeague({ league }: { league: PublicLeague }) {
   );
 }
 
+function LeagueRules() {
+  return (
+    <section
+      aria-labelledby="league-rules-heading"
+      className="mt-4 flex flex-col gap-2 border-t-2 border-foreground/15 pt-4"
+    >
+      <h2 id="league-rules-heading" className="font-display text-xl">
+        How league points work
+      </h2>
+      <p className="text-foreground/80">
+        Every finished quiz night in a league gives each team that played it:
+      </p>
+      <ul className="list-disc pl-6 text-foreground/80">
+        <li>
+          <strong>5, 4, 3, 2 or 1 points</strong> for finishing 1st, 2nd, 3rd,
+          4th or 5th. Teams tied on a place each get that place&apos;s full
+          points. Nothing below 5th.
+        </li>
+        <li>
+          <strong>1 participation point</strong> for answering at least one
+          question. A team that leaves early gets only this point; a team that
+          never answers gets nothing.
+        </li>
+      </ul>
+      <p className="text-foreground/80">
+        Teams are ranked by league points. If they are level, the team that won
+        more nights ranks higher, then the one with the better average placing.
+        Teams still level share the position.
+      </p>
+    </section>
+  );
+}
+
 /** The public league page: current leagues first, then the rest, and the selected league's table. */
 export function LeaguePanel() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -165,6 +198,7 @@ export function LeaguePanel() {
           <SelectedLeague key={selected.id} league={selected} />
         </>
       )}
+      <LeagueRules />
     </main>
   );
 }

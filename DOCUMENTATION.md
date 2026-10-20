@@ -1533,7 +1533,8 @@ points, the table and the public page.
     an unknown league is a 404.
 - **`/league` page** (public, no login): current leagues first as buttons, then the
   rest (marked "ended"), and the selected league's table. Empty states for no leagues
-  and for a league with no finished night yet.
+  and for a league with no finished night yet. A "How league points work" section at the
+  bottom states the scale, the participation point and the tie-breaks.
 
 ## Deploy and CI
 

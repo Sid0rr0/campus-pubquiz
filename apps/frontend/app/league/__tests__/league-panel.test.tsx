@@ -62,6 +62,19 @@ describe('LeaguePanel', () => {
     );
   });
 
+  it('explains how league points are earned below the table', async () => {
+    mockFetchPublicLeagues.mockResolvedValue({ items: [AUTUMN] });
+
+    renderWithQuery(<LeaguePanel />);
+
+    const rules = await screen.findByRole('region', {
+      name: 'How league points work',
+    });
+    expect(within(rules).getByText(/5, 4, 3, 2 or 1 points/)).toBeVisible();
+    expect(within(rules).getByText(/1 participation point/)).toBeVisible();
+    expect(within(rules).getByText(/won more nights/)).toBeVisible();
+  });
+
   it('shows the first (current) league table with every column', async () => {
     mockFetchPublicLeagues.mockResolvedValue({ items: [AUTUMN, SPRING] });
 
