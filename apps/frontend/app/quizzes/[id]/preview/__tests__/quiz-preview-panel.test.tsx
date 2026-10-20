@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   buildQuizPreview,
@@ -181,6 +181,133 @@ describe('QuizPreviewPanel', () => {
     expect(screen.queryByText(/block ends here/i)).not.toBeInTheDocument();
     await user.keyboard('{ArrowRight}');
     expect(screen.getByText(/block ends here/i)).toBeInTheDocument();
+  });
+
+  describe('jump list', () => {
+    const jumpList = () => screen.getByRole('navigation', { name: /jump to/i });
+
+    it('lists the rounds and their questions', async () => {
+      await renderPreview();
+
+      const list = within(jumpList());
+      expect(list.getByRole('button', { name: /geography/i })).toBeVisible();
+      expect(
+        list.getByRole('button', { name: /capital of france\?/i }),
+      ).toBeVisible();
+      expect(
+        list.getByRole('button', { name: /largest planet\?/i }),
+      ).toBeVisible();
+    });
+
+    it('moves to the chosen question and writes it to the URL', async () => {
+      const user = userEvent.setup();
+      await renderPreview();
+
+      await user.click(
+        within(jumpList()).getByRole('button', { name: /largest planet\?/i }),
+      );
+
+      expect(screen.getByText('Step 4 of 5')).toBeInTheDocument();
+      expect(screen.queryByText('Jupiter')).not.toBeInTheDocument();
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        '/quizzes/7/preview?at=r1q2',
+      );
+    });
+
+    it('moves back to a round title card and leaves ?at= out for the first step', async () => {
+      const user = userEvent.setup();
+      searchParamsRef.current = new URLSearchParams('at=r1q2');
+      await renderPreview();
+
+      await user.click(
+        within(jumpList()).getByRole('button', { name: /geography/i }),
+      );
+
+      expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
+      expect(mockReplace).toHaveBeenLastCalledWith('/quizzes/7/preview');
+    });
+
+    it('in the night order lists the same rounds and questions and jumps to the question screen', async () => {
+      const user = userEvent.setup();
+      searchParamsRef.current = new URLSearchParams('mode=night');
+      mockFetchQuizPreview.mockResolvedValue(buildQuizPreview(ROUNDS, 'night'));
+      renderWithQuery(<QuizPreviewPanel quizId="7" />);
+      await screen.findByRole('button', { name: /next/i });
+
+      await user.click(
+        within(jumpList()).getByRole('button', { name: /largest planet\?/i }),
+      );
+
+      expect(screen.getByText('Step 4 of 8')).toBeInTheDocument();
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        '/quizzes/7/preview?mode=night&at=r1q2',
+      );
+    });
+  });
+
+  describe('?at=', () => {
+    it('opens at the named question', async () => {
+      searchParamsRef.current = new URLSearchParams('at=r1q2');
+      await renderPreview();
+
+      expect(screen.getByText('Step 4 of 5')).toBeInTheDocument();
+      expect(screen.getByText('Largest planet?')).toBeInTheDocument();
+      expect(screen.queryByText('Jupiter')).not.toBeInTheDocument();
+    });
+
+    it('opens at the named answer', async () => {
+      searchParamsRef.current = new URLSearchParams('at=r1q1-answer');
+      await renderPreview();
+
+      expect(screen.getByText('Step 3 of 5')).toBeInTheDocument();
+      expect(screen.getAllByText('Paris').length).toBeGreaterThan(0);
+    });
+
+    it('is read in the night order too', async () => {
+      searchParamsRef.current = new URLSearchParams('mode=night&at=r1q2');
+      mockFetchQuizPreview.mockResolvedValue(buildQuizPreview(ROUNDS, 'night'));
+      renderWithQuery(<QuizPreviewPanel quizId="7" />);
+      await screen.findByRole('button', { name: /next/i });
+
+      expect(screen.getByText('Step 4 of 8')).toBeInTheDocument();
+    });
+
+    it('falls back to the first step for an unknown position', async () => {
+      searchParamsRef.current = new URLSearchParams('at=r9q9');
+      await renderPreview();
+
+      expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
+    });
+
+    it('is kept up to date while stepping with the buttons and the arrow keys', async () => {
+      const user = userEvent.setup();
+      await renderPreview();
+
+      await user.click(screen.getByRole('button', { name: /next/i }));
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        '/quizzes/7/preview?at=r1q1',
+      );
+
+      await user.keyboard('{ArrowRight}');
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        '/quizzes/7/preview?at=r1q1-answer',
+      );
+
+      await user.keyboard('{ArrowLeft}{ArrowLeft}');
+      expect(mockReplace).toHaveBeenLastCalledWith('/quizzes/7/preview');
+    });
+
+    it('is kept when the order is switched', async () => {
+      const user = userEvent.setup();
+      searchParamsRef.current = new URLSearchParams('at=r1q2');
+      await renderPreview();
+
+      await user.click(screen.getByRole('button', { name: /like the night/i }));
+
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        '/quizzes/7/preview?mode=night&at=r1q2',
+      );
+    });
   });
 
   it('says so when the quiz does not exist', async () => {

@@ -269,6 +269,68 @@ describe('SessionPickerPanel', () => {
     ).toHaveAttribute('href', '/quizzes/2');
   });
 
+  it('links each listed quiz to its preview from the actions menu', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/imported quiz/i);
+    await userEvent.click(
+      screen.getByRole('button', { name: /actions for imported quiz/i }),
+    );
+
+    expect(
+      await screen.findByRole('menuitem', { name: /preview/i }),
+    ).toHaveAttribute('href', '/quizzes/2/preview');
+  });
+
+  it("links a lobby session to its quiz's preview in a new tab", async () => {
+    mockFetchSessions.mockResolvedValue([
+      {
+        joinCode: 'ABCDEF',
+        quizId: 4,
+        quizTitle: 'Campus Pub Quiz Night',
+        name: 'Campus Pub Quiz Night',
+        status: 'lobby',
+        teamCount: 0,
+      },
+    ]);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    const previewLink = await screen.findByRole('link', { name: /preview/i });
+    expect(previewLink).toHaveAttribute('href', '/quizzes/4/preview');
+    expect(previewLink).toHaveAttribute('target', '_blank');
+  });
+
+  it('offers the preview only on sessions still in the lobby', async () => {
+    mockFetchSessions.mockResolvedValue([
+      {
+        joinCode: 'AAAAAA',
+        quizId: 1,
+        quizTitle: 'Live Quiz',
+        name: 'Live Quiz',
+        status: 'question_open',
+        teamCount: 1,
+      },
+      {
+        joinCode: 'BBBBBB',
+        quizId: 2,
+        quizTitle: 'Finished Quiz',
+        name: 'Finished Quiz',
+        status: 'ended',
+        teamCount: 2,
+      },
+    ]);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText('Live Quiz');
+    expect(
+      screen.queryByRole('link', { name: /preview/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the quiz's last-edited date and time", async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,

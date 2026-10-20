@@ -29,7 +29,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Before the night',
     paragraphs: [
-      'Build the quiz (see "Creating a quiz") and open it once from the Sessions page to check it.',
+      'Build the quiz, then check it with Quiz preview (Preview in the editor, quiz list, waiting session), not a throwaway session.',
       'Put /display on the big screen and /control on your laptop; teams join on their phones with the join code.',
       'A block is a run of rounds graded and revealed together. It ends at a round marked to break after it, and the last round always ends one.',
     ],

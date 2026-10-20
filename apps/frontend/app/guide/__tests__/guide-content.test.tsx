@@ -122,6 +122,13 @@ describe('GuideContent', () => {
     expect(text).toContain('Reconnecting…');
   });
 
+  it('points the moderator to Quiz preview rather than a throwaway session for checking content', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('check it with Quiz preview');
+    expect(text).toContain('not a throwaway session');
+  });
+
   it('says an over-cap penalty is a negative bonus', () => {
     const text = renderGuideText();
 

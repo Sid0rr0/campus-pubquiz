@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { DropdownMenu } from 'radix-ui';
 import {
   DotsVerticalIcon,
+  EyeOpenIcon,
   Pencil1Icon,
   PlayIcon,
   PlusIcon,
@@ -36,6 +37,7 @@ import {
 } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
+import { quizPreviewHref } from '@/app/lib/quiz-preview-position';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { StartSessionDialog } from '@/app/components/start-session-dialog';
@@ -194,6 +196,15 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                         >
                           <Pencil1Icon aria-hidden="true" />
                           Edit
+                        </Link>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item asChild>
+                        <Link
+                          href={quizPreviewHref(quiz.id)}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
+                        >
+                          <EyeOpenIcon aria-hidden="true" />
+                          Preview
                         </Link>
                       </DropdownMenu.Item>
                       {isAdmin && (

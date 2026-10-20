@@ -9,6 +9,10 @@ import {
 } from '@radix-ui/react-icons';
 import { type QuizDraftIssue } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import {
+  previewPosition,
+  quizPreviewHref,
+} from '@/app/lib/quiz-preview-position';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
   addRound,
@@ -43,9 +47,9 @@ const UNSAVED_PREVIEW_PROMPT =
   'You have unsaved changes. The preview shows the saved quiz, without them. Open it anyway?';
 
 /** Opens the saved quiz's preview in a new tab, so the draft here stays; asks first when the draft has unsaved changes. */
-function openPreview(quizId: number, isDirty: boolean): void {
+function openPreview(quizId: number, isDirty: boolean, at?: string): void {
   if (isDirty && !window.confirm(UNSAVED_PREVIEW_PROMPT)) return;
-  window.open(`/quizzes/${quizId}/preview`, '_blank', 'noopener');
+  window.open(quizPreviewHref(quizId, { at }), '_blank', 'noopener');
 }
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
@@ -255,6 +259,16 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   pinnedQuestionCount={pinnedQuestionCount}
                   structureNote={roundEditing && structureNoteFor(roundEditing)}
                   moveTargetRounds={moveTargetRounds(rounds, index, described)}
+                  onPreviewQuestion={
+                    draft.savedQuizId === null
+                      ? undefined
+                      : (questionIndex) =>
+                          openPreview(
+                            draft.savedQuizId!,
+                            draft.isDirty,
+                            previewPosition(index, questionIndex),
+                          )
+                  }
                   openedQuestionIds={openedQuestionIds}
                   issues={saveIssues.filter(
                     (issue) => issue.roundIndex === index,

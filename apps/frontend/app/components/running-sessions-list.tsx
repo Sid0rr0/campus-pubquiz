@@ -3,8 +3,10 @@ import {
   ArrowRightIcon,
   Cross2Icon,
   ExternalLinkIcon,
+  EyeOpenIcon,
 } from '@radix-ui/react-icons';
 import type { ActiveSessionSummary } from '@campus-pubquiz/types';
+import { quizPreviewHref } from '@/app/lib/quiz-preview-position';
 import { Button } from '@/app/components/button';
 import { CopyButton } from '@/app/components/copy-button';
 
@@ -51,6 +53,17 @@ export function RunningSessionsList({
                   <Cross2Icon aria-hidden="true" />
                   Close
                 </Button>
+              )}
+              {session.status === 'lobby' && (
+                <Link
+                  href={quizPreviewHref(session.quizId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-10 items-center gap-1.5 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
+                >
+                  <EyeOpenIcon aria-hidden="true" />
+                  Preview
+                </Link>
               )}
               <Link
                 href={`/remote?code=${session.joinCode}`}

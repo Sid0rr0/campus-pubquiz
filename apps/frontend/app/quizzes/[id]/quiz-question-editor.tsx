@@ -1,6 +1,11 @@
 'use client';
 
-import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from '@radix-ui/react-icons';
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  EyeOpenIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
 import {
   QUESTION_KINDS,
   QUESTION_TYPES,
@@ -41,6 +46,8 @@ interface QuizQuestionEditorProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onMoveToRound: (roundId: string) => void;
+  /** Opens the quiz preview at this question; absent when there is no saved quiz to preview. */
+  onPreviewFromHere?: () => void;
 }
 
 export interface MoveTarget {
@@ -100,6 +107,7 @@ export function QuizQuestionEditor({
   onMoveUp,
   onMoveDown,
   onMoveToRound,
+  onPreviewFromHere,
 }: QuizQuestionEditorProps) {
   const otherIssues = issues.filter(
     (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
@@ -162,6 +170,19 @@ export function QuizQuestionEditor({
               </option>
             ))}
           </select>
+        )}
+        {onPreviewFromHere && (
+          <Button
+            type="button"
+            onClick={onPreviewFromHere}
+            variant="icon"
+            size="icon-sm"
+            aria-label="Preview from here"
+            title="Preview from here"
+            className="mt-1"
+          >
+            <EyeOpenIcon aria-hidden="true" />
+          </Button>
         )}
         <Button
           type="button"

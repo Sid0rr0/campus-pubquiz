@@ -1008,6 +1008,9 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - **Preview** in the header bar (once the quiz is saved) opens the saved quiz's
   [Quiz preview](#quiz-preview) in a new tab. With unsaved changes the editor
   asks first, because the preview shows the saved quiz, not the draft.
+- **Preview from here** on each question (once the quiz is saved) opens the
+  preview in a new tab at that question (`?at=`), with the same unsaved-changes
+  prompt.
 
 ### Quiz preview
 
@@ -1021,6 +1024,16 @@ or counted. It is a read of the quiz.
   "Block ends here" marker after each block's last answer, and a not-found
   state for an unknown quiz. Media plays as on the night (clip bounds, YouTube,
   `hideVideo`).
+- **Jump list and position**: a side list of the rounds and their questions
+  moves straight to the chosen one. The position is kept in the URL as
+  `?at=` (rounds and questions numbered from 1: `r2` is round 2's title card,
+  `r2q3` its third question; a suffix names the other screens that share a
+  position: `-answer`, `-reveals`, `-break`, `-overview`). It is read once on
+  load, written while stepping (the first step is left out), and kept when the
+  order is switched; a position the order doesn't have opens the first step.
+- **Entry points**: the quiz editor's Preview and "Preview from here", a
+  Preview item in each quiz's actions menu on `/sessions`, and a Preview link on
+  each session still in the lobby there (it opens that session's quiz).
 - **Orders**, switched with a toggle on the page and kept in the URL as
   `?mode=night` (the default is left out, and the choice survives a refresh):
   - `answer_after_question` (the default): each round's title card, then each
