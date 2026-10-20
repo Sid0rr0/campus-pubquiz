@@ -6,7 +6,7 @@ Parent spec: `.scratch/question-record-module/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The preview type is inferred from the per-type preview schemas' input shape (never their output, which could carry defaults filled in by validation), under its existing name.
 - [ ] The stored payload type is inferred from the per-type payload schemas under its existing name. Payload parsing still drops keys a type doesn't read.

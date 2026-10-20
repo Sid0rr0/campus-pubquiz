@@ -1,7 +1,7 @@
 import { DEFAULT_MARGIN, type Margin } from './margin';
 import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionType } from './question-types';
-import type { MatchScoringMode } from './question-views';
+import type { MatchScoringMode } from './match-scoring-mode';
 
 /**
  * The Answer key module: what an answer is graded against. A question's

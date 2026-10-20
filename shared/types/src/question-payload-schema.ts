@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { MARGIN_UNITS, type Margin } from './margin';
+import { MARGIN_UNITS } from './margin';
+import { MATCH_SCORING_MODES } from './match-scoring-mode';
+import type { MergedOptional } from './merged-shape';
 
 /**
  * Payload codecs: one Zod schema per question type over the JSON stored in
@@ -38,7 +40,7 @@ export const matchPayloadSchema = z.object({
   ...media,
   options: stringList,
   matchTargets: stringList,
-  matchScoringMode: z.enum(['partial', 'all_or_nothing']).optional(),
+  matchScoringMode: z.enum(MATCH_SCORING_MODES).optional(),
 });
 
 export const closestGuessPayloadSchema = z.object(media);
@@ -50,17 +52,16 @@ export const numberPayloadSchema = z.object({
     .optional(),
 });
 
-/** What any stored payload decodes to: every field a type may carry, optional. */
-export interface QuestionPayload {
-  options?: string[];
-  matchTargets?: string[];
-  matchScoringMode?: 'partial' | 'all_or_nothing';
-  margin?: Margin;
-  mediaUrl?: string;
-  answerMediaUrl?: string;
-  mediaStartSeconds?: number;
-  mediaEndSeconds?: number;
-  isVideoHidden?: boolean;
-  revealStartSeconds?: number;
-  revealEndSeconds?: number;
-}
+/**
+ * What any stored payload decodes to: every field a type may carry, optional.
+ * Inferred from the per-type schemas above, so a field added to one reaches
+ * the type without a second edit.
+ */
+export type QuestionPayload = MergedOptional<
+  | z.infer<typeof freeTextPayloadSchema>
+  | z.infer<typeof multipleChoicePayloadSchema>
+  | z.infer<typeof sortPayloadSchema>
+  | z.infer<typeof matchPayloadSchema>
+  | z.infer<typeof closestGuessPayloadSchema>
+  | z.infer<typeof numberPayloadSchema>
+>;
