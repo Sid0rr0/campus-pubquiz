@@ -101,29 +101,47 @@ describe('Display view — teams-correct count on the reveal', () => {
     });
   });
 
-  it('keeps the earlier count while the leaderboard still updates when only the verdict tally read fails', async () => {
+  it('keeps the earlier count while the leaderboard and fun fact data still update when only the verdict tally read fails', async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const game = await startAt(
-      MATCH_ROUND,
-      ['Paris|Rome', 'Rome|Paris'],
-      (started) =>
-        jest
-          .spyOn(started.standingsService, 'verdictTallies')
-          .mockRejectedValue(new Error('tallies unavailable')),
-    );
+    // Team 2's first answer is wrong; the tally read is still healthy then.
+    const game = await startAt(MATCH_ROUND, ['Paris|Rome', 'Rome|Paris']);
+    const admin = await game.connectAdmin();
 
-    await walk(game, TO_REVEAL);
+    jest
+      .spyOn(game.standingsService, 'verdictTallies')
+      .mockRejectedValue(new Error('tallies unavailable'));
+    // Later writes: team 2 revises to the right answer and a bonus is awarded.
+    const { socket, teamId } = game.teams[1];
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId: game.rounds[0].questionIds[0],
+      teamId,
+      value: 'Paris|Rome',
+    });
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId,
+      category: 'shot',
+      points: 1,
+    });
 
+    await walk(game, TO_REVEAL.slice(0, 2));
+    const breakView = await game.resync('display');
+    expect(breakView.screen.kind).toBe('break_intro');
+    expect(
+      breakView.screen.kind === 'break_intro' && breakView.screen.funFacts,
+    ).toContainEqual(expect.objectContaining({ kind: 'bonus_awards_so_far' }));
+
+    await walk(game, TO_REVEAL.slice(2));
     const display = await game.resync('display');
     expect(display.progress.status).toBe('reveal');
+    // Only team 1 was right when the tally last read; team 2's fix is not counted.
     expect(display.teamsCorrect).toEqual({
-      correct: 0,
+      correct: 1,
       partial: 0,
       teamCount: 2,
     });
     expect(
       display.leaderboard.reduce((sum, entry) => sum + entry.totalPoints, 0),
-    ).toBe(4);
+    ).toBe(9);
   });
 
   it('has no count outside a revealed question', async () => {

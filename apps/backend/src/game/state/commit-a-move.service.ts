@@ -114,7 +114,7 @@ export class MoveCommitter {
    * settles and ends with the live results read (the same last step a session
    * write takes, with the same fallback: a failed read keeps the empty value),
    * then the league top, so the first snapshot a client receives already has
-   * its leaderboard. Nothing is saved.
+   * its live results and league. Nothing is saved.
    */
   async place(
     session: SessionState,
