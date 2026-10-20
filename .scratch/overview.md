@@ -8,7 +8,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
 | question-record-module | [One Question record codec for every shape a question takes](question-record-module/spec.md) | 5 | — |
 | display-screen-content | [The big screen and the phones draw what they are sent](display-screen-content/spec.md) | 5 | — |
-| session-result-module | [One Session result module for what a night's results mean](session-result-module/spec.md) | 4 | — |
 | ended-sessions-read | [One Ended-sessions read for which nights count and who took part](ended-sessions-read/spec.md) | 4 | session-result-module (tickets 03–04 only; 01–02 can start now) |
 | live-results-read | [One live results read in place of the with* helpers](live-results-read/spec.md) | 2 | — |
 | question-kind-derived-lists | [The question type registry derives every per-type list](question-kind-derived-lists/spec.md) | 3 | — |
