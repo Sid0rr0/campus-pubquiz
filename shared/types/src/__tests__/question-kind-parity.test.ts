@@ -3,7 +3,12 @@ import type { ImportQuestionPreview, SheetRow } from '../import';
 import { QUESTION_KINDS, checkQuestion } from '../question-kind';
 import { decodeSheetRow } from '../question-row-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
-import { BATCH_GRADED_TYPES, KAHOOT_ALLOWED_TYPES } from '../scoring';
+import { resolveAnswerKind } from '../answer-kind';
+import {
+  BATCH_GRADED_TYPES,
+  KAHOOT_ALLOWED_TYPES,
+  hasNumericAnswerKey,
+} from '../scoring';
 
 type Verdict = 'valid' | 'invalid';
 
@@ -310,6 +315,20 @@ describe('question kind grading flags', () => {
       );
       expect(KAHOOT_ALLOWED_TYPES.includes(type)).toBe(kind.kahootAllowed);
     }
+  });
+
+  it('has a numeric answer key for exactly the types whose answer kind is a number', () => {
+    const numeric = QUESTION_TYPES.filter(hasNumericAnswerKey);
+    expect([...numeric].sort()).toEqual(['closest_guess', 'number']);
+    for (const type of QUESTION_TYPES) {
+      expect(hasNumericAnswerKey(type)).toBe(
+        resolveAnswerKind({ type }) === 'number',
+      );
+    }
+  });
+
+  it.each(QUESTION_TYPES)('%s answer kind equals its input kind', (type) => {
+    expect(resolveAnswerKind({ type })).toBe(QUESTION_KINDS[type].inputKind);
   });
 
   it.each(QUESTION_TYPES)('%s declares how it is revealed', (type) => {
