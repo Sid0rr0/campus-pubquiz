@@ -9,6 +9,14 @@ export interface VerdictCardContent {
   shouldVibrate: boolean;
 }
 
+/** The text colour each tone is drawn in, shared by the verdict card and the block browser's "Your answer". */
+export const VERDICT_TONE_TEXT_CLASS: Record<VerdictCardTone, string> = {
+  correct: 'text-green',
+  partial: 'text-cyan',
+  incorrect: 'text-magenta',
+  none: 'text-foreground/65',
+};
+
 type VerdictCardSource = Pick<
   OpenedQuestionEntry,
   'myAnswer' | 'pointsAwarded' | 'verdict'
