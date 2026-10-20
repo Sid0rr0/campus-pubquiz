@@ -14,11 +14,10 @@ import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { Team } from '@/db/entities/team.entity';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
-import { StandingsService } from '@/standings/standings.service';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { TeamPageController } from '@/team/team-page.controller';
 import { useTestDatabase } from '@/test-db/test-database';
@@ -35,11 +34,7 @@ describe('TeamPageController (Postgres integration)', () => {
     joinCounter = 0;
     history = new TeamHistoryService(
       em.getRepository<Team, TeamRepository>(Team),
-      new StandingsService(
-        em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-          GameSessionTeam,
-        ),
-      ),
+      buildStandingsService(em),
       new PlayerCountService(
         em.getRepository<SessionPlayerCount, SessionPlayerCountRepository>(
           SessionPlayerCount,
@@ -51,11 +46,7 @@ describe('TeamPageController (Postgres integration)', () => {
       new LeagueTableService(
         em.getRepository<League, LeagueRepository>(League),
         em.getRepository<LeagueSession, LeagueSessionRepository>(LeagueSession),
-        new StandingsService(
-          em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-            GameSessionTeam,
-          ),
-        ),
+        buildStandingsService(em),
       ),
     );
   });

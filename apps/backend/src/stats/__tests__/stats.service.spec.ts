@@ -18,10 +18,9 @@ import { SessionFeedback } from '@/db/entities/session-feedback.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { Team } from '@/db/entities/team.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
-import { StandingsService } from '@/standings/standings.service';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { StatsService } from '@/stats/stats.service';
 import { useTestDatabase } from '@/test-db/test-database';
 
@@ -34,11 +33,7 @@ describe('StatsService (Postgres integration)', () => {
     em = db.orm.em.fork();
     statsService = new StatsService(
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
-      new StandingsService(
-        em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-          GameSessionTeam,
-        ),
-      ),
+      buildStandingsService(em),
       new PlayerCountService(
         em.getRepository<SessionPlayerCount, SessionPlayerCountRepository>(
           SessionPlayerCount,
