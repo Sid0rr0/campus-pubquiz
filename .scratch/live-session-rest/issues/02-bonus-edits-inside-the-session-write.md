@@ -12,7 +12,7 @@ See the spec's "Bonus edits and deletions inside the Session write".
 
 **Blocked by:** 01 (REST entry to the Live session module)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Through the real-store harness: an edited award shows its new points in the next snapshot to all three rooms
 - [ ] Through the real-store harness: a deleted award drops out of the leaderboard in the next snapshot

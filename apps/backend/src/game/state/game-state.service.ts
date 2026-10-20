@@ -4,6 +4,7 @@ import {
   type ActiveSessionSummary,
   type AdminQuestionContext,
   type AwardBonusPayload,
+  type BonusAwardAdminView,
   buildAdminQuestionContext,
   buildSnapshot,
   type CreateShowdownRoundPayload,
@@ -536,10 +537,36 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /** A bonus award was added, edited or deleted: refreshes the leaderboard. */
-  bonusChanged(joinCode: string): Promise<SessionOutcome> {
+  /**
+   * An admin edits a bonus award's points and reason; refreshes standings.
+   * Returns the updated admin view beside the outcome. A refusal carries the
+   * bonus service's message; a missing award is a BonusAwardNotFoundRefusal.
+   */
+  async editBonus(
+    joinCode: string,
+    awardId: number,
+    points: number,
+    reason: string | undefined,
+  ): Promise<{ outcome: SessionOutcome; award: BonusAwardAdminView }> {
+    let award: BonusAwardAdminView | undefined;
+    const outcome = await this.sessionWrite.write(joinCode, async (session) => {
+      const change = await this.bonusChanges.edit(
+        session,
+        awardId,
+        points,
+        reason,
+      );
+      award = change.award;
+      return change;
+    });
+    if (!award) throw new Error('A bonus edit stored no award view');
+    return { outcome, award };
+  }
+
+  /** An admin deletes a bonus award; refreshes standings. A missing award is a BonusAwardNotFoundRefusal. */
+  removeBonus(joinCode: string, awardId: number): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      this.bonusChanges.changed(session),
+      this.bonusChanges.remove(session, awardId),
     );
   }
 

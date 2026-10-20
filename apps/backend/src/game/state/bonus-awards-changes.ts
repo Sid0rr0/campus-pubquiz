@@ -1,10 +1,16 @@
 import {
   type AwardBonusPayload,
+  type BonusAwardAdminView,
   type SessionState,
   SOCKET_EVENTS,
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
-import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
+import {
+  BonusAwardNotFoundError,
+  BonusService,
+  InvalidBonusAwardError,
+} from '@/bonus/bonus.service';
+import { BonusAwardNotFoundRefusal } from '@/game/state/errors/bonus-award-not-found-refusal.error';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
 import {
@@ -14,7 +20,7 @@ import {
 
 /**
  * The bonus awards change module: builds the changes for the quiz master's
- * bonus award and for a bonus award added, edited or deleted over REST. It
+ * bonus award and for a bonus award edited or deleted over REST. It
  * follows the pattern of the session settings change module: a plain class
  * that never references the Session write module or the game state class.
  */
@@ -33,8 +39,8 @@ export class BonusAwardsChanges {
   ): Promise<SessionChange<SessionOutcome>> {
     const { enabledBonusCategories, maxBonusAwardsPerCategory } =
       session.seededGame.settings;
-    try {
-      await this.bonusService.award(
+    await this.refusing(() =>
+      this.bonusService.award(
         session.seededGame.gameSessionId,
         teamId,
         category,
@@ -42,13 +48,8 @@ export class BonusAwardsChanges {
         reason,
         enabledBonusCategories,
         maxBonusAwardsPerCategory,
-      );
-    } catch (error) {
-      if (error instanceof InvalidBonusAwardError) {
-        throw new SessionRefusal(error.message);
-      }
-      throw error;
-    }
+      ),
+    );
     return bonusChange(session, {
       teamId,
       notice: { category, points, reason },
@@ -56,11 +57,52 @@ export class BonusAwardsChanges {
   }
 
   /**
-   * A bonus award was added, edited or deleted: refreshes the leaderboard the
-   * same way grading does. Carries no BONUS_AWARDED notice.
+   * An admin edits an award's points and reason. The bonus service checks the
+   * award belongs to this session; a refusal carries its message, and a missing
+   * award is a BonusAwardNotFoundRefusal. Carries the updated admin view
+   * beside the change, and no BONUS_AWARDED notice.
    */
-  changed(session: SessionState): Promise<SessionChange<SessionOutcome>> {
-    return Promise.resolve(bonusChange(session));
+  async edit(
+    session: SessionState,
+    awardId: number,
+    points: number,
+    reason: string | undefined,
+  ): Promise<SessionChange<SessionOutcome> & { award: BonusAwardAdminView }> {
+    const award = await this.refusing(() =>
+      this.bonusService.update(
+        session.seededGame.gameSessionId,
+        awardId,
+        points,
+        reason,
+      ),
+    );
+    return { ...bonusChange(session), award };
+  }
+
+  /** An admin deletes an award; a missing award is a BonusAwardNotFoundRefusal. Carries no BONUS_AWARDED notice. */
+  async remove(
+    session: SessionState,
+    awardId: number,
+  ): Promise<SessionChange<SessionOutcome>> {
+    await this.refusing(() =>
+      this.bonusService.remove(session.seededGame.gameSessionId, awardId),
+    );
+    return bonusChange(session);
+  }
+
+  /** Runs a bonus service call, turning its refusals into session refusals. */
+  private async refusing<T>(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error) {
+      if (error instanceof BonusAwardNotFoundError) {
+        throw new BonusAwardNotFoundRefusal(error.message);
+      }
+      if (error instanceof InvalidBonusAwardError) {
+        throw new SessionRefusal(error.message);
+      }
+      throw error;
+    }
   }
 }
 

@@ -366,6 +366,7 @@ describe('BonusService', () => {
         category: 'shot',
         points: 1,
         createdAt: new Date(),
+        team: { id: 31 },
       };
       const repo = createFakeBonusAwardRepository(0, [], award);
       const gameSessionTeams = createFakeGameSessionTeamRepository();
@@ -374,7 +375,7 @@ describe('BonusService', () => {
         gameSessionTeams as unknown as GameSessionTeamRepository,
       );
 
-      await service.remove(101, 9);
+      await expect(service.remove(101, 9)).resolves.toEqual({ teamId: 31 });
 
       expect(repo.findOne).toHaveBeenCalledWith({ id: 9, gameSession: 101 });
       expect(repo.removeAndFlush).toHaveBeenCalledWith(award);

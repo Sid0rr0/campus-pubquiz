@@ -172,8 +172,14 @@ export class BonusService {
     return toAdminView(award);
   }
 
-  async remove(gameSessionId: number, awardId: number): Promise<void> {
+  /** Deletes an award and returns the id of the team that held it. */
+  async remove(
+    gameSessionId: number,
+    awardId: number,
+  ): Promise<{ teamId: number }> {
     const award = await this.findOwnedAward(gameSessionId, awardId);
+    const teamId = award.team.id;
     await this.bonusAwards.getEntityManager().removeAndFlush(award);
+    return { teamId };
   }
 }

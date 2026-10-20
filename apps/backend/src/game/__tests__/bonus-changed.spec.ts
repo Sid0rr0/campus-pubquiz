@@ -11,6 +11,10 @@ import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import {
+  BonusAwardNotFoundError,
+  InvalidBonusAwardError,
+} from '@/bonus/bonus.service';
 import { UnknownLiveSessionError } from '@/game/rest/live-session-rest.service';
 
 describe('GameGateway — bonus changed and leaderboard toggle', () => {
@@ -101,6 +105,85 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     expect(bonusOf(scorer.teamId)).toBe(0);
   });
 
+  it('applies a REST bonus edit queued behind a held write after that write, and the next snapshot reflects both', async () => {
+    const awardId = await awardShot(1);
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: idle.teamId,
+      category: 'shot',
+      points: 2,
+    });
+    await held.started;
+
+    const waiting = game.nextWriteWaiting();
+    const editing = game.inRequestContext(() =>
+      game.rest.editBonus(game.joinCode, awardId, 3, undefined),
+    );
+    await waiting;
+    const storedWhileHeld = await game.inRequestContext(() =>
+      game.bonusService.listForTeamAdmin(game.gameSessionId, scorer.teamId),
+    );
+    held.release();
+    await awarding;
+    await editing;
+
+    expect(storedWhileHeld).toEqual([
+      expect.objectContaining({ id: awardId, points: 1 }),
+    ]);
+    expect(bonusOf(scorer.teamId)).toBe(3);
+    expect(bonusOf(idle.teamId)).toBe(2);
+  });
+
+  it.each([
+    ['zero points', 0, 'Bonus points must be a non-zero number'],
+    ['a custom award with no reason', 2, 'A custom bonus needs a reason'],
+  ])(
+    'refuses a REST bonus edit with %s, storing and emitting nothing',
+    async (_label, points, message) => {
+      await game.gateway.handleAwardBonus(asSocket(admin), {
+        teamId: scorer.teamId,
+        category: 'custom',
+        points: 1,
+        reason: 'Best costume',
+      });
+      const [award] = await game.inRequestContext(() =>
+        game.bonusService.listForTeamAdmin(game.gameSessionId, scorer.teamId),
+      );
+      game.clearEmits();
+
+      await expect(
+        game.inRequestContext(() =>
+          game.rest.editBonus(
+            game.joinCode,
+            award.id,
+            points,
+            points === 0 ? 'Best costume' : undefined,
+          ),
+        ),
+      ).rejects.toThrow(new InvalidBonusAwardError(message));
+
+      const stored = await game.inRequestContext(() =>
+        game.bonusService.listForTeamAdmin(game.gameSessionId, scorer.teamId),
+      );
+      expect(stored).toEqual([
+        expect.objectContaining({ points: 1, reason: 'Best costume' }),
+      ]);
+      expect(game.roomEmits()).toEqual([]);
+    },
+  );
+
+  it('refuses a REST bonus edit or deletion of an award not in this session as not found, emitting nothing', async () => {
+    await expect(
+      game.inRequestContext(() =>
+        game.rest.editBonus(game.joinCode, 987654, 3, undefined),
+      ),
+    ).rejects.toBeInstanceOf(BonusAwardNotFoundError);
+    await expect(
+      game.inRequestContext(() => game.rest.removeBonus(game.joinCode, 987654)),
+    ).rejects.toBeInstanceOf(BonusAwardNotFoundError);
+    expect(game.roomEmits()).toEqual([]);
+  });
+
   it('lists a team’s awards for the bonus drawer', async () => {
     const awardId = await awardShot(1);
 
@@ -135,18 +218,34 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
   it('answers a session closed while the request waited in the queue with the unknown-session error', async () => {
     const awardId = await awardShot(1);
     await game.act('END_QUIZ');
-    const held = holdNextCall(game.bonusService, 'update');
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const awarding = game.inRequestContext(() =>
+      game.gameState.awardBonus(game.joinCode, {
+        teamId: idle.teamId,
+        category: 'shot',
+        points: 2,
+      }),
+    );
+    await held.started;
+
+    const waiting = Promise.all([
+      game.nextWriteWaiting(),
+      game.nextWriteWaiting(),
+    ]);
+    const closing = game.inRequestContext(() =>
+      game.rest.closeSession(game.joinCode),
+    );
     const editing = game.inRequestContext(() =>
       game.rest.editBonus(game.joinCode, awardId, 3, undefined),
     );
     const outcome = expect(editing).rejects.toBeInstanceOf(
       UnknownLiveSessionError,
     );
-    await held.started;
-
-    await game.inRequestContext(() => game.rest.closeSession(game.joinCode));
+    await waiting;
     held.release();
 
+    await awarding;
+    await closing;
     await outcome;
   });
 

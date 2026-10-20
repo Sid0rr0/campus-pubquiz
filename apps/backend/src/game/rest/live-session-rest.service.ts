@@ -6,12 +6,33 @@ import type {
   SessionSettings,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
-import { BonusService } from '@/bonus/bonus.service';
+import {
+  BonusAwardNotFoundError,
+  BonusService,
+  InvalidBonusAwardError,
+} from '@/bonus/bonus.service';
 import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
+import { BonusAwardNotFoundRefusal } from '@/game/state/errors/bonus-award-not-found-refusal.error';
+import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import { UnknownLiveSessionError } from '@/game/state/errors/unknown-live-session.error';
 import { GameStateService } from '@/game/state/game-state.service';
 
 export { UnknownLiveSessionError } from '@/game/state/errors/unknown-live-session.error';
+
+/** Turns the session refusals a bonus change throws back into the bonus service's error types, which the controllers map to 400 / 404. */
+async function asBonusErrors<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (error instanceof BonusAwardNotFoundRefusal) {
+      throw new BonusAwardNotFoundError(error.message);
+    }
+    if (error instanceof SessionRefusal) {
+      throw new InvalidBonusAwardError(error.message);
+    }
+    throw error;
+  }
+}
 
 /**
  * The REST entry to the Live session module: the counterpart of the gateway for
@@ -46,7 +67,7 @@ export class LiveSessionRest {
     }));
   }
 
-  /** Edits an award's points and reason; refreshes standings and delivers the outcome. Refusals are the bonus service's own errors. */
+  /** Edits an award's points and reason inside the Session write, then delivers the outcome. A refusal surfaces as the bonus service's own error type and message. */
   editBonus(
     joinCode: string,
     awardId: number,
@@ -54,31 +75,21 @@ export class LiveSessionRest {
     reason: string | undefined,
   ): Promise<BonusAwardAdminView> {
     return this.inLiveSession(joinCode, async () => {
-      const updated = await this.bonusService.update(
-        this.gameState.getGameSessionId(joinCode),
-        awardId,
-        points,
-        reason,
+      const { outcome, award } = await asBonusErrors(() =>
+        this.gameState.editBonus(joinCode, awardId, points, reason),
       );
-      await this.broadcaster.deliver(
-        joinCode,
-        await this.gameState.bonusChanged(joinCode),
-      );
-      return updated;
+      await this.broadcaster.deliver(joinCode, outcome);
+      return award;
     });
   }
 
-  /** Removes an award; refreshes standings and delivers the outcome. */
+  /** Removes an award inside the Session write, then delivers the outcome. */
   removeBonus(joinCode: string, awardId: number): Promise<void> {
     return this.inLiveSession(joinCode, async () => {
-      await this.bonusService.remove(
-        this.gameState.getGameSessionId(joinCode),
-        awardId,
+      const outcome = await asBonusErrors(() =>
+        this.gameState.removeBonus(joinCode, awardId),
       );
-      await this.broadcaster.deliver(
-        joinCode,
-        await this.gameState.bonusChanged(joinCode),
-      );
+      await this.broadcaster.deliver(joinCode, outcome);
     });
   }
 
