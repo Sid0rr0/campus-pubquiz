@@ -1332,6 +1332,11 @@ same guards as the other stats endpoints, open to admin and moderator).
   no range means all time. Anything else, or `from` after `to`, is a 400. The range
   applies to the session's date (when it was created), and it is parsed once by
   `feedbackTrendsQuerySchema` so every section of the page shares it.
+- `leagueId` is an optional league id: the endpoint then reads only that league's
+  member sessions (still ended, still with feedback on) and ignores `from`/`to`, so
+  it wins over the date range. An unknown league id is a 404. The page's "League"
+  picker switches between a date range and a league; picking a league disables the
+  date inputs, and "Date range" switches back.
 - The response is `{ sessions, topics, bestRounds, worstRounds }`, where each session is
   `{ id, name, date, rating: { average, count } | null }`. `sessions` runs oldest to newest. `rating` is the
   average of every round rating the session got and how many ratings that was;

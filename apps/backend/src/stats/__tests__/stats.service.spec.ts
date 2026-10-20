@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from '@mikro-orm/postgresql';
 import {
   DEFAULT_SESSION_SETTINGS,
@@ -7,6 +8,8 @@ import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { League } from '@/db/entities/league.entity';
+import { LeagueSession } from '@/db/entities/league-session.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
@@ -794,6 +797,36 @@ describe('StatsService (Postgres integration)', () => {
       expect(fromOnly.sessions.map((s) => s.id)).toContain(last.session.id);
       expect(fromOnly.sessions).toHaveLength(2);
       expect(toOnly.sessions).toHaveLength(1);
+    });
+
+    it('with a leagueId reads only that league member sessions, ignoring from/to', async () => {
+      const member = await playedSession('TL1', '2026-01-05T19:00:00Z');
+      const outsider = await playedSession('TL2', '2026-10-05T19:00:00Z');
+      await rate(member.session, member.round, 'L1', 5);
+      await rate(outsider.session, outsider.round, 'L2', 1);
+      const league = em.create(League, {
+        name: 'Autumn',
+        startsOn: '2026-09-01',
+        endsOn: '2026-12-01',
+      });
+      await em.flush();
+      em.create(LeagueSession, { league, gameSession: member.session });
+      await em.flush();
+
+      const result = await statsService.getFeedbackTrends({
+        leagueId: league.id,
+        from: '2026-10-01',
+        to: '2026-10-31',
+      });
+
+      expect(result.sessions.map((s) => s.id)).toEqual([member.session.id]);
+      expect(result.sessions[0].rating).toEqual({ average: 5, count: 1 });
+    });
+
+    it('rejects an unknown leagueId as not found', async () => {
+      await expect(
+        statsService.getFeedbackTrends({ leagueId: 9999 }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('carries no team id or name', async () => {

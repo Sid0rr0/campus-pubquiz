@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { fetchFeedbackTrends, StatsApiError } from '@/app/lib/stats-api';
+import { fetchLeagues } from '@/app/lib/leagues-api';
+import {
+  fetchFeedbackTrends,
+  StatsApiError,
+  type FeedbackTrendsRange,
+} from '@/app/lib/stats-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { BestAndWorstRounds } from '@/app/stats/feedback/best-and-worst-rounds';
@@ -15,7 +20,17 @@ const DATE_INPUT_CLASS =
 
 /** Feedback across many ended sessions for a chosen date range (all time by default). */
 export function FeedbackTrendsPanel() {
-  const [range, setRange] = useState({ from: '', to: '' });
+  const [range, setRange] = useState<FeedbackTrendsRange>({
+    from: '',
+    to: '',
+  });
+  const inLeague = range.leagueId !== undefined;
+
+  const leaguesQuery = useQuery({
+    queryKey: queryKeys.leagues.list(),
+    queryFn: ({ signal }) => fetchLeagues({}, signal),
+  });
+  const leagues = leaguesQuery.data?.items ?? [];
 
   const trendsQuery = useQuery({
     queryKey: queryKeys.stats.feedbackTrends(range),
@@ -43,10 +58,31 @@ export function FeedbackTrendsPanel() {
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm font-extrabold">
+          League
+          <select
+            value={range.leagueId ?? ''}
+            onChange={(event) => {
+              const { value } = event.target;
+              setRange(({ from, to }) =>
+                value ? { from, to, leagueId: Number(value) } : { from, to },
+              );
+            }}
+            className={DATE_INPUT_CLASS}
+          >
+            <option value="">Date range</option>
+            {leagues.map((league) => (
+              <option key={league.id} value={league.id}>
+                {league.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-extrabold">
           From
           <input
             type="date"
             value={range.from}
+            disabled={inLeague}
             max={range.to || undefined}
             onChange={(event) =>
               setRange((old) => ({ ...old, from: event.target.value }))
@@ -59,6 +95,7 @@ export function FeedbackTrendsPanel() {
           <input
             type="date"
             value={range.to}
+            disabled={inLeague}
             min={range.from || undefined}
             onChange={(event) =>
               setRange((old) => ({ ...old, to: event.target.value }))
@@ -66,7 +103,7 @@ export function FeedbackTrendsPanel() {
             className={DATE_INPUT_CLASS}
           />
         </label>
-        {(range.from || range.to) && (
+        {!inLeague && (range.from || range.to) && (
           <button
             type="button"
             onClick={() => setRange({ from: '', to: '' })}
