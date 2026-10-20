@@ -46,7 +46,9 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ twice the user's `git checkout integration/…` failed with "already used by worktree" (a merger's and a conflict-fixer's worktree), and `git branch -d` refused merged ticket branches because local `main` hadn't caught up.
 - **implement-spec steps 4 and 11 (2026-10-20)**: implementers no longer run `pnpm e2e`; the orchestrator runs it once on the integration tip in step 11, before pushing and opening the PR.
   _Why:_ every implementer queued on the shared e2e run lock, serialising the run; the journeys only need to pass on the final tip.
-- **implement-spec steps 4, 7 and 10 (2026-10-20 retro)**: ticket branches are `ticket/<spec>/<slug>` and the review fixes go on `ticket/<spec>/review-fixes`; once the user says the PR merged, step 10 checks `gh pr view … --json state` and deletes the run's branches with `git branch -D`, since PRs are squash-merged.
+- **implement-spec steps 4, 7 and 10 (2026-10-20 retro)**: ticket branches are `ticket/<spec>/<slug>` and the review fixes go on `ticket/<spec>/review-fixes`; once the user says the PR merged, step 10 checks `gh pr view … --json state` and deletes the run's branches with `git branch -D`, since PRs are rebase-merged.
+- **implement-spec steps 4 and 5 (2026-10-20 retro)**: implementers rebase onto the integration tip instead of merging it in, and mergers fast-forward (`--ff-only`), rebasing first if the tip moved and handing conflicts back to the implementer.
+  _Why:_ the user wants each ticket's commits in the PR and on `main` without the `merge(repo): ticket/… into integration/…` commits; the PR is rebase-merged.
   _Why:_ a second spec's `git worktree add -b ticket/review-fixes` failed because the first spec's branch was waiting on its unmerged PR; and five merged integration branches were still local, with the user asking "delete the old branches".
 - **implement-spec step 5 (2026-10-20 retro)**: mergers are spawned with `model: "haiku"`.
   _Why:_ a day of nine runs (~100 subagents) hit the account's weekly limit mid-run; a merger only runs `git merge` and `git commit`.
