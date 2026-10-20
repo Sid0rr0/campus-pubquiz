@@ -229,7 +229,7 @@ describe('AdminPage — keyboard shortcuts', () => {
     expect(sendAction).not.toHaveBeenCalled();
   });
 
-  it('sends TOGGLE_MEDIA_FULLSCREEN when Space is pressed', async () => {
+  it('sends TOGGLE_MEDIA_FULLSCREEN when F is pressed', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
       session: {
@@ -240,7 +240,7 @@ describe('AdminPage — keyboard shortcuts', () => {
     });
     renderWithQuery(<AdminPage />);
 
-    await userEvent.keyboard(' ');
+    await userEvent.keyboard('f');
 
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_FULLSCREEN');
   });

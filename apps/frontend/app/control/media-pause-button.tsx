@@ -3,6 +3,7 @@
 import { PauseIcon, PlayIcon } from '@radix-ui/react-icons';
 import type { GameAction } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { ADMIN_SHORTCUTS } from '@/app/control/admin-keyboard-shortcuts';
 
 interface MediaPauseButtonProps {
   /** Whether the open question has YouTube or audio media on /display to pause — see isPausableMediaUrl. Renders nothing otherwise. */
@@ -29,6 +30,7 @@ export function MediaPauseButton({
       variant="outline"
       size="lg"
       aria-label={label}
+      title={`Pause or resume (${ADMIN_SHORTCUTS.toggleMediaPause.keyName})`}
       onClick={() => onAction('TOGGLE_MEDIA_PAUSE')}
       className={`flex-1 ${className}`}
     >

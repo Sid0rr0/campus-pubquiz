@@ -53,6 +53,8 @@ interface AnswerMediaProps {
   isMediaPaused?: boolean;
   /** GameProgress.mediaReplayToken — a change seeks a video-file answer to the reveal clip start and plays it. */
   mediaReplayToken?: number;
+  /** The snapshot's isDisplaySoundMuted — silences the answer media (video file, YouTube, audio) without pausing it. */
+  isDisplaySoundMuted?: boolean;
 }
 
 // Shared by QuestionDisplay's reveal step and ClosestGuessRevealScreen's
@@ -68,14 +70,17 @@ export function AnswerMedia({
   endSeconds,
   isMediaPaused = false,
   mediaReplayToken = 0,
+  isDisplaySoundMuted = false,
 }: AnswerMediaProps) {
   const safeUrl = url && isHttpUrl(url) ? url : undefined;
   const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
-  const { videoRef, onVideoReady } = useMediaPause(
-    isMediaPaused,
-    mediaReplayToken,
-    startSeconds ?? 0,
-  );
+  const { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady } =
+    useMediaPause(
+      isMediaPaused,
+      mediaReplayToken,
+      startSeconds ?? 0,
+      isDisplaySoundMuted,
+    );
   const videoFailure = useVideoLoadFailure(safeUrl);
   if (!safeUrl) return null;
   const kind = classifyMediaUrl(safeUrl);
@@ -102,6 +107,10 @@ export function AnswerMedia({
     return (
       <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
         <iframe
+          ref={youtubeRef}
+          onLoad={onYoutubeLoad}
+          // Play again remounts the embed, restarting it from the reveal clip.
+          key={mediaReplayToken}
           data-testid={`${mediaTestIdPrefix}-answer-youtube`}
           src={buildYoutubeEmbedSrc(
             youtubeId,
@@ -120,6 +129,7 @@ export function AnswerMedia({
   if (kind === 'audio') {
     return (
       <audio
+        ref={audioRef}
         data-testid={`${mediaTestIdPrefix}-answer-audio`}
         src={safeUrl}
         controls
@@ -175,6 +185,8 @@ interface QuestionDisplayProps {
   mediaReplayToken?: number;
   /** GameProgress.isMediaPaused — pauses the question's YouTube/audio playback in place (no remount) and resumes it when cleared. */
   isMediaPaused?: boolean;
+  /** The snapshot's isDisplaySoundMuted — silences the question's and the answer's media (YouTube, audio, video) in place, without pausing it; a standing mute applies to media that mounts later. */
+  isDisplaySoundMuted?: boolean;
   /** The big screen's reveal: the answer comes in with its own entrance. Left off on the phone. */
   hasRevealEntrance?: boolean;
 }
@@ -191,6 +203,7 @@ export function QuestionDisplay({
   isFullscreen = false,
   mediaReplayToken = 0,
   isMediaPaused = false,
+  isDisplaySoundMuted = false,
   hasRevealEntrance = false,
 }: QuestionDisplayProps) {
   const {
@@ -213,7 +226,12 @@ export function QuestionDisplay({
     ? { start: revealStartSeconds, end: revealEndSeconds }
     : { start: question.mediaStartSeconds, end: question.mediaEndSeconds };
   const { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady } =
-    useMediaPause(isMediaPaused, mediaReplayToken, questionClip.start ?? 0);
+    useMediaPause(
+      isMediaPaused,
+      mediaReplayToken,
+      questionClip.start ?? 0,
+      isDisplaySoundMuted,
+    );
   // Presence of the prop (not its content) is what switches sort/match into
   // player-reveal mode — an empty string still means "don't show the answer
   // key", it just has nothing of the team's own to show either.
@@ -323,6 +341,7 @@ export function QuestionDisplay({
                 endSeconds={revealEndSeconds}
                 isMediaPaused={isMediaPaused}
                 mediaReplayToken={mediaReplayToken}
+                isDisplaySoundMuted={isDisplaySoundMuted}
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
@@ -442,6 +461,7 @@ export function QuestionDisplay({
                 endSeconds={revealEndSeconds}
                 isMediaPaused={isMediaPaused}
                 mediaReplayToken={mediaReplayToken}
+                isDisplaySoundMuted={isDisplaySoundMuted}
               />
             </div>
           </div>
@@ -483,6 +503,7 @@ export function QuestionDisplay({
             endSeconds={revealEndSeconds}
             isMediaPaused={isMediaPaused}
             mediaReplayToken={mediaReplayToken}
+            isDisplaySoundMuted={isDisplaySoundMuted}
           />
         </div>
       )}

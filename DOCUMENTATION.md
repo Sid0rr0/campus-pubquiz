@@ -203,13 +203,20 @@ command, and a question `<audio>` or video-file `<video>` element (including a
 video-file answer at reveal) is `pause()`d/`play()`ed. Every
 action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
 `REPLAY_MEDIA` resets it; the leaderboard and join overlay toggles leave it
-alone. `/control` and `/remote` show Pause/Resume only for an open question
-whose media is a video (YouTube or file) or audio. Browsers may refuse the
+alone. `/control` and `/remote` show Pause/Resume only while media is playing on
+the big screen: an open question whose media is a video (YouTube or file) or
+audio, or a reveal (an `answer`-kind one, not a closest-guess) showing answer
+media of that kind, else the question's own (the media the reveal shows). The
+admin view carries what decides this (`onAirScreen` and `revealQuestions`), so
+there is no protocol change. On `/remote`, Space pauses/resumes while the
+button is shown, under the same rules as on `/control` (ignored in form fields
+and with modifier keys); it is `/remote`'s only shortcut. Browsers may refuse the
 display's `play()` on resume if it has had no user interaction (autoplay
 policy); a rejection is ignored and the moderator can press Resume again. A
 standing pause is re-applied to a video file once it has loaded. "Play again"
-(`REPLAY_MEDIA`) is offered for an open question with a video (YouTube or file),
-not for audio; it seeks a video file to the start of the clip it is showing (the
+(`REPLAY_MEDIA`) is offered whenever the media shown is a video (YouTube or
+file), at reveal too, not for audio; a YouTube answer replays by remounting its
+embed. It seeks a video file to the start of the clip it is showing (the
 reveal clip at reveal, a video-file answer included).
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
@@ -392,13 +399,16 @@ questions to it.
 Browsers block audio until a tap, so `/display` shows an "Enable sound" button
 until it is tapped, whenever any display sound can play (that is, unless the
 big-screen mute is on), whatever the lock-countdown setting says. The mute also
-silences the lock-countdown track.
+silences the lock-countdown track, and it silences every question's media as
+well (YouTube, audio and video, while the question is asked and at reveal).
+Muted media keeps playing, so unmuting brings the sound back where the clip has
+got to, and a mute that is already on applies to media that mounts later.
 
 **Fields that belong to one room's view:**
 
 | View                            | Fields                                                                                                                                                                                                                                |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry)                                                         |
+| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                             |
 | Display (`DisplayStatePayload`) | `screen` (the Display screen), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
 | Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                                            |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                                                                      |

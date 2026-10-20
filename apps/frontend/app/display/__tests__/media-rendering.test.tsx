@@ -297,6 +297,36 @@ describe('DisplayPage — media rendering', () => {
     expect(screen.getByTestId('question-youtube')).not.toBe(iframeBeforeReplay);
   });
 
+  it('remounts a YouTube answer at reveal when mediaReplayToken changes', () => {
+    const revealQuestion = {
+      type: 'free_text' as const,
+      prompt: 'Name this music video.',
+      answer: 'Never Gonna Give You Up',
+      answerMediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+      points: 3,
+    };
+    function showReveal(mediaReplayToken: number) {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [{ questions: [revealQuestion] }],
+          progress: { status: 'reveal', revealIndex: 0, mediaReplayToken },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+    }
+    showReveal(1);
+    const { rerender } = render(<DisplayPage />);
+    const iframeBeforeReplay = screen.getByTestId('reveal-answer-youtube');
+
+    showReveal(2);
+    rerender(<DisplayPage />);
+
+    expect(screen.getByTestId('reveal-answer-youtube')).not.toBe(
+      iframeBeforeReplay,
+    );
+  });
+
   describe('media pause', () => {
     const youtubeQuestion = {
       type: 'free_text' as const,

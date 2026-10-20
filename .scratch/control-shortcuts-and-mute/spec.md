@@ -23,7 +23,8 @@ On `/control`:
 - **Space** pauses or resumes the question's media (`TOGGLE_MEDIA_PAUSE`). It does this only while the Pause/Resume button is shown (an open question with pausable media). Otherwise the key is left to the browser.
 - **M** toggles the big-screen mute (`SET_DISPLAY_SOUND_MUTED` with the opposite of the current value), at any point in the session, just as the mute button does.
 - Letter keys match either case. This fixes **J**, which today matches only lowercase.
-- All shortcuts stay ignored while focus is in a form field. They exist on `/control` only. `/display` gets no keys.
+- All shortcuts stay ignored while focus is in a form field. They exist on `/control` only, except Space, which also pauses/resumes on `/remote` while the Pause/Resume button is shown. `/display` gets no keys.
+- Pause/Resume and Play again also show at reveal, for the media the reveal shows (an answer video, YouTube or audio clip, else the question's own), so Space and the buttons work there too. A closest-guess reveal is excluded: its answer media arrives mid-walk and the admin view doesn't carry the step.
 - The Fullscreen, Pause/Resume and Mute buttons get a `title` tooltip naming their key, taken from `ADMIN_SHORTCUTS`.
 
 On `/display`, the big-screen mute also silences every question's media: the YouTube embed (IFrame API `mute`/`unMute`), `<audio>` and `<video>`, both while the question is asked and at reveal, hidden videos included. Media keeps playing while muted, and unmuting brings the sound back at the current position. A mute that is already on applies to media that mounts later (a new question, Play again, a remounted YouTube embed). `/display` shows no muted indicator.
@@ -56,7 +57,7 @@ On `/display`, the big-screen mute also silences every question's media: the You
 
 ## Out of Scope
 
-- Shortcuts on `/display` or `/remote`.
+- Shortcuts on `/display`, and any `/remote` shortcut other than Space (Pause/Resume, while its button is shown; added after the moderator asked, same rules as on `/control`).
 - Browser fullscreen of the `/control` window.
 - A muted indicator on the big screen.
 - Volume control or per-source mutes.

@@ -2,6 +2,7 @@
 
 import { SpeakerLoudIcon, SpeakerOffIcon } from '@radix-ui/react-icons';
 import { Button } from '@/app/components/button';
+import { ADMIN_SHORTCUTS } from '@/app/control/admin-keyboard-shortcuts';
 
 interface DisplaySoundMuteControlProps {
   isMuted: boolean;
@@ -29,6 +30,7 @@ export function DisplaySoundMuteControl({
           role="switch"
           aria-checked={!isMuted}
           aria-label="Display sound"
+          title={`Mute or unmute the big screen (${ADMIN_SHORTCUTS.toggleDisplayMute.keyName})`}
           onClick={() => onSetMuted(!isMuted)}
         >
           {isMuted ? (

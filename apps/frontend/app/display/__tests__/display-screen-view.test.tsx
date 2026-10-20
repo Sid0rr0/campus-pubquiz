@@ -1,7 +1,11 @@
+import { cloneElement } from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SOCKET_ROOMS } from '@campus-pubquiz/types';
-import { DisplayScreenView } from '@/app/components/display-screen-view';
+import {
+  DisplayScreenView,
+  type DisplayLiveContext,
+} from '@/app/components/display-screen-view';
 import { roomView, type SessionDescription } from '@/test-utils/room-view';
 
 const TEAMS = [
@@ -115,6 +119,94 @@ describe('DisplayScreenView — without a live context', () => {
     expect(screen.getByText('Largest planet?')).toBeInTheDocument();
     expect(screen.getAllByText('Jupiter').length).toBeGreaterThan(0);
     expectNoLiveParts();
+  });
+
+  describe('answer media at reveal', () => {
+    const LIVE = {
+      teams: [],
+      answeredTeamIds: [],
+      leaderboard: [],
+      leagueTop: null,
+      teamsCorrect: null,
+      joinCode: 'ABCDEF',
+      isConnected: true,
+      kahootQuestionEndsAt: null,
+      onPickAnotherGame: () => undefined,
+      onWinnerCelebrated: () => undefined,
+    };
+
+    function drawReveal(live: Partial<DisplayLiveContext>) {
+      const view = roomView(SOCKET_ROOMS.DISPLAY, {
+        teams: TEAMS,
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Name this film.',
+                answer: 'Alien',
+                answerMediaUrl: 'https://example.com/answer.webm',
+              },
+            ],
+          },
+        ],
+        progress: { status: 'reveal', revealIndex: 0 },
+      });
+      const element = (
+        <DisplayScreenView
+          screen={view.screen}
+          quiz={{
+            settings: view.settings,
+            quizStructure: view.quizStructure,
+            roundTitles: view.roundTitles,
+            roundCategories: view.roundCategories,
+            roundAuthors: view.roundAuthors,
+          }}
+          live={{ ...LIVE, ...live }}
+        />
+      );
+      return { element, ...render(element) };
+    }
+
+    it('pauses and resumes the answer video in place', () => {
+      const pause = vi
+        .spyOn(HTMLMediaElement.prototype, 'pause')
+        .mockImplementation(() => undefined);
+      const play = vi
+        .spyOn(HTMLMediaElement.prototype, 'play')
+        .mockResolvedValue(undefined);
+      const { rerender, element } = drawReveal({ isMediaPaused: false });
+      const video = screen.getByTestId('reveal-answer-video');
+
+      rerender(
+        cloneElement(element, { live: { ...LIVE, isMediaPaused: true } }),
+      );
+      expect(pause).toHaveBeenCalledTimes(1);
+
+      rerender(
+        cloneElement(element, { live: { ...LIVE, isMediaPaused: false } }),
+      );
+      expect(play).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('reveal-answer-video')).toBe(video);
+      vi.restoreAllMocks();
+    });
+
+    it('plays the answer video again on REPLAY_MEDIA', () => {
+      vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+      const { rerender, element } = drawReveal({ mediaReplayToken: 0 });
+      const video = screen.getByTestId(
+        'reveal-answer-video',
+      ) as HTMLVideoElement;
+      video.currentTime = 12;
+
+      rerender(
+        cloneElement(element, { live: { ...LIVE, mediaReplayToken: 1 } }),
+      );
+
+      expect(video.currentTime).toBe(0);
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+      vi.restoreAllMocks();
+    });
   });
 
   it('draws a closest-guess reveal', () => {

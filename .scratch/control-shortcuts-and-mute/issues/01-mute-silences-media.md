@@ -1,6 +1,6 @@
 # 01: Big-screen mute silences question media
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Control shortcuts and mute](../spec.md)
 

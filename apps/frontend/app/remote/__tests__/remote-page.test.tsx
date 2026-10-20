@@ -681,6 +681,95 @@ describe('RemotePage — content', () => {
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
   });
 
+  it('names the Space key in the Pause button tooltip', () => {
+    mockOpenQuestionWithMedia('https://example.com/song.mp3');
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute(
+      'title',
+      expect.stringContaining('Space'),
+    );
+  });
+
+  it('sends TOGGLE_MEDIA_PAUSE on Space while the Pause button is shown', () => {
+    const sendAction = vi.fn();
+    mockOpenQuestionWithMedia('https://example.com/song.mp3', sendAction);
+    renderWithQuery(<RemotePage />);
+
+    fireEvent.keyDown(window, { key: ' ' });
+
+    expect(sendAction).toHaveBeenCalledTimes(1);
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_PAUSE');
+  });
+
+  it('leaves Space to the browser when no Pause button is shown', () => {
+    const sendAction = vi.fn();
+    mockOpenQuestionWithMedia('https://example.com/photo.jpg', sendAction);
+    renderWithQuery(<RemotePage />);
+
+    const notPrevented = fireEvent.keyDown(window, { key: ' ' });
+
+    expect(sendAction).not.toHaveBeenCalled();
+    expect(notPrevented).toBe(true);
+  });
+
+  it('gives /remote no shortcuts other than Space', () => {
+    const sendAction = vi.fn();
+    mockOpenQuestionWithMedia('https://example.com/song.mp3', sendAction);
+    renderWithQuery(<RemotePage />);
+
+    for (const key of ['f', 'm', 'j', 'ArrowRight', 'ArrowLeft']) {
+      fireEvent.keyDown(window, { key });
+    }
+
+    expect(sendAction).not.toHaveBeenCalled();
+  });
+
+  it('ignores Space typed in a form field', () => {
+    const sendAction = vi.fn();
+    mockOpenQuestionWithMedia('https://example.com/song.mp3', sendAction);
+    renderWithQuery(<RemotePage />);
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+
+    fireEvent.keyDown(input, { key: ' ' });
+
+    expect(sendAction).not.toHaveBeenCalled();
+    input.remove();
+  });
+
+  it('shows Pause and Play again at reveal for an answer video, and Space pauses it', () => {
+    const sendAction = vi.fn();
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'reveal', revealIndex: 0 },
+        rounds: [
+          {
+            questions: [
+              {
+                id: 55,
+                type: 'free_text',
+                prompt: 'Name it.',
+                answer: 'Alien',
+                answerMediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+              },
+            ],
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction,
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /play video again/i }));
+    fireEvent.keyDown(window, { key: ' ' });
+
+    expect(sendAction).toHaveBeenCalledWith('REPLAY_MEDIA');
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_PAUSE');
+  });
+
   it('hides the Pause button for an image question', () => {
     mockOpenQuestionWithMedia('https://example.com/photo.jpg');
     renderWithQuery(<RemotePage />);

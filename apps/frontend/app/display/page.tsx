@@ -163,6 +163,7 @@ function DisplayPageContent() {
     screen,
     screenKey,
     header: headerContent,
+    isDisplaySoundMuted,
   } = snapshot;
 
   return (
@@ -214,6 +215,7 @@ function DisplayPageContent() {
               isConnected,
               isMediaFullscreen: progress.isMediaFullscreen,
               isMediaPaused: progress.isMediaPaused,
+              isDisplaySoundMuted,
               mediaReplayToken: progress.mediaReplayToken,
               kahootQuestionEndsAt,
               onPickAnotherGame: pickAnotherGame,

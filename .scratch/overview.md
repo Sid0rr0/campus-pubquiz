@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                       | Title                                                                                                            | Tickets | Blocked by |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| control-shortcuts-and-mute | [Control shortcuts F / Space / M, and a big-screen mute that silences media](control-shortcuts-and-mute/spec.md) | 2       | —          |
 
 ## Won't do
 
