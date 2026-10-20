@@ -1394,7 +1394,13 @@ the team code.
 code and no login. The page calls `POST /team-page` with `{ teamCode }`
 (`TeamPageController`), which returns `{ name, summary, sessions }`: exactly what
 `TeamHistoryService.detail` gives staff, without the team `id`. It never carries
-feedback or the team code.
+feedback or the team code. It also carries `leagues`: the team's position in each
+**current** league where it has league points (`LeagueTableService.positionsOf`, built
+on the public table so the positions always agree), newest league first, each with
+`leagueId`, `leagueName`, `position`, `shared`, `teamCount` and `leaguePoints`. A league
+that is not current, or where the team has no points, is left out; the array is empty
+when there are none. The page lists them under "Leagues" as "3rd of 18 · 14 pts", or
+"Joint 3rd of 18 · 14 pts" when `shared`.
 
 - **The code never goes in a URL or query string**, so it stays out of logs and
   browser history. It travels in the POST body, is validated with Zod (a missing,

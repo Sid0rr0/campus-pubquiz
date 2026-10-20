@@ -1,4 +1,5 @@
 import type { AnswerKind, Verdict } from './answer-kind';
+import type { TeamLeaguePosition } from './league';
 import type { QuestionType } from './question-types';
 
 export interface TeamListItem {
@@ -69,7 +70,10 @@ export interface TeamDetail {
 }
 
 /** A team's history as the team itself sees it, behind `POST /team-page`: the staff figures without the team id. Never carries feedback or the team code. */
-export type TeamPageHistory = Omit<TeamDetail, 'id'>;
+export type TeamPageHistory = Omit<TeamDetail, 'id'> & {
+  /** The team's position in each current league where it has points; empty when none. */
+  leagues: TeamLeaguePosition[];
+};
 
 /** One question of an ended night as the team that played it sees it: its own answer, the verdict and the right answer. Never another team's answer. */
 export interface TeamNightQuestion {

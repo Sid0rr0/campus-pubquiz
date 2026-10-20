@@ -290,6 +290,89 @@ describe('LeagueTableService (Postgres integration)', () => {
     });
   });
 
+  describe("a team's league positions", () => {
+    it('matches the public table, with the team count and points', async () => {
+      const league = await newLeague('Autumn');
+      const [alpha, beta, gamma] = [
+        await newTeam('Alpha'),
+        await newTeam('Beta'),
+        await newTeam('Gamma'),
+      ];
+      const night = await newSession();
+      await join(league, night);
+      await play(night, alpha, 9);
+      await play(night, beta, 5);
+      await play(night, gamma, 1);
+
+      const table = await service.table(league.id);
+      const positions = await service.positionsOf(gamma.id);
+
+      expect(positions).toEqual([
+        {
+          leagueId: league.id,
+          leagueName: 'Autumn',
+          position: table!.rows.find((r) => r.teamId === gamma.id)!.position,
+          shared: false,
+          teamCount: 3,
+          leaguePoints: 4,
+        },
+      ]);
+      expect(positions[0].position).toBe(3);
+    });
+
+    it('marks a shared position', async () => {
+      const league = await newLeague();
+      const [alpha, beta, gamma] = [
+        await newTeam('Alpha'),
+        await newTeam('Beta'),
+        await newTeam('Gamma'),
+      ];
+      const night = await newSession();
+      await join(league, night);
+      await play(night, alpha, 9);
+      await play(night, beta, 5);
+      await play(night, gamma, 5);
+
+      expect(await service.positionsOf(gamma.id)).toMatchObject([
+        { position: 2, shared: true, teamCount: 3 },
+      ]);
+    });
+
+    it('omits leagues that are not current and leagues where the team has no points', async () => {
+      const past = await newLeague('Past', '2020-01-31');
+      const current = await newLeague('Current');
+      const other = await newLeague('Other');
+      const team = await newTeam('Alpha');
+      const rival = await newTeam('Rival');
+      const night = await newSession();
+      const otherNight = await newSession();
+      await join(past, night);
+      await join(current, night);
+      await join(other, otherNight);
+      await play(night, team, 4);
+      await play(otherNight, rival, 4);
+
+      const positions = await service.positionsOf(team.id);
+
+      expect(positions.map((p) => p.leagueName)).toEqual(['Current']);
+    });
+
+    it('lists several current leagues, newest first, and none for an unknown team', async () => {
+      const first = await newLeague('First');
+      const second = await newLeague('Second');
+      const team = await newTeam('Alpha');
+      const night = await newSession();
+      await join(first, night);
+      await join(second, night);
+      await play(night, team, 4);
+
+      expect(
+        (await service.positionsOf(team.id)).map((p) => p.leagueName),
+      ).toEqual(['Second', 'First']);
+      expect(await service.positionsOf(9999)).toEqual([]);
+    });
+  });
+
   describe('public leagues', () => {
     it('lists current leagues first, then the rest, without sessions', async () => {
       await newLeague('Old', '2020-01-31');

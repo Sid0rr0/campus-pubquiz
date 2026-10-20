@@ -6,6 +6,7 @@ import {
   type LeagueTop,
   type PublicLeague,
   type PublicLeaguesPayload,
+  type TeamLeaguePosition,
 } from '@campus-pubquiz/types';
 import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';
@@ -94,6 +95,37 @@ export class LeagueTableService {
     const table = await this.table(newest.leagueId, now);
     if (!table) return null;
     return { name: table.name, rows: table.rows.slice(0, LEAGUE_TOP_SIZE) };
+  }
+
+  /**
+   * The team's standing in every current league where it has points, newest
+   * league first. Positions are the public table's own, so the two never differ.
+   */
+  async positionsOf(
+    teamId: number,
+    now = new Date(),
+  ): Promise<TeamLeaguePosition[]> {
+    const { items } = await this.publicLeagues(now);
+    const tables = await Promise.all(
+      items
+        .filter((league) => league.current)
+        .map((l) => this.table(l.id, now)),
+    );
+    const positions: TeamLeaguePosition[] = [];
+    for (const table of tables) {
+      const row = table?.rows.find((r) => r.teamId === teamId);
+      if (!table || !row || row.leaguePoints <= 0) continue;
+      positions.push({
+        leagueId: table.id,
+        leagueName: table.name,
+        position: row.position,
+        shared:
+          table.rows.filter((r) => r.position === row.position).length > 1,
+        teamCount: table.rows.length,
+        leaguePoints: row.leaguePoints,
+      });
+    }
+    return positions;
   }
 
   private async nightsOf(leagueId: number): Promise<TeamNight[]> {
