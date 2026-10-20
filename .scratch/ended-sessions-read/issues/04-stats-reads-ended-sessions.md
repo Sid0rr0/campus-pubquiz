@@ -18,7 +18,7 @@ See the spec's "Max points" and "Readers → Stats".
 
 Session result ticket 04 rewrites the stats session detail. This ticket goes after it so the two don't conflict.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The stats list shows the same rows, names and max points, and sorting by session name, max points, date, team count and winner gives the same order as before, still paged in SQL.
 - [ ] The stats session detail is a 404 for an unknown session or one that hasn't ended, as today.

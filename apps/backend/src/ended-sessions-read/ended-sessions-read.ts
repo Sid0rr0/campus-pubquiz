@@ -26,6 +26,7 @@ export interface EndedSessionHeader {
   customName: string | null;
   quizTitle: string;
   playedAt: Date;
+  maxPoints: number;
 }
 
 /** An ended session a team took part in. */
@@ -41,6 +42,7 @@ interface HeaderRow {
   custom_name: string | null;
   quiz_title: string;
   played_at: string | Date;
+  max_points: string | number;
 }
 
 function headerOf(row: HeaderRow): EndedSessionHeader {
@@ -52,6 +54,7 @@ function headerOf(row: HeaderRow): EndedSessionHeader {
     customName: row.custom_name,
     quizTitle: row.quiz_title,
     playedAt: new Date(row.played_at),
+    maxPoints: Number(row.max_points),
   };
 }
 
@@ -127,7 +130,8 @@ export class EndedSessionsRead {
    * Ended sessions as a query to narrow, join, order and page. Tables are
    * aliased `gs` (game_sessions) and `qz` (quizzes); columns: `game_session_id`,
    * `join_code`, `quiz_id`, `display_name`, `custom_name`, `quiz_title` and
-   * `played_at`.
+   * `played_at` and `max_points` (the sum of the points of the session's quiz
+   * questions, 0 for none).
    */
   endedSessionsQuery() {
     const knex: Knex = this.gameSessionTeams.getKnex();
@@ -140,7 +144,12 @@ export class EndedSessionsRead {
       .select(knex.raw(`${DISPLAY_NAME_SQL} as display_name`))
       .select('gs.name as custom_name')
       .select('qz.title as quiz_title')
-      .select('gs.created_at as played_at');
+      .select('gs.created_at as played_at')
+      .select(
+        knex.raw(
+          `(select coalesce(sum(mq.points), 0) from rounds mr join questions mq on mq.round_id = mr.id where mr.quiz_id = gs.quiz_id) as max_points`,
+        ),
+      );
   }
 
   /** One session's header by id; null if it doesn't exist or hasn't ended. */

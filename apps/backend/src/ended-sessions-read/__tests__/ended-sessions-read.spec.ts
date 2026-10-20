@@ -1,7 +1,11 @@
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Question } from '@/db/entities/question.entity';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
+import { sessionResult } from '@/standings/session-result';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import {
   gradable,
@@ -266,6 +270,77 @@ describe('EndedSessionsRead (Postgres integration)', () => {
         joinCode: 'TIEBBB',
         playedAt: played,
       });
+    });
+
+    it('sums the points of the session quiz questions, and is 0 for a quiz with none', async () => {
+      state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'free_text',
+        prompt: 'Name a vegetable',
+        answer: 'Leek',
+        points: 4,
+      });
+      const emptyRound = state.em.create(Round, {
+        quiz: state.session.quiz,
+        title: 'Round 2',
+        orderIndex: 1,
+      });
+      state.em.create(Question, {
+        round: emptyRound,
+        orderIndex: 0,
+        type: 'free_text',
+        prompt: 'Name a nut',
+        answer: 'Pecan',
+        points: 2,
+      });
+      const emptyQuiz = state.em.create(Quiz, { title: 'Empty quiz' });
+      const emptySession = state.em.create(GameSession, {
+        quiz: emptyQuiz,
+        joinCode: 'EMPTYQ',
+        status: 'ended',
+      });
+      await state.em.flush();
+      await setStatus(state.session.id, 'ended');
+
+      expect((await read.endedSession(state.session.id))?.maxPoints).toBe(7);
+      expect((await read.endedSession(emptySession.id))?.maxPoints).toBe(0);
+    });
+
+    it('agrees with the Session result module on max points for the same session', async () => {
+      state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'free_text',
+        prompt: 'Name a vegetable',
+        answer: 'Leek',
+        points: 4,
+      });
+      await state.em.flush();
+      await setStatus(state.session.id, 'ended');
+      const questions = await state.em.find(Question, {
+        round: { quiz: state.session.quiz.id },
+      });
+
+      const result = sessionResult({
+        standings: {
+          leaderboard: [],
+          departed: [],
+          participantCount: 0,
+          winner: undefined,
+        },
+        questions: questions.map((q) => ({
+          id: q.id,
+          roundId: state.round.id,
+          type: q.type,
+          points: q.points,
+        })),
+        answers: [],
+      });
+
+      expect((await read.endedSession(state.session.id))?.maxPoints).toBe(
+        result.maxPoints,
+      );
     });
 
     it('returns nothing for an unknown session and for one that has not ended', async () => {
