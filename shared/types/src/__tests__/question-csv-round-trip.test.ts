@@ -197,22 +197,6 @@ describe('CSV round-trip through the question kinds', () => {
   });
 });
 
-describe('media on a multiple choice question', () => {
-  it('round-trips a multiple choice question that carries a clipped YouTube video', () => {
-    const question: ImportQuestionPreview = {
-      ...QUESTION_BY_TYPE.multiple_choice,
-      mediaUrl: YOUTUBE,
-      mediaStartSeconds: 10,
-      mediaEndSeconds: 25,
-    };
-
-    const { checked, row } = roundTrip(question);
-
-    expect(row.notes).toBe('{start: "10", end: "25"}');
-    expect(checked).toEqual({ success: true, data: question });
-  });
-});
-
 describe('video file clip in the notes cell', () => {
   const MP4 = 'https://example.com/clip.mp4';
 

@@ -8,7 +8,11 @@ import { QUESTION_KINDS, type QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
 import { ROUND_CATEGORIES } from './round-category';
 import { ROUND_NOTE_MAX_LENGTH } from './round-note';
-import { hasVideoMedia, isVideoUrl } from './media';
+import { hasVideoMedia } from './media';
+import {
+  clipFieldsFromNotes,
+  clipNotesFieldsFor,
+} from './question-record-codec';
 import {
   parseClipNotes,
   writeClipNotes,
@@ -139,7 +143,7 @@ export function decodeSheetRow(
       points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
       mediaUrl,
       answerMediaUrl,
-      ...clipPreviewFieldsOf(clip, isVideoUrl(mediaUrl)),
+      ...clipFieldsFromNotes({ mediaUrl, answerMediaUrl }, clip),
     },
   };
 }
@@ -172,55 +176,13 @@ export function encodeSheetRow(
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
     notes: hasVideoMedia(question)
-      ? writeClipNotes(question.notes ?? '', clipNotesFieldsOf(question))
+      ? writeClipNotes(question.notes ?? '', clipNotesFieldsFor(question))
       : (question.notes ?? ''),
     breakAfter: isLastInRound && round.breakAfter ? '1' : '',
     category: isLastInRound ? (round.category ?? '') : '',
     author: isLastInRound ? (round.author ?? '') : '',
     roundNote: isLastInRound ? (round.note ?? '') : '',
     showRoundNote: isLastInRound && round.showNoteOnScreen ? '1' : '',
-  };
-}
-
-/** The notes-group fields a question carries: the clip and hidden flag only for a video question media, the reveal clip for either video. */
-function clipNotesFieldsOf(question: ImportQuestionPreview): ClipNotesFields {
-  const { mediaStartSeconds, mediaEndSeconds } = question;
-  const isQuestionVideo = isVideoUrl(question.mediaUrl);
-  return {
-    ...(isQuestionVideo && question.isVideoHidden
-      ? { isVideoHidden: true as const }
-      : {}),
-    ...(isQuestionVideo && mediaStartSeconds !== undefined
-      ? { startSeconds: mediaStartSeconds }
-      : {}),
-    ...(isQuestionVideo && mediaEndSeconds !== undefined
-      ? { endSeconds: mediaEndSeconds }
-      : {}),
-    ...(question.revealStartSeconds !== undefined
-      ? { revealStartSeconds: question.revealStartSeconds }
-      : {}),
-    ...(question.revealEndSeconds !== undefined
-      ? { revealEndSeconds: question.revealEndSeconds }
-      : {}),
-  };
-}
-
-/** The preview fields a notes group fills; the clip and hidden flag only for a video question media. */
-function clipPreviewFieldsOf(clip: ClipNotesFields, isQuestionVideo: boolean) {
-  return {
-    ...(isQuestionVideo && clip.isVideoHidden ? { isVideoHidden: true } : {}),
-    ...(isQuestionVideo && clip.startSeconds !== undefined
-      ? { mediaStartSeconds: clip.startSeconds }
-      : {}),
-    ...(isQuestionVideo && clip.endSeconds !== undefined
-      ? { mediaEndSeconds: clip.endSeconds }
-      : {}),
-    ...(clip.revealStartSeconds !== undefined
-      ? { revealStartSeconds: clip.revealStartSeconds }
-      : {}),
-    ...(clip.revealEndSeconds !== undefined
-      ? { revealEndSeconds: clip.revealEndSeconds }
-      : {}),
   };
 }
 
