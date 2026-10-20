@@ -13,7 +13,10 @@ import {
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import type { SeedService } from '@/db/seed.service';
-import type { SessionBroadcaster } from '@/game/socket/session-broadcaster';
+import {
+  UnknownLiveSessionError,
+  type LiveSessionRest,
+} from '@/game/rest/live-session-rest.service';
 import {
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
@@ -31,14 +34,11 @@ function makeController() {
   const gameState = {
     listSessions: jest.fn(),
     createSession: jest.fn(),
-    hasSession: jest.fn(),
-    closeSession: jest.fn(),
-    updateSessionSettings: jest.fn(),
   };
   const quizService = { findTitles: jest.fn() };
-  const broadcaster = {
-    notifySessionClosed: jest.fn(),
-    broadcastState: jest.fn(),
+  const rest = {
+    closeSession: jest.fn(),
+    updateSettingsAndLeagues: jest.fn(),
   };
   const seedService = {
     findStartedAtByJoinCodes: jest.fn().mockResolvedValue(new Map()),
@@ -50,15 +50,15 @@ function makeController() {
   const controller = new SessionsController(
     gameState as unknown as GameStateService,
     quizService as unknown as QuizService,
-    broadcaster as unknown as SessionBroadcaster,
     seedService as unknown as SeedService,
     leagues as unknown as LeagueService,
+    rest as unknown as LiveSessionRest,
   );
   return {
     controller,
     gameState,
     quizService,
-    broadcaster,
+    rest,
     seedService,
     leagues,
   };
@@ -444,90 +444,82 @@ describe('SessionsController', () => {
   });
 
   describe('updateSettings', () => {
-    it('updates settings and notifies clients while in the lobby', async () => {
-      const { controller, gameState, broadcaster } = makeController();
-      gameState.hasSession.mockReturnValue(true);
+    it('makes one update call with the parsed settings', async () => {
+      const { controller, rest } = makeController();
 
       await controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 });
 
-      expect(gameState.updateSessionSettings).toHaveBeenCalledWith(
+      expect(rest.updateSettingsAndLeagues).toHaveBeenCalledWith(
         'GHIJKL',
         { lockGraceSeconds: 15 },
         undefined,
       );
-      expect(broadcaster.broadcastState).toHaveBeenCalledWith('GHIJKL');
     });
 
     it('404s for an unknown join code', async () => {
-      const { controller, gameState } = makeController();
-      gameState.hasSession.mockReturnValue(false);
+      const { controller, rest } = makeController();
+      rest.updateSettingsAndLeagues.mockRejectedValue(
+        new UnknownLiveSessionError('NOPE12'),
+      );
 
       await expect(
         controller.updateSettings('NOPE12', { lockGraceSeconds: 15 }),
-      ).rejects.toThrow(NotFoundException);
-      expect(gameState.updateSessionSettings).not.toHaveBeenCalled();
+      ).rejects.toThrow(new NotFoundException('Unknown session "NOPE12"'));
     });
 
-    it('rejects an invalid settings body before calling GameStateService', async () => {
-      const { controller, gameState } = makeController();
-      gameState.hasSession.mockReturnValue(true);
+    it('rejects an invalid settings body without calling the REST entry', async () => {
+      const { controller, rest } = makeController();
 
       await expect(
         controller.updateSettings('GHIJKL', { lockGraceSeconds: 0 }),
       ).rejects.toThrow(BadRequestException);
-      expect(gameState.updateSessionSettings).not.toHaveBeenCalled();
+      expect(rest.updateSettingsAndLeagues).not.toHaveBeenCalled();
     });
 
-    it('maps a blocked update (game already started) to 409 without notifying clients', async () => {
-      const { controller, gameState, broadcaster } = makeController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.updateSessionSettings.mockRejectedValue(
+    it('maps a blocked update (game already started) to 409', async () => {
+      const { controller, rest } = makeController();
+      rest.updateSettingsAndLeagues.mockRejectedValue(
         new SessionSettingsUpdateBlockedError('GHIJKL', 'already started'),
       );
 
       await expect(
         controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 }),
       ).rejects.toThrow(ConflictException);
-      expect(broadcaster.broadcastState).not.toHaveBeenCalled();
     });
   });
 
   describe('updateSettings with leagueIds', () => {
-    it('hands only leagueIds to the one session write when only leagueIds is sent', async () => {
-      const { controller, gameState, broadcaster } = makeController();
-      gameState.hasSession.mockReturnValue(true);
+    it('hands only leagueIds when only leagueIds is sent', async () => {
+      const { controller, rest } = makeController();
 
       await controller.updateSettings('GHIJKL', { leagueIds: [4] });
 
-      expect(gameState.updateSessionSettings).toHaveBeenCalledWith(
+      expect(rest.updateSettingsAndLeagues).toHaveBeenCalledWith(
         'GHIJKL',
         {},
         [4],
       );
-      expect(broadcaster.broadcastState).toHaveBeenCalledWith('GHIJKL');
     });
 
-    it('applies settings and leagues in the same session write', async () => {
-      const { controller, gameState } = makeController();
-      gameState.hasSession.mockReturnValue(true);
+    it('hands settings and leagues in the same call', async () => {
+      const { controller, rest } = makeController();
 
       await controller.updateSettings('GHIJKL', {
         lockGraceSeconds: 15,
         leagueIds: [],
       });
 
-      expect(gameState.updateSessionSettings).toHaveBeenCalledTimes(1);
-      expect(gameState.updateSessionSettings).toHaveBeenCalledWith(
+      expect(rest.updateSettingsAndLeagues).toHaveBeenCalledTimes(1);
+      expect(rest.updateSettingsAndLeagues).toHaveBeenCalledWith(
         'GHIJKL',
         { lockGraceSeconds: 15 },
         [],
       );
     });
 
-    it('400s on a bad league id without telling clients', async () => {
-      const { controller, gameState, broadcaster } = makeController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.updateSessionSettings.mockRejectedValue(
+    it('400s on a bad league id', async () => {
+      const { controller, rest } = makeController();
+      rest.updateSettingsAndLeagues.mockRejectedValue(
         new InvalidLeagueIdsError([9]),
       );
 
@@ -537,13 +529,11 @@ describe('SessionsController', () => {
           leagueIds: [9],
         }),
       ).rejects.toThrow(BadRequestException);
-      expect(broadcaster.broadcastState).not.toHaveBeenCalled();
     });
 
     it('409s once the session has ended', async () => {
-      const { controller, gameState } = makeController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.updateSessionSettings.mockRejectedValue(
+      const { controller, rest } = makeController();
+      rest.updateSettingsAndLeagues.mockRejectedValue(
         new SessionEndedError('G'),
       );
 
@@ -554,65 +544,39 @@ describe('SessionsController', () => {
   });
 
   describe('close', () => {
-    it('closes a known session', async () => {
-      const { controller, gameState } = makeController();
-      gameState.hasSession.mockReturnValue(true);
+    it('makes one close call', async () => {
+      const { controller, rest } = makeController();
 
       await controller.close('GHIJKL');
 
-      expect(gameState.closeSession).toHaveBeenCalledWith('GHIJKL');
-    });
-
-    it('notifies connected players once the session is evicted', async () => {
-      const { controller, gameState, broadcaster } = makeController();
-      gameState.hasSession.mockReturnValue(true);
-
-      await controller.close('GHIJKL');
-
-      expect(broadcaster.notifySessionClosed).toHaveBeenCalledWith('GHIJKL');
+      expect(rest.closeSession).toHaveBeenCalledWith('GHIJKL');
     });
 
     it('404s for an unknown join code', async () => {
-      const { controller, gameState } = makeController();
-      gameState.hasSession.mockReturnValue(false);
+      const { controller, rest } = makeController();
+      rest.closeSession.mockRejectedValue(
+        new UnknownLiveSessionError('NOPE12'),
+      );
 
       await expect(controller.close('NOPE12')).rejects.toThrow(
-        NotFoundException,
+        new NotFoundException('Unknown session "NOPE12"'),
       );
-      expect(gameState.closeSession).not.toHaveBeenCalled();
     });
 
-    it('maps a blocked close to 409 conflict without notifying players', async () => {
-      const { controller, gameState, broadcaster } = makeController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.closeSession.mockImplementation(() => {
-        throw new SessionCloseBlockedError('GHIJKL', 'still in progress');
-      });
+    it('maps a blocked close to 409 conflict', async () => {
+      const { controller, rest } = makeController();
+      rest.closeSession.mockRejectedValue(
+        new SessionCloseBlockedError('GHIJKL', 'still in progress'),
+      );
 
       await expect(controller.close('GHIJKL')).rejects.toThrow(
         ConflictException,
       );
-      expect(broadcaster.notifySessionClosed).not.toHaveBeenCalled();
-    });
-
-    it('404s when the session was closed by a close that ran first', async () => {
-      const { controller, gameState } = makeController();
-      gameState.hasSession.mockReturnValueOnce(true).mockReturnValue(false);
-      gameState.closeSession.mockRejectedValue(
-        new Error('Unknown game session for join code "GHIJKL"'),
-      );
-
-      await expect(controller.close('GHIJKL')).rejects.toThrow(
-        NotFoundException,
-      );
     });
 
     it('lets unexpected errors bubble up unchanged', async () => {
-      const { controller, gameState } = makeController();
-      gameState.hasSession.mockReturnValue(true);
-      gameState.closeSession.mockImplementation(() => {
-        throw new Error('db down');
-      });
+      const { controller, rest } = makeController();
+      rest.closeSession.mockRejectedValue(new Error('db down'));
 
       await expect(controller.close('GHIJKL')).rejects.toThrow('db down');
     });

@@ -15,8 +15,7 @@ import type { LeaguesListedPayload, LeagueView } from '@campus-pubquiz/types';
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
-import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
-import { GameStateService } from '@/game/state/game-state.service';
+import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import {
   addLeagueSessionSchema,
   leagueFieldsSchema,
@@ -34,15 +33,11 @@ import { LeagueService } from '@/league/league.service';
 export class LeaguesController {
   constructor(
     private readonly leagueService: LeagueService,
-    private readonly gameState: GameStateService,
-    private readonly broadcaster: SessionBroadcaster,
+    private readonly liveSession: LiveSessionRest,
   ) {}
 
-  /** Re-reads each live session's lobby league and tells the clients of those that changed. */
-  private async refreshLobbies(): Promise<void> {
-    for (const joinCode of await this.gameState.refreshLeagueTops()) {
-      await this.broadcaster.broadcastState(joinCode);
-    }
+  private refreshLobbies(): Promise<void> {
+    return this.liveSession.refreshLeagueLobbies();
   }
 
   @Get()

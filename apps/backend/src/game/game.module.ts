@@ -7,6 +7,7 @@ import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { GameGateway } from '@/game/game.gateway';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
+import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
@@ -53,12 +54,14 @@ import { TeamService } from '@/team/team.service';
     SessionBroadcaster,
     GameGateway,
     LiveEditService,
+    LiveSessionRest,
   ],
   exports: [
     GameStateService,
     GameGateway,
     SessionBroadcaster,
     LiveEditService,
+    LiveSessionRest,
     AnswerService,
     BonusService,
     TeamService,

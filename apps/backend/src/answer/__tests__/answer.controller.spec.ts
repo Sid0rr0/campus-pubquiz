@@ -3,21 +3,15 @@ import type { AdminQuestionContext, AnswerView } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { AnswerController } from '@/answer/answer.controller';
-import type { AnswerService } from '@/answer/answer.service';
-import type { GameStateService } from '@/game/state/game-state.service';
+import {
+  UnknownLiveSessionError,
+  type LiveSessionRest,
+} from '@/game/rest/live-session-rest.service';
 
 function makeController() {
-  const answerService = { listForQuestion: jest.fn() };
-  const gameState = {
-    hasSession: jest.fn(),
-    getAdminQuestionContext: jest.fn(),
-    getGameSessionId: jest.fn(),
-  };
-  const controller = new AnswerController(
-    answerService as unknown as AnswerService,
-    gameState as unknown as GameStateService,
-  );
-  return { controller, answerService, gameState };
+  const rest = { listAnswers: jest.fn() };
+  const controller = new AnswerController(rest as unknown as LiveSessionRest);
+  return { controller, rest };
 }
 
 const question: AdminQuestionContext = {
@@ -55,36 +49,27 @@ describe('AnswerController', () => {
   });
 
   it('returns the question context and answers for a known question', async () => {
-    const { controller, answerService, gameState } = makeController();
-    gameState.hasSession.mockReturnValue(true);
-    gameState.getAdminQuestionContext.mockReturnValue(question);
-    gameState.getGameSessionId.mockReturnValue(101);
-    answerService.listForQuestion.mockResolvedValue(answers);
+    const { controller, rest } = makeController();
+    rest.listAnswers.mockResolvedValue({ questionId: 21, question, answers });
 
     const result = await controller.list('ABCDEF', 21);
 
-    expect(gameState.getAdminQuestionContext).toHaveBeenCalledWith(
-      'ABCDEF',
-      21,
-    );
-    expect(answerService.listForQuestion).toHaveBeenCalledWith(101, 21);
+    expect(rest.listAnswers).toHaveBeenCalledWith('ABCDEF', 21);
     expect(result).toEqual({ questionId: 21, question, answers });
   });
 
   it('404s for an unknown join code', async () => {
-    const { controller, gameState } = makeController();
-    gameState.hasSession.mockReturnValue(false);
+    const { controller, rest } = makeController();
+    rest.listAnswers.mockRejectedValue(new UnknownLiveSessionError('NOPE12'));
 
     await expect(controller.list('NOPE12', 21)).rejects.toThrow(
-      NotFoundException,
+      new NotFoundException('Unknown session "NOPE12"'),
     );
-    expect(gameState.getAdminQuestionContext).not.toHaveBeenCalled();
   });
 
   it('404s for an unknown question id', async () => {
-    const { controller, gameState } = makeController();
-    gameState.hasSession.mockReturnValue(true);
-    gameState.getAdminQuestionContext.mockReturnValue(null);
+    const { controller, rest } = makeController();
+    rest.listAnswers.mockResolvedValue(null);
 
     await expect(controller.list('ABCDEF', 999)).rejects.toThrow(
       NotFoundException,

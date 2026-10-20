@@ -34,6 +34,7 @@ import { GameGateway } from '@/game/game.gateway';
 import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { GameModule } from '@/game/game.module';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
+import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import { LeagueTableService } from '@/league/league-table.service';
 import { LeagueService } from '@/league/league.service';
 import { QuizService } from '@/quiz/quiz.service';
@@ -199,6 +200,8 @@ export interface RealStoreGateway extends PlayableQuiz {
   quizService: QuizService;
   /** The Live edit module — saves a quiz's title and rounds the way the editor's save does. */
   liveEdit: LiveEditService;
+  /** The REST entry — the module every REST route calls; drive a route's method through it the way a controller does (inside `inRequestContext`). */
+  rest: LiveSessionRest;
   /** Saves the seeded quiz through the Live edit module (in its own request context) with `edit` applied to the stored draft's rounds; no `edit` saves it unchanged. */
   saveQuizEdit: (
     edit?: (rounds: ImportRoundPreview[]) => ImportRoundPreview[],
@@ -527,6 +530,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const broadcaster = moduleRef.get(SessionBroadcaster);
     const gameState = moduleRef.get(GameStateService);
     const liveEdit = moduleRef.get(LiveEditService);
+    const rest = moduleRef.get(LiveSessionRest);
     const services = {
       answerService: moduleRef.get(AnswerService),
       standingsService: moduleRef.get(StandingsService),
@@ -693,6 +697,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       gateway,
       broadcaster,
       liveEdit,
+      rest,
       saveQuizEdit,
       saveAnswerKeyFix: (questionId, fix) =>
         saveQuizEdit((rounds) =>

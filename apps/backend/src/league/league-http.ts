@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { UnknownLiveSessionError } from '@/game/state/errors/unknown-live-session.error';
 import {
   InvalidLeagueIdsError,
   LeagueNotFoundError,
@@ -22,6 +23,20 @@ export function parseOrThrow<T>(
     throw new BadRequestException(result.error.issues[0]?.message ?? fallback);
   }
   return result.data;
+}
+
+/** Maps the REST entry's unknown-live-session error to a 404 with its message; anything else is rethrown. */
+export async function mapUnknownLiveSession<T>(
+  run: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (error instanceof UnknownLiveSessionError) {
+      throw new NotFoundException(error.message);
+    }
+    throw error;
+  }
 }
 
 /** Maps the league service's domain refusals to HTTP; anything else is a real failure. */
