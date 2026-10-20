@@ -109,6 +109,8 @@ export function AnswerMedia({
         <iframe
           ref={youtubeRef}
           onLoad={onYoutubeLoad}
+          // Play again remounts the embed, restarting it from the reveal clip.
+          key={mediaReplayToken}
           data-testid={`${mediaTestIdPrefix}-answer-youtube`}
           src={buildYoutubeEmbedSrc(
             youtubeId,
