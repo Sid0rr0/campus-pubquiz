@@ -2,10 +2,12 @@ import {
   DEFAULT_MARGIN,
   describeLiveEditRounds,
   formatTimecode,
-  hasVideoMedia,
+  clipFieldsFor,
   parseFiniteNumber,
   parseTimecode,
+  PARTIAL_MATCH_SCORING,
   hasMarginType,
+  type ClipFields,
   type MarginUnit,
   type ImportPreview,
   type ImportQuestionPreview,
@@ -111,9 +113,7 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
     options: [makeOption(), makeOption()],
     sortItems: ['', ''],
     matchPairs: [makeMatchPair(), makeMatchPair()],
-    matchScoringMode: 'partial',
-    marginValue: String(DEFAULT_MARGIN.value),
-    marginUnit: DEFAULT_MARGIN.unit,
+    ...GRADING_DRAFT_DEFAULTS,
     correctText: '',
     mediaUrl: '',
     answerMediaUrl: '',
@@ -180,26 +180,30 @@ function typedSeconds(typed: string): number | undefined {
   return parseTimecode(typed) ?? Number.NaN;
 }
 
-/** The clip fields a preview carries: each present when something is typed. */
-function clipFieldsFrom(question: EditorQuestion) {
-  const startSeconds = typedSeconds(question.clipStart);
-  const endSeconds = typedSeconds(question.clipEnd);
-  return {
-    ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
-    ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
-    ...(question.isVideoHidden ? { isVideoHidden: true } : {}),
+/** The clip fields a preview carries for this draft: what is typed, narrowed by the codec to what the media links allow. */
+function clipFieldsFrom(
+  question: EditorQuestion,
+  links: { mediaUrl?: string; answerMediaUrl?: string },
+): ClipFields {
+  const candidate: ClipFields = {
+    mediaStartSeconds: typedSeconds(question.clipStart),
+    mediaEndSeconds: typedSeconds(question.clipEnd),
+    isVideoHidden: question.isVideoHidden,
+    revealStartSeconds: typedSeconds(question.revealStart),
+    revealEndSeconds: typedSeconds(question.revealEnd),
   };
+  return clipFieldsFor(links, candidate);
 }
 
-/** The reveal clip fields a preview carries: each present when something is typed. */
-function revealClipFieldsFrom(question: EditorQuestion) {
-  const startSeconds = typedSeconds(question.revealStart);
-  const endSeconds = typedSeconds(question.revealEnd);
-  return {
-    ...(startSeconds !== undefined ? { revealStartSeconds: startSeconds } : {}),
-    ...(endSeconds !== undefined ? { revealEndSeconds: endSeconds } : {}),
-  };
-}
+/** The grading draft fields of a question that has no stored setting: the one place the editor's defaults are written. */
+const GRADING_DRAFT_DEFAULTS = {
+  matchScoringMode: PARTIAL_MATCH_SCORING,
+  marginValue: String(DEFAULT_MARGIN.value),
+  marginUnit: DEFAULT_MARGIN.unit,
+} satisfies Pick<
+  EditorQuestion,
+  'matchScoringMode' | 'marginValue' | 'marginUnit'
+>;
 
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
 export function questionFromPreview(
@@ -216,9 +220,7 @@ export function questionFromPreview(
     options: [makeOption(), makeOption()],
     sortItems: ['', ''],
     matchPairs: [makeMatchPair(), makeMatchPair()],
-    matchScoringMode: 'partial',
-    marginValue: String(DEFAULT_MARGIN.value),
-    marginUnit: DEFAULT_MARGIN.unit,
+    ...GRADING_DRAFT_DEFAULTS,
     correctText: '',
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
@@ -385,11 +387,8 @@ export function questionToPreview(
     ...saveAnswerDraft(question),
     ...saveGradingDrafts(question),
     ...(mediaUrl ? { mediaUrl } : {}),
-    ...(mediaUrl ? clipFieldsFrom(question) : {}),
     ...(answerMediaUrl ? { answerMediaUrl } : {}),
-    ...(hasVideoMedia({ mediaUrl, answerMediaUrl })
-      ? revealClipFieldsFrom(question)
-      : {}),
+    ...clipFieldsFrom(question, { mediaUrl, answerMediaUrl }),
   };
 }
 

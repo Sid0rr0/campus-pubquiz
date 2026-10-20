@@ -1,14 +1,6 @@
 import type { Margin } from './margin';
+import type { MatchScoringMode } from './match-scoring-mode';
 import type { QuestionType } from './question-types';
-
-/**
- * Match only: how Scoring's scoreSubmission scores a submitted pairing.
- * `partial` (the default) splits `points` evenly across correctly paired
- * items, rounded (see scoring.ts). `all_or_nothing` instead
- * awards full points when every pair is correct, half points (rounded) when
- * exactly one pair is wrong, and zero otherwise.
- */
-export type MatchScoringMode = 'partial' | 'all_or_nothing';
 
 export interface QuestionView {
   id: number;

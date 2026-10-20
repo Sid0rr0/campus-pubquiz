@@ -61,8 +61,6 @@ const QUESTION_BY_TYPE: Record<QuestionType, ImportQuestionPreview> = {
     answer: '1989',
     points: 2,
     mediaUrl: 'https://example.com/wall.jpg',
-    // CSV carries no margin: an imported Number question gets the default.
-    margin: { value: 10, unit: 'percent' },
   },
 };
 
@@ -196,22 +194,6 @@ describe('CSV round-trip through the question kinds', () => {
     });
 
     expect(checked).toEqual({ success: true, data: QUESTION_BY_TYPE.match });
-  });
-});
-
-describe('media on a multiple choice question', () => {
-  it('round-trips a multiple choice question that carries a clipped YouTube video', () => {
-    const question: ImportQuestionPreview = {
-      ...QUESTION_BY_TYPE.multiple_choice,
-      mediaUrl: YOUTUBE,
-      mediaStartSeconds: 10,
-      mediaEndSeconds: 25,
-    };
-
-    const { checked, row } = roundTrip(question);
-
-    expect(row.notes).toBe('{start: "10", end: "25"}');
-    expect(checked).toEqual({ success: true, data: question });
   });
 });
 

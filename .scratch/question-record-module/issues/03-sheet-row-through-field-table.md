@@ -9,7 +9,7 @@ Parent spec: `.scratch/question-record-module/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Sheet row encode and decode take the media and clip fields from the field table. The sheet row module's own copies of the clip rule are deleted.
 - [ ] These stay as they are:

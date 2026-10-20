@@ -809,8 +809,10 @@ grading behavior. Media is not a type: any question can carry a
   answer while it isn't a number); a key of 0 with a percentage margin shows an
   advisory hint, not an error. Switching Free text to Number keeps the prompt
   and keeps the answer only if it parses as a number. **CSV:** there is no
-  margin column (like match's scoring mode): import fills in 10% and export
-  writes no margin, so a custom margin is lost on export → re-import.
+  margin column (like match's scoring mode): an imported Number question is
+  stored with no margin and grades with the default (10%) the Answer key fills
+  in when it is read; export writes no margin, so a custom margin is lost on
+  export → re-import.
   Changing the margin of an opened question is a grading-input change like a
   key fix and re-scores its answers, discarding manual overrides.
   Allowed in kahoot rounds, where a correct answer is
@@ -861,7 +863,13 @@ A clip's start/end (seconds
 into the video) are real question fields (`mediaStartSeconds`/
 `mediaEndSeconds` on the draft, the preview and the JSON `payload`
 alongside `mediaUrl`); the editor shows them as the "Clip start"/"Clip end"
-inputs for any video `media_url` (YouTube or video file). On the big screen
+inputs for any video `media_url` (YouTube or video file). The clip times
+and the hidden-video flag are saved only for a video question media: if the
+author switches the media to an image or a sound, they are not sent with the
+save (the question record codec's `clipFieldsFor` decides, the editor has no
+video rule of its own) but the typed times stay in the form, so switching
+back to a video before saving keeps them; the reveal clip is sent when the
+question media or the answer media is a video. On the big screen
 a YouTube clip is the embed's `start`/`end` params; a video file's clip is a
 media fragment on the `<video>` src (`#t=start,end`, either bound optional,
 an empty clip leaves the url bare). The `notes` cell of a CSV row carries

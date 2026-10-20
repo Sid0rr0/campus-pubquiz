@@ -1,7 +1,10 @@
 import { DEFAULT_MARGIN, type Margin } from './margin';
 import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionType } from './question-types';
-import type { MatchScoringMode } from './question-views';
+import {
+  PARTIAL_MATCH_SCORING,
+  type MatchScoringMode,
+} from './match-scoring-mode';
 
 /**
  * The Answer key module: what an answer is graded against. A question's
@@ -34,7 +37,7 @@ export type GradingSettingsSource = OptionalGradingSettings & {
 export type AnswerKey = GradingSettings & { answer: string; points: number };
 
 const DEFAULT_SETTINGS: GradingSettingValues = {
-  matchScoringMode: 'partial',
+  matchScoringMode: PARTIAL_MATCH_SCORING,
   margin: DEFAULT_MARGIN,
 };
 

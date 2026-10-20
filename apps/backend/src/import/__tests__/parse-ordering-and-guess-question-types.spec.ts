@@ -222,7 +222,7 @@ describe('parseQuestionRow - sort, match, and closest_guess question types', () 
     expect(result.ok).toBe(false);
   });
 
-  it('accepts a number row and gives it the default 10% margin', () => {
+  it('accepts a number row and leaves its margin unset', () => {
     const result = parseQuestionRow(
       makeRow({
         type: 'number',
@@ -238,9 +238,9 @@ describe('parseQuestionRow - sort, match, and closest_guess question types', () 
         type: 'number',
         answer: '1989',
         points: 2,
-        margin: { value: 10, unit: 'percent' },
       },
     });
+    expect(result).not.toHaveProperty('question.margin');
   });
 
   it('rejects a number row with a non-numeric answer, like closest_guess', () => {

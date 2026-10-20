@@ -194,6 +194,23 @@ describe('ImportService (Postgres integration)', () => {
       });
     });
 
+    it('stores a Number question with no margin, leaving the default to the Answer key', async () => {
+      const { importService } = makeService();
+
+      await importService.confirm(
+        [
+          HEADER,
+          'History,number,In what year did the Berlin Wall fall?,,1989,2,,,,1',
+        ].join('\n'),
+        'ABCDEF',
+        'Trivia Night',
+      );
+
+      const [question] = await findQuestionsInOrder();
+      expect(question.type).toBe('number');
+      expect(question.payload).not.toHaveProperty('margin');
+    });
+
     it('re-imports idempotently, updating questions in place with stable ids', async () => {
       const { importService } = makeService();
       const first = await importService.confirm(
