@@ -38,6 +38,48 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
+/** Browser/OS chords (Cmd+F, Ctrl+J, Alt+Left…) are not ours, and typing in a form field mustn't be hijacked; Shift stays allowed so uppercase letters still match. */
+function isShortcutCandidate(event: KeyboardEvent): boolean {
+  if (event.ctrlKey || event.metaKey || event.altKey) {
+    return false;
+  }
+  return !isEditableTarget(event.target);
+}
+
+export interface UseAdminMediaPauseShortcutOptions {
+  /** Whether the Pause/Resume button is shown. */
+  canPauseMedia: boolean;
+  sendAction: (action: GameAction) => void;
+}
+
+/**
+ * /remote's only shortcut: Space pauses/resumes the media, under the same
+ * rules as on /control (only while the Pause/Resume button is shown, ignored
+ * in form fields and chords, left to the browser otherwise).
+ */
+export function useAdminMediaPauseShortcut({
+  canPauseMedia,
+  sendAction,
+}: UseAdminMediaPauseShortcutOptions): void {
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (!isShortcutCandidate(event)) {
+        return;
+      }
+      if (
+        matchesKey(event, ADMIN_SHORTCUTS.toggleMediaPause.key) &&
+        canPauseMedia
+      ) {
+        event.preventDefault();
+        sendAction('TOGGLE_MEDIA_PAUSE');
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canPauseMedia, sendAction]);
+}
+
 /**
  * Left/Right send PREVIOUS/ADVANCE whenever the server's announced step
  * allows it (the server resolves what a leaderboard press means); Up/Down show/hide the leaderboard; F toggles a fullscreen view of the
@@ -58,12 +100,7 @@ export function useAdminKeyboardShortcuts({
 }: UseAdminKeyboardShortcutsOptions): void {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
-      // Browser/OS chords (Cmd+F, Ctrl+J, Alt+Left…) are not ours; Shift stays
-      // allowed so uppercase letters still match.
-      if (event.ctrlKey || event.metaKey || event.altKey) {
-        return;
-      }
-      if (isEditableTarget(event.target)) {
+      if (!isShortcutCandidate(event)) {
         return;
       }
       if (event.key === ADMIN_SHORTCUTS.previous.key) {

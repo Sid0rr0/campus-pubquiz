@@ -16,6 +16,7 @@ import { ReplayMediaButton } from '@/app/control/replay-media-button';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { getAdminControls } from '@/app/control/admin-controls';
+import { useAdminMediaPauseShortcut } from '@/app/control/use-admin-keyboard-shortcuts';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
 function NextQuestionPreview({ question }: { question: SeededQuestion }) {
@@ -102,6 +103,10 @@ function RemotePageContent() {
     setDisplayTextScale,
     isLoading,
   } = useAdminSession('/remote');
+  const canPauseMedia = snapshot
+    ? getAdminControls(snapshot).canPauseMedia
+    : false;
+  useAdminMediaPauseShortcut({ canPauseMedia, sendAction });
 
   if (isLoading) {
     return (
@@ -136,8 +141,7 @@ function RemotePageContent() {
   const isMediaFullscreen = progress.isMediaFullscreen ?? false;
   const gameStatus = progress.status;
   const isMediaPaused = progress.isMediaPaused ?? false;
-  const { canReplayMedia, canPauseMedia, showAnswerStatus } =
-    getAdminControls(snapshot);
+  const { canReplayMedia, showAnswerStatus } = getAdminControls(snapshot);
   const hasMediaRow = canReplayMedia || canPauseMedia;
   // What Advance and Previous do is announced by the server (the admin view),
   // so the presenter's phone shows the buttons exactly as the admin console.

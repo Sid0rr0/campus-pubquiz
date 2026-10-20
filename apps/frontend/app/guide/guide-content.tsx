@@ -52,7 +52,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Media and sound',
     paragraphs: [
-      'On a video or audio question, Pause and "Play again" sit below the Leaderboard row on Control. Moving to another question restarts the media.',
+      'On a video or audio question (or its reveal), Pause and "Play again" sit below the Leaderboard row on Control. Moving on restarts the media.',
       'The Display sound toggle mutes the big screen, clips included; phones stay silent.',
     ],
   },
@@ -82,7 +82,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Leaderboard, late joiners and ties',
     paragraphs: [
       'Show or hide the leaderboard any time. While it shows, Advance reveals one rank at a time, from last place up.',
-      'Join overlay on Control covers the big screen with the QR code and join code for late teams while the quiz carries on.',
+      'Join overlay on Control covers the big screen with the QR code and join code for late teams.',
       'When teams tie for first place after a reveal, the Showdown panel offers a tiebreak between them.',
     ],
   },
@@ -105,7 +105,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      'Remote (Sessions page) is a phone-friendly page with notes, a next-up preview and Previous, Advance and leaderboard controls.',
+      'Remote (Sessions page) is a phone-friendly page with notes, a next-up preview and Previous, Advance and leaderboard controls. Space pauses media there too.',
       'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,
