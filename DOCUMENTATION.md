@@ -264,7 +264,7 @@ Each room gets **its own view**, built by the screen projection
 the display view names the screen on air; the admin view adds what `/control`
 marks as on air plus server-decided Advance/Previous availability, and gives each
 roster team its player count and over-cap flag; the
-players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state), and drops anything teams haven't been shown
+players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state; its `block` kind carries a mode of `answering`, `locked` or `revealing`), and drops anything teams haven't been shown
 yet (a kahoot question hidden behind the leaderboard is removed server-side,
 never filtered by the client). In particular it carries only the reveal walk so
 far: `revealQuestions` holds the questions before `revealIndex`, plus the one at
@@ -490,6 +490,11 @@ phone shows a card for about three seconds that never blocks input: "✓ Correct
 "No answer". It does not depend on the phone's auto-advance setting and is
 built from the team's own answer data; only a `correct` verdict vibrates. For a
 closest_guess question it appears when the answer step comes on air.
+
+On the phone's block browser, a revealed question's "Your answer" is coloured by
+the same Verdict: green for `correct` (even when speed scoring scaled the points
+down), cyan for `partial`, magenta for `incorrect`, no answer or not yet graded.
+The "n / max points" line is unchanged.
 
 ### Events
 

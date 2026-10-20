@@ -1,11 +1,16 @@
-import { formatAnswer, isBreakStatus, isHttpUrl } from '@campus-pubquiz/types';
+import { formatAnswer, isHttpUrl } from '@campus-pubquiz/types';
 import type {
+  BlockMode,
   BlockQuestionView,
   PlayersRevealQuestionView,
-  GameProgress,
   JoinAcceptedPayload,
   QuestionView,
+  Verdict,
 } from '@campus-pubquiz/types';
+import {
+  describeVerdictCard,
+  VERDICT_TONE_TEXT_CLASS,
+} from '@/app/play/verdict-card';
 import { NumberMarginText } from '@/app/components/number-margin-text';
 import { QuestionDisplay } from '@/app/display/question-display';
 import {
@@ -25,7 +30,9 @@ interface QuestionNavigation {
 }
 
 interface QuestionBrowserProps {
-  progress: GameProgress;
+  /** The block Phone screen's mode: the only thing that picks the reveal body, the answer form and the locked/revealing lines. */
+  mode: BlockMode;
+  /** False while the phone isn't linked to a team, whatever the mode. */
   isAnswerable: boolean;
   team: JoinAcceptedPayload | null;
   pickerRounds: PickerRound[];
@@ -38,6 +45,8 @@ interface QuestionBrowserProps {
   myAnswers: Record<number, string>;
   /** Points awarded for the selected question's answer, null until graded. */
   myAnswerPoints: number | null;
+  /** How the selected question's answer was judged, null until graded; colours "Your answer" on the reveal. */
+  myAnswerVerdict: Verdict | null;
   onSelectQuestion: (questionId: BlockQuestionView['id']) => void;
   onSubmitAnswer: (
     questionId: BlockQuestionView['id'],
@@ -85,7 +94,7 @@ function RevealBody({ revealQuestion, myAnswer }: RevealBodyProps) {
 
 /** The block question picker + prompt + answer form, shown while a question is open and, unless the leaderboard overlay is on, through break/reveal so teams can browse back. */
 export function QuestionBrowser({
-  progress,
+  mode,
   isAnswerable,
   team,
   pickerRounds,
@@ -95,6 +104,7 @@ export function QuestionBrowser({
   isKahootMode,
   myAnswers,
   myAnswerPoints,
+  myAnswerVerdict,
   onSelectQuestion,
   onSubmitAnswer,
   navigation,
@@ -135,7 +145,7 @@ export function QuestionBrowser({
           />
         </div>
       )}
-      {progress.status === 'reveal' && revealQuestion ? (
+      {mode === 'revealing' && revealQuestion ? (
         <div className="flex flex-col items-center gap-6 text-center">
           <RevealBody
             revealQuestion={revealQuestion}
@@ -143,9 +153,15 @@ export function QuestionBrowser({
           />
           <p
             className={`font-display text-2xl ${
-              myAnswerPoints === revealQuestion.points
-                ? 'text-green'
-                : 'text-magenta'
+              VERDICT_TONE_TEXT_CLASS[
+                myAnswer
+                  ? describeVerdictCard({
+                      myAnswer,
+                      pointsAwarded: myAnswerPoints,
+                      verdict: myAnswerVerdict,
+                    }).tone
+                  : 'incorrect'
+              ]
             }`}
           >
             <span className="font-body text-md font-extrabold text-foreground/55">
@@ -189,7 +205,7 @@ export function QuestionBrowser({
               })}
             </p>
           )}
-          {isAnswerable && team && (
+          {mode === 'answering' && isAnswerable && team && (
             <AnswerForm
               key={selectedQuestion.id}
               question={selectedQuestion}
@@ -200,12 +216,12 @@ export function QuestionBrowser({
               }
             />
           )}
-          {!isAnswerable && isBreakStatus(progress.status) && (
+          {mode === 'locked' && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               Answering is locked for this question
             </p>
           )}
-          {!isAnswerable && progress.status === 'reveal' && (
+          {mode === 'revealing' && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               Revealing answers…
             </p>

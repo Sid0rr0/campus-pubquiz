@@ -26,26 +26,28 @@ describe('Screen projection — the players view', () => {
     it('says when the block is answerable, and which screen the phone shows, across a whole walk', async () => {
       const [round1, round2] = game.rounds.map((round) => round.questionIds);
       const block = (
+        mode: 'answering' | 'locked' | 'revealing',
         onScreenQuestionId: number | null = null,
       ): PhoneScreen => ({
         kind: 'block',
+        mode,
         onScreenQuestionId,
       });
       const steps: [GameAction, boolean, PhoneScreen][] = [
         ['START_QUIZ', false, { kind: 'rules' }],
         ['ADVANCE', false, { kind: 'round_title', title: 'General Knowledge' }], // fresh round intro
-        ['ADVANCE', true, block()], // r1q1
-        ['ADVANCE', true, block()], // r1q2
-        ['ADVANCE', true, block()], // round intro over questions already open
-        ['ADVANCE', true, block()], // r2q1
-        ['ADVANCE', true, block()], // r2q2
-        ['ADVANCE', true, block()], // locking
-        ['ADVANCE', false, block()], // break_intro
+        ['ADVANCE', true, block('answering')], // r1q1
+        ['ADVANCE', true, block('answering')], // r1q2
+        ['ADVANCE', true, block('answering')], // round intro over questions already open
+        ['ADVANCE', true, block('answering')], // r2q1
+        ['ADVANCE', true, block('answering')], // r2q2
+        ['ADVANCE', true, block('answering')], // locking
+        ['ADVANCE', false, block('locked')], // break_intro
         ['ADVANCE', false, { kind: 'round_title', title: 'General Knowledge' }], // reveal_intro
-        ['ADVANCE', false, block(round1[0])],
-        ['ADVANCE', false, block(round1[1])],
+        ['ADVANCE', false, block('revealing', round1[0])],
+        ['ADVANCE', false, block('revealing', round1[1])],
         ['ADVANCE', false, { kind: 'round_title', title: 'Landmarks & Flags' }], // reveal_intro for round 2
-        ['ADVANCE', false, block(round2[0])],
+        ['ADVANCE', false, block('revealing', round2[0])],
       ];
 
       for (const [action, isAnswerable, phoneScreen] of steps) {
@@ -132,6 +134,7 @@ describe('Screen projection — the players view', () => {
 
       expect(playersView().phoneScreen).toEqual({
         kind: 'block',
+        mode: 'revealing',
         onScreenQuestionId: game.questionIds.multipleChoice,
       });
     });
