@@ -1,7 +1,6 @@
 import {
   isKahootAllowedType,
-  KAHOOT_ALLOWED_TYPES,
-  QUESTION_KINDS,
+  kahootTypeNames,
   checkQuestion,
   ROUND_CATEGORIES,
   ROUND_NOTE_MAX_LENGTH,
@@ -9,9 +8,7 @@ import {
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
 
-const KAHOOT_TYPES_MESSAGE = `Kahoot rounds only support ${KAHOOT_ALLOWED_TYPES.map(
-  (type) => QUESTION_KINDS[type].label.toLowerCase(),
-).join(', ')} questions`;
+const KAHOOT_TYPES_MESSAGE = `Kahoot rounds only support ${kahootTypeNames()} questions`;
 
 /**
  * Validates a full quiz draft (manual edits and/or a CSV-import preview
