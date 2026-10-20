@@ -126,6 +126,13 @@ describe('question record codec', () => {
     },
   );
 
+  it('keeps a Number question with no stored margin unset', () => {
+    const preview = rowToPreview(rowOf('number', null), {});
+
+    expect(preview).not.toHaveProperty('margin');
+    expect(previewToStoredFields(preview).payload).not.toHaveProperty('margin');
+  });
+
   it('keeps a set margin whose value is zero', () => {
     const payload: QuestionPayload = {
       margin: { value: 0, unit: 'absolute' },

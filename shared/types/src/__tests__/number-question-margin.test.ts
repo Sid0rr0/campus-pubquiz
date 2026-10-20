@@ -31,13 +31,11 @@ function messages(question: ImportQuestionPreview): string[] {
 }
 
 describe('Number question validation', () => {
-  it('fills in a 10% margin when none is given', () => {
+  it('leaves the margin unset when none is given', () => {
     const checked = checkQuestion(numberQuestion());
 
-    expect(checked).toEqual({
-      success: true,
-      data: { ...numberQuestion(), margin: { value: 10, unit: 'percent' } },
-    });
+    expect(checked).toEqual({ success: true, data: numberQuestion() });
+    expect(checked).not.toHaveProperty('data.margin');
   });
 
   it('keeps a margin the author chose', () => {

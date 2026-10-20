@@ -809,8 +809,10 @@ grading behavior. Media is not a type: any question can carry a
   answer while it isn't a number); a key of 0 with a percentage margin shows an
   advisory hint, not an error. Switching Free text to Number keeps the prompt
   and keeps the answer only if it parses as a number. **CSV:** there is no
-  margin column (like match's scoring mode): import fills in 10% and export
-  writes no margin, so a custom margin is lost on export → re-import.
+  margin column (like match's scoring mode): an imported Number question is
+  stored with no margin and grades with the default (10%) the Answer key fills
+  in when it is read; export writes no margin, so a custom margin is lost on
+  export → re-import.
   Changing the margin of an opened question is a grading-input change like a
   key fix and re-scores its answers, discarding manual overrides.
   Allowed in kahoot rounds, where a correct answer is
