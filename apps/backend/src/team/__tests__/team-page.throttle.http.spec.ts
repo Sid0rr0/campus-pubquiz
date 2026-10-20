@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import request from 'supertest';
 import type { Server } from 'node:http';
+import { LeagueTableService } from '@/league/league-table.service';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { TeamPageController } from '@/team/team-page.controller';
 
@@ -21,6 +22,7 @@ describe('team page throttling (HTTP)', () => {
             nightByCode: jest.fn().mockResolvedValue(null),
           },
         },
+        { provide: LeagueTableService, useValue: { positionsOf: jest.fn() } },
       ],
     }).compile();
     app = moduleRef.createNestApplication();

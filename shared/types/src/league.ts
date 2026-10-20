@@ -56,6 +56,19 @@ export interface LeagueTable {
   rows: LeagueTableRow[];
 }
 
+/** A team's standing in one current league, as its team page shows it. */
+export interface TeamLeaguePosition {
+  leagueId: number;
+  leagueName: string;
+  /** Same position as the public table: teams level on every tie-break share it. */
+  position: number;
+  /** True when another team holds the same position (shown as "Joint 3rd"). */
+  shared: boolean;
+  /** Teams in the league's table. */
+  teamCount: number;
+  leaguePoints: number;
+}
+
 /** A league as the public page lists it: no sessions. */
 export interface PublicLeague {
   id: number;

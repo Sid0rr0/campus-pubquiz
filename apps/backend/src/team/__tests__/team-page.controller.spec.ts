@@ -4,6 +4,11 @@ import type { EntityManager } from '@mikro-orm/postgresql';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { League } from '@/db/entities/league.entity';
+import { LeagueSession } from '@/db/entities/league-session.entity';
+import { LeagueTableService } from '@/league/league-table.service';
+import type { LeagueRepository } from '@/db/repositories/league.repository';
+import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
@@ -41,7 +46,18 @@ describe('TeamPageController (Postgres integration)', () => {
         ),
       ),
     );
-    controller = new TeamPageController(history);
+    controller = new TeamPageController(
+      history,
+      new LeagueTableService(
+        em.getRepository<League, LeagueRepository>(League),
+        em.getRepository<LeagueSession, LeagueSessionRepository>(LeagueSession),
+        new StandingsService(
+          em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
+            GameSessionTeam,
+          ),
+        ),
+      ),
+    );
   });
 
   /** An ended session where each team scores the given points on the quiz's one question. */
@@ -105,12 +121,46 @@ describe('TeamPageController (Postgres integration)', () => {
         name,
         summary: staff!.summary,
         sessions: staff!.sessions,
+        leagues: [],
       });
       expect(page).not.toHaveProperty('id');
       expect(JSON.stringify(page)).not.toContain(team.code);
     }
     const kicked = await controller.history({ teamCode: teams.Kicked.code });
     expect(kicked.sessions.every((row) => row.hasLeft)).toBe(true);
+  });
+
+  it('adds the position in each current league the team has points in', async () => {
+    const teams = await playEndedSession({ Alpha: 10, Beta: 5, Solo: 5 });
+    const [session] = await em.find(GameSession, {});
+    const current = em.create(League, {
+      name: 'Autumn',
+      startsOn: '2019-09-01',
+      endsOn: '2999-12-31',
+    });
+    const past = em.create(League, {
+      name: 'Past',
+      startsOn: '2019-09-01',
+      endsOn: '2020-01-31',
+    });
+    em.create(LeagueSession, { league: current, gameSession: session });
+    em.create(LeagueSession, { league: past, gameSession: session });
+    await em.flush();
+
+    const alpha = await controller.history({ teamCode: teams.Alpha.code });
+    const beta = await controller.history({ teamCode: teams.Beta.code });
+
+    expect(alpha.leagues).toEqual([
+      {
+        leagueId: current.id,
+        leagueName: 'Autumn',
+        position: 1,
+        shared: false,
+        teamCount: 3,
+        leaguePoints: 6,
+      },
+    ]);
+    expect(beta.leagues[0]).toMatchObject({ position: 2, shared: true });
   });
 
   it('accepts the code in any case with surrounding spaces', async () => {

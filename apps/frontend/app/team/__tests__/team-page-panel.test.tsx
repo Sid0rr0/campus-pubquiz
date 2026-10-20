@@ -33,6 +33,7 @@ const HISTORY: TeamPageHistory = {
     averageTotalPoints: 28,
     averagePlayerCount: null,
   },
+  leagues: [],
   sessions: [
     {
       gameSessionId: 2,
@@ -271,6 +272,62 @@ describe('TeamPagePanel', () => {
       );
 
       expect(await screen.findByLabelText('Team code')).toBeInTheDocument();
+    });
+  });
+
+  describe('league positions', () => {
+    const league = {
+      leagueId: 1,
+      leagueName: 'Autumn League',
+      position: 3,
+      shared: false,
+      teamCount: 18,
+      leaguePoints: 14,
+    };
+
+    beforeEach(() => {
+      window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, 'STORED1');
+    });
+
+    it('shows no league section when the team has no league position', async () => {
+      renderWithQuery(<TeamPagePanel />);
+
+      await screen.findByRole('heading', { name: 'The Quizzards' });
+      expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { name: 'Leagues' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows one league as position of teams and points', async () => {
+      mockFetchTeamPage.mockResolvedValue({ ...HISTORY, leagues: [league] });
+      renderWithQuery(<TeamPagePanel />);
+
+      expect(await screen.findByText('Autumn League')).toBeInTheDocument();
+      expect(screen.getByText('3rd of 18 · 14 pts')).toBeInTheDocument();
+    });
+
+    it('shows several leagues and reads a shared position as joint', async () => {
+      mockFetchTeamPage.mockResolvedValue({
+        ...HISTORY,
+        leagues: [
+          league,
+          {
+            ...league,
+            leagueId: 2,
+            leagueName: 'Spring League',
+            position: 1,
+            shared: true,
+            teamCount: 5,
+            leaguePoints: 1,
+          },
+        ],
+      });
+      renderWithQuery(<TeamPagePanel />);
+
+      expect(await screen.findByText('Spring League')).toBeInTheDocument();
+      expect(screen.getByText('3rd of 18 · 14 pts')).toBeInTheDocument();
+      expect(screen.getByText('Joint 1st of 5 · 1 pts')).toBeInTheDocument();
     });
   });
 
