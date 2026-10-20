@@ -82,7 +82,7 @@ export class LeagueTableService {
     gameSessionId: number,
     now = new Date(),
   ): Promise<LeagueTop | null> {
-    const newest = (await this.memberships
+    const newest: { leagueId: number } | undefined = await this.memberships
       .getKnex()('league_sessions as ls')
       .join('leagues as l', 'l.id', 'ls.league_id')
       .where('ls.game_session_id', gameSessionId)
@@ -90,7 +90,7 @@ export class LeagueTableService {
         { column: 'l.created_at', order: 'desc' },
         { column: 'l.id', order: 'desc' },
       ])
-      .first('l.id as leagueId')) as { leagueId: number } | undefined;
+      .first('l.id as leagueId');
     if (!newest) return null;
     const table = await this.table(newest.leagueId, now);
     if (!table) return null;
