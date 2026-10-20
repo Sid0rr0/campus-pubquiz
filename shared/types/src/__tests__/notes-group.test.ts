@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseClipNotes, writeClipNotes } from '../notes-group';
+import { parseNotesGroup, writeNotesGroup } from '../notes-group';
 
-describe('parseClipNotes', () => {
+describe('parseNotesGroup', () => {
   it('reads mm:ss start and end from a quoted group', () => {
-    const result = parseClipNotes('{start: "1:22", end: "2:20"}');
+    const result = parseNotesGroup('{start: "1:22", end: "2:20"}');
 
     expect(result).toEqual({
       freeNotes: '',
@@ -13,31 +13,31 @@ describe('parseClipNotes', () => {
   });
 
   it('reads the sample CSV group {start: "55", end: "88"}', () => {
-    const result = parseClipNotes('{start: "55", end: "88"}');
+    const result = parseNotesGroup('{start: "55", end: "88"}');
 
     expect(result.clip).toEqual({ startSeconds: 55, endSeconds: 88 });
   });
 
   it('reads h:mm:ss times, unquoted', () => {
-    const result = parseClipNotes('{start: 1:02:03, end: 1:05:00}');
+    const result = parseNotesGroup('{start: 1:02:03, end: 1:05:00}');
 
     expect(result.clip).toEqual({ startSeconds: 3723, endSeconds: 3900 });
   });
 
   it('reads plain seconds over 99 and = separators', () => {
-    const result = parseClipNotes("{start='173', end=200}");
+    const result = parseNotesGroup("{start='173', end=200}");
 
     expect(result.clip).toEqual({ startSeconds: 173, endSeconds: 200 });
   });
 
   it('reads only start when end is missing', () => {
-    const result = parseClipNotes('{start: "0:30"}');
+    const result = parseNotesGroup('{start: "0:30"}');
 
     expect(result.clip).toEqual({ startSeconds: 30 });
   });
 
   it('reads revealStart, revealEnd and hideVideo', () => {
-    const result = parseClipNotes(
+    const result = parseNotesGroup(
       '{start: "0:10", revealStart: "1:00", revealEnd: "1:15", hideVideo: true}',
     );
 
@@ -50,19 +50,19 @@ describe('parseClipNotes', () => {
   });
 
   it('does not mistake revealStart for start', () => {
-    const result = parseClipNotes('{revealStart: "0:40"}');
+    const result = parseNotesGroup('{revealStart: "0:40"}');
 
     expect(result.clip).toEqual({ revealStartSeconds: 40 });
   });
 
   it('does not set isVideoHidden for hideVideo: false', () => {
-    const result = parseClipNotes('{start: "5", hideVideo: false}');
+    const result = parseNotesGroup('{start: "5", hideVideo: false}');
 
     expect(result.clip).toEqual({ startSeconds: 5 });
   });
 
   it('reads the legacy YouTube clip line and strips it with its prefix', () => {
-    const result = parseClipNotes(
+    const result = parseNotesGroup(
       'Play the chorus\nYouTube clip: {start: "1:22", end: "2:20"}',
     );
 
@@ -74,7 +74,7 @@ describe('parseClipNotes', () => {
   });
 
   it('keeps free notes before and after the group', () => {
-    const result = parseClipNotes('Intro\n{start: "5"}\nOutro');
+    const result = parseNotesGroup('Intro\n{start: "5"}\nOutro');
 
     expect(result).toEqual({
       freeNotes: 'Intro\nOutro',
@@ -86,7 +86,7 @@ describe('parseClipNotes', () => {
   it('leaves notes without a clip group untouched', () => {
     const notes = 'Ask the audience if no one gets it in 10 seconds {maybe}';
 
-    expect(parseClipNotes(notes)).toEqual({
+    expect(parseNotesGroup(notes)).toEqual({
       freeNotes: notes,
       clip: {},
       invalidKeys: [],
@@ -94,7 +94,7 @@ describe('parseClipNotes', () => {
   });
 
   it('reports a timecode that does not parse instead of dropping it', () => {
-    expect(parseClipNotes('{start: "soon"}')).toEqual({
+    expect(parseNotesGroup('{start: "soon"}')).toEqual({
       freeNotes: '',
       clip: {},
       invalidKeys: ['start'],
@@ -102,14 +102,14 @@ describe('parseClipNotes', () => {
   });
 
   it('does not read the digits of a malformed timecode as a shorter one', () => {
-    const result = parseClipNotes('{start: "1:2x", revealEnd: "2:00"}');
+    const result = parseNotesGroup('{start: "1:2x", revealEnd: "2:00"}');
 
     expect(result.clip).toEqual({ revealEndSeconds: 120 });
     expect(result.invalidKeys).toEqual(['start']);
   });
 
   it('reads undefined notes as empty', () => {
-    expect(parseClipNotes(undefined)).toEqual({
+    expect(parseNotesGroup(undefined)).toEqual({
       freeNotes: '',
       clip: {},
       invalidKeys: [],
@@ -117,21 +117,21 @@ describe('parseClipNotes', () => {
   });
 });
 
-describe('writeClipNotes', () => {
+describe('writeNotesGroup', () => {
   it('returns the free notes unchanged when the clip is empty', () => {
-    expect(writeClipNotes('Just notes', {})).toBe('Just notes');
+    expect(writeNotesGroup('Just notes', {})).toBe('Just notes');
   });
 
   it('appends the canonical group, leaving empty keys out', () => {
-    expect(writeClipNotes('Hint', { startSeconds: 55, endSeconds: 88 })).toBe(
+    expect(writeNotesGroup('Hint', { startSeconds: 55, endSeconds: 88 })).toBe(
       'Hint\n{start: "55", end: "1:28"}',
     );
-    expect(writeClipNotes('', { startSeconds: 10 })).toBe('{start: "10"}');
+    expect(writeNotesGroup('', { startSeconds: 10 })).toBe('{start: "10"}');
   });
 
   it('writes reveal keys and hideVideo', () => {
     expect(
-      writeClipNotes('', {
+      writeNotesGroup('', {
         revealStartSeconds: 60,
         revealEndSeconds: 75,
         isVideoHidden: true,
@@ -139,7 +139,7 @@ describe('writeClipNotes', () => {
     ).toBe('{revealStart: "1:00", revealEnd: "1:15", hideVideo: true}');
   });
 
-  it('is read back identically by parseClipNotes', () => {
+  it('is read back identically by parseNotesGroup', () => {
     const clip = {
       startSeconds: 55,
       endSeconds: 88,
@@ -147,7 +147,7 @@ describe('writeClipNotes', () => {
       isVideoHidden: true as const,
     };
 
-    expect(parseClipNotes(writeClipNotes('Hint', clip))).toEqual({
+    expect(parseNotesGroup(writeNotesGroup('Hint', clip))).toEqual({
       freeNotes: 'Hint',
       clip,
       invalidKeys: [],
@@ -162,7 +162,7 @@ describe('grading settings in the notes group', () => {
     ['{margin: 2}', { value: 2, unit: 'absolute' }],
     ['{margin: "0.5"}', { value: 0.5, unit: 'absolute' }],
   ])('reads %s as a margin', (notes, margin) => {
-    expect(parseClipNotes(notes)).toEqual({
+    expect(parseNotesGroup(notes)).toEqual({
       freeNotes: '',
       clip: { margin },
       invalidKeys: [],
@@ -170,7 +170,7 @@ describe('grading settings in the notes group', () => {
   });
 
   it('reads a scoring mode in any case and keeps the other notes', () => {
-    expect(parseClipNotes('Pairs {scoring: All_Or_Nothing} only')).toEqual({
+    expect(parseNotesGroup('Pairs {scoring: All_Or_Nothing} only')).toEqual({
       freeNotes: 'Pairs\nonly',
       clip: { matchScoringMode: 'all_or_nothing' },
       invalidKeys: [],
@@ -178,13 +178,13 @@ describe('grading settings in the notes group', () => {
   });
 
   it('does not read margin or scoring inside another key', () => {
-    expect(parseClipNotes('{matchScoringMode: partial, bigmargin: 5}')).toEqual(
-      {
-        freeNotes: '{matchScoringMode: partial, bigmargin: 5}',
-        clip: {},
-        invalidKeys: [],
-      },
-    );
+    expect(
+      parseNotesGroup('{matchScoringMode: partial, bigmargin: 5}'),
+    ).toEqual({
+      freeNotes: '{matchScoringMode: partial, bigmargin: 5}',
+      clip: {},
+      invalidKeys: [],
+    });
   });
 
   it.each([
@@ -193,7 +193,7 @@ describe('grading settings in the notes group', () => {
     ['{scoring: half}', ['scoring']],
     ['{start: "1:2x", margin: "x%"}', ['start', 'margin']],
   ])('reports the unreadable keys of %s', (notes, invalidKeys) => {
-    expect(parseClipNotes(notes).invalidKeys).toEqual(invalidKeys);
+    expect(parseNotesGroup(notes).invalidKeys).toEqual(invalidKeys);
   });
 
   it('writes the settings after the clip and reads them back', () => {
@@ -203,12 +203,12 @@ describe('grading settings in the notes group', () => {
       margin: { value: 5, unit: 'percent' as const },
       matchScoringMode: 'partial' as const,
     };
-    const written = writeClipNotes('Hint', clip);
+    const written = writeNotesGroup('Hint', clip);
 
     expect(written).toBe(
       'Hint\n{start: "55", hideVideo: true, margin: "5%", scoring: "partial"}',
     );
-    expect(parseClipNotes(written)).toEqual({
+    expect(parseNotesGroup(written)).toEqual({
       freeNotes: 'Hint',
       clip,
       invalidKeys: [],

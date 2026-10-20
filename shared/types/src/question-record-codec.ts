@@ -5,7 +5,7 @@ import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
 import type { SeededQuestion } from './question-views';
 import { hasVideoMedia, isVideoUrl } from './media';
-import { parseClipNotes, type ClipNotesFields } from './notes-group';
+import { parseNotesGroup, type NotesGroupFields } from './notes-group';
 
 /**
  * The question record codec: a question's stored row (columns plus a payload
@@ -165,7 +165,7 @@ export function clipFieldsFor(
 /** The notes-group fields a sheet row carries for a question: the preview's clip fields the field table allows for its media, renamed to the group's. */
 export function clipNotesFieldsFor(question: MediaLinks & ClipFields) {
   const clip = clipFieldsFor(question, question);
-  const notes: ClipNotesFields = {
+  const notes: NotesGroupFields = {
     ...(clip.isVideoHidden ? { isVideoHidden: true } : {}),
     ...(clip.mediaStartSeconds !== undefined
       ? { startSeconds: clip.mediaStartSeconds }
@@ -197,7 +197,7 @@ export function gradingSettingsFor(
 /** The preview clip fields a parsed notes group fills for a question's media links; what the field table doesn't allow for them is left out. */
 export function clipFieldsFromNotes(
   links: MediaLinks,
-  clip: ClipNotesFields,
+  clip: NotesGroupFields,
 ): ClipFields {
   return clipFieldsFor(links, {
     mediaStartSeconds: clip.startSeconds,
@@ -226,8 +226,8 @@ export function rowToPreview(
   // A clip group left in the notes by an older save is stripped; the payload
   // fields stay the truth, the group only fills what the payload lacks.
   const { freeNotes, clip } = hasVideoMedia(payload)
-    ? parseClipNotes(row.notes ?? undefined)
-    : { freeNotes: row.notes ?? '', clip: {} as ClipNotesFields };
+    ? parseNotesGroup(row.notes ?? undefined)
+    : { freeNotes: row.notes ?? '', clip: {} as NotesGroupFields };
   return {
     questionId: row.id,
     type: row.type,

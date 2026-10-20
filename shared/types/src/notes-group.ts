@@ -6,7 +6,7 @@ import type { Margin } from './margin';
 import { formatTimecode, parseTimecode } from './youtube';
 
 /** What a `{…}` group in a question's notes can carry: the clip, the hidden-video flag and the grading settings; each field is present only when the group sets it. */
-export interface ClipNotesFields {
+export interface NotesGroupFields {
   startSeconds?: number;
   endSeconds?: number;
   revealStartSeconds?: number;
@@ -16,16 +16,16 @@ export interface ClipNotesFields {
   matchScoringMode?: MatchScoringMode;
 }
 
-export interface ParsedClipNotes {
+export interface ParsedNotesGroup {
   /** The notes with the clip group (and a legacy `YouTube clip:` prefix) removed. */
   freeNotes: string;
-  clip: ClipNotesFields;
+  clip: NotesGroupFields;
   /** The keys (`start`, `revealEnd`, `margin`, `scoring`, …) the group sets to something that doesn't read — as a timecode, a margin or a scoring mode — never silently dropped, so the caller can reject the row. */
   invalidKeys: string[];
 }
 
 // A `{…}` group, optionally behind the legacy "YouTube clip:" prefix.
-const CLIP_GROUP_PATTERN = /(?:YouTube clip:[ \t]*)?\{([^{}]*)\}/gi;
+const NOTES_GROUP_PATTERN = /(?:YouTube clip:[ \t]*)?\{([^{}]*)\}/gi;
 
 const TIMECODE_KEYS = [
   ['start', 'startSeconds'],
@@ -64,7 +64,7 @@ function keyPattern(key: string, valuePattern: string): RegExp {
 }
 
 interface ReadGroup {
-  clip: ClipNotesFields;
+  clip: NotesGroupFields;
   invalidKeys: string[];
 }
 
@@ -122,9 +122,9 @@ function readGroup(body: string): ReadGroup {
  * JSON, since authors write unquoted keys. Notes with no recognised group come
  * back unchanged as free notes.
  */
-export function parseClipNotes(notes: string | undefined): ParsedClipNotes {
+export function parseNotesGroup(notes: string | undefined): ParsedNotesGroup {
   const text = notes ?? '';
-  for (const match of text.matchAll(CLIP_GROUP_PATTERN)) {
+  for (const match of text.matchAll(NOTES_GROUP_PATTERN)) {
     const { clip, invalidKeys } = readGroup(match[1]);
     if (Object.keys(clip).length === 0 && invalidKeys.length === 0) continue;
     const before = text.slice(0, match.index).trimEnd();
@@ -136,9 +136,9 @@ export function parseClipNotes(notes: string | undefined): ParsedClipNotes {
 }
 
 /** Appends the fields as one canonical group, e.g. `{start: "55", end: "1:28", margin: "5%"}`, leaving empty keys out; with no fields the free notes come back unchanged. */
-export function writeClipNotes(
+export function writeNotesGroup(
   freeNotes: string,
-  clip: ClipNotesFields,
+  clip: NotesGroupFields,
 ): string {
   const entries = [
     ...TIMECODE_KEYS.flatMap(([key, field]) => {

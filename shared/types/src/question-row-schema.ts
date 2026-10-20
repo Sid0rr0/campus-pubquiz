@@ -18,9 +18,9 @@ import { MATCH_SCORING_MODES } from './match-scoring-mode';
 import {
   MARGIN_NOTES_KEY,
   SCORING_NOTES_KEY,
-  parseClipNotes,
-  writeClipNotes,
-  type ClipNotesFields,
+  parseNotesGroup,
+  writeNotesGroup,
+  type NotesGroupFields,
 } from './notes-group';
 
 /**
@@ -115,10 +115,10 @@ export function decodeSheetRow(
   const { freeNotes, clip, invalidKeys } =
     hasVideoMedia({ mediaUrl, answerMediaUrl }) ||
     QUESTION_KINDS[type].gradingSettings.length > 0
-      ? parseClipNotes(row.notes)
+      ? parseNotesGroup(row.notes)
       : {
           freeNotes: row.notes,
-          clip: {} as ClipNotesFields,
+          clip: {} as NotesGroupFields,
           invalidKeys: [] as string[],
         };
   const { answerIssue, ...choices } = QUESTION_KINDS[type].csv.decode({
@@ -191,7 +191,7 @@ export function encodeSheetRow(
     points: String(question.points),
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
-    notes: writeClipNotes(question.notes ?? '', {
+    notes: writeNotesGroup(question.notes ?? '', {
       ...clipNotesFieldsFor(question),
       ...gradingSettingsFor(question.type, question),
     }),

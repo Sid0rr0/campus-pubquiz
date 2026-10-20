@@ -915,7 +915,7 @@ an empty clip leaves the url bare). The `notes` cell of a CSV row carries
 them as CSV-only syntax: one `{…}` group anywhere in the notes, e.g.
 `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
 parse; quotes optional; the older `YouTube clip: {…}` line still imports).
-It isn't strict JSON: one lenient parser (`parseClipNotes` in
+It isn't strict JSON: one lenient parser (`parseNotesGroup` in
 `shared/types/src/notes-group.ts`) reads the keys `start`, `end`, `revealStart`,
 `revealEnd` and `hideVideo: true`, and returns the notes with the group
 removed, so notes without that syntax stay a normal free-text note. A
