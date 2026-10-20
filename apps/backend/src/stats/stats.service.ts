@@ -363,10 +363,10 @@ export class StatsService {
   async getFeedbackTrends(query: FeedbackTrendsQuery): Promise<FeedbackTrends> {
     const knex = this.gameSessions.getKnex();
     if (query.leagueId !== undefined) {
-      const league = await knex('leagues')
+      const leagues = (await knex('leagues')
         .where('id', query.leagueId)
-        .first('id');
-      if (!league) {
+        .select('id')) as { id: number }[];
+      if (leagues.length === 0) {
         throw new NotFoundException(`League ${query.leagueId} does not exist`);
       }
     }
