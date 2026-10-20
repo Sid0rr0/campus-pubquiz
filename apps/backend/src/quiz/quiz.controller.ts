@@ -15,7 +15,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  buildQuizPreview,
   type QuizDraft,
   type QuizDraftSaveRequest,
   type QuizDraftSaveResult,
@@ -25,10 +24,10 @@ import {
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
-import { SeedService } from '@/db/seed.service';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { toQuizHttpError } from '@/quiz/quiz-http-errors';
+import { QuizPreviewService } from '@/quiz/quiz-preview.service';
 import { quizPreviewQuerySchema } from '@/quiz/quiz-preview-query.schema';
 import { QuizService } from '@/quiz/quiz.service';
 
@@ -39,7 +38,7 @@ export class QuizController {
     private readonly quizService: QuizService,
     private readonly gameState: GameStateService,
     private readonly liveEdit: LiveEditService,
-    private readonly seedService: SeedService,
+    private readonly quizPreview: QuizPreviewService,
   ) {}
 
   @Get()
@@ -75,11 +74,11 @@ export class QuizController {
         parsed.error.issues[0]?.message ?? 'Invalid query',
       );
     }
-    if (!(await this.quizService.exists(id))) {
-      throw new NotFoundException(`Quiz ${id} does not exist`);
+    try {
+      return await this.quizPreview.preview(id, parsed.data.mode);
+    } catch (error) {
+      throw toQuizHttpError(error);
     }
-    const rounds = await this.seedService.loadQuizRounds(id);
-    return buildQuizPreview(rounds, parsed.data.mode);
   }
 
   @Post()

@@ -43,8 +43,10 @@ export function QuizPreviewPanel({ quizId }: QuizPreviewPanelProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   // The default order is left out of the URL; anything unknown means the default.
+  const modeParam = searchParams.get('mode');
   const mode: QuizPreviewMode =
-    searchParams.get('mode') === 'night' ? 'night' : DEFAULT_QUIZ_PREVIEW_MODE;
+    QUIZ_PREVIEW_MODES.find((option) => option === modeParam) ??
+    DEFAULT_QUIZ_PREVIEW_MODE;
   // The default order and the first step (at === null) are left out of the URL.
   const writeUrl = (nextMode: QuizPreviewMode, at: string | null) =>
     router.replace(

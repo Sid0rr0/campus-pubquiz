@@ -3,8 +3,7 @@ import type {
   DisplayScreen,
   LeaderboardEntry,
   LeagueTop,
-  QuizStructureSummary,
-  SessionSettings,
+  QuizPreviewContext,
   TeamView,
   TeamsCorrect,
 } from '@campus-pubquiz/types';
@@ -31,15 +30,6 @@ import { RoundOverviewScreen } from '@/app/display/round-overview-screen';
 import { RoundTitleCard } from '@/app/display/round-title-card';
 import { TeamsCorrectCount } from '@/app/display/teams-correct-count';
 
-/** What every screen reads about the quiz itself, known without a running session. */
-export interface DisplayQuizContext {
-  settings: SessionSettings;
-  quizStructure: QuizStructureSummary;
-  roundTitles: string[];
-  roundCategories: string[];
-  roundAuthors: string[];
-}
-
 /** What only a running session knows. Left out, the live-only parts draw empty. */
 export interface DisplayLiveContext {
   teams: TeamView[];
@@ -59,7 +49,8 @@ export interface DisplayLiveContext {
 
 interface DisplayScreenViewProps {
   screen: DisplayScreen;
-  quiz: DisplayQuizContext;
+  /** What every screen reads about the quiz itself, known without a running session. */
+  quiz: QuizPreviewContext;
   live?: DisplayLiveContext;
 }
 

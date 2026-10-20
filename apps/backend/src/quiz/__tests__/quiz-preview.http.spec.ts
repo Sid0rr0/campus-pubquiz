@@ -20,6 +20,7 @@ import { SeedService } from '@/db/seed.service';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { QuizController } from '@/quiz/quiz.controller';
+import { QuizPreviewService } from '@/quiz/quiz-preview.service';
 import { QuizService } from '@/quiz/quiz.service';
 import {
   makeQuestion,
@@ -55,6 +56,7 @@ describe('GET /quizzes/:id/preview (Postgres integration)', () => {
       controllers: [QuizController],
       providers: [
         QuizService,
+        QuizPreviewService,
         SeedService,
         SessionGuard,
         RolesGuard,
@@ -171,6 +173,48 @@ describe('GET /quizzes/:id/preview (Postgres integration)', () => {
       'reveal_intro',
       'reveal',
       'reveal',
+    ]);
+  });
+
+  it('answers 200 in the night order for a quiz with a round that has no questions', async () => {
+    // The editor refuses to save an empty round, so the questions are removed
+    // from a saved quiz's rounds directly.
+    const questionRound = (title: string) =>
+      makeRound({
+        title,
+        questions: [makeQuestion({ prompt: 'One?', answer: 'Yes' })],
+      });
+    const saved = await quizService.create('Gaps', [
+      questionRound('Empty'),
+      questionRound('Full'),
+      questionRound('Empty again'),
+    ]);
+    const em = db.orm.em.fork();
+    const savedRounds = await em.find(
+      Round,
+      { quiz: saved.quizId },
+      { orderBy: { orderIndex: 'asc' } },
+    );
+    await em.nativeDelete(Question, {
+      round: { $in: [savedRounds[0].id, savedRounds[2].id] },
+    });
+
+    const response = await get(
+      `/quizzes/${saved.quizId}/preview?mode=night`,
+      'admin-token',
+    );
+
+    expect(response.status).toBe(200);
+    const body = response.body as QuizPreviewPayload;
+    expect(body.steps.map(({ screen }) => screen.kind)).toEqual([
+      'round_overview',
+      'round_title',
+      'round_title',
+      'question',
+      'break_intro',
+      'reveal_intro',
+      'reveal',
+      'round_title',
     ]);
   });
 

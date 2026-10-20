@@ -10,10 +10,10 @@ import type {
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
-import type { SeedService } from '@/db/seed.service';
 import type { LiveEditService } from '@/game/live-edit/live-edit.service';
 import type { GameStateService } from '@/game/state/game-state.service';
 import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
+import type { QuizPreviewService } from '@/quiz/quiz-preview.service';
 import { QuizController } from '@/quiz/quiz.controller';
 import {
   QuizDraftInvalidError,
@@ -38,7 +38,7 @@ function makeController() {
     quizService as unknown as QuizService,
     gameState as unknown as GameStateService,
     liveEdit as unknown as LiveEditService,
-    {} as SeedService,
+    {} as QuizPreviewService,
   );
   return { controller, quizService, gameState, liveEdit };
 }

@@ -1053,7 +1053,10 @@ or counted. It is a read of the quiz.
     `round_title`, `question`, `break_intro`, `reveal_intro` and `reveal`;
     lobby, rules, join overlay, locking, break review, break round title,
     leaderboard, showdown and ended never appear. The break intro has no
-    deadline, no feedback prompt and no fun facts.
+    deadline, no feedback prompt and no fun facts. A round with no questions
+    can't be walked by the real Advance plan, so the dry run skips it and its
+    title card is shown in front of the next round's (or last, when no round
+    follows); the other rounds keep their place in the quiz's numbering.
 
   In both, live-only content is empty: no team counts, guesses, fun facts or
   break deadline, and a closest_guess reveal shows just its correct answer.
@@ -1065,8 +1068,9 @@ or counted. It is a read of the quiz.
   `questionNote`, each `null` when there is none). Same session and role guards as the
   other quiz reads (admin and moderator). An unknown quiz is a `404`, a `mode`
   that isn't a preview mode a `400`; `mode` defaults to `answer_after_question`.
-- **How it is built**: `buildQuizPreview` puts a team-less, in-memory
-  `SessionState` built from the quiz's seeded rounds (`SeedService.loadQuizRounds`)
+- **How it is built**: `QuizPreviewService` checks the quiz exists, loads its
+  seeded rounds (`SeedService.loadQuizRounds`) and hands them to
+  `buildQuizPreview`, which puts a team-less, in-memory `SessionState`
   at each screen and takes the `DisplayScreen` from the display projection, so
   the preview can't draw anything `/display` wouldn't.
 

@@ -1,4 +1,4 @@
-import type { QuizPreviewStep } from '@campus-pubquiz/types';
+import type { QuizPreviewMode, QuizPreviewStep } from '@campus-pubquiz/types';
 
 /**
  * A step's position in the preview URL's `?at=`: the round and question it
@@ -47,7 +47,7 @@ export function stepIndexAt(
 /** The preview page of a saved quiz, optionally in an order and at a position. The default order and the first step are left out. */
 export function quizPreviewHref(
   quizId: number | string,
-  options: { mode?: string; at?: string } = {},
+  options: { mode?: QuizPreviewMode; at?: string } = {},
 ): string {
   const params = new URLSearchParams();
   if (options.mode) params.set('mode', options.mode);
