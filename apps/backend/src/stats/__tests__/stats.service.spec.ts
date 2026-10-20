@@ -656,6 +656,398 @@ describe('StatsService (Postgres integration)', () => {
     });
   });
 
+  describe('getFeedbackTrends sessions', () => {
+    async function playedSession(
+      joinCode: string,
+      playedAt: string,
+      options: {
+        name?: string;
+        feedbackOff?: boolean;
+        status?: GameStatus;
+      } = {},
+    ): Promise<{ session: GameSession; round: Round }> {
+      const { quiz, questions } = await createQuiz(`Quiz ${joinCode}`, [[1]]);
+      const session = await createSession(
+        quiz,
+        joinCode,
+        options.status ?? 'ended',
+        options.name,
+      );
+      session.createdAt = new Date(playedAt);
+      if (options.feedbackOff) {
+        session.settings = {
+          ...DEFAULT_SESSION_SETTINGS,
+          collectFeedback: false,
+        };
+      }
+      await em.flush();
+      return { session, round: questions[0][0].round };
+    }
+
+    async function rate(
+      session: GameSession,
+      round: Round,
+      teamName: string,
+      stars: number,
+    ): Promise<void> {
+      const team = await joinTeam(session, teamName);
+      em.create(RoundRating, { gameSession: session, round, team, stars });
+      await em.flush();
+    }
+
+    it('lists ended sessions oldest first with their average rating and rating count', async () => {
+      const newer = await playedSession('TR1', '2026-10-10T19:00:00Z', {
+        name: 'Autumn quiz',
+      });
+      const older = await playedSession('TR2', '2026-09-01T19:00:00Z');
+      await rate(newer.session, newer.round, 'A1', 5);
+      await rate(newer.session, newer.round, 'A2', 4);
+      await rate(older.session, older.round, 'B1', 3);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions).toEqual([
+        {
+          id: older.session.id,
+          name: 'Quiz TR2',
+          date: '2026-09-01T19:00:00.000Z',
+          rating: { average: 3, count: 1 },
+        },
+        {
+          id: newer.session.id,
+          name: 'Autumn quiz',
+          date: '2026-10-10T19:00:00.000Z',
+          rating: { average: 4.5, count: 2 },
+        },
+      ]);
+    });
+
+    it('averages across all of a session’s rounds, not per round', async () => {
+      const { quiz, questions } = await createQuiz('Two rounds', [[1], [1]]);
+      const session = await createSession(quiz, 'TR3', 'ended');
+      await rate(session, questions[0][0].round, 'A1', 5);
+      await rate(session, questions[0][0].round, 'A2', 5);
+      await rate(session, questions[1][0].round, 'A3', 2);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions[0].rating).toEqual({ average: 4, count: 3 });
+    });
+
+    it('shows null for an ended session nobody rated', async () => {
+      await playedSession('TR4', '2026-10-01T19:00:00Z');
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions).toHaveLength(1);
+      expect(result.sessions[0].rating).toBeNull();
+    });
+
+    it('leaves out sessions with feedback off and sessions that have not ended', async () => {
+      const off = await playedSession('TR5', '2026-10-01T19:00:00Z', {
+        feedbackOff: true,
+      });
+      await rate(off.session, off.round, 'A1', 1);
+      await playedSession('TR6', '2026-10-02T19:00:00Z', {
+        status: 'question_open',
+      });
+      const on = await playedSession('TR7', '2026-10-03T19:00:00Z');
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions.map((s) => s.id)).toEqual([on.session.id]);
+    });
+
+    it('counts a session stored without the setting as feedback on', async () => {
+      const { session } = await playedSession('TR8', '2026-10-01T19:00:00Z');
+      const withoutSetting: Partial<typeof DEFAULT_SESSION_SETTINGS> = {
+        ...DEFAULT_SESSION_SETTINGS,
+      };
+      delete withoutSetting.collectFeedback;
+      session.settings = withoutSetting as typeof session.settings;
+      await em.flush();
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions.map((s) => s.id)).toEqual([session.id]);
+    });
+
+    it('keeps only sessions played from the from date to the end of the to date, UTC', async () => {
+      await playedSession('TR9', '2026-09-30T23:59:59Z');
+      const first = await playedSession('TR10', '2026-10-01T00:00:00Z');
+      const last = await playedSession('TR11', '2026-10-31T23:59:59Z');
+      await playedSession('TR12', '2026-11-01T00:00:00Z');
+
+      const bounded = await statsService.getFeedbackTrends({
+        from: '2026-10-01',
+        to: '2026-10-31',
+      });
+      const fromOnly = await statsService.getFeedbackTrends({
+        from: '2026-10-31',
+      });
+      const toOnly = await statsService.getFeedbackTrends({ to: '2026-09-30' });
+
+      expect(bounded.sessions.map((s) => s.id)).toEqual([
+        first.session.id,
+        last.session.id,
+      ]);
+      expect(fromOnly.sessions.map((s) => s.id)).toContain(last.session.id);
+      expect(fromOnly.sessions).toHaveLength(2);
+      expect(toOnly.sessions).toHaveLength(1);
+    });
+
+    it('carries no team id or name', async () => {
+      const { session, round } = await playedSession(
+        'TR13',
+        '2026-10-01T19:00:00Z',
+      );
+      await rate(session, round, 'SecretSquad', 3);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      const json = JSON.stringify(result);
+      expect(json).not.toContain('SecretSquad');
+      expect(json).not.toMatch(/team/i);
+    });
+  });
+
+  describe('getFeedbackTrends topics', () => {
+    async function endedAt(
+      joinCode: string,
+      playedAt: string,
+      feedbackOff = false,
+    ): Promise<GameSession> {
+      const { quiz } = await createQuiz(`Quiz ${joinCode}`, [[1]]);
+      const session = await createSession(quiz, joinCode, 'ended');
+      session.createdAt = new Date(playedAt);
+      if (feedbackOff) {
+        session.settings = {
+          ...DEFAULT_SESSION_SETTINGS,
+          collectFeedback: false,
+        };
+      }
+      await em.flush();
+      return session;
+    }
+
+    async function suggest(
+      session: GameSession,
+      teamName: string,
+      topics: string[],
+      sentAt: string,
+    ): Promise<void> {
+      const team = await joinTeam(session, teamName);
+      em.create(SessionFeedback, {
+        gameSession: session,
+        team,
+        comment: '',
+        topics,
+        createdAt: new Date(sentAt),
+        updatedAt: new Date(sentAt),
+      });
+      await em.flush();
+    }
+
+    it('merges the same topic from different sessions, showing the most common spelling, sorted by count then name', async () => {
+      const first = await endedAt('TT1', '2026-09-01T19:00:00Z');
+      const second = await endedAt('TT2', '2026-10-01T19:00:00Z');
+      await suggest(first, 'A1', ['geography', 'Film'], '2026-09-01T20:00:00Z');
+      await suggest(first, 'A2', ['Geography'], '2026-09-01T20:05:00Z');
+      await suggest(second, 'B1', [' Geography '], '2026-10-01T20:00:00Z');
+      await suggest(
+        second,
+        'B2',
+        ['GEOGRAPHY', 'film', 'Art'],
+        '2026-10-01T20:05:00Z',
+      );
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.topics).toEqual([
+        { topic: 'Geography', count: 4 },
+        { topic: 'Film', count: 2 },
+        { topic: 'Art', count: 1 },
+      ]);
+    });
+
+    it('counts only sessions in the range with feedback on, and carries no team', async () => {
+      const inRange = await endedAt('TT3', '2026-10-05T19:00:00Z');
+      const before = await endedAt('TT4', '2026-08-05T19:00:00Z');
+      const off = await endedAt('TT5', '2026-10-06T19:00:00Z', true);
+      await suggest(inRange, 'SecretSquad', ['Music'], '2026-10-05T20:00:00Z');
+      await suggest(before, 'B1', ['Sport'], '2026-08-05T20:00:00Z');
+      await suggest(off, 'C1', ['Cooking'], '2026-10-06T20:00:00Z');
+
+      const result = await statsService.getFeedbackTrends({
+        from: '2026-10-01',
+      });
+
+      expect(result.topics).toEqual([{ topic: 'Music', count: 1 }]);
+      expect(JSON.stringify(result)).not.toContain('SecretSquad');
+    });
+
+    it('is empty when nobody suggested a topic', async () => {
+      await endedAt('TT6', '2026-10-05T19:00:00Z');
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.topics).toEqual([]);
+    });
+  });
+
+  describe('getFeedbackTrends best and worst rounds', () => {
+    async function ratedRound(
+      joinCode: string,
+      playedAt: string,
+      stars: number[],
+      options: { sessionName?: string; feedbackOff?: boolean } = {},
+    ): Promise<GameSession> {
+      const { quiz, questions } = await createQuiz(`Quiz ${joinCode}`, [[1]]);
+      const round = questions[0][0].round;
+      round.title = `Round of ${joinCode}`;
+      const session = await createSession(
+        quiz,
+        joinCode,
+        'ended',
+        options.sessionName,
+      );
+      session.createdAt = new Date(playedAt);
+      if (options.feedbackOff) {
+        session.settings = {
+          ...DEFAULT_SESSION_SETTINGS,
+          collectFeedback: false,
+        };
+      }
+      await em.flush();
+      for (const [index, value] of stars.entries()) {
+        const team = await joinTeam(session, `${joinCode}-T${index}`);
+        em.create(RoundRating, {
+          gameSession: session,
+          round,
+          team,
+          stars: value,
+        });
+      }
+      await em.flush();
+      return session;
+    }
+
+    it('ranks rounds by average rating, best first and worst first', async () => {
+      const low = await ratedRound('BW1', '2026-10-01T19:00:00Z', [1, 2, 3]);
+      const mid = await ratedRound('BW2', '2026-10-02T19:00:00Z', [3, 3, 4]);
+      const high = await ratedRound('BW3', '2026-10-03T19:00:00Z', [5, 5, 4]);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.bestRounds.map((r) => r.sessionId)).toEqual([
+        high.id,
+        mid.id,
+        low.id,
+      ]);
+      expect(result.worstRounds.map((r) => r.sessionId)).toEqual([
+        low.id,
+        mid.id,
+        high.id,
+      ]);
+      expect(result.bestRounds[0]).toEqual({
+        sessionId: high.id,
+        sessionName: 'Quiz BW3',
+        roundTitle: 'Round of BW3',
+        average: 14 / 3,
+        count: 3,
+      });
+    });
+
+    it('counts only rounds with at least 3 ratings', async () => {
+      await ratedRound('BW4', '2026-10-01T19:00:00Z', [5, 5]);
+      const enough = await ratedRound('BW5', '2026-10-02T19:00:00Z', [2, 2, 2]);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.bestRounds.map((r) => r.sessionId)).toEqual([enough.id]);
+      expect(result.worstRounds.map((r) => r.sessionId)).toEqual([enough.id]);
+    });
+
+    it('keeps only 5 rounds in each list', async () => {
+      for (let i = 0; i < 7; i += 1) {
+        await ratedRound(`BW6${i}`, `2026-10-0${i + 1}T19:00:00Z`, [
+          1 + i * 0.5,
+          1 + i * 0.5,
+          1 + i * 0.5,
+        ]);
+      }
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.bestRounds.map((r) => r.average)).toEqual([
+        4, 3.5, 3, 2.5, 2,
+      ]);
+      expect(result.worstRounds.map((r) => r.average)).toEqual([
+        1, 1.5, 2, 2.5, 3,
+      ]);
+    });
+
+    it('breaks a tie by higher count first, then the newer session', async () => {
+      const fewer = await ratedRound('BW7', '2026-10-05T19:00:00Z', [4, 4, 4]);
+      const olderMore = await ratedRound(
+        'BW8',
+        '2026-10-01T19:00:00Z',
+        [4, 4, 4, 4],
+      );
+      const newerMore = await ratedRound(
+        'BW9',
+        '2026-10-02T19:00:00Z',
+        [4, 4, 4, 4],
+      );
+
+      const result = await statsService.getFeedbackTrends({});
+
+      const expected = [newerMore.id, olderMore.id, fewer.id];
+      expect(result.bestRounds.map((r) => r.sessionId)).toEqual(expected);
+      expect(result.worstRounds.map((r) => r.sessionId)).toEqual(expected);
+    });
+
+    it('uses the session name when set and honours the range and the feedback setting', async () => {
+      const named = await ratedRound(
+        'BW10',
+        '2026-10-10T19:00:00Z',
+        [3, 3, 3],
+        {
+          sessionName: 'Freshers night',
+        },
+      );
+      await ratedRound('BW11', '2026-08-10T19:00:00Z', [5, 5, 5]);
+      await ratedRound('BW12', '2026-10-11T19:00:00Z', [5, 5, 5], {
+        feedbackOff: true,
+      });
+
+      const result = await statsService.getFeedbackTrends({
+        from: '2026-10-01',
+      });
+
+      expect(result.bestRounds).toEqual([
+        {
+          sessionId: named.id,
+          sessionName: 'Freshers night',
+          roundTitle: 'Round of BW10',
+          average: 3,
+          count: 3,
+        },
+      ]);
+    });
+
+    it('returns empty lists when nothing qualifies and carries no team data', async () => {
+      const empty = await statsService.getFeedbackTrends({});
+      await ratedRound('BW13', '2026-10-01T19:00:00Z', [3, 3, 3]);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(empty.bestRounds).toEqual([]);
+      expect(empty.worstRounds).toEqual([]);
+      expect(JSON.stringify(result.bestRounds)).not.toMatch(/team|BW13-T/i);
+    });
+  });
+
   describe('getSessionDetail feedback', () => {
     async function send(
       session: GameSession,
