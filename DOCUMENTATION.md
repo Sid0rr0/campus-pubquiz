@@ -25,6 +25,7 @@ laptop. This document describes the system as currently built.
   - [Authentication](#authentication)
   - [Sessions: Running Multiple Quizzes at Once](#sessions-running-multiple-quizzes-at-once)
   - [Session Stats](#session-stats)
+  - [Leagues](#leagues)
   - [Deploy and CI](#deploy-and-ci)
 
 ## System Overview
@@ -85,6 +86,7 @@ management and authoring UI:
 | `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
 | `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
 | `/team`          | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)    |
+| `/leagues`       | Admin only                  | Create, edit and delete leagues; add or remove ended sessions (see Leagues)     |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -1431,6 +1433,39 @@ placing** column). `sortBy=averagePlacing` is a sort column alongside `joinedAt`
 and `sessionsJoined`; teams with no placing sort last in both directions. Because
 placings are not SQL ranks, this sort loads every team's results and orders and
 pages them in memory; the other sorts only compute the figure for the visible page.
+
+## Leagues
+
+A **league** (see `GLOSSARY.md`) is a named competition, such as a semester's, that
+ended sessions are added to. This section covers storage and the admin side; league
+points and the table are described where they ship.
+
+- **Storage.** `leagues` (`id`, `name`, `startsOn`, `endsOn`, timestamps; a check
+  constraint keeps `endsOn >= startsOn`) and the `league_sessions` join table (league,
+  game session; unique pair, `on delete cascade` on both sides). Deleting a league
+  removes only its league rows and memberships, never a session, team or answer.
+  Deleting a session removes its memberships.
+- **Dates are a label.** They never decide membership. They decide which leagues are
+  **current**: `endsOn` is today or later, where "today" is the date at the venue
+  (`Europe/Prague`, `league/venue-date.ts`, since no time-zone setting exists).
+- **Admin REST** (`LeaguesController`, `@Roles('admin')`, validated with Zod in
+  `league.schema.ts`; a blank name, a malformed date or `endsOn` before `startsOn` is a
+  400; a moderator gets 403):
+  - `POST /leagues` and `PATCH /leagues/:id` with `{ name, startsOn, endsOn }`
+    (the name is trimmed), `DELETE /leagues/:id`;
+  - `POST /leagues/:id/sessions` with `{ gameSessionId }` and
+    `DELETE /leagues/:id/sessions/:gameSessionId`. Only an **ended** session can be
+    added (a lobby or live session is a 409, an unknown league or session a 404).
+    Adding twice changes nothing; removing a session that is not in the league is a
+    no-op. Both work for any league, current or not.
+- **Staff read** (admin and moderator): `GET /leagues` lists leagues, newest first, each
+  with `current` and its `sessions` (id, join code, display name, played-at).
+  `GET /leagues?current=true` keeps only current leagues, which feeds the session
+  form's checkboxes.
+- **`/leagues` page** (admin only, "Leagues" in the account menu): a create form, and
+  per league an edit form, delete (behind a confirmation), its sessions each with
+  Remove, and "Add a session" choosing from ended sessions not yet in it (the latest
+  100). Each list has an empty state.
 
 ## Deploy and CI
 

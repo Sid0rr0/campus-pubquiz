@@ -4,6 +4,8 @@ import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { League } from '@/db/entities/league.entity';
+import { LeagueSession } from '@/db/entities/league-session.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
@@ -30,6 +32,8 @@ export const DB_ENTITIES = [
   RoundRating,
   SessionFeedback,
   SessionPlayerCount,
+  League,
+  LeagueSession,
   User,
   Session,
   ShowdownRound,

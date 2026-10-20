@@ -23,6 +23,8 @@ import { createMediaStorage } from '@/media/create-media-storage';
 import { MEDIA_STORAGE } from '@/media/media-storage';
 import { MediaController } from '@/media/media.controller';
 import { MediaService } from '@/media/media.service';
+import { LeaguesController } from '@/league/leagues.controller';
+import { LeagueService } from '@/league/league.service';
 import { SessionsController } from '@/session/sessions.controller';
 import { StatsController } from '@/stats/stats.controller';
 import { StatsService } from '@/stats/stats.service';
@@ -54,6 +56,7 @@ import { StatsService } from '@/stats/stats.service';
     BonusAwardsController,
     BonusAwardMutationsController,
     StatsController,
+    LeaguesController,
   ],
   providers: [
     // Must be registered before any other exception filters so Sentry sees
@@ -64,6 +67,7 @@ import { StatsService } from '@/stats/stats.service';
     { provide: MEDIA_STORAGE, useFactory: () => createMediaStorage() },
     MediaService,
     StatsService,
+    LeagueService,
   ],
 })
 export class AppModule {}
