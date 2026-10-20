@@ -1,18 +1,71 @@
 // Mechanical halves of two CLAUDE.md constraints, shared by the backend and
 // frontend ESLint configs. Test files are exempt: fixtures are built per type.
 
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+
+const QUESTION_TYPES_MODULE = fileURLToPath(
+  new URL('../shared/types/src/question-types.ts', import.meta.url),
+);
+
+// The TypeScript ESLint parser is a dependency of the backend workspace; resolve
+// it from there so this root-level module needs no dependency of its own.
+const requireFromBackend = createRequire(
+  new URL('../apps/backend/package.json', import.meta.url),
+);
+
 /**
- * Mirrors QUESTION_TYPES (shared/types/src/question-types.ts). ESLint can't
- * import the TypeScript source, so a shared/types test keeps the two equal.
+ * Reads the elements of the `QUESTION_TYPES` array literal from a TypeScript
+ * module. ESLint can't import TypeScript source, so the module is parsed.
+ * Throws (naming the module) rather than ever returning an empty list, so a
+ * moved or reshaped list can't silently switch the rule off.
  */
-export const QUESTION_TYPE_LITERALS = [
-  'multiple_choice',
-  'free_text',
-  'sort',
-  'match',
-  'closest_guess',
-  'number',
-];
+export function readQuestionTypes(modulePath = QUESTION_TYPES_MODULE) {
+  const fail = (reason) => {
+    throw new Error(
+      `ESLint question-kind rules: cannot read QUESTION_TYPES from ${modulePath}: ${reason}`,
+    );
+  };
+
+  let ast;
+  try {
+    const { parser } = requireFromBackend('typescript-eslint');
+    ast = parser.parseForESLint(readFileSync(modulePath, 'utf8')).ast;
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+
+  for (const statement of ast.body) {
+    const declaration =
+      statement.type === 'ExportNamedDeclaration'
+        ? statement.declaration
+        : statement;
+    if (declaration?.type !== 'VariableDeclaration') continue;
+    for (const declarator of declaration.declarations) {
+      if (declarator.id.name !== 'QUESTION_TYPES') continue;
+      let list = declarator.init;
+      while (list?.type === 'TSAsExpression') list = list.expression;
+      if (list?.type !== 'ArrayExpression') {
+        return fail('QUESTION_TYPES is not an array literal');
+      }
+      const types = list.elements.map((element) =>
+        element?.type === 'Literal' && typeof element.value === 'string'
+          ? element.value
+          : null,
+      );
+      if (types.length === 0) return fail('QUESTION_TYPES is empty');
+      if (types.includes(null)) {
+        return fail('QUESTION_TYPES has an element that is not a plain string');
+      }
+      return types;
+    }
+  }
+  return fail('no QUESTION_TYPES declaration found');
+}
+
+/** The shared type list (shared/types/src/question-types.ts), parsed when the config loads. */
+export const QUESTION_TYPE_LITERALS = readQuestionTypes();
 
 const TYPE_LITERAL = `/^(${QUESTION_TYPE_LITERALS.join('|')})$/`;
 const EQUALITY = 'BinaryExpression[operator=/^[!=]==?$/]';
