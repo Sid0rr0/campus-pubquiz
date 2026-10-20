@@ -21,7 +21,7 @@ import {
   parseClipNotes,
   writeClipNotes,
   type ClipNotesFields,
-} from './youtube';
+} from './notes-group';
 
 /**
  * Sheet-row half of the CSV format, both directions. The question's own

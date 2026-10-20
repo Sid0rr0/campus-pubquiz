@@ -32,6 +32,7 @@ export {
   type RoundLockReason,
   type RoundStructureEditing,
 } from './live-edit-frontier';
+export * from './notes-group';
 export * from './youtube';
 export * from './sort-match';
 export * from './media';

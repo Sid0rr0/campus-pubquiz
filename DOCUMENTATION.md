@@ -916,7 +916,7 @@ them as CSV-only syntax: one `{…}` group anywhere in the notes, e.g.
 `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
 parse; quotes optional; the older `YouTube clip: {…}` line still imports).
 It isn't strict JSON: one lenient parser (`parseClipNotes` in
-`shared/types/src/youtube.ts`) reads the keys `start`, `end`, `revealStart`,
+`shared/types/src/notes-group.ts`) reads the keys `start`, `end`, `revealStart`,
 `revealEnd` and `hideVideo: true`, and returns the notes with the group
 removed, so notes without that syntax stay a normal free-text note. A
 clip time that doesn't parse (e.g. `start: "1:2x"`) is never dropped
@@ -932,7 +932,7 @@ an older save left there (the payload fields stay the truth), and saving
 again cleans the row. The same group carries a question's **grading settings**: `margin: "5%"`
 (percent) or `margin: "2"` (absolute) for a Number question, and
 `scoring: "partial"` or `scoring: "all_or_nothing"` for a match question
-(`parseMarginCell` and the scoring modes in `youtube.ts`). A key the type
+(`parseMarginCell` and the scoring modes in `notes-group.ts`). A key the type
 doesn't carry is ignored, a value that doesn't read (`margin: "five"`,
 `scoring: "half"`) is reported as invalid on the `notes` column, and a
 margin outside the question schema's range (negative, or over 100%) is

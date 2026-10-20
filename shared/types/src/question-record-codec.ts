@@ -5,7 +5,7 @@ import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
 import type { SeededQuestion } from './question-views';
 import { hasVideoMedia, isVideoUrl } from './media';
-import { parseClipNotes, type ClipNotesFields } from './youtube';
+import { parseClipNotes, type ClipNotesFields } from './notes-group';
 
 /**
  * The question record codec: a question's stored row (columns plus a payload
