@@ -101,8 +101,9 @@ export interface SessionDetailRoundRow {
   category: string | null;
   /** Null when no team rated the round. */
   rating: SessionDetailRoundRating | null;
-  // Correct answers ÷ (teamCount * questions in this round).
-  correctRate: number;
+  // Correct answers ÷ (teamCount * the round's questions that have a correct
+  // rate). Null when the round has none (e.g. only closest_guess questions).
+  correctRate: number | null;
   // Points actually earned ÷ points achievable (teamCount * round's max points).
   pointsPercent: number;
 }
@@ -118,7 +119,9 @@ export interface SessionDetailQuestionRow {
   correctCount: number;
   // Credit per answer by verdict ÷ teamCount: `correct` counts 1, `partial`
   // counts its points' share of the question's points, anything else 0.
-  correctRate: number;
+  // Null for a closest_guess question (one winner by design) and for a
+  // session with no participants.
+  correctRate: number | null;
   fastestResponseMs: number | null;
 }
 

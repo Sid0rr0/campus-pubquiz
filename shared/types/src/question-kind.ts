@@ -66,6 +66,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   revealKind: 'answer' | 'closest_guess';
   /** Which per-type grading settings the question carries beyond its answer and points (see answer-key.ts). */
   gradingSettings: readonly GradingSettingName[];
+  /** Whether a correct rate means anything: false for a one-winner type, whose rate says nothing about how hard it was. Its own field, never derived from `gradingMode`. */
+  hasCorrectRate: boolean;
 }
 
 export const QUESTION_KINDS: {
@@ -73,6 +75,7 @@ export const QUESTION_KINDS: {
 } = {
   free_text: {
     type: 'free_text',
+    hasCorrectRate: true,
     revealKind: 'answer',
     label: 'Free text',
     moderatorNote:
@@ -88,6 +91,7 @@ export const QUESTION_KINDS: {
   },
   multiple_choice: {
     type: 'multiple_choice',
+    hasCorrectRate: true,
     revealKind: 'answer',
     label: 'Multiple choice',
     moderatorNote:
@@ -103,6 +107,7 @@ export const QUESTION_KINDS: {
   },
   sort: {
     type: 'sort',
+    hasCorrectRate: true,
     revealKind: 'answer',
     label: 'Sort / order',
     moderatorNote:
@@ -118,6 +123,7 @@ export const QUESTION_KINDS: {
   },
   match: {
     type: 'match',
+    hasCorrectRate: true,
     revealKind: 'answer',
     label: 'Match pairs',
     moderatorNote:
@@ -133,6 +139,7 @@ export const QUESTION_KINDS: {
   },
   closest_guess: {
     type: 'closest_guess',
+    hasCorrectRate: false,
     revealKind: 'closest_guess',
     label: 'Closest guess',
     moderatorNote:
@@ -148,6 +155,7 @@ export const QUESTION_KINDS: {
   },
   number: {
     type: 'number',
+    hasCorrectRate: true,
     revealKind: 'answer',
     label: 'Number',
     moderatorNote:

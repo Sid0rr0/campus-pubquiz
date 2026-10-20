@@ -647,6 +647,40 @@ describe('computeSessionDetail', () => {
     });
   });
 
+  it('breaks fastest answer and fastest team ties in the leaderboard name order (capitals before lowercase)', () => {
+    const answerBy = (teamId: number, teamName: string) => ({
+      questionId: 10,
+      teamId,
+      teamName,
+      pointsAwarded: 1,
+      gradedAt: '2026-01-01T00:00:01.000Z',
+      verdict: 'correct' as const,
+      responseMs: 2000,
+    });
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'apple' },
+          { teamId: 2, teamName: 'Zed' },
+        ],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Q',
+            type: 'free_text',
+            points: 1,
+          },
+        ],
+        answers: [answerBy(1, 'apple'), answerBy(2, 'Zed')],
+      }),
+    );
+
+    expect(result.highlights.fastestAnswer?.teamName).toBe('Zed');
+    expect(result.highlights.fastestTeam?.teamName).toBe('Zed');
+  });
+
   it('sums bonus points by category', () => {
     const result = computeSessionDetail(
       buildInput({
@@ -840,5 +874,91 @@ describe('computeSessionDetail', () => {
     // 2 points earned out of (2 teams * 4 max points) = 25%.
     expect(result.rounds[0].pointsPercent).toBeCloseTo(25);
     expect(result.rounds[0].category).toBe('History');
+  });
+
+  describe('with a closest_guess question', () => {
+    const answer = (
+      questionId: number,
+      teamId: number,
+      verdict: 'correct' | 'incorrect',
+    ) => ({
+      questionId,
+      teamId,
+      teamName: `Team ${teamId}`,
+      pointsAwarded: verdict === 'correct' ? 2 : 0,
+      gradedAt: '2026-01-01T00:00:01.000Z',
+      verdict,
+      responseMs: null,
+    });
+    const question = (
+      questionId: number,
+      roundId: number,
+      type: 'closest_guess' | 'free_text',
+    ) => ({
+      questionId,
+      roundId,
+      orderIndex: 0,
+      prompt: `Q${questionId}`,
+      type,
+      points: 2,
+    });
+    const rounds = [
+      { roundId: 100, title: 'Round 1', category: null, orderIndex: 0 },
+      { roundId: 200, title: 'Round 2', category: null, orderIndex: 1 },
+      { roundId: 300, title: 'Round 3', category: null, orderIndex: 2 },
+    ];
+    const build = () =>
+      computeSessionDetail(
+        buildInput({
+          teams: [
+            { teamId: 1, teamName: 'Team 1' },
+            { teamId: 2, teamName: 'Team 2' },
+          ],
+          rounds,
+          // Q10 closest_guess: one winner, so 50% would be the hardest; Q11
+          // and Q12 are free_text and easier. Round 300 has only the guess.
+          questions: [
+            question(10, 100, 'closest_guess'),
+            question(11, 100, 'free_text'),
+            question(12, 200, 'free_text'),
+            question(13, 300, 'closest_guess'),
+          ],
+          answers: [
+            answer(10, 1, 'correct'),
+            answer(10, 2, 'incorrect'),
+            answer(11, 1, 'correct'),
+            answer(11, 2, 'incorrect'),
+            answer(12, 1, 'correct'),
+            answer(12, 2, 'correct'),
+            answer(13, 1, 'incorrect'),
+            answer(13, 2, 'incorrect'),
+          ],
+        }),
+      );
+
+    it('has no correct rate but keeps its answered and correct counts', () => {
+      const row = build().questions.find((q) => q.questionId === 10);
+      expect(row?.correctRate).toBeNull();
+      expect(row?.answeredCount).toBe(2);
+      expect(row?.correctCount).toBe(1);
+    });
+
+    it('is never named hardest, easiest, all-correct or none-correct', () => {
+      const { highlights } = build();
+      expect(highlights.hardestQuestionId).toBe(11);
+      expect(highlights.easiestQuestionId).toBe(12);
+      expect(highlights.allCorrectQuestionIds).toEqual([12]);
+      // Q13 had nobody correct, but a closest_guess is never a highlight.
+      expect(highlights.noneCorrectQuestionIds).toEqual([]);
+    });
+
+    it('is left out of the round correct rate, and a round of only closest guesses has none', () => {
+      const { rounds: rows, highlights } = build();
+      // Round 1: only Q11 counts, 1 correct of 2 teams.
+      expect(rows[0].correctRate).toBeCloseTo(0.5);
+      expect(rows[1].correctRate).toBe(1);
+      expect(rows[2].correctRate).toBeNull();
+      expect(highlights.hardestRoundId).toBe(100);
+    });
   });
 });

@@ -17,6 +17,32 @@ function round(
   };
 }
 
+describe('RoundsTable correct rate column', () => {
+  it('shows the rate as a percentage', () => {
+    render(
+      <RoundsTable
+        rounds={[round({ correctRate: 0.5 })]}
+        hardestRoundId={null}
+      />,
+    );
+
+    expect(screen.getByText('50%')).toBeInTheDocument();
+  });
+
+  it('shows a dash for a round with no correct rate', () => {
+    render(
+      <RoundsTable
+        rounds={[round({ title: 'Guesses', correctRate: null })]}
+        hardestRoundId={null}
+      />,
+    );
+
+    const row = screen.getByText('Guesses').closest('tr')!;
+    expect(within(row).getAllByText('—')).toHaveLength(3); // category, rating, rate
+    expect(within(row).queryByText('0%')).not.toBeInTheDocument();
+  });
+});
+
 describe('RoundsTable rating column', () => {
   it('shows the average and how many teams rated a rated round', () => {
     render(

@@ -1,4 +1,5 @@
 import type { SessionDetailStats } from '@campus-pubquiz/types';
+import { formatPercent } from '@/app/stats/[id]/format-percent';
 import { formatResponseMs } from '@/app/stats/[id]/format-response-ms';
 
 interface HighlightTilesProps {
@@ -79,20 +80,12 @@ export function HighlightTiles({ data }: HighlightTilesProps) {
       />
       <StatTile
         label="Hardest question"
-        value={
-          hardestQuestion
-            ? `${(hardestQuestion.correctRate * 100).toFixed(0)}% correct`
-            : '—'
-        }
+        value={formatPercent(hardestQuestion?.correctRate, ' correct')}
         detail={hardestQuestion?.prompt}
       />
       <StatTile
         label="Hardest round"
-        value={
-          hardestRound
-            ? `${(hardestRound.correctRate * 100).toFixed(0)}% correct`
-            : '—'
-        }
+        value={formatPercent(hardestRound?.correctRate, ' correct')}
         detail={hardestRound?.title}
       />
       <StatTile

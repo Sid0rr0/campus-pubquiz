@@ -444,11 +444,11 @@ module, in this order, and skips a fact with no data:
 
 | `kind`                   | Fields                               | Meaning                                                                                                                                                         |
 | ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fastest_correct_answer` | `teamName`, `responseMs`, `question` | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the alphabetically first team                                   |
+| `fastest_correct_answer` | `teamName`, `responseMs`, `question` | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the first team in leaderboard name order                                   |
 | `toughest_question`      | `correctRate` (0-1), `question`      | Lowest correct rate above 0 of the revealed questions, never the question `nobody_got_it` names; skipped when none is below 1; never a `closest_guess` question |
 | `room_split`             | `correctRate` (0-1), `question`      | Revealed question whose correct rate is closest to one half (strictly between 0 and 1); never a `closest_guess` question                                        |
 | `nobody_got_it`          | `question`                           | First revealed question with no `correct` answer (a question nobody answered is skipped); never a `closest_guess` question                                      |
-| `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, alphabetical; `closest_guess` questions of the block are not counted                        |
+| `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted                        |
 | `bonus_awards_so_far`    | `counts: { category, count }[]`      | Positive bonus awards per category, in category order (`shot`, `selfie`, `custom`)                                                                              |
 
 `question` is `{ questionId, roundNumber, questionNumberInRound, prompt }`. The
@@ -1298,8 +1298,16 @@ question type: `correct` counts in full (a speed-scaled kahoot answer too),
 `partial` counts as its points' share of the question's points (between 0 and 1),
 and `incorrect` or ungraded counts nothing. The rate is the summed credit divided
 by the participant count, and the hardest and easiest question highlights use it.
-The question's correct count (fully correct answers) and a round's correct rate
-count only `correct` verdicts.
+A `closest_guess` question has no correct rate (it has one winner by design, so
+the rate says nothing): `correctRate` is `null` and the questions table shows
+"—", though its answered and correct counts are still listed. It is never the
+hardest, easiest, all-correct or none-correct question. The question's correct
+count (fully correct answers) and a round's correct rate count only `correct`
+verdicts; a round's correct rate leaves its `closest_guess` questions out, and a
+round made up only of them has `correctRate: null` ("—") and can't be the
+hardest round. The standings table (placing, left, totals, correct count) and the
+questions table's counts and rate come from the Session result module; the trophy
+row is the single session winner, never every team tied for first.
 
 The rounds table carries each round's **rating**: `rating: { average, count } | null`
 on the session detail's round rows, shown as "★ 4.2 · 9 teams", or "—" when no
@@ -1382,8 +1390,8 @@ non-numeric id a 400. The response is `{ id, name, summary, sessions }`:
 
 Placings come from the Standings service for each session, never from SQL ranks,
 so the page agrees with each session's standings table; a tie shares the
-competition rank ("Joint 2nd"). A **win** is placing 1 and being the session's
-single Standings winner. A session the team was kicked from or left is listed
+competition rank ("Joint 2nd"). A **win** is placing 1, ties included: every
+team tied for first wins the night, matching the league's nights won. A session the team was kicked from or left is listed
 with `hasLeft: true` and no placing: it counts in `sessionsPlayed` but not in
 wins, podiums, best or average placing. The response never carries feedback or
 the team code.

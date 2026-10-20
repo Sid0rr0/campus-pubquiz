@@ -13,6 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { SortableTable } from '@/app/components/sortable-table';
 import type { SessionDetailStats } from '@campus-pubquiz/types';
+import { formatPercent } from '@/app/stats/[id]/format-percent';
 import { formatResponseMs } from '@/app/stats/[id]/format-response-ms';
 
 interface QuestionsTableProps {
@@ -79,11 +80,12 @@ export function QuestionsTable({
           header: 'Answered',
           sortFn: sortFn_basic,
         }),
-        helper.accessor((q) => q.correctRate, {
+        // A question with no rate (closest_guess) sorts below every real rate.
+        helper.accessor((q) => q.correctRate ?? -1, {
           id: 'correctRate',
           header: 'Correct rate',
           sortFn: sortFn_basic,
-          cell: (context) => `${(context.getValue() * 100).toFixed(0)}%`,
+          cell: (context) => formatPercent(context.row.original.correctRate),
         }),
         helper.accessor((q) => q.fastestResponseMs ?? Infinity, {
           id: 'fastestResponseMs',

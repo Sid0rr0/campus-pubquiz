@@ -16,6 +16,7 @@ function night(
     teamName,
     placing,
     answered: true,
+    wonNight: placing === 1,
     ...overrides,
   };
 }

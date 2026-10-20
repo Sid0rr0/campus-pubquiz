@@ -8,7 +8,7 @@ Parent spec: `.scratch/session-result-module/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Session result module is pure, with no database or Nest dependency, and its interface is one function from one ended session's inputs to its result. It never ranks, sorts or re-sums totals: placing, ties, the winner and participation come from Standings unchanged.
 - [ ] A tie for first gives `wonNight` to every tied team and `isSessionWinner` to exactly one. A team that left has no placing and never wins the night.

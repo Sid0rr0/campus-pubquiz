@@ -1,14 +1,57 @@
-import type { TeamSessionRow, TeamStatsSummary } from '@campus-pubquiz/types';
+import {
+  displayedAveragePlacing,
+  type TeamSessionRow,
+  type TeamStatsSummary,
+} from '@campus-pubquiz/types';
+import type { SessionResult } from '@/standings/session-result';
 
 const PODIUM_PLACES = 3;
+
+/** A session a team took part in: its display facts and the Session result. */
+export interface TeamHistorySession {
+  gameSessionId: number;
+  name: string;
+  playedAt: string; // ISO
+  result: SessionResult;
+  /** Null when the team reported no player count for the session. */
+  playerCount: number | null;
+}
+
+/**
+ * The team's session rows (in the order given) and how many of those nights it
+ * won, read from the Session result. Sessions the team has no result in are
+ * skipped.
+ */
+export function teamHistoryOf(
+  teamId: number,
+  sessions: readonly TeamHistorySession[],
+): { rows: TeamSessionRow[]; nightsWon: number } {
+  const rows: TeamSessionRow[] = [];
+  let nightsWon = 0;
+  for (const session of sessions) {
+    const team = session.result.teams.find((t) => t.teamId === teamId);
+    if (!team) continue;
+    rows.push({
+      gameSessionId: session.gameSessionId,
+      name: session.name,
+      playedAt: session.playedAt,
+      placing: team.placing,
+      placingTo: team.placingTo,
+      teamCount: session.result.participantCount,
+      hasLeft: team.hasLeft,
+      totalPoints: team.totalPoints,
+      maxPoints: session.result.maxPoints,
+      correctCount: team.correctCount,
+      playerCount: session.playerCount,
+    });
+    if (team.wonNight) nightsWon += 1;
+  }
+  return { rows, nightsWon };
+}
 
 function mean(values: readonly number[]): number | null {
   if (values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function roundToOneDecimal(value: number): number {
-  return Math.round(value * 10) / 10;
 }
 
 /** The placings a team earned: sessions it left have none. */
@@ -24,17 +67,16 @@ function placingsOf(rows: readonly TeamSessionRow[]): number[] {
 export function averagePlacingOf(
   rows: readonly TeamSessionRow[],
 ): number | null {
-  const average = mean(placingsOf(rows));
-  return average === null ? null : roundToOneDecimal(average);
+  return displayedAveragePlacing(placingsOf(rows));
 }
 
 /**
- * A win is placing 1 *and* being the session's single Standings winner, so a
- * tie for first gives the win to one team only, matching the standings table.
+ * `nightsWon` is how many of the rows were a night won (placing 1, ties
+ * included), counted by the Session result module.
  */
 export function summarizeTeamHistory(
   rows: readonly TeamSessionRow[],
-  winningSessionIds: ReadonlySet<number>,
+  nightsWon: number,
 ): TeamStatsSummary {
   const placings = placingsOf(rows);
   // A session with no points to win has no share, so it stays out of the mean.
@@ -46,9 +88,7 @@ export function summarizeTeamHistory(
   );
   return {
     sessionsPlayed: rows.length,
-    wins: rows.filter(
-      (row) => row.placing === 1 && winningSessionIds.has(row.gameSessionId),
-    ).length,
+    wins: nightsWon,
     podiums: placings.filter((placing) => placing <= PODIUM_PLACES).length,
     bestPlacing: placings.length > 0 ? Math.min(...placings) : null,
     averagePlacing: averagePlacingOf(rows),
