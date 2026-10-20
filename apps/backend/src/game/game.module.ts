@@ -64,6 +64,7 @@ import { TeamService } from '@/team/team.service';
     PlayerCountService,
     QuizService,
     SeedService,
+    EndedSessionsRead,
     StandingsService,
     LeagueTableService,
     LeagueService,
