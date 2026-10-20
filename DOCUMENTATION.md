@@ -1474,8 +1474,8 @@ none), its verdict and points earned, and the right answer.
   Media questions show their text and answer, not the media.
 - **Only the team's own answers are read.** Another team's answers never enter
   the response.
-- **Only ended sessions the team took part in** (`StandingsService.hasTakenPart`:
-  on the roster, or kicked or left with answers or bonus awards). A session still
+- **Only ended sessions the team took part in** (`StandingsService.hasTakenPart`;
+  see **Took part** in the glossary). A session still
   running, one the team never joined and an unknown session or code all get the
   same generic 404, so a kicked team still sees its answers. Validation and the
   public route are the same as for `POST /team-page`. The throttle is looser
@@ -1487,7 +1487,12 @@ carries `averagePlacing: number | null`, computed by `averagePlacingOf` over
 `TeamHistoryService.resultsForTeams`, so the directory and a team's page always
 agree. It is `null` for a team with no placing (shown as "—" in the **Avg.
 placing** column). `sortBy=averagePlacing` is a sort column alongside `joinedAt`
-and `sessionsJoined`; teams with no placing sort last in both directions. Because
+and `sessionsJoined`; teams with no placing sort last in both directions.
+`sessionsJoined` (the **Sessions played** column) counts the ended sessions the
+team took part in and equals the team page's `sessionsPlayed`; a lobby or running
+session is not counted until it ends. It is computed in SQL
+(`EndedSessionsRead.sessionsPlayedQuery`), so sorting and paging by it stay in the
+query. Because
 placings are not SQL ranks, this sort loads every team's results and orders and
 pages them in memory; the other sorts only compute the figure for the visible page.
 

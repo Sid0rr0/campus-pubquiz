@@ -7,7 +7,7 @@ export interface TeamListItem {
   name: string;
   code: string;
   joinedAt: string; // Team.createdAt — when this team first ever registered
-  sessionsJoined: number; // count of game_session_teams rows for this team
+  sessionsJoined: number; // ended sessions this team took part in; equals the team page's sessionsPlayed
   /** Mean placing over ended sessions to one decimal (same figure as the team page), null when the team has no placing. */
   averagePlacing: number | null;
 }

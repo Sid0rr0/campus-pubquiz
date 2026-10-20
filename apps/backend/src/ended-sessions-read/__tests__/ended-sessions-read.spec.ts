@@ -100,4 +100,59 @@ describe('EndedSessionsRead (Postgres integration)', () => {
     expect(await read.participants(inThisSession())).toEqual(expected);
     expect(await read.participants({ teamIds: [team.id] })).toEqual(expected);
   });
+
+  describe('sessions played per team', () => {
+    const endSession = () =>
+      state.em.nativeUpdate(
+        GameSession,
+        { id: state.session.id },
+        { status: 'ended' },
+      );
+
+    const playedBy = async (team: Team) => {
+      const rows = (await read
+        .sessionsPlayedQuery()
+        .where('p.team_id', team.id)) as {
+        team_id: number;
+        sessions_played: string | number;
+      }[];
+      return rows.length === 0 ? 0 : Number(rows[0].sessions_played);
+    };
+
+    it('counts ended nights a team was kicked from or departed from after leaving a mark', async () => {
+      const kicked = await insertTeam('Kicked', 'token-k');
+      const departed = await insertTeam('Departed', 'token-d');
+      await answer(kicked);
+      await bonus(departed);
+      await leave(kicked);
+      await leave(departed);
+      await endSession();
+
+      expect(await playedBy(kicked)).toBe(1);
+      expect(await playedBy(departed)).toBe(1);
+    });
+
+    it('leaves out lobby and running sessions', async () => {
+      const team = await insertTeam('Waiting', 'token-w');
+      expect(await playedBy(team)).toBe(0);
+
+      await state.em.nativeUpdate(
+        GameSession,
+        { id: state.session.id },
+        { status: 'question_open' },
+      );
+      expect(await playedBy(team)).toBe(0);
+
+      await endSession();
+      expect(await playedBy(team)).toBe(1);
+    });
+
+    it('gives 0 to a team with no ended nights', async () => {
+      const team = await insertTeam('Fresh', 'token-f');
+      await endSession();
+      await leave(team);
+
+      expect(await playedBy(team)).toBe(0);
+    });
+  });
 });

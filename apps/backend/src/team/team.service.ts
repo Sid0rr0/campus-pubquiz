@@ -16,6 +16,7 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { generateJoinCode } from '@/db/join-code.util';
+import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { averagePlacingOf } from '@/team/team-history.calc';
 import { TeamHistoryService } from '@/team/team-history.service';
 import type { TeamsQuery } from '@/team/teams-query.schema';
@@ -87,6 +88,7 @@ export class TeamService {
     @InjectRepository(GameSessionTeam)
     private readonly gameSessionTeams: GameSessionTeamRepository,
     private readonly teamHistory: TeamHistoryService,
+    private readonly endedSessions: EndedSessionsRead,
   ) {}
 
   async join(
@@ -161,15 +163,12 @@ export class TeamService {
     const knex = this.gameSessionTeams.getKnex();
     const offset = (page - 1) * pageSize;
 
-    const sessionCounts = knex('game_session_teams')
-      .groupBy('team_id')
-      .select('team_id')
-      .count({ count: '*' });
+    const sessionsPlayed = this.endedSessions.sessionsPlayedQuery();
 
     const teamRows = knex('teams as t')
-      .leftJoin(sessionCounts.as('sc'), 'sc.team_id', 't.id')
+      .leftJoin(sessionsPlayed.as('sp'), 'sp.team_id', 't.id')
       .select('t.id', 't.name', 't.code', 't.created_at as joinedAt')
-      .select(knex.raw('coalesce(sc.count, 0) as "sessionsJoined"'));
+      .select(knex.raw('coalesce(sp.sessions_played, 0) as "sessionsJoined"'));
 
     // Placings come from the Standings per session, never from SQL, so the
     // average-placing order can't be done in the query: load every team,
@@ -190,7 +189,7 @@ export class TeamService {
 
     const orderColumn =
       sortBy === 'sessionsJoined'
-        ? knex.raw('coalesce(sc.count, 0)')
+        ? knex.raw('coalesce(sp.sessions_played, 0)')
         : 't.created_at';
 
     const [rows, [{ count: total }]] = await Promise.all([
