@@ -386,16 +386,6 @@ export class GameStateService implements OnModuleInit {
     return deadlinesOf(this.sessionWrite.read(joinCode));
   }
 
-  /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
-  getQuestionLockAt(joinCode: string): number | null {
-    return this.getDeadlines(joinCode).questionLockAt;
-  }
-
-  /** Epoch-ms deadline for auto-locking the currently-open kahootMode question, or null when none is armed. */
-  getKahootQuestionEndsAt(joinCode: string): number | null {
-    return this.getDeadlines(joinCode).kahootQuestionEndsAt;
-  }
-
   /** Admin-set/clear the epoch-ms time the break is expected to end — see StateSnapshotPayload.breakEndsAt. */
   breakEndTimeSet(
     joinCode: string,

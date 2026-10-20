@@ -58,10 +58,6 @@ export function kahootTypeNames(): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-export function isBatchGradedType(type: QuestionType): boolean {
-  return QUESTION_KINDS[type].gradingMode === 'batch';
-}
-
 /** Whether the type carries a margin: how far an answer may be from the key and still be correct (Number only). */
 export function hasMarginType(type: QuestionType): boolean {
   return QUESTION_KINDS[type].gradingSettings.includes('margin');

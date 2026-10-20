@@ -9,8 +9,8 @@ import { IDK_ANSWER_VALUE } from '../answers';
 import { QUESTION_KINDS } from '../question-kind';
 import { QUESTION_TYPES } from '../question-types';
 import {
+  BATCH_GRADED_TYPES,
   gradeClosestGuessBatch,
-  isBatchGradedType,
   scoreSubmission,
 } from '../scoring';
 
@@ -110,7 +110,7 @@ describe('every question type scores through its answer format', () => {
     };
     const answer = format.encode(CORRECT_PARTS[kind]);
     const question = { type, answer, points: 10 };
-    if (isBatchGradedType(type)) {
+    if (BATCH_GRADED_TYPES.includes(type)) {
       expect(gradeClosestGuessBatch(question, [answer])).toEqual([
         { points: 10, verdict: 'correct' },
       ]);
