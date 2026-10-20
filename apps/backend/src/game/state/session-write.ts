@@ -85,7 +85,8 @@ export class SessionWrite {
   /** Whether onModuleInit has resolved — lets read() distinguish "used too early" from "unknown joinCode". */
   private initialized = false;
 
-  private readonly liveResultsRead: LiveResultsRead;
+  /** The one live results read: every session write ends with it, and placement (via the Move committer) shares this instance. */
+  readonly liveResultsRead: LiveResultsRead;
 
   constructor(standingsService: StandingsService) {
     this.liveResultsRead = new LiveResultsRead(standingsService);
@@ -139,7 +140,7 @@ export class SessionWrite {
    * result and returns the change's outcome. A change that throws stores
    * nothing and doesn't hold up the next write; a failed live result read,
    * after the change has done its work, is logged and the session is stored
-   * with that figure's earlier value. Not re-entrant: `change` must not call another public event
+   * with the earlier value of each live result whose read failed. Not re-entrant: `change` must not call another public event
    * method of the owning game state class.
    */
   write<T>(
@@ -233,7 +234,7 @@ export class SessionWrite {
   ): Promise<T> {
     // The change has already done its database work (a press has saved its
     // progress), so it counts as done even if a live result read fails: the
-    // live results read keeps that figure's earlier value.
+    // live results read keeps that live result's earlier value.
     const sessionToStore = withPriorStandings(started, changedSession);
     this.sessions.set(
       joinCode,

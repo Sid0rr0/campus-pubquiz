@@ -10,7 +10,7 @@ import { StandingsService } from '@/standings/standings.service';
  * nothing; the caller does.
  *
  * The reads run in parallel, each on its own. A read that fails is logged with
- * the figure's name and the session's join code, and that figure keeps the
+ * the live result's name and the session's join code, and that live result keeps the
  * value the given session already holds, so this never throws because a read
  * failed.
  *
@@ -51,7 +51,7 @@ export class LiveResultsRead {
 
   private async readOrKeep<R>(
     session: SessionState,
-    figure: string,
+    liveResult: string,
     read: () => Promise<R>,
     kept: R,
   ): Promise<R> {
@@ -59,7 +59,7 @@ export class LiveResultsRead {
       return await read();
     } catch (error) {
       this.logger.error(
-        `${figure} read failed for session ${session.seededGame.joinCode}; keeping the earlier value until the next write`,
+        `${liveResult} read failed for session ${session.seededGame.joinCode}; keeping the earlier value until the next write`,
         error instanceof Error ? error.stack : String(error),
       );
       return kept;

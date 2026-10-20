@@ -2,18 +2,33 @@ import { Logger } from '@nestjs/common';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
+  type QuizRoundSpec,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 import { LeagueTableService } from '@/league/league-table.service';
 import { StandingsService } from '@/standings/standings.service';
 
+const ONE_BLOCK: QuizRoundSpec[] = [
+  {
+    title: 'Only round',
+    breakAfter: true,
+    questions: [
+      {
+        type: 'multiple_choice',
+        prompt: 'Pick the right one',
+        answer: 'right',
+        points: 2,
+        payload: { options: ['right', 'wrong'] },
+      },
+    ],
+  },
+];
+
 describe('Live session — placement and the live results read', () => {
   const harness = setupRealStoreGatewayTest();
-  let game: RealStoreGateway;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
   });
 
   afterEach(() => {
@@ -25,6 +40,9 @@ describe('Live session — placement and the live results read', () => {
   }
 
   it('creates a session with an empty board when the leaderboard read fails, and the first graded answer then appears on it', async () => {
+    const game: RealStoreGateway = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+    });
     jest
       .spyOn(game.standingsService, 'leaderboard')
       .mockRejectedValueOnce(new Error('standings unavailable'));
@@ -58,15 +76,20 @@ describe('Live session — placement and the live results read', () => {
   });
 
   it('restores a session at its saved position when a standings read fails, and the next write brings the figures back', async () => {
-    const admin = await game.connectAdmin();
-    await game.openFirstQuestion(admin);
-    const team = game.teams[0];
-    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
-      questionId: game.questionIds.multipleChoice,
-      teamId: team.teamId,
-      value: 'Paris',
+    const oneBlock = await harness.createGateway({
+      rounds: ONE_BLOCK,
+      teamNames: ['The Quizzards'],
     });
-    const before = await game.snapshot();
+    await oneBlock.act('START_QUIZ');
+    await oneBlock.act('ADVANCE');
+    await oneBlock.act('ADVANCE');
+    const team = oneBlock.teams[0];
+    await oneBlock.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId: oneBlock.rounds[0].questionIds[0],
+      teamId: team.teamId,
+      value: 'right',
+    });
+    const before = await oneBlock.snapshot();
     expect(totalPoints(before)).toBe(2);
 
     jest
@@ -78,13 +101,12 @@ describe('Live session — placement and the live results read', () => {
     jest
       .spyOn(StandingsService.prototype, 'funFactData')
       .mockRejectedValueOnce(new Error('fun facts unavailable'));
-    const restarted = await game.restart();
+    const restarted = await oneBlock.restart();
 
     const restored = await restarted.snapshot();
     expect(restored.progress).toEqual(before.progress);
     expect(restored.leaderboard).toEqual([]);
 
-    const readAfter = jest.spyOn(restarted.standingsService, 'funFactData');
     const adminAfter = await restarted.connectAdmin();
     await restarted.gateway.handleAwardBonus(asSocket(adminAfter), {
       teamId: team.teamId,
@@ -93,34 +115,60 @@ describe('Live session — placement and the live results read', () => {
     });
 
     expect(totalPoints(await restarted.snapshot())).toBe(3);
-    expect(readAfter).toHaveBeenCalled();
+
+    // The fun fact data came back: the break shows the bonus award.
+    await restarted.act('ADVANCE');
+    await restarted.act('ADVANCE');
+    const breakView = await restarted.resync('display');
+    expect(breakView.screen.kind).toBe('break_intro');
+    expect(
+      breakView.screen.kind === 'break_intro' && breakView.screen.funFacts,
+    ).toContainEqual(expect.objectContaining({ kind: 'bonus_awards_so_far' }));
+
+    // The verdict tallies came back: the reveal counts the correct team.
+    await restarted.act('ADVANCE');
+    await restarted.act('ADVANCE');
+    expect((await restarted.resync('display')).teamsCorrect).toEqual({
+      correct: 1,
+      partial: 0,
+      teamCount: 1,
+    });
   });
 
   it('reads the league top at creation and restart, never on an answer, a grade or a bonus', async () => {
+    const oneBlock = await harness.createGateway({
+      rounds: ONE_BLOCK,
+      teamNames: ['The Quizzards'],
+    });
     const readTop = jest.spyOn(LeagueTableService.prototype, 'topFor');
-    await game.inRequestContext(() =>
-      game.gameState.createSession(game.quizId),
+    await oneBlock.inRequestContext(() =>
+      oneBlock.gameState.createSession(oneBlock.quizId),
     );
     expect(readTop).toHaveBeenCalledTimes(1);
 
     readTop.mockClear();
-    const admin = await game.connectAdmin();
-    await game.openFirstQuestion(admin);
-    const team = game.teams[0];
-    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
-      questionId: game.questionIds.multipleChoice,
+    await oneBlock.act('START_QUIZ');
+    await oneBlock.act('ADVANCE');
+    await oneBlock.act('ADVANCE');
+    const team = oneBlock.teams[0];
+    await oneBlock.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId: oneBlock.rounds[0].questionIds[0],
       teamId: team.teamId,
-      value: 'Paris',
+      value: 'right',
     });
-    await game.gateway.handleAwardBonus(asSocket(admin), {
+    const admin = await oneBlock.connectAdmin();
+    await oneBlock.gateway.handleAwardBonus(asSocket(admin), {
       teamId: team.teamId,
       category: 'shot',
       points: 1,
     });
-    await game.act('ADVANCE');
+    // Lock the block, then the move into the break grades it.
+    await oneBlock.act('ADVANCE');
+    await oneBlock.act('ADVANCE');
+    expect((await oneBlock.snapshot()).progress.status).toBe('break_intro');
     expect(readTop).not.toHaveBeenCalled();
 
-    await game.restart();
+    await oneBlock.restart();
     expect(readTop).toHaveBeenCalled();
   });
 });
