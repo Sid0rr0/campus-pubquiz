@@ -79,11 +79,17 @@ export function QuestionsTable({
           header: 'Answered',
           sortFn: sortFn_basic,
         }),
-        helper.accessor((q) => q.correctRate, {
+        // A question with no rate (closest_guess) sorts below every real rate.
+        helper.accessor((q) => q.correctRate ?? -1, {
           id: 'correctRate',
           header: 'Correct rate',
           sortFn: sortFn_basic,
-          cell: (context) => `${(context.getValue() * 100).toFixed(0)}%`,
+          cell: (context) => {
+            const { correctRate } = context.row.original;
+            return correctRate === null
+              ? '—'
+              : `${(correctRate * 100).toFixed(0)}%`;
+          },
         }),
         helper.accessor((q) => q.fastestResponseMs ?? Infinity, {
           id: 'fastestResponseMs',

@@ -80,7 +80,7 @@ export function HighlightTiles({ data }: HighlightTilesProps) {
       <StatTile
         label="Hardest question"
         value={
-          hardestQuestion
+          hardestQuestion?.correctRate != null
             ? `${(hardestQuestion.correctRate * 100).toFixed(0)}% correct`
             : '—'
         }
@@ -89,7 +89,7 @@ export function HighlightTiles({ data }: HighlightTilesProps) {
       <StatTile
         label="Hardest round"
         value={
-          hardestRound
+          hardestRound?.correctRate != null
             ? `${(hardestRound.correctRate * 100).toFixed(0)}% correct`
             : '—'
         }

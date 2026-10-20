@@ -1298,8 +1298,16 @@ question type: `correct` counts in full (a speed-scaled kahoot answer too),
 `partial` counts as its points' share of the question's points (between 0 and 1),
 and `incorrect` or ungraded counts nothing. The rate is the summed credit divided
 by the participant count, and the hardest and easiest question highlights use it.
-The question's correct count (fully correct answers) and a round's correct rate
-count only `correct` verdicts.
+A `closest_guess` question has no correct rate (it has one winner by design, so
+the rate says nothing): `correctRate` is `null` and the questions table shows
+"—", though its answered and correct counts are still listed. It is never the
+hardest, easiest, all-correct or none-correct question. The question's correct
+count (fully correct answers) and a round's correct rate count only `correct`
+verdicts; a round's correct rate leaves its `closest_guess` questions out, and a
+round made up only of them has `correctRate: null` ("—") and can't be the
+hardest round. The standings table (placing, left, totals, correct count) and the
+questions table's counts and rate come from the Session result module; the trophy
+row is the single session winner, never every team tied for first.
 
 The rounds table carries each round's **rating**: `rating: { average, count } | null`
 on the session detail's round rows, shown as "★ 4.2 · 9 teams", or "—" when no
