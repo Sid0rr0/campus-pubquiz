@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { ImportQuestionPreview } from '../import';
+import type { ImportQuestionPreview, ImportRoundPreview } from '../import';
+import { checkQuestion } from '../question-kind';
+import { decodeSheetRow, encodeSheetRow } from '../question-row-schema';
 import {
   clipFieldsFor,
   previewToStoredFields,
@@ -14,6 +16,12 @@ const IMAGE = 'https://example.com/a.png';
 const SOUND = 'https://example.com/a.mp3';
 const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 const VIDEO_FILE = 'https://example.com/clip.mp4';
+
+const SHEET_ROUND: ImportRoundPreview = {
+  title: 'Round 1',
+  breakAfter: false,
+  questions: [],
+};
 
 const CLIP_FIELDS = [
   'mediaStartSeconds',
@@ -158,6 +166,35 @@ describe('question record codec round trip', () => {
       const back = rowToPreview({ id: 7, ...stored }, stored.payload);
 
       expect(back).toEqual(preview);
+    },
+  );
+
+  it.each(CASES)(
+    '$name: preview to sheet row to preview gives the same preview, less what the sheet has no column for',
+    ({ type, media }) => {
+      const preview: ImportQuestionPreview = {
+        ...BASE[type],
+        notes: 'Hint',
+        ...media.links,
+        ...allowedClip(media),
+      };
+
+      const row = {
+        rowNumber: 2,
+        ...encodeSheetRow(SHEET_ROUND, preview, true),
+      };
+      const { question, sheetAnswerIssue, clipIssues } = decodeSheetRow(
+        row,
+        type,
+      );
+
+      const { matchScoringMode: _mode, margin: _margin, ...expected } = preview;
+      expect(sheetAnswerIssue).toBeUndefined();
+      expect(clipIssues).toEqual([]);
+      expect(checkQuestion(question)).toEqual({
+        success: true,
+        data: expected,
+      });
     },
   );
 

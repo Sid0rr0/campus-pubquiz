@@ -152,6 +152,41 @@ export function clipFieldsFor(
   return carried;
 }
 
+/** The notes-group fields a sheet row carries for a question: the preview's clip fields the field table allows for its media, renamed to the group's. */
+export function clipNotesFieldsFor(question: MediaLinks & ClipFields) {
+  const clip = clipFieldsFor(question, question);
+  const notes: ClipNotesFields = {
+    ...(clip.isVideoHidden ? { isVideoHidden: true } : {}),
+    ...(clip.mediaStartSeconds !== undefined
+      ? { startSeconds: clip.mediaStartSeconds }
+      : {}),
+    ...(clip.mediaEndSeconds !== undefined
+      ? { endSeconds: clip.mediaEndSeconds }
+      : {}),
+    ...(clip.revealStartSeconds !== undefined
+      ? { revealStartSeconds: clip.revealStartSeconds }
+      : {}),
+    ...(clip.revealEndSeconds !== undefined
+      ? { revealEndSeconds: clip.revealEndSeconds }
+      : {}),
+  };
+  return notes;
+}
+
+/** The preview clip fields a parsed notes group fills for a question's media links; what the field table doesn't allow for them is left out. */
+export function clipFieldsFromNotes(
+  links: MediaLinks,
+  clip: ClipNotesFields,
+): ClipFields {
+  return clipFieldsFor(links, {
+    mediaStartSeconds: clip.startSeconds,
+    mediaEndSeconds: clip.endSeconds,
+    isVideoHidden: clip.isVideoHidden,
+    revealStartSeconds: clip.revealStartSeconds,
+    revealEndSeconds: clip.revealEndSeconds,
+  });
+}
+
 /** The clip fields of a preview: the clip, the hidden-video flag and the reveal clip. */
 export type ClipFields = Pick<
   ImportQuestionPreview,

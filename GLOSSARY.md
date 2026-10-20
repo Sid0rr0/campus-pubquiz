@@ -68,7 +68,7 @@ What an answer is graded against: the correct answer, the points, and the questi
 _Avoid_: grading fields, key fields
 
 **Question record codec**:
-The one place a question is converted between its stored row (columns plus a parsed payload) and its preview, the shape the quiz editor and import work with. It copies options, match targets, media and clip bounds once, and copies grading settings by spreading the ones the question type registry lists for the type, dropping any other. Unset stays unset; the Answer key owns defaults.
+The one place a question is converted between its stored row (columns plus a parsed payload), its preview (the shape the quiz editor and import work with), the seeded question a session holds, and the CSV sheet row. One field table decides when each shape carries a field: options, match targets, media, clip bounds, and grading settings (the ones the question type registry lists for the type). Any other field is dropped. The editor asks the same table for the media and clip rule. Unset stays unset; the Answer key owns defaults.
 _Avoid_: question mapper, payload mapper
 
 **Grading policy**:
