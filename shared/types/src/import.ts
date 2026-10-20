@@ -1,7 +1,3 @@
-import type { QuestionType } from './question-types';
-import type { Margin } from './margin';
-import type { MatchScoringMode } from './question-views';
-
 /**
  * One data row of the imported sheet, raw cell strings as exported by the
  * Google Sheets CSV endpoint. `rowNumber` is 1-based and counts the header,
@@ -33,39 +29,13 @@ export interface ImportRowIssue {
   message: string;
 }
 
-export interface ImportQuestionPreview {
-  /**
-   * The persisted `Question.id`, present when this preview reflects an
-   * existing DB row (returned by `GET /quizzes/:id`); absent for CSV import
-   * previews and brand-new questions. Distinct from the frontend editor's own
-   * `EditorQuestion.id` (a client-generated React key) — kept as a separate
-   * name so the two are never confused.
-   */
-  questionId?: number;
-  type: QuestionType;
-  prompt: string;
-  answer: string;
-  notes?: string;
-  points: number;
-  options?: string[];
-  /** Match only: the right-hand items, in the order shown to players. */
-  matchTargets?: string[];
-  /** Match only: unset is resolved by the Answer key (answer-key.ts), never defaulted by readers. Never CSV-settable — like RoundConfig.kahootMode, only settable through the manual quiz editor. */
-  matchScoringMode?: MatchScoringMode;
-  /** Number only: unset is resolved by the Answer key (answer-key.ts), never defaulted by readers. Never CSV-settable, like matchScoringMode: only the manual quiz editor sets it. */
-  margin?: Margin;
-  mediaUrl?: string;
-  /** The clip of a YouTube `mediaUrl`, in whole seconds — real fields, never kept in `notes` (the CSV carries them as a group in the notes cell; see `parseClipNotes`). */
-  mediaStartSeconds?: number;
-  mediaEndSeconds?: number;
-  /** A YouTube `mediaUrl` played sound-only: covered on the big screen until reveal. Unset reads as not hidden; the CSV carries it as `hideVideo: true` in the notes group. */
-  isVideoHidden?: boolean;
-  /** The reveal clip: the part of the video played at reveal — the YouTube `answerMediaUrl` when there is one, else the question's own YouTube video. Unset means the whole video. Carried in the notes group as `revealStart`/`revealEnd`. */
-  revealStartSeconds?: number;
-  revealEndSeconds?: number;
-  /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
-  answerMediaUrl?: string;
-}
+/**
+ * What the quiz editor and import work with, inferred from the per-type
+ * preview schemas' input shape (see `question-preview-schema.ts`); the field
+ * docs live there. Re-exported here under its long-standing name.
+ */
+export type { ImportQuestionPreview } from './question-preview-schema';
+import type { ImportQuestionPreview } from './question-preview-schema';
 
 export interface ImportRoundPreview {
   title: string;

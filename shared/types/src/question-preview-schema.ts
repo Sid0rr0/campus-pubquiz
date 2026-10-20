@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { DEFAULT_MARGIN, MARGIN_UNITS, parseFiniteNumber } from './margin';
+import { MATCH_SCORING_MODES } from './match-scoring-mode';
+import type { MergedOptional } from './merged-shape';
 import { isSameMultiset, splitPipeList } from './sort-match';
 
 /**
@@ -128,7 +130,7 @@ export const matchPreviewSchema = z
     matchTargets: z
       .array(z.string().min(1))
       .min(2, 'Provide at least two right items'),
-    matchScoringMode: z.enum(['partial', 'all_or_nothing']).optional(),
+    matchScoringMode: z.enum(MATCH_SCORING_MODES).optional(),
     mediaUrl: httpUrl.optional(),
   })
   .refine(
@@ -160,3 +162,23 @@ export const matchPreviewSchema = z
       });
     }
   });
+
+/**
+ * Every field any question type's preview may carry, taken from the schemas'
+ * input shape (never their output, which could carry defaults filled in by
+ * validation). `questionId` is the persisted `Question.id`, absent for CSV
+ * import previews and brand-new questions; distinct from the editor's own
+ * `EditorQuestion.id`. The always-present fields stay required, the rest are
+ * optional: unset margin / match scoring mode are resolved by the Answer key,
+ * never defaulted by readers.
+ */
+type PreviewInput =
+  | z.input<typeof freeTextPreviewSchema>
+  | z.input<typeof multipleChoicePreviewSchema>
+  | z.input<typeof closestGuessPreviewSchema>
+  | z.input<typeof numberPreviewSchema>
+  | z.input<typeof sortPreviewSchema>
+  | z.input<typeof matchPreviewSchema>;
+
+export type ImportQuestionPreview = MergedOptional<PreviewInput> &
+  Pick<PreviewInput, 'type' | 'prompt' | 'answer' | 'points'>;
