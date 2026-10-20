@@ -259,6 +259,24 @@ timers from them before anything is emitted, so the timers follow the
 session's deadlines after every change. A refused event reports nothing and
 leaves the timers as they were.
 
+The **Display screen** (`DisplayScreen`, `shared/types/src/display-screen.ts`) is what
+`/display` switches on; the page looks nothing up and works nothing out. Each kind carries
+what it draws:
+
+| Kind                                                         | Carries                                                                                                           |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `lobby`, `rules`, `round_overview`, `join_overlay`           | Nothing; they draw the shared top-level fields (teams, settings, quiz structure, round lists, league)              |
+| `round_title`                                                | `roundNumber`, `title`, `category`, `author`, `note` ('' when the round has none or hides its note)                |
+| `break_round_title`                                          | `roundNumber`, `title`, `note`                                                                                    |
+| `reveal_intro`                                               | `roundNumber`, `title`                                                                                            |
+| `question`, `break_review`, `reveal`                         | The question being drawn                                                                                          |
+| `locking`                                                    | `lockAt`                                                                                                          |
+| `break_intro`                                                | `roundNumber`, `breakNumber`, `isFinalBreak` (hides the bonus list), `isFeedbackPromptShown`, `funFacts`, `breakEndsAt` |
+| `leaderboard`                                                | `board`, `revealCount`, `isFinal` (the quiz has ended, or this is the last break, which crowns the winners)        |
+| `ended`                                                      | `isFeedbackPromptShown`                                                                                           |
+| `showdown`                                                   | `showdown`, `step`                                                                                                |
+| `blank`                                                      | Nothing; sent (and logged) when the server can't find a kind's content                                            |
+
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `shared/types/src/screen-projection.ts`, a pure module the backend calls):
 the display view carries the **Display screen** (`screen`: the screen on air with the content it draws, or `blank` when that content can't be found, which the server logs); the admin view names the **On-air screen** (`onAirScreen`) and adds what `/control`
