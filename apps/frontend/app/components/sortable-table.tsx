@@ -66,6 +66,15 @@ export function SortableTable<
                 return (
                   <th
                     key={header.id}
+                    aria-sort={
+                      sorted === 'asc'
+                        ? 'ascending'
+                        : sorted === 'desc'
+                          ? 'descending'
+                          : isSortable
+                            ? 'none'
+                            : undefined
+                    }
                     className={`px-4 py-2 font-display text-sm ${classes.headerCell}`}
                   >
                     {header.isPlaceholder ? null : isSortable ? (
