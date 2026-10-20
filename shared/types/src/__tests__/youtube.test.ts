@@ -238,3 +238,64 @@ describe('writeClipNotes', () => {
     });
   });
 });
+
+describe('grading settings in the notes group', () => {
+  it.each([
+    ['{margin: 5%}', { value: 5, unit: 'percent' }],
+    ['{margin: "5%"}', { value: 5, unit: 'percent' }],
+    ['{margin: 2}', { value: 2, unit: 'absolute' }],
+    ['{margin: "0.5"}', { value: 0.5, unit: 'absolute' }],
+  ])('reads %s as a margin', (notes, margin) => {
+    expect(parseClipNotes(notes)).toEqual({
+      freeNotes: '',
+      clip: { margin },
+      invalidKeys: [],
+    });
+  });
+
+  it('reads a scoring mode in any case and keeps the other notes', () => {
+    expect(parseClipNotes('Pairs {scoring: All_Or_Nothing} only')).toEqual({
+      freeNotes: 'Pairs\nonly',
+      clip: { matchScoringMode: 'all_or_nothing' },
+      invalidKeys: [],
+    });
+  });
+
+  it('does not read margin or scoring inside another key', () => {
+    expect(parseClipNotes('{matchScoringMode: partial, bigmargin: 5}')).toEqual(
+      {
+        freeNotes: '{matchScoringMode: partial, bigmargin: 5}',
+        clip: {},
+        invalidKeys: [],
+      },
+    );
+  });
+
+  it.each([
+    ['{margin: five}', ['margin']],
+    ['{margin: -3}', ['margin']],
+    ['{scoring: half}', ['scoring']],
+    ['{start: "1:2x", margin: "x%"}', ['start', 'margin']],
+  ])('reports the unreadable keys of %s', (notes, invalidKeys) => {
+    expect(parseClipNotes(notes).invalidKeys).toEqual(invalidKeys);
+  });
+
+  it('writes the settings after the clip and reads them back', () => {
+    const clip = {
+      startSeconds: 55,
+      isVideoHidden: true as const,
+      margin: { value: 5, unit: 'percent' as const },
+      matchScoringMode: 'partial' as const,
+    };
+    const written = writeClipNotes('Hint', clip);
+
+    expect(written).toBe(
+      'Hint\n{start: "55", hideVideo: true, margin: "5%", scoring: "partial"}',
+    );
+    expect(parseClipNotes(written)).toEqual({
+      freeNotes: 'Hint',
+      clip,
+      invalidKeys: [],
+    });
+  });
+});

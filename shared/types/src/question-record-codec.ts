@@ -183,6 +183,17 @@ export function clipNotesFieldsFor(question: MediaLinks & ClipFields) {
   return notes;
 }
 
+/** The grading settings of a candidate that its type carries; one without a value is left out. */
+export function gradingSettingsFor(
+  type: QuestionType,
+  candidate: Pick<QuestionPayload, 'margin' | 'matchScoringMode'>,
+): Pick<QuestionPayload, 'margin' | 'matchScoringMode'> {
+  return pickCarried(
+    candidate,
+    (row) => row.when === 'grading-setting' && carries(row, type, {}),
+  );
+}
+
 /** The preview clip fields a parsed notes group fills for a question's media links; what the field table doesn't allow for them is left out. */
 export function clipFieldsFromNotes(
   links: MediaLinks,

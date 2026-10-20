@@ -12,8 +12,12 @@ import { hasVideoMedia } from './media';
 import {
   clipFieldsFromNotes,
   clipNotesFieldsFor,
+  gradingSettingsFor,
 } from './question-record-codec';
+import { MATCH_SCORING_MODES } from './match-scoring-mode';
 import {
+  MARGIN_NOTES_KEY,
+  SCORING_NOTES_KEY,
   parseClipNotes,
   writeClipNotes,
   type ClipNotesFields,
@@ -77,6 +81,8 @@ const SHEET_COLUMN_BY_QUESTION_FIELD: Record<string, string> = {
   mediaUrl: 'media_url',
   answerMediaUrl: 'answer_media_url',
   matchTargets: 'match_right',
+  margin: 'notes',
+  matchScoringMode: 'notes',
 };
 
 /**
@@ -105,17 +111,16 @@ export function decodeSheetRow(
   const trimmedPoints = row.points.trim();
   const mediaUrl = blankToUndefined(row.mediaUrl);
   const answerMediaUrl = blankToUndefined(row.answerMediaUrl);
-  // The clip group is CSV-only syntax: pulled out of the notes into fields, when either media is a video (YouTube or file).
-  const { freeNotes, clip, invalidKeys } = hasVideoMedia({
-    mediaUrl,
-    answerMediaUrl,
-  })
-    ? parseClipNotes(row.notes)
-    : {
-        freeNotes: row.notes,
-        clip: {} as ClipNotesFields,
-        invalidKeys: [] as string[],
-      };
+  // The notes group is CSV-only syntax: pulled out of the notes into fields, when either media is a video (YouTube or file) or the type has grading settings.
+  const { freeNotes, clip, invalidKeys } =
+    hasVideoMedia({ mediaUrl, answerMediaUrl }) ||
+    QUESTION_KINDS[type].gradingSettings.length > 0
+      ? parseClipNotes(row.notes)
+      : {
+          freeNotes: row.notes,
+          clip: {} as ClipNotesFields,
+          invalidKeys: [] as string[],
+        };
   const { answerIssue, ...choices } = QUESTION_KINDS[type].csv.decode({
     options: row.options,
     answer: row.answer,
@@ -125,7 +130,7 @@ export function decodeSheetRow(
     clipIssues: invalidKeys.map((key) => ({
       path: ['notes'],
       code: 'custom',
-      message: `Clip time "${key}" is not a timecode — use seconds, M:SS or H:MM:SS`,
+      message: invalidKeyMessage(key),
     })),
     meta: {
       round: row.round.trim(),
@@ -144,8 +149,19 @@ export function decodeSheetRow(
       mediaUrl,
       answerMediaUrl,
       ...clipFieldsFromNotes({ mediaUrl, answerMediaUrl }, clip),
+      ...gradingSettingsFor(type, clip),
     },
   };
+}
+
+function invalidKeyMessage(key: string): string {
+  if (key === MARGIN_NOTES_KEY) {
+    return `Margin "${key}" is not a number — write 5% for a percentage or 2 for a plain distance`;
+  }
+  if (key === SCORING_NOTES_KEY) {
+    return `Scoring "${key}" is not a match scoring mode — use ${MATCH_SCORING_MODES.join(' or ')}`;
+  }
+  return `Clip time "${key}" is not a timecode — use seconds, M:SS or H:MM:SS`;
 }
 
 /**
@@ -153,8 +169,8 @@ export function decodeSheetRow(
  * back as the same question. Round-level cells (break_after, category,
  * author, round_note, show_round_note) are written only on the round's last row — the importer lets any
  * row carry them, and the last is where authors conventionally put them.
- * Fields with no column (questionId, matchScoringMode, round kahootMode)
- * are not written.
+ * Fields with no column (questionId, round kahootMode) are not written; the
+ * margin and match scoring mode travel in the notes group.
  */
 export function encodeSheetRow(
   round: Pick<
@@ -175,9 +191,10 @@ export function encodeSheetRow(
     points: String(question.points),
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
-    notes: hasVideoMedia(question)
-      ? writeClipNotes(question.notes ?? '', clipNotesFieldsFor(question))
-      : (question.notes ?? ''),
+    notes: writeClipNotes(question.notes ?? '', {
+      ...clipNotesFieldsFor(question),
+      ...gradingSettingsFor(question.type, question),
+    }),
     breakAfter: isLastInRound && round.breakAfter ? '1' : '',
     category: isLastInRound ? (round.category ?? '') : '',
     author: isLastInRound ? (round.author ?? '') : '',

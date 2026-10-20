@@ -4,6 +4,7 @@ import { checkQuestion } from '../question-kind';
 import {
   decodeSheetRow,
   encodeSheetRow,
+  sheetFieldForIssue,
   sheetRowMetaSchema,
 } from '../question-row-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
@@ -186,14 +187,131 @@ describe('CSV round-trip through the question kinds', () => {
     expect(noBreak.break_after).toBe('');
   });
 
-  it('drops what the sheet has no column for (question id, match scoring mode)', () => {
-    const { checked } = roundTrip({
-      ...QUESTION_BY_TYPE.match,
-      questionId: 7,
-      matchScoringMode: 'all_or_nothing',
-    });
+  it('drops what the sheet has no column for (question id)', () => {
+    const { checked } = roundTrip({ ...QUESTION_BY_TYPE.match, questionId: 7 });
 
     expect(checked).toEqual({ success: true, data: QUESTION_BY_TYPE.match });
+  });
+});
+
+describe('grading settings in the notes cell', () => {
+  it('round-trips a match scoring mode and writes it as a notes group', () => {
+    const question = {
+      ...QUESTION_BY_TYPE.match,
+      matchScoringMode: 'all_or_nothing' as const,
+    };
+    const row = encodeSheetRow(ROUND, question, true);
+
+    expect(row.notes).toBe('{scoring: "all_or_nothing"}');
+    expect(roundTrip(question).checked).toEqual({
+      success: true,
+      data: question,
+    });
+  });
+
+  it.each([
+    [{ value: 5, unit: 'percent' as const }, '{margin: "5%"}'],
+    [{ value: 2.5, unit: 'absolute' as const }, '{margin: "2.5"}'],
+    [{ value: 0, unit: 'absolute' as const }, '{margin: "0"}'],
+  ])('round-trips the margin %j as %s', (margin, group) => {
+    const question = { ...QUESTION_BY_TYPE.number, margin };
+
+    expect(encodeSheetRow(ROUND, question, true).notes).toBe(group);
+    expect(roundTrip(question).checked).toEqual({
+      success: true,
+      data: question,
+    });
+  });
+
+  it('writes nothing for a setting left unset', () => {
+    expect(encodeSheetRow(ROUND, QUESTION_BY_TYPE.number, true).notes).toBe('');
+    expect(encodeSheetRow(ROUND, QUESTION_BY_TYPE.match, true).notes).toBe('');
+  });
+
+  it('keeps free notes and puts the group after them', () => {
+    const question = {
+      ...QUESTION_BY_TYPE.number,
+      notes: 'Round it',
+      margin: { value: 5, unit: 'percent' as const },
+    };
+    const row = encodeSheetRow(ROUND, question, true);
+
+    expect(row.notes).toBe('Round it\n{margin: "5%"}');
+    expect(roundTrip(question).checked).toEqual({
+      success: true,
+      data: question,
+    });
+  });
+
+  it('ignores a setting the type does not carry', () => {
+    const row = {
+      rowNumber: 2,
+      ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.match, true),
+      notes: '{margin: "5%"}',
+    };
+    const { question, clipIssues } = decodeSheetRow(row, 'match');
+
+    expect(clipIssues).toEqual([]);
+    expect(question).not.toHaveProperty('margin');
+  });
+
+  it('reads the group on a type with settings even with no video, and leaves other notes alone on types without', () => {
+    const withNumber = decodeSheetRow(
+      {
+        rowNumber: 2,
+        ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.number, true),
+        notes: 'Be precise {margin: 5%}',
+      },
+      'number',
+    );
+    expect(withNumber.question).toMatchObject({
+      notes: 'Be precise',
+      margin: { value: 5, unit: 'percent' },
+    });
+
+    const freeText = decodeSheetRow(
+      {
+        rowNumber: 2,
+        ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.free_text, true),
+        notes: 'Be precise {margin: 5%}',
+      },
+      'free_text',
+    );
+    expect(freeText.question).toMatchObject({
+      notes: 'Be precise {margin: 5%}',
+    });
+  });
+
+  it.each([
+    ['{margin: "five"}', 'number', 'Margin'],
+    ['{margin: "-3"}', 'number', 'Margin'],
+    ['{scoring: "half"}', 'match', 'Scoring'],
+  ] as const)('reports %s as an invalid notes cell', (notes, type, word) => {
+    const row = {
+      rowNumber: 2,
+      ...encodeSheetRow(ROUND, QUESTION_BY_TYPE[type], true),
+      notes,
+    };
+    const { clipIssues } = decodeSheetRow(row, type);
+
+    expect(clipIssues).toHaveLength(1);
+    expect(clipIssues[0].path).toEqual(['notes']);
+    expect(clipIssues[0].message).toContain(word);
+  });
+
+  it('reports a percentage margin over 100 against the notes column', () => {
+    const row = {
+      rowNumber: 2,
+      ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.number, true),
+      notes: '{margin: "150%"}',
+    };
+    const { question } = decodeSheetRow(row, 'number');
+    const checked = checkQuestion(question);
+
+    expect(checked.success).toBe(false);
+    if (!checked.success) {
+      expect(sheetFieldForIssue(checked.issues[0])).toBe('notes');
+    }
   });
 });
 

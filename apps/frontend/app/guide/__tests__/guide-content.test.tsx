@@ -59,12 +59,13 @@ describe('GuideContent', () => {
     }
   });
 
-  it('describes the Number question margin controls and that CSV carries no margin', () => {
+  it('describes the Number question margin controls and the CSV margin and scoring keys', () => {
     const text = renderGuideText();
 
     expect(text).toContain('margin row');
     expect(text).toContain('% / absolute');
-    expect(text).toContain('no margin column');
+    expect(text).toContain('margin: "5%"');
+    expect(text).toContain('scoring: "all_or_nothing"');
   });
 
   it('describes the Hide video checkbox and the hideVideo CSV key', () => {

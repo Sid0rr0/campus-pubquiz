@@ -75,20 +75,20 @@ starts at the picker.
 Beyond the three live-game surfaces, the same Next.js app serves the
 management and authoring UI:
 
-| Route            | Who                         | What it does                                                                    |
-| ---------------- | --------------------------- | ------------------------------------------------------------------------------- |
-| `/`              | Anyone                      | Landing page — team join panel, plus a "Quiz master login" link                 |
-| `/login`         | Admin/moderator             | Session login; redirects to `/sessions` on success                              |
-| `/register`      | Prospective admin/moderator | Self-registration; account is `pending` until an existing admin approves it     |
-| `/sessions`      | Admin/moderator (any)       | Lists/starts/closes game sessions; opening one routes to `/control?code=...`    |
-| `/control/users` | Admin only                  | Approve pending accounts, deactivate active ones                                |
-| `/quizzes/[id]`  | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
-| `/quizzes/[id]/preview` | Admin/moderator (any) | Quiz preview: a saved quiz's big-screen screens in a 16:9 frame, no session (see Quiz preview) |
-| `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
-| `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
-| `/team`          | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)    |
-| `/leagues`       | Admin only                  | Create, edit and delete leagues; add or remove ended sessions (see Leagues)     |
-| `/league`        | Anyone                      | The public league tables (see Leagues)                                          |
+| Route                   | Who                         | What it does                                                                                   |
+| ----------------------- | --------------------------- | ---------------------------------------------------------------------------------------------- |
+| `/`                     | Anyone                      | Landing page — team join panel, plus a "Quiz master login" link                                |
+| `/login`                | Admin/moderator             | Session login; redirects to `/sessions` on success                                             |
+| `/register`             | Prospective admin/moderator | Self-registration; account is `pending` until an existing admin approves it                    |
+| `/sessions`             | Admin/moderator (any)       | Lists/starts/closes game sessions; opening one routes to `/control?code=...`                   |
+| `/control/users`        | Admin only                  | Approve pending accounts, deactivate active ones                                               |
+| `/quizzes/[id]`         | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here                |
+| `/quizzes/[id]/preview` | Admin/moderator (any)       | Quiz preview: a saved quiz's big-screen screens in a 16:9 frame, no session (see Quiz preview) |
+| `/rules`                | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz                     |
+| `/teams/[id]`           | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                               |
+| `/team`                 | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)                   |
+| `/leagues`              | Admin only                  | Create, edit and delete leagues; add or remove ended sessions (see Leagues)                    |
+| `/league`               | Anyone                      | The public league tables (see Leagues)                                                         |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -790,8 +790,9 @@ grading behavior. Media is not a type: any question can carry a
   order so it's directly comparable to a submission, which is built the same
   positional way. Auto-graded at submit time by counting correct pairs
   position-by-position. How that count becomes points depends on the
-  question's `matchScoringMode` (set in the manual editor only, like
-  `kahootMode` — never from CSV; unset behaves as `partial`): `partial`
+  question's `matchScoringMode` (set in the manual editor, or from CSV as
+  `scoring: "all_or_nothing"` / `scoring: "partial"` in the notes `{…}`
+  group — see the notes group under Media; unset behaves as `partial`): `partial`
   splits the question's points evenly across pairs and rounds to the nearest
   half point (4 points, 3 pairs, 2 correct → 2.5; 1 point, 2 pairs, 1 correct
   → 0.5); `all_or_nothing` gives full points when every
@@ -829,8 +830,8 @@ grading behavior. Media is not a type: any question can carry a
   message as `closest_guess`); players type on the decimal number keypad. The
   question's `margin` is `{ value, unit }` with `unit` `percent` or `absolute`
   (stored in the payload next to `matchScoringMode`, set in the manual editor
-  only — never from CSV, so an imported question, and one with no stored
-  margin, gets the default `{ value: 10, unit: 'percent' }`). The value must
+  or from CSV as `margin: "5%"` / `margin: "2"` in the notes `{…}` group; a
+  question with no stored margin gets the default `{ value: 10, unit: 'percent' }`). The value must
   not be negative and a percentage must be at most 100. It is **auto-graded at
   submit**: with `allowed` = the margin value (absolute) or `|key| × value / 100`
   (percent), an answer with `|answer − key| <= allowed` is correct with full
@@ -846,10 +847,11 @@ grading behavior. Media is not a type: any question can carry a
   advisory hint, not an error. Switching a question's type to Number or
   Closest guess keeps the prompt and keeps the answer only if it parses as a
   number; any other type keeps the answer. **CSV:** there is no
-  margin column (like match's scoring mode): an imported Number question is
-  stored with no margin and grades with the default (10%) the Answer key fills
-  in when it is read; export writes no margin, so a custom margin is lost on
-  export → re-import.
+  margin column; the margin rides in the notes `{…}` group as `margin: "5%"`
+  (percent) or `margin: "2"` (absolute), so it survives export → re-import.
+  A row with no `margin` imports with none stored and grades with the default
+  (10%) the Answer key fills in when it is read; export writes the key only
+  for a question that has one.
   Changing the margin of an opened question is a grading-input change like a
   key fix and re-scores its answers, discarding manual overrides.
   Allowed in kahoot rounds, where a correct answer is
@@ -922,12 +924,22 @@ silently: a CSV row with one is reported as invalid on its `notes` column,
 and in the editor an unreadable "Clip start"/"Reveal end" etc. is rejected at
 save ("Clip times must be whole seconds"); a blank one just means the whole
 video. CSV import moves the group out of the notes into the fields (only when
-`media_url` or `answer_media_url` is a video, YouTube or file; `start`/`end` only fill
-the clip when `media_url` is); CSV export writes the fields back as one
+`media_url` or `answer_media_url` is a video, YouTube or file, or the type has
+grading settings; `start`/`end` only fill the clip when `media_url` is); CSV export writes the fields back as one
 canonical group appended to the free notes, leaving empty keys out. Stored
 `notes` are free text only: loading a stored question strips any clip group
 an older save left there (the payload fields stay the truth), and saving
-again cleans the row. The **reveal clip** (`revealStartSeconds`/
+again cleans the row. The same group carries a question's **grading settings**: `margin: "5%"`
+(percent) or `margin: "2"` (absolute) for a Number question, and
+`scoring: "partial"` or `scoring: "all_or_nothing"` for a match question
+(`parseMarginCell` and the scoring modes in `youtube.ts`). A key the type
+doesn't carry is ignored, a value that doesn't read (`margin: "five"`,
+`scoring: "half"`) is reported as invalid on the `notes` column, and a
+margin outside the question schema's range (negative, or over 100%) is
+reported against `notes` too. Export writes a setting only when the question
+has one. On a type with grading settings, a `{…}` group that sets any
+recognised key is lifted out of the notes even with no video; on other types
+without a video, notes are left alone. The **reveal clip** (`revealStartSeconds`/
 `revealEndSeconds`, in the notes group as `revealStart`/`revealEnd`) is the
 start/end of the one video played at reveal, and applies when either
 `media_url` or `answer_media_url` is a video (the editor labels the
@@ -1070,6 +1082,7 @@ or counted. It is a read of the quiz.
 
   In both, live-only content is empty: no team counts, guesses, fun facts or
   break deadline, and a closest_guess reveal shows just its correct answer.
+
 - **Endpoint** `GET /quizzes/:id/preview?mode=answer_after_question|night` returns a
   `QuizPreviewPayload` (`shared/types/src/quiz-preview.ts`): the quiz-level
   display context (`quiz`) and the ordered `steps`, each with its
@@ -1195,8 +1208,8 @@ the submit-time grade against the key as it stood before the edit). The editor k
 display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
 reshuffle what players see. The keys are compared with defaults filled in
 (`answerKeyOf` / `isSameAnswerKey`), so a setting left unset and one saved as
-its default are the same: a CSV-imported `match` question (no stored scoring
-mode) saved as `partial` is not a key fix and keeps its overrides. A setting
+its default are the same: a `match` question with no stored scoring
+mode (a CSV row with no `scoring` key) saved as `partial` is not a key fix and keeps its overrides. A setting
 the type doesn't carry never counts, and a margin compares by value and unit
 whatever the order of its fields.
 
@@ -1207,7 +1220,8 @@ reads, so an exported file re-imports as-is. `break_after`, `category`,
 `author`, `round_note`, and `show_round_note` all land on each round's last
 row (`show_round_note` is blank when the setting is off); `match` answers are rebuilt as
 `left+right` pairs. Rounds with no questions are omitted, and `kahootMode`
-has no column, so it isn't exported.
+has no column, so it isn't exported. A `match` question's scoring mode and a
+`number` question's margin are exported in the notes cell.
 
 **CSV import mechanics**: the browser reads the uploaded file's text directly
 (`file.text()`) and POSTs it to `POST /import/preview`. The parsed

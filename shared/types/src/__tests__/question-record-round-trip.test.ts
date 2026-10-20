@@ -170,7 +170,7 @@ describe('question record codec round trip', () => {
   );
 
   it.each(CASES)(
-    '$name: preview to sheet row to preview gives the same preview, less what the sheet has no column for',
+    '$name: preview to sheet row to preview gives the same preview',
     ({ type, media }) => {
       const preview: ImportQuestionPreview = {
         ...BASE[type],
@@ -188,12 +188,11 @@ describe('question record codec round trip', () => {
         type,
       );
 
-      const { matchScoringMode: _mode, margin: _margin, ...expected } = preview;
       expect(sheetAnswerIssue).toBeUndefined();
       expect(clipIssues).toEqual([]);
       expect(checkQuestion(question)).toEqual({
         success: true,
-        data: expected,
+        data: preview,
       });
     },
   );
