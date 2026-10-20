@@ -1,4 +1,5 @@
 import type { SessionDetailStats } from '@campus-pubquiz/types';
+import { formatPercent } from '@/app/stats/[id]/format-percent';
 
 type RoundRating = SessionDetailStats['rounds'][number]['rating'];
 
@@ -65,9 +66,7 @@ export function RoundsTable({ rounds, hardestRoundId }: RoundsTableProps) {
                 </td>
                 <td className="px-4 py-2">{round.category ?? '—'}</td>
                 <td className="px-4 py-2">
-                  {round.correctRate === null
-                    ? '—'
-                    : `${(round.correctRate * 100).toFixed(0)}%`}
+                  {formatPercent(round.correctRate)}
                 </td>
                 <td className="px-4 py-2">{round.pointsPercent.toFixed(0)}%</td>
                 <td className="px-4 py-2">{formatRating(round.rating)}</td>

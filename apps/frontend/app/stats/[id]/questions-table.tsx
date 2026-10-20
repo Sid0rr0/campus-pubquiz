@@ -13,6 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { SortableTable } from '@/app/components/sortable-table';
 import type { SessionDetailStats } from '@campus-pubquiz/types';
+import { formatPercent } from '@/app/stats/[id]/format-percent';
 import { formatResponseMs } from '@/app/stats/[id]/format-response-ms';
 
 interface QuestionsTableProps {
@@ -84,12 +85,7 @@ export function QuestionsTable({
           id: 'correctRate',
           header: 'Correct rate',
           sortFn: sortFn_basic,
-          cell: (context) => {
-            const { correctRate } = context.row.original;
-            return correctRate === null
-              ? '—'
-              : `${(correctRate * 100).toFixed(0)}%`;
-          },
+          cell: (context) => formatPercent(context.row.original.correctRate),
         }),
         helper.accessor((q) => q.fastestResponseMs ?? Infinity, {
           id: 'fastestResponseMs',
