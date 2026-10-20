@@ -6,7 +6,7 @@ Parent spec: `.scratch/question-record-module/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The editor's draft → preview conversion takes its clip, hidden-video and reveal clip fields from the codec's media fields query. The editor holds no "is this a video" rule of its own.
 - [ ] A draft with typed clip times and image or sound media sends no clip and no hidden-video flag, and its typed times are unchanged in the draft.
