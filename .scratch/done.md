@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| question-record-module | [One Question record codec for every shape a question takes](question-record-module/spec.md) | 5 |
 | session-result-module | [One Session result module for what a night's results mean](session-result-module/spec.md) | 4 |
 | league | [Leagues — ranking teams across a semester](league/spec.md) | 6 |
 | team-page | [A team page opened with the team code](team-page/spec.md) | 3 |
