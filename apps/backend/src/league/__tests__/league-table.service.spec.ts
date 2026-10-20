@@ -9,11 +9,10 @@ import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
-import type { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
 import { LeagueTableService } from '@/league/league-table.service';
-import { StandingsService } from '@/standings/standings.service';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { useTestDatabase } from '@/test-db/test-database';
 
 describe('LeagueTableService (Postgres integration)', () => {
@@ -30,11 +29,7 @@ describe('LeagueTableService (Postgres integration)', () => {
     service = new LeagueTableService(
       em.getRepository<League, LeagueRepository>(League),
       em.getRepository<LeagueSession, LeagueSessionRepository>(LeagueSession),
-      new StandingsService(
-        em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-          GameSessionTeam,
-        ),
-      ),
+      buildStandingsService(em),
     );
     quiz = em.create(Quiz, { title: 'Movie Night' });
     const round = em.create(Round, { quiz, orderIndex: 0, title: 'Round 1' });

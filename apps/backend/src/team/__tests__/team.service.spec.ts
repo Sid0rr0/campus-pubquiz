@@ -9,7 +9,7 @@ import { Team } from '@/db/entities/team.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
-import { StandingsService } from '@/standings/standings.service';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -40,7 +40,7 @@ describe('TeamService (Postgres integration)', () => {
       gameSessionTeams,
       new TeamHistoryService(
         teams,
-        new StandingsService(gameSessionTeams),
+        buildStandingsService(em),
         new PlayerCountService(
           em.getRepository<SessionPlayerCount, SessionPlayerCountRepository>(
             SessionPlayerCount,
