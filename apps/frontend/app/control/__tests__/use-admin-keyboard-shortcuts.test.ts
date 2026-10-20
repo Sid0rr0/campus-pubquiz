@@ -225,6 +225,49 @@ describe('useAdminKeyboardShortcuts', () => {
     },
   );
 
+  it.each([
+    ['ctrlKey', 'f'],
+    ['metaKey', 'f'],
+    ['metaKey', 'm'],
+    ['ctrlKey', 'j'],
+    ['altKey', 'm'],
+    ['metaKey', ' '],
+    ['metaKey', 'ArrowRight'],
+    ['ctrlKey', 'ArrowLeft'],
+    ['altKey', 'ArrowUp'],
+    ['metaKey', 'ArrowDown'],
+  ] as const)(
+    'ignores %s + %j and leaves it to the browser',
+    (modifier, key) => {
+      const { sendAction, setDisplaySoundMuted } = renderShortcuts({
+        canPauseMedia: true,
+        advanceStep: 'advance',
+        previousState: 'available',
+        isLeaderboardVisible: key === 'ArrowDown',
+      });
+      const event = new KeyboardEvent('keydown', {
+        key,
+        [modifier]: true,
+        cancelable: true,
+        bubbles: true,
+      });
+
+      window.dispatchEvent(event);
+
+      expect(sendAction).not.toHaveBeenCalled();
+      expect(setDisplaySoundMuted).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    },
+  );
+
+  it('still handles Shift+F', async () => {
+    const { sendAction } = renderShortcuts();
+
+    await userEvent.keyboard('{Shift>}f{/Shift}');
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_FULLSCREEN');
+  });
+
   it.each(['f', 'm', ' '])(
     'ignores %j while an editable field is focused',
     async (key) => {

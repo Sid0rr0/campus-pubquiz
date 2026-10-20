@@ -58,6 +58,11 @@ export function useAdminKeyboardShortcuts({
 }: UseAdminKeyboardShortcutsOptions): void {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
+      // Browser/OS chords (Cmd+F, Ctrl+J, Alt+Left…) are not ours; Shift stays
+      // allowed so uppercase letters still match.
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
       if (isEditableTarget(event.target)) {
         return;
       }
