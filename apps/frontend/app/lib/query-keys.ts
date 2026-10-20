@@ -21,6 +21,8 @@ export const queryKeys = {
   leagues: {
     all: ['leagues'] as const,
     list: (current?: boolean) => ['leagues', 'list', current ?? false] as const,
+    publicList: () => ['leagues', 'public'] as const,
+    table: (leagueId: number) => ['leagues', 'table', leagueId] as const,
   },
   teams: {
     all: ['teams'] as const,

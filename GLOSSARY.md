@@ -182,7 +182,7 @@ A named competition, such as a semester's, over which teams are ranked across se
 _Avoid_: season, championship, all teams ever (that's the team directory)
 
 **League points**:
-What a team earns towards a league from one session: 5, 4, 3, 2 or 1 for placing 1st to 5th (tied teams each get their shared place's full points) and nothing below 5th, plus one participation point for having answered at least one question. A team that left the session has no placing, so it gets the participation point only.
+What a team earns towards a league from one session: 5, 4, 3, 2 or 1 for placing 1st to 5th (tied teams each get their shared place's full points) and nothing below 5th, plus one participation point for having answered at least one question. A team that left the session has no placing, so it gets the participation point only. A team that answered nothing earns nothing, whatever its placing.
 _Avoid_: season points, ranking points
 
 **League table**:
