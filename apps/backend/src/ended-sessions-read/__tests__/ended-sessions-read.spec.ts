@@ -12,6 +12,7 @@ import {
   setupAnswerServiceTest,
 } from '@/answer/__tests__/answer-service-test-utils';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
+import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 
 describe('EndedSessionsRead (Postgres integration)', () => {
   const { state, insertTeam } = setupAnswerServiceTest();
@@ -103,6 +104,26 @@ describe('EndedSessionsRead (Postgres integration)', () => {
 
     expect(await read.participants(inThisSession())).toEqual(expected);
     expect(await read.participants({ teamIds: [team.id] })).toEqual(expected);
+  });
+
+  it('narrows by session and team together', async () => {
+    const mine = await insertTeam('Mine', 'token-m');
+    await insertTeam('Other', 'token-o');
+
+    expect(
+      await read.participants({
+        gameSessionIds: [state.session.id],
+        teamIds: [mine.id],
+      }),
+    ).toEqual([
+      { gameSessionId: state.session.id, teamId: mine.id, isOnRoster: true },
+    ]);
+    expect(
+      await read.participants({
+        gameSessionIds: [state.session.id],
+        teamIds: [999_999],
+      }),
+    ).toEqual([]);
   });
 
   describe('sessions played per team', () => {
@@ -237,6 +258,40 @@ describe('EndedSessionsRead (Postgres integration)', () => {
         named.id,
         state.session.id,
       ]);
+    });
+
+    it('keeps the SQL display name and the in-memory display name rule in agreement', async () => {
+      const named = await otherSession('AGREED', { name: 'Zebra night' });
+      await setStatus(state.session.id, 'ended');
+
+      const rows = (await read.endedSessionsQuery()) as {
+        display_name: string;
+        custom_name: string | null;
+        quiz_title: string;
+      }[];
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => row.custom_name).sort()).toEqual([
+        'Zebra night',
+        null,
+      ]);
+      for (const row of rows) {
+        expect(row.display_name).toBe(
+          sessionDisplayName(row.custom_name, row.quiz_title),
+        );
+      }
+      expect(named.name).toBe('Zebra night');
+    });
+
+    it('only works out max points when asked', async () => {
+      await setStatus(state.session.id, 'ended');
+
+      const [without] = (await read.endedSessionsQuery()) as object[];
+      const [withPoints] = (await read.endedSessionsQuery({
+        withMaxPoints: true,
+      })) as object[];
+
+      expect(without).not.toHaveProperty('max_points');
+      expect(withPoints).toHaveProperty('max_points');
     });
 
     it('lists participations newest first, session id breaking a tie on date', async () => {
