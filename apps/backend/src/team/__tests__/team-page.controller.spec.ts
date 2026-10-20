@@ -17,6 +17,7 @@ import { Team } from '@/db/entities/team.entity';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
 import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { TeamPageController } from '@/team/team-page.controller';
@@ -40,6 +41,7 @@ describe('TeamPageController (Postgres integration)', () => {
           SessionPlayerCount,
         ),
       ),
+      buildEndedSessionsRead(em),
     );
     controller = new TeamPageController(
       history,
@@ -47,6 +49,7 @@ describe('TeamPageController (Postgres integration)', () => {
         em.getRepository<League, LeagueRepository>(League),
         em.getRepository<LeagueSession, LeagueSessionRepository>(LeagueSession),
         buildStandingsService(em),
+        buildEndedSessionsRead(em),
       ),
     );
   });
