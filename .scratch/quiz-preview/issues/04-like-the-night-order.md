@@ -1,6 +1,6 @@
 # 04: "Like the night" order
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Quiz preview](../spec.md)
 

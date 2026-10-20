@@ -22,6 +22,17 @@ vi.mock('@/app/lib/quiz-preview-api', async () => {
   return { ...actual, fetchQuizPreview: mockFetchQuizPreview };
 });
 
+const { searchParamsRef, mockReplace } = vi.hoisted(() => ({
+  searchParamsRef: { current: new URLSearchParams() },
+  mockReplace: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => searchParamsRef.current,
+  usePathname: () => '/quizzes/7/preview',
+  useRouter: () => ({ replace: mockReplace }),
+}));
+
 function question(id: number, prompt: string, answer: string): SeededQuestion {
   return { id, type: 'free_text', prompt, answer, points: 1000 };
 }
@@ -55,6 +66,60 @@ describe('QuizPreviewPanel', () => {
 
   beforeEach(() => {
     mockFetchQuizPreview.mockReset();
+    mockReplace.mockReset();
+    searchParamsRef.current = new URLSearchParams();
+  });
+
+  it('reads ?mode=night on load and asks for the night order', async () => {
+    searchParamsRef.current = new URLSearchParams('mode=night');
+    mockFetchQuizPreview.mockResolvedValue(buildQuizPreview(ROUNDS, 'night'));
+    renderWithQuery(<QuizPreviewPanel quizId="7" />);
+    await screen.findByRole('button', { name: /next/i });
+
+    expect(mockFetchQuizPreview).toHaveBeenCalledWith(
+      7,
+      'night',
+      expect.anything(),
+    );
+    expect(
+      screen.getByRole('button', { name: /like the night/i }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('writes ?mode=night to the URL when switched to like the night', async () => {
+    const user = userEvent.setup();
+    await renderPreview();
+
+    await user.click(screen.getByRole('button', { name: /like the night/i }));
+
+    expect(mockReplace).toHaveBeenCalledWith('/quizzes/7/preview?mode=night');
+  });
+
+  it('omits the default mode from the URL when switched back', async () => {
+    const user = userEvent.setup();
+    searchParamsRef.current = new URLSearchParams('mode=night');
+    mockFetchQuizPreview.mockResolvedValue(buildQuizPreview(ROUNDS, 'night'));
+    renderWithQuery(<QuizPreviewPanel quizId="7" />);
+    await screen.findByRole('button', { name: /next/i });
+
+    await user.click(
+      screen.getByRole('button', { name: /question → answer/i }),
+    );
+
+    expect(mockReplace).toHaveBeenCalledWith('/quizzes/7/preview');
+  });
+
+  it('draws the night order: the break intro comes between questions and reveals', async () => {
+    const user = userEvent.setup();
+    searchParamsRef.current = new URLSearchParams('mode=night');
+    mockFetchQuizPreview.mockResolvedValue(buildQuizPreview(ROUNDS, 'night'));
+    renderWithQuery(<QuizPreviewPanel quizId="7" />);
+    await screen.findByRole('button', { name: /next/i });
+
+    // overview, title, Q1, Q2, break intro
+    await user.keyboard('{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}');
+    expect(screen.getByText('Step 5 of 8')).toBeInTheDocument();
+    expect(screen.getByText(/break/i)).toBeInTheDocument();
   });
 
   it('asks for the saved quiz in the default order', async () => {

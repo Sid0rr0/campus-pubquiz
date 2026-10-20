@@ -1021,12 +1021,23 @@ or counted. It is a read of the quiz.
   "Block ends here" marker after each block's last answer, and a not-found
   state for an unknown quiz. Media plays as on the night (clip bounds, YouTube,
   `hideVideo`).
-- **Order** `answer_after_question` (the default and, for now, the only one):
-  each round's title card, then each question followed by its revealed answer.
-  Kahoot rounds look the same. Live-only content is empty: no team counts,
-  guesses, fun facts or break deadline, and a closest_guess reveal shows just
-  its correct answer.
-- **Endpoint** `GET /quizzes/:id/preview?mode=answer_after_question` returns a
+- **Orders**, switched with a toggle on the page and kept in the URL as
+  `?mode=night` (the default is left out, and the choice survives a refresh):
+  - `answer_after_question` (the default): each round's title card, then each
+    question followed by its revealed answer. Kahoot rounds look the same.
+  - `night` ("like the night"): the screens in the order the room sees them:
+    the round overview, round title cards, a block's questions, the break
+    intro, the reveal intro, then that block's reveals, block after block. The
+    order is a dry run of the real Advance plan over the team-less session (no
+    grading writes, nothing saved), keeping only `round_overview`,
+    `round_title`, `question`, `break_intro`, `reveal_intro` and `reveal`;
+    lobby, rules, join overlay, locking, break review, break round title,
+    leaderboard, showdown and ended never appear. The break intro has no
+    deadline, no feedback prompt and no fun facts.
+
+  In both, live-only content is empty: no team counts, guesses, fun facts or
+  break deadline, and a closest_guess reveal shows just its correct answer.
+- **Endpoint** `GET /quizzes/:id/preview?mode=answer_after_question|night` returns a
   `QuizPreviewPayload` (`shared/types/src/quiz-preview.ts`): the quiz-level
   display context (`quiz`) and the ordered `steps`, each with its
   `DisplayScreen`, its `roundIndex` / `questionIndex` (`questionIndex` is

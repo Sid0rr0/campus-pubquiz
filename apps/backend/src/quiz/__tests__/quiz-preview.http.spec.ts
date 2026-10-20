@@ -151,6 +151,29 @@ describe('GET /quizzes/:id/preview (Postgres integration)', () => {
     expect(response.status).toBe(404);
   });
 
+  it('accepts mode=night and answers with the night order', async () => {
+    const quizId = await saveQuiz();
+
+    const response = await get(
+      `/quizzes/${quizId}/preview?mode=night`,
+      'admin-token',
+    );
+
+    expect(response.status).toBe(200);
+    const body = response.body as QuizPreviewPayload;
+    expect(body.mode).toBe('night');
+    expect(body.steps.map(({ screen }) => screen.kind)).toEqual([
+      'round_overview',
+      'round_title',
+      'question',
+      'question',
+      'break_intro',
+      'reveal_intro',
+      'reveal',
+      'reveal',
+    ]);
+  });
+
   it('answers 400 for a mode that is not one of the preview modes', async () => {
     const quizId = await saveQuiz();
 

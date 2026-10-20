@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
   DEFAULT_QUIZ_PREVIEW_MODE,
+  QUIZ_PREVIEW_MODES,
+  type QuizPreviewMode,
   type QuizPreviewPayload,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -30,7 +33,18 @@ function FullPageMessage({ children }: { children: React.ReactNode }) {
 /** Steps through a saved quiz's big-screen screens in a 16:9 frame. Nothing is stored and no session exists. */
 export function QuizPreviewPanel({ quizId }: QuizPreviewPanelProps) {
   const numericQuizId = Number(quizId);
-  const mode = DEFAULT_QUIZ_PREVIEW_MODE;
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // The default order is left out of the URL; anything unknown means the default.
+  const mode: QuizPreviewMode =
+    searchParams.get('mode') === 'night' ? 'night' : DEFAULT_QUIZ_PREVIEW_MODE;
+  const changeMode = (next: QuizPreviewMode) =>
+    router.replace(
+      next === DEFAULT_QUIZ_PREVIEW_MODE
+        ? pathname
+        : `${pathname}?mode=${next}`,
+    );
   const query = useQuery({
     queryKey: queryKeys.quizzes.preview(numericQuizId, mode),
     queryFn: ({ signal }) => fetchQuizPreview(numericQuizId, mode, signal),
@@ -65,10 +79,57 @@ export function QuizPreviewPanel({ quizId }: QuizPreviewPanelProps) {
     );
   }
 
-  return <PreviewStepper preview={query.data} />;
+  return (
+    <PreviewStepper
+      key={mode}
+      preview={query.data}
+      mode={mode}
+      onModeChange={changeMode}
+    />
+  );
 }
 
-function PreviewStepper({ preview }: { preview: QuizPreviewPayload }) {
+const MODE_LABELS: Record<QuizPreviewMode, string> = {
+  answer_after_question: 'Question → answer',
+  night: 'Like the night',
+};
+
+function ModeToggle({
+  mode,
+  onModeChange,
+}: {
+  mode: QuizPreviewMode;
+  onModeChange: (mode: QuizPreviewMode) => void;
+}) {
+  return (
+    <div className="ml-auto flex gap-2">
+      {QUIZ_PREVIEW_MODES.map((option) => (
+        <Button
+          key={option}
+          type="button"
+          size="md"
+          aria-pressed={mode === option}
+          onClick={() => onModeChange(option)}
+          className={`rounded-xl border-2 border-background/50 text-xs font-extrabold ${
+            mode === option ? 'bg-background text-foreground' : ''
+          }`}
+        >
+          {MODE_LABELS[option]}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function PreviewStepper({
+  preview,
+  mode,
+  onModeChange,
+}: {
+  preview: QuizPreviewPayload;
+  mode: QuizPreviewMode;
+  onModeChange: (mode: QuizPreviewMode) => void;
+}) {
   const { steps, quiz } = preview;
   const [index, setIndex] = useState(0);
   const lastIndex = steps.length - 1;
@@ -128,6 +189,7 @@ function PreviewStepper({ preview }: { preview: QuizPreviewPayload }) {
             Block ends here
           </span>
         )}
+        <ModeToggle mode={mode} onModeChange={onModeChange} />
       </div>
       <div className="flex min-h-0 flex-1 items-center justify-center">
         <div

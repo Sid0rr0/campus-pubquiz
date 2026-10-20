@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
 import { QuizPreviewPanel } from '@/app/quizzes/[id]/preview/quiz-preview-panel';
@@ -25,5 +25,10 @@ export default function QuizPreviewPage() {
     );
   }
 
-  return <QuizPreviewPanel quizId={params.id} />;
+  // useSearchParams requires a Suspense boundary during static prerendering.
+  return (
+    <Suspense fallback={null}>
+      <QuizPreviewPanel quizId={params.id} />
+    </Suspense>
+  );
 }
