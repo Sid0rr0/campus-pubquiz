@@ -1,13 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
 import { SessionWriteQueue } from '@/game/state/session-write-queue';
-import {
-  withFunFactData,
-  withLeaderboard,
-  withPriorStandings,
-  withVerdictTallies,
-} from '@/game/state/session-updates.util';
+import { LiveResultsRead } from '@/game/state/live-results-read';
+import { withPriorStandings } from '@/game/state/session-updates.util';
 import { deadlinesOf, type SessionOutcome } from '@/game/state/session-outcome';
 
 /** What a change returns: the new session and the outcome the write resolves to. */
@@ -78,21 +74,22 @@ function reportDeadlineChange<T>(
 /**
  * The Session write module: the only holder of the in-memory sessions (keyed
  * by joinCode, one backend instance — see CLAUDE.md) and the only way a
- * session is stored. Owns the per-session queue, the standings read and its
- * failed-read fallback, and the auto-lock deadline report. Composed inside
+ * session is stored. Owns the per-session queue, the final live results read,
+ * and the auto-lock deadline report. Composed inside
  * a Nest provider, injected into the game state class.
  */
 @Injectable()
 export class SessionWrite {
-  // A string, not `SessionWrite.name`: `nest build` crashes on a
-  // self-reference in the owning game state class, so both avoid it.
-  private readonly logger = new Logger('SessionWrite');
   private readonly sessions = new Map<string, SessionState>();
   private readonly queue = new SessionWriteQueue();
   /** Whether onModuleInit has resolved — lets read() distinguish "used too early" from "unknown joinCode". */
   private initialized = false;
 
-  constructor(private readonly standingsService: StandingsService) {}
+  private readonly liveResultsRead: LiveResultsRead;
+
+  constructor(standingsService: StandingsService) {
+    this.liveResultsRead = new LiveResultsRead(standingsService);
+  }
 
   markInitialized(): void {
     this.initialized = true;
@@ -137,12 +134,12 @@ export class SessionWrite {
 
   /**
    * A session write: runs `change` against the session as the previous write
-   * for this join code left it, reads standings once as the last step
-   * (unless the write says it doesn't change scores), stores the result and
-   * returns the change's outcome. A change that throws stores nothing and
-   * doesn't hold up the next write; a failed standings read, after the change
-   * has done its work, is logged and the session is stored with its earlier
-   * leaderboard. Not re-entrant: `change` must not call another public event
+   * for this join code left it, refreshes the live results once as the
+   * last step (unless the write says it doesn't change scores), stores the
+   * result and returns the change's outcome. A change that throws stores
+   * nothing and doesn't hold up the next write; a failed live result read,
+   * after the change has done its work, is logged and the session is stored
+   * with that figure's earlier value. Not re-entrant: `change` must not call another public event
    * method of the owning game state class.
    */
   write<T>(
@@ -234,64 +231,16 @@ export class SessionWrite {
     { session: changedSession, outcome }: SessionChange<T>,
     refreshStandings: boolean,
   ): Promise<T> {
+    // The change has already done its database work (a press has saved its
+    // progress), so it counts as done even if a live result read fails: the
+    // live results read keeps that figure's earlier value.
     const sessionToStore = withPriorStandings(started, changedSession);
-    if (refreshStandings) {
-      await this.storeWithStandings(joinCode, sessionToStore);
-    } else {
-      this.sessions.set(joinCode, sessionToStore);
-    }
-    return reportDeadlineChange(started, this.read(joinCode), outcome);
-  }
-
-  /**
-   * Stores `session` after reading its standings. The change has already
-   * done its database work (a press has saved its progress), so it counts as
-   * done even if the standings read fails: memory must match what was saved
-   * and clients must hear about it. The session keeps its earlier leaderboard
-   * and the next write reads standings again.
-   */
-  private async storeWithStandings(
-    joinCode: string,
-    session: SessionState,
-  ): Promise<void> {
-    const { gameSessionId } = session.seededGame;
-    const [leaderboard, verdictTallies, funFactData] = await Promise.all([
-      this.readOrKeep(joinCode, 'Standings', () =>
-        this.standingsService.leaderboard(gameSessionId),
-      ),
-      this.readOrKeep(joinCode, 'Verdict tally', () =>
-        this.standingsService.verdictTallies(gameSessionId),
-      ),
-      this.readOrKeep(joinCode, 'Fun fact data', () =>
-        this.standingsService.funFactData(gameSessionId),
-      ),
-    ]);
-    const withStandings = leaderboard
-      ? withLeaderboard(session, leaderboard)
-      : session;
-    const withTallies = verdictTallies
-      ? withVerdictTallies(withStandings, verdictTallies)
-      : withStandings;
     this.sessions.set(
       joinCode,
-      funFactData ? withFunFactData(withTallies, funFactData) : withTallies,
+      refreshStandings
+        ? await this.liveResultsRead.read(sessionToStore)
+        : sessionToStore,
     );
-  }
-
-  /** The value `read` returns, or undefined (logged) when it fails, so the session keeps what it had until the next write. */
-  private async readOrKeep<R>(
-    joinCode: string,
-    what: string,
-    read: () => Promise<R>,
-  ): Promise<R | undefined> {
-    try {
-      return await read();
-    } catch (error) {
-      this.logger.error(
-        `${what} read failed for session ${joinCode}; keeping the earlier value until the next write`,
-        error instanceof Error ? error.stack : String(error),
-      );
-      return undefined;
-    }
+    return reportDeadlineChange(started, this.read(joinCode), outcome);
   }
 }
