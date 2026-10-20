@@ -8,7 +8,7 @@ This is the prefactor that the later tickets build on. See the spec's "The Ended
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Ended-sessions read is a Nest provider over Knex, beside the Standings module. Its participants read takes a set of session ids or a set of team ids and returns session id, team id and whether the team is on the roster.
 - [ ] The participants read includes teams in lobby and running sessions (it ignores status).

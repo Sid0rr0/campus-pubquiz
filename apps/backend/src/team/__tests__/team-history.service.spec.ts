@@ -10,11 +10,11 @@ import { RoundRating } from '@/db/entities/round-rating.entity';
 import { SessionFeedback } from '@/db/entities/session-feedback.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { Team } from '@/db/entities/team.entity';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
-import { StandingsService } from '@/standings/standings.service';
+import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { useTestDatabase } from '@/test-db/test-database';
 
@@ -29,16 +29,13 @@ describe('TeamHistoryService (Postgres integration)', () => {
     joinCounter = 0;
     history = new TeamHistoryService(
       em.getRepository<Team, TeamRepository>(Team),
-      new StandingsService(
-        em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-          GameSessionTeam,
-        ),
-      ),
+      buildStandingsService(em),
       new PlayerCountService(
         em.getRepository<SessionPlayerCount, SessionPlayerCountRepository>(
           SessionPlayerCount,
         ),
       ),
+      buildEndedSessionsRead(em),
     );
   });
 

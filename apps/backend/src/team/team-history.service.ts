@@ -12,6 +12,7 @@ import {
 } from '@campus-pubquiz/types';
 import { readQuestionPayload } from '@/db/question-payload';
 import { Team } from '@/db/entities/team.entity';
+import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { StandingsService } from '@/standings/standings.service';
@@ -20,14 +21,6 @@ import {
   teamHistoryOf,
   type TeamHistorySession,
 } from '@/team/team-history.calc';
-
-interface ParticipationRow {
-  gameSessionId: number;
-  teamId: number;
-  name: string | null;
-  quizTitle: string;
-  playedAt: string | Date;
-}
 
 interface NightQuestionRow {
   id: number;
@@ -67,6 +60,7 @@ export class TeamHistoryService {
     @InjectRepository(Team) private readonly teams: TeamRepository,
     private readonly standings: StandingsService,
     private readonly playerCountService: PlayerCountService,
+    private readonly endedSessions: EndedSessionsRead,
   ) {}
 
   /** One team's header, summary and sessions; null for an unknown team. */
@@ -106,24 +100,7 @@ export class TeamHistoryService {
     if (!team) return null;
     const knex = this.teams.getKnex();
 
-    const session = (await knex('game_sessions as gs')
-      .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
-      .where('gs.id', gameSessionId)
-      .where('gs.status', 'ended')
-      .select(
-        'gs.quiz_id as quizId',
-        'gs.name as name',
-        'qz.title as quizTitle',
-        'gs.created_at as playedAt',
-      )
-      .first()) as
-      | {
-          quizId: number;
-          name: string | null;
-          quizTitle: string;
-          playedAt: string | Date;
-        }
-      | undefined;
+    const session = await this.endedSessions.endedSession(gameSessionId);
     if (!session) return null;
     if (!(await this.standings.hasTakenPart(gameSessionId, team.id))) {
       return null;
@@ -187,8 +164,8 @@ export class TeamHistoryService {
     });
     return {
       gameSessionId,
-      name: session.name ?? session.quizTitle,
-      playedAt: new Date(session.playedAt).toISOString(),
+      name: session.displayName,
+      playedAt: session.playedAt.toISOString(),
       questions: rows,
     };
   }
@@ -211,7 +188,7 @@ export class TeamHistoryService {
     );
     if (teamIds.length === 0) return results;
 
-    const participations = await this.loadParticipations(teamIds);
+    const participations = await this.endedSessions.participations(teamIds);
     if (participations.length === 0) return results;
 
     const sessionIds = [...new Set(participations.map((p) => p.gameSessionId))];
@@ -228,8 +205,8 @@ export class TeamHistoryService {
         if (!result) continue;
         sessions.push({
           gameSessionId: participation.gameSessionId,
-          name: participation.name ?? participation.quizTitle,
-          playedAt: new Date(participation.playedAt).toISOString(),
+          name: participation.displayName,
+          playedAt: participation.playedAt.toISOString(),
           result,
           playerCount:
             playerCounts.get(participation.gameSessionId)?.get(teamId) ?? null,
@@ -238,39 +215,5 @@ export class TeamHistoryService {
       results.set(teamId, teamHistoryOf(teamId, sessions));
     }
     return results;
-  }
-
-  /** Ended sessions each team is on the roster of or left a mark on (answers, bonus awards), newest first. */
-  private async loadParticipations(
-    teamIds: readonly number[],
-  ): Promise<ParticipationRow[]> {
-    const knex = this.teams.getKnex();
-    const ids = [...teamIds];
-    const participants = knex('game_session_teams')
-      .whereIn('team_id', ids)
-      .select('game_session_id', 'team_id')
-      .union([
-        knex('answers')
-          .whereIn('team_id', ids)
-          .select('game_session_id', 'team_id'),
-        knex('bonus_awards')
-          .whereIn('team_id', ids)
-          .select('game_session_id', 'team_id'),
-      ]);
-
-    return (await knex
-      .from(participants.as('p'))
-      .join('game_sessions as gs', 'gs.id', 'p.game_session_id')
-      .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
-      .where('gs.status', 'ended')
-      .orderBy('gs.created_at', 'desc')
-      .orderBy('gs.id', 'desc')
-      .select(
-        'gs.id as gameSessionId',
-        'p.team_id as teamId',
-        'gs.name as name',
-        'qz.title as quizTitle',
-        'gs.created_at as playedAt',
-      )) as ParticipationRow[];
   }
 }

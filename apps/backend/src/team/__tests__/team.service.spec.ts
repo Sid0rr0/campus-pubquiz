@@ -9,7 +9,8 @@ import { Team } from '@/db/entities/team.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
-import { StandingsService } from '@/standings/standings.service';
+import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -38,21 +39,47 @@ describe('TeamService (Postgres integration)', () => {
       teams,
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
       gameSessionTeams,
-      new TeamHistoryService(
-        teams,
-        new StandingsService(gameSessionTeams),
-        new PlayerCountService(
-          em.getRepository<SessionPlayerCount, SessionPlayerCountRepository>(
-            SessionPlayerCount,
-          ),
-        ),
-      ),
+      buildHistory(),
+      buildEndedSessionsRead(em),
     );
     const quiz = em.create(Quiz, { title: 'Team Test Quiz' });
     const session = em.create(GameSession, { quiz, joinCode: 'ABCDEF' });
     await em.flush();
     sessionId = session.id;
   });
+
+  function buildHistory(): TeamHistoryService {
+    return new TeamHistoryService(
+      em.getRepository<Team, TeamRepository>(Team),
+      buildStandingsService(em),
+      new PlayerCountService(
+        em.getRepository<SessionPlayerCount, SessionPlayerCountRepository>(
+          SessionPlayerCount,
+        ),
+      ),
+      buildEndedSessionsRead(em),
+    );
+  }
+
+  /** A question in the quiz of the given session. */
+  async function seedQuestion(forSessionId: number): Promise<Question> {
+    const session = await em.findOneOrFail(GameSession, forSessionId);
+    const round = em.create(Round, {
+      quiz: session.quiz,
+      title: 'Round 1',
+      orderIndex: 0,
+    });
+    const question = em.create(Question, {
+      round,
+      orderIndex: 0,
+      type: 'free_text',
+      prompt: 'Q',
+      answer: 'a',
+      points: 10,
+    });
+    await em.flush();
+    return question;
+  }
 
   async function createSecondSession(joinCode: string): Promise<number> {
     const quiz = em.create(Quiz, { title: 'Second Quiz' });
@@ -280,7 +307,11 @@ describe('TeamService (Postgres integration)', () => {
       return team;
     }
 
-    it('returns every team with its sessionsJoined count, including teams with zero sessions', async () => {
+    async function endSession(id: number): Promise<void> {
+      await em.nativeUpdate(GameSession, { id }, { status: 'ended' });
+    }
+
+    it('returns every team with its ended sessions played, including teams with none', async () => {
       const session2Id = await createSecondSession('GHIJKL');
       const soloTeam = await teamService.join(sessionId, 'Solo Team', {
         joinCode: 'ABCDEF',
@@ -293,6 +324,8 @@ describe('TeamService (Postgres integration)', () => {
         joinCode: 'GHIJKL',
       });
       const bareTeam = await createBareTeam('Bare Team');
+      await endSession(sessionId);
+      await endSession(session2Id);
 
       const result = await teamService.listAll({
         page: 1,
@@ -307,6 +340,75 @@ describe('TeamService (Postgres integration)', () => {
         expect.objectContaining({ id: multiTeam.id, sessionsJoined: 2 }),
         expect.objectContaining({ id: bareTeam.id, sessionsJoined: 0 }),
       ]);
+    });
+
+    it('does not count a lobby or running session until it ends', async () => {
+      const team = await teamService.join(sessionId, 'Lobby Team', {
+        joinCode: 'ABCDEF',
+      });
+      const items = async () =>
+        (
+          await teamService.listAll({
+            page: 1,
+            pageSize: 20,
+            sortBy: 'joinedAt',
+            sortOrder: 'asc',
+          })
+        ).items;
+
+      expect(await items()).toEqual([
+        expect.objectContaining({ id: team.id, sessionsJoined: 0 }),
+      ]);
+
+      await endSession(sessionId);
+
+      expect(await items()).toEqual([
+        expect.objectContaining({ id: team.id, sessionsJoined: 1 }),
+      ]);
+    });
+
+    it('shows the same sessions played as the team history summary, for a kicked team and a lobby team', async () => {
+      const session2Id = await createSecondSession('GHIJKL');
+      const kicked = await teamService.join(sessionId, 'Kicked Team', {
+        joinCode: 'ABCDEF',
+      });
+      const lobby = await teamService.join(session2Id, 'Lobby Team', {
+        joinCode: 'GHIJKL',
+      });
+      const question = await seedQuestion(sessionId);
+      em.create(Answer, {
+        gameSession: em.getReference(GameSession, sessionId),
+        question,
+        team: em.getReference(Team, kicked.id),
+        value: 'v',
+        pointsAwarded: 5,
+        gradedAt: new Date(),
+        verdict: 'correct',
+      });
+      await em.flush();
+      await teamService.removeFromRoster(sessionId, kicked.id);
+      await endSession(sessionId);
+
+      const { items } = await teamService.listAll({
+        page: 1,
+        pageSize: 20,
+        sortBy: 'joinedAt',
+        sortOrder: 'asc',
+      });
+      const history = buildHistory();
+
+      for (const team of [kicked, lobby]) {
+        const detail = await history.detail(team.id);
+        expect(items.find((item) => item.id === team.id)?.sessionsJoined).toBe(
+          detail!.summary.sessionsPlayed,
+        );
+      }
+      expect(items.find((item) => item.id === kicked.id)?.sessionsJoined).toBe(
+        1,
+      );
+      expect(items.find((item) => item.id === lobby.id)?.sessionsJoined).toBe(
+        0,
+      );
     });
 
     it('paginates: page 2 returns the next slice, with a stable total across pages', async () => {
@@ -336,7 +438,7 @@ describe('TeamService (Postgres integration)', () => {
       expect(page2.total).toBe(3);
     });
 
-    it('sorts by sessionsJoined ascending, fewer sessions first', async () => {
+    it('sorts by sessions played ascending, fewer ended sessions first', async () => {
       const session2Id = await createSecondSession('GHIJKL');
       const fewer = await teamService.join(sessionId, 'Fewer Sessions', {
         joinCode: 'ABCDEF',
@@ -348,6 +450,8 @@ describe('TeamService (Postgres integration)', () => {
         teamToken: more.token,
         joinCode: 'GHIJKL',
       });
+      await endSession(sessionId);
+      await endSession(session2Id);
 
       const result = await teamService.listAll({
         page: 1,

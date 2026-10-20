@@ -3,6 +3,7 @@ import { AnswerService } from '@/answer/answer.service';
 import { AuthModule } from '@/auth/auth.module';
 import { SeedService } from '@/db/seed.service';
 import { BonusService } from '@/bonus/bonus.service';
+import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { GameGateway } from '@/game/game.gateway';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
@@ -34,6 +35,7 @@ import { TeamService } from '@/team/team.service';
     TeamService,
     TeamHistoryService,
     AnswerService,
+    EndedSessionsRead,
     StandingsService,
     LeagueTableService,
     LeagueService,
@@ -62,6 +64,7 @@ import { TeamService } from '@/team/team.service';
     PlayerCountService,
     QuizService,
     SeedService,
+    EndedSessionsRead,
     StandingsService,
     LeagueTableService,
     LeagueService,

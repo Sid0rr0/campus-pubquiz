@@ -156,6 +156,12 @@ _Avoid_: position, rank (on its own)
 The mean of a team's placings across the ended sessions it played, leaving out the sessions it left. A team with no placing has no average placing. The team page averages every night the team has a placing for; the league averages only the nights that count towards the league (the team answered at least one question).
 _Avoid_: average position, average rank
 
+**Took part**:
+A team took part in a session if it is on the roster, or was kicked or departed and left an answer or bonus award behind. Used by every screen about a session.
+
+**Sessions played**:
+The ended sessions a team took part in. Shown the same in the team directory and on the team page.
+
 **Session result**:
 What one ended session's results mean, computed by a pure module beside Standings from the session's Standings and its stored questions and answers. Per team: placing, whether it left, totals, whether it answered, its correct count, whether it won the night and whether it is the session winner. Per question: how many teams answered, how many were correct and its correct rate. For the session: the participant count and the max points. It never ranks or re-sums; placing, ties and participation stay with Standings.
 

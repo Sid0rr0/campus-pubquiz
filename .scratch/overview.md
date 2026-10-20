@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                            | Title                                                                                                                                                                      | Tickets | Blocked by |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| ended-sessions-read | [One Ended-sessions read for which nights count and who took part](ended-sessions-read/spec.md) | 4 | session-result-module (tickets 03–04 only; 01–02 can start now) |
 | live-results-read | [One live results read in place of the with* helpers](live-results-read/spec.md) | 2 | — |
 | question-kind-derived-lists | [The question type registry derives every per-type list](question-kind-derived-lists/spec.md) | 3 | — |
 

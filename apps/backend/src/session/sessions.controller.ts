@@ -26,6 +26,7 @@ import {
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
 } from '@/game/state/game-state.service';
+import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 import { leagueIdsSchema } from '@/league/league.schema';
 import { mapLeagueErrors } from '@/league/league-http';
 import { LeagueService } from '@/league/league.service';
@@ -135,7 +136,7 @@ export class SessionsController {
       joinCode: snapshot.joinCode,
       quizId,
       quizTitle,
-      name: name ?? quizTitle,
+      name: sessionDisplayName(name, quizTitle),
       status: snapshot.progress.status,
       teamCount: snapshot.teams.length,
       startedAt: (
@@ -214,7 +215,10 @@ export class SessionsController {
       return {
         ...session,
         quizTitle,
-        name: namesByJoinCode.get(session.joinCode) ?? quizTitle,
+        name: sessionDisplayName(
+          namesByJoinCode.get(session.joinCode),
+          quizTitle,
+        ),
         startedAt: (
           startedAtByJoinCode.get(session.joinCode) ?? new Date(0)
         ).toISOString(),

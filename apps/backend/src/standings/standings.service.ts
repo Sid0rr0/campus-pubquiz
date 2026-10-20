@@ -9,6 +9,7 @@ import type {
 } from '@campus-pubquiz/types';
 import { compareTeamNames, rankTeams } from '@campus-pubquiz/types';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import {
   sessionResult,
@@ -57,26 +58,6 @@ function inSessions<Q extends { whereIn(column: string, ids: number[]): Q }>(
     : query;
 }
 
-/**
- * A team took part if it is on the roster or left a mark on the session:
- * kicking or leaving hard-deletes the roster row, but graded answers and
- * bonus awards stay.
- */
-function participantsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
-  return inSessions(knex('game_session_teams'), gameSessionIds)
-    .select('game_session_id', 'team_id')
-    .union([
-      inSessions(knex('answers'), gameSessionIds).select(
-        'game_session_id',
-        'team_id',
-      ),
-      inSessions(knex('bonus_awards'), gameSessionIds).select(
-        'game_session_id',
-        'team_id',
-      ),
-    ]);
-}
-
 // The two totals are pre-aggregated as subqueries (rather than two leftJoins
 // straight off the participants) so a team with several answers *and* several
 // bonus awards doesn't fan out into a cross product that inflates both sums.
@@ -105,9 +86,8 @@ function bonusTotalsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
 }
 
 /**
- * Owns who took part in a session, how teams are ordered and how ties are
- * ranked. A team took part if it is on the roster *or* has an answer or
- * bonus award in the session; only roster teams are ranked. Totals are loaded
+ * Owns how teams are ordered and how ties are ranked. Who took part comes from
+ * the Ended-sessions read; only roster teams are ranked. Totals are loaded
  * in SQL, ordering and tie ranks come from the shared ranking rule.
  */
 @Injectable()
@@ -115,6 +95,7 @@ export class StandingsService {
   constructor(
     @InjectRepository(GameSessionTeam)
     private readonly gameSessionTeams: GameSessionTeamRepository,
+    private readonly endedSessionsRead: EndedSessionsRead,
   ) {}
 
   /** Just the ranked roster — what every live-leaderboard refresh needs. */
@@ -200,13 +181,11 @@ export class StandingsService {
    * departed with graded answers or bonus awards left behind.
    */
   async hasTakenPart(gameSessionId: number, teamId: number): Promise<boolean> {
-    const knex = this.gameSessionTeams.getKnex();
-    const rows = (await knex
-      .from(participantsQuery(knex, [gameSessionId]).as('p'))
-      .where('p.team_id', teamId)
-      .select('p.team_id')
-      .limit(1)) as unknown[];
-    return rows.length > 0;
+    const participants = await this.endedSessionsRead.participants({
+      gameSessionIds: [gameSessionId],
+      teamIds: [teamId],
+    });
+    return participants.length > 0;
   }
 
   async forSession(gameSessionId: number): Promise<SessionStandings> {
@@ -291,11 +270,10 @@ export class StandingsService {
     if (gameSessionIds.length === 0) return results;
     const knex = this.gameSessionTeams.getKnex();
 
-    const endedRows = (await knex('game_sessions')
-      .whereIn('id', [...gameSessionIds])
-      .where('status', 'ended')
-      .select('id')) as { id: number }[];
-    const endedIds = endedRows.map((row) => row.id);
+    const endedRows = (await this.endedSessionsRead
+      .endedSessionsQuery()
+      .whereIn('gs.id', [...gameSessionIds])) as { game_session_id: number }[];
+    const endedIds = endedRows.map((row) => row.game_session_id);
     if (endedIds.length === 0) return results;
 
     const [standings, questionRows, answerRows] = await Promise.all([
@@ -351,7 +329,7 @@ export class StandingsService {
     const bonusTotals = bonusTotalsQuery(knex);
 
     const participantCounts = knex
-      .from(participantsQuery(knex).as('p'))
+      .from(this.endedSessionsRead.participantsQuery().as('p'))
       .groupBy('p.game_session_id')
       .select('p.game_session_id as game_session_id')
       .select(knex.raw('count(*) as participant_count'));
@@ -392,19 +370,15 @@ export class StandingsService {
     if (gameSessionIds.length === 0) return [];
     const knex = this.gameSessionTeams.getKnex();
     const ids = [...gameSessionIds];
-    const participants = participantsQuery(knex, ids);
+    const participants = this.endedSessionsRead.participantsQuery({
+      gameSessionIds: ids,
+    });
     const answerTotals = answerTotalsQuery(knex, ids);
     const bonusTotals = bonusTotalsQuery(knex, ids);
 
     return (await knex
       .from(participants.as('p'))
       .join('teams as t', 't.id', 'p.team_id')
-      .leftJoin('game_session_teams as gst', function joinRoster() {
-        this.on('gst.game_session_id', 'p.game_session_id').andOn(
-          'gst.team_id',
-          'p.team_id',
-        );
-      })
       .leftJoin(answerTotals.as('ans'), function joinAnswers() {
         this.on('ans.game_session_id', 'p.game_session_id').andOn(
           'ans.team_id',
@@ -419,7 +393,7 @@ export class StandingsService {
       })
       .select('p.game_session_id as gameSessionId')
       .select('t.id as teamId', 't.name as teamName')
-      .select(knex.raw('(gst.team_id is not null) as "isOnRoster"'))
+      .select('p.is_on_roster as isOnRoster')
       .select(knex.raw('coalesce(ans.total, 0) as "quizPoints"'))
       .select(knex.raw('coalesce(bonus.total, 0) as "bonusPoints"'))
       .select(

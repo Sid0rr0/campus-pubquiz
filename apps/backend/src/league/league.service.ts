@@ -5,6 +5,7 @@ import type {
   LeaguesListedPayload,
   LeagueView,
 } from '@campus-pubquiz/types';
+import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';
@@ -256,7 +257,7 @@ export class LeagueService {
       sessions: rows.map(({ gameSession }) => ({
         gameSessionId: gameSession.id,
         joinCode: gameSession.joinCode,
-        name: gameSession.name ?? gameSession.quiz.title,
+        name: sessionDisplayName(gameSession.name, gameSession.quiz.title),
         playedAt: gameSession.createdAt.toISOString(),
       })),
     };

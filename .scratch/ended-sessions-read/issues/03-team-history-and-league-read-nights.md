@@ -21,7 +21,7 @@ See the spec's "Interface", "Display name" and "Readers → League / Team histor
 
 Session result tickets 02 and 03 rewrite the team history and league loading. This ticket goes after them so the two don't conflict.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Team history and the team page list the same nights, in the same order, with the same names as before.
 - [ ] Opening one past night on the team page still works only for an ended session the team took part in, including after a kick.

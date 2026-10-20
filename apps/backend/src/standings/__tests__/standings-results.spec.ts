@@ -1,23 +1,19 @@
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import {
   gradable,
   setupAnswerServiceTest,
 } from '@/answer/__tests__/answer-service-test-utils';
-import { StandingsService } from '@/standings/standings.service';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
+import type { StandingsService } from '@/standings/standings.service';
 
 describe('StandingsService.resultsForSessions (Postgres integration)', () => {
   const { state, insertTeam } = setupAnswerServiceTest();
   let standings: StandingsService;
 
   beforeEach(() => {
-    standings = new StandingsService(
-      state.em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-        GameSessionTeam,
-      ),
-    );
+    standings = buildStandingsService(state.em);
   });
 
   async function endSession() {
