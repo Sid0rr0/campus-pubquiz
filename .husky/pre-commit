@@ -1,2 +1,3 @@
 pnpm exec lint-staged
+node scripts/check-scratch-index.mjs
 pnpm typecheck

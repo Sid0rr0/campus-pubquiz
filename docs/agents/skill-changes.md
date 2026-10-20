@@ -46,3 +46,9 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ twice the user's `git checkout integration/…` failed with "already used by worktree" (a merger's and a conflict-fixer's worktree), and `git branch -d` refused merged ticket branches because local `main` hadn't caught up.
 - **implement-spec steps 4 and 11 (2026-10-20)**: implementers no longer run `pnpm e2e`; the orchestrator runs it once on the integration tip in step 11, before pushing and opening the PR.
   _Why:_ every implementer queued on the shared e2e run lock, serialising the run; the journeys only need to pass on the final tip.
+- **implement-spec steps 4, 7 and 10 (2026-10-20 retro)**: ticket branches are `ticket/<spec>/<slug>` and the review fixes go on `ticket/<spec>/review-fixes`; once the user says the PR merged, step 10 checks `gh pr view … --json state` and deletes the run's branches with `git branch -D`, since PRs are squash-merged.
+  _Why:_ a second spec's `git worktree add -b ticket/review-fixes` failed because the first spec's branch was waiting on its unmerged PR; and five merged integration branches were still local, with the user asking "delete the old branches".
+- **implement-spec step 5 (2026-10-20 retro)**: mergers are spawned with `model: "haiku"`.
+  _Why:_ a day of nine runs (~100 subagents) hit the account's weekly limit mid-run; a merger only runs `git merge` and `git commit`.
+- **to-tickets step 3 and new step 6 (2026-10-20 retro)**: check ticket pairs for overlap; add the spec's row to `.scratch/overview.md`, checked by `scripts/check-scratch-index.mjs` (pre-commit and CI).
+  _Why:_ after the architecture review the user had to ask twice for specs to be added to the overview; display-screen-content's ticket 05 implementer found ticket 04 had already built its code.

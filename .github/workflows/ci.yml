@@ -27,6 +27,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Every .scratch spec is in overview.md or done.md
+        run: node scripts/check-scratch-index.mjs
+
       - name: Typecheck
         run: pnpm typecheck
 
