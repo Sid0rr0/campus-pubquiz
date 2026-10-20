@@ -245,7 +245,36 @@ describe('PlayPage — break and reveal', () => {
     ).toHaveClass('text-green');
   });
 
-  it('colors YOUR ANSWER red during reveal when it earned less than full points', () => {
+  it('colors YOUR ANSWER green for a correct verdict even when speed scaling cut its points', () => {
+    renderPhone(FRUIT_REVEAL, {
+      myAnswers: { 1: 'Banana' },
+      myAnswerGrades: {
+        1: { pointsAwarded: 2, gradedAt: GRADED_AT, verdict: 'correct' },
+      },
+      seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
+    });
+
+    expect(
+      screen.getByText('Banana', { selector: 'p.font-display' }),
+    ).toHaveClass('text-green');
+    expect(screen.getByText('2 / 5 points')).toBeInTheDocument();
+  });
+
+  it('colors YOUR ANSWER as partial for a partial verdict', () => {
+    renderPhone(FRUIT_REVEAL, {
+      myAnswers: { 1: 'Bananas' },
+      myAnswerGrades: {
+        1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' },
+      },
+      seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
+    });
+
+    expect(
+      screen.getByText('Bananas', { selector: 'p.font-display' }),
+    ).toHaveClass('text-cyan');
+  });
+
+  it('colors YOUR ANSWER magenta for an incorrect verdict', () => {
     renderPhone(FRUIT_REVEAL, {
       myAnswers: { 1: 'Mango' },
       myAnswerGrades: {
@@ -257,6 +286,29 @@ describe('PlayPage — break and reveal', () => {
     expect(
       screen.getByText('Mango', { selector: 'p.font-display' }),
     ).toHaveClass('text-magenta');
+  });
+
+  it('colors YOUR ANSWER magenta when the team gave no answer', () => {
+    renderPhone(FRUIT_REVEAL, {
+      myAnswers: {},
+      seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
+    });
+
+    expect(
+      screen.getByText('No answer submitted', { selector: 'p.font-display' }),
+    ).toHaveClass('text-magenta');
+  });
+
+  it('colors an ungraded YOUR ANSWER magenta and shows no points line', () => {
+    renderPhone(FRUIT_REVEAL, {
+      myAnswers: { 1: 'Mango' },
+      seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
+    });
+
+    expect(
+      screen.getByText('Mango', { selector: 'p.font-display' }),
+    ).toHaveClass('text-magenta');
+    expect(screen.queryByText(/^\d+ \/ \d+ points$/)).not.toBeInTheDocument();
   });
 
   it('formats YOUR ANSWER for a sort/match question during reveal instead of showing the raw pipe-joined value', () => {
