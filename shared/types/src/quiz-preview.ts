@@ -35,6 +35,51 @@ export interface QuizPreviewStep {
   questionIndex: number | null;
   /** Whether a block ends after this step (the last question's answer closes its block). */
   isBlockEnd: boolean;
+  /** The text the room never sees for this step, shown in the host-only panel. */
+  hostOnly: QuizPreviewHostOnly;
+}
+
+/** The host-only text of one step; null where there is none. */
+export interface QuizPreviewHostOnly {
+  /** The round's note, on its title card, when the round doesn't show it on the big screen. */
+  roundNote: string | null;
+  /** The note of the question the step shows. */
+  questionNote: string | null;
+}
+
+/** A step before its host-only text is attached. */
+type BareStep = Omit<QuizPreviewStep, 'hostOnly'>;
+
+function nonEmpty(text: string | null | undefined): string | null {
+  return text && text.trim() !== '' ? text : null;
+}
+
+/** Attaches each step's host-only text from the round and question it sits at. */
+function withHostOnly(
+  steps: BareStep[],
+  rounds: readonly SeededRound[],
+): QuizPreviewStep[] {
+  return steps.map((step) => {
+    const round = rounds[step.roundIndex];
+    const isTitleCard = step.screen.kind === 'round_title';
+    const questionId =
+      step.questionIndex === null
+        ? undefined
+        : round?.questions[step.questionIndex]?.id;
+    return {
+      ...step,
+      hostOnly: {
+        roundNote:
+          isTitleCard && !round?.showNoteOnScreen
+            ? nonEmpty(round?.note)
+            : null,
+        questionNote:
+          questionId === undefined
+            ? null
+            : nonEmpty(round?.questionNotesById?.[questionId]),
+      },
+    };
+  });
 }
 
 /** What every preview screen reads about the quiz itself. */
@@ -109,10 +154,12 @@ export function buildQuizPreview(
       roundCategories: overview.roundCategories,
       roundAuthors: overview.roundAuthors,
     },
-    steps:
+    steps: withHostOnly(
       mode === 'night'
         ? buildNightSteps(fullSession)
         : buildAnswerAfterQuestionSteps(fullSession, rounds),
+      rounds,
+    ),
   };
 }
 
@@ -135,9 +182,9 @@ function questionPositions(rounds: readonly SeededRound[]) {
  * (Start quiz, then Advance until nothing moves; no grading writes, nothing
  * saved) and only the screens with quiz content are kept.
  */
-function buildNightSteps(fullSession: SessionState): QuizPreviewStep[] {
+function buildNightSteps(fullSession: SessionState): BareStep[] {
   const positions = questionPositions(fullSession.seededGame.rounds);
-  const steps: QuizPreviewStep[] = [];
+  const steps: BareStep[] = [];
   // A quiz with no rounds has nothing to show, not even an overview of nothing.
   if (fullSession.seededGame.rounds.length === 0) return steps;
 
@@ -154,7 +201,7 @@ function buildNightSteps(fullSession: SessionState): QuizPreviewStep[] {
 
   // A block ends at its last reveal: the next screen is neither another
   // reveal nor the next round's reveal title card.
-  const continuesReveals = (step: QuizPreviewStep | undefined) =>
+  const continuesReveals = (step: BareStep | undefined) =>
     step?.screen.kind === 'reveal' || step?.screen.kind === 'reveal_intro';
   return steps.map((step, index) => ({
     ...step,
@@ -190,7 +237,7 @@ function nightStep(
   screen: DisplayScreen,
   session: SessionState,
   positions: ReturnType<typeof questionPositions>,
-): QuizPreviewStep {
+): BareStep {
   const { roundIndex } = session.progress;
   switch (screen.kind) {
     case 'question':
@@ -224,7 +271,7 @@ function nightStep(
 function buildAnswerAfterQuestionSteps(
   fullSession: SessionState,
   rounds: readonly SeededRound[],
-): QuizPreviewStep[] {
+): BareStep[] {
   // The block helpers can't place a round with no questions, so questions are
   // placed in a session without such rounds; title cards come from the full one.
   const questionRoundIndexes = rounds.flatMap((round, index) =>
@@ -236,7 +283,7 @@ function buildAnswerAfterQuestionSteps(
   });
   const context = getGameContext(questionSession);
 
-  const steps: QuizPreviewStep[] = [];
+  const steps: BareStep[] = [];
   rounds.forEach((round, roundIndex) => {
     steps.push({
       screen: displayScreenAt(fullSession, {

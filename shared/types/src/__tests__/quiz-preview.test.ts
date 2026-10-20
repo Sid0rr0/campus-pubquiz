@@ -385,3 +385,84 @@ describe('buildQuizPreview, answer_after_question', () => {
     ]);
   });
 });
+
+describe('buildQuizPreview, host-only text', () => {
+  const NONE = { roundNote: null, questionNote: null };
+
+  it.each(['answer_after_question', 'night'] as const)(
+    'carries a question note on its question and reveal steps (%s)',
+    (mode) => {
+      const rounds = [
+        round(1, [question(1), question(2)], {
+          questionNotesById: { 1: 'Accept "Paris, France"', 2: null },
+        }),
+      ];
+      const { steps } = buildQuizPreview(rounds, mode);
+      const forQuestion = (id: number) =>
+        steps.filter(
+          (step) =>
+            (step.screen.kind === 'question' ||
+              step.screen.kind === 'reveal') &&
+            step.screen.question.id === id,
+        );
+      expect(forQuestion(1)).toHaveLength(2);
+      for (const step of forQuestion(1)) {
+        expect(step.hostOnly).toEqual({
+          roundNote: null,
+          questionNote: 'Accept "Paris, France"',
+        });
+      }
+      for (const step of forQuestion(2)) expect(step.hostOnly).toEqual(NONE);
+    },
+  );
+
+  it.each(['answer_after_question', 'night'] as const)(
+    'carries a round note the big screen does not show on its title card (%s)',
+    (mode) => {
+      const rounds = [
+        round(1, [question(1)], {
+          note: 'Read slowly',
+          showNoteOnScreen: false,
+        }),
+      ];
+      const { steps } = buildQuizPreview(rounds, mode);
+      const title = steps.find((step) => step.screen.kind === 'round_title');
+      expect(title?.hostOnly).toEqual({
+        roundNote: 'Read slowly',
+        questionNote: null,
+      });
+      expect(
+        steps
+          .filter((step) => step.screen.kind !== 'round_title')
+          .every((step) => step.hostOnly.roundNote === null),
+      ).toBe(true);
+    },
+  );
+
+  it.each(['answer_after_question', 'night'] as const)(
+    'carries no host-only round note when the title card shows it (%s)',
+    (mode) => {
+      const rounds = [
+        round(1, [question(1)], {
+          note: 'Read slowly',
+          showNoteOnScreen: true,
+        }),
+      ];
+      const { steps } = buildQuizPreview(rounds, mode);
+      const title = steps.find((step) => step.screen.kind === 'round_title');
+      expect(title?.hostOnly).toEqual(NONE);
+      expect(title?.screen).toMatchObject({ note: 'Read slowly' });
+    },
+  );
+
+  it('carries nothing on steps with neither a note', () => {
+    const { steps } = buildQuizPreview(
+      [round(1, [question(1)])],
+      'answer_after_question',
+    );
+    expect(steps.every((step) => step.hostOnly.roundNote === null)).toBe(true);
+    expect(steps.every((step) => step.hostOnly.questionNote === null)).toBe(
+      true,
+    );
+  });
+});
