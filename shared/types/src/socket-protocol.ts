@@ -16,7 +16,11 @@ import type {
   SubmitAnswerPayload,
   TeamAnswersSyncedPayload,
 } from './answers';
-import type { AwardBonusPayload, BonusAwardedPayload } from './bonus';
+import type {
+  AwardBonusPayload,
+  BonusAwardedPayload,
+  TeamBonusAwardsSyncedPayload,
+} from './bonus';
 import type { RateRoundPayload, SendFeedbackPayload } from './feedback';
 import type {
   SetPlayerCountPayload,
@@ -107,6 +111,7 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED]: PresenterContextPayload;
   [SOCKET_EVENTS.TEAM_ANSWERS_SYNCED]: TeamAnswersSyncedPayload;
   [SOCKET_EVENTS.BONUS_AWARDED]: BonusAwardedPayload;
+  [SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED]: TeamBonusAwardsSyncedPayload;
   [SOCKET_EVENTS.SESSION_CLOSED]: SessionClosedPayload;
   [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
