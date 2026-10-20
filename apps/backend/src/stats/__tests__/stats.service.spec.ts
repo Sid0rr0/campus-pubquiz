@@ -19,6 +19,7 @@ import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { Team } from '@/db/entities/team.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
+import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { StatsService } from '@/stats/stats.service';
@@ -39,6 +40,7 @@ describe('StatsService (Postgres integration)', () => {
           SessionPlayerCount,
         ),
       ),
+      buildEndedSessionsRead(em),
     );
   });
 
@@ -134,18 +136,6 @@ describe('StatsService (Postgres integration)', () => {
     sortBy: 'playedAt' as const,
     sortOrder: 'desc' as const,
   };
-
-  it('only lists sessions with status "ended"', async () => {
-    const { quiz } = await createQuiz('Quiz A', [[1]]);
-    await createSession(quiz, 'LOBBY1', 'lobby');
-    const ended = await createSession(quiz, 'ENDED1', 'ended');
-
-    const result = await statsService.listPlayedSessions(defaultQuery);
-
-    expect(result.items).toHaveLength(1);
-    expect(result.total).toBe(1);
-    expect(result.items[0].gameSessionId).toBe(ended.id);
-  });
 
   it('sums the points of every question across every round for maxPoints', async () => {
     const { quiz } = await createQuiz('Quiz B', [[1, 2], [3]]);
