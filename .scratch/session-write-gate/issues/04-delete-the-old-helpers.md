@@ -8,10 +8,10 @@ See the spec's "Migrating the specs" and "Docs".
 
 **Blocked by:** 02 (Migrate the session-write spec), 03 (Migrate the other ordering specs)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `holdNextCall`, its `HeldCall` type, the queue-run swap and `nextWriteWaiting` are gone from the harness
-- [ ] The harness no longer reaches any private field of the game state service or the Session write
-- [ ] Harness docs describe forcing an overlap with the gate
-- [ ] `docs/architecture.md` updated if it lists the Session write's collaborators
-- [ ] `pnpm typecheck`, `pnpm lint` and the backend tests pass
+- [x] `holdNextCall`, its `HeldCall` type, the queue-run swap and `nextWriteWaiting` are gone from the harness
+- [x] The harness no longer reaches any private field of the game state service or the Session write
+- [x] Harness docs describe forcing an overlap with the gate
+- [x] `docs/architecture.md` updated if it lists the Session write's collaborators (the Write gate line already exists)
+- [x] `pnpm typecheck`, `pnpm lint` and the backend tests pass
