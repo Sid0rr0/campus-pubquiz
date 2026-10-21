@@ -399,6 +399,48 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     });
   });
 
+  describe('a showdown composed during the reveal', () => {
+    // Team A and Team B guess alike, so both are closest and tie for first.
+    const TIED_GUESSES = [
+      { teamName: 'Team A', value: '950' },
+      { teamName: 'Team B', value: '950' },
+      { teamName: 'Team C', value: '2000' },
+    ];
+
+    it('leaves the reveal on air alone, and starts at its first step once the quiz ends', async () => {
+      const game = await startWithGuesses(TIED_GUESSES);
+      await actAll(game, [...TO_REVEAL, 'ADVANCE', 'ADVANCE']); // step 2
+      const before = await game.resync(SOCKET_ROOMS.DISPLAY);
+      const playersBefore = await game.resync(SOCKET_ROOMS.PLAYERS);
+
+      const admin = await game.connectAdmin();
+      await game.gateway.handleCreateShowdownRound(asSocket(admin), {
+        question: 'How many people are in this room?',
+        answer: '42',
+        points: 5,
+      });
+
+      expect(await stepOn(game)).toBe(2);
+      const after = await game.resync(SOCKET_ROOMS.DISPLAY);
+      expect(after.screen).toEqual(before.screen);
+      const playersAfter = await game.resync(SOCKET_ROOMS.PLAYERS);
+      expect(playersAfter.revealQuestions).toEqual(
+        playersBefore.revealQuestions,
+      );
+
+      const ended = await game.act('END_QUIZ');
+      expect(ended.showdownRevealStep).toBe(0);
+      const { socket, teamId } = game.teams[0];
+      await game.gateway.handleSubmitShowdownGuess(asSocket(socket), {
+        showdownRoundId: ended.activeShowdown!.id,
+        teamId,
+        value: '40',
+      });
+      const guessed = await game.snapshot();
+      expect(guessed.activeShowdown?.participants[0].hasGuessed).toBe(true);
+    });
+  });
+
   it('keeps the 5-step reveal walk when the backend restarts mid-reveal', async () => {
     const game = await startWithGuesses(GUESSES);
     await actAll(game, TO_REVEAL);

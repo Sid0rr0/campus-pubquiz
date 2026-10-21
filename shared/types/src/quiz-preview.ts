@@ -327,7 +327,6 @@ function dryRunPress(session: SessionState): SessionState | null {
       };
     case 'reveal_step':
       return move.session;
-    case 'showdown_step':
     case 'showdown_waiting':
     case 'grading_pending':
     case 'blocked':

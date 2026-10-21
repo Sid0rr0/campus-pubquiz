@@ -7,8 +7,6 @@ import {
 import { getLeaderboardRevealStepCount } from './leaderboard-tiebreak';
 import type { AdvanceSlotStep, PreviousState } from './room-views';
 import { getGameContext, type SessionState } from './session-state';
-import { ShowdownGuessesPendingError } from './showdown-guesses-pending-error';
-import { tryStepShowdownReveal } from './showdown-reveal';
 import { stepRevealOnAir, type SteppedRevealKind } from './stepped-reveal';
 
 export type Movement = 'ADVANCE' | 'PREVIOUS';
@@ -30,21 +28,20 @@ export type MoveStep =
   | { kind: 'leaderboard_hide'; progress: GameProgress }
   /** ADVANCE or PREVIOUS under the join overlay: hides it, exactly as the toggle does, and nothing else. Always pressable. */
   | { kind: 'join_overlay_hide'; progress: GameProgress }
-  /** A showdown reveal step; `shouldResolve` when it crosses into the final step. */
-  | {
-      kind: 'showdown_step';
-      session: SessionState;
-      shouldResolve: boolean;
-      isPressable: boolean;
-    }
   /** ADVANCE on a showdown that is still waiting for guesses: pressable, but answers with what is missing. */
   | { kind: 'showdown_waiting' }
-  /** A step of the stepped reveal on air (not the showdown, which has its own step for now); `isFinal` when the press reached its last step. */
+  /**
+   * A press on the stepped reveal on air: `reveal` says which one, `isFinal`
+   * when the press reached its last step. A press at an end of a reveal that
+   * holds is a reveal step too, on the same step: pressable when it is Advance
+   * (a harmless repeat), not when it is Previous (nowhere to go).
+   */
   | {
       kind: 'reveal_step';
       reveal: SteppedRevealKind;
       session: SessionState;
       isFinal: boolean;
+      isPressable: boolean;
     }
   | { kind: 'transition'; progress: GameProgress }
   /**
@@ -155,9 +152,9 @@ function getLeaderboardRevealSteps(session: SessionState): number {
 }
 
 /**
- * What a press would do to the quiz itself, leaderboard aside: the showdown
- * reveal walk once the quiz has ended, then the closest_guess sub-steps, then
- * the state machine.
+ * What a press would do to the quiz itself, leaderboard aside: a step of the
+ * stepped reveal on air (the Stepped reveal module decides which), then the
+ * state machine.
  *
  * The showdown only takes over at status 'ended': the admin can compose the
  * tiebreaker as soon as the final block is graded, well before the quiz
@@ -169,19 +166,29 @@ function planUnderlyingMove(
 ): MoveStep {
   const { progress } = session;
 
-  if (progress.status === 'ended' && session.activeShowdownRound !== null) {
-    const showdownStep = planShowdownStep(session, movement);
-    if (showdownStep) return showdownStep;
-  }
-
   const stepped = stepRevealOnAir(session, movement);
-  if (stepped.kind === 'step') {
-    return {
-      kind: 'reveal_step',
-      reveal: stepped.reveal,
-      session: stepped.session,
-      isFinal: stepped.isFinal,
-    };
+  switch (stepped.kind) {
+    case 'step':
+      return {
+        kind: 'reveal_step',
+        reveal: stepped.reveal,
+        session: stepped.session,
+        isFinal: stepped.isFinal,
+        isPressable: true,
+      };
+    case 'hold':
+      return {
+        kind: 'reveal_step',
+        reveal: stepped.reveal,
+        session,
+        isFinal: false,
+        isPressable: movement === 'ADVANCE',
+      };
+    case 'wait':
+      return { kind: 'showdown_waiting' };
+    case 'fall_through':
+    case 'none':
+      break;
   }
 
   const step = planTransition(session, movement);
@@ -208,29 +215,6 @@ function planGradingGate(session: SessionState, step: MoveStep): MoveStep {
   };
 }
 
-function planShowdownStep(
-  session: SessionState,
-  movement: Movement,
-): MoveStep | null {
-  try {
-    const stepped = tryStepShowdownReveal(session, movement);
-    if (!stepped) return null;
-    return {
-      kind: 'showdown_step',
-      session: stepped.session,
-      shouldResolve: stepped.shouldResolve,
-      // ADVANCE always answers (a repeat on the last step is a harmless
-      // no-op); PREVIOUS only has somewhere to go after the first step.
-      isPressable: movement === 'ADVANCE' || session.showdownRevealStep > 0,
-    };
-  } catch (error) {
-    if (error instanceof ShowdownGuessesPendingError) {
-      return { kind: 'showdown_waiting' };
-    }
-    throw error;
-  }
-}
-
 /** The state-machine action a hide step is carried out as, or `pressed` for any other step. */
 export function effectiveActionOf(
   step: MoveStep,
@@ -243,7 +227,7 @@ export function effectiveActionOf(
 /** Whether pressing the step does something the admin should be offered. The ungraded-answers gate and a showdown waiting for guesses count as pressable — pressing them answers with what is missing. */
 function isStepPressable(step: MoveStep): boolean {
   if (step.kind === 'blocked') return false;
-  return step.kind !== 'showdown_step' || step.isPressable;
+  return step.kind !== 'reveal_step' || step.isPressable;
 }
 
 /** What the Advance slot does on its next press, as the admin view announces it. */

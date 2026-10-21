@@ -235,7 +235,7 @@ describe('Screen projection — players view closest-guess steps', () => {
     ];
     return {
       ...session(rounds, { roundIndex: 0, questionIndex: 1, ...progress }),
-      closestGuessRevealStep: step,
+      revealStep: step,
       closestGuessSummaries: { 10: summary, 11: summary },
     };
   }

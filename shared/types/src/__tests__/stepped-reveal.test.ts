@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SESSION_SETTINGS } from '../session-settings';
-import { freshSessionState } from '../session-state';
+import {
+  freshSessionState,
+  LOBBY_PROGRESS,
+  type ActiveShowdownRoundState,
+} from '../session-state';
 import {
   isFinalStep,
   revealOnAir,
@@ -125,11 +129,85 @@ describe('reading a reveal step', () => {
         rounds: [],
         settings: DEFAULT_SESSION_SETTINGS,
       }),
-      closestGuessRevealStep: 3,
+      revealStep: 3,
     };
     expect(revealOnAir(session)).toBeNull();
     expect(revealStepOf(session, 'closest_guess')).toBe(0);
+    expect(revealStepOf(session, 'showdown')).toBe(0);
     expect(stepRevealOnAir(session, 'ADVANCE')).toEqual({ kind: 'none' });
+  });
+
+  describe('the showdown', () => {
+    const round = (guesses: (string | null)[]): ActiveShowdownRoundState => ({
+      id: 1,
+      question: 'How many?',
+      answer: '42',
+      participants: guesses.map((guess, seatIndex) => ({
+        teamId: seatIndex + 1,
+        teamName: `Team ${seatIndex + 1}`,
+        seatIndex,
+        guess,
+      })),
+      winnerTeamId: null,
+      isTie: false,
+      resolved: false,
+    });
+    const ended = (guesses: (string | null)[], revealStep: number) => ({
+      ...freshSessionState(
+        {
+          quizId: 1,
+          gameSessionId: 1,
+          joinCode: 'ABCDEF',
+          rounds: [],
+          settings: DEFAULT_SESSION_SETTINGS,
+        },
+        { ...LOBBY_PROGRESS, status: 'ended' as const },
+      ),
+      activeShowdownRound: round(guesses),
+      revealStep,
+    });
+
+    it('is on air once the quiz has ended, with one step per seat plus a start and a final step', () => {
+      expect(revealOnAir(ended(['1', '2'], 1))).toMatchObject({
+        reveal: 'showdown',
+        step: 1,
+        descriptor: { stepCount: 4, atStart: 'hold', atEnd: 'hold' },
+      });
+      expect(revealStepOf(ended(['1', '2'], 1), 'showdown')).toBe(1);
+      expect(revealStepOf(ended(['1', '2'], 1), 'closest_guess')).toBe(0);
+    });
+
+    it('is not on air before the quiz has ended, however the counter stands', () => {
+      const session = {
+        ...ended(['1', '2'], 2),
+        progress: LOBBY_PROGRESS,
+      };
+      expect(revealOnAir(session)).toBeNull();
+      expect(revealStepOf(session, 'showdown')).toBe(0);
+    });
+
+    it('waits on the first Advance while a seat has not guessed', () => {
+      expect(stepRevealOnAir(ended(['1', null], 0), 'ADVANCE')).toEqual({
+        kind: 'wait',
+        reveal: 'showdown',
+      });
+    });
+
+    it('reaches the final step on the Advance after the last seat and holds there', () => {
+      expect(stepRevealOnAir(ended(['1', '2'], 2), 'ADVANCE')).toMatchObject({
+        kind: 'step',
+        reveal: 'showdown',
+        isFinal: true,
+      });
+      expect(stepRevealOnAir(ended(['1', '2'], 3), 'ADVANCE')).toEqual({
+        kind: 'hold',
+        reveal: 'showdown',
+      });
+      expect(stepRevealOnAir(ended(['1', '2'], 0), 'PREVIOUS')).toEqual({
+        kind: 'hold',
+        reveal: 'showdown',
+      });
+    });
   });
 });
 

@@ -13,7 +13,7 @@ import { projectScreen } from '../screen-projection';
 import { DEFAULT_SESSION_SETTINGS } from '../session-settings';
 import { freshSessionState, type SessionState } from '../session-state';
 import { SOCKET_ROOMS } from '../socket-events';
-import { tryStepShowdownReveal } from '../showdown-reveal';
+import { revealStepOf, stepRevealOnAir } from '../stepped-reveal';
 import { lobby } from './game-state-fixtures';
 
 /** A block spanning two rounds, a plain block, a kahoot round, and a last block; with the round overview on. */
@@ -251,16 +251,16 @@ describe('screenPositionOf', () => {
       'ADVANCE',
       'PREVIOUS',
     ] as const) {
-      const stepped = tryStepShowdownReveal(current, action);
-      expect(stepped).not.toBeNull();
-      current = stepped!.session;
+      const stepped = stepRevealOnAir(current, action);
+      expect(stepped.kind).toBe('step');
+      if (stepped.kind === 'step') current = stepped.session;
       expect(positionOnDisplay(current)).toBe(before);
     }
-    expect(current.showdownRevealStep).toBeGreaterThan(0);
+    expect(revealStepOf(current, 'showdown')).toBeGreaterThan(0);
   });
 
   // Closest-guess reveal steps need no test of their own: they only move
-  // `closestGuessRevealStep`, which is not a GameProgress field, and the
+  // `revealStep`, which is not a GameProgress field, and the
   // position is a function of GameProgress alone, so it can't move for them
   // by construction.
 });

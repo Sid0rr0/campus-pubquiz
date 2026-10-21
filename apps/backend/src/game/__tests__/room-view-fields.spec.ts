@@ -118,10 +118,8 @@ describe('room view fields', () => {
       },
     };
     const at = (step: number) =>
-      projectScreen(
-        { ...guessed, closestGuessRevealStep: step },
-        SOCKET_ROOMS.DISPLAY,
-      ).screenKey;
+      projectScreen({ ...guessed, revealStep: step }, SOCKET_ROOMS.DISPLAY)
+        .screenKey;
 
     expect(at(1)).not.toBe(at(0));
   });

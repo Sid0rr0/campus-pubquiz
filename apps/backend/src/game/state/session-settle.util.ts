@@ -111,15 +111,16 @@ export function settleSession({
     ),
     // Any action that leaves the same reveal on air (an overlay, a rank, a
     // media action) keeps its step; only a different reveal restarts it.
-    closestGuessRevealStep:
+    revealStep:
       step.kind !== 'place' && isSameRevealOnAir(session.progress, progress)
-        ? session.closestGuessRevealStep
+        ? session.revealStep
         : revealStartStep(session, progress, action),
   };
 }
 
-/** Whether `next` leaves the reveal question that `current` has on air still on air. */
+/** Whether `next` leaves the reveal that `current` has on air still on air: the same reveal question, or the ended screen (the showdown). */
 function isSameRevealOnAir(current: GameProgress, next: GameProgress): boolean {
+  if (current.status === 'ended' && next.status === 'ended') return true;
   return (
     current.status === 'reveal' &&
     next.status === 'reveal' &&

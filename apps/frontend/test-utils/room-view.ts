@@ -258,12 +258,14 @@ export function buildSessionState(
     leaderboard,
     leaderboardRevealCount: description.leaderboardRevealCount ?? 0,
     priorStandings: buildLeaderboard(description.priorStandings ?? []),
-    closestGuessRevealStep: description.closestGuessRevealStep ?? 0,
+    revealStep:
+      description.showdown?.revealStep ??
+      description.closestGuessRevealStep ??
+      0,
     verdictTallies: description.verdictTallies ?? {},
     closestGuessSummaries: closestGuessSummariesOf(roundDescriptions, rounds),
     answeredTeamIdsByQuestion: description.answeredTeams ?? {},
     activeShowdownRound: description.showdown?.round ?? null,
-    showdownRevealStep: description.showdown?.revealStep ?? 0,
     leagueTop: description.leagueTop ?? null,
   };
   return { ...state, ...buildPhaseTimer(state, description.phaseTimer) };

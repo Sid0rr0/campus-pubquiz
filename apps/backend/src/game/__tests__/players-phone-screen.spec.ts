@@ -241,14 +241,14 @@ describe('Screen projection — the players view phone screen', () => {
       phoneScreen({
         ...ended,
         activeShowdownRound: SHOWDOWN,
-        showdownRevealStep: 0,
+        revealStep: 0,
       }),
     ).toEqual({ kind: 'showdown_guessing' });
     expect(
       phoneScreen({
         ...ended,
         activeShowdownRound: SHOWDOWN,
-        showdownRevealStep: 1,
+        revealStep: 1,
       }),
     ).toEqual({ kind: 'showdown_reveal' });
   });

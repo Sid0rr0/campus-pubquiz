@@ -226,7 +226,7 @@ describe('Screen projection — the Display screen', () => {
           isTie: false,
           resolved: false,
         },
-        showdownRevealStep: 1,
+        revealStep: 1,
       },
     );
 

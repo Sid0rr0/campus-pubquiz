@@ -14,7 +14,7 @@ The Move plan's `showdown_step` becomes `reveal_step`. `showdown_waiting` stays.
 
 **Blocked by:** 02 (The Stepped reveal module, with the closest-guess reveal on it)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The showdown interceptor and its own step count are gone. The Move plan has no `showdown_step`. The session has only `revealStep`.
 - [ ] The existing showdown reveal and showdown socket gateway specs pass unchanged:

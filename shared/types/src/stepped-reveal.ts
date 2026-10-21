@@ -1,9 +1,10 @@
 import { closestGuessRevealDescriptor } from './closest-guess-reveal';
 import type { GameAction, GameProgress } from './game-state-types';
 import type { SessionState } from './session-state';
+import { showdownRevealDescriptor } from './showdown-reveal';
 
 /** The reveals that walk one line per Advance. */
-export type SteppedRevealKind = 'closest_guess';
+export type SteppedRevealKind = 'closest_guess' | 'showdown';
 
 /** What happens on a press past an end of a reveal: stay put, or let the state machine move on. */
 export type RevealEnd = 'hold' | 'fall_through';
@@ -77,6 +78,14 @@ function descriptorOnAir(
   session: SessionState,
   progress: GameProgress,
 ): { reveal: SteppedRevealKind; descriptor: SteppedRevealDescriptor } | null {
+  // The showdown only takes over once the quiz has ended: it can be composed
+  // well before, while the block's own reveal is still on air.
+  if (progress.status === 'ended' && session.activeShowdownRound !== null) {
+    return {
+      reveal: 'showdown',
+      descriptor: showdownRevealDescriptor(session.activeShowdownRound),
+    };
+  }
   const closestGuess = closestGuessRevealDescriptor(session, progress);
   return closestGuess
     ? { reveal: 'closest_guess', descriptor: closestGuess }
@@ -87,7 +96,7 @@ function descriptorOnAir(
 export function revealOnAir(session: SessionState): RevealOnAir | null {
   const onAir = descriptorOnAir(session, session.progress);
   if (!onAir) return null;
-  return { ...onAir, step: session.closestGuessRevealStep };
+  return { ...onAir, step: session.revealStep };
 }
 
 /** The step of reveal `reveal`: the counter while it is on air, 0 otherwise. */
@@ -132,7 +141,7 @@ export function stepRevealOnAir(
   return {
     kind: 'step',
     reveal: onAir.reveal,
-    session: { ...session, closestGuessRevealStep: move.step },
+    session: { ...session, revealStep: move.step },
     isFinal: move.isFinal,
   };
 }

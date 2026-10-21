@@ -31,6 +31,7 @@ import {
   type SessionState,
 } from './session-state';
 import { buildActiveShowdownView } from './showdown-reveal';
+import { revealStepOf } from './stepped-reveal';
 
 /**
  * The phaseStartedAt/phaseElapsedMs pair for whatever timed phase is
@@ -168,9 +169,9 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,
-      session.showdownRevealStep,
+      revealStepOf(session, 'showdown'),
     ),
-    showdownRevealStep: session.showdownRevealStep,
+    showdownRevealStep: revealStepOf(session, 'showdown'),
   };
 }
 
