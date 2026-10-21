@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                       | Title                                                                                     | Tickets | Blocked by |
 | -------------------------- | ----------------------------------------------------------------------------------------- | ------- | ---------- |
-| ended-night-read           | [One ended-night read for the stats page and the Team page](ended-night-read/spec.md)     | 2       | —          |
 | live-session-summary       | [The live session summary is built where the session lives](live-session-summary/spec.md) | 2       | —          |
 | admin-control-availability | [Control availability comes with the admin view](admin-control-availability/spec.md)      | 2       | —          |
 | touched-scores             | [Each change says whether it touched scores](touched-scores/spec.md)                      | 2       | —          |
