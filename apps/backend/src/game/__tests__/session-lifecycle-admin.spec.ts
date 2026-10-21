@@ -108,6 +108,48 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
     });
   });
 
+  describe('renameHeldSession (a stats rename reaching the picker)', () => {
+    it('shows the new name on the next list, and the quiz title once cleared', async () => {
+      const gameSessionId = game.gameState.getGameSessionId(game.joinCode);
+
+      await game.gameState.renameHeldSession(gameSessionId, 'Week 3 Social');
+      expect(game.gameState.listSessions()[0]).toMatchObject({
+        quizTitle: 'Real Store Quiz',
+        name: 'Week 3 Social',
+      });
+
+      await game.gameState.renameHeldSession(gameSessionId, null);
+      expect(game.gameState.listSessions()[0]).toMatchObject({
+        name: 'Real Store Quiz',
+      });
+    });
+
+    it('leaves status and team count alone', async () => {
+      await game.joinTeam('The Quizzards');
+      const before = game.gameState.listSessions()[0];
+
+      await game.gameState.renameHeldSession(
+        game.gameState.getGameSessionId(game.joinCode),
+        'Renamed',
+      );
+
+      expect(game.gameState.listSessions()[0]).toEqual({
+        ...before,
+        name: 'Renamed',
+      });
+    });
+
+    it('resolves for a session that is not held, changing nothing', async () => {
+      const before = game.gameState.listSessions();
+
+      await expect(
+        game.gameState.renameHeldSession(999999, 'Gone'),
+      ).resolves.toBeUndefined();
+
+      expect(game.gameState.listSessions()).toEqual(before);
+    });
+  });
+
   describe('createSession', () => {
     it('returns the quiz title as the name when none was given, and the row creation time', async () => {
       const created = await createOtherSession();

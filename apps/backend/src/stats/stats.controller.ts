@@ -19,6 +19,7 @@ import type {
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
+import { GameStateService } from '@/game/state/game-state.service';
 import { StatsService } from '@/stats/stats.service';
 import {
   feedbackTrendsQuerySchema,
@@ -30,7 +31,10 @@ import {
 @Controller('stats')
 @UseGuards(SessionGuard, RolesGuard)
 export class StatsController {
-  constructor(private readonly statsService: StatsService) {}
+  constructor(
+    private readonly statsService: StatsService,
+    private readonly gameState: GameStateService,
+  ) {}
 
   @Get('sessions')
   async listPlayedSessions(
@@ -88,6 +92,10 @@ export class StatsController {
         parsed.error.issues[0]?.message ?? 'Invalid name',
       );
     }
-    await this.statsService.renameSession(id, parsed.data.name);
+    const customName = await this.statsService.renameSession(
+      id,
+      parsed.data.name,
+    );
+    await this.gameState.renameHeldSession(id, customName);
   }
 }

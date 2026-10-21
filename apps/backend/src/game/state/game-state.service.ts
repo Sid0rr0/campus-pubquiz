@@ -215,6 +215,40 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
+   * Updates the held session's custom name after the stats page renamed (or
+   * cleared) the ended session's row, so the pickers show it straight away.
+   * Does nothing when the session isn't held (closed, or evicted). An ordinary
+   * write that doesn't touch scores and broadcasts nothing.
+   */
+  async renameHeldSession(
+    gameSessionId: number,
+    customName: string | null,
+  ): Promise<void> {
+    const held = this.sessionWrite
+      .list()
+      .find(({ seededGame }) => seededGame.gameSessionId === gameSessionId);
+    if (!held) return;
+    const { joinCode } = held.seededGame;
+    try {
+      await this.sessionWrite.write(
+        joinCode,
+        (session) =>
+          Promise.resolve({
+            session: {
+              ...session,
+              seededGame: { ...session.seededGame, customName },
+            },
+            outcome: undefined,
+          }),
+        NOT_TOUCHING_SCORES,
+      );
+    } catch (error) {
+      // Closed between the lookup and the write: nothing left to update.
+      if (this.sessionWrite.has(joinCode)) throw error;
+    }
+  }
+
+  /**
    * Resolves once every session write queued for `joinCode` has finished.
    * Only observes the queue; lets a test assert after in-flight writes land.
    */
