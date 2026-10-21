@@ -27,8 +27,8 @@ export interface FunFactBonusAward {
 
 /**
  * The session's stored answers and bonus awards that fun facts are built
- * from. A cache filled with the standings (like verdictTallies), so the
- * display view stays synchronous.
+ * from, and the reveal's teams-correct count reads it too. A cache filled
+ * with the standings, so the display view stays synchronous.
  */
 export interface FunFactData {
   answers: FunFactAnswer[];
