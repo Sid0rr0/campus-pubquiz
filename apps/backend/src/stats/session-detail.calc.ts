@@ -52,6 +52,8 @@ export interface SessionDetailQuestionInputRow {
   orderIndex: number;
   prompt: string;
   type: QuestionType;
+  /** The correct answer, already worded for people. */
+  answer: string;
   points: number;
 }
 
@@ -316,6 +318,7 @@ export function computeSessionDetail(
         orderIndex: question.orderIndex,
         prompt: question.prompt,
         type: question.type,
+        answer: question.answer,
         points: question.points,
         answeredCount: questionResult?.answeredCount ?? 0,
         correctCount: questionResult?.correctCount ?? 0,

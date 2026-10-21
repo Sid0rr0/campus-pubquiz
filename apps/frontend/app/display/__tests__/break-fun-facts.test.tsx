@@ -18,6 +18,7 @@ const QUESTION = {
   roundNumber: 2,
   questionNumberInRound: 3,
   prompt: 'Which river runs through Cairo?',
+  answer: 'The Nile',
 };
 
 const BONUS_FACT: FunFact = {
@@ -133,22 +134,32 @@ describe('BreakIntroScreen — fun facts', () => {
         responseMs: 2430,
         question: QUESTION,
       },
-      ['Quizzy Rascals', '2.4 s', 'Round 2 · Q3'],
+      ['Quizzy Rascals', '2.4 s', 'Round 2 · Q3', 'Answer: The Nile'],
     ],
     [
       'toughest_question',
       { kind: 'toughest_question', correctRate: 0.12, question: QUESTION },
-      ['Round 2 · Q3', '12%', 'Which river runs through Cairo?'],
+      [
+        'Round 2 · Q3',
+        '12%',
+        'Which river runs through Cairo?',
+        'Answer: The Nile',
+      ],
     ],
     [
       'room_split',
       { kind: 'room_split', correctRate: 0.5, question: QUESTION },
-      ['Round 2 · Q3', '50%', 'Which river runs through Cairo?'],
+      [
+        'Round 2 · Q3',
+        '50%',
+        'Which river runs through Cairo?',
+        'Answer: The Nile',
+      ],
     ],
     [
       'nobody_got_it',
       { kind: 'nobody_got_it', question: QUESTION },
-      ['Nobody got it', 'Round 2 · Q3'],
+      ['Nobody got it', 'Round 2 · Q3', 'Answer: The Nile'],
     ],
     [
       'clean_sweep',

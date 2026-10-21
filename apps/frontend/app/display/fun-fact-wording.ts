@@ -10,6 +10,8 @@ export interface FunFactLine {
   detail: string;
   /** The question's text, when the fact is about one question. */
   prompt?: string;
+  /** That question's correct answer: rounds can repeat a prompt over different media. */
+  answer?: string;
 }
 
 const MS_PER_SECOND = 1000;
@@ -43,24 +45,28 @@ export function describeFunFactLine(fact: FunFact): FunFactLine {
         headline: fact.teamName,
         detail: `Fastest correct answer: ${(fact.responseMs / MS_PER_SECOND).toFixed(1)} s on ${questionLabel(fact.question)}`,
         prompt: fact.question.prompt,
+        answer: fact.question.answer,
       };
     case 'toughest_question':
       return {
         headline: questionLabel(fact.question),
         detail: `Toughest question: only ${percent(fact.correctRate)} got it right`,
         prompt: fact.question.prompt,
+        answer: fact.question.answer,
       };
     case 'room_split':
       return {
         headline: questionLabel(fact.question),
         detail: `The room was split: ${percent(fact.correctRate)} got it right`,
         prompt: fact.question.prompt,
+        answer: fact.question.answer,
       };
     case 'nobody_got_it':
       return {
         headline: 'Nobody got it',
         detail: questionLabel(fact.question),
         prompt: fact.question.prompt,
+        answer: fact.question.answer,
       };
     case 'clean_sweep':
       return {

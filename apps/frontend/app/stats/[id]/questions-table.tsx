@@ -75,6 +75,15 @@ export function QuestionsTable({
             );
           },
         }),
+        helper.accessor('answer', {
+          header: 'Answer',
+          enableSorting: false,
+          cell: (context) => (
+            <span title={context.getValue()} className="line-clamp-2">
+              {context.getValue()}
+            </span>
+          ),
+        }),
         helper.accessor('points', { header: 'Points', sortFn: sortFn_basic }),
         helper.accessor('answeredCount', {
           header: 'Answered',

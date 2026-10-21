@@ -425,12 +425,12 @@ got to, and a mute that is already on applies to media that mounts later.
 
 **Fields that belong to one room's view:**
 
-| View                            | Fields                                                                                                                                                                                                                                |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                             |
+| View                            | Fields                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                                                                                                                                                                                                                                 |
 | Display (`DisplayStatePayload`) | `screen` (the Display screen), `screenPosition` (the Screen position: grows on every forward move through the quiz, falls on Previous, unmoved by overlays and steps within a screen; the admin and players views don't carry it), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
-| Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                                            |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                                                                      |
+| Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                                                                                                                                                                                                                                                |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                                                                                                                                                                                                                                                                          |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -502,7 +502,11 @@ module, in this order, and skips a fact with no data:
 | `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted           |
 | `bonus_awards_so_far`    | `counts: { category, count }[]`      | Positive bonus awards per category, in category order (`shot`, `selfie`, `custom`)                                                                              |
 
-`question` is `{ questionId, roundNumber, questionNumberInRound, prompt }`. The
+`question` is `{ questionId, roundNumber, questionNumberInRound, prompt, answer }`;
+`answer` is the current answer key's correct answer worded by `formatAnswer` (a
+round can repeat one prompt over different media, so the prompt alone may not
+say which question it was). `/display` shows it as an "Answer: …" line under the
+prompt, cut off after two lines. The
 correct rate is the stats page's definition: `correct` counts fully, `partial`
 as its points' share of the question's points, over every roster team. A
 `closest_guess` question has a single winner by design (ties aside), so its
@@ -1446,6 +1450,12 @@ for the rest of the flow.
 `getSessionDetail`) is the deep dive for one: standings, a rounds table,
 a questions table and highlight tiles. All of it is computed per request from
 the stored rows, never cached.
+
+Each question row carries `answer`, the correct answer worded by `formatAnswer`,
+since a round can repeat one prompt over different media. The questions table
+shows it as the **Answer** column and the **Hardest question** tile as an
+"Answer: …" line under the prompt; both cut it off after two lines, with the
+full text on hover.
 
 **Player counts** show how many people came. They are read from the
 per-session player counts (the table the teams' reports are stored in), joined

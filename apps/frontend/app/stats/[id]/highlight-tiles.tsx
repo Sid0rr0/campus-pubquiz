@@ -10,10 +10,13 @@ export function StatTile({
   label,
   value,
   detail,
+  answer,
 }: {
   label: string;
   value: string;
   detail?: string;
+  /** The correct answer of the question the tile is about. */
+  answer?: string;
 }) {
   return (
     <div className="rounded-xl border border-foreground/15 p-4">
@@ -22,6 +25,14 @@ export function StatTile({
       </p>
       <p className="mt-1 text-xl font-extrabold">{value}</p>
       {detail && <p className="mt-0.5 text-sm text-foreground/60">{detail}</p>}
+      {answer && (
+        <p
+          title={answer}
+          className="mt-0.5 line-clamp-2 text-sm text-foreground/60"
+        >
+          Answer: <span className="font-bold">{answer}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -82,6 +93,7 @@ export function HighlightTiles({ data }: HighlightTilesProps) {
         label="Hardest question"
         value={formatPercent(hardestQuestion?.correctRate, ' correct')}
         detail={hardestQuestion?.prompt}
+        answer={hardestQuestion?.answer}
       />
       <StatTile
         label="Hardest round"

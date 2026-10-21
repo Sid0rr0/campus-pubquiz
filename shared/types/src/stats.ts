@@ -114,6 +114,8 @@ export interface SessionDetailQuestionRow {
   orderIndex: number;
   prompt: string;
   type: string;
+  /** The correct answer as people read it: rounds can repeat a prompt over different media. */
+  answer: string;
   points: number;
   answeredCount: number;
   correctCount: number;

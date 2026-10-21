@@ -563,6 +563,29 @@ describe('StatsService (Postgres integration)', () => {
       expect(unnamedResult.name).toBe('Quiz N');
     });
 
+    it('words each question’s correct answer the way the screens show it', async () => {
+      const { quiz, questions } = await createQuiz('Quiz W', [[1]]);
+      const round = questions[0][0].round;
+      em.create(Question, {
+        round,
+        orderIndex: 1,
+        type: 'sort',
+        prompt: 'Order the planets',
+        answer: 'Mercury|Venus|Earth',
+        payload: { options: ['Venus', 'Earth', 'Mercury'] },
+        points: 1,
+      });
+      await em.flush();
+      const session = await createSession(quiz, 'WORDED1', 'ended');
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.questions.map((q) => q.answer)).toEqual([
+        'answer',
+        'Mercury → Venus → Earth',
+      ]);
+    });
+
     it('still counts a team that was kicked/left after answering, so correctRate cannot exceed 100%', async () => {
       const { quiz, questions } = await createQuiz('Quiz H', [[10]]);
       const session = await createSession(quiz, 'KICKED1', 'ended');

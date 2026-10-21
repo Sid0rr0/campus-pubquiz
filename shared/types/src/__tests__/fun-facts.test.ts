@@ -41,7 +41,7 @@ function roundsOf(specs: RoundSpec[]): SeededRound[] {
           ? ('closest_guess' as const)
           : ('free_text' as const),
         prompt: `Question ${id}?`,
-        answer: 'x',
+        answer: `Answer ${id}`,
         points: 1000,
       };
     }),
@@ -164,6 +164,7 @@ describe('describeFunFacts', () => {
           roundNumber: 2,
           questionNumberInRound: 1,
           prompt: 'Question 2?',
+          answer: 'Answer 2',
         },
       });
     });
@@ -228,6 +229,7 @@ describe('describeFunFacts', () => {
           roundNumber: 1,
           questionNumberInRound: 2,
           prompt: 'Question 2?',
+          answer: 'Answer 2',
         },
       });
     });
@@ -250,6 +252,29 @@ describe('describeFunFacts', () => {
         (fact) => fact.kind === 'toughest_question',
       );
       expect(toughest).toMatchObject({ correctRate: 0.375 });
+    });
+
+    it('words the answer the way the screens show it', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(1, 1, 'incorrect'),
+          answer(2, 0, 'correct'),
+          answer(2, 1, 'correct'),
+        ],
+      });
+      session.seededGame.rounds[0].questions[0] = {
+        ...session.seededGame.rounds[0].questions[0],
+        type: 'sort',
+        answer: 'Mercury|Venus|Earth',
+      };
+
+      const toughest = describeFunFacts(session).find(
+        (fact) => fact.kind === 'toughest_question',
+      );
+      expect(toughest).toMatchObject({
+        question: { questionId: 1, answer: 'Mercury → Venus → Earth' },
+      });
     });
 
     it('leaves a partial-credit question nobody fully got right to nobody-got-it', () => {

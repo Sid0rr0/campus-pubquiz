@@ -84,6 +84,7 @@ const DETAIL: SessionDetailStats = {
       orderIndex: 0,
       prompt: 'Capital of France?',
       type: 'free_text',
+      answer: 'Paris',
       points: 5,
       answeredCount: 2,
       correctCount: 2,
@@ -96,6 +97,7 @@ const DETAIL: SessionDetailStats = {
       orderIndex: 1,
       prompt: 'Capital of the Moon?',
       type: 'free_text',
+      answer: 'Tranquility Base',
       points: 5,
       answeredCount: 2,
       correctCount: 0,
@@ -143,6 +145,14 @@ describe('SessionDetailPanel', () => {
     expect(
       screen.getByRole('link', { name: '← Back to stats' }),
     ).toHaveAttribute('href', '/stats');
+  });
+
+  it('shows the hardest question with its answer, which tells repeated prompts apart', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    const tile = (await screen.findByText('Hardest question')).parentElement!;
+    expect(tile).toHaveTextContent('Capital of the Moon?');
+    expect(tile).toHaveTextContent('Answer: Tranquility Base');
   });
 
   it('shows the total players with how many teams reported, and the average team size', async () => {

@@ -12,9 +12,11 @@ import {
   type QuestionType,
   type SessionDetailFeedbackTopic,
   type SessionDetailStats,
+  formatAnswer,
   type SessionSettings,
   type Verdict,
 } from '@campus-pubquiz/types';
+import { readQuestionPayload } from '@/db/question-payload';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
@@ -80,6 +82,8 @@ interface SessionQuestionRow {
   orderIndex: number;
   prompt: string;
   type: QuestionType;
+  answer: string;
+  payload: unknown;
   points: string | number;
 }
 
@@ -245,6 +249,8 @@ export class StatsService {
         'q.order_index as orderIndex',
         'q.prompt',
         'q.type',
+        'q.answer',
+        'q.payload',
         'q.points',
       )) as SessionQuestionRow[];
 
@@ -299,6 +305,14 @@ export class StatsService {
         orderIndex: q.orderIndex,
         prompt: q.prompt,
         type: q.type,
+        answer: formatAnswer(q.answer, {
+          type: q.type,
+          options: readQuestionPayload({
+            id: q.questionId,
+            type: q.type,
+            payload: q.payload,
+          }).options,
+        }),
         points: Number(q.points),
       })),
       answers: answers.map((a) => ({

@@ -12,6 +12,7 @@ function question(
     orderIndex: 0,
     prompt: 'Name the band',
     type: 'free_text',
+    answer: 'Queen',
     points: 2,
     answeredCount: 4,
     correctCount: 3,
@@ -55,5 +56,24 @@ describe('QuestionsTable correct rate column', () => {
     expect(within(row).getByText('—')).toBeInTheDocument();
     expect(within(row).getByText('5')).toBeInTheDocument();
     expect(within(row).queryByText('0%')).not.toBeInTheDocument();
+  });
+});
+
+describe('QuestionsTable answer column', () => {
+  it('shows each question with its correct answer, so repeated prompts are told apart', () => {
+    render(
+      <QuestionsTable
+        questions={[
+          question({ questionId: 1, answer: 'Queen' }),
+          question({ questionId: 2, answer: 'ABBA' }),
+        ]}
+        allCorrectQuestionIds={[]}
+        noneCorrectQuestionIds={[]}
+      />,
+    );
+
+    const [first, second] = screen.getAllByText('Name the band');
+    expect(within(first.closest('tr')!).getByText('Queen')).toBeInTheDocument();
+    expect(within(second.closest('tr')!).getByText('ABBA')).toBeInTheDocument();
   });
 });

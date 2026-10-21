@@ -47,7 +47,9 @@ export function FunFactRotator({ funFacts }: FunFactRotatorProps) {
   if (!isStarted || factCount === 0) return null;
   // The list can shrink between broadcasts; wrap rather than index past its end.
   const position = index % factCount;
-  const { headline, detail, prompt } = describeFunFactLine(funFacts[position]);
+  const { headline, detail, prompt, answer } = describeFunFactLine(
+    funFacts[position],
+  );
 
   return (
     <div
@@ -62,6 +64,11 @@ export function FunFactRotator({ funFacts }: FunFactRotatorProps) {
       {prompt && (
         <p className="text-balance text-display-lg text-foreground/55">
           {prompt}
+        </p>
+      )}
+      {answer && (
+        <p className="line-clamp-2 text-balance text-display-lg text-foreground/70">
+          Answer: <span className="font-bold">{answer}</span>
         </p>
       )}
     </div>

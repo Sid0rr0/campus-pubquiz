@@ -1,6 +1,6 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
-import type { Verdict } from './answer-kind';
+import { formatAnswer, type Verdict } from './answer-kind';
 import { answerCredit } from './question-correct-rate';
 import { QUESTION_KINDS } from './question-kind';
 import { compareTeamNames } from './ranking-rule';
@@ -40,6 +40,12 @@ export interface FunFactQuestion {
   roundNumber: number;
   questionNumberInRound: number;
   prompt: string;
+  /**
+   * The current answer key's correct answer, as people read it. Rounds can
+   * repeat one prompt over different media, so the prompt alone may not say
+   * which question this is.
+   */
+  answer: string;
 }
 
 /** How many positive bonus awards a category has received. */
@@ -92,6 +98,7 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
       roundNumber: roundIndex + 1,
       questionNumberInRound: questionIndex + 1,
       prompt: question.prompt,
+      answer: formatAnswer(question.answer, question),
       isKahoot: round.kahootMode ?? false,
       isClosestGuess:
         QUESTION_KINDS[question.type].revealKind === 'closest_guess',
@@ -116,8 +123,9 @@ function toFunFactQuestion({
   roundNumber,
   questionNumberInRound,
   prompt,
+  answer,
 }: RevealedQuestion): FunFactQuestion {
-  return { questionId, roundNumber, questionNumberInRound, prompt };
+  return { questionId, roundNumber, questionNumberInRound, prompt, answer };
 }
 
 function fastestCorrectAnswer(
