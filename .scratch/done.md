@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| control-round-points            | [The control panel's teams table reads rounds from the snapshot](control-round-points/spec.md)                                                                             | 1       |
 | stepped-reveal                  | [One stepped reveal for the showdown and the closest guess](stepped-reveal/spec.md)                                                                                        | 3       |
 | display-screen-sounds           | [Big-screen sounds follow the Display screen](display-screen-sounds/spec.md)                                                                                               | 2       |
 | session-write-gate              | [A Write gate on the Session write](session-write-gate/spec.md)                                                                                                            | 4       |

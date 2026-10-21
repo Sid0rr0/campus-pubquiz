@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                 | Title                                                                                          | Tickets | Blocked by |
 | -------------------- | ---------------------------------------------------------------------------------------------- | ------- | ---------- |
-| control-round-points | [The control panel's teams table reads rounds from the snapshot](control-round-points/spec.md) | 1       | —          |
 
 ## Won't do
 

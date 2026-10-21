@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `/control` passes the admin view's `roundTitles` to the teams table. The REST quiz list isn't used for the table's columns.
 - [ ] A column at round index `i` shows `roundPoints[i].points`, or 0 when missing. The title-matching helper is deleted.
