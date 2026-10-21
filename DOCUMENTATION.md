@@ -443,8 +443,9 @@ from the session, so a reloaded or second big screen draws the same thing):
   count is taken over the same capped entries).
 - `countUpBoard` — present only for the between-questions kahoot board: the
   prior standings of the teams in `entries`, which the board holds, counts up
-  from, then reorders into `entries`. Absent everywhere else, and on the first
-  board after a backend restart (the prior standings are ephemeral).
+  from, then reorders into `entries`. Absent everywhere else, and after a
+  backend restart until the next block's first question opens (the prior
+  standings are ephemeral).
 - `trends` — `up` / `down` / `same` per team id, shown once the board settles.
   The basis is the prior standings in every round: the board as it stood
   before the block in play's first question opened (in a kahoot round, before
