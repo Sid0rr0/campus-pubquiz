@@ -40,7 +40,10 @@ function showDisplay(description: SessionDescription) {
   });
 }
 
-const LOCKING: SessionDescription = { progress: { status: 'locking' } };
+const LOCKING: SessionDescription = {
+  progress: { status: 'locking' },
+  timers: { questionLockAt: 1_000 },
+};
 const LOCKED: SessionDescription = { progress: { status: 'break_intro' } };
 
 describe('DisplayPage — the time-up sound', () => {

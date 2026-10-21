@@ -3,23 +3,16 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import {
-  DEFAULT_SESSION_SETTINGS,
-  isGradedStatus,
-} from '@campus-pubquiz/types';
-import { fireConfetti } from '@/app/lib/confetti';
-import { displaySounds } from '@/app/lib/display-sounds';
-import { useOnLiveForwardMove } from '@/app/lib/live-change';
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import {
   clearStoredDisplayCode,
   readStoredDisplayCode,
   storeDisplayCode,
 } from '@/app/lib/display-code-storage';
 import { useDisplayGame } from '@/app/lib/use-display-game';
-import { revealPosition } from '@/app/lib/reveal-position';
+import { useDisplayScreenSounds } from '@/app/lib/use-display-screen-sounds';
 import { useDisplaySoundMuted } from '@/app/lib/use-display-sound-muted';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
-import { useRoundTitleSting } from '@/app/lib/use-round-title-sting';
 import { DisplayScreenView } from '@/app/components/display-screen-view';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
 import { DisplaySessionPicker } from '@/app/display/display-session-picker';
@@ -51,47 +44,9 @@ function DisplayPageContent() {
   // Set once the final leaderboard has crowned the winner, so Quiz complete
   // doesn't play the same fanfare and confetti a second time.
   const hasWinnerBeenCelebratedRef = useRef(false);
-  // Confetti and the fanfare only when the quiz is seen ending live: not on a
-  // reloaded display, not on Previous.
-  useOnLiveForwardMove(
-    snapshot?.screen.kind === 'ended' ? 1 : 0,
-    isConnected,
-    () => {
-      if (hasWinnerBeenCelebratedRef.current) return;
-      fireConfetti();
-      displaySounds.play('fanfare');
-    },
-  );
-
-  // The sting plays when the quiz moves forward onto a revealed answer,
-  // never for a reloaded screen or a Previous.
-  const isRevealOnAir = snapshot?.progress.status === 'reveal';
-  useOnLiveForwardMove(
-    snapshot ? revealPosition(snapshot.progress) : 0,
-    isConnected,
-    () => {
-      if (isRevealOnAir) displaySounds.play('reveal');
-    },
-  );
-
-  // The block locking is the end of the countdown: one hit when it is seen
-  // live, never for a reloaded screen or a Previous.
-  useOnLiveForwardMove(
-    snapshot && isGradedStatus(snapshot.progress.status) ? 1 : 0,
-    isConnected,
-    () => displaySounds.play('timeUp'),
-  );
-
-  useRoundTitleSting(
-    snapshot
-      ? {
-          status: snapshot.progress.status,
-          roundIndex: snapshot.progress.roundIndex,
-          screenKind: snapshot.screen.kind,
-        }
-      : null,
-    isConnected,
-  );
+  // Round sting, reveal sting, time-up and the fanfare with confetti follow
+  // the Display screen the room sees, on a live forward move only.
+  useDisplayScreenSounds(snapshot, isConnected, hasWinnerBeenCelebratedRef);
 
   useDisplaySoundMuted(snapshot?.isDisplaySoundMuted ?? false);
 

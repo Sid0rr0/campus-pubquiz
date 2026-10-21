@@ -372,6 +372,19 @@ showdown. Confetti (the big screen always, a phone only for ranks 1–3) and the
 fanfare fire through the live-change helper, so never on a reloaded display, a
 reconnected phone or Previous.
 
+The big screen's one-off screen sounds follow the Display screen it shows, not
+the session's status. When the Screen position grows on a connected display
+(a live forward move), `/display` asks one table (`soundFor(previous, next)`)
+which sound the move from the previous Display screen to the new one plays:
+the round sting onto a round intro (not the break round intro or the reveal
+intro), the reveal sting onto each revealed answer (not the steps of a
+closest-guess reveal), time-up once when the block locks (not again through the
+break), and the fanfare with confetti onto `ended` (skipped when the final
+leaderboard already crowned the winner). Because the room can't see a screen
+hidden under the join overlay, no screen sound plays for a move made while an
+overlay covers the screen (the lock countdown sound, a timer, still does), and
+returning to `ended` after an end-of-quiz showdown doesn't replay the fanfare.
+
 ### The snapshot
 
 `StateSnapshotPayload` is the shared base every room's state view is built
