@@ -1,22 +1,18 @@
 import { SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
+  CAPITAL_QUESTION,
+  advanceToBlockBoard,
+  advanceUntil,
   freezeClockAt,
   restoreClock,
   setupRealStoreGatewayTest,
+  submitAnswer,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
 const KAHOOT_TIMER_SECONDS = 10;
 const BONUS_POINTS = 3;
-
-const QUESTION = {
-  type: 'multiple_choice' as const,
-  prompt: 'Capital of France?',
-  answer: 'Paris',
-  points: 10,
-  payload: { options: ['Paris', 'London'] },
-};
 
 describe('GameGateway — prior standings behind the display count-up board', () => {
   const harness = setupRealStoreGatewayTest();
@@ -34,7 +30,10 @@ describe('GameGateway — prior standings behind the display count-up board', ()
         {
           title: 'Speed Round',
           kahootMode: true,
-          questions: [QUESTION, { ...QUESTION, prompt: 'Capital of UK?' }],
+          questions: [
+            CAPITAL_QUESTION,
+            { ...CAPITAL_QUESTION, prompt: 'Capital of UK?' },
+          ],
         },
       ],
       settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
@@ -168,11 +167,11 @@ describe('GameGateway — prior standings behind the display count-up board', ()
       game = await harness.createGateway({
         teamNames: ['Leader', 'Chaser'],
         rounds: [
-          { title: 'One', questions: [QUESTION] },
+          { title: 'One', questions: [CAPITAL_QUESTION] },
           {
             title: 'Two',
             breakAfter: true,
-            questions: [{ ...QUESTION, prompt: 'Capital of Spain?' }],
+            questions: [{ ...CAPITAL_QUESTION, prompt: 'Capital of Spain?' }],
           },
         ],
       });
@@ -180,18 +179,14 @@ describe('GameGateway — prior standings behind the display count-up board', ()
       await awardBonus(0); // Leader leads before the block
       const progress = () => game.sessionWrite.read(game.joinCode).progress;
       await game.act('START_QUIZ');
-      while (progress().status !== 'question_open') await game.act('ADVANCE');
-      await game.gateway.handleSubmitAnswer(asSocket(chaser.socket), {
-        questionId: game.rounds[0].questionIds[0],
-        teamId: chaser.teamId,
-        value: 'Paris', // Chaser passes Leader on air in round One
-      });
+      await advanceUntil(game, 'question_open');
+      await submitAnswer(game, 1, 'Paris'); // Chaser passes Leader on air in round One
       await game.act('ADVANCE'); // -> round Two's intro, same block
       await game.act('ADVANCE'); // -> round Two's question opens
       expect(progress().roundIndex).toBe(1);
       expect(progress().status).toBe('question_open');
 
-      while (!progress().isLeaderboardVisible) await game.act('ADVANCE');
+      await advanceToBlockBoard(game);
 
       expect(boardOf(displayView()).trends).toEqual({
         [chaser.teamId]: 'up',

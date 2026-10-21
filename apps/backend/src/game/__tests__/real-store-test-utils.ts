@@ -8,6 +8,7 @@ import {
   SOCKET_ROOMS,
   sessionRoom,
   type GameAction,
+  type GameStatus,
   type ImportRoundPreview,
   type Margin,
   type QuizDraftSaveResult,
@@ -827,6 +828,73 @@ export async function tieOnFirstQuestion(
       teamId,
       value: 'Paris',
     });
+  }
+}
+
+/** A multiple-choice question worth 10 points, answered 'Paris'; vary its prompt for each question a quiz needs. */
+export const CAPITAL_QUESTION = {
+  type: 'multiple_choice' as const,
+  prompt: 'Capital of France?',
+  answer: 'Paris',
+  points: 10,
+  payload: { options: ['Paris', 'London'] },
+};
+
+/** Presses Advance until the session reaches `status`. */
+export async function advanceUntil(
+  game: RealStoreGateway,
+  status: GameStatus,
+): Promise<void> {
+  while (game.sessionWrite.read(game.joinCode).progress.status !== status) {
+    await game.act('ADVANCE');
+  }
+}
+
+/** Presses Advance through the block in play until the board after its reveal is up. */
+export async function advanceToBlockBoard(
+  game: RealStoreGateway,
+): Promise<void> {
+  while (!game.sessionWrite.read(game.joinCode).progress.isLeaderboardVisible) {
+    await game.act('ADVANCE');
+  }
+}
+
+/** A seeded question by its place in the quiz; the first round by default. */
+export interface QuestionPlace {
+  roundIndex?: number;
+  questionIndex?: number;
+}
+
+function questionIdAt(
+  game: RealStoreGateway,
+  { roundIndex = 0, questionIndex = 0 }: QuestionPlace,
+): number {
+  return game.rounds[roundIndex].questionIds[questionIndex];
+}
+
+/** The team at `teamIndex` submits `value` to the question at `place`. */
+export async function submitAnswer(
+  game: RealStoreGateway,
+  teamIndex: number,
+  value: string,
+  place: QuestionPlace = {},
+): Promise<void> {
+  const { socket, teamId } = game.teams[teamIndex];
+  await game.gateway.handleSubmitAnswer(asSocket(socket), {
+    questionId: questionIdAt(game, place),
+    teamId,
+    value,
+  });
+}
+
+/** Each team (by index) submits its value to the question at `place`. */
+export async function submitAnswers(
+  game: RealStoreGateway,
+  values: string[],
+  place: QuestionPlace = {},
+): Promise<void> {
+  for (const [teamIndex, value] of values.entries()) {
+    await submitAnswer(game, teamIndex, value, place);
   }
 }
 
