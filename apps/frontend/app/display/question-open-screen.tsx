@@ -28,7 +28,7 @@ export function QuestionOpenScreen({
   const countClassName =
     'pt-8 text-display-2xl font-extrabold tracking-wide text-foreground/55';
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-16 py-8 text-center">
+    <div className="flex min-h-0 flex-1 flex-col px-16 pb-8 pt-16 text-center">
       {kahootQuestionEndsAt != null && (
         <QuestionLockCountdown
           key={`kahoot-ring-${kahootQuestionEndsAt}`}

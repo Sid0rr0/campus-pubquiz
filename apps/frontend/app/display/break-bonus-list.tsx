@@ -37,7 +37,7 @@ export function BreakBonusList({
   }
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-3">
+    <div className="flex w-full max-w-5xl flex-col gap-3">
       <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
         BONUS POINTS AVAILABLE
       </p>
