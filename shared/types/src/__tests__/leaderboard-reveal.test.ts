@@ -1,5 +1,7 @@
-import type { GameProgress, LeaderboardEntry } from '@campus-pubquiz/types';
-import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
+import { describe, expect, it } from 'vitest';
+import type { GameProgress } from '../game-state-types';
+import { computeLeaderboardRevealCount } from '../leaderboard-reveal';
+import type { LeaderboardEntry } from '../room-views';
 
 function progress(overrides: Partial<GameProgress> = {}): GameProgress {
   return {

@@ -1,16 +1,10 @@
-import {
-  type GameAction,
-  type GameContext,
-  type GameProgress,
-  getBlockInPlayIds,
-  getGameContext,
-  getPastBlockIds,
-  getTimedPhaseKey,
-  revealStepAfterMove,
-  type SessionState,
-} from '@campus-pubquiz/types';
-import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
-import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
+import { getBlockInPlayIds, getPastBlockIds } from './block-in-play';
+import { getTimedPhaseKey } from './game-state-timed-phase';
+import type { GameAction, GameContext, GameProgress } from './game-state-types';
+import { computeLeaderboardRevealCount } from './leaderboard-reveal';
+import { computePhaseTimerFields } from './phase-timer';
+import { getGameContext, type SessionState } from './session-state';
+import { revealStepAfterMove } from './stepped-reveal';
 
 /** The persisted half of the phase timer — what a restart restores exactly. */
 export interface SavedPhaseTimer {
@@ -117,7 +111,7 @@ export function settleSession({
 function computeQuestionLockAt(
   progress: GameProgress,
   lockDurationMs: number,
-  now: number = Date.now(),
+  now: number,
 ): number | null {
   return progress.status === 'locking' ? now + lockDurationMs : null;
 }
