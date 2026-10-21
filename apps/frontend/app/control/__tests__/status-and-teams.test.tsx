@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
@@ -99,6 +99,70 @@ describe('AdminPage — status and teams', () => {
     expect(sidebar).toHaveTextContent(/teams \(2\)/i);
     expect(sidebar).toHaveTextContent('The Quizzards');
     expect(sidebar).toHaveTextContent('Beer Necessities');
+  });
+
+  describe('teams table round columns', () => {
+    const roundHeaders = () =>
+      within(screen.getByRole('table'))
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent)
+        .filter((text) => /^\d+$/.test(text ?? ''));
+
+    function mockSession() {
+      mockUseAdminGame.mockReturnValue({
+        session: {
+          progress: { status: 'question_open' },
+          rounds: [
+            { title: 'Music', questions: [{}] },
+            { title: 'Music', questions: [{}] },
+            { title: 'Film', questions: [{}] },
+          ],
+          leaderboard: [
+            {
+              teamName: 'The Quizzards',
+              totalPoints: 9,
+              roundPoints: [
+                { roundTitle: 'Music', points: 2 },
+                { roundTitle: 'Music', points: 7 },
+              ],
+            },
+          ],
+        },
+      });
+    }
+
+    it('renders a column per round of the view while the quiz list is still empty', () => {
+      mockFetchQuizzes.mockReturnValue(new Promise(() => {}));
+      mockSession();
+      renderWithQuery(<AdminPage />);
+
+      expect(roundHeaders()).toEqual(['1', '2', '3']);
+      const cells = within(
+        screen.getByText('The Quizzards', { selector: 'td' }).closest('tr')!,
+      )
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent);
+      expect(cells.slice(2, 5)).toEqual(['2', '7', '0']);
+    });
+
+    it('follows the view when the quiz list has a different number of rounds', async () => {
+      mockFetchQuizzes.mockResolvedValue({
+        activeQuizId: 1,
+        quizzes: [
+          {
+            id: 1,
+            title: 'Stale quiz',
+            rounds: [{ id: 1, title: 'Music', questions: [] }],
+          },
+        ],
+      });
+      mockSession();
+      renderWithQuery(<AdminPage />);
+
+      await waitFor(() => expect(mockFetchQuizzes).toHaveBeenCalled());
+      await screen.findByText(/stale quiz/i);
+      expect(roundHeaders()).toEqual(['1', '2', '3']);
+    });
   });
 
   it('marks the teams that have answered the current question in the sidebar', () => {

@@ -153,6 +153,91 @@ describe('TeamsTable', () => {
     expect(within(secondPlaceRow).getAllByText('0')).toHaveLength(2); // round 2 and bonus
   });
 
+  it('shows each round its own points when two rounds share a title', () => {
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={[
+          {
+            ...LEADERBOARD[0],
+            roundPoints: [
+              { roundTitle: 'Music', points: 3 },
+              { roundTitle: 'Music', points: 5 },
+            ],
+            bonusPoints: 0,
+            totalPoints: 8,
+          },
+        ]}
+        roundTitles={['Music', 'Music']}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    const cells = within(
+      screen.getByText('The Quizzards').closest('tr')!,
+    ).getAllByRole('cell');
+    expect(cells.slice(2, 4).map((cell) => cell.textContent)).toEqual([
+      '3',
+      '5',
+    ]);
+  });
+
+  it('shows 0 for every team in a round nobody has scored in', () => {
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={LEADERBOARD}
+        roundTitles={['Animals', 'History', 'Sport']}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    const thirdRound = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell')[4].textContent);
+    expect(thirdRound).toEqual(['0', '0']);
+  });
+
+  it("sorts teams by a round's points when its column header is clicked", async () => {
+    const team = (teamId: number, teamName: string, points: number[]) => ({
+      ...LEADERBOARD[0],
+      teamId,
+      teamName,
+      roundPoints: points.map((p) => ({ roundTitle: 'Same', points: p })),
+    });
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={[
+          team(1, 'Alpha', [4, 6]),
+          team(2, 'Bravo', [6, 0]),
+          team(3, 'Charlie', [5, 3]),
+        ]}
+        roundTitles={['Same', 'Same']}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+    const teamNames = () =>
+      screen
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => within(row).getAllByRole('cell')[1].textContent);
+
+    expect(teamNames()).toEqual(['Alpha', 'Bravo', 'Charlie']);
+
+    // Round 1 points: Bravo 6, Charlie 5, Alpha 4.
+    await userEvent.click(screen.getByRole('button', { name: '1' }));
+    expect(teamNames()).toEqual(['Bravo', 'Charlie', 'Alpha']);
+
+    // Round 2 points: Alpha 6, Charlie 3, Bravo 0.
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    expect(teamNames()).toEqual(['Alpha', 'Charlie', 'Bravo']);
+  });
+
   it("shows each team's position ranked by total points, tied teams sharing a range", () => {
     renderWithQuery(
       <TeamsTable

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -178,10 +178,6 @@ function AdminPageContent() {
   const activeQuizRounds =
     quizzes?.quizzes.find((quiz) => quiz.id === activeQuizId)?.rounds ??
     EMPTY_ROUNDS;
-  const roundTitles = useMemo(
-    () => activeQuizRounds.map((round) => round.title),
-    [activeQuizRounds],
-  );
 
   const closeSessionMutation = useMutation({
     mutationFn: (joinCode: string) => closeSession(joinCode),
@@ -250,6 +246,7 @@ function AdminPageContent() {
     activeBlockStartIndex,
     blockQuestions,
     leaderboard,
+    roundTitles,
     teams,
     ungradedQuestionIds,
     phaseStartedAt,

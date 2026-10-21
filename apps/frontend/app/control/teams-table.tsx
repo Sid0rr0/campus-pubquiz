@@ -1,6 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import {
   createColumnHelper,
+  createSortedRowModel,
+  rowSortingFeature,
+  sortFn_basic,
   tableFeatures,
   useTable,
 } from '@tanstack/react-table';
@@ -40,14 +43,16 @@ interface TeamsTableProps {
   enabledBonusCategories: BonusCategory[];
 }
 
-const features = tableFeatures({});
+// Rows keep the server's ranking until a round column header is clicked.
+const features = tableFeatures({
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+});
 const helper = createColumnHelper<typeof features, LeaderboardEntry>();
 
-function pointsForRound(entry: LeaderboardEntry, roundTitle: string): number {
-  return (
-    entry.roundPoints.find((round) => round.roundTitle === roundTitle)
-      ?.points ?? 0
-  );
+/** `roundPoints` arrives in round order, so a round's points sit at its index. A stale list may be shorter than the rounds. */
+function pointsForRound(entry: LeaderboardEntry, roundIndex: number): number {
+  return entry.roundPoints[roundIndex]?.points ?? 0;
 }
 
 export function TeamsTable({
@@ -80,15 +85,22 @@ export function TeamsTable({
           header: 'Position',
           cell: (context) => formatRankLabel(context.row.original),
         }),
-        helper.accessor('teamName', { header: 'Team' }),
-        ...roundTitles.map((roundTitle, index) =>
-          helper.accessor((entry) => pointsForRound(entry, roundTitle), {
+        helper.accessor('teamName', { header: 'Team', enableSorting: false }),
+        ...roundTitles.map((_title, index) =>
+          helper.accessor((entry) => pointsForRound(entry, index), {
             id: `round-${index}`,
             header: `${index + 1}`,
+            sortFn: sortFn_basic,
           }),
         ),
-        helper.accessor('bonusPoints', { header: 'Bonus' }),
-        helper.accessor('totalPoints', { header: 'Total' }),
+        helper.accessor('bonusPoints', {
+          header: 'Bonus',
+          enableSorting: false,
+        }),
+        helper.accessor('totalPoints', {
+          header: 'Total',
+          enableSorting: false,
+        }),
         helper.display({
           id: 'actions',
           header: 'Actions',
