@@ -232,14 +232,7 @@ export class GameStateService implements OnModuleInit {
     try {
       await this.sessionWrite.write(
         joinCode,
-        (session) =>
-          Promise.resolve({
-            session: {
-              ...session,
-              seededGame: { ...session.seededGame, customName },
-            },
-            outcome: undefined,
-          }),
+        (session) => this.settingsChanges.customName(session, customName),
         NOT_TOUCHING_SCORES,
       );
     } catch (error) {

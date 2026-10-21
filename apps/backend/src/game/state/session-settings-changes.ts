@@ -62,6 +62,20 @@ export class SessionSettingsChanges {
     });
   }
 
+  /** Sets or clears (null) the held session's custom name, after the stats page renamed the ended session's row. */
+  customName(
+    session: SessionState,
+    customName: string | null,
+  ): Promise<SessionChange<void>> {
+    return Promise.resolve({
+      session: {
+        ...session,
+        seededGame: { ...session.seededGame, customName },
+      },
+      outcome: undefined,
+    });
+  }
+
   /**
    * Merges `partial` over the session's settings and persists them,
    * lobby-only: refused once the quiz has started, so the values in effect

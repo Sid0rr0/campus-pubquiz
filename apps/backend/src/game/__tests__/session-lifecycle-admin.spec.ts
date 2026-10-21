@@ -1,9 +1,16 @@
 import { GameSession } from '@/db/entities/game-session.entity';
+import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
+import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
+import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
 import { SessionCloseBlockedError } from '@/game/state/game-state.service';
 import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import { PlayerCountService } from '@/player-count/player-count.service';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
+import { StatsService } from '@/stats/stats.service';
 
 describe('GameStateService — session lifecycle admin surface (phase 4)', () => {
   const harness = setupRealStoreGatewayTest();
@@ -136,6 +143,64 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
       expect(game.gameState.listSessions()[0]).toEqual({
         ...before,
         name: 'Renamed',
+      });
+    });
+
+    describe('after the stats page renames an ended session', () => {
+      /** Mirrors StatsController.renameSession: the real stats rename, then the held-session update with its result. */
+      async function renameFromStats(
+        name: string,
+        gameSessionId = game.gameState.getGameSessionId(game.joinCode),
+      ): Promise<string | null> {
+        const em = game.orm.em.fork();
+        const statsService = new StatsService(
+          em.getRepository<GameSession, GameSessionRepository>(GameSession),
+          buildStandingsService(em),
+          new PlayerCountService(
+            em.getRepository<SessionPlayerCount, SessionPlayerCountRepository>(
+              SessionPlayerCount,
+            ),
+          ),
+          buildEndedSessionsRead(em),
+        );
+        const customName = await statsService.renameSession(
+          gameSessionId,
+          name,
+        );
+        await game.gameState.renameHeldSession(gameSessionId, customName);
+        return customName;
+      }
+
+      async function endQuiz(): Promise<void> {
+        await game.act('START_QUIZ');
+        await game.act('END_QUIZ');
+      }
+
+      it('lists the new name, then the quiz title once cleared', async () => {
+        await endQuiz();
+
+        await renameFromStats('  Week 3 Social  ');
+        expect(game.gameState.listSessions()[0]).toMatchObject({
+          quizTitle: 'Real Store Quiz',
+          name: 'Week 3 Social',
+        });
+
+        await renameFromStats('   ');
+        expect(game.gameState.listSessions()[0]).toMatchObject({
+          name: 'Real Store Quiz',
+        });
+      });
+
+      it('succeeds for a closed session, which is no longer listed', async () => {
+        await endQuiz();
+        const gameSessionId = game.gameState.getGameSessionId(game.joinCode);
+        await game.gameState.closeSession(game.joinCode);
+
+        await expect(
+          renameFromStats('Week 3 Social', gameSessionId),
+        ).resolves.toBe('Week 3 Social');
+
+        expect(game.gameState.listSessions()).toEqual([]);
       });
     });
 
