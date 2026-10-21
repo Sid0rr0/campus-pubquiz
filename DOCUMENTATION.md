@@ -1118,6 +1118,7 @@ or counted. It is a read of the quiz.
     lobby, rules, join overlay, locking, break review, break round title,
     leaderboard, showdown and ended never appear. The break intro has no
     deadline, no feedback prompt and no fun facts. A round with no questions
+    (not allowed in a live session, but the preview reads unfinished quizzes)
     can't be walked by the real Advance plan, so the dry run skips it and its
     title card is shown in front of the next round's (or last, when no round
     follows); the other rounds keep their place in the quiz's numbering.
@@ -1429,7 +1430,10 @@ admin/moderator landing page for managing them:
 - `GET /sessions` — list running sessions (auth-gated).
 - `POST /sessions` (`{ quizId, name?, settings?, leagueIds? }`) — start a new
   session, producing a fresh join code. `leagueIds` (default none) are the
-  leagues the session counts towards (see Leagues).
+  leagues the session counts towards (see Leagues). Rounds without questions
+  are not allowed: saving a quiz with one is rejected by the editor's
+  validation, and `POST /sessions` answers 400 naming the round (for a quiz
+  that already holds one) and creates nothing.
 - `PATCH /sessions/:joinCode/settings` — settings (lobby only, 409 once
   started) and/or `leagueIds`, which replaces the session's leagues and is
   accepted until the session ends. A body of only `leagueIds` leaves settings
