@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| prior-standings-trends          | [Prior standings as the only trend basis](prior-standings-trends/spec.md)                                                                                                  | 2       |
 | control-round-points            | [The control panel's teams table reads rounds from the snapshot](control-round-points/spec.md)                                                                             | 1       |
 | stepped-reveal                  | [One stepped reveal for the showdown and the closest guess](stepped-reveal/spec.md)                                                                                        | 3       |
 | display-screen-sounds           | [Big-screen sounds follow the Display screen](display-screen-sounds/spec.md)                                                                                               | 2       |
