@@ -18,8 +18,16 @@ See the spec's "Migrating the specs".
 
 **Status:** done
 
-- [ ] No `holdNextCall` or `nextWriteWaiting` left in any of the six spec files
-- [ ] No spec casts the game state service to reach its Session write (action-availability and real-store-smoke use the harness's)
-- [ ] Every test keeps its name and assertions, and passes
-- [ ] The queue-off check fails the same set of ordering tests before and after the migration (listed in the commit message or the ticket's Comments)
-- [ ] `rejectNthCall` and the failure spies are untouched
+- [x] No `holdNextCall` or `nextWriteWaiting` left in any of the six spec files
+- [x] No spec casts the game state service to reach its Session write (action-availability and real-store-smoke use the harness's)
+- [x] Every test keeps its name and assertions, and passes
+- [ ] The queue-off check fails the same set of ordering tests before and after the migration (not met: 14 of 43 fail with the queue off, against 18 before; see Comments)
+- [x] `rejectNthCall` and the failure spies are untouched
+
+## Comments
+
+Queue-off check (queue `run` runs its task at once; 43 ordering tests across the six files):
+
+- Before migrating: 18 fail.
+- After migrating: 14 fail. About 5 ordering tests are no longer caught, for the same reason as ticket 02: the hold sits before the standings read, and the commit re-reads standings from the database, so the final state is right even without the queue. Catching them needs a gate step between the standings read and the store, which was deliberately not added.
+- `letOthersRun()` is timing-based (100 `setImmediate` turns) because the harness `settled` deadlocks behind a held write: it waits for the queue to go idle.

@@ -19,7 +19,7 @@ See the spec's "Migrating the specs".
 
 - [x] No `holdNextCall` or `nextWriteWaiting` left in the session-write spec
 - [x] Every test keeps its name and assertions, and passes
-- [ ] The queue-off check fails the same set of ordering tests before and after the migration (see Comments: it does not, by design of the gate)
+- [ ] The queue-off check fails the same set of ordering tests before and after the migration (not met: 17 of 29 fail with the queue off, against 20 before; see Comments)
 - [x] Failure tests still use spies on the failing service
 - [x] Backend suite run time is not slower
 
@@ -29,6 +29,6 @@ Queue-off check (queue `run` runs its task at once; 29 tests in the spec):
 
 - Before migrating: 20 fail (every ordering test except the cross-session one, the failed-save one and the refused-press one).
 - After migrating, first pass: 8 fail. `nextQueued` resolves at hand-over, so with the queue off the second write had barely started when the hold was released.
-- Fix: the spec has a local `letRun(write)` that, after `await nextQueued()`, races the second write against 100 macrotask turns before releasing. (The harness `settled` cannot be used: it waits for the queue to go idle and would deadlock behind a held write.) Behind the real queue the write cannot progress, so all 29 pass.
-- After the fix, 15 fail with the queue off (timer expiry, close behind write, break end/text size, both disconnects, both lobby settings, answer during Advance, kick during press, three quiz-edit/answered tests, both showdown tests, answered-teams read, ungraded marker).
-- 6 ordering tests still pass with the queue off though they failed before: first award, first grade, kick-vs-join, bonus-vs-join (roster), press-vs-join, quiz edit behind a press. Holding the first write at `change` instead of `standings` did not help. Cause: the commit re-reads standings from the database, so the stale result the old hold kept no longer exists; the final state is right even without the queue. Catching these needs a gate step between the standings read and the store (a production gate change), which was not made.
+- Fix: the harness `letOthersRun()` (timing-based: 100 `setImmediate` turns) runs after `await nextQueued()` and before releasing. The harness `settled` cannot be used: it waits for the queue to go idle and would deadlock behind a held write. Behind the real queue the write cannot progress, so all 29 pass.
+- Measured outcome: 17 of 29 fail with the queue off, against 20 before the migration. The check is not met.
+- 6 ordering tests (roughly the earlier list: first award, first grade, kick-vs-join, bonus-vs-join, press-vs-join, quiz edit behind a press) are not caught because standings is held before the read: the commit re-reads standings from the database, so the stale result the old hold kept no longer exists and the final state is right even without the queue. Catching them would need a gate step between the standings read and the store (a production gate change), which was deliberately not added.
