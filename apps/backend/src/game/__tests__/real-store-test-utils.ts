@@ -734,8 +734,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       await new Promise<void>((resolve) => setImmediate(resolve));
     };
     const letOthersRun = async () => {
-      // Database work takes several macrotask turns to finish.
-      for (let turn = 0; turn < 25; turn++) {
+      // A write's database work takes dozens of macrotask turns to finish;
+      // too few and a write that overtook the held one is still mid-flight.
+      for (let turn = 0; turn < 100; turn++) {
         await new Promise<void>((resolve) => setImmediate(resolve));
       }
     };
