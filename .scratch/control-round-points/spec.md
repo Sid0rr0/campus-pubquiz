@@ -1,6 +1,6 @@
 # Spec: The control panel's teams table reads rounds from the snapshot
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none.
 
