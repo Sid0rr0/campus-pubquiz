@@ -1,6 +1,5 @@
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  holdNextCall,
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -52,17 +51,18 @@ describe('GameGateway — grades and bonus awards wait their turn in the session
     const admin = await game.connectAdmin();
     const gradeSpy = jest.spyOn(game.answerService, 'grade');
 
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = game.gateway.handleAdminAction(asSocket(admin), {
       action: 'ADVANCE',
     });
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const grading = game.gateway.handleGradeAnswer(asSocket(admin), {
       answerId,
       pointsAwarded: 1,
     });
     await waiting;
+    await game.letOthersRun();
 
     expect(gradeSpy).not.toHaveBeenCalled();
     held.release();
@@ -89,18 +89,19 @@ describe('GameGateway — grades and bonus awards wait their turn in the session
     const [{ teamId }] = game.teams;
     const awardSpy = jest.spyOn(game.bonusService, 'award');
 
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = game.gateway.handleAdminAction(asSocket(admin), {
       action: 'ADVANCE',
     });
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId,
       category: 'shot',
       points: 1,
     });
     await waiting;
+    await game.letOthersRun();
 
     expect(awardSpy).not.toHaveBeenCalled();
     held.release();

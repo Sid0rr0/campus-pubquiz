@@ -23,14 +23,14 @@ See the spec's "The Write gate" and "The test gate".
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A gate spec through the real-store harness: holding at `change` stops a press before its session is stored (snapshot unchanged), and release finishes it
-- [ ] Holding at `standings` stops a bonus award after its change, before its leaderboard changes
-- [ ] A `joinCode` filter lets another session's write run freely
-- [ ] `nextQueued` resolves for a write queued behind a held one
-- [ ] Holding at `hold` stops a Live edit save before its quiz is saved
-- [ ] An unreached `holdAt` (e.g. `standings` on a disconnect) fails the test at teardown with a clear message rather than hanging
-- [ ] Production wiring provides no gate, and the pass-through default is used
-- [ ] Old helpers (`holdNextCall`, `nextWriteWaiting`) still work, and the full backend suite passes
-- [ ] `pnpm typecheck` and `pnpm lint` pass
+- [x] A gate spec through the real-store harness: holding at `change` stops a press before its session is stored (snapshot unchanged), and release finishes it
+- [x] Holding at `standings` stops a bonus award after its change, before its leaderboard changes
+- [x] A `joinCode` filter lets another session's write run freely
+- [x] `nextQueued` resolves for a write queued behind a held one
+- [x] Holding at `hold` stops a Live edit save before its quiz is saved
+- [x] An unreached `holdAt` fails the test at teardown with a clear message rather than hanging (the harness throws the gate's `finish()` message; the spec checks the message on a standalone gate so the suite stays green)
+- [x] Production wiring provides no gate, and the pass-through default is used
+- [ ] Old helpers (`holdNextCall`, `nextWriteWaiting`) still work, and the full backend suite passes (true at this step; the helpers were deleted in 04, so no longer checkable)
+- [x] `pnpm typecheck` and `pnpm lint` pass

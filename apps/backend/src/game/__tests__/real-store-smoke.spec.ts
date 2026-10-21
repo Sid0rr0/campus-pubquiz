@@ -26,9 +26,7 @@ describe('GameGateway — real-store harness smoke', () => {
       target as unknown as Record<string, unknown>;
 
     expect(privates(game.gateway).gameState).toBe(game.gameState);
-    expect(privates(game.liveEdit).sessionWrite).toBe(
-      privates(game.gameState).sessionWrite,
-    );
+    expect(privates(game.liveEdit).sessionWrite).toBe(game.sessionWrite);
     expect(privates(game.gameState).progressRepository).toBe(
       game.progressRepository,
     );

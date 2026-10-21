@@ -9,7 +9,6 @@ import {
 import { Round } from '@/db/entities/round.entity';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
-  holdNextCall,
   type JoinedTeam,
   setupRealStoreGatewayTest,
   tieOnFirstQuestion,
@@ -57,13 +56,14 @@ describe('GameGateway — session write: bonus changes', () => {
   }
 
   it('ends with both awards on the leaderboard when the first award’s standings read finishes last', async () => {
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('change');
 
     const first = award(1);
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const second = award(2);
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([first, second]);
 
@@ -81,9 +81,9 @@ describe('GameGateway — session write: bonus changes', () => {
     const other = await game.joinTeam('Other Team', otherCode);
     game.clearEmits();
 
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const blocked = award(1);
-    await held.started;
+    await held.reached;
 
     await award(2, otherAdmin, other.teamId);
 
@@ -195,12 +195,13 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     const [firstAnswer, secondAnswer] = await ungradedAnswerIds(questionId);
     game.clearEmits();
 
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('change');
     const first = grade(firstAnswer, 1);
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const second = grade(secondAnswer, 2);
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([first, second]);
 
@@ -210,12 +211,13 @@ describe('GameGateway — session write: answers recorded and graded', () => {
   it('shows both teams as answered when the first answer’s answered-teams read finishes last', async () => {
     const questionId = game.questionIds.multipleChoice;
 
-    const held = holdNextCall(game.answerService, 'listForQuestion');
+    const held = game.holdAt('change');
     const first = submit(teamA, questionId, 'Paris');
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const second = submit(teamB, questionId, 'Paris');
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([first, second]);
 
@@ -231,12 +233,13 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     const [firstAnswer, secondAnswer] = await ungradedAnswerIds(questionId);
     expect(lastAdminSnapshot().ungradedQuestionIds).toEqual([questionId]);
 
-    const held = holdNextCall(game.answerService, 'listUngradedQuestionIds');
+    const held = game.holdAt('change');
     const first = grade(firstAnswer, 1);
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const second = grade(secondAnswer, 0);
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([first, second]);
 
@@ -288,13 +291,14 @@ describe('GameGateway — session write: roster changes', () => {
   }
 
   it('ends with the joined team connected and the kicked team gone when the kick’s standings read finishes last', async () => {
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('change');
     const kicking = kick(kicked.teamId);
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const { joined } = await startJoin('Newcomers');
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([kicking, joined]);
 
@@ -316,17 +320,18 @@ describe('GameGateway — session write: roster changes', () => {
   });
 
   it('shows a team that joins while a bonus write is held as connected once both finish', async () => {
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('change');
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: kicked.teamId,
       category: 'shot',
       points: 1,
     });
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const { joined } = await startJoin('Latecomers');
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([awarding, joined]);
 
@@ -394,17 +399,18 @@ describe('GameGateway — session write: presses', () => {
 
   it('keeps an answer submitted while an Advance waits on its progress save', async () => {
     const questionId = game.questionIds.multipleChoice;
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = press();
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const submitting = game.gateway.handleSubmitAnswer(asSocket(team.socket), {
       questionId,
       teamId: team.teamId,
       value: 'Paris',
     });
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([pressing, submitting]);
     // The press moved on to the next question; step back to read this one's marker.
@@ -421,17 +427,18 @@ describe('GameGateway — session write: presses', () => {
   });
 
   it('shows a team that joins while a press waits on its save as connected and on the leaderboard', async () => {
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = press();
-    await held.started;
+    await held.reached;
 
     const socket = await game.connectPlayer();
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const joining = game.gateway.handleJoinPlayers(asSocket(socket), {
       teamName: 'Latecomers',
       joinCode: game.joinCode,
     });
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([pressing, joining]);
 
@@ -446,15 +453,16 @@ describe('GameGateway — session write: presses', () => {
   });
 
   it('removes a team kicked during a press from the roster and leaderboard for good', async () => {
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = press();
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const kicking = game.gateway.handleKickTeam(asSocket(admin), {
       teamId: team.teamId,
     });
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([pressing, kicking]);
 
@@ -557,11 +565,11 @@ describe('GameGateway — session write: a timer expiry', () => {
       await game.act(action);
     }
     await game.act('ADVANCE'); // -> locking, lock armed
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const expiring = game.timers().lock.fireNow();
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId,
       category: 'shot',
@@ -630,15 +638,16 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     );
     expect(lastAdminSnapshot().ungradedQuestionIds).toEqual([questionId]);
 
-    const held = holdNextCall(game.seedService, 'loadGame');
+    const held = game.holdAt('change');
     const editing = editQuiz();
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const grading = game.gateway.handleGradeAnswer(asSocket(admin), {
       answerId: answer.answerId,
       pointsAwarded: 1,
     });
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([editing, grading]);
 
@@ -654,12 +663,13 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
   it('still shows an answer submitted while a reload is held as answered', async () => {
     const questionId = game.questionIds.multipleChoice;
 
-    const held = holdNextCall(game.seedService, 'loadGame');
+    const held = game.holdAt('change');
     const editing = editQuiz();
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const submitting = submit(questionId, 'Paris');
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([editing, submitting]);
 
@@ -668,11 +678,11 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
   });
 
   it('finishes a quiz edit made while a press is held after the press, with both changes in the final snapshot', async () => {
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = game.gateway.handleAdminAction(asSocket(admin), {
       action: 'ADVANCE',
     });
-    await held.started;
+    await held.reached;
     const before = await game.snapshot();
     await game.inRequestContext(async () => {
       const em = game.orm.em.fork();
@@ -681,9 +691,10 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
       await em.flush();
     });
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const editing = editQuiz();
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([pressing, editing]);
 
@@ -731,15 +742,15 @@ describe('GameGateway — session write: events that do not touch scores', () =>
   }
 
   it('shows a team that disconnects while a bonus write is held as disconnected once both finish', async () => {
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: team.teamId,
       category: 'shot',
       points: 1,
     });
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const disconnecting = game.gateway.handleDisconnect(asSocket(team.socket));
     await waiting;
     held.release();
@@ -750,13 +761,13 @@ describe('GameGateway — session write: events that do not touch scores', () =>
   });
 
   it('shows a team that disconnects while a press waits on its save as disconnected', async () => {
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = game.gateway.handleAdminAction(asSocket(admin), {
       action: 'ADVANCE',
     });
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const disconnecting = game.gateway.handleDisconnect(asSocket(team.socket));
     await waiting;
     held.release();
@@ -767,17 +778,14 @@ describe('GameGateway — session write: events that do not touch scores', () =>
   });
 
   it('keeps a break end time and a display text size set while a press waits on its save', async () => {
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = game.gateway.handleAdminAction(asSocket(admin), {
       action: 'ADVANCE',
     });
-    await held.started;
+    await held.reached;
 
     const breakEndsAt = Date.now() + 600_000;
-    const waiting = Promise.all([
-      game.nextWriteWaiting(),
-      game.nextWriteWaiting(),
-    ]);
+    const waiting = Promise.all([game.nextQueued(), game.nextQueued()]);
     const settingBreak = game.gateway.handleSetBreakEndTime(asSocket(admin), {
       breakEndsAt,
     });
@@ -852,17 +860,18 @@ describe('GameGateway — session write: showdown', () => {
   }
 
   it('has a showdown guess submitted while a bonus write is held in the final snapshot', async () => {
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: teamA.teamId,
       category: 'shot',
       points: 1,
     });
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const guessing = guess();
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([awarding, guessing]);
 
@@ -870,15 +879,16 @@ describe('GameGateway — session write: showdown', () => {
   });
 
   it('has a showdown guess submitted while a press waits on its save in the final snapshot', async () => {
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const pressing = game.gateway.handleAdminAction(asSocket(admin), {
       action: 'ADVANCE',
     });
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const guessing = guess();
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([pressing, guessing]);
 
@@ -958,11 +968,11 @@ describe('GameGateway — session write: lobby settings', () => {
   }
 
   it('keeps both the new settings and the team that joined while the settings write waits on its save', async () => {
-    const held = holdNextCall(game.seedService, 'updateSettings');
+    const held = game.holdAt('change');
     const updating = updateSettings();
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const joining = startJoin('Latecomers');
     await waiting;
     held.release();
@@ -972,11 +982,11 @@ describe('GameGateway — session write: lobby settings', () => {
   });
 
   it('keeps both the new settings and the team whose join is held on its standings read', async () => {
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const joining = startJoin('Latecomers');
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const updating = updateSettings();
     await waiting;
     held.release();
@@ -1026,14 +1036,11 @@ describe('GameGateway — session write: closing a session', () => {
   }
 
   it('finishes the write in progress, closes the session for good and fails a write queued behind the close with the unknown-session error', async () => {
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const inProgress = bonusChanged();
-    await held.started;
+    await held.reached;
 
-    const waiting = Promise.all([
-      game.nextWriteWaiting(),
-      game.nextWriteWaiting(),
-    ]);
+    const waiting = Promise.all([game.nextQueued(), game.nextQueued()]);
     const closing = game.gameState.closeSession(game.joinCode);
     const behindClose = bonusChanged();
     const behindCloseOutcome =

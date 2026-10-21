@@ -1,7 +1,6 @@
 import type { StateSnapshotPayload } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
-  holdNextCall,
   setupRealStoreGatewayTest,
   type JoinedTeam,
   type RealStoreGateway,
@@ -41,15 +40,16 @@ describe('GameGateway — join, leave and kick land in one order', () => {
 
   it('refuses a leave from the old socket queued behind a takeover rejoin, keeping the team on the roster and connected', async () => {
     const second = await game.connectPlayer();
-    const held = holdNextCall(game.teamService, 'join');
+    const held = game.holdAt('change');
     const joining = rejoin(second);
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const leaving = game.gateway.handleLeaveSession(asSocket(team.socket), {
       teamId: team.teamId,
     });
     await waiting;
+    await game.letOthersRun();
     held.release();
     const [joined, left] = await Promise.all([joining, leaving]);
 
@@ -73,15 +73,16 @@ describe('GameGateway — join, leave and kick land in one order', () => {
 
   it('ends with the team kicked, not half joined, when a kick is queued behind its rejoin', async () => {
     const second = await game.connectPlayer();
-    const held = holdNextCall(game.teamService, 'join');
+    const held = game.holdAt('change');
     const joining = rejoin(second);
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const kicking = game.gateway.handleKickTeam(asSocket(admin), {
       teamId: team.teamId,
     });
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([joining, kicking]);
 
@@ -92,15 +93,16 @@ describe('GameGateway — join, leave and kick land in one order', () => {
 
   it('keeps roster, connection and leaderboard in agreement when a rejoin is queued behind a kick', async () => {
     const second = await game.connectPlayer();
-    const held = holdNextCall(game.teamService, 'removeFromRoster');
+    const held = game.holdAt('change');
     const kicking = game.gateway.handleKickTeam(asSocket(admin), {
       teamId: team.teamId,
     });
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const joining = rejoin(second);
     await waiting;
+    await game.letOthersRun();
     held.release();
     await Promise.all([kicking, joining]);
 

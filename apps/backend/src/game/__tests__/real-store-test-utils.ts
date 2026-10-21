@@ -45,7 +45,13 @@ import {
 } from '@/game/socket/phase-timers';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
-import type { SessionWriteQueue } from '@/game/state/session-write-queue';
+import { SessionWrite } from '@/game/state/session-write';
+import { WRITE_GATE, type WriteStep } from '@/game/state/write-gate';
+import {
+  TestWriteGate,
+  type GateFilter,
+  type HeldWrite,
+} from '@/game/__tests__/test-write-gate';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 import {
@@ -187,6 +193,26 @@ export interface RealStoreGateway extends PlayableQuiz {
   /** Everything pushed to clients goes through it; the mock server is attached to it. */
   broadcaster: SessionBroadcaster;
   server: MockServer;
+  /** The Session write behind the game state service — for a spec that drives a write directly instead of casting to a private field. */
+  sessionWrite: SessionWrite;
+  /**
+   * Forces an overlap at a named step of the Session write, in the module's own
+   * terms: holds the next write to reach `step` (for `joinCode` when given).
+   * Start the first event, `await held.reached`, send the second, then
+   * `held.release()`. Later writes pass through. Steps: `hold` (a Live edit
+   * hold owns its queues, before its task runs), `change` (the change has
+   * returned, nothing is stored yet), `standings` (just before the live results
+   * read; a write that opts out never reaches it). Outstanding holds are
+   * released when the test ends, and a hold no write reached fails the test.
+   */
+  holdAt: (step: WriteStep, filter?: GateFilter) => HeldWrite;
+  /**
+   * Call before sending the event under test: resolves when the next write is
+   * handed to the Session write (for `joinCode` when given). The queue is
+   * first-in first-out, so a write queued while another is held is waiting
+   * behind it: await this before releasing the held write.
+   */
+  nextQueued: (filter?: GateFilter) => Promise<void>;
   answerService: AnswerService;
   standingsService: StandingsService;
   leagueTableService: LeagueTableService;
@@ -243,21 +269,26 @@ export interface RealStoreGateway extends PlayableQuiz {
    * Resolves once every session write in flight for the seeded session has
    * finished (stored, refused or thrown) and the broadcasts sent at the end
    * of a write have been recorded. Use it instead of sleeping before
-   * asserting on what a room was sent; to control the order of two writes,
-   * pair it with `holdNextCall` (below) and await it after releasing.
+   * asserting on what a room was sent. Never await it while a write is held
+   * with `holdAt`: it waits for that write too, so it would hang until the
+   * hold is released. To force an ordering, use `holdAt` + `nextQueued` +
+   * `letOthersRun` and `settled` only after `held.release()`.
    */
   settled: () => Promise<void>;
   /**
-   * Call before sending the event under test: the returned promise resolves
-   * once that event's session write is either waiting behind a write already
-   * in flight (e.g. one held with `holdNextCall`) or has finished. Await it
-   * before releasing the held call, in place of sleeping to let the second
-   * event "get in". It pairs with a write already held in flight: if the
-   * event is rejected before it queues a write, or finds the queue idle and
-   * runs into the held call itself, the promise never resolves. Each call
-   * covers one write, in the order writes reach the queue (any join code).
+   * Forcing an overlap, in full: `const held = game.holdAt('change')`, start
+   * the first event, `await held.reached`, then `const waiting =
+   * game.nextQueued()`, send the second event and `await waiting`. Now call
+   * this, then `held.release()`.
+   *
+   * It lets a write that is not held run as far as it can, for the moment
+   * between `await waiting` and `held.release()`. `settled` cannot do this:
+   * it waits for the held write. A queued write runs nothing here, so a write
+   * that overtakes the held one (the queue broken) has finished by the time
+   * the spec releases, and the spec's ordering assertion fails. It sleeps on
+   * macrotask turns, never on the clock.
    */
-  nextWriteWaiting: () => Promise<void>;
+  letOthersRun: () => Promise<void>;
   /**
    * The auto-lock timer and the kahoot question timer of the seeded session
    * (or another by `joinCode`). Nothing waits in real time: read `isArmed` /
@@ -389,6 +420,18 @@ function phaseTimerSchedulersModule(
   return { module: PhaseTimerSchedulersModule };
 }
 
+/** Provides the Session write's Write gate, which production leaves unprovided (the pass-through gate is used). */
+function writeGateModule(gate: TestWriteGate): DynamicModule {
+  @Global()
+  @Module({
+    providers: [{ provide: WRITE_GATE, useValue: gate }],
+    exports: [WRITE_GATE],
+  })
+  class WriteGateModule {}
+
+  return { module: WriteGateModule };
+}
+
 /**
  * Gateway test harness backed by the real answer, team, bonus, showdown,
  * seed and game-progress modules on a Postgres testcontainer — the only way
@@ -400,10 +443,18 @@ function phaseTimerSchedulersModule(
  */
 export function setupRealStoreGatewayTest(): RealStoreHarness {
   let modules: TestingModule[] = [];
+  let gates: TestWriteGate[] = [];
 
   // Registered before useTestDatabase() so the modules are closed before its
   // afterEach empties the tables (hooks run in definition order).
   afterEach(async () => {
+    // Held writes are let go first so closing never waits on one; a hold that
+    // no write reached fails the test instead of hanging it.
+    const finishing = gates;
+    gates = [];
+    const unreached = finishing
+      .map((gate) => gate.finish())
+      .filter((message): message is string => message !== undefined);
     // Closing runs module destroy, which clears armed lock/kahoot timers that
     // would otherwise fire into truncated tables and keep the worker alive.
     // It never closes the worker's ORM: the test database module only hands
@@ -411,6 +462,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const closing = modules;
     modules = [];
     await Promise.all(closing.map((module) => module.close()));
+    if (unreached.length > 0) throw new Error(unreached.join('\n'));
   });
 
   const db = useTestDatabase();
@@ -509,6 +561,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const sessionService = createFakeSessionService();
     const lockScheduler = new ManualTimerScheduler();
     const kahootScheduler = new ManualTimerScheduler();
+    const gate = new TestWriteGate();
+    gates.push(gate);
     // Nest runs module init (the session store loads), then application
     // bootstrap (timers re-arm), the way the app boots.
     const moduleRef = await Test.createTestingModule({
@@ -519,6 +573,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
           lock: lockScheduler,
           kahoot: kahootScheduler,
         }),
+        writeGateModule(gate),
       ],
     })
       .overrideProvider(SessionService)
@@ -545,7 +600,6 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       progressRepository: moduleRef.get(GameProgressRepository),
       quizService: moduleRef.get(QuizService),
     };
-    const nextWriteWaiting = watchNextWrite(gameState);
     const saveQuizEdit = (
       edit: (rounds: ImportRoundPreview[]) => ImportRoundPreview[] = (rounds) =>
         rounds,
@@ -679,6 +733,13 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       // A macrotask turn: every microtask queued by the last write has run.
       await new Promise<void>((resolve) => setImmediate(resolve));
     };
+    const letOthersRun = async () => {
+      // A write's database work takes dozens of macrotask turns to finish;
+      // too few and a write that overtook the held one is still mid-flight.
+      for (let turn = 0; turn < 100; turn++) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+    };
     const controlTimer = (
       scheduler: ManualTimerScheduler,
       joinCode: string,
@@ -696,6 +757,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       ...services,
       gateway,
       broadcaster,
+      sessionWrite: moduleRef.get(SessionWrite),
+      holdAt: (step, filter) => gate.holdAt(step, filter),
+      nextQueued: (filter) => gate.nextQueued(filter),
       liveEdit,
       rest,
       saveQuizEdit,
@@ -726,8 +790,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         server.sockets.sockets.forEach((socket) => socket.emit.mockClear());
       },
       inRequestContext: (work) => RequestContext.create(db.orm.em, work),
-      nextWriteWaiting,
       settled,
+      letOthersRun,
       timers: (joinCode = quiz.joinCode) => ({
         lock: controlTimer(lockScheduler, joinCode),
         kahoot: controlTimer(kahootScheduler, joinCode),
@@ -799,48 +863,6 @@ export function restoreClock(): void {
   jest.useRealTimers();
 }
 
-type WriteWaiter = (outcome?: Promise<void>) => void;
-
-// Wraps the game's session write queue so a test can learn when the next
-// write handed to it is waiting its turn (one waiter per write, in order).
-// The queue's chain is microtasks only, so one macrotask after the hand-over a
-// write that hasn't started is blocked behind an earlier one; a write that has
-// started runs to the end.
-function watchNextWrite(gameState: GameStateService): () => Promise<void> {
-  type Run = (
-    joinCode: string,
-    task: () => Promise<unknown>,
-  ) => Promise<unknown>;
-  const { sessionWrite } = gameState as unknown as {
-    sessionWrite: { queue: SessionWriteQueue };
-  };
-  const { queue } = sessionWrite;
-  const target = queue as unknown as { run: Run };
-  const originalRun = target.run;
-  const run: Run = (joinCode, task) =>
-    Reflect.apply(originalRun, queue, [joinCode, task]);
-  const waiters: WriteWaiter[] = [];
-  target.run = (joinCode, task) => {
-    const watching = waiters.shift();
-    if (!watching) return run(joinCode, task);
-    let hasStarted = false;
-    const result = run(joinCode, () => {
-      hasStarted = true;
-      return task();
-    });
-    const finished = result.then(
-      () => undefined,
-      () => undefined,
-    );
-    setImmediate(() => watching(hasStarted ? finished : undefined));
-    return result;
-  };
-  return () =>
-    new Promise<void>((resolve) => {
-      waiters.push(resolve as WriteWaiter);
-    });
-}
-
 /**
  * Makes one call to `target[method]` reject with `error` without running it,
  * letting the `skipCalls` calls before it pass through for real. Only that one
@@ -864,48 +886,4 @@ export function rejectNthCall<T extends object, K extends string & keyof T>(
     asyncTarget[method] = original;
     return Promise.reject(error);
   };
-}
-
-export interface HeldCall {
-  /** Resolves once the held call has been made and its real result computed. */
-  started: Promise<void>;
-  /** Lets the held call return the result it computed when it started. */
-  release: () => void;
-}
-
-/**
- * Holds open the next call to `target[method]` — a database-facing
- * collaborator such as `game.standingsService.leaderboard`,
- * `game.progressRepository.save` or `game.answerService.submit` — so a spec
- * can force two events to overlap: start the first event, `await
- * held.started`, send the second, then `held.release()`.
- *
- * The call runs for real the moment it is made, so it sees the database as it
- * stood then; only its resolution waits for `release()`, which is what makes
- * its result stale by the time it lands. Only that one call is held — later
- * calls (and calls for other sessions) pass straight through, because the
- * method is restored the moment the held call is made.
- */
-export function holdNextCall<T extends object, K extends string & keyof T>(
-  target: T,
-  method: K,
-): HeldCall {
-  type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
-  const asyncTarget = target as unknown as Record<string, AsyncMethod>;
-  const original = asyncTarget[method];
-  const callOriginal = (...args: unknown[]): Promise<unknown> =>
-    Reflect.apply(original, target, args);
-  let markStarted!: () => void;
-  const started = new Promise<void>((resolve) => (markStarted = resolve));
-  let release!: () => void;
-  const released = new Promise<void>((resolve) => (release = resolve));
-  asyncTarget[method] = async (...args: unknown[]) => {
-    asyncTarget[method] = original;
-    const result = callOriginal(...args);
-    markStarted();
-    const value = await result;
-    await released;
-    return value;
-  };
-  return { started, release };
 }

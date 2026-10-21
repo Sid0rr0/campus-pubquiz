@@ -5,7 +5,6 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  holdNextCall,
   tieOnFirstQuestion,
   setupRealStoreGatewayTest,
   type JoinedTeam,
@@ -94,12 +93,13 @@ describe('GameGateway — rating and feedback are checked inside the session wri
     await advanceUntil(game, (status) => status === 'break_intro');
     const roundId = game.rounds[0].id;
 
-    const held = holdNextCall(game.progressRepository, 'save');
+    const held = game.holdAt('change');
     const press = game.act('ADVANCE');
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const rating = rate(game, team, { roundId, stars: 4 });
     await waiting;
+    await game.letOthersRun();
     held.release();
     const [, ack] = await Promise.all([press, rating]);
 
@@ -116,12 +116,13 @@ describe('GameGateway — rating and feedback are checked inside the session wri
     await advanceUntil(game, (status) => status === 'break_intro');
     const roundId = game.rounds[0].id;
 
-    const held = holdNextCall(game.feedbackService, 'rateRound');
+    const held = game.holdAt('change');
     const rating = rate(game, team, { roundId, stars: 4 });
-    await held.started;
-    const waiting = game.nextWriteWaiting();
+    await held.reached;
+    const waiting = game.nextQueued();
     const press = game.act('ADVANCE');
     await waiting;
+    await game.letOthersRun();
     held.release();
     const [ack] = await Promise.all([rating, press]);
 
@@ -140,23 +141,24 @@ describe('GameGateway — rating and feedback are checked inside the session wri
     const admin = await game.connectAdmin();
 
     // An earlier write in flight, so the showdown's write has to queue.
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const bonus = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: teamC.teamId,
       category: 'shot',
       points: 1,
     });
-    await held.started;
-    const showdownQueued = game.nextWriteWaiting();
+    await held.reached;
+    const showdownQueued = game.nextQueued();
     const showdown = game.gateway.handleCreateShowdownRound(asSocket(admin), {
       question: 'How many?',
       answer: '100',
       points: 5,
     });
     await showdownQueued;
-    const feedbackQueued = game.nextWriteWaiting();
+    const feedbackQueued = game.nextQueued();
     const feedback = send(game, teamC, { comment: 'Great', topics: [] });
     await feedbackQueued;
+    await game.letOthersRun();
     held.release();
     const [, , ack] = await Promise.all([bonus, showdown, feedback]);
 

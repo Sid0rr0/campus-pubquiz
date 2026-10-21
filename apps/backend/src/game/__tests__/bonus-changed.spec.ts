@@ -7,7 +7,6 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
-  holdNextCall,
   setupRealStoreGatewayTest,
   type JoinedTeam,
   type RealStoreGateway,
@@ -187,15 +186,15 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
 
   it('applies a REST bonus edit queued behind a held write after that write, and the next snapshot reflects both', async () => {
     const awardId = await awardShot(1);
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: idle.teamId,
       category: 'shot',
       points: 2,
     });
-    await held.started;
+    await held.reached;
 
-    const waiting = game.nextWriteWaiting();
+    const waiting = game.nextQueued();
     const editing = game.inRequestContext(() =>
       game.rest.editBonus(game.joinCode, awardId, 3, undefined),
     );
@@ -203,6 +202,7 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     const storedWhileHeld = await game.inRequestContext(() =>
       game.bonusService.listForTeamAdmin(game.gameSessionId, scorer.teamId),
     );
+    await game.letOthersRun();
     held.release();
     await awarding;
     await editing;
@@ -316,7 +316,7 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
   it('answers a session closed while the request waited in the queue with the unknown-session error', async () => {
     const awardId = await awardShot(1);
     await game.act('END_QUIZ');
-    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const held = game.holdAt('standings');
     const awarding = game.inRequestContext(() =>
       game.gameState.awardBonus(game.joinCode, {
         teamId: idle.teamId,
@@ -324,12 +324,9 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
         points: 2,
       }),
     );
-    await held.started;
+    await held.reached;
 
-    const waiting = Promise.all([
-      game.nextWriteWaiting(),
-      game.nextWriteWaiting(),
-    ]);
+    const waiting = Promise.all([game.nextQueued(), game.nextQueued()]);
     const closing = game.inRequestContext(() =>
       game.rest.closeSession(game.joinCode),
     );
@@ -340,6 +337,7 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
       UnknownLiveSessionError,
     );
     await waiting;
+    await game.letOthersRun();
     held.release();
 
     await awarding;
