@@ -1,5 +1,6 @@
 import {
   isQuestionOnAirStatus,
+  revealOnAir,
   type ActiveShowdownRoundState,
   type SessionState,
   type TeamRosterEntry,
@@ -126,12 +127,15 @@ export function withDisplaySoundMuted(
   return { ...session, isDisplaySoundMuted };
 }
 
-/** Sets/replaces the in-progress showdown round and resets the reveal step to 0 — including sudden death's fresh round. */
+/** Sets/replaces the in-progress showdown round — including sudden death's fresh round. A round that is the reveal on air starts at its first step; one composed while another reveal is on air leaves that reveal's step alone. */
 export function withActiveShowdownRound(
   session: SessionState,
   round: ActiveShowdownRoundState,
 ): SessionState {
-  return { ...session, activeShowdownRound: round, showdownRevealStep: 0 };
+  const withRound = { ...session, activeShowdownRound: round };
+  return revealOnAir(withRound)?.reveal === 'showdown'
+    ? { ...withRound, revealStep: 0 }
+    : withRound;
 }
 
 /** Overwrite semantics — resubmitting a guess before reveal replaces the previous one. No-op when there's no active round (a stale/racing submit after the round moved on). */

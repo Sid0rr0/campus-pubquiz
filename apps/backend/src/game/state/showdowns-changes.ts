@@ -2,6 +2,7 @@ import {
   type CreateShowdownRoundPayload,
   getTiedForFirst,
   isShowdownAcceptingGuesses,
+  revealStepOf,
   type SessionState,
   type SubmitShowdownGuessPayload,
 } from '@campus-pubquiz/types';
@@ -46,7 +47,7 @@ export class ShowdownsChanges {
       !isShowdownAcceptingGuesses(
         round,
         showdownRoundId,
-        session.showdownRevealStep,
+        revealStepOf(session, 'showdown'),
       )
     ) {
       throw new SessionRefusal(

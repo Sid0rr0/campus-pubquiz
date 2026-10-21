@@ -31,6 +31,7 @@ import {
   type SessionState,
 } from './session-state';
 import { buildActiveShowdownView } from './showdown-reveal';
+import { revealStepOf } from './stepped-reveal';
 
 /**
  * The phaseStartedAt/phaseElapsedMs pair for whatever timed phase is
@@ -146,6 +147,7 @@ export function buildPlayersFields(
 
 /** Assembles the shared base of every room's view for a session — the shape every display/admin/players client resyncs to on connect or after every applyAction. */
 export function buildSnapshot(session: SessionState): StateSnapshotPayload {
+  const showdownRevealStep = revealStepOf(session, 'showdown');
   return {
     progress: session.progress,
     quizStructure: getQuizStructureSummary(getGameContext(session)),
@@ -168,9 +170,9 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,
-      session.showdownRevealStep,
+      showdownRevealStep,
     ),
-    showdownRevealStep: session.showdownRevealStep,
+    showdownRevealStep,
   };
 }
 

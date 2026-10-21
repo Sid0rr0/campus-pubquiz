@@ -1,5 +1,4 @@
 import {
-  computeInitialRevealStep,
   type GameAction,
   type GameContext,
   type GameProgress,
@@ -7,6 +6,7 @@ import {
   getGameContext,
   getPastBlockIds,
   getTimedPhaseKey,
+  revealStepAfterMove,
   type SessionState,
 } from '@campus-pubquiz/types';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
@@ -109,14 +109,7 @@ export function settleSession({
       session.leaderboardRevealCount,
       context.rounds[progress.roundIndex]?.kahootMode ?? false,
     ),
-    // Showing a rank or hiding the board leaves the quiz underneath exactly
-    // where it was, including a closest_guess reveal mid-way through.
-    closestGuessRevealStep:
-      step.kind === 'leaderboard_reveal' ||
-      step.kind === 'leaderboard_hide' ||
-      step.kind === 'join_overlay_hide'
-        ? session.closestGuessRevealStep
-        : computeInitialRevealStep(session, progress, action),
+    revealStep: revealStepAfterMove(session, progress, action),
   };
 }
 

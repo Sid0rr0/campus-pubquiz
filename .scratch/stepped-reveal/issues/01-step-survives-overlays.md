@@ -4,11 +4,11 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A real-store gateway test walks a closest-guess reveal to a middle step, shows and hides the leaderboard, and asserts that the display and players views still show the same lines. It is written first and seen failing against today's code. If it passes instead, record that under `## Comments` and narrow the ticket to the cases that do fail.
-- [ ] The same for showing and hiding the join overlay, and for a leaderboard rank reveal while the leaderboard is up.
-- [ ] Advance and Previous onto a closest-guess question still start it at step 0 (forward) and at its last step (backward). Moving to another question still resets it.
-- [ ] The showdown's step is unaffected (it never goes through this settle rule).
-- [ ] The existing closest-guess, showdown, presenter-context and action-availability gateway specs pass unchanged.
-- [ ] `DOCUMENTATION.md` says the reveal keeps its step through the leaderboard and the join overlay, if it describes this anywhere.
+- [x] A real-store gateway test walks a closest-guess reveal to a middle step, shows and hides the leaderboard, and asserts that the display and players views still show the same lines. It is written first and seen failing against today's code. If it passes instead, record that under `## Comments` and narrow the ticket to the cases that do fail.
+- [x] The same for showing and hiding the join overlay, and for a leaderboard rank reveal while the leaderboard is up.
+- [x] Advance and Previous onto a closest-guess question still start it at step 0 (forward) and at its last step (backward). Moving to another question still resets it.
+- [x] The showdown's step is unaffected (it never goes through this settle rule).
+- [x] The existing closest-guess, showdown, presenter-context and action-availability gateway specs pass unchanged.
+- [x] `DOCUMENTATION.md` says the reveal keeps its step through the leaderboard and the join overlay, if it describes this anywhere.

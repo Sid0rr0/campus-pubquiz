@@ -134,13 +134,6 @@ function describePreviewedMove(
   { step, session: after }: PreviewedMove,
 ): ScreenPreview | null {
   switch (step.kind) {
-    case 'showdown_step':
-      return after.showdownRevealStep === session.showdownRevealStep
-        ? null
-        : {
-            heading: 'Showdown',
-            body: `Reveal step ${after.showdownRevealStep}`,
-          };
     case 'showdown_waiting':
       return { heading: 'Showdown', body: 'Waiting for every guess' };
     case 'grading_pending':
@@ -150,8 +143,13 @@ function describePreviewedMove(
         heading: 'Leaderboard',
         body: `Next place (${step.place} of ${step.placeCount})`,
       };
-    case 'closest_guess_step':
-      return { ...describeScreen(session), body: 'Next closest-guess step' };
+    case 'reveal_step':
+      if (step.reveal === 'closest_guess') {
+        return { ...describeScreen(session), body: 'Next closest-guess step' };
+      }
+      return after.revealStep === session.revealStep
+        ? null
+        : { heading: 'Showdown', body: `Reveal step ${after.revealStep}` };
     case 'join_overlay_hide':
       return { ...describeScreen(after), body: 'Hides the join overlay' };
     case 'leaderboard_hide':

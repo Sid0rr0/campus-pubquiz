@@ -83,21 +83,19 @@ export class MoveCommitter {
   ): Promise<CommittedMove> {
     const step = planMove(session, action);
 
-    // The ephemeral steps (showdown reveal, closest_guess sub-steps) never
+    // The ephemeral steps (the stepped reveals' sub-steps) never
     // reach getNextGameState: GameProgress is untouched and nothing is
-    // persisted. See tryStepClosestGuessReveal for why they stay ephemeral.
+    // persisted. The Stepped reveal module owns them.
     switch (step.kind) {
       case 'blocked':
         throw step.cause;
       case 'showdown_waiting':
         throw new ShowdownGuessesPendingError();
-      case 'showdown_step':
+      case 'reveal_step':
         return {
           session: await this.resolveShowdownIfFinished(step),
           outcome: BROADCAST_STATE_OUTCOME,
         };
-      case 'closest_guess_step':
-        return { session: step.session, outcome: BROADCAST_STATE_OUTCOME };
       case 'transition':
       case 'grading_pending':
       case 'leaderboard_reveal':
@@ -186,10 +184,12 @@ export class MoveCommitter {
 
   /** Crossing into a showdown's final reveal step records the winner; the session write's standings read then puts its bonus on the leaderboard. */
   private async resolveShowdownIfFinished(
-    step: Extract<MoveStep, { kind: 'showdown_step' }>,
+    step: Extract<MoveStep, { kind: 'reveal_step' }>,
   ): Promise<SessionState> {
-    const { session, shouldResolve } = step;
-    if (!shouldResolve || !session.activeShowdownRound) return session;
+    const { session, reveal, isFinal } = step;
+    if (reveal !== 'showdown' || !isFinal || !session.activeShowdownRound) {
+      return session;
+    }
     const { winnerTeamId, isTie } = await this.showdownService.resolve(
       session.activeShowdownRound.id,
     );
@@ -240,8 +240,7 @@ export function previewMove(
     case 'leaderboard_hide':
     case 'join_overlay_hide':
       return { step, session: settleMove(session, step, action) };
-    case 'showdown_step':
-    case 'closest_guess_step':
+    case 'reveal_step':
       return { step, session: step.session };
     case 'grading_pending':
     case 'showdown_waiting':

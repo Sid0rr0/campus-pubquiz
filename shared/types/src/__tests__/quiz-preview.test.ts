@@ -85,7 +85,7 @@ function screensByAdvancing(rounds: SeededRound[]) {
         ...session,
         leaderboardRevealCount: session.leaderboardRevealCount + 1,
       };
-    } else if (step.kind === 'closest_guess_step') {
+    } else if (step.kind === 'reveal_step') {
       session = step.session;
     } else {
       break;

@@ -94,11 +94,32 @@ describe('room view fields', () => {
   );
 
   it('still changes the reveal screen key with the closest-guess step', () => {
+    const guessed = {
+      ...session(),
+      seededGame: {
+        ...session().seededGame,
+        rounds: [
+          {
+            ...ROUNDS[0],
+            questions: [
+              { ...question(10), type: 'closest_guess', answer: '55' },
+            ],
+          },
+          ROUNDS[1],
+        ] as unknown as SeededRound[],
+      },
+      closestGuessSummaries: {
+        10: {
+          hasSubmissions: true,
+          minGuess: '10',
+          maxGuess: '90',
+          closestGuesses: [],
+        },
+      },
+    };
     const at = (step: number) =>
-      projectScreen(
-        { ...session(), closestGuessRevealStep: step },
-        SOCKET_ROOMS.DISPLAY,
-      ).screenKey;
+      projectScreen({ ...guessed, revealStep: step }, SOCKET_ROOMS.DISPLAY)
+        .screenKey;
 
     expect(at(1)).not.toBe(at(0));
   });

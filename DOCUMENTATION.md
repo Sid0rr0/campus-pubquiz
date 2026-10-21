@@ -156,9 +156,15 @@ For a `closest_guess` question with at least one submitted guess,
 `ADVANCE`/`PREVIOUS` in `reveal` first walk a 5-step cumulative reveal on that
 one question (smallest guess → highest guess → correct answer → closest
 team(s)) before falling through to the normal transition — see
-[Question Types](#question-types) below. This sub-walk is ephemeral
-(`closestGuessRevealStep` on the session, in no room view), not part of
-`GameProgress`.
+[Question Types](#question-types) below. This sub-walk is a Stepped reveal, as
+is the showdown reveal once the quiz has `ended`: both share one ephemeral step
+counter on the session (`revealStep`, not part of `GameProgress`; the closest
+guess's step is in no room view, the showdown's is sent as
+`showdownRevealStep`). The walk keeps its step through the leaderboard (show,
+hide, rank reveal), the join overlay and media actions; only a different reveal
+question, a status change, a new showdown round or the quiz ending restarts it.
+Composing a showdown during a closest-guess reveal leaves that reveal's step
+alone.
 
 There is **no per-question locking** — locking is purely a consequence of
 finishing a `breakAfter` round. A `locked` status existed in an earlier

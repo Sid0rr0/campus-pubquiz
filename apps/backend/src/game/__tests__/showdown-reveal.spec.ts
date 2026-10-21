@@ -160,4 +160,40 @@ describe('GameGateway — showdown reveal-step gating', () => {
     const atZero = await game.act('PREVIOUS');
     expect(atZero.showdownRevealStep).toBe(0);
   });
+
+  it('keeps the step when the leaderboard is shown and hidden mid-showdown', async () => {
+    await endQuiz();
+    await createRound();
+    await guess(0, '40');
+    await guess(1, '50');
+    await game.act('ADVANCE'); // step 1
+
+    const shown = await game.act('TOGGLE_LEADERBOARD');
+    expect(shown.showdownRevealStep).toBe(1);
+    const hidden = await game.act('TOGGLE_LEADERBOARD');
+    expect(hidden.showdownRevealStep).toBe(1);
+    expect(hidden.activeShowdown?.participants[0].guess).toBe('40');
+    expect(hidden.activeShowdown?.participants[1].guess).toBeUndefined();
+  });
+
+  it('starts a sudden-death round at its first step with its guesses hidden', async () => {
+    await endQuiz();
+    await createRound();
+    // Equally far from 42: the round ties and awards nothing.
+    await guess(0, '40');
+    await guess(1, '44');
+    await game.act('ADVANCE');
+    await game.act('ADVANCE');
+    const tied = await game.act('ADVANCE');
+    expect(tied.activeShowdown?.isTie).toBe(true);
+
+    await createRound();
+    const suddenDeath = await game.snapshot();
+
+    expect(suddenDeath.showdownRevealStep).toBe(0);
+    expect(suddenDeath.activeShowdown?.id).not.toBe(tied.activeShowdown?.id);
+    expect(
+      suddenDeath.activeShowdown?.participants.map((entry) => entry.guess),
+    ).toEqual([undefined, undefined]);
+  });
 });

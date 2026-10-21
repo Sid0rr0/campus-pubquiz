@@ -56,7 +56,7 @@ How a question is answered: typed text, a number, picking a choice, putting item
 _Avoid_: input kind (the registry field that is its default)
 
 **Showdown**:
-A tiebreak played between teams tied on the leaderboard, in which every tied team guesses at once and the guesses are then revealed one by one in a fixed seat order.
+A tiebreak played between teams tied on the leaderboard, in which every tied team guesses at once and the guesses are then revealed one by one in a fixed seat order, then the answer and the winner. A **Stepped reveal** that holds at both ends, and whose first Advance waits until every team has guessed.
 _Avoid_: tiebreaker round, sudden death
 
 **Grading**:
@@ -140,7 +140,10 @@ How the screens reveal a revealed question: `answer` (the question with its corr
 _Avoid_: reveal type, reveal mode
 
 **Closest-guess reveal**:
-The step-by-step reveal of a closest_guess question: the question; then the smallest guess, the highest guess, the correct answer and the closest teams, one more line per Advance (one step when nobody guessed). Owned by one module and sent to each screen already trimmed to the step on air, so the reveal screen draws what it is sent and never sees a step number.
+The step-by-step reveal of a closest_guess question: the question; then the smallest guess, the highest guess, the correct answer and the closest teams, one more line per Advance (one step when nobody guessed). A **Stepped reveal** that falls through to the next screen at both ends. Its disclosure is sent to each screen already trimmed to the step on air, so the reveal screen draws what it is sent and never sees a step number.
+
+**Stepped reveal**:
+The walk one line per Advance, and back one per Previous, that the **Closest-guess reveal** and the **Showdown** share. One module owns it: it knows which stepped reveal is on air, keeps the session's single ephemeral step counter (`revealStep`), and decides what a press does (a new step, a hold at an end, a fall-through to the next screen, or a wait). Each reveal only supplies its step count, what happens at its ends, a guard on the first Advance and its own lines. The step survives every action that leaves the reveal on air, including the leaderboard and the join overlay; only a different reveal restarts it. Read a reveal's step through the module, never the raw counter, so composing a showdown during another reveal disturbs neither.
 
 **Auto-advance**:
 A phone setting, on by default and remembered on that phone. On, the block browser follows the big screen's current question and reveal step; off, the team browses the block freely with previous/next.
@@ -252,7 +255,7 @@ lobby → rules → round_overview
 ## Moving through the quiz
 
 **Move plan**:
-What one press of an admin action does right now. Advance and Previous: reveal the next leaderboard rank, hide the leaderboard, take a showdown or closest*guess reveal step, move the quiz to its next status, wait for grading (Advance out of the break while an answer is ungraded — pressable, but refused with the ungraded questions), or nothing. Any other action (Start quiz in the lobby, Toggle leaderboard, …) is a plain transition, or blocked when illegal. The Move plan also owns "the next press": Start quiz in the lobby, Advance everywhere else. While the leaderboard is up, a press only works the leaderboard; while the join overlay is up, Advance or Previous only hides it. Neither ever moves the quiz underneath. Previous on the rules goes back to the lobby.
+What one press of an admin action does right now. Advance and Previous: reveal the next leaderboard rank, hide the leaderboard, take a step of the **Stepped reveal** on air (the showdown or a closest-guess reveal), move the quiz to its next status, wait for grading (Advance out of the break while an answer is ungraded — pressable, but refused with the ungraded questions), or nothing. Any other action (Start quiz in the lobby, Toggle leaderboard, …) is a plain transition, or blocked when illegal. The Move plan also owns "the next press": Start quiz in the lobby, Advance everywhere else. While the leaderboard is up, a press only works the leaderboard; while the join overlay is up, Advance or Previous only hides it. Neither ever moves the quiz underneath. Previous on the rules goes back to the lobby.
 \_Avoid*: next step, action result
 
 **Join overlay**:
@@ -260,7 +263,7 @@ The join code and QR code shown over the big screen once the quiz has started, s
 _Avoid_: QR screen, lobby overlay
 
 **Settle step**:
-Bringing a session's timers, deadlines and reveal counters into line with the point in the quiz it is moving to. Every way a session reaches a new point (starting, restoring after a restart, Advance, Previous) goes through it.
+Bringing a session's timers, deadlines and reveal step into line with the point in the quiz it is moving to. Every way a session reaches a new point (starting, restoring after a restart, Advance, Previous) goes through it.
 
 **Phase timers**:
 The two auto-lock timers every live session can have: the question lock (the last question of a block has been open for the lock grace period) and the kahoot question timer (a kahoot question's time ran out). Armed from the session's deadlines, re-armed whenever a write moves one, cleared when it goes away, restored for every session after a restart. An expiry presses Advance exactly as the admin would.

@@ -357,6 +357,90 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     });
   });
 
+  describe('an overlay shown mid-reveal', () => {
+    async function linesOnAir(game: RealStoreGateway) {
+      const { screen } = await game.resync(SOCKET_ROOMS.DISPLAY);
+      if (screen.kind !== 'reveal') throw new Error('not on a reveal screen');
+      const players = await game.resync(SOCKET_ROOMS.PLAYERS);
+      return {
+        display: screen.question,
+        players: players.revealQuestions[players.progress.revealIndex],
+      };
+    }
+
+    async function atMiddleStep(): Promise<RealStoreGateway> {
+      const game = await startWithGuesses(GUESSES);
+      await actAll(game, [...TO_REVEAL, 'ADVANCE', 'ADVANCE']); // step 2
+      return game;
+    }
+
+    it.each(['TOGGLE_LEADERBOARD', 'TOGGLE_JOIN_OVERLAY'] as const)(
+      'keeps the lines on air when %s is shown and hidden',
+      async (toggle) => {
+        const game = await atMiddleStep();
+        const before = await linesOnAir(game);
+
+        await game.act(toggle);
+        await game.act(toggle);
+
+        expect(await linesOnAir(game)).toEqual(before);
+        expect(await stepOn(game)).toBe(2);
+      },
+    );
+
+    it('keeps the step through a leaderboard rank reveal', async () => {
+      const game = await atMiddleStep();
+      await game.act('TOGGLE_LEADERBOARD');
+
+      await game.act('ADVANCE'); // reveals a rank under the board
+      await game.act('TOGGLE_LEADERBOARD');
+
+      expect(await stepOn(game)).toBe(2);
+    });
+  });
+
+  describe('a showdown composed during the reveal', () => {
+    // Team A and Team B guess alike, so both are closest and tie for first.
+    const TIED_GUESSES = [
+      { teamName: 'Team A', value: '950' },
+      { teamName: 'Team B', value: '950' },
+      { teamName: 'Team C', value: '2000' },
+    ];
+
+    it('leaves the reveal on air alone, and starts at its first step once the quiz ends', async () => {
+      const game = await startWithGuesses(TIED_GUESSES);
+      await actAll(game, [...TO_REVEAL, 'ADVANCE', 'ADVANCE']); // step 2
+      const before = await game.resync(SOCKET_ROOMS.DISPLAY);
+      const playersBefore = await game.resync(SOCKET_ROOMS.PLAYERS);
+
+      const admin = await game.connectAdmin();
+      await game.gateway.handleCreateShowdownRound(asSocket(admin), {
+        question: 'How many people are in this room?',
+        answer: '42',
+        points: 5,
+      });
+
+      expect(await stepOn(game)).toBe(2);
+      const after = await game.resync(SOCKET_ROOMS.DISPLAY);
+      expect(after.screen).toEqual(before.screen);
+      const playersAfter = await game.resync(SOCKET_ROOMS.PLAYERS);
+      expect(playersAfter.revealQuestions).toEqual(
+        playersBefore.revealQuestions,
+      );
+
+      const ended = await game.act('END_QUIZ');
+      expect(ended.showdownRevealStep).toBe(0);
+      const { socket, teamId } = game.teams[0];
+      await game.gateway.handleSubmitShowdownGuess(asSocket(socket), {
+        showdownRoundId: ended.activeShowdown!.id,
+        teamId,
+        value: '40',
+      });
+      const guessed = await game.snapshot();
+      expect(guessed.activeShowdown?.participants[0].hasGuessed).toBe(true);
+    });
+  });
+
   it('keeps the 5-step reveal walk when the backend restarts mid-reveal', async () => {
     const game = await startWithGuesses(GUESSES);
     await actAll(game, TO_REVEAL);

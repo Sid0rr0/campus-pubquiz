@@ -11,6 +11,7 @@ import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import { FULLY_REVEALED_STEP, shownAtStep } from './closest-guess-reveal';
+import { revealStepOf } from './stepped-reveal';
 import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
   type OnAirScreen,
@@ -117,7 +118,7 @@ export function projectScreen(
   const snapshot = buildSnapshot(session);
   // The closest-guess step stays server-side: it only keys the reveal screen
   // and trims the reveal questions; no view carries it.
-  const { closestGuessRevealStep } = session;
+  const closestGuessRevealStep = revealStepOf(session, 'closest_guess');
   const { screen, screenKey, header } = describeOnAirScreen({
     ...snapshot,
     closestGuessRevealStep,

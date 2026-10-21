@@ -151,8 +151,8 @@ export interface SessionState {
   answeredTeamIdsByQuestion: Record<number, number[]>;
   /** teamId -> socket.id of the one device currently connected as that team. */
   connectedTeamSockets: Record<number, string>;
-  /** closest_guess reveal-step counter for the question at progress.revealIndex — ephemeral, not persisted. */
-  closestGuessRevealStep: number;
+  /** The step counter of the stepped reveal on air (the closest-guess reveal or the showdown) — ephemeral, not persisted. Read it through the Stepped reveal module, never raw: it means nothing while no stepped reveal is on air. */
+  revealStep: number;
   /** Cached per-question closest_guess grading/summary, keyed by questionId — computed once when a block locks, ephemeral like leaderboardRevealCount. */
   closestGuessSummaries: Record<number, ClosestGuessRevealData>;
   /**
@@ -167,8 +167,6 @@ export interface SessionState {
   ungradedQuestionIds: number[];
   /** The in-progress/just-resolved showdown tiebreaker round, or null between rounds — see ActiveShowdownRoundState. */
   activeShowdownRound: ActiveShowdownRoundState | null;
-  /** showdown reveal-step counter, ephemeral like closestGuessRevealStep — meaningless while activeShowdownRound is null. */
-  showdownRevealStep: number;
 }
 
 /** One participating team's seat + guess within the active showdown round — the server-side cache backing ActiveShowdownView; the answer/guess fields are always held here in plaintext and only selectively projected out per showdownRevealStep by buildActiveShowdownView. */
@@ -221,11 +219,10 @@ export function freshSessionState(
     playerCounts: {},
     answeredTeamIdsByQuestion: {},
     connectedTeamSockets: {},
-    closestGuessRevealStep: 0,
+    revealStep: 0,
     closestGuessSummaries: {},
     ungradedQuestionIds: [],
     activeShowdownRound: null,
-    showdownRevealStep: 0,
   };
 }
 

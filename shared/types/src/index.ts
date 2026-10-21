@@ -62,6 +62,7 @@ export * from './kahoot-visibility';
 export * from './admin-view-flags';
 export * from './feedback-rounds';
 export * from './closest-guess-reveal';
+export * from './stepped-reveal';
 export * from './showdown-reveal';
 export * from './showdown-guesses-pending-error';
 export * from './move-plan';

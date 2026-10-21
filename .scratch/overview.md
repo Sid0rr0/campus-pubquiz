@@ -4,10 +4,9 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 ## Not implemented
 
-| Spec                  | Title                                                                                          | Tickets | Blocked by |
-| --------------------- | ---------------------------------------------------------------------------------------------- | ------- | ---------- |
-| stepped-reveal        | [One stepped reveal for the showdown and the closest guess](stepped-reveal/spec.md)            | 3       | —          |
-| control-round-points  | [The control panel's teams table reads rounds from the snapshot](control-round-points/spec.md) | 1       | —          |
+| Spec                 | Title                                                                                          | Tickets | Blocked by |
+| -------------------- | ---------------------------------------------------------------------------------------------- | ------- | ---------- |
+| control-round-points | [The control panel's teams table reads rounds from the snapshot](control-round-points/spec.md) | 1       | —          |
 
 ## Won't do
 

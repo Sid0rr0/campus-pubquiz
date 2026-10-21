@@ -12,16 +12,16 @@ The closest-guess reveal supplies only a descriptor: its step count (one plus on
 
 **Blocked by:** 01 (A reveal's step survives the leaderboard and the join overlay)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Pure tests for the module over a test descriptor cover:
+- [x] Pure tests for the module over a test descriptor cover:
   - forward and backward bounds
   - hold vs. fall-through at each end
   - a first-Advance guard that waits
   - the start step landing forward and backward
   - the final-step flag
   - reading a reveal's step when it isn't on air
-- [ ] The closest-guess interceptor and start-step function are gone. The Move plan, the settle step and the screen projection reach the closest-guess reveal only through the module.
-- [ ] The Move plan has no `closest_guess_step`. A closest-guess press plans a `reveal_step`. Commit a move still saves nothing for it and never runs the state machine.
-- [ ] The closest-guess reveal, players-reveal-redaction, presenter-context and action-availability gateway specs, and 01's new tests, pass unchanged.
-- [ ] `pnpm typecheck` and the shared-types, backend and frontend tests pass.
+- [x] The closest-guess interceptor and start-step function are gone. The Move plan, the settle step and the screen projection reach the closest-guess reveal only through the module.
+- [x] The Move plan has no `closest_guess_step`. A closest-guess press plans a `reveal_step`. Commit a move still saves nothing for it and never runs the state machine.
+- [x] The closest-guess reveal, players-reveal-redaction, presenter-context and action-availability gateway specs, and 01's new tests, pass unchanged.
+- [x] `pnpm typecheck` and the shared-types, backend and frontend tests pass.

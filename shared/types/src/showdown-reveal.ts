@@ -1,9 +1,9 @@
-import type { ActiveShowdownRoundState, SessionState } from './session-state';
+import type { ActiveShowdownRoundState } from './session-state';
 import type { ActiveShowdownView } from './showdown';
-import { ShowdownGuessesPendingError } from './showdown-guesses-pending-error';
+import type { SteppedRevealDescriptor } from './stepped-reveal';
 
-/** How many reveal sub-steps an active showdown round has: one per participant's guess, plus one final step for the answer/winner. */
-function getShowdownRevealStepCount(round: ActiveShowdownRoundState): number {
+/** The number of the showdown's final step: one per participant's guess, then the answer/winner. */
+function getShowdownFinalStep(round: ActiveShowdownRoundState): number {
   return round.participants.length + 1;
 }
 
@@ -13,7 +13,7 @@ export function buildActiveShowdownView(
   step: number,
 ): ActiveShowdownView | null {
   if (!round) return null;
-  const finalStep = getShowdownRevealStepCount(round);
+  const finalStep = getShowdownFinalStep(round);
   const sortedParticipants = [...round.participants].sort(
     (a, b) => a.seatIndex - b.seatIndex,
   );
@@ -39,39 +39,16 @@ export function buildActiveShowdownView(
   };
 }
 
-/** ADVANCE/PREVIOUS while a showdown round is active — mirrors tryStepClosestGuessReveal's shape, but signals the caller (GameStateService.applyAction) when crossing into the final step so it can trigger ShowdownService.resolve() and a leaderboard refresh. Never falls through to getNextGameState; status stays 'ended' throughout. */
-export function tryStepShowdownReveal(
-  session: SessionState,
-  action: 'ADVANCE' | 'PREVIOUS',
-): { session: SessionState; shouldResolve: boolean } | null {
-  const round = session.activeShowdownRound;
-  if (!round) return null;
-
-  const finalStep = getShowdownRevealStepCount(round);
-  const step = session.showdownRevealStep;
-
-  if (action === 'PREVIOUS') {
-    if (step === 0) return { session, shouldResolve: false };
-    return {
-      session: { ...session, showdownRevealStep: step - 1 },
-      shouldResolve: false,
-    };
-  }
-
-  // ADVANCE
-  if (
-    step === 0 &&
-    round.participants.some((participant) => participant.guess === null)
-  ) {
-    throw new ShowdownGuessesPendingError();
-  }
-  if (step >= finalStep) {
-    // Already fully revealed — a repeated ADVANCE press is a harmless no-op.
-    return { session, shouldResolve: false };
-  }
-  const nextStep = step + 1;
+/** The showdown as a stepped reveal: step 0 shows no guess, step N the first N seats' guesses, the last step the answer and winner. It holds at both ends, and the first Advance waits until every seat has guessed. */
+export function showdownRevealDescriptor(
+  round: ActiveShowdownRoundState,
+): SteppedRevealDescriptor {
   return {
-    session: { ...session, showdownRevealStep: nextStep },
-    shouldResolve: nextStep === finalStep,
+    stepCount: getShowdownFinalStep(round) + 1,
+    atStart: 'hold',
+    atEnd: 'hold',
+    canStart: round.participants.every(
+      (participant) => participant.guess !== null,
+    ),
   };
 }
