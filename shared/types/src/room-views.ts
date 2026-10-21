@@ -48,7 +48,7 @@ export interface LeaderboardEntry {
   roundPoints: RoundPoints[];
 }
 
-/** How a team's rank moved against the trend basis. */
+/** How a team's rank moved against the prior standings. */
 export type RankTrend = 'up' | 'down' | 'same';
 
 /**
@@ -60,7 +60,7 @@ export interface LeaderboardBoard {
   entries: LeaderboardEntry[];
   /** The board to hold and count up from, then reorder into `entries` — present only for the between-questions kahoot board. */
   countUpBoard?: LeaderboardEntry[];
-  /** Rank movement per team id, shown once the board settles; a team with no previous standing has none. */
+  /** Rank movement per team id, shown once the board settles; a team missing from the prior standings has none, and every team has none when there are none. */
   trends: Record<number, RankTrend>;
 }
 

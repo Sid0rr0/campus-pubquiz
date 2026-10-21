@@ -15,7 +15,7 @@ Parent spec: `.scratch/prior-standings-trends/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The trend basis is always the Prior standings, ranked with the shared ranking rule. With none, no team has a trend. A team missing from them has none.
 - [ ] When the Prior standings have more than one team, all tied, every shown team on them is up, in every round.
