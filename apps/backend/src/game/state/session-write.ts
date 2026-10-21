@@ -180,10 +180,15 @@ export class SessionWrite {
     options?: SessionWriteOptions,
   ): Promise<T> {
     const refreshStandings = shouldRefreshStandings(options);
-    this.gate.queued(joinCode);
-    return this.queue.run(joinCode, () =>
+    return this.runQueued(joinCode, () =>
       this.writeNow(joinCode, change, refreshStandings),
     );
+  }
+
+  /** Puts `work` on the join code's queue, telling the gate it is queued first. */
+  private runQueued<T>(joinCode: string, work: () => Promise<T>): Promise<T> {
+    this.gate.queued(joinCode);
+    return this.queue.run(joinCode, work);
   }
 
   /**
@@ -195,8 +200,7 @@ export class SessionWrite {
     joinCode: string,
     check: (session: SessionState) => void,
   ): Promise<void> {
-    this.gate.queued(joinCode);
-    return this.queue.run(joinCode, () => {
+    return this.runQueued(joinCode, () => {
       check(this.read(joinCode));
       this.sessions.delete(joinCode);
       return Promise.resolve();
