@@ -1,5 +1,4 @@
 import {
-  computeInitialRevealStep,
   type GameAction,
   type GameContext,
   type GameProgress,
@@ -7,6 +6,7 @@ import {
   getGameContext,
   getPastBlockIds,
   getTimedPhaseKey,
+  revealStartStep,
   type SessionState,
 } from '@campus-pubquiz/types';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
@@ -114,7 +114,7 @@ export function settleSession({
     closestGuessRevealStep:
       step.kind !== 'place' && isSameRevealOnAir(session.progress, progress)
         ? session.closestGuessRevealStep
-        : computeInitialRevealStep(session, progress, action),
+        : revealStartStep(session, progress, action),
   };
 }
 

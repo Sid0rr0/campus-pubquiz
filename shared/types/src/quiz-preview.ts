@@ -325,7 +325,7 @@ function dryRunPress(session: SessionState): SessionState | null {
         ...session,
         leaderboardRevealCount: session.leaderboardRevealCount + 1,
       };
-    case 'closest_guess_step':
+    case 'reveal_step':
       return move.session;
     case 'showdown_step':
     case 'showdown_waiting':

@@ -150,7 +150,7 @@ function describePreviewedMove(
         heading: 'Leaderboard',
         body: `Next place (${step.place} of ${step.placeCount})`,
       };
-    case 'closest_guess_step':
+    case 'reveal_step':
       return { ...describeScreen(session), body: 'Next closest-guess step' };
     case 'join_overlay_hide':
       return { ...describeScreen(after), body: 'Hides the join overlay' };

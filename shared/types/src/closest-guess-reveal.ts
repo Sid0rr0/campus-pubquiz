@@ -1,9 +1,10 @@
 import type { AnswerView } from './answers';
+import { getBlockInPlayIds } from './block-in-play';
 import {
   getBlockStartPosition,
   getRoundAndQuestionForBlockPosition,
 } from './game-state-block-position';
-import type { GameAction, GameProgress } from './game-state-types';
+import type { GameProgress } from './game-state-types';
 import type {
   BlockRevealQuestionView,
   ClosestGuessRevealData,
@@ -14,6 +15,7 @@ import { toBlockQuestionView } from './question-view-conversions';
 import { QUESTION_KINDS } from './question-kind';
 import { findClosestGuesses } from './scoring';
 import { getGameContext, type SessionState } from './session-state';
+import type { SteppedRevealDescriptor } from './stepped-reveal';
 
 /**
  * Summarizes a closest_guess question's answers into the display/play-facing
@@ -140,43 +142,30 @@ export function shownAtStep(
   };
 }
 
-/** ADVANCE/PREVIOUS while mid-sequence on the current reveal question — null when there's nothing to gate (not closest_guess, single-step, or already at a boundary), signaling the caller to fall through to getNextGameState. */
-export function tryStepClosestGuessReveal(
-  session: SessionState,
-  action: 'ADVANCE' | 'PREVIOUS',
-): SessionState | null {
-  const question = getRevealTargetQuestion(
-    session,
-    session.progress.roundIndex,
-    session.progress.questionIndex,
-    session.progress.revealIndex,
-  );
-  const totalSteps = getRevealStepCount(question, session);
-  if (totalSteps <= 1) return null;
-
-  const step = session.closestGuessRevealStep;
-  if (action === 'ADVANCE' && step < totalSteps - 1) {
-    return { ...session, closestGuessRevealStep: step + 1 };
-  }
-  if (action === 'PREVIOUS' && step > 0) {
-    return { ...session, closestGuessRevealStep: step - 1 };
-  }
-  return null;
-}
-
-/** Initializes the step counter whenever a (possibly new) question lands on 'reveal': 0 arriving forward (ADVANCE), last step arriving backward (PREVIOUS) — mirrors how PREVIOUS already resumes any other type fully revealed. */
-export function computeInitialRevealStep(
+/** The closest-guess reveal as a stepped reveal when `progress` puts a question someone guessed on on air; null otherwise (one step, nothing to walk). It falls through at both ends and has no guard. */
+export function closestGuessRevealDescriptor(
   session: SessionState,
   progress: GameProgress,
-  action: GameAction | null,
-): number {
-  if (progress.status !== 'reveal') return 0;
+): SteppedRevealDescriptor | null {
+  if (progress.status !== 'reveal') return null;
+  // A reveal index past the block names no question: nothing to walk.
+  const blockSize = getBlockInPlayIds(
+    session.seededGame.rounds,
+    progress,
+  ).length;
+  if (progress.revealIndex >= blockSize) return null;
   const question = getRevealTargetQuestion(
     session,
     progress.roundIndex,
     progress.questionIndex,
     progress.revealIndex,
   );
-  const totalSteps = getRevealStepCount(question, session);
-  return action === 'PREVIOUS' ? totalSteps - 1 : 0;
+  const stepCount = getRevealStepCount(question, session);
+  if (stepCount <= 1) return null;
+  return {
+    stepCount,
+    atStart: 'fall_through',
+    atEnd: 'fall_through',
+    canStart: true,
+  };
 }

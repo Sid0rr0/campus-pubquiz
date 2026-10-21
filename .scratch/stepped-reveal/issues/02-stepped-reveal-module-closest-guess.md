@@ -12,7 +12,7 @@ The closest-guess reveal supplies only a descriptor: its step count (one plus on
 
 **Blocked by:** 01 (A reveal's step survives the leaderboard and the join overlay)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Pure tests for the module over a test descriptor cover:
   - forward and backward bounds

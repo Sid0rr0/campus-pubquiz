@@ -1,4 +1,3 @@
-import { tryStepClosestGuessReveal } from './closest-guess-reveal';
 import { getNextGameState } from './game-state';
 import {
   IllegalGameTransitionError,
@@ -10,6 +9,7 @@ import type { AdvanceSlotStep, PreviousState } from './room-views';
 import { getGameContext, type SessionState } from './session-state';
 import { ShowdownGuessesPendingError } from './showdown-guesses-pending-error';
 import { tryStepShowdownReveal } from './showdown-reveal';
+import { stepRevealOnAir, type SteppedRevealKind } from './stepped-reveal';
 
 export type Movement = 'ADVANCE' | 'PREVIOUS';
 
@@ -39,7 +39,13 @@ export type MoveStep =
     }
   /** ADVANCE on a showdown that is still waiting for guesses: pressable, but answers with what is missing. */
   | { kind: 'showdown_waiting' }
-  | { kind: 'closest_guess_step'; session: SessionState }
+  /** A step of the stepped reveal on air (not the showdown, which has its own step for now); `isFinal` when the press reached its last step. */
+  | {
+      kind: 'reveal_step';
+      reveal: SteppedRevealKind;
+      session: SessionState;
+      isFinal: boolean;
+    }
   | { kind: 'transition'; progress: GameProgress }
   /**
    * ADVANCE out of the break into the reveal while the cached ungraded set
@@ -168,9 +174,14 @@ function planUnderlyingMove(
     if (showdownStep) return showdownStep;
   }
 
-  if (progress.status === 'reveal') {
-    const stepped = tryStepClosestGuessReveal(session, movement);
-    if (stepped) return { kind: 'closest_guess_step', session: stepped };
+  const stepped = stepRevealOnAir(session, movement);
+  if (stepped.kind === 'step') {
+    return {
+      kind: 'reveal_step',
+      reveal: stepped.reveal,
+      session: stepped.session,
+      isFinal: stepped.isFinal,
+    };
   }
 
   const step = planTransition(session, movement);

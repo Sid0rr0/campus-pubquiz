@@ -85,7 +85,7 @@ export class MoveCommitter {
 
     // The ephemeral steps (showdown reveal, closest_guess sub-steps) never
     // reach getNextGameState: GameProgress is untouched and nothing is
-    // persisted. See tryStepClosestGuessReveal for why they stay ephemeral.
+    // persisted. The Stepped reveal module owns them.
     switch (step.kind) {
       case 'blocked':
         throw step.cause;
@@ -96,7 +96,7 @@ export class MoveCommitter {
           session: await this.resolveShowdownIfFinished(step),
           outcome: BROADCAST_STATE_OUTCOME,
         };
-      case 'closest_guess_step':
+      case 'reveal_step':
         return { session: step.session, outcome: BROADCAST_STATE_OUTCOME };
       case 'transition':
       case 'grading_pending':
@@ -241,7 +241,7 @@ export function previewMove(
     case 'join_overlay_hide':
       return { step, session: settleMove(session, step, action) };
     case 'showdown_step':
-    case 'closest_guess_step':
+    case 'reveal_step':
       return { step, session: step.session };
     case 'grading_pending':
     case 'showdown_waiting':
