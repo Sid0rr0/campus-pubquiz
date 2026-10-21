@@ -1,8 +1,9 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import { formatAnswer, type Verdict } from './answer-kind';
-import { answerCredit } from './question-correct-rate';
-import { QUESTION_KINDS } from './question-kind';
+import { hasMeaningfulCorrectRate } from './question-correct-rate';
+import { questionOutcome } from './question-outcome';
+import type { QuestionType } from './question-types';
 import { compareTeamNames } from './ranking-rule';
 import type { SessionState } from './session-state';
 
@@ -86,8 +87,7 @@ const HALF = 0.5;
 
 interface RevealedQuestion extends FunFactQuestion {
   isKahoot: boolean;
-  /** A closest guess has one winner by design, so rates say nothing about it. */
-  isClosestGuess: boolean;
+  type: QuestionType;
   points: number;
 }
 
@@ -100,8 +100,7 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
       prompt: question.prompt,
       answer: formatAnswer(question.answer, question),
       isKahoot: round.kahootMode ?? false,
-      isClosestGuess:
-        QUESTION_KINDS[question.type].revealKind === 'closest_guess',
+      type: question.type,
       points: question.points,
     })),
   );
@@ -166,19 +165,18 @@ function outcomesOf(
   teamCount: number,
 ): QuestionOutcome[] {
   return revealed.flatMap((question) => {
-    if (question.isClosestGuess) return [];
+    // A type with no correct rate (one winner by design) says nothing in rates.
+    if (!hasMeaningfulCorrectRate(question.type)) return [];
     const own = answers.filter((a) => a.questionId === question.questionId);
     // Nobody answered: no data, so nothing to say about it.
     if (own.length === 0) return [];
-    const credit = own.reduce(
-      (sum, a) => sum + answerCredit(a, question.points),
-      0,
-    );
+    const outcome = questionOutcome(question, own, teamCount);
     return [
       {
         question,
-        correctRate: teamCount > 0 ? credit / teamCount : 0,
-        correctCount: own.filter((a) => a.verdict === 'correct').length,
+        // An empty roster has no rate; read it as 0 as before.
+        correctRate: outcome.correctRate ?? 0,
+        correctCount: outcome.correctCount,
       },
     ];
   });
@@ -189,13 +187,16 @@ function cleanSweep(
   revealed: readonly RevealedQuestion[],
   answers: readonly FunFactAnswer[],
 ): FunFact | null {
-  // Closest guesses don't count: only the closest team gets one right.
-  const closestGuessIds = new Set(
-    revealed.filter((q) => q.isClosestGuess).map((q) => q.questionId),
+  // Types with no correct rate don't count: only the closest team gets a
+  // closest guess right.
+  const noRateIds = new Set(
+    revealed
+      .filter((q) => !hasMeaningfulCorrectRate(q.type))
+      .map((q) => q.questionId),
   );
   const blockIds = new Set(
     getLastPastBlockIds(session.seededGame.rounds, session.progress).filter(
-      (id) => !closestGuessIds.has(id),
+      (id) => !noRateIds.has(id),
     ),
   );
   if (blockIds.size === 0) return null;
