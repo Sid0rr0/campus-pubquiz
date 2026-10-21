@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Night read on the Ended-sessions read, used by the Team page)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The stats session detail no longer queries questions or answers itself and no longer builds its own wording map; it passes the night read's questions and answers (unnarrowed) into the session-detail calc
 - [ ] The night read itself is not changed by this ticket
