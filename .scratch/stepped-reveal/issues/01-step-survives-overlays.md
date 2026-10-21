@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A real-store gateway test walks a closest-guess reveal to a middle step, shows and hides the leaderboard, and asserts that the display and players views still show the same lines. It is written first and seen failing against today's code. If it passes instead, record that under `## Comments` and narrow the ticket to the cases that do fail.
 - [ ] The same for showing and hiding the join overlay, and for a leaderboard rank reveal while the leaderboard is up.

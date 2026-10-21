@@ -109,15 +109,24 @@ export function settleSession({
       session.leaderboardRevealCount,
       context.rounds[progress.roundIndex]?.kahootMode ?? false,
     ),
-    // Showing a rank or hiding the board leaves the quiz underneath exactly
-    // where it was, including a closest_guess reveal mid-way through.
+    // Any action that leaves the same reveal on air (an overlay, a rank, a
+    // media action) keeps its step; only a different reveal restarts it.
     closestGuessRevealStep:
-      step.kind === 'leaderboard_reveal' ||
-      step.kind === 'leaderboard_hide' ||
-      step.kind === 'join_overlay_hide'
+      step.kind !== 'place' && isSameRevealOnAir(session.progress, progress)
         ? session.closestGuessRevealStep
         : computeInitialRevealStep(session, progress, action),
   };
+}
+
+/** Whether `next` leaves the reveal question that `current` has on air still on air. */
+function isSameRevealOnAir(current: GameProgress, next: GameProgress): boolean {
+  return (
+    current.status === 'reveal' &&
+    next.status === 'reveal' &&
+    current.roundIndex === next.roundIndex &&
+    current.questionIndex === next.questionIndex &&
+    current.revealIndex === next.revealIndex
+  );
 }
 
 /** Armed only while in the 'locking' countdown, so a gateway timer can advance into the break without the admin clicking Advance. */

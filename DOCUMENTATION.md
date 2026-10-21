@@ -158,7 +158,9 @@ one question (smallest guess → highest guess → correct answer → closest
 team(s)) before falling through to the normal transition — see
 [Question Types](#question-types) below. This sub-walk is ephemeral
 (`closestGuessRevealStep` on the session, in no room view), not part of
-`GameProgress`.
+`GameProgress`. It keeps its step through the leaderboard (show, hide, rank
+reveal), the join overlay and media actions; only a different reveal question,
+a status change or the quiz ending restarts it.
 
 There is **no per-question locking** — locking is purely a consequence of
 finishing a `breakAfter` round. A `locked` status existed in an earlier

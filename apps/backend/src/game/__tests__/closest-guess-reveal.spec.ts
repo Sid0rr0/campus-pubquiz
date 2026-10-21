@@ -357,6 +357,48 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     });
   });
 
+  describe('an overlay shown mid-reveal', () => {
+    async function linesOnAir(game: RealStoreGateway) {
+      const { screen } = await game.resync(SOCKET_ROOMS.DISPLAY);
+      if (screen.kind !== 'reveal') throw new Error('not on a reveal screen');
+      const players = await game.resync(SOCKET_ROOMS.PLAYERS);
+      return {
+        display: screen.question,
+        players: players.revealQuestions[players.progress.revealIndex],
+      };
+    }
+
+    async function atMiddleStep(): Promise<RealStoreGateway> {
+      const game = await startWithGuesses(GUESSES);
+      await actAll(game, [...TO_REVEAL, 'ADVANCE', 'ADVANCE']); // step 2
+      return game;
+    }
+
+    it.each(['TOGGLE_LEADERBOARD', 'TOGGLE_JOIN_OVERLAY'] as const)(
+      'keeps the lines on air when %s is shown and hidden',
+      async (toggle) => {
+        const game = await atMiddleStep();
+        const before = await linesOnAir(game);
+
+        await game.act(toggle);
+        await game.act(toggle);
+
+        expect(await linesOnAir(game)).toEqual(before);
+        expect(await stepOn(game)).toBe(2);
+      },
+    );
+
+    it('keeps the step through a leaderboard rank reveal', async () => {
+      const game = await atMiddleStep();
+      await game.act('TOGGLE_LEADERBOARD');
+
+      await game.act('ADVANCE'); // reveals a rank under the board
+      await game.act('TOGGLE_LEADERBOARD');
+
+      expect(await stepOn(game)).toBe(2);
+    });
+  });
+
   it('keeps the 5-step reveal walk when the backend restarts mid-reveal', async () => {
     const game = await startWithGuesses(GUESSES);
     await actAll(game, TO_REVEAL);
