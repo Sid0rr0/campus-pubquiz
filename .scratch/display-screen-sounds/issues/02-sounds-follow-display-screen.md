@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (The display view carries a screen position)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `soundFor` returns `sting` for a move onto `round_title`, `reveal` onto `reveal`, `timeUp` from `question`/`locking` onto a screen after the lock (`break_intro`, `break_review`, `break_round_title`, `reveal_intro`, `reveal`), `fanfare` onto `ended`, and `null` otherwise. Pure tests cover each row, plus the `null` cases (question → question, question → locking, `break_round_title`, `reveal_intro`, overlays).
 - [ ] `/display` makes no sound decision from `progress.status`. `useRoundTitleSting`, its test, `revealPosition` and its test are deleted. Any order cases worth keeping have already moved into 01's walk test.
