@@ -8,6 +8,7 @@ import type {
   TeamView,
 } from '@campus-pubquiz/types';
 import { AnswersPanel } from '@/app/control/answers-panel';
+import { NotesLine } from '@/app/control/notes-line';
 import { Button } from '@/app/components/button';
 
 interface QuestionBrowserPanelProps {
@@ -85,12 +86,14 @@ export function QuestionBrowserPanel({
     return null;
   }
 
+  const selectedQuestion = rounds
+    .flatMap((round) => round.questions)
+    .find((question) => question.id === selectedQuestionId);
   const selectedPrompt =
-    rounds
-      .flatMap((round) => round.questions)
-      .find((question) => question.id === selectedQuestionId)?.prompt ??
+    selectedQuestion?.prompt ??
     fallbackQuestions.find((question) => question.id === selectedQuestionId)
       ?.prompt;
+  const selectedNotes = selectedQuestion?.notes;
   const hasLiveAnswers = liveAnswers?.questionId === selectedQuestionId;
 
   return (
@@ -108,81 +111,96 @@ export function QuestionBrowserPanel({
             return (
               <div
                 key={`${round.title}-${roundIndex}`}
-                className="flex flex-wrap items-center gap-1.5"
+                className="flex flex-col gap-0.5"
               >
-                <span role="img" aria-label={`Round ${roundIndex + 1}`}>
-                  {roundIndex + 1}
-                </span>
-                <nav
-                  aria-label={`${round.title} questions`}
-                  className="flex flex-wrap items-center gap-1"
-                >
-                  <span
-                    role="img"
-                    title={`${round.title} title card${isTitleOnDisplay ? ' (live on display)' : ''}`}
-                    className={displayMarkerClasses(
-                      isTitleOnDisplay,
-                      !isActiveRound,
-                    )}
-                  >
-                    T
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span role="img" aria-label={`Round ${roundIndex + 1}`}>
+                    {roundIndex + 1}
                   </span>
-                  {round.questions.map((question, questionIndex) => {
-                    const isSelected = question.id === selectedQuestionId;
-                    const isOnDisplay =
-                      question.id === indicators.onDisplayQuestionId;
-                    const isUngraded = ungradedQuestionIds.includes(
-                      question.id,
-                    );
-                    const label = `Grade question ${questionIndex + 1} of ${round.title}${isOnDisplay ? ' (live on display)' : ''}${isUngraded ? ' (not yet graded)' : ''}`;
-                    return (
-                      <span key={question.id} className="relative inline-flex">
-                        <Button
-                          type="button"
-                          aria-label={label}
-                          aria-pressed={isSelected}
-                          onClick={() => onSelectQuestion(question.id)}
-                          className={questionButtonClasses(
-                            isSelected,
-                            isOnDisplay,
-                            !isActiveRound,
-                          )}
-                        >
-                          {questionIndex + 1}
-                        </Button>
-                        {isUngraded && (
-                          <span
-                            aria-hidden="true"
-                            title="Not yet graded"
-                            className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-magenta ring-1 ring-white"
-                          />
-                        )}
-                      </span>
-                    );
-                  })}
-                  {round.breakAfter && (
+                  <nav
+                    aria-label={`${round.title} questions`}
+                    className="flex flex-wrap items-center gap-1"
+                  >
                     <span
                       role="img"
-                      title={`${round.title} break card${isBreakOnDisplay ? ' (live on display)' : ''}`}
+                      title={`${round.title} title card${isTitleOnDisplay ? ' (live on display)' : ''}`}
                       className={displayMarkerClasses(
-                        isBreakOnDisplay,
+                        isTitleOnDisplay,
                         !isActiveRound,
                       )}
                     >
-                      B
+                      T
                     </span>
-                  )}
-                </nav>
+                    {round.questions.map((question, questionIndex) => {
+                      const isSelected = question.id === selectedQuestionId;
+                      const isOnDisplay =
+                        question.id === indicators.onDisplayQuestionId;
+                      const isUngraded = ungradedQuestionIds.includes(
+                        question.id,
+                      );
+                      const label = `Grade question ${questionIndex + 1} of ${round.title}${isOnDisplay ? ' (live on display)' : ''}${isUngraded ? ' (not yet graded)' : ''}`;
+                      return (
+                        <span
+                          key={question.id}
+                          className="relative inline-flex"
+                        >
+                          <Button
+                            type="button"
+                            aria-label={label}
+                            aria-pressed={isSelected}
+                            onClick={() => onSelectQuestion(question.id)}
+                            className={questionButtonClasses(
+                              isSelected,
+                              isOnDisplay,
+                              !isActiveRound,
+                            )}
+                          >
+                            {questionIndex + 1}
+                          </Button>
+                          {isUngraded && (
+                            <span
+                              aria-hidden="true"
+                              title="Not yet graded"
+                              className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-magenta ring-1 ring-white"
+                            />
+                          )}
+                        </span>
+                      );
+                    })}
+                    {round.breakAfter && (
+                      <span
+                        role="img"
+                        title={`${round.title} break card${isBreakOnDisplay ? ' (live on display)' : ''}`}
+                        className={displayMarkerClasses(
+                          isBreakOnDisplay,
+                          !isActiveRound,
+                        )}
+                      >
+                        B
+                      </span>
+                    )}
+                  </nav>
 
-                <p
-                  className={
-                    isActiveRound
-                      ? 'text-xs font-extrabold tracking-wide text-foreground/55'
-                      : 'text-[10px] font-bold tracking-wide text-foreground/35'
-                  }
-                >
-                  {round.title}
-                </p>
+                  <p
+                    className={
+                      isActiveRound
+                        ? 'text-xs font-extrabold tracking-wide text-foreground/55'
+                        : 'text-[10px] font-bold tracking-wide text-foreground/35'
+                    }
+                  >
+                    {round.title}
+                  </p>
+                </div>
+                {round.note && (
+                  <div className="flex flex-col pl-6">
+                    <p className="text-[10px] font-extrabold tracking-wide text-foreground/40 uppercase">
+                      Round note
+                    </p>
+                    <p className="text-xs whitespace-pre-line text-foreground/60">
+                      {round.note}
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -193,10 +211,14 @@ export function QuestionBrowserPanel({
           liveAnswers={liveAnswers}
           teams={teams}
           onGrade={onGrade}
+          notes={selectedNotes}
         />
       )}
       {selectedQuestionId !== null && !hasLiveAnswers && selectedPrompt && (
-        <p className="text-sm font-bold">{selectedPrompt}</p>
+        <>
+          <p className="text-sm font-bold">{selectedPrompt}</p>
+          {selectedNotes && <NotesLine notes={selectedNotes} />}
+        </>
       )}
     </section>
   );

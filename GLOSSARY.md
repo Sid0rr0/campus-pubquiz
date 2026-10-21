@@ -113,8 +113,12 @@ Stepping back through a block's locked questions during its break, with answers 
 A screen showing a round's name before its content: the round intro before its questions, the break round intro when break review steps across it, and the reveal intro before its answers are revealed.
 
 **Round note**:
-What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro (or the break round intro) is on air, and on the big screen too when the round is set to show it; never on the reveal intro, and never on phones. Not the same as a question's notes, which are host-only and never on screen.
+What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro, the break round intro or the reveal intro is on air, and on the admin console with the round; on the big screen too when the round is set to show it, though never on the reveal intro; never on phones. Not the same as **Question notes**, which are host-only and never on screen.
 _Avoid_: title card note, intro text, round description
+
+**Question notes**:
+What the quiz master needs to know about a question, written on the question: grading hints, pronunciation, the story behind the answer. Only the quiz master sees them: on the presenter remote whenever that question is on the big screen (asked, reviewed in the break or revealed), and on the admin console with the question. Never on the big screen or on phones. Settings written into the notes in braces (a video's start and end, a margin, a scoring mode) are settings, not notes, and are never shown as notes.
+_Avoid_: host notes, question note
 
 **Display screen**:
 The screen the big screen draws, named by the server in the display view as `screen` with a kind and the content that kind draws (the question, the round's title, category, author and note, the break number, the leaderboard board and whether it is final, the active showdown). `/display` switches on the kind and looks nothing up. Its kinds are the On-air screen's plus `blank`, which the server sends (and logs) when it can't find a screen's content, so the big screen is never silently empty. Not the same as the On-air screen, which only names the screen (with ids and indexes) for the admin room, the presenter preview and the round note rule.

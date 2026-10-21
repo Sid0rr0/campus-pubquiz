@@ -52,14 +52,14 @@ describe('Round note — host-only context for a round intro', () => {
     expect(presenterNote()).toBeNull();
   });
 
-  it('gives null on the reveal intro', async () => {
+  it('gives the round note on the reveal intro', async () => {
     await game.act('START_QUIZ');
     await advance(5); // -> question, locking, break_intro, reveal_intro
 
     expect(game.gameState.getSnapshot(game.joinCode).progress.status).toBe(
       'reveal_intro',
     );
-    expect(presenterNote()).toBeNull();
+    expect(presenterNote()).toBe(ROUND_NOTE);
   });
 
   it('gives the round note again when break review steps back across the round intro', async () => {

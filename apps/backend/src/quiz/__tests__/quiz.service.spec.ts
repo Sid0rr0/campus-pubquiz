@@ -54,8 +54,15 @@ describe('QuizService (Postgres integration)', () => {
     title: string,
     orderIndex: number,
     breakAfter = false,
+    note?: string,
   ): Promise<Round> {
-    const round = em.create(Round, { quiz, title, orderIndex, breakAfter });
+    const round = em.create(Round, {
+      quiz,
+      title,
+      orderIndex,
+      breakAfter,
+      note,
+    });
     await em.flush();
     return round;
   }
@@ -64,9 +71,9 @@ describe('QuizService (Postgres integration)', () => {
     round: Round,
     prompt: string,
     orderIndex: number,
-    payload: { options?: string[]; answer?: string } = {},
+    payload: { options?: string[]; answer?: string; notes?: string } = {},
   ): Promise<Question> {
-    const { answer, ...restPayload } = payload;
+    const { answer, notes, ...restPayload } = payload;
     const question = em.create(Question, {
       round,
       orderIndex,
@@ -75,6 +82,7 @@ describe('QuizService (Postgres integration)', () => {
       answer: answer || 'unknown',
       payload: restPayload,
       points: 1,
+      notes,
     });
     await em.flush();
     return question;
@@ -160,6 +168,33 @@ describe('QuizService (Postgres integration)', () => {
         options: ['Paris', 'London', 'Berlin'],
         answer: 'Paris',
       },
+    ]);
+  });
+
+  it("includes each round's note and each question's notes without the settings written into them", async () => {
+    const quiz = await insertQuiz('Campus Pub Quiz Night');
+    const round = await insertRound(
+      quiz,
+      'Round 1',
+      0,
+      false,
+      'Play the jingle.',
+    );
+    await insertQuestion(round, 'Band?', 0, {
+      answer: 'ABBA',
+      notes: 'Accept "Abba".\n{start: "1:00", margin: "5%"}',
+    });
+    await insertQuestion(round, 'Song?', 1, {
+      answer: 'Waterloo',
+      notes: '{start: "1:00"}',
+    });
+
+    const [listed] = await quizService.list();
+
+    expect(listed.rounds[0].note).toBe('Play the jingle.');
+    expect(listed.rounds[0].questions.map((q) => q.notes)).toEqual([
+      'Accept "Abba".',
+      undefined,
     ]);
   });
 

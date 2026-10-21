@@ -1,7 +1,6 @@
 import {
   getBlockSeededQuestions,
   getBreakNumber,
-  getCurrentQuestion,
   getGameContext,
   getQuizStructureSummary,
   getRoundNoteOnAir,
@@ -170,8 +169,21 @@ export function describeNextScreen(
   );
 }
 
+/** The question a screen puts in front of the room on its own (asked, shown again in break review or revealed); null on every screen that shows none. */
+function questionOnScreen(screen: OnAirScreen): number | null {
+  switch (screen.kind) {
+    case 'question':
+    case 'locking':
+    case 'break_review':
+    case 'reveal':
+      return screen.questionId;
+    default:
+      return null;
+  }
+}
+
 /**
- * Host notes for the open question + what /display shows now and after the
+ * Host notes for the question on the big screen + what /display shows now and after the
  * next Advance, for the /remote presenter view alone. Callers MUST only forward this over an
  * admin-room-only channel (PRESENTER_CONTEXT_UPDATED) — never through the
  * broadcast snapshot.
@@ -179,14 +191,14 @@ export function describeNextScreen(
 export function buildPresenterContext(
   session: SessionState,
 ): PresenterContextPayload {
-  const currentQuestion = getCurrentQuestion(session);
-  const currentRound = session.seededGame.rounds[session.progress.roundIndex];
-  const currentQuestionNotes =
-    currentQuestion && currentRound
-      ? (currentRound.questionNotesById?.[currentQuestion.id] ?? null)
-      : null;
-
   const { onAirScreen } = projectScreen(session, SOCKET_ROOMS.ADMIN);
+  const questionId = questionOnScreen(onAirScreen);
+  const currentQuestionNotes =
+    questionId === null
+      ? null
+      : (session.seededGame.rounds
+          .map((round) => round.questionNotesById?.[questionId])
+          .find((notes) => notes != null) ?? null);
 
   return {
     currentQuestionNotes,

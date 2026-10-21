@@ -199,6 +199,20 @@ describe('RemotePage — content', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the notes of the question being revealed', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: { progress: { status: 'reveal' } },
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({
+        currentQuestionNotes: 'Accept "Abba".',
+      }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('Accept "Abba".')).toBeInTheDocument();
+  });
+
   it('shows an empty state when there are no notes', () => {
     mockUseAdminGame.mockReturnValue({
       session: { progress: { status: 'question_open' } },
@@ -211,7 +225,7 @@ describe('RemotePage — content', () => {
     expect(screen.getByText('No notes for this question.')).toBeInTheDocument();
   });
 
-  it.each(['round_intro', 'break_round_intro'] as const)(
+  it.each(['round_intro', 'break_round_intro', 'reveal_intro'] as const)(
     'shows the round note on a %s',
     (status) => {
       mockUseAdminGame.mockReturnValue({

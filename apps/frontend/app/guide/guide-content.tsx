@@ -59,7 +59,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Grading',
     paragraphs: [
-      'Grade an answer as soon as it arrives, in the teams/answers table; finish the rest in the break: the quiz will not leave the break while an answer is ungraded.',
+      'Grade an answer as soon as it arrives; finish the rest in the break: the quiz will not leave the break while an answer is ungraded.',
       'A graded answer that a team changes so it no longer matches is cleared for you to regrade. Grading by question type:',
     ],
     bullets: QUESTION_TYPE_BULLETS,
@@ -90,8 +90,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Teams',
     paragraphs: [
       'The Teams panel shows who is connected and has answered; kick a team here to remove it.',
-      'Phones and the big screen pick up where the quiz is on reconnecting. A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…" meanwhile.',
-      'Each team shows its player count. Above the "max players per team" setting it is flagged as over the player cap; nothing is deducted automatically, so give a negative bonus for a house-rules penalty.',
+      'Phones and the big screen pick up where the quiz is on reconnecting. A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
+      'Each team shows its player count, flagged as over the player cap above the "max players per team" setting; nothing is deducted automatically, so give a negative bonus as a penalty.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
       "Bonus points: open the team's actions menu, choose Award bonus, pick a category, set the points (negative is a penalty) and press Award.",
     ],
@@ -105,7 +105,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      'Remote (Sessions page) is a phone-friendly page with notes, a next-up preview and Previous, Advance and leaderboard controls. Space pauses media there too.',
+      'Remote (Sessions page) is a phone-friendly page with Previous, Advance and leaderboard controls, a next-up preview and your notes for the question on the big screen. Control shows them too. Space pauses media.',
       'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,
@@ -123,7 +123,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'To add to a saved quiz, tick "Add to quiz instead of replacing" when importing. If a live-session save is refused, reload and save again.',
     ],
     bullets: [
-      'Round note: up to 500 characters, for you on Remote. "Show on screen" adds the big screen; phones never see it.',
+      'Round note: up to 500 characters, for Remote and Control. "Show on screen" adds the big screen; phones never see it.',
       'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL). Video files have no controls: run them from Control.',
       'Number question: the margin row has a number field and a % / absolute switch, starting at 10%. CSV notes cell: {margin: "5%"}; for match, {scoring: "all_or_nothing"}.',
       'Video question: tick "Hide video (sound only)" to cover the video until the reveal. In a CSV, write hideVideo: true inside the {…} group in the notes cell.',

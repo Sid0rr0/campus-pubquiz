@@ -14,6 +14,16 @@ export function isRoundIntroScreen(
   return screen.kind === 'round_title' || screen.kind === 'break_round_title';
 }
 
+/** Whether the screen is a round's intro, break round intro or reveal intro: where the presenter remote shows the round note. */
+export function isRoundNoteScreen(
+  screen: OnAirScreen,
+): screen is Extract<
+  OnAirScreen,
+  { kind: 'round_title' | 'break_round_title' | 'reveal_intro' }
+> {
+  return isRoundIntroScreen(screen) || screen.kind === 'reveal_intro';
+}
+
 /** The round whose intro or break round intro is on air; undefined on every other screen (the reveal intro included). */
 function roundWithIntroOnAir(
   session: SessionState,
@@ -25,15 +35,17 @@ function roundWithIntroOnAir(
 }
 
 /**
- * The note of the round whose intro or break round intro is on air; null on
- * every other screen (the reveal intro included) or when that round has none.
- * Host-only: for the presenter context, never a broadcast view.
+ * The note of the round whose intro, break round intro or reveal intro is on
+ * air; null on every other screen or when that round has none. Host-only: for
+ * the presenter context, never a broadcast view (the big screen never shows
+ * it on the reveal intro, see getDisplayRoundNote).
  */
 export function getRoundNoteOnAir(
   session: SessionState,
   screen: OnAirScreen,
 ): string | null {
-  return roundWithIntroOnAir(session, screen)?.note ?? null;
+  if (!isRoundNoteScreen(screen) || screen.roundIndex === null) return null;
+  return session.seededGame.rounds[screen.roundIndex]?.note ?? null;
 }
 
 /** The round note the big screen draws: the on-air round note when that round shows it on screen, else ''. */

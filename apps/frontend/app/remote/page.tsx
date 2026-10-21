@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
-  isRoundIntroScreen,
+  isRoundNoteScreen,
   type PresenterContextPayload,
   type SeededQuestion,
   type ScreenPreview,
@@ -68,19 +68,19 @@ function ScreenPreviewCard({ screen }: { screen: ScreenPreview }) {
   );
 }
 
-/** Question notes when a question is open, the round note on a round intro or break round intro, else the empty state. */
+/** Question notes when a question is on the big screen, the round note on a round intro, break round intro or reveal intro, else the empty state. */
 function NotesBody({
   presenterContext,
-  isRoundIntroOnAir,
+  isRoundNoteOnAir,
 }: {
   presenterContext: PresenterContextPayload | null;
-  isRoundIntroOnAir: boolean;
+  isRoundNoteOnAir: boolean;
 }) {
   const roundNote = presenterContext?.currentRoundNote;
   if (roundNote) {
     return <p className="text-sm whitespace-pre-line">{roundNote}</p>;
   }
-  if (isRoundIntroOnAir) {
+  if (isRoundNoteOnAir) {
     return (
       <p className="text-sm text-foreground/50">No note for this round.</p>
     );
@@ -211,7 +211,7 @@ function RemotePageContent() {
         </h2>
         <NotesBody
           presenterContext={presenterContext}
-          isRoundIntroOnAir={isRoundIntroScreen(onAirScreen)}
+          isRoundNoteOnAir={isRoundNoteScreen(onAirScreen)}
         />
       </section>
 

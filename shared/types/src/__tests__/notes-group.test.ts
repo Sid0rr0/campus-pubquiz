@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseNotesGroup, writeNotesGroup } from '../notes-group';
+import {
+  questionNotesOf,
+  parseNotesGroup,
+  writeNotesGroup,
+} from '../notes-group';
 
 describe('parseNotesGroup', () => {
   it('reads mm:ss start and end from a quoted group', () => {
@@ -213,5 +217,28 @@ describe('grading settings in the notes group', () => {
       clip,
       invalidKeys: [],
     });
+  });
+});
+
+describe('questionNotesOf', () => {
+  it('drops the settings group and keeps the notes around it', () => {
+    expect(questionNotesOf('Accept Abba.\n{start: "1:00", margin: "5%"}')).toBe(
+      'Accept Abba.',
+    );
+  });
+
+  it('keeps braces that set no recognised setting', () => {
+    expect(questionNotesOf('Say {a joke}')).toBe('Say {a joke}');
+  });
+
+  it('trims the notes left around the group', () => {
+    expect(questionNotesOf('\n Hum it.\n{start: "1:00"}\n')).toBe('Hum it.');
+  });
+
+  it('is null when nothing is left, or there were no notes', () => {
+    expect(questionNotesOf('{start: "1:00"}')).toBeNull();
+    expect(questionNotesOf('  ')).toBeNull();
+    expect(questionNotesOf(null)).toBeNull();
+    expect(questionNotesOf(undefined)).toBeNull();
   });
 });

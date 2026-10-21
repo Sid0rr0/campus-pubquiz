@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DEFAULT_SESSION_SETTINGS,
+  questionNotesOf,
   rowToSeededQuestion,
   type SeededGame,
   type SeededRound,
@@ -144,7 +145,7 @@ export class SeedService {
           rowToSeededQuestion(row, readQuestionPayload(row)),
         ),
         questionNotesById: Object.fromEntries(
-          questionRows.map((row) => [row.id, row.notes ?? null]),
+          questionRows.map((row) => [row.id, questionNotesOf(row.notes)]),
         ),
       });
     }

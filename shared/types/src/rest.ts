@@ -9,10 +9,14 @@ export interface QuizSummaryQuestion {
   options?: string[];
   matchTargets?: string[];
   answer: string;
+  /** See Question notes: the host-only notes without the settings group; absent when there are none. */
+  notes?: string;
 }
 
 export interface QuizSummaryRound {
   title: string;
+  /** Host-only round note; absent when the round has none. */
+  note?: string;
   breakAfter: boolean;
   /** See RoundConfig.kahootMode — optional so existing QuizSummaryRound literals don't all need updating; undefined behaves as false. */
   kahootMode?: boolean;

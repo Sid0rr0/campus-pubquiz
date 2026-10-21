@@ -13,6 +13,7 @@ import {
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 import { Button } from '@/app/components/button';
 import { CustomGradeControl } from '@/app/control/custom-grade-control';
+import { NotesLine } from '@/app/control/notes-line';
 
 interface GradeOption {
   display: string;
@@ -158,6 +159,8 @@ interface AnswersPanelProps {
   teams: TeamView[];
   onGrade: (answerId: number, points: number) => void;
   nav?: AnswersPanelNav;
+  /** The question's notes, shown as one line under the correct answer. */
+  notes?: string;
 }
 
 export function AnswersPanel({
@@ -165,6 +168,7 @@ export function AnswersPanel({
   teams,
   onGrade,
   nav,
+  notes,
 }: AnswersPanelProps) {
   const { question, answers } = liveAnswers;
   const answersByTeamId = new Map(
@@ -226,6 +230,7 @@ export function AnswersPanel({
           </span>
           <span className="text-cyan">{correctCount} correct</span>
         </p>
+        {notes && <NotesLine notes={notes} />}
       </div>
       <ul className="flex flex-col gap-2">
         {sortedTeams.map((team) => (

@@ -43,6 +43,22 @@ describe('GameStateService — getPresenterContext', () => {
     }
   }
 
+  async function advanceTo(kind: string, times = 1): Promise<void> {
+    let seen = 0;
+    for (let step = 0; step < 30; step += 1) {
+      await game.act('ADVANCE');
+      const { onAirScreen } = game.gameState.getView(
+        game.joinCode,
+        SOCKET_ROOMS.ADMIN,
+      );
+      if (onAirScreen.kind === kind) {
+        seen += 1;
+        if (seen === times) return;
+      }
+    }
+    throw new Error(`never reached ${kind}`);
+  }
+
   /** Has the team answer the first question correctly, so it is on the board for the leaderboard screens. */
   async function answerFirstQuestion(answer: string): Promise<void> {
     const { socket, teamId } = game.teams[0];
@@ -179,6 +195,137 @@ describe('GameStateService — getPresenterContext', () => {
       // Every rank is shown and nothing waits under the final board, so
       // Advance does nothing and the preview names no next screen.
       expect(screens()).toMatchObject({ next: null });
+    });
+  });
+
+  describe('question notes', () => {
+    beforeEach(async () => {
+      game = await harness.createGateway({
+        rounds: [
+          {
+            title: 'Music',
+            breakAfter: true,
+            note: 'Play the jingle first.',
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Band?',
+                answer: 'ABBA',
+                points: 1,
+                notes: 'Accept "Abba".',
+              },
+              {
+                type: 'free_text',
+                prompt: 'Song?',
+                answer: 'Waterloo',
+                points: 1,
+                notes: '{start: "1:00", end: "1:30", margin: "5%"} Hum it.',
+              },
+              {
+                type: 'free_text',
+                prompt: 'Year?',
+                answer: '1974',
+                points: 1,
+              },
+            ],
+          },
+        ],
+        teamNames: ['The Quizzards'],
+      });
+    });
+
+    it('keeps the settings written into the notes out of the notes', async () => {
+      await game.act('START_QUIZ');
+      await advanceTo('question', 2);
+
+      expect(
+        game.gameState.getPresenterContext(game.joinCode).currentQuestionNotes,
+      ).toBe('Hum it.');
+    });
+
+    it('shows the notes of the question being revealed', async () => {
+      await game.act('START_QUIZ');
+      await advanceTo('reveal');
+
+      expect(
+        game.gameState.getPresenterContext(game.joinCode).currentQuestionNotes,
+      ).toBe('Accept "Abba".');
+    });
+
+    it('shows the notes of a question shown again in break review', async () => {
+      await game.act('START_QUIZ');
+      await advanceTo('break_intro');
+      await game.act('PREVIOUS');
+      await game.act('PREVIOUS'); // -> back one more, onto "Song?"
+
+      const { onAirScreen } = game.gameState.getView(
+        game.joinCode,
+        SOCKET_ROOMS.ADMIN,
+      );
+      expect(onAirScreen.kind).toBe('break_review');
+      expect(
+        game.gameState.getPresenterContext(game.joinCode).currentQuestionNotes,
+      ).toBe('Hum it.');
+    });
+
+    it('shows no notes for a revealed question that has none', async () => {
+      await game.act('START_QUIZ');
+      await advanceTo('reveal', 3);
+
+      expect(
+        game.gameState.getPresenterContext(game.joinCode).currentQuestionNotes,
+      ).toBeNull();
+    });
+
+    it('shows the round note on the round intro and on the reveal intro', async () => {
+      await game.act('START_QUIZ');
+      await advanceTo('round_title');
+      expect(
+        game.gameState.getPresenterContext(game.joinCode).currentRoundNote,
+      ).toBe('Play the jingle first.');
+
+      await advanceTo('reveal_intro');
+      expect(
+        game.gameState.getPresenterContext(game.joinCode).currentRoundNote,
+      ).toBe('Play the jingle first.');
+    });
+  });
+
+  describe('question notes on a closest-guess reveal', () => {
+    it('keeps the notes of a closest-guess question through every step of its reveal', async () => {
+      game = await harness.createGateway({
+        rounds: [
+          {
+            title: 'Numbers',
+            breakAfter: true,
+            questions: [
+              {
+                type: 'closest_guess',
+                prompt: 'Bones in an adult?',
+                answer: '206',
+                points: 3,
+                notes: 'Say it is not 300.',
+              },
+            ],
+          },
+        ],
+        teamNames: ['The Quizzards'],
+      });
+      await game.act('START_QUIZ');
+      await advanceTo('reveal');
+
+      for (let step = 0; step < 6; step += 1) {
+        const { onAirScreen } = game.gameState.getView(
+          game.joinCode,
+          SOCKET_ROOMS.ADMIN,
+        );
+        if (onAirScreen.kind !== 'reveal') break;
+        expect(
+          game.gameState.getPresenterContext(game.joinCode)
+            .currentQuestionNotes,
+        ).toBe('Say it is not 300.');
+        await game.act('ADVANCE');
+      }
     });
   });
 

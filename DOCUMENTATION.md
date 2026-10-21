@@ -560,10 +560,11 @@ connected as `players` receives `PlayersStatePayload` on them and nothing else.
 Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED`,
 `ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
 `PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview;
-`currentQuestionNotes` for the open question, and `currentRoundNote`, the
-**Round note** of the round whose intro or break round intro is on air, `null`
-on every other screen including the reveal intro, decided from the on-air
-screen in `screen-preview.util.ts`),
+`currentQuestionNotes`, the **Question notes** of the question the on-air
+screen shows (asked, locking, break review or reveal), without the `{…}` settings
+group (`questionNotesOf`), and `currentRoundNote`, the **Round note** of the round
+whose intro, break round intro or reveal intro is on air; each `null` on every
+other screen, decided from the on-air screen in `screen-preview.util.ts`),
 `TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
 team's own phone only), `BONUS_AWARDED` (one fresh award, appended on the
 phone with a toast), `TEAM_BONUS_AWARDS_SYNCED` (`{ bonusAwards }`, the team's
@@ -1037,8 +1038,10 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   kept, trimmed, at most `ROUND_NOTE_MAX_LENGTH` (500) characters, blank saved
   as no note; a longer note is rejected like any other invalid draft. It is
   stored on `Round.note`, seeded onto the session's round, and shown on
-  `/remote`'s Notes panel while that round's intro (or the break round intro)
-  is on air ("No note for this round." when it has none). The round's **Show on
+  `/remote`'s Notes panel while that round's intro, break round intro or reveal
+  intro is on air ("No note for this round." when it has none), and on `/control`
+  under the round in the question browser (`QuizSummaryRound.note`). The
+  reveal intro never shows it on the big screen. The round's **Show on
   screen** checkbox (`Round.showNoteOnScreen`, off by default, disabled while the
   note is blank) also puts the note on the big screen's round intro and break
   round intro, drawn as text (line breaks kept, display text scale applied)
@@ -1048,6 +1051,15 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   Phones and the reveal intro never get it. It can be edited for
   any round while live — `findLiveEditViolations` ignores it, and the live edit
   re-seeds running sessions.
+- **Question notes** (`Question.notes`) are what the quiz master reads about a
+  question, never on a broadcast view. `/remote` gets them in the presenter
+  context for whichever question the on-air screen shows; `/control` reads
+  `QuizSummaryQuestion.notes` from `GET /quizzes` (login required) and shows the
+  selected question's as one line under its correct answer. Both go through
+  `questionNotesOf` (`notes-group.ts`), which drops the `{…}` settings group and
+  trims, applied when a session is seeded (`questionNotesById`) and in the quiz
+  summary, so quizzes saved before the group moved out of the notes read the
+  same.
 - Re-import a CSV or re-fetch a Google Sheets link mid-edit at any time — it
   overwrites the current draft.
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated

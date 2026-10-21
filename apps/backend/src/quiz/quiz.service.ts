@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
+  questionNotesOf,
   previewToStoredFields,
   rowToPreview,
   type ImportQuestionPreview,
@@ -115,15 +116,20 @@ export class QuizService {
       updatedAt: quiz.updatedAt.toISOString(),
       rounds: quiz.rounds.getItems().map((round) => ({
         title: round.title,
+        ...(round.note ? { note: round.note } : {}),
         breakAfter: round.breakAfter,
         kahootMode: round.kahootMode,
-        questions: round.questions.getItems().map((question) => ({
-          id: question.id,
-          type: question.type,
-          prompt: question.prompt,
-          answer: question.answer,
-          ...toSummaryPayload(question),
-        })),
+        questions: round.questions.getItems().map((question) => {
+          const notes = questionNotesOf(question.notes);
+          return {
+            id: question.id,
+            type: question.type,
+            prompt: question.prompt,
+            answer: question.answer,
+            ...(notes !== null ? { notes } : {}),
+            ...toSummaryPayload(question),
+          };
+        }),
       })),
     }));
   }

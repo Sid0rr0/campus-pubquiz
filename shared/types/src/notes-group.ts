@@ -159,3 +159,11 @@ export function writeNotesGroup(
   const group = `{${entries.join(', ')}}`;
   return freeNotes ? `${freeNotes}\n${group}` : group;
 }
+
+/** What the quiz master reads as a question's notes: the notes without the settings group, or null when nothing is left. */
+export function questionNotesOf(
+  notes: string | null | undefined,
+): string | null {
+  const freeNotes = parseNotesGroup(notes ?? undefined).freeNotes.trim();
+  return freeNotes === '' ? null : freeNotes;
+}
