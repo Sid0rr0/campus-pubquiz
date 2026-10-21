@@ -35,12 +35,11 @@ function describeCountUpBoard(
   session: SessionState,
   entries: LeaderboardEntry[],
 ): LeaderboardEntry[] | undefined {
-  if (session.priorStandings.length === 0) return undefined;
+  const priorBoard = session.priorStandings?.board ?? [];
+  if (priorBoard.length === 0) return undefined;
   const shownTeamIds = new Set(entries.map((entry) => entry.teamId));
-  const priorTeamIds = new Set(
-    session.priorStandings.map((entry) => entry.teamId),
-  );
-  const fromPriorBoard = session.priorStandings.filter((entry) =>
+  const priorTeamIds = new Set(priorBoard.map((entry) => entry.teamId));
+  const fromPriorBoard = priorBoard.filter((entry) =>
     shownTeamIds.has(entry.teamId),
   );
   const newcomers = entries
@@ -55,10 +54,10 @@ function describeCountUpBoard(
  * against that tie would hand a dash to the new leader and a down arrow to
  * everyone else, so every team shows as having moved up onto the board.
  */
-function isAllTied(priorStandings: LeaderboardEntry[]): boolean {
+function isAllTied(priorBoard: LeaderboardEntry[]): boolean {
   return (
-    priorStandings.length > 1 &&
-    new Set(priorStandings.map((entry) => entry.totalPoints)).size === 1
+    priorBoard.length > 1 &&
+    new Set(priorBoard.map((entry) => entry.totalPoints)).size === 1
   );
 }
 
@@ -78,9 +77,10 @@ function describeTrends(
   { priorStandings }: SessionState,
   entries: LeaderboardEntry[],
 ): Record<number, RankTrend> {
-  const isForcedUp = isAllTied(priorStandings);
+  const priorBoard = priorStandings?.board ?? [];
+  const isForcedUp = isAllTied(priorBoard);
   const previousRankByTeamId = new Map(
-    rankTeams(priorStandings).map((team) => [team.teamId, team.rank]),
+    rankTeams(priorBoard).map((team) => [team.teamId, team.rank]),
   );
   return Object.fromEntries(
     entries.flatMap((entry) => {
@@ -100,8 +100,8 @@ function isQuestionBeingAnswered({ progress }: SessionState): boolean {
   );
 }
 
-/** The question on air's id when it is the first question of the block in play, else null. */
-function blockIdOpenedOnAir(session: SessionState): number | null {
+/** The block in play's first question id when that first question is the one on air, else null. */
+function firstQuestionIdOfBlockOnAir(session: SessionState): number | null {
   const { roundIndex, questionIndex } = session.progress;
   const [blockStart] = getBlockInPlay(
     session.seededGame.rounds,
@@ -136,14 +136,16 @@ export function withPriorStandings(
     !isQuestionBeingAnswered(started) &&
     !isGradedStatus(started.progress.status);
   if (!isQuestionOpening) return session;
-  const blockId = blockIdOpenedOnAir(session);
-  if (blockId === null || blockId === session.priorStandingsBlockId) {
+  const blockFirstQuestionId = firstQuestionIdOfBlockOnAir(session);
+  if (
+    blockFirstQuestionId === null ||
+    blockFirstQuestionId === session.priorStandings?.blockFirstQuestionId
+  ) {
     return session;
   }
   return {
     ...session,
-    priorStandings: started.leaderboard,
-    priorStandingsBlockId: blockId,
+    priorStandings: { board: started.leaderboard, blockFirstQuestionId },
   };
 }
 
