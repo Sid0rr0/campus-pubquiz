@@ -15,6 +15,28 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
+/**
+ * Lets a write that was handed over behind a held one run as far as it can,
+ * without sleeping on the clock: the write is raced against a bounded number
+ * of macrotask turns. Behind a real queue it can't progress, so this returns
+ * after the turns; with the queue switched off it runs to the end first, and
+ * the spec's assertion catches the missing ordering.
+ */
+async function letRun(write: Promise<unknown>): Promise<void> {
+  const turns = (async () => {
+    for (let turn = 0; turn < 100; turn += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+  })();
+  await Promise.race([
+    write.then(
+      () => undefined,
+      () => undefined,
+    ),
+    turns,
+  ]);
+}
+
 describe('GameGateway — session write: bonus changes', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
@@ -56,13 +78,14 @@ describe('GameGateway — session write: bonus changes', () => {
   }
 
   it('ends with both awards on the leaderboard when the first award’s standings read finishes last', async () => {
-    const held = game.holdAt('standings');
+    const held = game.holdAt('change');
 
     const first = award(1);
     await held.reached;
     const waiting = game.nextQueued();
     const second = award(2);
     await waiting;
+    await letRun(second);
     held.release();
     await Promise.all([first, second]);
 
@@ -194,12 +217,13 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     const [firstAnswer, secondAnswer] = await ungradedAnswerIds(questionId);
     game.clearEmits();
 
-    const held = game.holdAt('standings');
+    const held = game.holdAt('change');
     const first = grade(firstAnswer, 1);
     await held.reached;
     const waiting = game.nextQueued();
     const second = grade(secondAnswer, 2);
     await waiting;
+    await letRun(second);
     held.release();
     await Promise.all([first, second]);
 
@@ -215,6 +239,7 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     const waiting = game.nextQueued();
     const second = submit(teamB, questionId, 'Paris');
     await waiting;
+    await letRun(second);
     held.release();
     await Promise.all([first, second]);
 
@@ -236,6 +261,7 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     const waiting = game.nextQueued();
     const second = grade(secondAnswer, 0);
     await waiting;
+    await letRun(second);
     held.release();
     await Promise.all([first, second]);
 
@@ -287,13 +313,14 @@ describe('GameGateway — session write: roster changes', () => {
   }
 
   it('ends with the joined team connected and the kicked team gone when the kick’s standings read finishes last', async () => {
-    const held = game.holdAt('standings');
+    const held = game.holdAt('change');
     const kicking = kick(kicked.teamId);
     await held.reached;
 
     const waiting = game.nextQueued();
     const { joined } = await startJoin('Newcomers');
     await waiting;
+    await letRun(joined);
     held.release();
     await Promise.all([kicking, joined]);
 
@@ -315,7 +342,7 @@ describe('GameGateway — session write: roster changes', () => {
   });
 
   it('shows a team that joins while a bonus write is held as connected once both finish', async () => {
-    const held = game.holdAt('standings');
+    const held = game.holdAt('change');
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: kicked.teamId,
       category: 'shot',
@@ -326,6 +353,7 @@ describe('GameGateway — session write: roster changes', () => {
     const waiting = game.nextQueued();
     const { joined } = await startJoin('Latecomers');
     await waiting;
+    await letRun(joined);
     held.release();
     await Promise.all([awarding, joined]);
 
@@ -404,6 +432,7 @@ describe('GameGateway — session write: presses', () => {
       value: 'Paris',
     });
     await waiting;
+    await letRun(submitting);
     held.release();
     await Promise.all([pressing, submitting]);
     // The press moved on to the next question; step back to read this one's marker.
@@ -431,6 +460,7 @@ describe('GameGateway — session write: presses', () => {
       joinCode: game.joinCode,
     });
     await waiting;
+    await letRun(joining);
     held.release();
     await Promise.all([pressing, joining]);
 
@@ -454,6 +484,7 @@ describe('GameGateway — session write: presses', () => {
       teamId: team.teamId,
     });
     await waiting;
+    await letRun(kicking);
     held.release();
     await Promise.all([pressing, kicking]);
 
@@ -638,6 +669,7 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
       pointsAwarded: 1,
     });
     await waiting;
+    await letRun(grading);
     held.release();
     await Promise.all([editing, grading]);
 
@@ -659,6 +691,7 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     const waiting = game.nextQueued();
     const submitting = submit(questionId, 'Paris');
     await waiting;
+    await letRun(submitting);
     held.release();
     await Promise.all([editing, submitting]);
 
@@ -683,6 +716,7 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     const waiting = game.nextQueued();
     const editing = editQuiz();
     await waiting;
+    await letRun(editing);
     held.release();
     await Promise.all([pressing, editing]);
 
@@ -859,6 +893,7 @@ describe('GameGateway — session write: showdown', () => {
     const waiting = game.nextQueued();
     const guessing = guess();
     await waiting;
+    await letRun(guessing);
     held.release();
     await Promise.all([awarding, guessing]);
 
@@ -875,6 +910,7 @@ describe('GameGateway — session write: showdown', () => {
     const waiting = game.nextQueued();
     const guessing = guess();
     await waiting;
+    await letRun(guessing);
     held.release();
     await Promise.all([pressing, guessing]);
 
