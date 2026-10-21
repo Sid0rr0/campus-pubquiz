@@ -54,3 +54,7 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ a day of nine runs (~100 subagents) hit the account's weekly limit mid-run; a merger only runs `git merge` and `git commit`.
 - **to-tickets step 3 and new step 6 (2026-10-20 retro)**: check ticket pairs for overlap; add the spec's row to `.scratch/overview.md`, checked by `scripts/check-scratch-index.mjs` (pre-commit and CI).
   _Why:_ after the architecture review the user had to ask twice for specs to be added to the overview; display-screen-content's ticket 05 implementer found ticket 04 had already built its code.
+- **implement-spec step 5 (2026-10-21 retro)**: the merger checks `git merge-base --is-ancestor` first and fast-forwards directly when it passes; only if it fails does it rebase, inside the worktree holding the ticket branch (`git -C <path> rebase`).
+  _Why:_ in four runs `git rebase <integration> ticket/…` failed with "already used by worktree" because the implementer's worktree still had the branch checked out; one merger gave up with "Not landed".
+- **implement-spec step 4 (2026-10-21 retro)**: the full backend run is plain `pnpm --filter backend test`; the backend `test` script now carries `--maxWorkers=2` itself.
+  _Why:_ the orchestrator's root `pnpm test` ran Jest unbounded and backend suites crashed under parallel load (a different suite each run), costing reruns and flake investigations.
