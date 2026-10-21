@@ -239,6 +239,77 @@ export function describeOnAirScreen(input: OnAirInput): OnAirDescription {
   };
 }
 
+const PRE_QUIZ_SCREENS = 3;
+const ROUND_SPAN = 1_000;
+const REGION_SPAN = 10_000;
+/** Regions of one question's slot, in the order the quiz walks them. */
+const REGION = {
+  roundIntro: 0,
+  question: 1,
+  locking: 2,
+  breakReview: 3,
+  breakIntro: 4,
+  reveal: 5,
+} as const;
+const REGIONS = 6;
+const ENDED_POSITION = Number.MAX_SAFE_INTEGER;
+
+/** A title card (even step) comes just before the answer it introduces (odd step). */
+function walkStep(revealIndex: number, isCardOnAir: boolean): number {
+  return revealIndex * 2 + (isCardOnAir ? 0 : 1);
+}
+
+/**
+ * One number that orders the On-air screens of a quiz: it grows on every
+ * forward move (START_QUIZ, ADVANCE, END_QUIZ) that changes the screen under
+ * any overlay and falls on every PREVIOUS that does. Overlays, rank, showdown
+ * and closest-guess steps and media actions don't move it, because it reads
+ * only the progress fields that name the screen. Break and reveal keep the
+ * block's last round and question while `revealIndex` walks, so (round,
+ * question) orders the slots, the region orders a slot's stages, and the step
+ * orders the title cards and answers within a walk. The screen key only says
+ * the screen changed; this says which way.
+ */
+export function screenPositionOf(progress: GameProgress): number {
+  const { status, roundIndex, questionIndex, revealIndex } = progress;
+  switch (status) {
+    case 'lobby':
+      return 0;
+    case 'rules':
+      return 1;
+    case 'round_overview':
+      return 2;
+    case 'ended':
+      return ENDED_POSITION;
+    default:
+      break;
+  }
+  const slot =
+    (roundIndex * ROUND_SPAN + (status === 'round_intro' ? 0 : questionIndex)) *
+    REGIONS *
+    REGION_SPAN;
+  const at = (region: number, step = 0) =>
+    PRE_QUIZ_SCREENS + slot + region * REGION_SPAN + step;
+  switch (status) {
+    case 'round_intro':
+      return at(REGION.roundIntro);
+    case 'question_open':
+      return at(REGION.question);
+    case 'locking':
+      return at(REGION.locking);
+    case 'break':
+      return at(REGION.breakReview, walkStep(revealIndex, false));
+    case 'break_round_intro':
+      return at(REGION.breakReview, walkStep(revealIndex, true));
+    case 'break_intro':
+      return at(REGION.breakIntro);
+    case 'reveal_intro':
+      return at(REGION.reveal, walkStep(revealIndex, true));
+    case 'reveal':
+      return at(REGION.reveal, walkStep(revealIndex, false));
+  }
+}
+
 /** What the quiz master's question browser marks as on air, for /control. */
 export interface AdminIndicators {
   /** The question on the big screen while one is shown (open, locking, break review, reveal), else null. */

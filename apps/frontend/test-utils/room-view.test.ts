@@ -13,6 +13,29 @@ describe('room view fixture builder', () => {
     },
   );
 
+  it('gives the display view a screen position that grows across two forward views', () => {
+    const rounds = [{ questions: [{}, {}] }];
+    const open = roomView(SOCKET_ROOMS.DISPLAY, {
+      rounds,
+      progress: { status: 'question_open' as const, questionIndex: 0 },
+    });
+    const next = roomView(SOCKET_ROOMS.DISPLAY, {
+      rounds,
+      progress: { status: 'question_open' as const, questionIndex: 1 },
+    });
+    const covered = roomView(SOCKET_ROOMS.DISPLAY, {
+      rounds,
+      progress: {
+        status: 'question_open' as const,
+        questionIndex: 1,
+        isLeaderboardVisible: true,
+      },
+    });
+
+    expect(next.screenPosition).toBeGreaterThan(open.screenPosition);
+    expect(covered.screenPosition).toBe(next.screenPosition);
+  });
+
   it('gives phones an answerable view with the open question in the block', () => {
     const description = {
       rounds: [{ questions: [{ id: 7, prompt: 'Capital of France?' }] }],
