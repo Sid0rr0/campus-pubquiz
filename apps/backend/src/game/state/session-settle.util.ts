@@ -6,7 +6,7 @@ import {
   getGameContext,
   getPastBlockIds,
   getTimedPhaseKey,
-  revealStartStep,
+  revealStepAfterMove,
   type SessionState,
 } from '@campus-pubquiz/types';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
@@ -109,25 +109,8 @@ export function settleSession({
       session.leaderboardRevealCount,
       context.rounds[progress.roundIndex]?.kahootMode ?? false,
     ),
-    // Any action that leaves the same reveal on air (an overlay, a rank, a
-    // media action) keeps its step; only a different reveal restarts it.
-    revealStep:
-      step.kind !== 'place' && isSameRevealOnAir(session.progress, progress)
-        ? session.revealStep
-        : revealStartStep(session, progress, action),
+    revealStep: revealStepAfterMove(session, progress, action),
   };
-}
-
-/** Whether `next` leaves the reveal that `current` has on air still on air: the same reveal question, or the ended screen (the showdown). */
-function isSameRevealOnAir(current: GameProgress, next: GameProgress): boolean {
-  if (current.status === 'ended' && next.status === 'ended') return true;
-  return (
-    current.status === 'reveal' &&
-    next.status === 'reveal' &&
-    current.roundIndex === next.roundIndex &&
-    current.questionIndex === next.questionIndex &&
-    current.revealIndex === next.revealIndex
-  );
 }
 
 /** Armed only while in the 'locking' countdown, so a gateway timer can advance into the break without the admin clicking Advance. */

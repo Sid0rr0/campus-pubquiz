@@ -16,17 +16,21 @@ The Move plan's `showdown_step` becomes `reveal_step`. `showdown_waiting` stays.
 
 **Status:** done
 
-- [ ] The showdown interceptor and its own step count are gone. The Move plan has no `showdown_step`. The session has only `revealStep`.
-- [ ] The existing showdown reveal and showdown socket gateway specs pass unchanged:
+- [x] The showdown interceptor and its own step count are gone. The Move plan has no `showdown_step`. The session has only `revealStep`.
+- [x] The existing showdown reveal and showdown socket gateway specs pass unchanged:
   - no intercept before `ended`
   - Advance waits while a guess is missing
   - the walk resolves on the final step with a leaderboard refresh
   - Previous doesn't resolve
   - guesses are refused once the reveal starts
-- [ ] New gateway cases:
+- [x] New gateway cases:
   - composing a showdown during a closest-guess reveal leaves that reveal's step and trimmed lines alone, and the showdown accepts guesses after END_QUIZ and starts at its first step
   - a sudden-death round starts at its first step with its guesses hidden
   - showing and hiding the leaderboard mid-showdown keeps the step
-- [ ] The display, admin and players views, and the phone's showdown screens, show the same steps as before (existing display, room-view-fields, players-phone-screen and frontend showdown tests pass).
-- [ ] `GLOSSARY.md` gains **Stepped reveal**. **Closest-guess reveal**, **Showdown** and the Move plan entry point at it. `DOCUMENTATION.md` no longer names two counters.
-- [ ] `pnpm typecheck` and the shared-types, backend and frontend tests pass.
+- [x] The display, admin and players views, and the phone's showdown screens, show the same steps as before (existing display, room-view-fields, players-phone-screen and frontend showdown tests pass).
+- [x] `GLOSSARY.md` gains **Stepped reveal**. **Closest-guess reveal**, **Showdown** and the Move plan entry point at it. `DOCUMENTATION.md` no longer names two counters.
+- [x] `pnpm typecheck` and the shared-types, backend and frontend tests pass.
+
+## Comments
+
+The new gateway cases (composing a showdown during a closest-guess reveal, a sudden-death round starting at its first step, and showing and hiding the leaderboard mid-showdown) were characterisation tests that also pass on the old two-counter code, so they were not red-first. They guard the single counter.

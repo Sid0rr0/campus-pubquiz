@@ -147,6 +147,7 @@ export function buildPlayersFields(
 
 /** Assembles the shared base of every room's view for a session — the shape every display/admin/players client resyncs to on connect or after every applyAction. */
 export function buildSnapshot(session: SessionState): StateSnapshotPayload {
+  const showdownRevealStep = revealStepOf(session, 'showdown');
   return {
     progress: session.progress,
     quizStructure: getQuizStructureSummary(getGameContext(session)),
@@ -169,9 +170,9 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,
-      revealStepOf(session, 'showdown'),
+      showdownRevealStep,
     ),
-    showdownRevealStep: revealStepOf(session, 'showdown'),
+    showdownRevealStep,
   };
 }
 

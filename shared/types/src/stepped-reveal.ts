@@ -1,5 +1,6 @@
 import { closestGuessRevealDescriptor } from './closest-guess-reveal';
 import type { GameAction, GameProgress } from './game-state-types';
+import type { Movement } from './move-plan';
 import type { SessionState } from './session-state';
 import { showdownRevealDescriptor } from './showdown-reveal';
 
@@ -20,8 +21,6 @@ export interface SteppedRevealDescriptor {
   /** The first-Advance guard: false while Advance on step 0 must wait. */
   canStart: boolean;
 }
-
-type Movement = 'ADVANCE' | 'PREVIOUS';
 
 /** One press on a stepped reveal. */
 export type SteppedMove =
@@ -116,6 +115,35 @@ export function revealStartStep(
 ): number {
   const onAir = descriptorOnAir(session, progress);
   return onAir ? startStepOf(onAir.descriptor, action) : 0;
+}
+
+/** Whether `next` leaves the reveal that `current` has on air still on air: the same reveal question, or the ended screen (the showdown). */
+function isSameRevealOnAir(current: GameProgress, next: GameProgress): boolean {
+  if (current.status === 'ended' && next.status === 'ended') return true;
+  return (
+    current.status === 'reveal' &&
+    next.status === 'reveal' &&
+    current.roundIndex === next.roundIndex &&
+    current.questionIndex === next.questionIndex &&
+    current.revealIndex === next.revealIndex
+  );
+}
+
+/**
+ * The step to settle `session` on when it moves to `progress` by `action`
+ * (null when placing, i.e. creating or restoring): any action that leaves the
+ * same reveal on air (an overlay, a rank, a media action) keeps its step; only
+ * a different reveal restarts it.
+ */
+export function revealStepAfterMove(
+  session: SessionState,
+  progress: GameProgress,
+  action: GameAction | null,
+): number {
+  if (action !== null && isSameRevealOnAir(session.progress, progress)) {
+    return session.revealStep;
+  }
+  return revealStartStep(session, progress, action);
 }
 
 /** What a movement does to the stepped reveal on air; `none` when there is none. */

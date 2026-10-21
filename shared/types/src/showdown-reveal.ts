@@ -3,7 +3,7 @@ import type { ActiveShowdownView } from './showdown';
 import type { SteppedRevealDescriptor } from './stepped-reveal';
 
 /** The number of the showdown's final step: one per participant's guess, then the answer/winner. */
-function getShowdownRevealStepCount(round: ActiveShowdownRoundState): number {
+function getShowdownFinalStep(round: ActiveShowdownRoundState): number {
   return round.participants.length + 1;
 }
 
@@ -13,7 +13,7 @@ export function buildActiveShowdownView(
   step: number,
 ): ActiveShowdownView | null {
   if (!round) return null;
-  const finalStep = getShowdownRevealStepCount(round);
+  const finalStep = getShowdownFinalStep(round);
   const sortedParticipants = [...round.participants].sort(
     (a, b) => a.seatIndex - b.seatIndex,
   );
@@ -44,7 +44,7 @@ export function showdownRevealDescriptor(
   round: ActiveShowdownRoundState,
 ): SteppedRevealDescriptor {
   return {
-    stepCount: getShowdownRevealStepCount(round) + 1,
+    stepCount: getShowdownFinalStep(round) + 1,
     atStart: 'hold',
     atEnd: 'hold',
     canStart: round.participants.every(
