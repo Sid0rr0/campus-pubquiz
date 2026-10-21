@@ -1,16 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
-  formatAnswer,
-  resolveAnswerKind,
-  type QuestionType,
   type TeamDetail,
   type TeamNightDetail,
   type TeamNightQuestion,
   type TeamSessionRow,
-  type Verdict,
 } from '@campus-pubquiz/types';
-import { readQuestionPayload } from '@/db/question-payload';
 import { Team } from '@/db/entities/team.entity';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { TeamRepository } from '@/db/repositories/team.repository';
@@ -21,24 +16,6 @@ import {
   teamHistoryOf,
   type TeamHistorySession,
 } from '@/team/team-history.calc';
-
-interface NightQuestionRow {
-  id: number;
-  type: QuestionType;
-  prompt: string;
-  answer: string;
-  payload: unknown;
-  points: number;
-  roundId: number;
-  roundTitle: string;
-}
-
-interface NightAnswerRow {
-  questionId: number;
-  value: string;
-  verdict: Verdict | null;
-  pointsAwarded: string | number;
-}
 
 /** A team's session rows, with how many of those nights it won. */
 interface TeamSessionResults {
@@ -98,7 +75,6 @@ export class TeamHistoryService {
   ): Promise<TeamNightDetail | null> {
     const team = await this.teamByCode(teamCode);
     if (!team) return null;
-    const knex = this.teams.getKnex();
 
     const session = await this.endedSessions.endedSession(gameSessionId);
     if (!session) return null;
@@ -106,60 +82,27 @@ export class TeamHistoryService {
       return null;
     }
 
-    const questions = (await knex('questions as q')
-      .join('rounds as r', 'r.id', 'q.round_id')
-      .where('r.quiz_id', session.quizId)
-      .orderBy([
-        { column: 'r.order_index', order: 'asc' },
-        { column: 'q.order_index', order: 'asc' },
-      ])
-      .select(
-        'q.id as id',
-        'q.type as type',
-        'q.prompt as prompt',
-        'q.answer as answer',
-        'q.payload as payload',
-        'q.points as points',
-        'r.id as roundId',
-        'r.title as roundTitle',
-      )) as NightQuestionRow[];
-    const answers = (await knex('answers')
-      .where('game_session_id', gameSessionId)
-      .where('team_id', team.id)
-      .select(
-        'question_id as questionId',
-        'value',
-        'verdict',
-        'points_awarded as pointsAwarded',
-      )) as NightAnswerRow[];
-    const answerByQuestion = new Map(answers.map((a) => [a.questionId, a]));
-
-    const roundNumberById = new Map<number, number>();
-    const questionCountByRound = new Map<number, number>();
-    const rows = questions.map((question): TeamNightQuestion => {
-      if (!roundNumberById.has(question.roundId)) {
-        roundNumberById.set(question.roundId, roundNumberById.size + 1);
-      }
-      const questionNumber =
-        (questionCountByRound.get(question.roundId) ?? 0) + 1;
-      questionCountByRound.set(question.roundId, questionNumber);
-
-      const { options } = readQuestionPayload(question);
-      const formattable = { type: question.type, options };
-      const answer = answerByQuestion.get(question.id);
+    const night = await this.endedSessions.night(gameSessionId, {
+      teamId: team.id,
+    });
+    const answerByQuestion = new Map(
+      night.answers.map((a) => [a.questionId, a]),
+    );
+    const rows = night.questions.map((question): TeamNightQuestion => {
+      const answer = answerByQuestion.get(question.questionId);
       return {
-        questionId: question.id,
+        questionId: question.questionId,
         roundTitle: question.roundTitle,
-        roundNumber: roundNumberById.get(question.roundId)!,
-        questionNumber,
+        roundNumber: question.roundNumber,
+        questionNumber: question.questionNumber,
         prompt: question.prompt,
         type: question.type,
-        answerKind: resolveAnswerKind(question),
+        answerKind: question.answerKind,
         points: question.points,
-        teamAnswer: answer ? formatAnswer(answer.value, formattable) : null,
+        teamAnswer: answer?.answer ?? null,
         verdict: answer?.verdict ?? null,
-        pointsAwarded: answer ? Number(answer.pointsAwarded) : 0,
-        correctAnswer: formatAnswer(question.answer, formattable),
+        pointsAwarded: answer?.pointsAwarded ?? 0,
+        correctAnswer: question.answer,
       };
     });
     return {

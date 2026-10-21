@@ -6,7 +6,7 @@ The read carries every field the spec lists, including the ones only the stats s
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The night read returns questions in round order then question order, each with round id and title, round number and question number (both from 1, question number restarting per round), order index, prompt, type, answer kind, points as a number and the worded Answer key
 - [ ] It returns answers with question id, team id, team name, verdict, points awarded as a number, graded-at, response time in ms (null when missing) and the worded answer
