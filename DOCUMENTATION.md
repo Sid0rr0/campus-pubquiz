@@ -1112,8 +1112,8 @@ or counted. It is a read of the quiz.
   - `night` ("like the night"): the screens in the order the room sees them:
     the round overview, round title cards, a block's questions, the break
     intro, the reveal intro, then that block's reveals, block after block. The
-    order is a dry run of the real Advance plan over the team-less session (no
-    grading writes, nothing saved), keeping only `round_overview`,
+    order is a dry run of the real press (the Move plan and the Settle step)
+    over the team-less session (no grading writes, nothing saved), keeping only `round_overview`,
     `round_title`, `question`, `break_intro`, `reveal_intro` and `reveal`;
     lobby, rules, join overlay, locking, break review, break round title,
     leaderboard, showdown and ended never appear. The break intro has no
