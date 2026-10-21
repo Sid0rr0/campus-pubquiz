@@ -1,5 +1,5 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import type { SessionState } from '@campus-pubquiz/types';
+import { withPriorStandings, type SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
 import { SessionWriteQueue } from '@/game/state/session-write-queue';
 import {
@@ -8,7 +8,6 @@ import {
   type WriteGate,
 } from '@/game/state/write-gate';
 import { LiveResultsRead } from '@/game/state/live-results-read';
-import { withPriorStandings } from '@/game/state/session-updates.util';
 import { deadlinesOf, type SessionOutcome } from '@/game/state/session-outcome';
 
 /** What a change returns: the new session and the outcome the write resolves to. */

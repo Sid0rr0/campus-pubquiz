@@ -119,6 +119,24 @@ describe('GameGateway — prior standings behind the display count-up board', ()
     expect(prior[game.teams[0].teamId]).toBe(0);
   });
 
+  it('keeps the count-up board from the question opening when the leaderboard is toggled over it', async () => {
+    await awardBonus(1); // on air
+    await game.act('TOGGLE_LEADERBOARD'); // shown over q0
+    await game.act('TOGGLE_LEADERBOARD'); // hidden: q0 is answered again
+    await landFirstQuestionPoints();
+
+    expect(totals(countUpBoard())[game.teams[1].teamId]).toBe(0);
+  });
+
+  it('keeps the count-up board from the question opening after Previous and Advance again', async () => {
+    await awardBonus(1); // on air
+    await game.act('PREVIOUS'); // -> round_intro
+    await game.act('ADVANCE'); // -> q0 open again
+    await landFirstQuestionPoints();
+
+    expect(totals(countUpBoard())[game.teams[1].teamId]).toBe(0);
+  });
+
   it('leaves the count-up board untouched while the leaderboard is shown', async () => {
     await landFirstQuestionPoints();
     const before = countUpBoard();

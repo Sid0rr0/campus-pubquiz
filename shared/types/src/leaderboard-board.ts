@@ -1,4 +1,5 @@
 import { getBlockInPlay } from './block-in-play';
+import { isGradedStatus, isQuestionOnAirStatus } from './game-state-groups';
 import {
   isCurrentRoundKahoot,
   isQuestionHiddenBehindKahootLeaderboard,
@@ -136,6 +137,60 @@ function describeTrends(
       ];
     }),
   );
+}
+
+/** A question is on air and the leaderboard is not covering it: teams can see it and answer. */
+function isQuestionBeingAnswered({ progress }: SessionState): boolean {
+  return (
+    isQuestionOnAirStatus(progress.status) && !progress.isLeaderboardVisible
+  );
+}
+
+/** The question on air's id when it is the first question of the block in play, else null. */
+function blockIdOpenedOnAir(session: SessionState): number | null {
+  const { roundIndex, questionIndex } = session.progress;
+  const [blockStart] = getBlockInPlay(
+    session.seededGame.rounds,
+    session.progress,
+  );
+  const isBlockStart =
+    blockStart !== undefined &&
+    blockStart.roundIndex === roundIndex &&
+    blockStart.questionIndex === questionIndex;
+  return isBlockStart ? blockStart.questionId : null;
+}
+
+/**
+ * The session a write ends with, its prior standings brought up to date. The
+ * write that first puts the block in play's first question in front of the
+ * teams (on air, leaderboard hidden, from anything that wasn't, and not
+ * stepping back into it out of a graded status) makes the leaderboard it
+ * started from the prior standings, tagged with that block. Nothing scored in
+ * the block has landed yet, so it is the board before the block. A later
+ * question or round of the block, Previous and Advance back into its first
+ * question, and a leaderboard toggle over it take nothing, since the prior
+ * standings are already this block's. In a kahoot round every question is its
+ * own block. Pure: the Session write applies it once per write, before the
+ * new standings are read.
+ */
+export function withPriorStandings(
+  started: SessionState,
+  session: SessionState,
+): SessionState {
+  const isQuestionOpening =
+    isQuestionBeingAnswered(session) &&
+    !isQuestionBeingAnswered(started) &&
+    !isGradedStatus(started.progress.status);
+  if (!isQuestionOpening) return session;
+  const blockId = blockIdOpenedOnAir(session);
+  if (blockId === null || blockId === session.priorStandingsBlockId) {
+    return session;
+  }
+  return {
+    ...session,
+    priorStandings: started.leaderboard,
+    priorStandingsBlockId: blockId,
+  };
 }
 
 /**

@@ -13,7 +13,7 @@ Parent spec: `.scratch/prior-standings-trends/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The rule is one pure function in shared types: given the session a write started from and the session it ends with, it returns the session with its Prior standings brought up to date. It takes them, from the leaderboard the write started from, only when all three hold:
   - the question is being answered after the write and wasn't before, and the write isn't stepping back into it out of a graded status (today's opening test);
