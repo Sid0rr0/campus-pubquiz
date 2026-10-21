@@ -118,7 +118,7 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
     await game.joinTeam('The Quizzards');
 
     const created = await game.inRequestContext(() =>
-      game.gameState.createSession(game.quizId),
+      game.gameState.createSessionSnapshot(game.quizId),
     );
 
     expect(created.joinCode).not.toBe(game.joinCode);

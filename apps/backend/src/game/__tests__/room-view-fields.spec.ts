@@ -7,6 +7,7 @@ import {
   type SessionState,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
+import { SEEDED_GAME_SUMMARY_DEFAULTS } from '@/game/__tests__/seeded-game-defaults';
 
 function question(id: number): SeededQuestion {
   return {
@@ -31,6 +32,7 @@ function session(): SessionState {
         quizId: 1,
         gameSessionId: 1,
         joinCode: 'ABCDEF',
+        ...SEEDED_GAME_SUMMARY_DEFAULTS,
         rounds: ROUNDS,
         settings: DEFAULT_SESSION_SETTINGS,
       },

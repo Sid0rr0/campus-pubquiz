@@ -10,6 +10,7 @@ import {
   type SessionState,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
+import { SEEDED_GAME_SUMMARY_DEFAULTS } from '@/game/__tests__/seeded-game-defaults';
 
 const STORED_MARGIN: Margin = { value: 5, unit: 'absolute' };
 
@@ -41,6 +42,7 @@ function session(progress: Partial<GameProgress>): SessionState {
       quizId: 1,
       gameSessionId: 1,
       joinCode: 'ABCDEF',
+      ...SEEDED_GAME_SUMMARY_DEFAULTS,
       rounds: [
         { id: 1, title: 'Round', breakAfter: true, questions: QUESTIONS },
       ],

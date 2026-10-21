@@ -18,6 +18,7 @@ import {
   type RateRoundPayload,
   type SendFeedbackPayload,
   type SessionSettings,
+  type SessionState,
   type SetPlayerCountPayload,
   type SetTeamPlayerCountPayload,
   type SocketRoomName,
@@ -57,6 +58,7 @@ import { LeagueTableService } from '@/league/league-table.service';
 import { LeagueService } from '@/league/league.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
+import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 
 export { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
@@ -64,6 +66,20 @@ export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 
 /** The option for a session write whose event doesn't change scores: skips the standings read. */
 const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
+
+/** The one place a held session becomes its picker summary. */
+function summarizeSession(session: SessionState): ActiveSessionSummary {
+  const { seededGame } = session;
+  return {
+    joinCode: seededGame.joinCode,
+    quizId: seededGame.quizId,
+    quizTitle: seededGame.quizTitle,
+    name: sessionDisplayName(seededGame.customName, seededGame.quizTitle),
+    status: session.progress.status,
+    teamCount: session.teams.length,
+    startedAt: seededGame.startedAt.toISOString(),
+  };
+}
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
@@ -193,17 +209,9 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrite.read(joinCode).seededGame.quizId;
   }
 
-  /** Every currently-running session, for the admin session picker (`GET /sessions`). Titles, names, and start times are filled in by the caller — this service only knows quizId, not quiz/GameSession metadata. */
-  listSessions(): Omit<
-    ActiveSessionSummary,
-    'quizTitle' | 'name' | 'startedAt'
-  >[] {
-    return this.sessionWrite.list().map((session) => ({
-      joinCode: session.seededGame.joinCode,
-      quizId: session.seededGame.quizId,
-      status: session.progress.status,
-      teamCount: session.teams.length,
-    }));
+  /** Every currently-held session's summary, for the admin and public session pickers (`GET /sessions`). */
+  listSessions(): ActiveSessionSummary[] {
+    return this.sessionWrite.list().map(summarizeSession);
   }
 
   /**
@@ -245,7 +253,38 @@ export class GameStateService implements OnModuleInit {
     settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
     name?: string,
     leagueIds: number[] = [],
+  ): Promise<ActiveSessionSummary> {
+    const joinCode = await this.placeNewSession(
+      quizId,
+      settings,
+      name,
+      leagueIds,
+    );
+    return summarizeSession(this.sessionWrite.read(joinCode));
+  }
+
+  /** Like `createSession`, for a caller that wants the new session's full state snapshot rather than its picker summary. */
+  async createSessionSnapshot(
+    quizId: number,
+    settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
+    name?: string,
+    leagueIds: number[] = [],
   ): Promise<StateSnapshotPayload> {
+    const joinCode = await this.placeNewSession(
+      quizId,
+      settings,
+      name,
+      leagueIds,
+    );
+    return this.getSnapshot(joinCode);
+  }
+
+  private async placeNewSession(
+    quizId: number,
+    settings: SessionSettings,
+    name: string | undefined,
+    leagueIds: number[],
+  ): Promise<string> {
     // Refused before the session row is written, so a refused start stores nothing.
     const quizRounds = await this.seedService.loadQuizRounds(quizId);
     const emptyRoundIndex = quizRounds.findIndex(
@@ -282,7 +321,7 @@ export class GameStateService implements OnModuleInit {
         NOT_TOUCHING_SCORES,
       );
     }
-    return this.getSnapshot(seededGame.joinCode);
+    return seededGame.joinCode;
   }
 
   /** A team rates a round of the break card. Changes no scores and pushes nothing. */

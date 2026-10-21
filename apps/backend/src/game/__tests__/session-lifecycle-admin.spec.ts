@@ -1,3 +1,4 @@
+import { GameSession } from '@/db/entities/game-session.entity';
 import { SessionCloseBlockedError } from '@/game/state/game-state.service';
 import {
   setupRealStoreGatewayTest,
@@ -30,14 +31,24 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
     );
   }
 
+  async function rowCreatedAt(joinCode: string): Promise<string> {
+    const row = await game.orm.em
+      .fork()
+      .findOneOrFail(GameSession, { joinCode });
+    return row.createdAt.toISOString();
+  }
+
   describe('listSessions', () => {
-    it('lists the one session created at boot', () => {
+    it('lists the session created at boot with its summary', async () => {
       expect(game.gameState.listSessions()).toEqual([
         {
           joinCode: game.joinCode,
           quizId: game.quizId,
+          quizTitle: 'Real Store Quiz',
+          name: 'Real Store Quiz',
           status: 'lobby',
           teamCount: 0,
+          startedAt: await rowCreatedAt(game.joinCode),
         },
       ]);
     });
@@ -47,18 +58,14 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
 
       expect(game.gameState.listSessions()).toEqual(
         expect.arrayContaining([
-          {
+          expect.objectContaining({
             joinCode: game.joinCode,
             quizId: game.quizId,
-            status: 'lobby',
-            teamCount: 0,
-          },
-          {
+          }),
+          expect.objectContaining({
             joinCode: created.joinCode,
             quizId: other.quizId,
-            status: 'lobby',
-            teamCount: 0,
-          },
+          }),
         ]),
       );
     });
@@ -70,12 +77,73 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
 
       const [listed] = game.gameState.listSessions();
 
-      expect(listed).toEqual({
+      expect(listed).toMatchObject({
         joinCode: game.joinCode,
-        quizId: game.quizId,
         status: 'rules',
         teamCount: 2,
       });
+    });
+
+    it('shows a quiz rename made through the Live edit save on a lobby session', async () => {
+      await game.saveQuizEdit(undefined, 'Renamed Quiz');
+
+      expect(game.gameState.listSessions()[0]).toMatchObject({
+        quizTitle: 'Renamed Quiz',
+        name: 'Renamed Quiz',
+      });
+    });
+
+    it('keeps the start time and custom name across a restart', async () => {
+      const created = await game.inRequestContext(() =>
+        game.gameState.createSession(other.quizId, undefined, 'Week 3 Social'),
+      );
+
+      const restarted = await game.restart();
+
+      const listed = restarted.gameState
+        .listSessions()
+        .find((session) => session.joinCode === created.joinCode);
+      expect(listed).toEqual(created);
+      expect(listed?.name).toBe('Week 3 Social');
+    });
+  });
+
+  describe('createSession', () => {
+    it('returns the quiz title as the name when none was given, and the row creation time', async () => {
+      const created = await createOtherSession();
+
+      expect(created).toEqual({
+        joinCode: created.joinCode,
+        quizId: other.quizId,
+        quizTitle: 'Real Store Quiz',
+        name: 'Real Store Quiz',
+        status: 'lobby',
+        teamCount: 0,
+        startedAt: await rowCreatedAt(created.joinCode),
+      });
+    });
+
+    it('returns the trimmed custom name when one was given', async () => {
+      const created = await game.inRequestContext(() =>
+        game.gameState.createSession(
+          other.quizId,
+          undefined,
+          '  Week 3 Social  ',
+        ),
+      );
+
+      expect(created.name).toBe('Week 3 Social');
+      expect(created.quizTitle).toBe('Real Store Quiz');
+    });
+
+    it('agrees with the next list', async () => {
+      const created = await createOtherSession();
+
+      expect(
+        game.gameState
+          .listSessions()
+          .find((session) => session.joinCode === created.joinCode),
+      ).toEqual(created);
     });
   });
 

@@ -168,6 +168,9 @@ export function buildQuizPreview(
     quizId: 0,
     gameSessionId: 0,
     joinCode: '',
+    quizTitle: '',
+    customName: null,
+    startedAt: new Date(0),
     rounds: [...rounds],
     settings: PREVIEW_SETTINGS,
   });

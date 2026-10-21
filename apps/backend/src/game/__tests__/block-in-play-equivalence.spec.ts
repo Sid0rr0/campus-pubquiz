@@ -13,12 +13,14 @@ import {
   type GameProgress,
   type SeededGame,
 } from '@campus-pubquiz/types';
+import { SEEDED_GAME_SUMMARY_DEFAULTS } from '@/game/__tests__/seeded-game-defaults';
 import { BLOCK_IN_PLAY_ROUNDS } from '@/game/__tests__/block-in-play-quiz';
 
 const seededGame: SeededGame = {
   quizId: 1,
   gameSessionId: 1,
   joinCode: 'ABCD',
+  ...SEEDED_GAME_SUMMARY_DEFAULTS,
   rounds: BLOCK_IN_PLAY_ROUNDS,
   settings: {
     showRoundOverview: true,
