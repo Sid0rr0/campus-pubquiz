@@ -192,7 +192,10 @@ _Avoid_: win (on its own; see **Session winner**)
 The single team Standings picks as winner of an ended session, by showdown or else name order. It is the trophy row on the stats page. It is not the same as a **night won**: a team tied for first wins the night without being the session winner.
 
 **Correct rate**:
-How much of a question the room got right: the summed credit of its answers (a correct answer counts 1, a partial answer its share of the question's points) divided by the participant count. A closest_guess question has no correct rate, since it has one winner by design; it is left out of every rate-based figure.
+How much of a question the room got right: the summed credit of its answers (a correct answer counts 1, a partial answer its share of the question's points) divided by the team count of the **Question outcome**. "No correct rate" is a registry setting (`hasCorrectRate: false`): a closest_guess question has one winner by design, so it is left out of every rate-based figure.
+
+**Question outcome**:
+How one question went: its answered, correct and partial counts and its correct rate. One pure module works it out from the question's answers and a team count chosen by the caller (the live views pass the roster, the stats page passes every team that took part).
 
 **Scoresheet**:
 An ended session's points per team per question, on the stats page: one row per team that took part, one column per question, each cell the points that team earned on that question and its verdict. Teams that left are on it too.
