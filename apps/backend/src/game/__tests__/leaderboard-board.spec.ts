@@ -291,6 +291,49 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
   });
 
+  describe('in an ordinary block of several rounds', () => {
+    it('backs out every round of the block, so a team that kept its rank shows no movement', async () => {
+      game = await harness.createGateway({
+        teamNames: ['Leader', 'Chaser', 'Outsider'],
+        rounds: [
+          { title: 'One', questions: [QUESTION] },
+          {
+            title: 'Two',
+            breakAfter: true,
+            questions: [{ ...QUESTION, prompt: 'Capital of UK?', points: 25 }],
+          },
+        ],
+      });
+      const [leader, chaser, outsider] = [0, 1, 2];
+      await awardBonus(leader, 30);
+      await awardBonus(chaser, 20);
+      await awardBonus(outsider, 10);
+      const advanceUntil = async (status: string) => {
+        while (game.sessionWrite.read(game.joinCode).progress.status !== status)
+          await game.act('ADVANCE');
+      };
+      await game.act('START_QUIZ');
+      await advanceUntil('question_open');
+      await submitAnswers(0, ['London', 'Paris', 'London']); // Chaser draws level on 30
+      await advanceUntil('round_intro'); // -> round two
+      await advanceUntil('question_open');
+      const { socket, teamId } = game.teams[outsider];
+      await game.gateway.handleSubmitAnswer(asSocket(socket), {
+        questionId: game.rounds[1].questionIds[0],
+        teamId,
+        value: 'Paris', // Outsider passes them both on 35
+      });
+      await advanceUntil('break_intro');
+      await game.act('TOGGLE_LEADERBOARD');
+
+      expect(board().trends).toEqual({
+        [game.teams[outsider].teamId]: 'up',
+        [game.teams[leader].teamId]: 'down',
+        [game.teams[chaser].teamId]: 'same',
+      });
+    });
+  });
+
   describe('in an ordinary round', () => {
     it('sends every team, no count-up board, and trends against the round backed out', async () => {
       game = await harness.createGateway({ teamNames: ['First', 'Second'] });

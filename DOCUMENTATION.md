@@ -447,8 +447,9 @@ from the session, so a reloaded or second big screen draws the same thing):
   board after a backend restart (the prior standings are ephemeral).
 - `trends` — `up` / `down` / `same` per team id, shown once the board settles.
   The basis is the prior standings in a kahoot round (between questions, round
-  end, quiz end), otherwise the standings with the current round's points
-  backed out. When the prior standings are a real board with more than one team
+  end, quiz end), otherwise the standings with the points of every round of
+  the block in play backed out (a block can span several rounds, all scored
+  together at its break). When the prior standings are a real board with more than one team
   all tied (e.g. everyone on 0), every team is `up`. A team missing from the
   basis has no trend. Ranks are compared with the shared ranking rule.
 

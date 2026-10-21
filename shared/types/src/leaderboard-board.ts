@@ -1,3 +1,4 @@
+import { getBlockInPlay } from './block-in-play';
 import {
   isCurrentRoundKahoot,
   isQuestionHiddenBehindKahootLeaderboard,
@@ -54,26 +55,43 @@ function describeCountUpBoard(
   return rankTeams([...fromPriorBoard, ...newcomers]);
 }
 
-/** This team's cumulative total with just `roundIndex`'s points removed. */
-function totalBeforeRound(entry: LeaderboardEntry, roundIndex: number): number {
-  return entry.totalPoints - (entry.roundPoints[roundIndex]?.points ?? 0);
+/** The rounds the board's latest scoring came from: every round of the block in play (graded and revealed together), and always the current round. */
+function roundIndexesOfLatestScoring(session: SessionState): Set<number> {
+  const blockRoundIndexes = getBlockInPlay(
+    session.seededGame.rounds,
+    session.progress,
+  ).map(({ roundIndex }) => roundIndex);
+  return new Set([...blockRoundIndexes, session.progress.roundIndex]);
+}
+
+/** This team's cumulative total with just those rounds' points removed. */
+function totalBeforeRounds(
+  entry: LeaderboardEntry,
+  roundIndexes: Set<number>,
+): number {
+  const removed = [...roundIndexes].reduce(
+    (sum, roundIndex) => sum + (entry.roundPoints[roundIndex]?.points ?? 0),
+    0,
+  );
+  return entry.totalPoints - removed;
 }
 
 /**
  * The board to compare ranks against: the prior standings in a kahoot round
  * (a round can span several questions, so backing the round out would net out
- * more than the last one), otherwise the standings with the current round's
- * points backed out.
+ * more than the last one), otherwise the standings with the points of the
+ * whole block in play backed out (a block can span several rounds, all scored
+ * together at its break).
  */
 function describeTrendBasis(session: SessionState): TrendBasis {
-  const { roundIndex } = session.progress;
   if (isCurrentRoundKahoot(session) && session.priorStandings.length > 0) {
     return { board: session.priorStandings, isPriorBoard: true };
   }
+  const roundIndexes = roundIndexesOfLatestScoring(session);
   return {
     board: session.leaderboard.map((entry) => ({
       ...entry,
-      totalPoints: totalBeforeRound(entry, roundIndex),
+      totalPoints: totalBeforeRounds(entry, roundIndexes),
     })),
     isPriorBoard: false,
   };
