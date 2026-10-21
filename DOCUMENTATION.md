@@ -372,6 +372,19 @@ showdown. Confetti (the big screen always, a phone only for ranks 1–3) and the
 fanfare fire through the live-change helper, so never on a reloaded display, a
 reconnected phone or Previous.
 
+The big screen's one-off screen sounds follow the Display screen it shows, not
+the session's status. When the Screen position grows on a connected display
+(a live forward move), `/display` asks one table (`soundFor(previous, next)`)
+which sound the move from the previous Display screen to the new one plays:
+the round sting onto a round intro (not the break round intro or the reveal
+intro), the reveal sting onto each revealed answer (not the steps of a
+closest-guess reveal), time-up once when the block locks (not again through the
+break), and the fanfare with confetti onto `ended` (skipped when the final
+leaderboard already crowned the winner). Because the room can't see a screen
+hidden under the join overlay, no screen sound plays for a move made while an
+overlay covers the screen (the lock countdown sound, a timer, still does), and
+returning to `ended` after an end-of-quiz showdown doesn't replay the fanfare.
+
 ### The snapshot
 
 `StateSnapshotPayload` is the shared base every room's state view is built
@@ -409,7 +422,7 @@ got to, and a mute that is already on applies to media that mounts later.
 | View                            | Fields                                                                                                                                                                                                                                |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                             |
-| Display (`DisplayStatePayload`) | `screen` (the Display screen), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
+| Display (`DisplayStatePayload`) | `screen` (the Display screen), `screenPosition` (the Screen position: grows on every forward move through the quiz, falls on Previous, unmoved by overlays and steps within a screen; the admin and players views don't carry it), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
 | Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                                                            |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                                                                                      |
 

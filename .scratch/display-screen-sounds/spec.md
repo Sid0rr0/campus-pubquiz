@@ -1,6 +1,6 @@
 # Spec: Big-screen sounds follow the Display screen
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none. `control-shortcuts-and-mute` (the big-screen mute over media), which touched the same sounds, is done.
 

@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The display view carries `screenPosition`, declared once in the display room's view type. The admin and players views don't carry it.
 - [ ] It strictly grows on every `START_QUIZ`, `ADVANCE` or `END_QUIZ` that changes the On-air screen underneath any overlay. That covers lobby/rules/round overview → round intro → each question → locking → break intro → break review → break round intro → reveal intro → each reveal → the next block's round intro → ended.

@@ -17,6 +17,7 @@ import {
   describeAdminIndicators,
   describeOnAirScreen,
   describePlayersScreen,
+  screenPositionOf,
 } from './on-air-screen';
 import type {
   BlockRevealQuestionView,
@@ -156,6 +157,7 @@ export function projectScreen(
         ...buildDisplayFields(session),
         screen: displayScreen,
         screenKey,
+        screenPosition: screenPositionOf(snapshot.progress),
         header,
         leagueTop: session.leagueTop,
       };
