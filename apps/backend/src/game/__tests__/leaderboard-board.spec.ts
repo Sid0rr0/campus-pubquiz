@@ -83,6 +83,19 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
   }
 
+  /** Each team (by index) submits its value to the round's `questionIndex`th question, scored on the spot like a kahoot answer. */
+  async function submitAnswers(questionIndex: number, values: string[]) {
+    const questionId = game.rounds[0].questionIds[questionIndex];
+    for (const [teamIndex, value] of values.entries()) {
+      const { socket, teamId } = game.teams[teamIndex];
+      await game.gateway.handleSubmitAnswer(asSocket(socket), {
+        questionId,
+        teamId,
+        value,
+      });
+    }
+  }
+
   async function actAll(actions: GameAction[]) {
     for (const action of actions) await game.act(action);
   }
@@ -133,15 +146,45 @@ describe('GameGateway — the leaderboard description on the display view', () =
       });
     });
 
-    it('compares trends against the standings before the last question, not the whole round', async () => {
+    it('counts a bonus awarded on air as movement on the board that follows', async () => {
       await openKahootRound(['First', 'Second']);
-      await awardBonus(0); // on air: part of the prior standings
+      await awardBonus(0); // on air: the board is frozen when the question opens
       await actAll(['ADVANCE', 'ADVANCE']);
       await awardBonus(1, BIG_BONUS_POINTS);
       await game.act('ADVANCE');
 
+      expect(board().countUpBoard?.map((entry) => entry.totalPoints)).toEqual([
+        0, 0,
+      ]);
       expect(board().trends).toEqual({
-        [game.teams[0].teamId]: 'down',
+        [game.teams[0].teamId]: 'up',
+        [game.teams[1].teamId]: 'up',
+      });
+    });
+
+    it('counts up from the board before the question, however many answers landed on air', async () => {
+      await openKahootRound(['First', 'Second']);
+      await submitAnswers(0, ['Paris', 'London']); // First scores on air
+      await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE']); // -> q1 behind the board
+
+      const { countUpBoard, trends } = board();
+
+      expect(countUpBoard?.map((entry) => entry.totalPoints)).toEqual([0, 0]);
+      expect(trends).toEqual({
+        [game.teams[0].teamId]: 'up',
+        [game.teams[1].teamId]: 'up',
+      });
+    });
+
+    it('compares trends against the standings before the last question when its answers landed on air', async () => {
+      await openKahootRound(['First', 'Second']);
+      await submitAnswers(0, ['Paris', 'London']);
+      await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE', 'TOGGLE_LEADERBOARD']);
+      await submitAnswers(1, ['London', 'Paris']); // Second draws level
+      await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE']);
+
+      expect(board().trends).toEqual({
+        [game.teams[0].teamId]: 'same',
         [game.teams[1].teamId]: 'up',
       });
     });

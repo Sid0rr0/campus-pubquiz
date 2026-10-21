@@ -1,4 +1,5 @@
 import {
+  isGradedStatus,
   isQuestionOnAirStatus,
   revealOnAir,
   type ActiveShowdownRoundState,
@@ -13,22 +14,33 @@ import {
  * caches that depend on it.
  */
 
+/** A question is on air and the leaderboard is not covering it: teams can see it and answer. */
+function isQuestionBeingAnswered({ progress }: SessionState): boolean {
+  return (
+    isQuestionOnAirStatus(progress.status) && !progress.isLeaderboardVisible
+  );
+}
+
 /**
- * The session a write ends with, its prior standings brought up to date: when
- * the write started from a session whose question was on air with the
- * leaderboard hidden, that session's leaderboard becomes the prior standings
- * (points land at the lock, after this board, so it is the board before them).
- * Otherwise the prior standings carry over. Call before the new standings are
- * read.
+ * The session a write ends with, its prior standings brought up to date: the
+ * write that puts a question in front of the teams (on air, leaderboard
+ * hidden, from anything that wasn't) makes the leaderboard it started from the
+ * prior standings. Nothing scored on that question has landed yet (a kahoot
+ * question behind the board takes no answers), so it is the board before them;
+ * answers scored on air and every other write while it stays up leave the
+ * prior standings alone. Stepping back into a question out of a graded status
+ * (Previous) is no opening either: its points have landed. Otherwise the prior
+ * standings carry over. Call before the new standings are read.
  */
 export function withPriorStandings(
   started: SessionState,
   session: SessionState,
 ): SessionState {
-  const isBoardBeforeScoring =
-    isQuestionOnAirStatus(started.progress.status) &&
-    !started.progress.isLeaderboardVisible;
-  return isBoardBeforeScoring
+  const isQuestionOpening =
+    isQuestionBeingAnswered(session) &&
+    !isQuestionBeingAnswered(started) &&
+    !isGradedStatus(started.progress.status);
+  return isQuestionOpening
     ? { ...session, priorStandings: started.leaderboard }
     : session;
 }

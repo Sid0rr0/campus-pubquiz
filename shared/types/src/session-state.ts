@@ -119,9 +119,10 @@ export interface SessionState {
   leaderboardRevealCount: number;
   /**
    * The standings as they stood before the latest scoring the leaderboard
-   * should show: the leaderboard the session had when a write started while a
-   * question was on air with the board hidden. Empty before any such write
-   * (and after a restart). Ephemeral like leaderboardRevealCount.
+   * should show: the leaderboard the session had when a question was put in
+   * front of the teams (on air, board hidden), frozen until the next one is.
+   * Empty before any such write (and after a restart). Ephemeral like
+   * leaderboardRevealCount.
    */
   priorStandings: LeaderboardEntry[];
   /**

@@ -16,8 +16,8 @@ describe('GameGateway — prior standings behind the display count-up board', ()
 
   beforeEach(async () => {
     freezeClockAt('2024-01-01T00:00:00.000Z');
-    // Kahoot points are speed-scored at the lock, so they land after the
-    // board the question opened on.
+    // Kahoot answers are scored on air, so their points land after the board
+    // the question opened on.
     const question = {
       type: 'multiple_choice' as const,
       prompt: 'Capital of France?',
@@ -109,13 +109,13 @@ describe('GameGateway — prior standings behind the display count-up board', ()
     expect(boardOf(resynced).countUpBoard).toBeDefined();
   });
 
-  it('counts a bonus awarded while the question is on air into the count-up board', async () => {
+  it('freezes the count-up board when the question opens, so a bonus awarded on air counts as movement', async () => {
     await awardBonus(1);
     await landFirstQuestionPoints();
 
     const prior = totals(countUpBoard());
 
-    expect(prior[game.teams[1].teamId]).toBe(BONUS_POINTS);
+    expect(prior[game.teams[1].teamId]).toBe(0);
     expect(prior[game.teams[0].teamId]).toBe(0);
   });
 
