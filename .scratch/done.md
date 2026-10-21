@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| live-session-summary            | [The live session summary is built where the session lives](live-session-summary/spec.md)                                                                                  | 2       |
 | ended-night-read                | [One ended-night read for the stats page and the Team page](ended-night-read/spec.md)                                                                                      | 2       |
 | prior-standings-trends          | [Prior standings as the only trend basis](prior-standings-trends/spec.md)                                                                                                  | 2       |
 | dry-run-press                   | [One dry-run press for the Quiz preview and the presenter preview](dry-run-press/spec.md)                                                                                  | 4       |
