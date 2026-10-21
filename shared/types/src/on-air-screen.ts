@@ -252,6 +252,7 @@ const REGION = {
   reveal: 5,
 } as const;
 const REGIONS = 6;
+/** The ended screen is the highest position: nothing comes after it, so END_QUIZ grows from anywhere. */
 const ENDED_POSITION = Number.MAX_SAFE_INTEGER;
 
 /** A title card (even step) comes just before the answer it introduces (odd step). */

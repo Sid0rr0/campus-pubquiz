@@ -170,7 +170,7 @@ export interface DisplayStatePayload
   screen: DisplayScreen;
   /** Transition key — changes only when what's on screen changes. */
   screenKey: string;
-  /** Orders the On-air screens: grows on every forward move through the quiz and falls on Previous, unmoved by overlays and steps within a screen. The key only says the screen changed; this says which way. */
+  /** Orders the On-air screens: grows on every forward move through the quiz and falls on Previous, unmoved by overlays and steps within a screen. The ended screen is the highest position (`Number.MAX_SAFE_INTEGER`). The key only says the screen changed; this says which way. */
   screenPosition: number;
   /** Header label/title/badge for the screen on air. */
   header: HeaderContent;
