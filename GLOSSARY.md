@@ -113,7 +113,7 @@ Stepping back through a block's locked questions during its break, with answers 
 A screen showing a round's name before its content: the round intro before its questions, the break round intro when break review steps across it, and the reveal intro before its answers are revealed.
 
 **Round note**:
-What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro, the break round intro or the reveal intro is on air, and on the admin console with the round; on the big screen too when the round is set to show it, though never on the reveal intro; never on phones. Not the same as **Question notes**, which are host-only and never on screen.
+What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro, the break round intro or the reveal intro is on air, and on the admin console with the round; on the big screen too when the round is set to show it, though never on the reveal intro; never on phones. The Quiz preview's host-only panel shows it on the round intro (when the round doesn't show it on screen) and on the reveal intro. Not the same as **Question notes**, which are host-only and never on screen.
 _Avoid_: title card note, intro text, round description
 
 **Question notes**:
@@ -133,7 +133,7 @@ The quiz master's switch that silences everything the big screen plays: the quiz
 _Avoid_: display sound (sounds like only the quiz's own effects), media pause (stops the picture too)
 
 **Quiz preview**:
-A saved quiz's display screens, stepped through by staff without a session, to check its content before the night. Nothing is played, stored or counted, and no team can join. Its "like the night" order is walked by the same dry-run press as the presenter preview (see **Commit a move**). Not the same as the presenter preview, which describes the next press in a live session.
+A saved quiz's display screens, stepped through by staff without a session, to check its content before the night. Nothing is played, stored or counted, and no team can join. Its "like the night" order is walked by the same dry-run press as the presenter preview (see **Commit a move**). Its host-only panel follows the same rule as the presenter remote, minus what the frame already shows. Not the same as the presenter preview, which describes the next press in a live session.
 _Avoid_: rehearsal, test session, dry run
 
 **Phone screen**:

@@ -1104,8 +1104,10 @@ or counted. It is a read of the quiz.
   frame shows the current step's text the room never sees: the question's
   notes (on its question and answer screens) and the round note on a round's
   title card when the round doesn't show it on the big screen (a note shown on
-  screen is on the card and isn't repeated). An empty state shows when there is
-  none. The Fullscreen button shows the frame alone at full size, hiding the
+  screen is on the card and isn't repeated) and on its reveal intro (in the
+  "like the night" order), where the big screen never draws it. The text
+  follows the presenter remote's rule for the screen on air. An empty state
+  shows when there is none. The Fullscreen button shows the frame alone at full size, hiding the
   panel, jump list and controls; arrow keys still step and Escape leaves.
 - **Entry points**: the quiz editor's Preview and "Preview from here", a
   Preview item in each quiz's actions menu on `/sessions`, and a Preview link on

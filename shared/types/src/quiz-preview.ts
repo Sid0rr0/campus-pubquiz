@@ -5,6 +5,8 @@ import {
 } from './game-state-block-position';
 import { previewMove } from './dry-run-press';
 import { nextPressAction } from './move-plan';
+import type { OnAirScreen } from './on-air-screen';
+import { getHostOnlyText } from './round-note';
 import type { QuizStructureSummary } from './game-state-structure';
 import type { GameProgress } from './game-state-types';
 import { projectScreen } from './screen-projection';
@@ -42,42 +44,63 @@ export interface QuizPreviewStep {
 
 /** The host-only text of one step; null where there is none. */
 export interface QuizPreviewHostOnly {
-  /** The round's note, on its title card, when the round doesn't show it on the big screen. */
+  /** The round's note on its title card and reveal intro, unless the step's frame already draws it. */
   roundNote: string | null;
   /** The note of the question the step shows. */
   questionNote: string | null;
 }
 
-/** A step before its host-only text is attached. */
-type BareStep = Omit<QuizPreviewStep, 'hostOnly'>;
+/** A step before its host-only text is attached; it keeps the On-air screen its progress puts on air. */
+type BareStep = Omit<QuizPreviewStep, 'hostOnly'> & { onAir: OnAirScreen };
 
 function nonEmpty(text: string | null | undefined): string | null {
   return text && text.trim() !== '' ? text : null;
 }
 
-/** Attaches each step's host-only text from the round and question it sits at. */
+/**
+ * The On-air screen a session shows, with its round index mapped to the full
+ * quiz's when the session was built without some of the quiz's rounds.
+ */
+function onAirScreenOf(
+  session: SessionState,
+  toFullRound?: readonly number[],
+): OnAirScreen {
+  const { onAirScreen } = projectScreen(session, SOCKET_ROOMS.ADMIN);
+  if (
+    !toFullRound ||
+    !('roundIndex' in onAirScreen) ||
+    onAirScreen.roundIndex === null
+  )
+    return onAirScreen;
+  return { ...onAirScreen, roundIndex: toFullRound[onAirScreen.roundIndex] };
+}
+
+/** The On-air screen a session shows when put at a progress. */
+function onAirScreenAt(
+  session: SessionState,
+  progress: GameProgress,
+  toFullRound?: readonly number[],
+): OnAirScreen {
+  return onAirScreenOf({ ...session, progress }, toFullRound);
+}
+
+/**
+ * Attaches each step's host-only text: what the shared rule gives its On-air
+ * screen, minus a round note the step's frame already draws.
+ */
 function withHostOnly(
   steps: BareStep[],
   rounds: readonly SeededRound[],
 ): QuizPreviewStep[] {
-  return steps.map((step) => {
-    const round = rounds[step.roundIndex];
-    const isTitleCard = step.screen.kind === 'round_title';
-    const questionId =
-      step.questionIndex === null
-        ? undefined
-        : round?.questions[step.questionIndex]?.id;
+  return steps.map(({ onAir, ...step }) => {
+    const text = getHostOnlyText(rounds, onAir);
+    const isNoteDrawn =
+      step.screen.kind === 'round_title' && nonEmpty(step.screen.note) !== null;
     return {
       ...step,
       hostOnly: {
-        roundNote:
-          isTitleCard && !round?.showNoteOnScreen
-            ? nonEmpty(round?.note)
-            : null,
-        questionNote:
-          questionId === undefined
-            ? null
-            : nonEmpty(round?.questionNotesById?.[questionId]),
+        roundNote: isNoteDrawn ? null : nonEmpty(text.roundNote),
+        questionNote: nonEmpty(text.questionNotes),
       },
     };
   });
@@ -206,6 +229,7 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
       ? [
           {
             screen: { kind: 'round_overview' },
+            onAir: { kind: 'round_overview' },
             roundIndex: 0,
             questionIndex: null,
             isBlockEnd: false,
@@ -254,12 +278,14 @@ function emptyRoundTitle(
   fullSession: SessionState,
   roundIndex: number,
 ): BareStep {
+  const progress: GameProgress = {
+    ...LOBBY_PROGRESS,
+    status: 'round_intro',
+    roundIndex,
+  };
   return {
-    screen: displayScreenAt(fullSession, {
-      ...LOBBY_PROGRESS,
-      status: 'round_intro',
-      roundIndex,
-    }),
+    screen: displayScreenAt(fullSession, progress),
+    onAir: onAirScreenAt(fullSession, progress),
     roundIndex,
     questionIndex: null,
     isBlockEnd: false,
@@ -277,13 +303,14 @@ function walkNightSteps(
   for (let press = 0; press <= MAX_NIGHT_PRESSES; press += 1) {
     const { screen } = projectScreen(session, SOCKET_ROOMS.DISPLAY);
     if (NIGHT_SCREEN_KINDS.includes(screen.kind)) {
-      steps.push(
-        nightStep(
+      steps.push({
+        ...nightStep(
           renumberRounds(screen, placed),
           placed[session.progress.roundIndex],
           positions,
         ),
-      );
+        onAir: onAirScreenOf(session, placed),
+      });
     }
     const next = pressNext(session);
     if (!next) break;
@@ -345,7 +372,7 @@ function nightStep(
   screen: DisplayScreen,
   roundIndex: number,
   positions: ReturnType<typeof questionPositions>,
-): BareStep {
+): Omit<BareStep, 'onAir'> {
   switch (screen.kind) {
     case 'question':
     case 'reveal': {
@@ -392,12 +419,14 @@ function buildAnswerAfterQuestionSteps(
 
   const steps: BareStep[] = [];
   rounds.forEach((round, roundIndex) => {
+    const introProgress: GameProgress = {
+      ...LOBBY_PROGRESS,
+      status: 'round_intro',
+      roundIndex,
+    };
     steps.push({
-      screen: displayScreenAt(fullSession, {
-        ...LOBBY_PROGRESS,
-        status: 'round_intro',
-        roundIndex,
-      }),
+      screen: displayScreenAt(fullSession, introProgress),
+      onAir: onAirScreenAt(fullSession, introProgress),
       roundIndex,
       questionIndex: null,
       isBlockEnd: false,
@@ -412,28 +441,40 @@ function buildAnswerAfterQuestionSteps(
         isLastQuestion ||
         isBreakPointQuestion(placedRoundIndex, questionIndex, context);
       const at = { roundIndex: placedRoundIndex, questionIndex };
+      const openProgress: GameProgress = {
+        ...LOBBY_PROGRESS,
+        ...at,
+        status: 'question_open',
+      };
+      const revealProgress: GameProgress = {
+        ...LOBBY_PROGRESS,
+        ...at,
+        status: 'reveal',
+        revealIndex: getBlockPositionForQuestion(
+          placedRoundIndex,
+          questionIndex,
+          context,
+        ),
+      };
       steps.push(
         {
-          screen: displayScreenAt(questionSession, {
-            ...LOBBY_PROGRESS,
-            ...at,
-            status: 'question_open',
-          }),
+          screen: displayScreenAt(questionSession, openProgress),
+          onAir: onAirScreenAt(
+            questionSession,
+            openProgress,
+            questionRoundIndexes,
+          ),
           roundIndex,
           questionIndex,
           isBlockEnd: false,
         },
         {
-          screen: displayScreenAt(questionSession, {
-            ...LOBBY_PROGRESS,
-            ...at,
-            status: 'reveal',
-            revealIndex: getBlockPositionForQuestion(
-              placedRoundIndex,
-              questionIndex,
-              context,
-            ),
-          }),
+          screen: displayScreenAt(questionSession, revealProgress),
+          onAir: onAirScreenAt(
+            questionSession,
+            revealProgress,
+            questionRoundIndexes,
+          ),
           roundIndex,
           questionIndex,
           isBlockEnd,

@@ -8,7 +8,7 @@ Parent spec: `.scratch/host-only-text/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Each preview step keeps the On-air screen its progress puts on air, in both orders, including an empty round's title card.
 - [ ] A step's host-only panel is the rule's output for that On-air screen. The round note is left out only when the step's Display screen already draws it: a round title card with a non-empty drawn note.
