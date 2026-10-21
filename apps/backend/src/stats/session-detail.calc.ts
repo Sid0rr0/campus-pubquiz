@@ -65,6 +65,8 @@ export interface SessionDetailAnswerInputRow {
   gradedAt: string | Date | null;
   verdict: Verdict | null;
   responseMs: number | null;
+  /** The team's answer, already worded for people. */
+  answer: string;
 }
 
 export interface SessionDetailBonusInputRow {
@@ -314,6 +316,7 @@ export function computeSessionDetail(
       const questionResult = questionResultById.get(question.questionId);
       return {
         questionId: question.questionId,
+        roundId: question.roundId,
         roundTitle: roundTitleById.get(question.roundId) ?? '',
         orderIndex: question.orderIndex,
         prompt: question.prompt,
@@ -389,5 +392,12 @@ export function computeSessionDetail(
             sessionStandings.leaderboard[1].totalPoints
           : null,
     },
+    scoresheet: answers.map((a) => ({
+      teamId: a.teamId,
+      questionId: a.questionId,
+      pointsAwarded: a.pointsAwarded,
+      verdict: a.verdict,
+      answer: a.answer,
+    })),
   };
 }

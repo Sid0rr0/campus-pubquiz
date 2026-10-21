@@ -10,6 +10,7 @@ import { StandingsTable } from '@/app/stats/[id]/standings-table';
 import { RoundsTable } from '@/app/stats/[id]/rounds-table';
 import { FeedbackSection } from '@/app/stats/[id]/feedback-section';
 import { QuestionsTable } from '@/app/stats/[id]/questions-table';
+import { ScoresheetTable } from '@/app/stats/[id]/scoresheet-table';
 
 interface SessionDetailPanelProps {
   gameSessionId: number;
@@ -86,6 +87,16 @@ export function SessionDetailPanel({ gameSessionId }: SessionDetailPanelProps) {
           questions={data.questions}
           allCorrectQuestionIds={data.highlights.allCorrectQuestionIds}
           noneCorrectQuestionIds={data.highlights.noneCorrectQuestionIds}
+        />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-display text-lg">Scoresheet</h2>
+        <ScoresheetTable
+          standings={data.standings}
+          rounds={data.rounds}
+          questions={data.questions}
+          scoresheet={data.scoresheet}
         />
       </section>
     </main>

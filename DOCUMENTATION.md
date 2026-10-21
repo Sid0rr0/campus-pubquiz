@@ -1448,7 +1448,7 @@ for the rest of the flow.
 
 `/stats` lists every **ended** session; `/stats/:id` (`GET /stats/sessions/:id`,
 `getSessionDetail`) is the deep dive for one: standings, a rounds table,
-a questions table and highlight tiles. All of it is computed per request from
+a questions table, highlight tiles and the Scoresheet. All of it is computed per request from
 the stored rows, never cached.
 
 Each question row carries `answer`, the correct answer worded by `formatAnswer`,
@@ -1456,6 +1456,20 @@ since a round can repeat one prompt over different media. The questions table
 shows it as the **Answer** column and the **Hardest question** tile as an
 "Answer: …" line under the prompt; both cut it off after two lines, with the
 full text on hover.
+
+The **Scoresheet** at the bottom of the page is the night in one grid. The
+session detail carries `scoresheet: { teamId, questionId, pointsAwarded, verdict,
+answer }[]`, one cell per stored answer (departed teams' included; `answer` is the
+team's answer worded by `formatAnswer`), and each question row carries its
+`roundId` so the page can group the columns. Rows are the standing rows in their
+order (a team that left greyed, ranked "left"); the columns are Rank and Team
+(both stay put while the grid scrolls sideways), one column per question grouped
+under "Round n" headers (hovering a question's "Qn" shows its prompt and
+answer, hovering the round its title), then Bonus and Total. A cell shows the
+points earned, green for `correct` and yellow for `partial`; "—" means no answer
+and a muted "?" an ungraded one. Hovering a cell shows the team's answer. The
+question columns and Total sort on click (a missing answer sorts below every
+scored one); otherwise the server's order stands.
 
 **Player counts** show how many people came. They are read from the
 per-session player counts (the table the teams' reports are stored in), joined

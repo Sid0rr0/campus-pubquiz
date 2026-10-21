@@ -194,6 +194,10 @@ The single team Standings picks as winner of an ended session, by showdown or el
 **Correct rate**:
 How much of a question the room got right: the summed credit of its answers (a correct answer counts 1, a partial answer its share of the question's points) divided by the participant count. A closest_guess question has no correct rate, since it has one winner by design; it is left out of every rate-based figure.
 
+**Scoresheet**:
+An ended session's points per team per question, on the stats page: one row per team that took part, one column per question, each cell the points that team earned on that question and its verdict. Teams that left are on it too.
+_Avoid_: answer grid, results matrix, standings (that's the ranked totals)
+
 **Team page**:
 A team's own public page at `/team`, opened with its team code instead of a login. It shows the team's history across ended sessions (the same figures staff see on the team stats page, minus anything staff-only), and for each ended session every question with the team's own answer, its verdict and the right answer. It never shows other teams' answers or feedback.
 _Avoid_: team profile, team stats page (that is the staff page at `/teams/[id]`)
@@ -260,7 +264,7 @@ lobby → rules → round_overview
 
 **Move plan**:
 What one press of an admin action does right now. Advance and Previous: reveal the next leaderboard rank, hide the leaderboard, take a step of the **Stepped reveal** on air (the showdown or a closest-guess reveal), move the quiz to its next status, wait for grading (Advance out of the break while an answer is ungraded — pressable, but refused with the ungraded questions), or nothing. Any other action (Start quiz in the lobby, Toggle leaderboard, …) is a plain transition, or blocked when illegal. The Move plan also owns "the next press": Start quiz in the lobby, Advance everywhere else. While the leaderboard is up, a press only works the leaderboard; while the join overlay is up, Advance or Previous only hides it. Neither ever moves the quiz underneath. Previous on the rules goes back to the lobby.
-\_Avoid*: next step, action result
+\_Avoid\*: next step, action result
 
 **Join overlay**:
 The join code and QR code shown over the big screen once the quiz has started, so late teams can join without the quiz moving. Like the leaderboard it is not a status: the quiz carries on underneath, timers included, and phones are untouched. Only one of the two is up at a time, and it can't be up in the lobby or once the quiz has ended.

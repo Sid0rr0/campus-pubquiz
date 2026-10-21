@@ -1,3 +1,4 @@
+import type { Verdict } from './answer-kind';
 import type { BonusCategory } from './bonus';
 
 /** One row per **ended** game session, for the admin/moderator stats history view. */
@@ -110,6 +111,7 @@ export interface SessionDetailRoundRow {
 
 export interface SessionDetailQuestionRow {
   questionId: number;
+  roundId: number;
   roundTitle: string;
   orderIndex: number;
   prompt: string;
@@ -224,4 +226,17 @@ export interface SessionDetailStats {
   feedback: SessionDetailFeedback;
   questions: SessionDetailQuestionRow[];
   highlights: SessionDetailHighlights;
+  /** Every stored answer, departed teams' included; a team with no answer to a question has no cell. */
+  scoresheet: SessionDetailScoresheetCell[];
+}
+
+/** One team's answer to one question on the Scoresheet. */
+export interface SessionDetailScoresheetCell {
+  teamId: number;
+  questionId: number;
+  pointsAwarded: number;
+  /** Null while the answer is ungraded. */
+  verdict: Verdict | null;
+  /** The team's answer as people read it. */
+  answer: string;
 }

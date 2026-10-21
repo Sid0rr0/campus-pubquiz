@@ -80,6 +80,7 @@ const DETAIL: SessionDetailStats = {
   questions: [
     {
       questionId: 10,
+      roundId: 100,
       roundTitle: 'Round 1',
       orderIndex: 0,
       prompt: 'Capital of France?',
@@ -93,6 +94,7 @@ const DETAIL: SessionDetailStats = {
     },
     {
       questionId: 11,
+      roundId: 100,
       roundTitle: 'Round 1',
       orderIndex: 1,
       prompt: 'Capital of the Moon?',
@@ -120,6 +122,15 @@ const DETAIL: SessionDetailStats = {
     },
     winningMargin: 6,
   },
+  scoresheet: [
+    {
+      teamId: 1,
+      questionId: 10,
+      pointsAwarded: 5,
+      verdict: 'correct',
+      answer: 'Paris',
+    },
+  ],
 };
 
 describe('SessionDetailPanel', () => {
@@ -136,7 +147,7 @@ describe('SessionDetailPanel', () => {
     );
     expect(screen.getByText('Medium')).toBeInTheDocument();
     expect(screen.getAllByText('Team A').length).toBeGreaterThan(0);
-    expect(screen.getByText('Team B')).toBeInTheDocument();
+    expect(screen.getAllByText('Team B').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Round 1').length).toBeGreaterThan(0);
     expect(screen.getByText('Capital of France?')).toBeInTheDocument();
     expect(screen.getAllByText('Capital of the Moon?').length).toBeGreaterThan(
@@ -153,6 +164,13 @@ describe('SessionDetailPanel', () => {
     const tile = (await screen.findByText('Hardest question')).parentElement!;
     expect(tile).toHaveTextContent('Capital of the Moon?');
     expect(tile).toHaveTextContent('Answer: Tranquility Base');
+  });
+
+  it('shows the scoresheet below the questions', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    const heading = await screen.findByRole('heading', { name: 'Scoresheet' });
+    expect(heading.parentElement).toHaveTextContent('Round 1');
   });
 
   it('shows the total players with how many teams reported, and the average team size', async () => {
@@ -188,7 +206,7 @@ describe('SessionDetailPanel', () => {
   it("shows 'Not recorded' for a team with no timed answers", async () => {
     renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
 
-    await waitFor(() => screen.getByText('Team B'));
+    await waitFor(() => screen.getAllByText('Team B'));
     expect(screen.getAllByText('Not recorded').length).toBeGreaterThan(0);
   });
 

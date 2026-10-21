@@ -95,6 +95,7 @@ interface SessionAnswerRow {
   gradedAt: string | Date | null;
   verdict: Verdict | null;
   responseMs: string | number | null;
+  value: string;
 }
 
 interface SessionBonusRow {
@@ -265,11 +266,27 @@ export class StatsService {
         'a.graded_at as gradedAt',
         'a.verdict as verdict',
         'a.response_ms as responseMs',
+        'a.value as value',
       )) as SessionAnswerRow[];
 
     const bonusAwards = (await knex('bonus_awards')
       .where('game_session_id', gameSessionId)
       .select('team_id as teamId', 'category', 'points')) as SessionBonusRow[];
+
+    // One parse per question, shared by the key and every team's answer to it.
+    const wordingById = new Map(
+      questions.map((q) => [
+        q.questionId,
+        {
+          type: q.type,
+          options: readQuestionPayload({
+            id: q.questionId,
+            type: q.type,
+            payload: q.payload,
+          }).options,
+        },
+      ]),
+    );
 
     return computeSessionDetail({
       session: {
@@ -305,14 +322,7 @@ export class StatsService {
         orderIndex: q.orderIndex,
         prompt: q.prompt,
         type: q.type,
-        answer: formatAnswer(q.answer, {
-          type: q.type,
-          options: readQuestionPayload({
-            id: q.questionId,
-            type: q.type,
-            payload: q.payload,
-          }).options,
-        }),
+        answer: formatAnswer(q.answer, wordingById.get(q.questionId)!),
         points: Number(q.points),
       })),
       answers: answers.map((a) => ({
@@ -323,6 +333,7 @@ export class StatsService {
         gradedAt: a.gradedAt,
         verdict: a.verdict,
         responseMs: a.responseMs === null ? null : Number(a.responseMs),
+        answer: formatAnswer(a.value, wordingById.get(a.questionId)!),
       })),
       bonusAwards: bonusAwards.map((b) => ({
         teamId: b.teamId,

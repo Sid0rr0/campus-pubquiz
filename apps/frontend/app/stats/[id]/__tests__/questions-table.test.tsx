@@ -8,6 +8,7 @@ function question(
 ): SessionDetailQuestionRow {
   return {
     questionId: 1,
+    roundId: 1,
     roundTitle: 'Music',
     orderIndex: 0,
     prompt: 'Name the band',

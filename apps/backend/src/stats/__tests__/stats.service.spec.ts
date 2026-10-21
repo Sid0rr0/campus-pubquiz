@@ -563,10 +563,10 @@ describe('StatsService (Postgres integration)', () => {
       expect(unnamedResult.name).toBe('Quiz N');
     });
 
-    it('words each question’s correct answer the way the screens show it', async () => {
+    it('words each correct answer and team answer the way the screens show it', async () => {
       const { quiz, questions } = await createQuiz('Quiz W', [[1]]);
       const round = questions[0][0].round;
-      em.create(Question, {
+      const sortQuestion = em.create(Question, {
         round,
         orderIndex: 1,
         type: 'sort',
@@ -577,12 +577,32 @@ describe('StatsService (Postgres integration)', () => {
       });
       await em.flush();
       const session = await createSession(quiz, 'WORDED1', 'ended');
+      const team = await joinTeam(session, 'Team A');
+      em.create(Answer, {
+        gameSession: session,
+        question: sortQuestion,
+        team,
+        value: 'Venus|Mercury|Earth',
+        pointsAwarded: 0,
+        gradedAt: new Date(),
+        verdict: 'incorrect',
+      });
+      await em.flush();
 
       const result = await statsService.getSessionDetail(session.id);
 
       expect(result.questions.map((q) => q.answer)).toEqual([
         'answer',
         'Mercury → Venus → Earth',
+      ]);
+      expect(result.scoresheet).toEqual([
+        {
+          teamId: team.id,
+          questionId: sortQuestion.id,
+          pointsAwarded: 0,
+          verdict: 'incorrect',
+          answer: 'Venus → Mercury → Earth',
+        },
       ]);
     });
 

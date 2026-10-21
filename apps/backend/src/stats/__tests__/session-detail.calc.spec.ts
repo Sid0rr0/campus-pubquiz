@@ -126,6 +126,61 @@ describe('computeSessionDetail', () => {
     ]);
   });
 
+  it('lists every stored answer on the scoresheet, ungraded and departed teams included', () => {
+    const answerRow = (
+      teamId: number,
+      verdict: 'correct' | null,
+      pointsAwarded: number,
+    ) => ({
+      questionId: 10,
+      teamId,
+      teamName: `Team ${teamId}`,
+      pointsAwarded,
+      gradedAt: verdict === null ? null : '2026-01-01T00:00:01.000Z',
+      verdict,
+      responseMs: null,
+      answer: `Answer ${teamId}`,
+    });
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'Team 1' },
+          { teamId: 2, teamName: 'Team 2', hasLeft: true },
+        ],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Q',
+            answer: 'A',
+            type: 'free_text',
+            points: 2,
+          },
+        ],
+        answers: [answerRow(1, 'correct', 2), answerRow(2, null, 0)],
+      }),
+    );
+
+    expect(result.questions[0].roundId).toBe(100);
+    expect(result.scoresheet).toEqual([
+      {
+        teamId: 1,
+        questionId: 10,
+        pointsAwarded: 2,
+        verdict: 'correct',
+        answer: 'Answer 1',
+      },
+      {
+        teamId: 2,
+        questionId: 10,
+        pointsAwarded: 0,
+        verdict: null,
+        answer: 'Answer 2',
+      },
+    ]);
+  });
+
   it('uses the participant count, departed teams included, as every denominator', () => {
     const result = computeSessionDetail(
       buildInput({
@@ -153,6 +208,7 @@ describe('computeSessionDetail', () => {
           gradedAt: '2026-01-01T00:00:01.000Z',
           verdict: 'correct' as const,
           responseMs: null,
+          answer: 'a',
         })),
       }),
     );
@@ -188,6 +244,7 @@ describe('computeSessionDetail', () => {
             gradedAt: null,
             verdict: null,
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -221,6 +278,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'partial',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -256,6 +314,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'correct',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 10,
@@ -265,6 +324,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'correct',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -302,6 +362,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'partial',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 10,
@@ -311,6 +372,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'partial',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -357,6 +419,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'partial',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 10,
@@ -366,6 +429,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'partial',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -384,6 +448,7 @@ describe('computeSessionDetail', () => {
       gradedAt: '2026-01-01T00:00:01.000Z',
       verdict: 'partial' as const,
       responseMs: null,
+      answer: 'a',
     });
     const result = computeSessionDetail(
       buildInput({
@@ -420,6 +485,7 @@ describe('computeSessionDetail', () => {
       gradedAt: '2026-01-01T00:00:01.000Z',
       verdict: 'correct' as const,
       responseMs: null,
+      answer: 'a',
     });
     const result = computeSessionDetail(
       buildInput({
@@ -469,6 +535,7 @@ describe('computeSessionDetail', () => {
             gradedAt: null,
             verdict: null,
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -513,6 +580,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'partial',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 11,
@@ -522,6 +590,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'incorrect',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -602,6 +671,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'correct',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 10,
@@ -611,6 +681,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'correct',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 11,
@@ -620,6 +691,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'incorrect',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -653,6 +725,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'correct',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -691,6 +764,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'correct',
             responseMs: 5000,
+            answer: 'a',
           },
           {
             questionId: 10,
@@ -700,6 +774,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'incorrect',
             responseMs: 1200,
+            answer: 'a',
           },
         ],
       }),
@@ -725,6 +800,7 @@ describe('computeSessionDetail', () => {
       gradedAt: '2026-01-01T00:00:01.000Z',
       verdict: 'correct' as const,
       responseMs: 2000,
+      answer: 'a',
     });
     const result = computeSessionDetail(
       buildInput({
@@ -803,6 +879,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: averagePercent > 0 ? 'correct' : 'incorrect',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -911,6 +988,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'correct',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 11,
@@ -920,6 +998,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'incorrect',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 10,
@@ -929,6 +1008,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'incorrect',
             responseMs: null,
+            answer: 'a',
           },
           {
             questionId: 11,
@@ -938,6 +1018,7 @@ describe('computeSessionDetail', () => {
             gradedAt: '2026-01-01T00:00:01.000Z',
             verdict: 'incorrect',
             responseMs: null,
+            answer: 'a',
           },
         ],
       }),
@@ -963,6 +1044,7 @@ describe('computeSessionDetail', () => {
       gradedAt: '2026-01-01T00:00:01.000Z',
       verdict,
       responseMs: null,
+      answer: 'a',
     });
     const question = (
       questionId: number,
