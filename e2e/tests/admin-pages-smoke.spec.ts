@@ -40,11 +40,17 @@ test('after a short played session, /sessions, /stats and /teams show its data',
   );
   await playedRow.getByRole('link', { name: session.quizTitle }).click();
   await expect(page).toHaveURL(/\/stats\/\d+/);
-  const winnerRow = page.getByRole('row').filter({ hasText: phoneA.teamName });
+  // The Scoresheet further down has a row per team too, so look only at the standings.
+  const standings = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: 'Standings' }) });
+  const winnerRow = standings
+    .getByRole('row')
+    .filter({ hasText: phoneA.teamName });
   await expect(winnerRow).toContainText('Winner');
   await expect(winnerRow.getByRole('cell').first()).toHaveText('1.');
   await expect(
-    page
+    standings
       .getByRole('row')
       .filter({ hasText: phoneB.teamName })
       .getByRole('cell')

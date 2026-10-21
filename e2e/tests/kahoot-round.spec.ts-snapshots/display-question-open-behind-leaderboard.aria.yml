@@ -4,5 +4,5 @@
   - paragraph: QUESTION 2
   - heading "Leaderboard" [level=1]
   - list:
-    - listitem: /– 1\. Team A [0-9a-f]{6} [\d.]+/
-    - listitem: /– 2\. Team B [0-9a-f]{6} 0/
+    - listitem: /▲ 1\. Team A [0-9a-f]{6} [\d.]+/
+    - listitem: /▲ 2\. Team B [0-9a-f]{6} 0/
