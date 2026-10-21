@@ -4,7 +4,8 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| display-screen-sounds           | [Big-screen sounds follow the Display screen](display-screen-sounds/spec.md)                                                                                              | 2       |
+| stepped-reveal                  | [One stepped reveal for the showdown and the closest guess](stepped-reveal/spec.md)                                                                                        | 3       |
+| display-screen-sounds           | [Big-screen sounds follow the Display screen](display-screen-sounds/spec.md)                                                                                               | 2       |
 | session-write-gate              | [A Write gate on the Session write](session-write-gate/spec.md)                                                                                                            | 4       |
 | live-session-rest               | [Every REST change to a live session goes through the Live session module](live-session-rest/spec.md)                                                                      | 4       |
 | control-shortcuts-and-mute      | [Control shortcuts F / Space / M, and a big-screen mute that silences media](control-shortcuts-and-mute/spec.md)                                                           | 2       |
