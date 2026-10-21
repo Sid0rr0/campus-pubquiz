@@ -17,6 +17,14 @@ const NIGHT_KINDS: readonly ScreenKind[] = [
   'reveal',
 ];
 
+/** Kinds a real run passes through that the preview leaves out. */
+const NEVER_IN_PREVIEW: readonly ScreenKind[] = [
+  'lobby',
+  'rules',
+  'locking',
+  'leaderboard',
+];
+
 const free = (prompt: string) => ({
   type: 'free_text' as const,
   prompt,
@@ -100,6 +108,7 @@ describe('Quiz preview vs a real session', () => {
 
     expect(preview).toEqual(live.filter((kind) => NIGHT_KINDS.includes(kind)));
     // The run really passed through kinds the preview leaves out.
-    expect(live.length).toBeGreaterThan(preview.length);
+    const leftOut = NEVER_IN_PREVIEW.filter((kind) => live.includes(kind));
+    expect(leftOut).toEqual(NEVER_IN_PREVIEW);
   });
 });

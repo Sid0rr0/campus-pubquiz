@@ -328,8 +328,16 @@ function pressNext(session: SessionState): SessionState | null {
     case 'grading_pending':
     case 'blocked':
       return null;
-    default:
+    case 'transition':
+    case 'leaderboard_reveal':
+    case 'leaderboard_hide':
+    case 'join_overlay_hide':
+    case 'reveal_step':
       return next;
+    default: {
+      const unhandled: never = step;
+      return unhandled;
+    }
   }
 }
 
