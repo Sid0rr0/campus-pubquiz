@@ -61,6 +61,15 @@ describe('Grading policy: grade at submit', () => {
     ).toBeNull();
   });
 
+  it('free_text: "I don\'t know" is graded incorrect with 0 points', () => {
+    expect(
+      gradeAtSubmit(
+        { type: 'free_text', answer: 'Queen', points: 10 },
+        IDK_ANSWER_VALUE,
+      ),
+    ).toEqual({ points: 0, verdict: 'incorrect' });
+  });
+
   it('grades an auto type either way', () => {
     expect(gradeAtSubmit(AUTO, 'Rome')).toEqual({
       points: 0,
@@ -168,6 +177,14 @@ describe('Grading policy: submit', () => {
         kind: 'set',
         points: 3,
         verdict: 'correct',
+      });
+    });
+
+    it('sets incorrect on a first "I don\'t know" submission', () => {
+      expect(gradeOnSubmit(MATCH_OR_HUMAN, IDK_ANSWER_VALUE, null)).toEqual({
+        kind: 'set',
+        points: 0,
+        verdict: 'incorrect',
       });
     });
 

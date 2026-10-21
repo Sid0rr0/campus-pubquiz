@@ -988,7 +988,8 @@ without the field reads as not hidden.
 `multiple_choice`/`sort`/`match`/`number` are auto-graded the instant a team
 submits, and the admin can still override any of them per answer;
 `free_text` (grading mode `match-or-human`) is graded
-correct at submit when the answer matches the key and otherwise left ungraded
+correct at submit when the answer matches the key, incorrect (0 points) when
+the team answered "I don't know", and otherwise left ungraded
 for the admin, who can override any of them too. A revision that matches is
 graded correct (replacing any earlier grade); a revision that doesn't match
 and differs from the previous value goes back to ungraded, even if the admin
