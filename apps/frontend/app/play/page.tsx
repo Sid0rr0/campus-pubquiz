@@ -202,7 +202,11 @@ function PlayPageContent() {
   // last bit of inline content underneath it.
   const hasBonusPanel = settings.enabledBonusCategories.length > 0;
   const showBonusAvailability = !isShowingLastBreak(progress, quizStructure);
-  const hasMobileActionBar = hasBonusPanel || openedQuestions.length > 0;
+  const jokerRound = view.jokerRounds.find(
+    (round) => round.roundId === myJoker?.roundId,
+  );
+  const hasMobileActionBar =
+    hasBonusPanel || openedQuestions.length > 0 || jokerRound !== undefined;
 
   return (
     <main
@@ -360,6 +364,14 @@ function PlayPageContent() {
         historyEntries={openedQuestions}
         jumpableHistoryIds={jumpableQuestionIds}
         onSelectHistoryQuestion={selectQuestion}
+        joker={
+          jokerRound
+            ? {
+                roundNumber: jokerRound.roundNumber,
+                roundTitle: jokerRound.title,
+              }
+            : null
+        }
         bonus={
           hasBonusPanel
             ? {

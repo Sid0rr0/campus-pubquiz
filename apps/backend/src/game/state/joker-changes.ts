@@ -1,9 +1,11 @@
 import {
   canChooseJoker,
+  canSetJoker,
   drawJoker,
   isJokerPickOpen,
   pickableRounds,
   type PickJokerPayload,
+  type SetTeamJokerPayload,
   type SessionState,
   type TeamJoker,
 } from '@campus-pubquiz/types';
@@ -87,6 +89,57 @@ export class JokerChanges {
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
         shouldBroadcastDisplayState: true,
+        jokerSyncs: jokerSyncsFor(session, [teamId], { [teamId]: joker }),
+      },
+      touchedScores: true,
+    };
+  }
+
+  /**
+   * The quiz master gives a team `roundId` as its joker, whatever the team had.
+   * Refused for a team not on the roster, when the session plays without
+   * jokers, before the pick has opened, or for a round with an opened question.
+   * The team's phones are told its new joker (a toast there, since it did not
+   * pick it) and the admin room gets a fresh view of itself; the big screen and
+   * the players room hear nothing. Moves standings once jokers double.
+   */
+  async setTeamJoker(
+    session: SessionState,
+    { teamId, roundId }: SetTeamJokerPayload,
+  ): Promise<SessionChange<SessionOutcome>> {
+    if (!session.teams.some((team) => team.teamId === teamId)) {
+      throw new SessionRefusal(`Team ${teamId} is not in this session`);
+    }
+    const pickableRoundIds = pickableRounds(
+      session.seededGame.rounds,
+      session.openedQuestionIds,
+    ).map((round) => round.id);
+    const canSet = canSetJoker(
+      {
+        isEnabled: session.seededGame.settings.jokersEnabled,
+        status: session.progress.status,
+        pickableRoundIds,
+      },
+      roundId,
+    );
+    if (!canSet) {
+      throw new SessionRefusal(
+        'That round cannot be the joker: it has already started, or the joker pick has not opened',
+      );
+    }
+
+    const joker: TeamJoker = { roundId, source: 'set_by_quiz_master' };
+    await this.jokerService.set(
+      session.seededGame.gameSessionId,
+      teamId,
+      joker,
+    );
+    return {
+      session: withJoker(session, teamId, joker),
+      outcome: {
+        ...BROADCAST_STATE_OUTCOME,
+        shouldBroadcastState: false,
+        shouldBroadcastAdminState: true,
         jokerSyncs: jokerSyncsFor(session, [teamId], { [teamId]: joker }),
       },
       touchedScores: true,

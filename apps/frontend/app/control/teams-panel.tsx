@@ -1,7 +1,11 @@
 'use client';
 
 import { Cross2Icon } from '@radix-ui/react-icons';
-import type { AdminTeamView, JokerSource } from '@campus-pubquiz/types';
+import type {
+  AdminTeamView,
+  JokerPickRound,
+  JokerSource,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { PlayerCountEditor } from '@/app/control/player-count-editor';
@@ -19,7 +23,59 @@ interface TeamsPanelProps {
   answeredTeamIds: number[];
   onKickTeam: (teamId: number) => void;
   onSetPlayerCount: (teamId: number, playerCount: number) => void;
+  /** The rounds a team's joker may be moved to (none: the list is left out). */
+  jokerRounds: JokerPickRound[];
+  onSetJoker: (teamId: number, roundId: number) => void;
   className?: string;
+}
+
+function roundOptionLabel(roundNumber: number, title: string): string {
+  return `Round ${roundNumber} — ${title}`;
+}
+
+/** The quiz master's list for moving one team's joker to a round that has not started. */
+function JokerRoundSelect({
+  team,
+  jokerRounds,
+  onSetJoker,
+}: {
+  team: AdminTeamView;
+  jokerRounds: JokerPickRound[];
+  onSetJoker: (teamId: number, roundId: number) => void;
+}) {
+  const current = team.joker;
+  const isCurrentListed = jokerRounds.some(
+    (round) => round.roundId === current?.roundId,
+  );
+  return (
+    <label className="ml-5 flex items-center gap-1.5 text-xs font-bold text-background/70">
+      <span className="sr-only">Joker round for {team.teamName}</span>
+      <select
+        value={current ? String(current.roundId) : ''}
+        onChange={(event) =>
+          onSetJoker(team.teamId, Number(event.target.value))
+        }
+        className="max-w-full rounded border border-background/30 bg-foreground px-1 py-0.5 text-xs text-background"
+      >
+        {!current && (
+          <option value="" disabled>
+            No joker yet
+          </option>
+        )}
+        {current && !isCurrentListed && (
+          <option value={current.roundId} disabled>
+            {roundOptionLabel(current.roundNumber, current.roundTitle)}{' '}
+            (started)
+          </option>
+        )}
+        {jokerRounds.map((round) => (
+          <option key={round.roundId} value={round.roundId}>
+            {roundOptionLabel(round.roundNumber, round.title)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 export function TeamsPanel({
@@ -28,6 +84,8 @@ export function TeamsPanel({
   answeredTeamIds,
   onKickTeam,
   onSetPlayerCount,
+  jokerRounds,
+  onSetJoker,
   className = '',
 }: TeamsPanelProps) {
   if (teams.length === 0) {
@@ -102,6 +160,13 @@ export function TeamsPanel({
                     ({JOKER_SOURCE_LABELS[team.joker.source]})
                   </span>
                 </p>
+              )}
+              {jokerRounds.length > 0 && (
+                <JokerRoundSelect
+                  team={team}
+                  jokerRounds={jokerRounds}
+                  onSetJoker={onSetJoker}
+                />
               )}
               <PlayerCountEditor
                 team={team}

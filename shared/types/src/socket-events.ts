@@ -31,6 +31,7 @@ export const SOCKET_EVENTS = {
   SET_PLAYER_COUNT: 'game:set_player_count',
   SET_TEAM_PLAYER_COUNT: 'game:set_team_player_count',
   PICK_JOKER: 'game:pick_joker',
+  SET_TEAM_JOKER: 'game:set_team_joker',
 } as const;
 
 export const SOCKET_ROOMS = {

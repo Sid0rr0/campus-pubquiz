@@ -35,6 +35,9 @@ export const KICK_NOTICE = 'You were removed from this team by the quiz master';
 /** Award toasts outlast the default so a team passing the phone around still sees them. */
 export const BONUS_AWARD_TOAST_DURATION_MS = 8000;
 
+/** A joker change toast stays long enough for the team to read which round it moved to. */
+const JOKER_TOAST_MS = 6000;
+
 /** How long a refused rejoin waits before asking again: the old socket holding the seat is gone once the server's ping timeout (~45 s) notices it. */
 export const JOIN_RETRY_DELAY_MS = 3000;
 /** Retries before a refused rejoin is shown as an error: together they outlast the ping timeout. */
@@ -678,6 +681,34 @@ function awardBonus(
   };
 }
 
+/**
+ * The server told the team's phones its joker. A joker the team did not pick
+ * itself (the quiz master's change, a draw) that differs from the one held is
+ * announced once; the team's own pick, and a joker already held (the pick
+ * closing re-sends every joker), change the chip quietly.
+ */
+function syncJoker(
+  state: TeamLinkState,
+  joker: TeamJoker | null,
+): TeamLinkStep {
+  const next = { ...state, myJoker: joker };
+  const isChange =
+    joker !== null &&
+    (joker.roundId !== state.myJoker?.roundId ||
+      joker.source !== state.myJoker?.source);
+  if (!isChange || joker.source === 'chosen') return unchanged(next);
+  const message =
+    joker.source === 'drawn'
+      ? 'A joker was drawn for your team'
+      : 'Your joker was changed by the quiz master';
+  return {
+    state: next,
+    commands: [
+      { type: 'toast', tone: 'neutral', message, durationMs: JOKER_TOAST_MS },
+    ],
+  };
+}
+
 export function teamLink(
   state: TeamLinkState,
   input: TeamLinkInput,
@@ -750,6 +781,7 @@ export function teamLink(
     case 'playerCountSaved':
       return unchanged({ ...state, myPlayerCount: input.playerCount });
     case 'jokerSynced':
+      return syncJoker(state, input.joker);
     case 'jokerSaved':
       return unchanged({ ...state, myJoker: input.joker });
     case 'joinRefused':

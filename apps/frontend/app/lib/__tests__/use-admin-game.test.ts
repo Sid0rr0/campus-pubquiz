@@ -74,6 +74,12 @@ describe('useAdminGame', () => {
         call: (game) => game.setTeamPlayerCount(7, 5),
       },
       {
+        name: 'setTeamJoker',
+        event: SOCKET_EVENTS.SET_TEAM_JOKER,
+        payload: { teamId: 7, roundId: 12 },
+        call: (game) => game.setTeamJoker(7, 12),
+      },
+      {
         name: 'awardBonus',
         event: SOCKET_EVENTS.AWARD_BONUS,
         payload: { teamId: 31, category: 'custom', points: 3, reason: 'Name' },

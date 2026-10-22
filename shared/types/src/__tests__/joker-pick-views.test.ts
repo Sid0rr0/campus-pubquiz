@@ -145,6 +145,85 @@ describe('the joker pick views', () => {
     expect(view.jokerPick?.endsAt).toBeNull();
   });
 
+  describe('naming the rounds for the phone’s joker chip', () => {
+    const NUMBERED_TITLES = [
+      { roundId: 10, roundNumber: 1, title: 'Round 1' },
+      { roundId: 20, roundNumber: 2, title: 'Round 2' },
+    ];
+
+    it('lists every round, started or not, from the pick onward', () => {
+      const picking = { ...onPick(jokerNight()), openedQuestionIds: [100] };
+      const view = projectScreen(picking, SOCKET_ROOMS.PLAYERS);
+
+      expect(view.jokerRounds).toMatchObject(NUMBERED_TITLES);
+      expect(JSON.stringify(view)).not.toContain('chosen');
+
+      const later = projectScreen(
+        { ...picking, progress: { ...lobby, status: 'question_open' } },
+        SOCKET_ROOMS.PLAYERS,
+      );
+      expect(later.jokerRounds).toMatchObject(NUMBERED_TITLES);
+    });
+
+    it('lists none before the pick has opened, so the lineup stays unspoiled', () => {
+      const view = projectScreen(jokerNight(), SOCKET_ROOMS.PLAYERS);
+
+      expect(view.jokerRounds).toEqual([]);
+    });
+
+    it('lists none when the session plays without jokers', () => {
+      const session = jokerNight();
+      const view = projectScreen(
+        {
+          ...session,
+          seededGame: {
+            ...session.seededGame,
+            settings: { ...session.seededGame.settings, jokersEnabled: false },
+          },
+          progress: { ...lobby, status: 'question_open' },
+        },
+        SOCKET_ROOMS.PLAYERS,
+      );
+
+      expect(view.jokerRounds).toEqual([]);
+    });
+  });
+
+  describe('the rounds the quiz master may give a team as its joker', () => {
+    it('lists the rounds with no opened question once the pick has opened', () => {
+      const picking = { ...onPick(jokerNight()), openedQuestionIds: [100] };
+
+      const view = projectScreen(picking, SOCKET_ROOMS.ADMIN);
+
+      expect(view.settableJokerRounds.map((round) => round.roundId)).toEqual([
+        20,
+      ]);
+    });
+
+    it('lists none before the pick has opened', () => {
+      const view = projectScreen(jokerNight(), SOCKET_ROOMS.ADMIN);
+
+      expect(view.settableJokerRounds).toEqual([]);
+    });
+
+    it('lists none when the session plays without jokers', () => {
+      const session = jokerNight();
+      const view = projectScreen(
+        {
+          ...session,
+          seededGame: {
+            ...session.seededGame,
+            settings: { ...session.seededGame.settings, jokersEnabled: false },
+          },
+          progress: { ...lobby, status: 'question_open' },
+        },
+        SOCKET_ROOMS.ADMIN,
+      );
+
+      expect(view.settableJokerRounds).toEqual([]);
+    });
+  });
+
   it('lists every team’s joker with its source to the quiz master', () => {
     const view = projectScreen(onPick(jokerNight()), SOCKET_ROOMS.ADMIN);
 

@@ -20,6 +20,7 @@ import {
   type JoinPlayersPayload,
   LOBBY_PROGRESS,
   type PickJokerPayload,
+  type SetTeamJokerPayload,
   type PresenterContextPayload,
   projectScreen,
   type RateRoundPayload,
@@ -374,6 +375,16 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
       this.jokerChanges.pick(session, payload, socketId),
+    );
+  }
+
+  /** The quiz master sets a team's joker round; refused for a round that has started or a team not in the session. Only that team's phones and the admin room are told. */
+  teamJokerSet(
+    joinCode: string,
+    payload: SetTeamJokerPayload,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.jokerChanges.setTeamJoker(session, payload),
     );
   }
 

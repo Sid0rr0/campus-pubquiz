@@ -196,6 +196,19 @@ export class GameGateway
     );
   }
 
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setTeamJoker.event)
+  async handleSetTeamJoker(
+    @ConnectedSocket() client: GameSocket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.setTeamJoker,
+      rawPayload,
+      client,
+      ({ joinCode, payload }) => this.gameState.teamJokerSet(joinCode, payload),
+    );
+  }
+
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.gradeAnswer.event)
   async handleGradeAnswer(
     @ConnectedSocket() client: GameSocket,

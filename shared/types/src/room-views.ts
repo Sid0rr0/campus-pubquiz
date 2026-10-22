@@ -8,7 +8,11 @@ import type {
   PlayersScreenFields,
 } from './on-air-screen';
 import type { GameProgress, QuizStructureSummary } from './game-state';
-import type { AdminTeamJoker, JokerPickPlayersView } from './joker';
+import type {
+  AdminTeamJoker,
+  JokerPickPlayersView,
+  JokerPickRound,
+} from './joker';
 import type { LeagueTop } from './league';
 import type {
   BlockQuestionView,
@@ -223,6 +227,8 @@ export interface AdminStatePayload
     ScreenOperatorFields {
   /** The roster, each team with its player count and over-cap flag. */
   teams: AdminTeamView[];
+  /** The rounds the quiz master may give a team as its joker: those with no opened question, once the joker pick has opened in a session with jokers; empty otherwise. */
+  settableJokerRounds: JokerPickRound[];
   onAirScreen: OnAirScreen;
   /** What the quiz master can do right now, read from the same Display screen /display is sent. */
   controlAvailability: ControlAvailability;
@@ -282,6 +288,13 @@ export interface PlayersStatePayload
    * `TEAM_JOKER_SYNCED`). Null outside the pick.
    */
   jokerPick: JokerPickPlayersView | null;
+  /**
+   * Every round of a session played with jokers, by id, number and title, from
+   * the joker pick onward (empty before it and without jokers), so a phone can
+   * name its joker round ("🃏 R4", "Round 4 — Music") whatever the status. Never
+   * any team's choice.
+   */
+  jokerRounds: JokerPickRound[];
   /**
    * Positions (and round titles) of the current block's remaining
    * questions — not open yet, shown as disabled slots in the block picker

@@ -19,6 +19,7 @@ import {
   sendFeedbackPayloadSchema,
   setPlayerCountPayloadSchema,
   setTeamPlayerCountPayloadSchema,
+  setTeamJokerPayloadSchema,
   setBreakEndTimePayloadSchema,
   setDisplaySoundMutedPayloadSchema,
   setDisplayTextScalePayloadSchema,
@@ -119,6 +120,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.PLAYERS,
     rejection: 'Only player clients may pick a joker',
     logFields: ['roundId'],
+  }),
+  setTeamJoker: declareSocketEvent({
+    event: SOCKET_EVENTS.SET_TEAM_JOKER,
+    schema: setTeamJokerPayloadSchema,
+    allowedRoom: SOCKET_ROOMS.ADMIN,
+    rejection: 'Only admin clients may set a team’s joker',
+    logFields: ['teamId', 'roundId'],
   }),
   gradeAnswer: declareSocketEvent({
     event: SOCKET_EVENTS.GRADE_ANSWER,

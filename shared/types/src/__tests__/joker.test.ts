@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canChooseJoker,
+  canSetJoker,
   drawJoker,
   JOKER_PICK_SECONDS,
   pickableRounds,
@@ -68,6 +69,60 @@ describe('canChooseJoker', () => {
   it('refuses a round that has started', () => {
     expect(
       canChooseJoker({ isPickOpen: true, pickableRoundIds: [10] }, 20),
+    ).toBe(false);
+  });
+});
+
+describe('canSetJoker', () => {
+  const pickable = [10, 20];
+
+  it.each(['joker_pick', 'round_intro', 'question_open', 'break'] as const)(
+    'lets the quiz master set a pickable round at %s',
+    (status) => {
+      expect(
+        canSetJoker(
+          { isEnabled: true, status, pickableRoundIds: pickable },
+          20,
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each(['lobby', 'rules', 'round_overview'] as const)(
+    'refuses before the pick has opened, at %s',
+    (status) => {
+      expect(
+        canSetJoker(
+          { isEnabled: true, status, pickableRoundIds: pickable },
+          20,
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it('refuses when the session plays without jokers', () => {
+    expect(
+      canSetJoker(
+        {
+          isEnabled: false,
+          status: 'joker_pick',
+          pickableRoundIds: pickable,
+        },
+        20,
+      ),
+    ).toBe(false);
+  });
+
+  it('refuses a round that has started', () => {
+    expect(
+      canSetJoker(
+        {
+          isEnabled: true,
+          status: 'round_intro',
+          pickableRoundIds: [10],
+        },
+        20,
+      ),
     ).toBe(false);
   });
 });

@@ -20,6 +20,7 @@ import {
   type SetBreakEndTimePayload,
   type SetDisplaySoundMutedPayload,
   type SetDisplayTextScalePayload,
+  type SetTeamJokerPayload,
   type SetTeamPlayerCountPayload,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
@@ -49,6 +50,8 @@ export interface UseAdminGameResult {
     teamId: number,
     playerCount: number,
   ) => Promise<AckResult>;
+  /** Gives a team a round as its joker, until that round has started; a rejection is a toast and the returned result. */
+  setTeamJoker: (teamId: number, roundId: number) => Promise<AckResult>;
   awardBonus: (
     teamId: number,
     category: BonusCategory,
@@ -163,6 +166,14 @@ export function useAdminGame(
     [emitAction],
   );
 
+  const setTeamJoker = useCallback(
+    (teamId: number, roundId: number) => {
+      const payload: SetTeamJokerPayload = { teamId, roundId };
+      return emitAction(SOCKET_EVENTS.SET_TEAM_JOKER, payload);
+    },
+    [emitAction],
+  );
+
   const awardBonus = useCallback(
     (
       teamId: number,
@@ -224,6 +235,7 @@ export function useAdminGame(
     gradeAnswer,
     kickTeam,
     setTeamPlayerCount,
+    setTeamJoker,
     awardBonus,
     setBreakEndTime,
     setDisplayTextScale,

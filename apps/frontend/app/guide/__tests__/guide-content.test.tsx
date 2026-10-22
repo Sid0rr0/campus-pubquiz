@@ -70,6 +70,14 @@ describe('GuideContent', () => {
     expect(text).toContain('🃏');
   });
 
+  it('explains changing a team’s joker', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('joker list');
+    expect(text).toContain('until that round has started');
+    expect(text).toContain('changed by the quiz master');
+  });
+
   it('describes every question type from the registry', () => {
     const text = renderGuideText();
 

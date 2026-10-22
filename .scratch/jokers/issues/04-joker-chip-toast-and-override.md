@@ -6,11 +6,11 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Actions bar joker chip whenever the team has a joker, with an explanation on tap
-- [ ] `SET_TEAM_JOKER` (admin) `{ teamId, roundId }` as a Session write that touches scores; refused for a round with an opened question or a team not in the session; the source becomes `set_by_quiz_master`
-- [ ] `/control` lets the quiz master pick a team's joker round from the joker list
-- [ ] A team sync event pushes the team's joker when it changes without its own pick; the phone shows a toast ("…changed by the quiz master", "…drawn for you") on the live sync only, never on a state sync
-- [ ] Real-store harness specs (accepted, refused, sync only to that team) and page specs (chip, toast live-only)
-- [ ] `DOCUMENTATION.md` protocol and `/guide` (changing a team's joker) updated
+- [x] Actions bar joker chip whenever the team has a joker, with an explanation on tap
+- [x] `SET_TEAM_JOKER` (admin) `{ teamId, roundId }` as a Session write that touches scores; refused for a round with an opened question or a team not in the session; the source becomes `set_by_quiz_master`
+- [x] `/control` lets the quiz master pick a team's joker round from the joker list
+- [x] A team sync event pushes the team's joker when it changes without its own pick; the phone shows a toast ("…changed by the quiz master", "…drawn for you") on the live sync only, never on a state sync
+- [x] Real-store harness specs (accepted, refused, sync only to that team) and page specs (chip, toast live-only)
+- [x] `DOCUMENTATION.md` protocol and `/guide` (changing a team's joker) updated

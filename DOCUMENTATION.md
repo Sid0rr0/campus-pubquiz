@@ -287,20 +287,20 @@ The **Display screen** (`DisplayScreen`, `shared/types/src/display-screen.ts`) i
 `/display` switches on; the page looks nothing up and works nothing out. Each kind carries
 what it draws:
 
-| Kind                                               | Carries                                                                                                                                                  |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lobby`, `rules`, `round_overview`, `join_overlay` | Nothing; they draw the shared top-level fields (teams, settings, quiz structure, round lists, league)                                                    |
+| Kind                                               | Carries                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lobby`, `rules`, `round_overview`, `join_overlay` | Nothing; they draw the shared top-level fields (teams, settings, quiz structure, round lists, league)                                                                                                                                                                                     |
 | `joker_pick`                                       | `endsAt` (the pick's deadline, null once closed), `rounds` (every round: `roundId`, `roundNumber`, `title`, `category`, `author`), `pickedTeamIds` (roster teams that chose a joker themselves; the screen ticks their names off and shows "N/M picked"); never which round a team picked |
-| `round_title`                                      | `roundNumber`, `title`, `category`, `author`, `note` ('' when the round has none or hides its note)                                                      |
-| `break_round_title`                                | `roundNumber`, `title`, `note`                                                                                                                           |
-| `reveal_intro`                                     | `roundNumber`, `title`                                                                                                                                   |
-| `question`, `break_review`, `reveal`               | The question being drawn                                                                                                                                 |
-| `locking`                                          | `lockAt`                                                                                                                                                 |
-| `break_intro`                                      | `roundNumber`, `breakNumber`, `isFinalBreak` (hides the bonus list), `isFeedbackPromptShown`, `funFacts`, `breakEndsAt`                                  |
-| `leaderboard`                                      | `board`, `revealCount`, `isFinal` (the quiz has ended, or this is the last break, which crowns the winners)                                              |
-| `ended`                                            | `isFeedbackPromptShown`                                                                                                                                  |
-| `showdown`                                         | `showdown`, `step`                                                                                                                                       |
-| `blank`                                            | Nothing; sent (and logged) when the server can't find a kind's content                                                                                   |
+| `round_title`                                      | `roundNumber`, `title`, `category`, `author`, `note` ('' when the round has none or hides its note)                                                                                                                                                                                       |
+| `break_round_title`                                | `roundNumber`, `title`, `note`                                                                                                                                                                                                                                                            |
+| `reveal_intro`                                     | `roundNumber`, `title`                                                                                                                                                                                                                                                                    |
+| `question`, `break_review`, `reveal`               | The question being drawn                                                                                                                                                                                                                                                                  |
+| `locking`                                          | `lockAt`                                                                                                                                                                                                                                                                                  |
+| `break_intro`                                      | `roundNumber`, `breakNumber`, `isFinalBreak` (hides the bonus list), `isFeedbackPromptShown`, `funFacts`, `breakEndsAt`                                                                                                                                                                   |
+| `leaderboard`                                      | `board`, `revealCount`, `isFinal` (the quiz has ended, or this is the last break, which crowns the winners)                                                                                                                                                                               |
+| `ended`                                            | `isFeedbackPromptShown`                                                                                                                                                                                                                                                                   |
+| `showdown`                                         | `showdown`, `step`                                                                                                                                                                                                                                                                        |
+| `blank`                                            | Nothing; sent (and logged) when the server can't find a kind's content                                                                                                                                                                                                                    |
 
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `shared/types/src/screen-projection.ts`, a pure module the backend calls):
@@ -445,12 +445,12 @@ got to, and a mute that is already on applies to media that mounts later.
 
 **Fields that belong to one room's view:**
 
-| View                            | Fields                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                                                                                                                                                                                                                                 |
+| View                            | Fields                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                                                                                                                                                                                                                                                                                                                                               |
 | Display (`DisplayStatePayload`) | `screen` (the Display screen), `screenPosition` (the Screen position: grows on every forward move through the quiz, falls on Previous, unmoved by overlays and steps within a screen; the admin and players views don't carry it), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `jokerPickEndsAt` (the open pick's deadline, apart from `screen` so the countdown track outlives an overlay), `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
-| Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`); each `teams` entry also carries the team's `joker` (round id, number, title and source, or `null`)                                                                                                                                                                                                            |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`, `jokerPick` (while the status is `joker_pick`: the deadline, `null` once closed, and the pickable rounds; never a team's choice)                                                                                                                                                                                                                                        |
+| Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`); each `teams` entry also carries the team's `joker` (round id, number, title and source, or `null`); `settableJokerRounds` (the rounds with no opened question, once the pick has opened in a session with Jokers, else empty; the `/control` joker list offers them)                                                                                                                                                        |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`, `jokerPick` (while the status is `joker_pick`: the deadline, `null` once closed, and the pickable rounds; never a team's choice), `jokerRounds` (every round's id, number and title once the pick has opened in a session with Jokers, else empty; names the team's own joker on its phone, never any team's choice)                                                                                                                                                                  |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -628,8 +628,32 @@ points read the raw stored points, so a bet does not distort how hard the
 questions were. Each `roundPoints` entry of a leaderboard row carries `isJoker`,
 which `/control` draws as a 🃏 beside the round's (doubled) points.
 
+`SET_TEAM_JOKER` — `{ teamId, roundId }` (admin only) — lets the quiz master give
+a team a round as its joker, whatever the team had; the stored `source` becomes
+`set_by_quiz_master`. It is accepted when the session plays with Jokers, the pick
+has opened (the status is `joker_pick` or later; the pick may since have closed)
+and the round has no opened question, so a team can still be moved until its new
+round starts. It is refused, storing nothing, for a team not on the roster, a
+round that has started or is not in the quiz, a session without Jokers, or a quiz
+that has not reached the pick ("That round cannot be the joker: it has already
+started, or the joker pick has not opened", "Team N is not in this session"). It
+is a session write that touches scores, like `PICK_JOKER`, and is delivered the
+same way: `TEAM_JOKER_SYNCED` to that team's own connected phones and a fresh
+`STATE_UPDATED` to the admin room alone. The team can pick again while the pick is
+still open, which replaces the quiz master's choice.
+
+The phone shows a toast when `TEAM_JOKER_SYNCED` brings a joker the team did not
+pick and does not already hold: "Your joker was changed by the quiz master"
+(`set_by_quiz_master`) or "A joker was drawn for your team" (`drawn`). The team's
+own pick (`chosen`), a joker it already holds (closing the pick re-sends every
+joker), and the joker `JOIN_ACCEPTED` carries on a reconnect or rejoin only update
+the chip, never toast.
+
 The phone screen for the pick is `{ kind: 'joker_pick', isOpen }`: the picker while
 `isOpen`, and the team's joker with "Look at the screen" once the pick has closed.
+Every phone whose team has a joker shows a **joker chip** in the actions bar
+("🃏 R4"); tapping it opens a drawer saying "Round 4 — Music scores double". The
+phone names the round from `jokerRounds` in the players view.
 
 `/display` (`BreakIntroScreen`, via `FunFactRotator`) first shows the break card
 as it was before fun facts; the first fact appears `FUN_FACT_START_DELAY_MS`
@@ -681,7 +705,7 @@ phone's list with no toast, and a disconnected team catches up on rejoin),
 `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
-Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `AWARD_BONUS`,
+Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `SET_TEAM_JOKER`, `AWARD_BONUS`,
 `SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE`, `SET_DISPLAY_SOUND_MUTED`
 (`{ isDisplaySoundMuted: boolean }`) and `CREATE_SHOWDOWN_ROUND` (admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
 `SEND_FEEDBACK`, `SET_PLAYER_COUNT`, `PICK_JOKER` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is

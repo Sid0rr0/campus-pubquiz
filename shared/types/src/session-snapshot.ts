@@ -11,6 +11,7 @@ import {
 } from './block-questions';
 import { isAnsweringStatus } from './game-state-groups';
 import {
+  hasJokerPickOpened,
   pickableRounds,
   toJokerPickRounds,
   type AdminTeamJoker,
@@ -117,6 +118,14 @@ export function isJokerPickOpen(session: SessionState): boolean {
   );
 }
 
+/** Whether the session plays with jokers and has reached the joker pick, so the rounds can be named for a joker. */
+function isJokerLineupKnown(session: SessionState): boolean {
+  return (
+    session.seededGame.settings.jokersEnabled &&
+    hasJokerPickOpened(session.progress.status)
+  );
+}
+
 /** The session's rounds as the joker pick lists them; with `onlyPickable`, only those with no opened question. */
 export function describeJokerPickRounds(
   session: SessionState,
@@ -172,10 +181,17 @@ export function buildAdminFields(
   session: SessionState,
 ): Pick<
   AdminStatePayload,
-  'teams' | 'ungradedQuestionIds' | 'phaseStartedAt' | 'phaseElapsedMs'
+  | 'teams'
+  | 'settableJokerRounds'
+  | 'ungradedQuestionIds'
+  | 'phaseStartedAt'
+  | 'phaseElapsedMs'
 > {
   const { maxPlayersPerTeam } = session.seededGame.settings;
   return {
+    settableJokerRounds: isJokerLineupKnown(session)
+      ? describeJokerPickRounds(session, true)
+      : [],
     teams: session.teams.map((team): AdminTeamView => {
       const playerCount = session.playerCounts[team.teamId] ?? null;
       return {
@@ -197,9 +213,12 @@ export function buildPlayersFields(
   session: SessionState,
 ): Pick<
   PlayersStatePayload,
-  'upcomingQuestions' | 'pastRevealedQuestions' | 'jokerPick'
+  'upcomingQuestions' | 'pastRevealedQuestions' | 'jokerPick' | 'jokerRounds'
 > {
   return {
+    jokerRounds: isJokerLineupKnown(session)
+      ? describeJokerPickRounds(session, false)
+      : [],
     upcomingQuestions: getUpcomingQuestionPositions(session),
     pastRevealedQuestions: getPastRevealedQuestions(session),
     jokerPick:

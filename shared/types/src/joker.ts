@@ -1,3 +1,5 @@
+import type { GameStatus } from './game-state-types';
+
 /** How long the joker pick stays open, in seconds. Fixed, not a setting. */
 export const JOKER_PICK_SECONDS = 60;
 
@@ -20,6 +22,12 @@ export interface AdminTeamJoker extends TeamJoker {
 
 /** A team asking for a round as its joker; the ack says whether it was saved. Replaces whatever the team had. */
 export interface PickJokerPayload {
+  roundId: number;
+}
+
+/** The quiz master giving a team a joker round; the ack says whether it was saved. Replaces whatever the team had. */
+export interface SetTeamJokerPayload {
+  teamId: number;
   roundId: number;
 }
 
@@ -99,6 +107,38 @@ export function drawJoker(
     pickableRoundIds.length - 1,
   );
   return pickableRoundIds[index];
+}
+
+/** The statuses before the joker pick has ever opened, when there is no joker to show or change yet. */
+const STATUSES_BEFORE_JOKER_PICK: readonly GameStatus[] = [
+  'lobby',
+  'rules',
+  'round_overview',
+];
+
+/** Whether the quiz has reached the joker pick: at it, or past it (the pick may since have closed). */
+export function hasJokerPickOpened(status: GameStatus): boolean {
+  return !STATUSES_BEFORE_JOKER_PICK.includes(status);
+}
+
+/**
+ * Whether the quiz master may set a team's joker to `roundId`: the session plays
+ * with jokers, the pick has opened (it may since have closed), and the round has
+ * not started.
+ */
+export function canSetJoker(
+  context: {
+    isEnabled: boolean;
+    status: GameStatus;
+    pickableRoundIds: readonly number[];
+  },
+  roundId: number,
+): boolean {
+  return (
+    context.isEnabled &&
+    hasJokerPickOpened(context.status) &&
+    context.pickableRoundIds.includes(roundId)
+  );
 }
 
 /** Whether a team may choose `roundId` as its joker: only while the pick is open, and only a round that has not started. */

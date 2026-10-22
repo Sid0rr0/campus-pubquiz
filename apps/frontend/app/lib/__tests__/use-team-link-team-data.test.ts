@@ -213,6 +213,40 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
+  it('toasts a live joker change the team did not pick, and a reconnect only updates the chip', () => {
+    const { result, socket } = renderPlayingTeam();
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
+        joker: { roundId: 12, source: 'set_by_quiz_master' },
+      }),
+    );
+    expect(mockToast).toHaveBeenCalledTimes(1);
+    expect(mockToast.mock.calls[0][0]).toBe(
+      'Your joker was changed by the quiz master',
+    );
+
+    mockToast.mockClear();
+    act(() => socket.serverConnects());
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        ...ACCEPTED,
+        joker: { roundId: 14, source: 'drawn' },
+      }),
+    );
+    act(() =>
+      socket.trigger(
+        SOCKET_EVENTS.STATE_SYNC,
+        roomView(SOCKET_ROOMS.PLAYERS, {}),
+      ),
+    );
+    expect(result.current.game?.myJoker).toEqual({
+      roundId: 14,
+      source: 'drawn',
+    });
+    expect(mockToast).not.toHaveBeenCalled();
+  });
+
   it('emits the answer and resolves once the server acknowledges it, without reconnecting', async () => {
     const { result, socket } = renderPlayingTeam();
 

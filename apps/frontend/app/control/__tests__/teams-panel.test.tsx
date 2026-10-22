@@ -39,6 +39,8 @@ describe('TeamsPanel player counts', () => {
         answeredTeamIds={[]}
         onKickTeam={vi.fn()}
         onSetPlayerCount={onSetPlayerCount}
+        jokerRounds={[]}
+        onSetJoker={vi.fn()}
       />,
     );
     return onSetPlayerCount;
@@ -141,6 +143,87 @@ describe('TeamsPanel player counts', () => {
   });
 });
 
+describe('TeamsPanel joker rounds', () => {
+  const JOKER_ROUNDS = [
+    {
+      roundId: 11,
+      roundNumber: 2,
+      title: 'Film',
+      category: '',
+      author: '',
+    },
+    {
+      roundId: 12,
+      roundNumber: 3,
+      title: 'Sport',
+      category: '',
+      author: '',
+    },
+  ];
+  const JOKER_TEAMS: AdminTeamView[] = [
+    {
+      ...TEAMS[0],
+      joker: {
+        roundId: 11,
+        source: 'chosen',
+        roundNumber: 2,
+        roundTitle: 'Film',
+      },
+    },
+    TEAMS[1],
+  ];
+
+  function renderPanel(jokerRounds = JOKER_ROUNDS) {
+    const onSetJoker = vi.fn();
+    render(
+      <TeamsPanel
+        teams={JOKER_TEAMS}
+        showAnswerStatus={false}
+        answeredTeamIds={[]}
+        onKickTeam={vi.fn()}
+        onSetPlayerCount={vi.fn()}
+        jokerRounds={jokerRounds}
+        onSetJoker={onSetJoker}
+      />,
+    );
+    return onSetJoker;
+  }
+
+  it('lets the quiz master pick a team’s joker round from the list', async () => {
+    const onSetJoker = renderPanel();
+
+    await userEvent.selectOptions(
+      within(teamItem('Beer Necessities')).getByRole('combobox', {
+        name: /joker round for beer necessities/i,
+      }),
+      'Round 3 — Sport',
+    );
+
+    expect(onSetJoker).toHaveBeenCalledWith(2, 12);
+  });
+
+  it('shows the team’s current joker selected, and nothing selected for a team without one', () => {
+    renderPanel();
+
+    expect(
+      within(teamItem('The Quizzards')).getByRole('combobox', {
+        name: /joker round for the quizzards/i,
+      }),
+    ).toHaveValue('11');
+    expect(
+      within(teamItem('Beer Necessities')).getByRole('combobox', {
+        name: /joker round for beer necessities/i,
+      }),
+    ).toHaveValue('');
+  });
+
+  it('offers no list when no round can take a joker', () => {
+    renderPanel([]);
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+});
+
 describe('TeamsPanel', () => {
   it('asks for confirmation before kicking a team', async () => {
     const onKickTeam = vi.fn();
@@ -151,6 +234,8 @@ describe('TeamsPanel', () => {
         answeredTeamIds={[]}
         onKickTeam={onKickTeam}
         onSetPlayerCount={vi.fn()}
+        jokerRounds={[]}
+        onSetJoker={vi.fn()}
       />,
     );
 
@@ -189,6 +274,8 @@ describe('TeamsPanel', () => {
         answeredTeamIds={[]}
         onKickTeam={onKickTeam}
         onSetPlayerCount={vi.fn()}
+        jokerRounds={[]}
+        onSetJoker={vi.fn()}
       />,
     );
 
