@@ -66,6 +66,12 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   gradingSettings: readonly GradingSettingName[];
   /** Whether a correct rate means anything: false for a one-winner type, whose rate says nothing about how hard it was. Its own field, never derived from `gradingMode`. */
   hasCorrectRate: boolean;
+  /**
+   * What the Night brief says about a question's wrong answers: the most common
+   * typed ones, every option with its pick count, the spread of guesses, or
+   * nothing (long answer chains would bury the useful data).
+   */
+  briefWrongAnswers: 'typed' | 'options' | 'spread' | 'none';
 }
 
 export const QUESTION_KINDS: {
@@ -74,6 +80,7 @@ export const QUESTION_KINDS: {
   free_text: {
     type: 'free_text',
     hasCorrectRate: true,
+    briefWrongAnswers: 'typed',
     revealKind: 'answer',
     label: 'Free text',
     moderatorNote:
@@ -89,6 +96,7 @@ export const QUESTION_KINDS: {
   multiple_choice: {
     type: 'multiple_choice',
     hasCorrectRate: true,
+    briefWrongAnswers: 'options',
     revealKind: 'answer',
     label: 'Multiple choice',
     moderatorNote:
@@ -104,6 +112,7 @@ export const QUESTION_KINDS: {
   sort: {
     type: 'sort',
     hasCorrectRate: true,
+    briefWrongAnswers: 'none',
     revealKind: 'answer',
     label: 'Sort / order',
     moderatorNote:
@@ -119,6 +128,7 @@ export const QUESTION_KINDS: {
   match: {
     type: 'match',
     hasCorrectRate: true,
+    briefWrongAnswers: 'none',
     revealKind: 'answer',
     label: 'Match pairs',
     moderatorNote:
@@ -134,6 +144,7 @@ export const QUESTION_KINDS: {
   closest_guess: {
     type: 'closest_guess',
     hasCorrectRate: false,
+    briefWrongAnswers: 'spread',
     revealKind: 'closest_guess',
     label: 'Closest guess',
     moderatorNote:
@@ -149,6 +160,7 @@ export const QUESTION_KINDS: {
   number: {
     type: 'number',
     hasCorrectRate: true,
+    briefWrongAnswers: 'typed',
     revealKind: 'answer',
     label: 'Number',
     moderatorNote:

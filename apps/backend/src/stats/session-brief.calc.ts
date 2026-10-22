@@ -1,6 +1,7 @@
 import { groupTopics } from '@/stats/session-feedback.calc';
 import {
   parseFiniteNumber,
+  QUESTION_KINDS,
   questionNotesOf,
   questionOutcome,
   type MediaKind,
@@ -213,9 +214,8 @@ function wrongAnswerLines(
   question: SessionBriefQuestionInputRow,
   given: readonly SessionBriefInput['answers'][number][],
 ): string[] {
-  switch (question.type) {
-    case 'free_text':
-    case 'number': {
+  switch (QUESTION_KINDS[question.type].briefWrongAnswers) {
+    case 'typed': {
       const wrong = groupedAnswers(
         given.filter((a) => a.verdict === 'incorrect').map((a) => a.answer),
         WRONG_ANSWERS_SHOWN,
@@ -228,7 +228,7 @@ function wrongAnswerLines(
         ...(ungraded ? [`- Ungraded answers: ${ungraded}`] : []),
       ];
     }
-    case 'multiple_choice': {
+    case 'options': {
       const options = question.options ?? [];
       if (options.length === 0) return [];
       const picks = options.map((option) => {
@@ -237,7 +237,7 @@ function wrongAnswerLines(
       });
       return [`- Options: ${picks.join(', ')}`];
     }
-    case 'closest_guess': {
+    case 'spread': {
       const guesses = given
         .map((a) => parseFiniteNumber(a.answer))
         .filter((n): n is number => n !== null)
@@ -247,7 +247,7 @@ function wrongAnswerLines(
         `- Guesses: lowest ${guesses[0]}, median ${medianOf(guesses)}, highest ${guesses[guesses.length - 1]}`,
       ];
     }
-    default:
+    case 'none':
       return [];
   }
 }

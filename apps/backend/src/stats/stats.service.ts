@@ -5,6 +5,7 @@ import { z } from 'zod';
 import {
   classifyMediaUrl,
   MIN_RATINGS_FOR_RANKING,
+  QUESTION_KINDS,
   TREND_ROUNDS_LIMIT,
   type BonusCategory,
   type QuestionType,
@@ -226,7 +227,10 @@ export class StatsService {
           q.questionId,
           {
             notes: q.notes,
-            options: q.type === 'multiple_choice' ? payload.options : undefined,
+            options:
+              QUESTION_KINDS[q.type].briefWrongAnswers === 'options'
+                ? payload.options
+                : undefined,
             media: {
               question: briefMediaKind(classifyMediaUrl(payload.mediaUrl)),
               answer: briefMediaKind(classifyMediaUrl(payload.answerMediaUrl)),
