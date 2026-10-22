@@ -629,6 +629,49 @@ describe('StatsService (Postgres integration)', () => {
     });
   });
 
+  describe('getSessionBrief', () => {
+    it('writes an ended session with its round columns, question notes, media flag and figures', async () => {
+      const { quiz, questions } = await createQuiz('Quiz Brief', [[5, 5]]);
+      const [round] = await em.find(Round, { quiz });
+      round.author = 'Alex';
+      round.note = 'Warm-up';
+      round.kahootMode = true;
+      const [q1] = questions[0];
+      q1.notes = 'Context for the host {margin: "5%"}';
+      q1.payload = { mediaUrl: 'https://example.com/secret/pic.png' };
+      const session = await createSession(quiz, 'BRIEF1', 'ended');
+      const teamA = await joinTeam(session, 'Distinctive Team A');
+      const teamB = await joinTeam(session, 'Distinctive Team B');
+      await grade(session, q1, teamA, 5);
+      await grade(session, q1, teamB, 0);
+
+      const brief = await statsService.getSessionBrief(session.id);
+
+      expect(brief).toContain('Teams: 2');
+      expect(brief).toContain('Author: Alex');
+      expect(brief).toContain('Note: Warm-up');
+      expect(brief).toContain('Notes: Context for the host');
+      expect(brief).not.toContain('margin');
+      expect(brief).toContain('Media: image');
+      expect(brief).toContain('Answered 2, correct 1, partial 0');
+      expect(brief).not.toContain('example.com');
+      expect(brief).not.toContain('Distinctive');
+      expect(brief).not.toContain('BRIEF1');
+    });
+
+    it('throws NotFoundException for an unknown or running session', async () => {
+      const { quiz } = await createQuiz('Quiz Running', [[1]]);
+      const live = await createSession(quiz, 'LIVE01', 'lobby');
+
+      await expect(statsService.getSessionBrief(999999)).rejects.toThrow(
+        'Ended session 999999 does not exist',
+      );
+      await expect(statsService.getSessionBrief(live.id)).rejects.toThrow(
+        `Ended session ${live.id} does not exist`,
+      );
+    });
+  });
+
   describe('getSessionDetail round ratings', () => {
     async function rate(
       session: GameSession,

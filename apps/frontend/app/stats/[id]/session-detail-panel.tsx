@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchSessionDetail, StatsApiError } from '@/app/lib/stats-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
+import { NightBriefControl } from '@/app/stats/[id]/night-brief-control';
 import { HighlightTiles } from '@/app/stats/[id]/highlight-tiles';
 import { StandingsTable } from '@/app/stats/[id]/standings-table';
 import { RoundsTable } from '@/app/stats/[id]/rounds-table';
@@ -45,6 +46,11 @@ export function SessionDetailPanel({ gameSessionId }: SessionDetailPanelProps) {
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
       <div className="flex flex-col gap-1">
+        <NightBriefControl
+          gameSessionId={gameSessionId}
+          sessionName={data.name}
+          playedAt={data.playedAt}
+        />
         <Link
           href="/stats"
           className="text-sm text-foreground/60 underline-offset-2 hover:underline"

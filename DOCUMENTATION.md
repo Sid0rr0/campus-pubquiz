@@ -1541,6 +1541,33 @@ The session detail also carries a `feedback` section, shown on the page as
 - The team is never selected: no team id or name reaches the response or the page.
   Comment and topic order uses when the team last sent its feedback.
 
+### Night brief
+
+One ended session written up as a single Markdown text for whoever writes the
+next quiz (see `GLOSSARY.md`). The app makes no AI calls and adds no preamble:
+the brief is data only.
+
+- **Endpoint:** `GET /stats/sessions/:id/brief`, same guards as the other stats
+  reads (admin and moderator). Returns `text/markdown`; a running or unknown
+  session gets the session detail's 404, a non-numeric id a 400. It is computed
+  per request and never cached.
+- **Built by one pure calc** (`apps/backend/src/stats/session-brief.calc.ts`)
+  from the same rows and the same Question outcome as the session detail, with
+  the same team count (departed teams included), so the figures match the page.
+- **Contents:** the session name, date and team count; each round with its
+  number, title, category, author (line absent when none), round note and a
+  kahoot flag; each question with its number, type, prompt, correct answer,
+  points, notes (without the `{…}` settings group; blank notes left out), a
+  media flag, and answered, correct and partial counts with the correct rate
+  (none for `closest_guess`).
+- **Media** shows its kind (`image`, `audio` or `video`) for the question's
+  media and, separately, its answer media. The URL is never written.
+- **No team identity:** no team name, code or id appears in the text.
+- **On `/stats/:id`** the header's "Night brief" control has **Copy** (writes the
+  text to the clipboard and shows a "Copied" toast, or an error toast) and
+  **Download** (saves `night-brief-<session-name-slug>-<YYYY-MM-DD>.md`). The
+  `/stats` list does not get it.
+
 ### Feedback trends
 
 `/stats/feedback` (linked from `/stats`) reads feedback across many ended sessions

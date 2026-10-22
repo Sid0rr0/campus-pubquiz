@@ -1,17 +1,30 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionDetailStats } from '@campus-pubquiz/types';
 import { SessionDetailPanel } from '@/app/stats/[id]/session-detail-panel';
 import { renderWithQuery } from '@/test-utils/query';
 
-const { mockFetchSessionDetail } = vi.hoisted(() => ({
-  mockFetchSessionDetail: vi.fn(),
-}));
+const { mockFetchSessionDetail, mockFetchSessionBrief, mockDownloadTextFile } =
+  vi.hoisted(() => ({
+    mockFetchSessionDetail: vi.fn(),
+    mockFetchSessionBrief: vi.fn(),
+    mockDownloadTextFile: vi.fn(),
+  }));
 
 vi.mock('@/app/lib/stats-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/stats-api')>();
-  return { ...actual, fetchSessionDetail: mockFetchSessionDetail };
+  return {
+    ...actual,
+    fetchSessionDetail: mockFetchSessionDetail,
+    fetchSessionBrief: mockFetchSessionBrief,
+  };
 });
+
+vi.mock('@/app/lib/download-text-file', () => ({
+  downloadTextFile: mockDownloadTextFile,
+}));
 
 const DETAIL: SessionDetailStats = {
   gameSessionId: 1,
@@ -253,6 +266,78 @@ describe('SessionDetailPanel', () => {
 
     expect(await screen.findByText('No comments yet.')).toBeInTheDocument();
     expect(screen.getByText('No topic suggestions yet.')).toBeInTheDocument();
+  });
+
+  describe('Night brief', () => {
+    const BRIEF = '# Quiz Night\n\nTeams: 2\n';
+    const writeText = vi.fn();
+
+    beforeEach(() => {
+      mockFetchSessionBrief.mockReset();
+      mockFetchSessionBrief.mockResolvedValue(BRIEF);
+      mockDownloadTextFile.mockReset();
+      writeText.mockReset();
+      writeText.mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+      });
+    });
+
+    it('copies the fetched brief to the clipboard and says Copied', async () => {
+      renderWithQuery(
+        <>
+          <SessionDetailPanel gameSessionId={1} />
+          <Toaster />
+        </>,
+      );
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Copy' }),
+      );
+
+      expect(mockFetchSessionBrief).toHaveBeenCalledWith(1);
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(BRIEF));
+      expect(await screen.findByText('Copied')).toBeInTheDocument();
+    });
+
+    it('shows an error toast when the brief cannot be copied', async () => {
+      writeText.mockRejectedValue(new Error('denied'));
+      renderWithQuery(
+        <>
+          <SessionDetailPanel gameSessionId={1} />
+          <Toaster />
+        </>,
+      );
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Copy' }),
+      );
+
+      expect(
+        await screen.findByText('Could not copy the Night brief'),
+      ).toBeInTheDocument();
+    });
+
+    it('downloads the fetched brief under the session name and date', async () => {
+      mockFetchSessionDetail.mockResolvedValue({
+        ...DETAIL,
+        name: 'Spring Quiz: Week #3',
+      });
+      renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Download' }),
+      );
+
+      await waitFor(() =>
+        expect(mockDownloadTextFile).toHaveBeenCalledWith(
+          'night-brief-spring-quiz-week-3-2026-01-05.md',
+          BRIEF,
+          'text/markdown',
+        ),
+      );
+    });
   });
 
   it('replaces the feedback sections with a note when feedback was off', async () => {

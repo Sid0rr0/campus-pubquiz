@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   Param,
   ParseIntPipe,
@@ -67,6 +68,14 @@ export class StatsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<SessionDetailStats> {
     return this.statsService.getSessionDetail(id);
+  }
+
+  @Get('sessions/:id/brief')
+  @Header('Content-Type', 'text/markdown; charset=utf-8')
+  async getSessionBrief(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<string> {
+    return this.statsService.getSessionBrief(id);
   }
 
   // Admin-only, unlike the reads above — matches QuizController.remove:

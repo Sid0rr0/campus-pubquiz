@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ParseIntPipe } from '@nestjs/common';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { StatsController } from '@/stats/stats.controller';
@@ -13,6 +13,7 @@ function makeController() {
   const statsService = {
     listPlayedSessions: jest.fn(),
     getSessionDetail: jest.fn(),
+    getSessionBrief: jest.fn(),
     getFeedbackTrends: jest.fn(),
     deleteSession: jest.fn(),
     renameSession: jest.fn(),
@@ -196,6 +197,42 @@ describe('StatsController', () => {
 
       await expect(controller.getSessionDetail(1)).resolves.toBe(payload);
       expect(statsService.getSessionDetail).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('getSessionBrief', () => {
+    it('returns the service text as markdown, open to admin and moderator alike', async () => {
+      const { controller, statsService } = makeController();
+      statsService.getSessionBrief.mockResolvedValue('# Night');
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- inspected for metadata only, never invoked
+      const handler = StatsController.prototype.getSessionBrief;
+
+      await expect(controller.getSessionBrief(3)).resolves.toBe('# Night');
+      expect(statsService.getSessionBrief).toHaveBeenCalledWith(3);
+      expect(Reflect.getMetadata('roles', handler)).toBeUndefined();
+      expect(Reflect.getMetadata('__httpCode__', handler)).toBeUndefined();
+      const headers = Reflect.getMetadata('__headers__', handler) as {
+        name: string;
+        value: string;
+      }[];
+      expect(headers).toContainEqual({
+        name: 'Content-Type',
+        value: expect.stringContaining('text/markdown') as string,
+      });
+    });
+
+    it('rejects a non-numeric id with a 400 through the id pipe', async () => {
+      const routeArgs = Reflect.getMetadata(
+        '__routeArguments__',
+        StatsController,
+        'getSessionBrief',
+      ) as Record<string, { pipes: unknown[] }>;
+      const pipes = Object.values(routeArgs).flatMap((arg) => arg.pipes);
+
+      expect(pipes).toContain(ParseIntPipe);
+      await expect(
+        new ParseIntPipe().transform('abc', { type: 'param', data: 'id' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

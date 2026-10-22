@@ -11,11 +11,11 @@ Parent spec: `.scratch/night-brief/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Pure calc tests: rounds and questions rendered with answer, notes, media flag and counts; `closest_guess` shows no correct rate; author line absent when the round has none; no team name, code or id in the output
-- [ ] One case: figures equal `computeSessionDetail`'s for the same rows
-- [ ] Postgres test via the stats service: ended session → brief; running or unknown → 404
-- [ ] Controller spec: admin and moderator allowed; non-numeric id → 400
-- [ ] Frontend panel test: Copy writes the fetched text and toasts; Download saves the expected filename
-- [ ] `DOCUMENTATION.md`: "Night brief" subsection under Session Stats
+- [x] Pure calc tests: rounds and questions rendered with answer, notes, media flag and counts; `closest_guess` shows no correct rate; author line absent when the round has none; no team name, code or id in the output
+- [x] One case: figures equal `computeSessionDetail`'s for the same rows
+- [x] Postgres test via the stats service: ended session → brief; running or unknown → 404
+- [x] Controller spec: admin and moderator allowed; non-numeric id → 400
+- [x] Frontend panel test: Copy writes the fetched text and toasts; Download saves the expected filename
+- [x] `DOCUMENTATION.md`: "Night brief" subsection under Session Stats
