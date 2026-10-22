@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] One shared function returns the media the big screen is playing, from the Display screen: the open question's own media, or on a reveal screen the answer media (replacing the question's own), else the question's own. Screens that show no question play nothing
 - [ ] The pausable-media check lives in shared types beside the media classifier, and the display code imports it from there
