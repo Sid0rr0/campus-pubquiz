@@ -11,6 +11,16 @@
           }
         ],
         "description": "Block Bash commands that would dump .env contents (ADMIN_PASSWORD, DATABASE_URL) into the transcript"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/format-bash-edited-files.sh mark"
+          }
+        ],
+        "description": "Stamp a marker so the PostToolUse Bash hook formats only files this command wrote"
       }
     ],
     "PostToolUse": [
@@ -23,6 +33,16 @@
           }
         ],
         "description": "Run Prettier on each edited TS/JS file, so pnpm lint never fails on formatting"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/format-bash-edited-files.sh format"
+          }
+        ],
+        "description": "Run Prettier on TS/JS files a Bash command wrote (sed -i, python heredocs), which the Edit|Write hook misses"
       }
     ],
     "WorktreeCreate": [
