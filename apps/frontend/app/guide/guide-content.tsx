@@ -31,7 +31,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'Build the quiz, then check it with Quiz preview (Preview in the editor, quiz list, waiting session), not a throwaway session.',
       'Put /display on the big screen and /control on your laptop; teams join on their phones with the join code.',
-      'A block is a run of rounds graded and revealed together. It ends at a round marked to break after it, and the last round always ends one.',
+      'A block is a run of rounds graded and revealed together. It ends at a round marked to break after it; the last round always does.',
     ],
   },
   {
@@ -52,7 +52,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Media and sound',
     paragraphs: [
-      'On a video or audio question (or its reveal), Pause and "Play again" sit below the Leaderboard row on Control. On a closest guess reveal they appear once the answer video or audio is on the big screen, not before. Moving on restarts the media.',
+      'On a video or audio question (or its reveal), Pause and "Play again" sit below the Leaderboard row on Control; on a closest guess reveal they appear once its answer media is on screen. Moving on restarts the media.',
       'The Display sound toggle mutes the big screen, clips included; phones stay silent.',
     ],
   },
@@ -68,7 +68,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'The break and break review',
     paragraphs: [
       'When a block ends, answers close and the big screen shows a break card with a timer. Break End Time sets or extends it.',
-      'Fun facts rotate on the card; switch them off in Session Settings (lobby only).',
+      'Fun facts rotate on the card; switch them off in Session Settings.',
       "Previous steps back through the block's questions with answers hidden: the break review.",
     ],
   },
@@ -82,7 +82,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Leaderboard, late joiners and ties',
     paragraphs: [
       'Show or hide the leaderboard any time. While it shows, Advance reveals one rank at a time, from last place up.',
-      'Join overlay on Control covers the big screen with the QR code and join code for late teams.',
+      'Join overlay covers the big screen with the QR code and join code for late teams.',
       'When teams tie for first place after a reveal, the Showdown panel offers a tiebreak between them.',
     ],
   },
@@ -93,7 +93,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'Phones and the big screen pick up where the quiz is on reconnecting. A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
       'Each team shows its player count, flagged as over the player cap above the "max players per team" setting; nothing is deducted automatically, so give a negative bonus as a penalty.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
-      "Bonus points: open the team's actions menu, choose Award bonus, pick a category, set the points (negative is a penalty) and press Award.",
+      "Bonus points: open the team's actions menu, choose Award bonus, pick a category, set the points and press Award.",
     ],
   },
   {
@@ -105,7 +105,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      'Remote (Sessions page) is a phone-friendly page with Previous, Advance and leaderboard controls, a next-up preview and your notes for the question on the big screen. Control shows them too. Space pauses media.',
+      'Remote (Sessions page) is a phone-friendly page with Previous, Advance and leaderboard controls, a next-up preview and your notes for the question on the big screen. Space pauses media.',
       'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,
