@@ -1,0 +1,16 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - heading "Pick your joker" [level=1]
+  - paragraph: "Choose a round on your phone: its points count double."
+  - timer "Time left to pick a joker": /\d+:\d+/
+  - paragraph: 1/2 picked
+  - list "Teams that picked":
+    - listitem: /Team A [a-z0-9]{6}/
+  - list:
+    - listitem: Warm-upGeneral knowledge by Alex Author
+    - listitem: MusicMusic by Sam Spinner
+    - listitem: SportSports by Kay Kahoot
+- region "Notifications alt+T"
+- alert

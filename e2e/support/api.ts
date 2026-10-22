@@ -19,6 +19,8 @@ export interface SessionSettingsInput {
   lockGraceSeconds?: number;
   kahootQuestionTimerSeconds?: number | null;
   showRoundOverview?: boolean;
+  /** Needs `showRoundOverview` on too (the backend refuses the pair otherwise). */
+  jokersEnabled?: boolean;
 }
 
 export interface SeededSession {

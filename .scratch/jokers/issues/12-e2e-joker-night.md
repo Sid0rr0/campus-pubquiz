@@ -6,7 +6,7 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 05, 07, 08, 09
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Journey passes with `pnpm e2e` and with `--repeat-each=5`
-- [ ] Covers the pick, a draw, the border on a joker question, and the stamp with the doubled total
+- [x] Journey passes with `pnpm e2e` and with `--repeat-each=5`
+- [x] Covers the pick, a draw, the border on a joker question, and the stamp with the doubled total

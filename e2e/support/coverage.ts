@@ -14,6 +14,7 @@ export const STATUSES = [
   'lobby',
   'rules',
   'round_overview',
+  'joker_pick',
   'round_intro',
   'question_open',
   'locking',
