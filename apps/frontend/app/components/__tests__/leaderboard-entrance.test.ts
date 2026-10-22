@@ -9,6 +9,7 @@ function rowAt(rankIndex: number): LeaderboardRow {
   return {
     rankIndex,
     label: `${rankIndex + 1}.`,
+    isJokerStamped: false,
     entry: {
       teamId: rankIndex + 1,
       teamName: `Team ${rankIndex + 1}`,

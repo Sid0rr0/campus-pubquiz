@@ -78,6 +78,13 @@ describe('GuideContent', () => {
     expect(text).toContain('changed by the quiz master');
   });
 
+  it('explains the 2× stamp on the leaderboard', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('"2×" stamp');
+    expect(text).toContain('even on 0 points');
+  });
+
   it('describes every question type from the registry', () => {
     const text = renderGuideText();
 

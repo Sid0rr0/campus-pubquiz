@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -98,6 +98,44 @@ describe('PlayPage — own placing on the leaderboard screen', () => {
 
     expect(screen.queryByText(/you're/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId('own-leaderboard-row')).not.toBeInTheDocument();
+  });
+});
+
+describe('PlayPage — the 2× stamp on the own leaderboard row', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Beta');
+    searchParamsRef.current = new URLSearchParams();
+  });
+
+  it('stamps the own row when the joker round is in the block just scored, even on 0 points', () => {
+    const session = {
+      ...boardSession(2, [
+        { teamId: 2, teamName: 'Beta', totalPoints: 0 },
+        { teamId: 1, teamName: 'Alpha', totalPoints: 0 },
+      ]),
+      jokers: { 2: { roundId: 1, source: 'chosen' as const } },
+    };
+    mockUseTeamLink.mockReturnValue(linkFor(session, BETA_TEAM));
+    renderWithQuery(<PlayPage />);
+
+    expect(
+      within(screen.getByTestId('own-leaderboard-row')).getByLabelText(
+        'Joker 2×',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no stamp for a team whose joker is on another round', () => {
+    const session = {
+      ...boardSession(2),
+      rounds: [{ kahootMode: true, questions: [{}] }, { questions: [{}] }],
+      jokers: { 2: { roundId: 2, source: 'chosen' as const } },
+    };
+    mockUseTeamLink.mockReturnValue(linkFor(session, BETA_TEAM));
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.queryByLabelText('Joker 2×')).not.toBeInTheDocument();
   });
 });
 

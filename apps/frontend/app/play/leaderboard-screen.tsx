@@ -1,6 +1,7 @@
 'use client';
 
 import type { LeaderboardBoard } from '@campus-pubquiz/types';
+import { JokerStamp } from '@/app/components/joker-stamp';
 import { findMyStanding } from '@/app/play/my-standing';
 import { placingText } from '@/app/lib/placing-text';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
@@ -45,6 +46,7 @@ export function LeaderboardScreen({
           data-testid="own-leaderboard-row"
           className="flex w-full max-w-sm flex-col items-center gap-1 rounded-xl border-[3px] border-magenta bg-white px-4 py-3 text-dark-blue shadow-[0_3px_0_#ec008c]"
         >
+          {standing.isJokerStamped && <JokerStamp className="text-2xl" />}
           <p className="font-display text-3xl">{placingText(standing.entry)}</p>
           <p className="text-base font-bold">
             {standing.entry.teamName} · {standing.entry.totalPoints} pts

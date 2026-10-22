@@ -71,6 +71,8 @@ export interface LeaderboardBoard {
   countUpBoard?: LeaderboardEntry[];
   /** Rank movement per team id, shown once the board settles; a team missing from the prior standings has none, and every team has none when there are none. */
   trends: Record<number, RankTrend>;
+  /** Ids of the shown teams whose joker round has a question in the block just scored: their row gets the 2× stamp, even on 0 points. Present only when there is one (never while the leaderboard is not on air, so a pick is not leaked). */
+  jokerTeamIds?: number[];
 }
 
 export interface TeamView {

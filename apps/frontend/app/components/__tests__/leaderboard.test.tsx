@@ -94,6 +94,64 @@ describe('Leaderboard', () => {
     );
   });
 
+  describe('joker stamp', () => {
+    it('stamps the rows the server flagged, and no others', () => {
+      render(
+        <Leaderboard
+          board={described(ENTRIES, { jokerTeamIds: [2] })}
+          revealCount={3}
+        />,
+      );
+
+      const rows = screen.getAllByRole('listitem');
+      expect(within(rows[1]).getByLabelText('Joker 2×')).toBeInTheDocument();
+      expect(screen.getAllByLabelText('Joker 2×')).toHaveLength(1);
+    });
+
+    it('stamps a flagged team on 0 points', () => {
+      render(
+        <Leaderboard
+          board={described([ranked(1, 'Flopped', 0, 1)], {
+            jokerTeamIds: [1],
+          })}
+          revealCount={1}
+        />,
+      );
+
+      expect(screen.getByLabelText('Joker 2×')).toBeInTheDocument();
+    });
+
+    it('shows no stamp before the flagged rank is revealed', () => {
+      render(
+        <Leaderboard
+          board={described(ENTRIES, { jokerTeamIds: [1] })}
+          revealCount={2}
+        />,
+      );
+
+      expect(screen.queryByLabelText('Joker 2×')).not.toBeInTheDocument();
+    });
+
+    it('lands the stamp when its rank is revealed live, but not on a reload', () => {
+      const board = described(ENTRIES, { jokerTeamIds: [2] });
+      const { rerender, unmount } = render(
+        <Leaderboard board={board} revealCount={1} />,
+      );
+      rerender(<Leaderboard board={board} revealCount={2} />);
+      expect(screen.getByLabelText('Joker 2×')).toHaveAttribute(
+        'data-stamp',
+        'landing',
+      );
+      unmount();
+
+      render(<Leaderboard board={board} revealCount={2} />);
+      expect(screen.getByLabelText('Joker 2×')).toHaveAttribute(
+        'data-stamp',
+        'settled',
+      );
+    });
+  });
+
   describe('bonus stars', () => {
     it('shows one yellow star per point for a small positive bonus total', () => {
       render(

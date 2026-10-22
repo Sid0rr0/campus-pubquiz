@@ -475,6 +475,17 @@ from the session, so a reloaded or second big screen draws the same thing):
   (it joined during the block) has no trend, and no team has one when there is
   no basis (after a backend restart, until the next block's first question
   opens). Ranks are compared with the shared ranking rule.
+- `jokerTeamIds` — the 2× stamp: the ids of the shown teams whose joker round
+  has a question in the block just scored, i.e. the block the prior standings
+  were taken for (in a kahoot round, each question). The server decides; it is
+  present only while the leaderboard is on air (so a pick is never sent early)
+  and only when at least one team qualifies, and a team on 0 points is flagged
+  all the same. The later blocks' boards do not flag the team. After a backend
+  restart, until the next block's first question opens, there are no prior
+  standings and so no stamp. `/display` stamps the row as its rank is revealed
+  live (the stamp lands, with a spring, beside the team's name; a reload or
+  reconnect draws it already in place), and the phone's own-row card carries the
+  same stamp.
 
 `leaderboardRevealCount` stays a separate display field: how many ranks,
 counting up from last place, are revealed.
