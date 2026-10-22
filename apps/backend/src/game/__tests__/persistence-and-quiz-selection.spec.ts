@@ -58,7 +58,9 @@ describe('GameGateway — persistence and quiz selection', () => {
   }
 
   function createSessionFor(quizId: number) {
-    return game.inRequestContext(() => game.gameState.createSession(quizId));
+    return game.inRequestContext(() =>
+      game.gameState.createSessionSnapshot(quizId),
+    );
   }
 
   it('persists progress after applying an action, so a restart resumes it', async () => {

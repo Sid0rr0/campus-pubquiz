@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The seeded game carries the quiz title, the session's custom name (null when none was set) and its start time (the session row's creation time). The game load sets them from the session row and quiz, and the hand-built boot game sets them too, so `seed()` gives the same facts whether it created or resumed the game
 - [ ] Quiz-edit reloads refresh the quiz title along with the rounds, with no extra step

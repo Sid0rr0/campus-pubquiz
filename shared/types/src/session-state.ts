@@ -46,6 +46,12 @@ export interface SeededGame {
   quizId: number;
   gameSessionId: number;
   joinCode: string;
+  /** The quiz's title, refreshed whenever the game is reloaded. */
+  quizTitle: string;
+  /** The session's own name; null when none was set (the display name then falls back to the quiz title). */
+  customName: string | null;
+  /** When the session started: its row's creation time. */
+  startedAt: Date;
   rounds: SeededRound[];
   settings: SessionSettings;
 }

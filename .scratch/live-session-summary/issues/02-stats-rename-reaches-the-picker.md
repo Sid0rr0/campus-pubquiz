@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Game state returns the full active session summary)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] After updating the row, the stats rename updates the held session's custom name when that session is still held, through the Session write, as an ordinary write that doesn't touch scores and broadcasts nothing new
 - [ ] Renaming a session that isn't held (closed, or evicted) still succeeds, with no in-memory update

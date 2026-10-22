@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { StatsController } from '@/stats/stats.controller';
+import type { GameStateService } from '@/game/state/game-state.service';
 import type { StatsService } from '@/stats/stats.service';
 import type {
   PlayedSessionsListedPayload,
@@ -16,10 +17,12 @@ function makeController() {
     deleteSession: jest.fn(),
     renameSession: jest.fn(),
   };
+  const gameState = { renameHeldSession: jest.fn() };
   const controller = new StatsController(
     statsService as unknown as StatsService,
+    gameState as unknown as GameStateService,
   );
-  return { controller, statsService };
+  return { controller, statsService, gameState };
 }
 
 describe('StatsController', () => {
@@ -245,6 +248,32 @@ describe('StatsController', () => {
       await controller.renameSession(1, { name: '   ' });
 
       expect(statsService.renameSession).toHaveBeenCalledWith(1, '');
+    });
+
+    it('passes the stored name on to the held session, and the cleared name as null', async () => {
+      const { controller, statsService, gameState } = makeController();
+      statsService.renameSession.mockResolvedValueOnce('Week 3 Social');
+      statsService.renameSession.mockResolvedValueOnce(null);
+
+      await controller.renameSession(7, { name: 'Week 3 Social' });
+      await controller.renameSession(7, { name: ' ' });
+
+      expect(gameState.renameHeldSession).toHaveBeenNthCalledWith(
+        1,
+        7,
+        'Week 3 Social',
+      );
+      expect(gameState.renameHeldSession).toHaveBeenNthCalledWith(2, 7, null);
+    });
+
+    it('leaves the held session alone when the rename is refused', async () => {
+      const { controller, statsService, gameState } = makeController();
+      statsService.renameSession.mockRejectedValue(new Error('not ended'));
+
+      await expect(controller.renameSession(7, { name: 'x' })).rejects.toThrow(
+        'not ended',
+      );
+      expect(gameState.renameHeldSession).not.toHaveBeenCalled();
     });
 
     it('rejects a non-string name', async () => {

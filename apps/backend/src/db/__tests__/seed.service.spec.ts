@@ -252,53 +252,8 @@ describe('SeedService (Postgres integration)', () => {
     });
   });
 
-  describe('findStartedAtByJoinCodes', () => {
-    it('maps each join code to its session row createdAt', async () => {
-      const first = await seedService.seed();
-      const second = await seedService.createSession(first.quizId);
-
-      const startedAtByJoinCode = await seedService.findStartedAtByJoinCodes([
-        first.joinCode,
-        second.joinCode,
-      ]);
-
-      const firstRow = await em.findOneOrFail(GameSession, {
-        id: first.gameSessionId,
-      });
-      const secondRow = await em.findOneOrFail(GameSession, {
-        id: second.gameSessionId,
-      });
-      expect(startedAtByJoinCode.get(first.joinCode)).toEqual(
-        firstRow.createdAt,
-      );
-      expect(startedAtByJoinCode.get(second.joinCode)).toEqual(
-        secondRow.createdAt,
-      );
-    });
-
-    it('omits join codes that do not exist rather than throwing', async () => {
-      const first = await seedService.seed();
-
-      const startedAtByJoinCode = await seedService.findStartedAtByJoinCodes([
-        first.joinCode,
-        'NOPE12',
-      ]);
-
-      expect(startedAtByJoinCode.size).toBe(1);
-      expect(startedAtByJoinCode.has('NOPE12')).toBe(false);
-    });
-
-    it('returns an empty map without querying for an empty join code list', async () => {
-      const startedAtByJoinCode = await seedService.findStartedAtByJoinCodes(
-        [],
-      );
-
-      expect(startedAtByJoinCode.size).toBe(0);
-    });
-  });
-
-  describe('findNamesByJoinCodes', () => {
-    it('maps each join code to its custom name, or null when none was set', async () => {
+  describe('summary facts on the loaded game', () => {
+    it('carries the quiz title, custom name and session start time', async () => {
       const first = await seedService.seed();
       const named = await seedService.createSession(
         first.quizId,
@@ -306,31 +261,34 @@ describe('SeedService (Postgres integration)', () => {
         'Week 3 Social',
       );
 
-      const namesByJoinCode = await seedService.findNamesByJoinCodes([
-        first.joinCode,
+      const game = await seedService.loadGame(
+        first.quizId,
+        named.gameSessionId,
         named.joinCode,
-      ]);
+      );
 
-      expect(namesByJoinCode.get(first.joinCode)).toBeNull();
-      expect(namesByJoinCode.get(named.joinCode)).toBe('Week 3 Social');
+      const row = await em.findOneOrFail(GameSession, {
+        id: named.gameSessionId,
+      });
+      expect(game.quizTitle).toBe(HARDCODED_QUIZ.title);
+      expect(game.customName).toBe('Week 3 Social');
+      expect(game.startedAt).toEqual(row.createdAt);
     });
 
-    it('omits join codes that do not exist rather than throwing', async () => {
+    it('has a null custom name when none was set', async () => {
       const first = await seedService.seed();
 
-      const namesByJoinCode = await seedService.findNamesByJoinCodes([
-        first.joinCode,
-        'NOPE12',
-      ]);
-
-      expect(namesByJoinCode.size).toBe(1);
-      expect(namesByJoinCode.has('NOPE12')).toBe(false);
+      expect(first.customName).toBeNull();
     });
 
-    it('returns an empty map without querying for an empty join code list', async () => {
-      const namesByJoinCode = await seedService.findNamesByJoinCodes([]);
+    it('gives the same facts whether seed created the boot game or resumed it', async () => {
+      const created = await seedService.seed();
 
-      expect(namesByJoinCode.size).toBe(0);
+      const resumed = await makeSeedService(db.orm.em.fork()).seed();
+
+      expect(resumed.quizTitle).toBe(created.quizTitle);
+      expect(resumed.customName).toBe(created.customName);
+      expect(resumed.startedAt).toEqual(created.startedAt);
     });
   });
 });

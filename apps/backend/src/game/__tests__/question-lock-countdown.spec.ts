@@ -106,7 +106,7 @@ describe('GameGateway — question lock countdown', () => {
     await game.act('END_QUIZ');
 
     const created = await game.inRequestContext(() =>
-      game.gameState.createSession(game.quizId),
+      game.gameState.createSessionSnapshot(game.quizId),
     );
 
     expect(created.questionLockAt).toBeNull();

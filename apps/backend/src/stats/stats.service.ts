@@ -405,8 +405,11 @@ export class StatsService {
     await this.gameSessions.getEntityManager().removeAndFlush(session);
   }
 
-  /** Sets an ended session's custom display name — a blank name clears it, falling back to showing the quiz's own title instead. */
-  async renameSession(gameSessionId: number, name: string): Promise<void> {
+  /** Sets an ended session's custom display name — a blank name clears it, falling back to showing the quiz's own title instead. Returns the stored name (null when cleared). */
+  async renameSession(
+    gameSessionId: number,
+    name: string,
+  ): Promise<string | null> {
     const session = await this.gameSessions.findOne({ id: gameSessionId });
     if (!session || session.status !== 'ended') {
       throw new NotFoundException(
@@ -415,5 +418,6 @@ export class StatsService {
     }
     session.name = name.trim() || null;
     await this.gameSessions.getEntityManager().flush();
+    return session.name;
   }
 }

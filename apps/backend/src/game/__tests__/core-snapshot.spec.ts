@@ -93,7 +93,7 @@ describe('GameStateService — core snapshot', () => {
     await game.joinTeam('The Quizzards');
 
     const snapshot = await game.inRequestContext(() =>
-      game.gameState.createSession(game.quizId),
+      game.gameState.createSessionSnapshot(game.quizId),
     );
 
     expect(snapshot.teams).toEqual([]);

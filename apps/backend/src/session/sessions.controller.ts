@@ -17,7 +17,6 @@ import type {
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
-import { SeedService } from '@/db/seed.service';
 import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import {
   GameStateService,
@@ -25,18 +24,14 @@ import {
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
 } from '@/game/state/game-state.service';
-import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 import { leagueIdsSchema } from '@/league/league.schema';
 import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
 import { mapLeagueErrors } from '@/league/league-http';
 import { LeagueService } from '@/league/league.service';
-import { QuizService } from '@/quiz/quiz.service';
 import {
   resolveSessionSettings,
   sessionSettingsPartialSchema,
 } from '@/session/session-settings.schema';
-
-const UNKNOWN_QUIZ_TITLE = 'Unknown quiz';
 
 function requireQuizId(body: Partial<CreateSessionPayload>): number {
   if (typeof body.quizId !== 'number' || !Number.isInteger(body.quizId)) {
@@ -85,8 +80,6 @@ function parseLeagueIds(raw: unknown): number[] | undefined {
 export class SessionsController {
   constructor(
     private readonly gameState: GameStateService,
-    private readonly quizService: QuizService,
-    private readonly seedService: SeedService,
     private readonly leagues: LeagueService,
     private readonly liveSession: LiveSessionRest,
   ) {}
@@ -99,14 +92,14 @@ export class SessionsController {
    * once printed on the lobby QR code (title, status, team count).
    */
   @Get('public')
-  async listPublic(): Promise<ActiveSessionSummary[]> {
-    return this.summarize(this.gameState.listSessions());
+  listPublic(): ActiveSessionSummary[] {
+    return this.gameState.listSessions();
   }
 
   @Get()
   @UseGuards(SessionGuard, RolesGuard)
-  async list(): Promise<ActiveSessionSummary[]> {
-    return this.summarize(this.gameState.listSessions());
+  list(): ActiveSessionSummary[] {
+    return this.gameState.listSessions();
   }
 
   @Post()
@@ -121,7 +114,7 @@ export class SessionsController {
     const name = parseName(body.name);
     const leagueIds = parseLeagueIds(body.leagueIds) ?? [];
     await mapLeagueErrors(() => this.leagues.assertAssignable(leagueIds));
-    const snapshot = await this.gameState
+    return this.gameState
       .createSession(quizId, settings, name, leagueIds)
       .catch((error: unknown) => {
         if (error instanceof QuizHasEmptyRoundError) {
@@ -129,22 +122,6 @@ export class SessionsController {
         }
         throw error;
       });
-    const titles = await this.quizService.findTitles([quizId]);
-    const quizTitle = titles.get(quizId) ?? UNKNOWN_QUIZ_TITLE;
-    const startedAtByJoinCode = await this.seedService.findStartedAtByJoinCodes(
-      [snapshot.joinCode],
-    );
-    return {
-      joinCode: snapshot.joinCode,
-      quizId,
-      quizTitle,
-      name: sessionDisplayName(name, quizTitle),
-      status: snapshot.progress.status,
-      teamCount: snapshot.teams.length,
-      startedAt: (
-        startedAtByJoinCode.get(snapshot.joinCode) ?? new Date()
-      ).toISOString(),
-    };
   }
 
   @Patch(':joinCode/settings')
@@ -183,35 +160,5 @@ export class SessionsController {
       }
       throw error;
     }
-  }
-
-  private async summarize(
-    sessions: Omit<ActiveSessionSummary, 'quizTitle' | 'name' | 'startedAt'>[],
-  ): Promise<ActiveSessionSummary[]> {
-    const titles = await this.quizService.findTitles(
-      sessions.map((session) => session.quizId),
-    );
-    const [startedAtByJoinCode, namesByJoinCode] = await Promise.all([
-      this.seedService.findStartedAtByJoinCodes(
-        sessions.map((session) => session.joinCode),
-      ),
-      this.seedService.findNamesByJoinCodes(
-        sessions.map((session) => session.joinCode),
-      ),
-    ]);
-    return sessions.map((session) => {
-      const quizTitle = titles.get(session.quizId) ?? UNKNOWN_QUIZ_TITLE;
-      return {
-        ...session,
-        quizTitle,
-        name: sessionDisplayName(
-          namesByJoinCode.get(session.joinCode),
-          quizTitle,
-        ),
-        startedAt: (
-          startedAtByJoinCode.get(session.joinCode) ?? new Date(0)
-        ).toISOString(),
-      };
-    });
   }
 }

@@ -4,11 +4,10 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 ## Not implemented
 
-| Spec                       | Title                                                                                     | Tickets | Blocked by |
-| -------------------------- | ----------------------------------------------------------------------------------------- | ------- | ---------- |
-| live-session-summary       | [The live session summary is built where the session lives](live-session-summary/spec.md) | 2       | —          |
-| admin-control-availability | [Control availability comes with the admin view](admin-control-availability/spec.md)      | 2       | —          |
-| touched-scores             | [Each change says whether it touched scores](touched-scores/spec.md)                      | 2       | —          |
+| Spec                       | Title                                                                                | Tickets | Blocked by |
+| -------------------------- | ------------------------------------------------------------------------------------ | ------- | ---------- |
+| admin-control-availability | [Control availability comes with the admin view](admin-control-availability/spec.md) | 2       | —          |
+| touched-scores             | [Each change says whether it touched scores](touched-scores/spec.md)                 | 2       | —          |
 
 ## Won't do
 

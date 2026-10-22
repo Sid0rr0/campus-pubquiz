@@ -62,30 +62,6 @@ export class SeedService {
     return { gameSessionId: session.id, joinCode: session.joinCode };
   }
 
-  /** Session start times for the admin session picker's "Started" column — GameStateService knows joinCode but not GameSession metadata. */
-  async findStartedAtByJoinCodes(
-    joinCodes: string[],
-  ): Promise<Map<string, Date>> {
-    if (joinCodes.length === 0) return new Map();
-    const sessions = await this.gameSessions.find({
-      joinCode: { $in: joinCodes },
-    });
-    return new Map(
-      sessions.map((session) => [session.joinCode, session.createdAt]),
-    );
-  }
-
-  /** Session display names for the admin session picker and stats views — null means no custom name was set, so callers fall back to the quiz's own title. */
-  async findNamesByJoinCodes(
-    joinCodes: string[],
-  ): Promise<Map<string, string | null>> {
-    if (joinCodes.length === 0) return new Map();
-    const sessions = await this.gameSessions.find({
-      joinCode: { $in: joinCodes },
-    });
-    return new Map(sessions.map((session) => [session.joinCode, session.name]));
-  }
-
   /** Merges the given settings into an existing session's row — the lobby-settings-update flow's persistence step. */
   async updateSettings(
     gameSessionId: number,
@@ -102,12 +78,16 @@ export class SeedService {
     joinCode: string,
   ): Promise<SeededGame> {
     const gameSessionRow = await this.gameSessions.findOneOrFail(gameSessionId);
+    const quiz = await this.quizzes.findOneOrFail(quizId);
     const rounds = await this.loadQuizRounds(quizId);
 
     return {
       quizId,
       gameSessionId,
       joinCode,
+      quizTitle: quiz.title,
+      customName: gameSessionRow.name,
+      startedAt: gameSessionRow.createdAt,
       rounds,
       // Sessions stored before the "Collect feedback" / "Fun facts" settings have no such field: they count as on.
       settings: {
@@ -208,11 +188,17 @@ export class SeedService {
     }
 
     const session = await this.createSession(quiz.id);
+    const sessionRow = await this.gameSessions.findOneOrFail(
+      session.gameSessionId,
+    );
 
     return {
       quizId: quiz.id,
       gameSessionId: session.gameSessionId,
       joinCode: session.joinCode,
+      quizTitle: quiz.title,
+      customName: sessionRow.name,
+      startedAt: sessionRow.createdAt,
       rounds,
       settings: DEFAULT_SESSION_SETTINGS,
     };

@@ -235,6 +235,7 @@ export interface RealStoreGateway extends PlayableQuiz {
   /** Saves the seeded quiz through the Live edit module (in its own request context) with `edit` applied to the stored draft's rounds; no `edit` saves it unchanged. */
   saveQuizEdit: (
     edit?: (rounds: ImportRoundPreview[]) => ImportRoundPreview[],
+    title?: string,
   ) => Promise<QuizDraftSaveResult>;
   /** Saves a corrected answer key (and/or points) for one question of the seeded quiz through the Live edit module. */
   saveAnswerKeyFix: (
@@ -608,12 +609,13 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const saveQuizEdit = (
       edit: (rounds: ImportRoundPreview[]) => ImportRoundPreview[] = (rounds) =>
         rounds,
+      title?: string,
     ) =>
       RequestContext.create(db.orm.em, async () => {
         const draft = await services.quizService.findDraftById(quiz.quizId);
         if (!draft) throw new Error(`Quiz ${quiz.quizId} does not exist`);
         return liveEdit.save(quiz.quizId, {
-          title: draft.title,
+          title: title ?? draft.title,
           rounds: edit(draft.rounds),
         });
       });
