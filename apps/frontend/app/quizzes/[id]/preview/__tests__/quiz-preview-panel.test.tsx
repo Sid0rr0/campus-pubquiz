@@ -79,6 +79,7 @@ describe('QuizPreviewPanel', () => {
     expect(mockFetchQuizPreview).toHaveBeenCalledWith(
       7,
       'night',
+      false,
       expect.anything(),
     );
     expect(
@@ -128,8 +129,95 @@ describe('QuizPreviewPanel', () => {
     expect(mockFetchQuizPreview).toHaveBeenCalledWith(
       7,
       'answer_after_question',
+      false,
       expect.anything(),
     );
+  });
+
+  describe('with jokers', () => {
+    const JOKER_NIGHT = buildQuizPreview(ROUNDS, 'night', { withJokers: true });
+
+    function renderNight(
+      search: string,
+      preview = buildQuizPreview(ROUNDS, 'night'),
+    ) {
+      searchParamsRef.current = new URLSearchParams(search);
+      mockFetchQuizPreview.mockResolvedValue(preview);
+      renderWithQuery(<QuizPreviewPanel quizId="7" />);
+      return screen.findByRole('button', { name: /next/i });
+    }
+
+    it('offers the switch in the night order only, off by default', async () => {
+      await renderPreview();
+      expect(
+        screen.queryByRole('checkbox', { name: /with jokers/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('is off by default in the night order and asks for no jokers', async () => {
+      await renderNight('mode=night');
+
+      expect(
+        screen.getByRole('checkbox', { name: /with jokers/i }),
+      ).not.toBeChecked();
+      expect(mockFetchQuizPreview).toHaveBeenCalledWith(
+        7,
+        'night',
+        false,
+        expect.anything(),
+      );
+    });
+
+    it('reads ?jokers=true on load and asks for the joker pick', async () => {
+      await renderNight('mode=night&jokers=true', JOKER_NIGHT);
+
+      expect(
+        screen.getByRole('checkbox', { name: /with jokers/i }),
+      ).toBeChecked();
+      expect(mockFetchQuizPreview).toHaveBeenCalledWith(
+        7,
+        'night',
+        true,
+        expect.anything(),
+      );
+    });
+
+    it('writes ?jokers=true to the URL when switched on', async () => {
+      const user = userEvent.setup();
+      await renderNight('mode=night');
+
+      await user.click(screen.getByRole('checkbox', { name: /with jokers/i }));
+
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        '/quizzes/7/preview?mode=night&jokers=true',
+      );
+    });
+
+    it('drops ?jokers from the URL when switched off', async () => {
+      const user = userEvent.setup();
+      await renderNight('mode=night&jokers=true', JOKER_NIGHT);
+
+      await user.click(screen.getByRole('checkbox', { name: /with jokers/i }));
+
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        '/quizzes/7/preview?mode=night',
+      );
+    });
+
+    it('shows the joker pick screen after the overview and addresses it by ?at=', async () => {
+      const user = userEvent.setup();
+      await renderNight('mode=night&jokers=true', JOKER_NIGHT);
+
+      await user.keyboard('{ArrowRight}');
+
+      expect(screen.getByText('Step 2 of 9')).toBeInTheDocument();
+      expect(screen.getByText('Pick your joker')).toBeInTheDocument();
+      expect(screen.getByText('0/0 picked')).toBeInTheDocument();
+      expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        '/quizzes/7/preview?mode=night&jokers=true&at=r1-jokers',
+      );
+    });
   });
 
   it('draws the first step, the round title card, with the shared display component', async () => {

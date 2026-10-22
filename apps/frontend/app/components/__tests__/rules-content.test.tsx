@@ -11,6 +11,7 @@ const settingsWith = (
   enabledBonusCategories: [],
   maxPlayersPerTeam: 6,
   extraPlayerPenaltyPoints: 2,
+  jokersEnabled: false,
   ...overrides,
 });
 
@@ -85,6 +86,19 @@ describe('RulesContent', () => {
 
     expect(screen.queryByText(/Shot bonus:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Selfie bonus:/)).not.toBeInTheDocument();
+  });
+
+  it('adds the joker line after the other rules only when Jokers is on', () => {
+    const { rerender } = render(
+      <RulesContent settings={settingsWith({ jokersEnabled: true })} />,
+    );
+    const items = screen.getAllByRole('listitem').map((li) => li.textContent);
+    expect(items.at(-1)).toContain(
+      "Joker: pick one round to score double. You'll choose after the round overview.",
+    );
+
+    rerender(<RulesContent settings={settingsWith()} />);
+    expect(screen.queryByText(/^Joker:/)).not.toBeInTheDocument();
   });
 
   it('states the team size and penalty from the settings', () => {

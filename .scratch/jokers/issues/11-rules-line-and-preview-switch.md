@@ -6,9 +6,9 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Rules screen joker line only when Jokers is on
-- [ ] Quiz preview "with jokers" switch, off by default; on, `joker_pick` appears after `round_overview` in the preview order
-- [ ] Page specs and Quiz preview specs
-- [ ] `DOCUMENTATION.md` (rules, Quiz preview) updated
+- [x] Rules screen joker line only when Jokers is on
+- [x] Quiz preview "with jokers" switch, off by default; on, `joker_pick` appears after `round_overview` in the preview order
+- [x] Page specs and Quiz preview specs
+- [x] `DOCUMENTATION.md` (rules, Quiz preview) updated

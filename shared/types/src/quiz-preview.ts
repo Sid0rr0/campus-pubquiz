@@ -125,6 +125,12 @@ export interface QuizPreview {
 /** What `GET /quizzes/:id/preview` answers with. */
 export type QuizPreviewPayload = QuizPreview;
 
+/** Options of a Quiz preview. */
+export interface QuizPreviewOptions {
+  /** Preview a night played with jokers: the "like the night" order gets the joker pick after the overview. */
+  withJokers?: boolean;
+}
+
 const PREVIEW_SETTINGS: SessionSettings = {
   ...DEFAULT_SESSION_SETTINGS,
   funFactsEnabled: false,
@@ -142,6 +148,7 @@ function displayScreenAt(
 /** The screen kinds the "like the night" order keeps; every other kind needs a live session. */
 const NIGHT_SCREEN_KINDS: readonly DisplayScreen['kind'][] = [
   'round_overview',
+  'joker_pick',
   'round_title',
   'question',
   'break_intro',
@@ -163,6 +170,7 @@ const MAX_NIGHT_PRESSES = 5000;
 export function buildQuizPreview(
   rounds: readonly SeededRound[],
   mode: QuizPreviewMode,
+  options: QuizPreviewOptions = {},
 ): QuizPreview {
   const fullSession = freshSessionState({
     quizId: 0,
@@ -172,7 +180,10 @@ export function buildQuizPreview(
     customName: null,
     startedAt: new Date(0),
     rounds: [...rounds],
-    settings: PREVIEW_SETTINGS,
+    settings: {
+      ...PREVIEW_SETTINGS,
+      jokersEnabled: options.withJokers === true,
+    },
   });
   const overview = projectScreen(fullSession, SOCKET_ROOMS.DISPLAY);
   return {
@@ -217,6 +228,13 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
   // A quiz with no rounds has nothing to show, not even an overview of nothing.
   if (rounds.length === 0) return [];
 
+  // The joker pick lists every round of the quiz, empty ones too, and runs no
+  // timer: the walk's session has neither all the rounds nor a clock.
+  const jokerPickScreen = displayScreenAt(fullSession, {
+    ...LOBBY_PROGRESS,
+    status: 'joker_pick',
+  });
+
   // The real Advance plan can't place a round with no questions, so the dry
   // run walks a session without such rounds. Their title cards are put back
   // in front of the next round's, and the walked rounds' numbers are mapped
@@ -237,6 +255,17 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
             questionIndex: null,
             isBlockEnd: false,
           },
+          ...(fullSession.seededGame.settings.jokersEnabled
+            ? [
+                {
+                  screen: jokerPickScreen,
+                  onAir: { kind: 'joker_pick' } as const,
+                  roundIndex: 0,
+                  questionIndex: null,
+                  isBlockEnd: false,
+                },
+              ]
+            : []),
         ]
       : walkNightSteps(
           freshSessionState({
@@ -261,7 +290,11 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
   for (const step of walked) {
     if (step.screen.kind === 'round_title')
       pushEmptyTitlesBefore(step.roundIndex);
-    steps.push(step);
+    steps.push(
+      step.screen.kind === 'joker_pick'
+        ? { ...step, screen: jokerPickScreen }
+        : step,
+    );
   }
   pushEmptyTitlesBefore(rounds.length);
 

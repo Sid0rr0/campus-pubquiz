@@ -45,8 +45,8 @@ export const queryKeys = {
     // JSON-stable across calls with and without a joinCode.
     list: (joinCode?: string) => ['quizzes', 'list', joinCode ?? null] as const,
     draft: (quizId: number) => ['quizzes', 'draft', quizId] as const,
-    preview: (quizId: number, mode: QuizPreviewMode) =>
-      ['quizzes', 'preview', quizId, mode] as const,
+    preview: (quizId: number, mode: QuizPreviewMode, withJokers: boolean) =>
+      ['quizzes', 'preview', quizId, mode, withJokers] as const,
   },
   sessions: {
     all: ['sessions'] as const,

@@ -135,6 +135,66 @@ describe('buildQuizPreview, night', () => {
     expect(buildQuizPreview([], 'night').steps).toEqual([]);
   });
 
+  describe('with jokers', () => {
+    const jokerQuiz = () => [
+      round(1, [question(1)]),
+      round(2, []),
+      round(3, [question(2)]),
+    ];
+
+    it('is off by default: no joker pick in the order', () => {
+      const { steps } = buildQuizPreview(jokerQuiz(), 'night');
+      expect(steps.map(({ screen }) => screen.kind)).not.toContain(
+        'joker_pick',
+      );
+    });
+
+    it('puts the joker pick right after the round overview', () => {
+      const { steps } = buildQuizPreview(jokerQuiz(), 'night', {
+        withJokers: true,
+      });
+      expect(steps.slice(0, 3).map(({ screen }) => screen.kind)).toEqual([
+        'round_overview',
+        'joker_pick',
+        'round_title',
+      ]);
+    });
+
+    it('lists every round of the quiz, even one with no questions, and runs no timer', () => {
+      const { steps } = buildQuizPreview(jokerQuiz(), 'night', {
+        withJokers: true,
+      });
+      const pick = steps[1].screen;
+      if (pick.kind !== 'joker_pick') throw new Error('expected joker_pick');
+      expect(pick.rounds.map((entry) => entry.title)).toEqual([
+        'Round 1',
+        'Round 2',
+        'Round 3',
+      ]);
+      expect(pick.endsAt).toBeNull();
+    });
+
+    it('still gives the pick to a quiz whose rounds have no questions', () => {
+      const { steps } = buildQuizPreview([round(1, [])], 'night', {
+        withJokers: true,
+      });
+      expect(steps.map(({ screen }) => screen.kind)).toEqual([
+        'round_overview',
+        'joker_pick',
+        'round_title',
+      ]);
+    });
+
+    it('leaves the question-then-answer order alone', () => {
+      const { steps } = buildQuizPreview(jokerQuiz(), 'answer_after_question', {
+        withJokers: true,
+      });
+      expect(steps.map(({ screen }) => screen.kind)).not.toContain(
+        'joker_pick',
+      );
+    });
+  });
+
   describe('a round with no questions', () => {
     /** Compact label per step: 'overview', 'title:N', 'q:id', 'a:id', or the kind. */
     const nightLabels = (rounds: SeededRound[]) =>

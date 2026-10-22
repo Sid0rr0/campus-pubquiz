@@ -82,6 +82,37 @@ describe('PlayPage — pre-game screens', () => {
     expect(screen.queryByText(/no cheating/i)).not.toBeInTheDocument();
   });
 
+  it.each([
+    [true, true],
+    [false, false],
+  ])(
+    'with Jokers %s the rules screen shows the joker line: %s',
+    (jokersEnabled, isShown) => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+      mockUseTeamLink.mockReturnValue(
+        teamLinkResult({
+          session: {
+            progress: { status: 'rules' },
+            settings: { jokersEnabled, showRoundOverview: true },
+          },
+          join: {
+            team: {
+              teamId: 'team-1',
+              teamName: 'The Quizzards',
+              teamToken: 'token-1',
+            },
+          },
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+
+      const line = screen.queryByText(
+        "Joker: pick one round to score double. You'll choose after the round overview.",
+      );
+      expect(line !== null).toBe(isShown);
+    },
+  );
+
   it('shows the round name and a "look at the screen" hint on a fresh round intro card', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(

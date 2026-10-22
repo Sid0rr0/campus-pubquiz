@@ -21,9 +21,11 @@ interface ErrorBody {
 export async function fetchQuizPreview(
   quizId: number,
   mode: QuizPreviewMode,
+  withJokers: boolean,
   signal?: AbortSignal,
 ): Promise<QuizPreviewPayload> {
   const query = new URLSearchParams({ mode });
+  if (withJokers) query.set('jokers', 'true');
   const response = await fetch(
     `${getBackendUrl()}/quizzes/${quizId}/preview?${query}`,
     { credentials: 'include', signal },

@@ -57,6 +57,29 @@ describe('DisplayPage — rules and round intro', () => {
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 
+  it.each([
+    [true, true],
+    [false, false],
+  ])(
+    'with Jokers %s the rules screen shows the joker line: %s',
+    (jokersEnabled, isShown) => {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          settings: { jokersEnabled, showRoundOverview: true },
+          progress: { status: 'rules' },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      const line = screen.queryByText(
+        "Joker: pick one round to score double. You'll choose after the round overview.",
+      );
+      expect(line !== null).toBe(isShown);
+    },
+  );
+
   it('lists every round title, category, and author on the round overview screen, before round 0 opens', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
