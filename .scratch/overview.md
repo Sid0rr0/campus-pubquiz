@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                       | Title                                                                                | Tickets | Blocked by |
 | -------------------------- | ------------------------------------------------------------------------------------ | ------- | ---------- |
-| admin-control-availability | [Control availability comes with the admin view](admin-control-availability/spec.md) | 2       | —          |
 | touched-scores             | [Each change says whether it touched scores](touched-scores/spec.md)                 | 2       | —          |
 
 ## Won't do
