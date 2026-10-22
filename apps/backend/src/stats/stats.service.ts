@@ -9,14 +9,10 @@ import {
   type FeedbackTrends,
   type FeedbackTrendsRound,
   type PlayedSessionsListedPayload,
-  type QuestionType,
   type SessionDetailFeedbackTopic,
   type SessionDetailStats,
-  formatAnswer,
   type SessionSettings,
-  type Verdict,
 } from '@campus-pubquiz/types';
-import { readQuestionPayload } from '@/db/question-payload';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
@@ -74,28 +70,6 @@ interface SessionRoundRatingRow {
   roundId: number;
   average: string | number;
   count: string | number;
-}
-
-interface SessionQuestionRow {
-  questionId: number;
-  roundId: number;
-  orderIndex: number;
-  prompt: string;
-  type: QuestionType;
-  answer: string;
-  payload: unknown;
-  points: string | number;
-}
-
-interface SessionAnswerRow {
-  questionId: number;
-  teamId: number;
-  teamName: string;
-  pointsAwarded: string | number;
-  gradedAt: string | Date | null;
-  verdict: Verdict | null;
-  responseMs: string | number | null;
-  value: string;
 }
 
 interface SessionBonusRow {
@@ -241,52 +215,12 @@ export class StatsService {
         'updated_at as submittedAt',
       )) as SessionFeedbackRow[];
 
-    const questions = (await knex('questions as q')
-      .join('rounds as r', 'r.id', 'q.round_id')
-      .where('r.quiz_id', header.quizId)
-      .select(
-        'q.id as questionId',
-        'q.round_id as roundId',
-        'q.order_index as orderIndex',
-        'q.prompt',
-        'q.type',
-        'q.answer',
-        'q.payload',
-        'q.points',
-      )) as SessionQuestionRow[];
-
-    const answers = (await knex('answers as a')
-      .join('teams as t', 't.id', 'a.team_id')
-      .where('a.game_session_id', gameSessionId)
-      .select(
-        'a.question_id as questionId',
-        'a.team_id as teamId',
-        't.name as teamName',
-        'a.points_awarded as pointsAwarded',
-        'a.graded_at as gradedAt',
-        'a.verdict as verdict',
-        'a.response_ms as responseMs',
-        'a.value as value',
-      )) as SessionAnswerRow[];
+    const { questions, answers } =
+      await this.endedSessions.night(gameSessionId);
 
     const bonusAwards = (await knex('bonus_awards')
       .where('game_session_id', gameSessionId)
       .select('team_id as teamId', 'category', 'points')) as SessionBonusRow[];
-
-    // One parse per question, shared by the key and every team's answer to it.
-    const wordingById = new Map(
-      questions.map((q) => [
-        q.questionId,
-        {
-          type: q.type,
-          options: readQuestionPayload({
-            id: q.questionId,
-            type: q.type,
-            payload: q.payload,
-          }).options,
-        },
-      ]),
-    );
 
     return computeSessionDetail({
       session: {
@@ -316,25 +250,8 @@ export class StatsService {
         topics: storedTopicsSchema.parse(f.topics),
         submittedAt: f.submittedAt,
       })),
-      questions: questions.map((q) => ({
-        questionId: q.questionId,
-        roundId: q.roundId,
-        orderIndex: q.orderIndex,
-        prompt: q.prompt,
-        type: q.type,
-        answer: formatAnswer(q.answer, wordingById.get(q.questionId)!),
-        points: Number(q.points),
-      })),
-      answers: answers.map((a) => ({
-        questionId: a.questionId,
-        teamId: a.teamId,
-        teamName: a.teamName,
-        pointsAwarded: Number(a.pointsAwarded),
-        gradedAt: a.gradedAt,
-        verdict: a.verdict,
-        responseMs: a.responseMs === null ? null : Number(a.responseMs),
-        answer: formatAnswer(a.value, wordingById.get(a.questionId)!),
-      })),
+      questions,
+      answers,
       bonusAwards: bonusAwards.map((b) => ({
         teamId: b.teamId,
         category: b.category,

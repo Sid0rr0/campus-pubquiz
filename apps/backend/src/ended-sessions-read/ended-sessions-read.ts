@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
+import {
+  formatAnswer,
+  resolveAnswerKind,
+  type AnswerKind,
+  type QuestionType,
+  type Verdict,
+} from '@campus-pubquiz/types';
+import { readQuestionPayload } from '@/db/question-payload';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { DISPLAY_NAME_SQL } from '@/ended-sessions-read/session-display-name';
@@ -34,6 +42,67 @@ export interface EndedSessionHeader {
 export interface ParticipationRow extends EndedSessionHeader {
   teamId: number;
 }
+
+/** One question of an ended night, worded and numbered the way the screens show it. */
+export interface NightQuestion {
+  questionId: number;
+  roundId: number;
+  roundTitle: string;
+  /** From 1, following round order. */
+  roundNumber: number;
+  /** From 1, restarting in each round. */
+  questionNumber: number;
+  orderIndex: number;
+  prompt: string;
+  type: QuestionType;
+  answerKind: AnswerKind;
+  points: number;
+  /** The worded Answer key. */
+  answer: string;
+}
+
+/** One stored answer of an ended night, worded the way the screens show it. */
+export interface NightAnswer {
+  questionId: number;
+  teamId: number;
+  teamName: string;
+  verdict: Verdict | null;
+  pointsAwarded: number;
+  gradedAt: Date | null;
+  responseMs: number | null;
+  answer: string;
+}
+
+export interface Night {
+  /** In play order. */
+  questions: NightQuestion[];
+  answers: NightAnswer[];
+}
+
+interface NightQuestionRow {
+  questionId: number;
+  roundId: number;
+  roundTitle: string;
+  orderIndex: number;
+  prompt: string;
+  type: QuestionType;
+  answer: string;
+  payload: unknown;
+  points: string | number;
+}
+
+interface NightAnswerRow {
+  questionId: number;
+  teamId: number;
+  teamName: string;
+  verdict: Verdict | null;
+  pointsAwarded: string | number;
+  gradedAt: string | Date | null;
+  responseMs: string | number | null;
+  value: string;
+}
+
+type AnswerWording = Parameters<typeof formatAnswer>[1];
 
 interface HeaderRow {
   game_session_id: number;
@@ -188,6 +257,111 @@ export class EndedSessionsRead {
       .orderBy('gs.created_at', 'desc')
       .orderBy('gs.id', 'desc')) as (HeaderRow & { team_id: number })[];
     return rows.map((row) => ({ ...headerOf(row), teamId: row.team_id }));
+  }
+
+  /**
+   * An ended night as the screens show it: the questions in play order (round
+   * order, then question order; round and question numbers start at 1, the
+   * question number restarting per round) and the stored answers, with the
+   * Answer key and every answer worded by `formatAnswer`. With a team id only
+   * that team's answers are read (narrowed in SQL). Questions come from the
+   * session's quiz as it is now: that choice is made here and nowhere else.
+   *
+   * Trusts its caller: it checks neither the session's status nor that a team
+   * took part. Call {@link endedSession} first (null means not ended) and, for
+   * a team's own night, check the team took part.
+   */
+  async night(
+    gameSessionId: number,
+    { teamId }: { teamId?: number } = {},
+  ): Promise<Night> {
+    const knex: Knex = this.gameSessionTeams.getKnex();
+    const questionRows = (await knex('game_sessions as gs')
+      .join('rounds as r', 'r.quiz_id', 'gs.quiz_id')
+      .join('questions as q', 'q.round_id', 'r.id')
+      .where('gs.id', gameSessionId)
+      .orderBy([
+        { column: 'r.order_index', order: 'asc' },
+        { column: 'r.id', order: 'asc' },
+        { column: 'q.order_index', order: 'asc' },
+        { column: 'q.id', order: 'asc' },
+      ])
+      .select(
+        'q.id as questionId',
+        'r.id as roundId',
+        'r.title as roundTitle',
+        'q.order_index as orderIndex',
+        'q.prompt as prompt',
+        'q.type as type',
+        'q.answer as answer',
+        'q.payload as payload',
+        'q.points as points',
+      )) as NightQuestionRow[];
+
+    let answersQuery = knex('answers as a')
+      .join('teams as t', 't.id', 'a.team_id')
+      .where('a.game_session_id', gameSessionId);
+    if (teamId !== undefined) {
+      answersQuery = answersQuery.where('a.team_id', teamId);
+    }
+    const answerRows = (await answersQuery.select(
+      'a.question_id as questionId',
+      'a.team_id as teamId',
+      't.name as teamName',
+      'a.verdict as verdict',
+      'a.points_awarded as pointsAwarded',
+      'a.graded_at as gradedAt',
+      'a.response_ms as responseMs',
+      'a.value as value',
+    )) as NightAnswerRow[];
+
+    // One parse per question, shared by the key and every answer to it.
+    const wordingById = new Map<number, AnswerWording>();
+    const roundNumberById = new Map<number, number>();
+    const questionCountByRound = new Map<number, number>();
+    const questions = questionRows.map((row): NightQuestion => {
+      const wording: AnswerWording = {
+        type: row.type,
+        options: readQuestionPayload({
+          id: row.questionId,
+          type: row.type,
+          payload: row.payload,
+        }).options,
+      };
+      wordingById.set(row.questionId, wording);
+      if (!roundNumberById.has(row.roundId)) {
+        roundNumberById.set(row.roundId, roundNumberById.size + 1);
+      }
+      const questionNumber = (questionCountByRound.get(row.roundId) ?? 0) + 1;
+      questionCountByRound.set(row.roundId, questionNumber);
+      return {
+        questionId: row.questionId,
+        roundId: row.roundId,
+        roundTitle: row.roundTitle,
+        roundNumber: roundNumberById.get(row.roundId)!,
+        questionNumber,
+        orderIndex: row.orderIndex,
+        prompt: row.prompt,
+        type: row.type,
+        answerKind: resolveAnswerKind(row),
+        points: Number(row.points),
+        answer: formatAnswer(row.answer, wording),
+      };
+    });
+
+    const answers = answerRows.map(
+      (row): NightAnswer => ({
+        questionId: row.questionId,
+        teamId: row.teamId,
+        teamName: row.teamName,
+        verdict: row.verdict,
+        pointsAwarded: Number(row.pointsAwarded),
+        gradedAt: row.gradedAt === null ? null : new Date(row.gradedAt),
+        responseMs: row.responseMs === null ? null : Number(row.responseMs),
+        answer: formatAnswer(row.value, wordingById.get(row.questionId)!),
+      }),
+    );
+    return { questions, answers };
   }
 
   /** Every team that took part in the given sessions, or in any session for the given teams. */
