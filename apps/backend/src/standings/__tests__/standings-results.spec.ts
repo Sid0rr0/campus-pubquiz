@@ -1,6 +1,7 @@
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
+import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
 import {
   gradable,
   setupAnswerServiceTest,
@@ -73,6 +74,35 @@ describe('StandingsService.resultsForSessions (Postgres integration)', () => {
       totalPoints: 3,
       bonusPoints: 2,
     });
+  });
+
+  it('places and crowns teams on the doubled totals while max points and outcomes stay raw', async () => {
+    const gambler = await insertTeam('Gambler', 'token-g');
+    const steady = await insertTeam('Steady', 'token-s');
+    await score(state.question, gambler.id, 1);
+    await score(state.question, steady.id, 1.5);
+    state.em.create(SessionTeamJoker, {
+      gameSession: state.session,
+      team: gambler,
+      round: state.round,
+      source: 'chosen',
+    });
+    await state.em.flush();
+    await endSession();
+
+    const result = (await standings.resultsForSessions([state.session.id])).get(
+      state.session.id,
+    )!;
+
+    expect(
+      result.teams.map((t) => [t.teamName, t.totalPoints, t.placing]),
+    ).toEqual([
+      ['Gambler', 2, 1],
+      ['Steady', 1.5, 2],
+    ]);
+    expect(result.teams[0].wonNight).toBe(true);
+    expect(result.maxPoints).toBe(state.question.points);
+    expect(result.questions[0].answeredCount).toBe(2);
   });
 
   it('reads only ended sessions', async () => {

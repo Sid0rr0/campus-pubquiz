@@ -24,7 +24,10 @@ import type { ActiveShowdownView } from './showdown';
 
 export interface RoundPoints {
   roundTitle: string;
+  /** Already doubled when this is the team's joker round. */
   points: number;
+  /** Whether this is the team's joker round (absent reads as false). Drives the joker mark on the `/control` score table. */
+  isJoker?: boolean;
 }
 
 export interface LeaderboardEntry {

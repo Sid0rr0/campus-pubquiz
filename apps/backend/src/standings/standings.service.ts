@@ -45,16 +45,21 @@ interface RoundTotalRow {
   total: string | number;
 }
 
+interface JokerRoundRow {
+  gameSessionId: number;
+  teamId: number;
+  roundId: number;
+}
+
 type Knex = ReturnType<GameSessionTeamRepository['getKnex']>;
 
 /** Narrows a query to the given sessions; every session when no ids are given. */
 function inSessions<Q extends { whereIn(column: string, ids: number[]): Q }>(
   query: Q,
   gameSessionIds: readonly number[] | undefined,
+  column = 'game_session_id',
 ): Q {
-  return gameSessionIds
-    ? query.whereIn('game_session_id', [...gameSessionIds])
-    : query;
+  return gameSessionIds ? query.whereIn(column, [...gameSessionIds]) : query;
 }
 
 /**
@@ -65,14 +70,29 @@ function inSessions<Q extends { whereIn(column: string, ids: number[]): Q }>(
  * joker, ADR 0004) is applied here and nowhere else.
  */
 function roundPointsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
-  return inSessions(
-    knex('answers as a').join('questions as q', 'q.id', 'a.question_id'),
-    gameSessionIds,
-  )
-    .groupBy('a.game_session_id', 'q.round_id', 'a.team_id')
-    .select('a.game_session_id as game_session_id')
-    .select('q.round_id as round_id', 'a.team_id as team_id')
-    .select(knex.raw('sum(a.points_awarded) as total'));
+  return (
+    inSessions(
+      knex('answers as a')
+        .join('questions as q', 'q.id', 'a.question_id')
+        .leftJoin('session_team_jokers as j', function joinJoker() {
+          this.on('j.game_session_id', 'a.game_session_id')
+            .andOn('j.team_id', 'a.team_id')
+            .andOn('j.round_id', 'q.round_id');
+        }),
+      gameSessionIds,
+      'a.game_session_id',
+    )
+      .groupBy('a.game_session_id', 'q.round_id', 'a.team_id')
+      .select('a.game_session_id as game_session_id')
+      .select('q.round_id as round_id', 'a.team_id as team_id')
+      // The joker joins on the answer's own round, so it matches only a team's
+      // joker round: that round's answer points count double (ADR 0004).
+      .select(
+        knex.raw(
+          'sum(a.points_awarded * case when j.id is null then 1 else 2 end) as total',
+        ),
+      )
+  );
 }
 
 // The two totals are pre-aggregated as subqueries (rather than two leftJoins
@@ -184,11 +204,15 @@ export class StandingsService {
   async forSessions(
     gameSessionIds: readonly number[],
   ): Promise<Map<number, SessionStandings>> {
-    const [teams, rounds, roundTotals] = await Promise.all([
+    const [teams, rounds, roundTotals, jokers] = await Promise.all([
       this.loadTeamTotals(gameSessionIds),
       this.loadRounds(gameSessionIds),
       this.loadRoundTotals(gameSessionIds),
+      this.loadJokerRounds(gameSessionIds),
     ]);
+    const jokerRoundByTeam = new Map(
+      jokers.map((row) => [`${row.gameSessionId}:${row.teamId}`, row.roundId]),
+    );
 
     const pointsByRoundAndTeam = new Map(
       roundTotals.map((row) => [
@@ -219,6 +243,9 @@ export class StandingsService {
                 pointsByRoundAndTeam.get(
                   `${gameSessionId}:${round.roundId}:${row.teamId}`,
                 ) ?? 0,
+              isJoker:
+                jokerRoundByTeam.get(`${gameSessionId}:${row.teamId}`) ===
+                round.roundId,
             })),
           } satisfies DepartedTeam,
         }));
@@ -403,6 +430,18 @@ export class StandingsService {
       .orderBy('r.order_index', 'asc')
       .select('gs.id as gameSessionId')
       .select('r.id as roundId', 'r.title as roundTitle')) as RoundRow[];
+  }
+
+  /** Each team's joker round per session, for the mark on its round cell. The points already carry the doubling. */
+  private async loadJokerRounds(
+    gameSessionIds: readonly number[],
+  ): Promise<JokerRoundRow[]> {
+    if (gameSessionIds.length === 0) return [];
+    const knex = this.gameSessionTeams.getKnex();
+    return (await knex('session_team_jokers')
+      .whereIn('game_session_id', [...gameSessionIds])
+      .select('game_session_id as gameSessionId')
+      .select('team_id as teamId', 'round_id as roundId')) as JokerRoundRow[];
   }
 
   private async loadRoundTotals(

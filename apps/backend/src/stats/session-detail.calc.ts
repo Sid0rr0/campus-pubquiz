@@ -68,6 +68,8 @@ export interface SessionDetailAnswerInputRow {
   responseMs: number | null;
   /** The team's answer, already worded for people. */
   answer: string;
+  /** The answer is to a question of the team's joker round (absent reads as false). */
+  isJoker?: boolean;
 }
 
 export interface SessionDetailBonusInputRow {
@@ -344,9 +346,11 @@ export function computeSessionDetail(
       row.correctRate !== null,
   );
 
+  // Difficulty measures the questions, so it reads the raw stored points: a
+  // team's bet on a round (the joker) must not make the quiz look easier.
   const avgAnswerPoints =
     teamCount > 0
-      ? standings.reduce((sum, s) => sum + s.answerPoints, 0) / teamCount
+      ? answers.reduce((sum, a) => sum + a.pointsAwarded, 0) / teamCount
       : 0;
   const averagePercent =
     maxPoints > 0 ? (avgAnswerPoints / maxPoints) * 100 : 0;
@@ -397,6 +401,7 @@ export function computeSessionDetail(
       teamId: a.teamId,
       questionId: a.questionId,
       pointsAwarded: cellPoints(a),
+      isJoker: a.isJoker === true,
       verdict: a.verdict,
       answer: a.answer,
     })),

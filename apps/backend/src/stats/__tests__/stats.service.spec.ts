@@ -15,6 +15,7 @@ import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { RoundRating } from '@/db/entities/round-rating.entity';
 import { SessionFeedback } from '@/db/entities/session-feedback.entity';
+import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { Team } from '@/db/entities/team.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
@@ -600,10 +601,43 @@ describe('StatsService (Postgres integration)', () => {
           teamId: team.id,
           questionId: sortQuestion.id,
           pointsAwarded: 0,
+          isJoker: false,
           verdict: 'incorrect',
           answer: 'Venus → Mercury → Earth',
         },
       ]);
+    });
+
+    it('doubles the joker round on the scoresheet, in the totals and in the sessions list, leaving round percentages and max points raw', async () => {
+      const { quiz, questions } = await createQuiz('Quiz J', [[2], [2]]);
+      const session = await createSession(quiz, 'JOKER01', 'ended');
+      const [[q1], [q2]] = questions;
+      const gambler = await joinTeam(session, 'Gambler');
+      await grade(session, q1, gambler, 2);
+      await grade(session, q2, gambler, 1);
+      em.create(SessionTeamJoker, {
+        gameSession: session,
+        team: gambler,
+        round: q1.round,
+        source: 'chosen',
+      });
+      await em.flush();
+
+      const detail = await statsService.getSessionDetail(session.id);
+      const { items } = await statsService.listPlayedSessions(defaultQuery);
+
+      const cellOf = (questionId: number) =>
+        detail.scoresheet.find((c) => c.questionId === questionId);
+      expect(cellOf(q1.id)).toEqual(
+        expect.objectContaining({ pointsAwarded: 4, isJoker: true }),
+      );
+      expect(cellOf(q2.id)).toEqual(
+        expect.objectContaining({ pointsAwarded: 1, isJoker: false }),
+      );
+      expect(detail.standings[0].total).toBe(5);
+      expect(items[0].winnerPoints).toBe(5);
+      expect(detail.maxPoints).toBe(4);
+      expect(detail.rounds.map((r) => r.pointsPercent)).toEqual([100, 50]);
     });
 
     it('still counts a team that was kicked/left after answering, so correctRate cannot exceed 100%', async () => {

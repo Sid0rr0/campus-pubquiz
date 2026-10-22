@@ -6,7 +6,7 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The shared step from ticket 01 doubles the joker round's answer points for the team; nothing else sums answer points
 - [ ] Partial and closest-guess points double after grading; bonus awards don't; stored answer points are unchanged

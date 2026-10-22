@@ -62,6 +62,14 @@ describe('GuideContent', () => {
     expect(text).toContain('"Countdown sound"');
   });
 
+  it('explains that the joker round counts double and how the Teams table marks it', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('count double');
+    expect(text).toContain('bonus awards never');
+    expect(text).toContain('🃏');
+  });
+
   it('describes every question type from the registry', () => {
     const text = renderGuideText();
 

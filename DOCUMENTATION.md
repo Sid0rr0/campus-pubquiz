@@ -612,6 +612,22 @@ rules (pickable rounds, the draw, who may choose) are in
 `shared/types/src/joker.ts`. A joker's doubling of points is derived, never
 stored on answers (ADR 0004).
 
+**Joker scoring.** A team's answer points in its joker round count double
+everywhere scores are summed; bonus awards never do, and an answer's stored
+`points_awarded` is never changed. Two places apply it, so every total agrees:
+`roundPointsQuery` in `StandingsService` (SQL: an answer whose round is the
+team's joker round counts twice) feeds the standings, round points, quiz
+points, the Session result, the sessions list's winner total and the league
+table and team page, and `cellPoints` doubles the cells of the Scoresheet
+and the team's night (`Night` answers carry `isJoker`). Hand grades, key fixes
+and joker changes therefore move the totals with no rewrite. Ties, placings and
+showdowns are decided on the doubled totals; the showdown guess itself is not a
+round and is never doubled. Correct rate, the Question outcome, the fun facts,
+the round table's `pointsPercent`, the difficulty label and the session's max
+points read the raw stored points, so a bet does not distort how hard the
+questions were. Each `roundPoints` entry of a leaderboard row carries `isJoker`,
+which `/control` draws as a 🃏 beside the round's (doubled) points.
+
 The phone screen for the pick is `{ kind: 'joker_pick', isOpen }`: the picker while
 `isOpen`, and the team's joker with "Look at the screen" once the pick has closed.
 
@@ -1551,9 +1567,11 @@ shows it as the **Answer** column and the **Hardest question** tile as an
 full text on hover.
 
 The **Scoresheet** at the bottom of the page is the night in one grid. The
-session detail carries `scoresheet: { teamId, questionId, pointsAwarded, verdict,
-answer }[]`, one cell per stored answer (departed teams' included; `answer` is the
-team's answer worded by `formatAnswer`), and each question row carries its
+session detail carries `scoresheet: { teamId, questionId, pointsAwarded, isJoker,
+verdict, answer }[]`, one cell per stored answer (departed teams' included; `answer` is the
+team's answer worded by `formatAnswer`; a cell in the team's joker round shows the
+doubled points with `isJoker` set, drawn with a 🃏, so a row adds up to the team's
+total), and each question row carries its
 `roundId` so the page can group the columns. Rows are the standing rows in their
 order (a team that left greyed, ranked "left"); the columns are Rank and Team
 (both stay put while the grid scrolls sideways), one column per question grouped

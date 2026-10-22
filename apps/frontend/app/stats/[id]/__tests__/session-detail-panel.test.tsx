@@ -140,6 +140,7 @@ const DETAIL: SessionDetailStats = {
       teamId: 1,
       questionId: 10,
       pointsAwarded: 5,
+      isJoker: false,
       verdict: 'correct',
       answer: 'Paris',
     },

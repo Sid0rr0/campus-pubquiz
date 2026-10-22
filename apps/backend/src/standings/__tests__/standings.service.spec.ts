@@ -1,7 +1,9 @@
 import { GameSession } from '@/db/entities/game-session.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Answer } from '@/db/entities/answer.entity';
 import { Question } from '@/db/entities/question.entity';
+import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
 import { Team } from '@/db/entities/team.entity';
 import { Round } from '@/db/entities/round.entity';
 import {
@@ -80,7 +82,7 @@ describe('StandingsService (Postgres integration)', () => {
         bonusPoints: 0,
         positiveBonusPoints: 0,
         negativeBonusPoints: 0,
-        roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
+        roundPoints: [{ roundTitle: 'Round 1', points: 0, isJoker: false }],
       },
     ]);
   });
@@ -100,7 +102,7 @@ describe('StandingsService (Postgres integration)', () => {
         bonusPoints: 0,
         rank: 1,
         rankTo: 1,
-        roundPoints: [{ roundTitle: 'Round 1', points: 3 }],
+        roundPoints: [{ roundTitle: 'Round 1', points: 3, isJoker: false }],
       }),
       expect.objectContaining({
         teamName: 'Bonus Team',
@@ -109,7 +111,7 @@ describe('StandingsService (Postgres integration)', () => {
         positiveBonusPoints: 2,
         rank: 2,
         rankTo: 2,
-        roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
+        roundPoints: [{ roundTitle: 'Round 1', points: 0, isJoker: false }],
       }),
     ]);
   });
@@ -203,8 +205,8 @@ describe('StandingsService (Postgres integration)', () => {
     const { leaderboard } = await standings.forSession(state.session.id);
 
     expect(leaderboard[0].roundPoints).toEqual([
-      { roundTitle: 'Round 1', points: 2 },
-      { roundTitle: 'Round 2', points: 3 },
+      { roundTitle: 'Round 1', points: 2, isJoker: false },
+      { roundTitle: 'Round 2', points: 3, isJoker: false },
     ]);
     expect(leaderboard[0].totalPoints).toBe(5);
   });
@@ -226,9 +228,138 @@ describe('StandingsService (Postgres integration)', () => {
         bonusPoints: 3,
         positiveBonusPoints: 5,
         negativeBonusPoints: -2,
-        roundPoints: [{ roundTitle: 'Round 1', points: 5 }],
+        roundPoints: [{ roundTitle: 'Round 1', points: 5, isJoker: false }],
       }),
     );
+  });
+
+  describe('with a joker', () => {
+    async function setJoker(
+      team: Awaited<ReturnType<typeof insertTeam>>,
+      round: Round,
+    ) {
+      const existing = await state.em.findOne(SessionTeamJoker, {
+        gameSession: state.session,
+        team,
+      });
+      if (existing) {
+        existing.round = round;
+      } else {
+        state.em.create(SessionTeamJoker, {
+          gameSession: state.session,
+          team,
+          round,
+          source: 'chosen',
+        });
+      }
+      await state.em.flush();
+    }
+
+    async function secondRound() {
+      const round2 = state.em.create(Round, {
+        quiz: state.round.quiz,
+        title: 'Round 2',
+        orderIndex: 1,
+      });
+      const question2 = await addQuestion(0, round2);
+      return { round2, question2 };
+    }
+
+    it('doubles the joker round in round points and the total, never the bonus', async () => {
+      const { question2 } = await secondRound();
+      const team = await insertTeam('Team A', 'token-a');
+      await scoreAnswer(state.question, team.id, 2);
+      await scoreAnswer(question2, team.id, 3);
+      await awardBonus(team, 4);
+      await setJoker(team, state.round);
+
+      const { leaderboard } = await standings.forSession(state.session.id);
+
+      expect(leaderboard[0].roundPoints).toEqual([
+        { roundTitle: 'Round 1', points: 4, isJoker: true },
+        { roundTitle: 'Round 2', points: 3, isJoker: false },
+      ]);
+      expect(leaderboard[0].totalPoints).toBe(4 + 3 + 4);
+      expect(leaderboard[0].bonusPoints).toBe(4);
+    });
+
+    it('doubles partial points after grading and leaves stored answer points alone', async () => {
+      const team = await insertTeam('Team A', 'token-a');
+      await scoreAnswer(state.question, team.id, 0.5);
+      await setJoker(team, state.round);
+
+      const { leaderboard } = await standings.forSession(state.session.id);
+
+      expect(leaderboard[0].totalPoints).toBe(1);
+      const stored = await state.em.find(Answer, { team: team.id });
+      expect(stored.map((a) => Number(a.pointsAwarded))).toEqual([0.5]);
+    });
+
+    it('moves the totals when the joker changes and when an answer is regraded', async () => {
+      const { round2, question2 } = await secondRound();
+      const team = await insertTeam('Team A', 'token-a');
+      await scoreAnswer(state.question, team.id, 2);
+      await scoreAnswer(question2, team.id, 3);
+      await setJoker(team, state.round);
+      expect(
+        (await standings.forSession(state.session.id)).leaderboard[0]
+          .totalPoints,
+      ).toBe(7);
+
+      await setJoker(team, round2);
+      expect(
+        (await standings.forSession(state.session.id)).leaderboard[0]
+          .totalPoints,
+      ).toBe(8);
+
+      await scoreAnswer(question2, team.id, 1);
+      expect(
+        (await standings.forSession(state.session.id)).leaderboard[0]
+          .totalPoints,
+      ).toBe(4);
+    });
+
+    it('lets a joker turn a loss into a win and decides the winner on the doubled totals', async () => {
+      const { question2 } = await secondRound();
+      const gambler = await insertTeam('Gambler', 'token-g');
+      const steady = await insertTeam('Steady', 'token-s');
+      await scoreAnswer(state.question, gambler.id, 2);
+      await scoreAnswer(question2, gambler.id, 0);
+      await scoreAnswer(state.question, steady.id, 3);
+      await setJoker(gambler, state.round);
+
+      const { winner } = await standings.forSession(state.session.id);
+
+      expect(winner?.teamName).toBe('Gambler');
+    });
+
+    it('feeds the winning total the sessions list sorts by', async () => {
+      const team = await insertTeam('Team A', 'token-a');
+      await scoreAnswer(state.question, team.id, 2);
+      await setJoker(team, state.round);
+
+      const rows = (await standings
+        .sessionTotalsQuery()
+        .where('pc.game_session_id', state.session.id)) as {
+        winner_total: string | number;
+      }[];
+
+      expect(Number(rows[0].winner_total)).toBe(4);
+    });
+
+    it("doubles a departed team's joker round too", async () => {
+      const team = await insertTeam('Team A', 'token-a');
+      await scoreAnswer(state.question, team.id, 2);
+      await setJoker(team, state.round);
+      await state.em.nativeDelete(GameSessionTeam, {
+        gameSession: state.session.id,
+        team: team.id,
+      });
+
+      const { departed } = await standings.forSession(state.session.id);
+
+      expect(departed[0].totalPoints).toBe(4);
+    });
   });
 
   async function removeFromRoster(
@@ -257,7 +388,7 @@ describe('StandingsService (Postgres integration)', () => {
       expect.objectContaining({
         teamId: kicked.id,
         totalPoints: 9,
-        roundPoints: [{ roundTitle: 'Round 1', points: 9 }],
+        roundPoints: [{ roundTitle: 'Round 1', points: 9, isJoker: false }],
       }),
     ]);
     expect(standings_.departed[0]).not.toHaveProperty('rank');
