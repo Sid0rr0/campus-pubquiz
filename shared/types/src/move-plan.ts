@@ -1,3 +1,4 @@
+import { describeMediaControls } from './control-availability';
 import { getPlayingMediaUrl } from './display-screen';
 import { getNextGameState } from './game-state';
 import {
@@ -6,7 +7,6 @@ import {
   type GameProgress,
 } from './game-state-types';
 import { getLeaderboardRevealStepCount } from './leaderboard-tiebreak';
-import { isPausableMediaUrl, isVideoUrl } from './media';
 import type { AdvanceSlotStep, PreviousState } from './room-views';
 import { describeSessionDisplayScreen } from './session-display-screen';
 import { getGameContext, type SessionState } from './session-state';
@@ -93,12 +93,10 @@ function isMediaActionAvailable(
   action: GameAction,
 ): boolean {
   if (action !== 'REPLAY_MEDIA' && action !== 'TOGGLE_MEDIA_PAUSE') return true;
-  const playingMediaUrl = getPlayingMediaUrl(
-    describeSessionDisplayScreen(session),
+  const { canReplayMedia, canPauseMedia } = describeMediaControls(
+    getPlayingMediaUrl(describeSessionDisplayScreen(session)),
   );
-  return action === 'REPLAY_MEDIA'
-    ? isVideoUrl(playingMediaUrl)
-    : isPausableMediaUrl(playingMediaUrl);
+  return action === 'REPLAY_MEDIA' ? canReplayMedia : canPauseMedia;
 }
 
 function planTransition(session: SessionState, action: GameAction): MoveStep {

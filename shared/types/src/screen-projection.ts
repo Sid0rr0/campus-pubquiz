@@ -6,13 +6,16 @@ import {
 import { getBlockSeededQuestions } from './block-questions';
 import { getFeedbackField } from './feedback-rounds';
 import { describeControlAvailability } from './control-availability';
-import { describeDisplayScreen, type DisplayScreen } from './display-screen';
+import type { DisplayScreen } from './display-screen';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import { FULLY_REVEALED_STEP } from './closest-guess-reveal';
-import { trimOnAirQuestion } from './session-display-screen';
+import {
+  assembleDisplayScreen,
+  trimOnAirQuestion,
+} from './session-display-screen';
 import { revealStepOf } from './stepped-reveal';
 import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
@@ -115,16 +118,7 @@ export function projectScreen(
   // The Display screen /display is sent. The admin view reads the media the big
   // screen is playing from it, so the two can't disagree.
   const buildDisplayScreen = (): DisplayScreen =>
-    describeDisplayScreen({
-      session,
-      onAir: screen,
-      snapshot,
-      revealQuestions: trimOnAirQuestion(
-        snapshot.revealQuestions,
-        snapshot.progress,
-        closestGuessRevealStep,
-      ),
-    });
+    assembleDisplayScreen(session, snapshot, screen, closestGuessRevealStep);
 
   switch (audience) {
     case SOCKET_ROOMS.DISPLAY: {

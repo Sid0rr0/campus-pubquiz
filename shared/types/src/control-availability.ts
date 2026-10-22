@@ -32,6 +32,16 @@ export interface ControlAvailabilityInput {
   displayScreen: DisplayScreen;
 }
 
+/** The media buttons' availability for the media link the big screen is playing. The Move plan refuses the same actions from this, so button and refusal can't disagree. */
+export function describeMediaControls(
+  playingMediaUrl: string | undefined,
+): Pick<ControlAvailability, 'canReplayMedia' | 'canPauseMedia'> {
+  return {
+    canReplayMedia: isVideoUrl(playingMediaUrl),
+    canPauseMedia: isPausableMediaUrl(playingMediaUrl),
+  };
+}
+
 export function describeControlAvailability({
   progress,
   leaderboard,
@@ -44,8 +54,7 @@ export function describeControlAvailability({
     canEndQuiz: status !== 'ended',
     canCloseSession: status === 'ended',
     canToggleJoinOverlay: isJoinOverlayAllowedStatus(status),
-    canReplayMedia: isVideoUrl(playingMediaUrl),
-    canPauseMedia: isPausableMediaUrl(playingMediaUrl),
+    ...describeMediaControls(playingMediaUrl),
     showAnswerStatus: isQuestionOnAirStatus(status),
     tiedTeamNames: getTiedForFirst(leaderboard).map((entry) => entry.teamName),
   };

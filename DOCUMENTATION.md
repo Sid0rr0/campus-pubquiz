@@ -212,8 +212,8 @@ action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
 alone. `/control` and `/remote` show Pause/Resume only while media is playing on
 the big screen: an open question whose media is a video (YouTube or file) or
 audio, or a reveal showing answer media of that kind, else the question's own
-(the media the reveal shows). A closest-guess reveal counts once its walk has
-reached the answer step. The admin view's `controlAvailability`
+(the media the reveal shows). A closest-guess reveal plays nothing before the
+answer step, so neither button is offered until the walk reaches it. The admin view's `controlAvailability`
 (`canReplayMedia`, `canPauseMedia`, plus start/end/close, the join overlay
 toggle, answer status and the teams tied for first) is read from the Display
 screen on air, so the buttons and `/display` can't disagree. On `/remote`, Space pauses/resumes while the
