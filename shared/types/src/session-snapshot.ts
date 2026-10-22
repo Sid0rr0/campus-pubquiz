@@ -13,6 +13,8 @@ import { isAnsweringStatus } from './game-state-groups';
 import { getQuizStructureSummary } from './game-state-structure';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import { hasMeaningfulCorrectRate } from './question-correct-rate';
+import { questionOutcome } from './question-outcome';
 import type { SeededQuestion } from './question-views';
 import type {
   AdminQuestionContext,
@@ -64,21 +66,28 @@ function resolveCurrentPhaseTimerView(session: SessionState): {
 
 /**
  * The teams-correct count for the question on air in 'reveal'. Null outside a
- * reveal and for a closest_guess question (its reveal names the closest teams).
- * Teams that gave no answer count in the total.
+ * reveal and for a question type with no correct rate (a closest_guess reveal
+ * names the closest teams). Teams that gave no answer count in the total.
  */
 function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
   if (session.progress.status !== 'reveal') return null;
   const question =
     getBlockSeededQuestions(session)[session.progress.revealIndex];
-  if (!question || question.revealKind === 'closest_guess') return null;
-  const tally = session.verdictTallies[question.id];
+  if (!question || !hasMeaningfulCorrectRate(question.type)) return null;
+  // The leaderboard lists every roster team (re-read with each write and on
+  // restore); `session.teams` is only filled as teams join.
+  const teamCount = session.leaderboard.length;
+  const { correctCount, partialCount } = questionOutcome(
+    question,
+    session.funFactData.answers.filter(
+      (answer) => answer.questionId === question.id,
+    ),
+    teamCount,
+  );
   return {
-    correct: tally?.correct ?? 0,
-    partial: tally?.partial ?? 0,
-    // The leaderboard lists every roster team (re-read with each write and on
-    // restore); `session.teams` is only filled as teams join.
-    teamCount: session.leaderboard.length,
+    correct: correctCount,
+    partial: partialCount,
+    teamCount,
   };
 }
 
