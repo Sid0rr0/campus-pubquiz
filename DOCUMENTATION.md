@@ -1541,6 +1541,68 @@ The session detail also carries a `feedback` section, shown on the page as
 - The team is never selected: no team id or name reaches the response or the page.
   Comment and topic order uses when the team last sent its feedback.
 
+### Night brief
+
+One ended session written up as a single Markdown text for whoever writes the
+next quiz (see `GLOSSARY.md`). The app makes no AI calls and adds no preamble:
+the brief is data only.
+
+- **Endpoint:** `GET /stats/sessions/:id/brief`, same guards as the other stats
+  reads (admin and moderator). Returns `text/markdown`; a running or unknown
+  session gets the session detail's 404, a non-numeric id a 400. It is computed
+  per request and never cached. An optional `timeZone` query (an IANA zone, a
+  400 when unknown; UTC when absent) sets the zone the date is written in; the
+  page sends the browser's, so the date matches the one the page shows.
+- **Built by one pure calc** (`apps/backend/src/stats/session-brief.calc.ts`)
+  from the same rows and the same Question outcome as the session detail, with
+  the same team count (departed teams included), so the figures match the page.
+- **Contents:** the session name, date and team count; each round with its
+  number, title, category, author (line absent when none), round note and a
+  kahoot flag; each question with its number, type, prompt, correct answer,
+  points, notes (without the `{…}` settings group; blank notes left out), a
+  media flag, and answered, correct and partial counts with the correct rate
+  (none for `closest_guess`).
+- **Session level:** player totals ("7 (2 of 3 teams reported)") and a score
+  spread line (top, median and bottom share of max points, across every team
+  that took part). **Standings** list one line per team with placing ("1st",
+  "Joint 2nd", or "left" for a departed team), points (bonus awards counted,
+  not itemised), share of max points and player count, in the Session result's
+  order and ties. **Highlights** name the hardest and easiest question by round
+  and question number with its prompt, by the stats page's rules
+  (`closest_guess` never counts). A kahoot round is marked with a plain
+  "Kahoot round" line.
+  Each round carries its star rating (average and count, or "no ratings") and
+  its correct rate (absent when the round has no question with a rate).
+  **Feedback** lists topic suggestions grouped by `groupTopics` with counts and
+  the comments as written, newest first, blanks skipped; with `collectFeedback`
+  off it is one line, "Feedback was off."
+- **What went wrong on a question**, by type (answers are worded by
+  `formatAnswer` and passed through as written):
+  - `free_text` and `number`: a "Wrong answers" line with the top 3 incorrect
+    answers and counts, grouped like topics (`groupTopics`: trim, collapse
+    whitespace, ignore case, most common spelling, ties alphabetical). Partial
+    answers are not wrong answers.
+  - `multiple_choice`: an "Options" line with every option in stored order, its
+    pick count, and the correct one marked `[correct]`.
+  - `closest_guess`: a "Guesses" line with the lowest, median and highest guess.
+  - `sort` and `match`: nothing added.
+  - **Ungraded answers** (only left by a force-end or a live answer-key fix) of
+    `free_text` and `number` questions are grouped the same way on their own
+    "Ungraded answers" line, never among the wrong answers.
+- **Not played:** a question with no stored answers that the session never
+  opened reads `(not played)` instead of counts; one that was opened but got no
+  answers reads "Answered 0". "Opened" comes from the session row's
+  `opened_question_ids`; a session saved before that was tracked (null) falls
+  back to "not played" for every question after the last one with an answer.
+- **Media** shows its kind (`image`, `audio` or `video`) for the question's
+  media and, separately, its answer media. The URL is never written.
+- **No team identity:** no team name, code or id appears in the text.
+- **On `/stats/:id`** the header's "Night brief" control has **Copy** (writes the
+  text to the clipboard and shows a "Copied" toast, or an error toast) and
+  **Download** (saves `night-brief-<session-name-slug>-<YYYY-MM-DD>.md`, the
+  date being the browser-local day the page shows). The
+  `/stats` list does not get it.
+
 ### Feedback trends
 
 `/stats/feedback` (linked from `/stats`) reads feedback across many ended sessions

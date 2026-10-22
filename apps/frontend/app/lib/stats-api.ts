@@ -71,6 +71,22 @@ export async function fetchSessionDetail(
   return (await response.json()) as SessionDetailStats;
 }
 
+/** The Night brief of an ended session: Markdown text. */
+export async function fetchSessionBrief(
+  gameSessionId: number,
+  timeZone: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  const response = await fetch(
+    `${getBackendUrl()}/stats/sessions/${gameSessionId}/brief?timeZone=${encodeURIComponent(timeZone)}`,
+    { credentials: 'include', signal },
+  );
+  if (!response.ok) {
+    return throwApiError(response, 'Could not load the Night brief');
+  }
+  return response.text();
+}
+
 /**
  * Both bounds are `YYYY-MM-DD` dates (UTC); an empty string means no bound.
  * A `leagueId` means that league's member sessions and wins over the bounds.

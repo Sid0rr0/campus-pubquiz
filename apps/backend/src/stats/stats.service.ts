@@ -3,6 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import type { Knex } from '@mikro-orm/postgresql';
 import { z } from 'zod';
 import {
+  classifyMediaUrl,
   MIN_RATINGS_FOR_RANKING,
   TREND_ROUNDS_LIMIT,
   type BonusCategory,
@@ -19,7 +20,18 @@ import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { StandingsService } from '@/standings/standings.service';
 import { summarisePlayerCounts } from '@/stats/player-count.calc';
-import { computeSessionDetail } from '@/stats/session-detail.calc';
+import {
+  briefMediaKind,
+  computeSessionBrief,
+  type SessionBriefInput,
+  type SessionBriefQuestionInputRow,
+  type SessionBriefRoundInputRow,
+} from '@/stats/session-brief.calc';
+import {
+  computeSessionDetail,
+  type SessionDetailInput,
+} from '@/stats/session-detail.calc';
+import { readQuestionPayload } from '@/db/question-payload';
 import { groupTopics } from '@/stats/session-feedback.calc';
 import type {
   FeedbackTrendsQuery,
@@ -166,6 +178,100 @@ export class StatsService {
   }
 
   async getSessionDetail(gameSessionId: number): Promise<SessionDetailStats> {
+    return computeSessionDetail(await this.loadSessionRows(gameSessionId));
+  }
+
+  /**
+   * The Night brief of an ended session: the same rows the session detail is
+   * computed from, plus the round and question columns only the brief reads.
+   * No team column beyond what Standings and the answers already carry is read,
+   * and the calc never writes any of them.
+   */
+  async getSessionBrief(
+    gameSessionId: number,
+    timeZone?: string,
+  ): Promise<string> {
+    const knex = this.gameSessions.getKnex();
+    const rows = await this.loadSessionRows(gameSessionId);
+
+    const roundExtras = (await knex('rounds as r')
+      .join('game_sessions as gs', 'gs.quiz_id', 'r.quiz_id')
+      .where('gs.id', gameSessionId)
+      .select(
+        'r.id as roundId',
+        'r.author',
+        'r.note',
+        'r.kahoot_mode as isKahoot',
+      )) as Pick<
+      SessionBriefRoundInputRow,
+      'roundId' | 'author' | 'note' | 'isKahoot'
+    >[];
+    const roundExtrasById = new Map(roundExtras.map((r) => [r.roundId, r]));
+
+    const questionExtras = (await knex('questions as q')
+      .join('rounds as r', 'r.id', 'q.round_id')
+      .join('game_sessions as gs', 'gs.quiz_id', 'r.quiz_id')
+      .where('gs.id', gameSessionId)
+      .select('q.id as questionId', 'q.type', 'q.notes', 'q.payload')) as (Pick<
+      SessionBriefQuestionInputRow,
+      'questionId' | 'type' | 'notes'
+    > & { payload: unknown })[];
+    const questionExtrasById = new Map(
+      questionExtras.map((q) => {
+        const payload = readQuestionPayload({
+          id: q.questionId,
+          type: q.type,
+          payload: q.payload,
+        });
+        return [
+          q.questionId,
+          {
+            notes: q.notes,
+            options: payload.options,
+            media: {
+              question: briefMediaKind(classifyMediaUrl(payload.mediaUrl)),
+              answer: briefMediaKind(classifyMediaUrl(payload.answerMediaUrl)),
+            },
+          },
+        ];
+      }),
+    );
+
+    // Every question the session opened; null for a session saved before that was tracked.
+    const { openedQuestionIds } = (await knex('game_sessions')
+      .where('id', gameSessionId)
+      .select('opened_question_ids as openedQuestionIds')
+      .first()) as Pick<SessionBriefInput, 'openedQuestionIds'>;
+
+    return computeSessionBrief({
+      ...rows,
+      rounds: rows.rounds.map((round) => {
+        const extras = roundExtrasById.get(round.roundId);
+        return {
+          ...round,
+          author: extras?.author ?? null,
+          note: extras?.note ?? null,
+          isKahoot: extras?.isKahoot ?? false,
+        };
+      }),
+      questions: rows.questions.map((question) => {
+        const extras = questionExtrasById.get(question.questionId);
+        return {
+          ...question,
+          notes: extras?.notes ?? null,
+          options: extras?.options,
+          media: extras?.media ?? {},
+        };
+      }),
+      openedQuestionIds,
+      timeZone,
+    });
+  }
+
+  /** The stored rows of one ended session, as both the session detail and the Night brief read them. */
+  private async loadSessionRows(
+    gameSessionId: number,
+  ): Promise<SessionDetailInput> {
     const knex = this.gameSessions.getKnex();
 
     const header = await this.endedSessions.endedSession(gameSessionId);
@@ -222,7 +328,7 @@ export class StatsService {
       .where('game_session_id', gameSessionId)
       .select('team_id as teamId', 'category', 'points')) as SessionBonusRow[];
 
-    return computeSessionDetail({
+    return {
       session: {
         gameSessionId: header.gameSessionId,
         joinCode: header.joinCode,
@@ -257,7 +363,7 @@ export class StatsService {
         category: b.category,
         points: Number(b.points),
       })),
-    });
+    };
   }
 
   /**
