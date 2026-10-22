@@ -30,6 +30,7 @@ describe('SOCKET_EVENTS', () => {
       SESSION_CLOSED: 'game:session_closed',
       TEAM_KICKED: 'game:team_kicked',
       TEAM_PLAYER_COUNT_SYNCED: 'game:team_player_count_synced',
+      TEAM_JOKER_SYNCED: 'game:team_joker_synced',
       ADMIN_ACTION: 'game:admin_action',
       SUBMIT_ANSWER: 'game:submit_answer',
       JOIN_PLAYERS: 'game:join_players',
@@ -46,6 +47,7 @@ describe('SOCKET_EVENTS', () => {
       SEND_FEEDBACK: 'game:send_feedback',
       SET_PLAYER_COUNT: 'game:set_player_count',
       SET_TEAM_PLAYER_COUNT: 'game:set_team_player_count',
+      PICK_JOKER: 'game:pick_joker',
     });
   });
 });
@@ -284,6 +286,7 @@ describe('SessionSettings defaults', () => {
       autoplayMedia: true,
       playLockCountdownSound: true,
       showRoundOverview: false,
+      jokersEnabled: false,
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       maxPlayersPerTeam: 6,
       extraPlayerPenaltyPoints: 2,

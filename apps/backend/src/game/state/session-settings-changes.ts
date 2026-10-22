@@ -1,5 +1,11 @@
-import type { SessionSettings, SessionState } from '@campus-pubquiz/types';
+import {
+  hasJokersWithoutOverview,
+  JOKERS_NEED_OVERVIEW_MESSAGE,
+  type SessionSettings,
+  type SessionState,
+} from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
+import { SessionSettingsInvalidError } from '@/game/state/errors/session-settings-invalid.error';
 import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 import type { SessionChange } from '@/game/state/session-write';
 import {
@@ -96,6 +102,10 @@ export class SessionSettingsChanges {
       );
     }
     const settings = { ...session.seededGame.settings, ...partial };
+    // A patch naming only one of the pair is checked against the other as stored.
+    if (hasJokersWithoutOverview(settings)) {
+      throw new SessionSettingsInvalidError(JOKERS_NEED_OVERVIEW_MESSAGE);
+    }
     await this.seedService.updateSettings(
       session.seededGame.gameSessionId,
       settings,

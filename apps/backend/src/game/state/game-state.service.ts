@@ -1,4 +1,10 @@
-import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  Optional,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   type ActiveSessionSummary,
@@ -13,6 +19,7 @@ import {
   type GameAction,
   type JoinPlayersPayload,
   LOBBY_PROGRESS,
+  type PickJokerPayload,
   type PresenterContextPayload,
   projectScreen,
   type RateRoundPayload,
@@ -38,6 +45,12 @@ import { SessionWrite } from '@/game/state/session-write';
 import { AnswersChanges } from '@/game/state/answers-changes';
 import { BonusAwardsChanges } from '@/game/state/bonus-awards-changes';
 import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
+import {
+  JOKER_RANDOM,
+  JokerChanges,
+  type RandomSource,
+} from '@/game/state/joker-changes';
+import { JokerService } from '@/joker/joker.service';
 import { TeamRosterChanges } from '@/game/state/team-roster-changes';
 import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
 import { TeamPlayerCountChanges } from '@/game/state/team-player-count-changes';
@@ -62,6 +75,7 @@ import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 
 export { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
+export { SessionSettingsInvalidError } from '@/game/state/errors/session-settings-invalid.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 
 /** The one place a held session becomes its picker summary. */
@@ -92,6 +106,7 @@ export class GameStateService implements OnModuleInit {
   private readonly playerCountChanges: TeamPlayerCountChanges;
   private readonly showdownsChanges: ShowdownsChanges;
   private readonly leagueChanges: LeagueChanges;
+  private readonly jokerChanges: JokerChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -108,7 +123,14 @@ export class GameStateService implements OnModuleInit {
     private readonly grading: BlockGradingService,
     private readonly leagueTableService: LeagueTableService,
     private readonly leagueService: LeagueService,
+    private readonly jokerService: JokerService,
+    @Optional() @Inject(JOKER_RANDOM) random?: RandomSource,
   ) {
+    this.jokerChanges = new JokerChanges(
+      this.jokerService,
+      this.teamService,
+      random ?? Math.random,
+    );
     this.settingsChanges = new SessionSettingsChanges(this.seedService);
     this.answersChanges = new AnswersChanges(this.answerService, this.grading);
     this.bonusChanges = new BonusAwardsChanges(this.bonusService);
@@ -118,6 +140,7 @@ export class GameStateService implements OnModuleInit {
       this.bonusService,
       this.feedbackService,
       this.playerCountService,
+      this.jokerChanges,
     );
     this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
     this.playerCountChanges = new TeamPlayerCountChanges(
@@ -136,6 +159,7 @@ export class GameStateService implements OnModuleInit {
       this.sessionWrite.liveResultsRead,
       this.showdownService,
       (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
+      this.jokerChanges,
     );
   }
 
@@ -340,6 +364,17 @@ export class GameStateService implements OnModuleInit {
       );
     }
     return seededGame.joinCode;
+  }
+
+  /** A team picks its joker round from `socketId` during the joker pick; refused otherwise. Only the team's own phones and the admin room are told. */
+  jokerPicked(
+    joinCode: string,
+    payload: PickJokerPayload,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.jokerChanges.pick(session, payload, socketId),
+    );
   }
 
   /** A team rates a round of the break card. Changes no scores and pushes nothing. */

@@ -38,6 +38,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   roundRatings: [],
   feedback: { comment: '', topics: [] },
   playerCount: null,
+  joker: null,
 };
 
 const SEAT_TAKEN = `"The Quizzards" ${SEAT_TAKEN_REFUSAL_MARKER} — ask the quiz master to remove it, then try again.`;

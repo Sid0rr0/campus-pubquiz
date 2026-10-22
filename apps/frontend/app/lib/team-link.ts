@@ -17,6 +17,7 @@ import {
   type TeamAnswerView,
   type TeamBonusAwardView,
   type TeamFeedbackView,
+  type TeamJoker,
   type Verdict,
 } from '@campus-pubquiz/types';
 
@@ -157,6 +158,8 @@ export interface TeamLinkState {
   myFeedback: TeamFeedbackView;
   /** How many players the server holds for this team, or null until one is reported. */
   myPlayerCount: number | null;
+  /** The team's own joker as the server last said it (the join, a sync, or an acknowledged pick), or null while it has none. */
+  myJoker: TeamJoker | null;
   /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
   roundRatingsEpoch: number;
   /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
@@ -194,6 +197,10 @@ export type TeamLinkInput =
   | { type: 'playerCountSynced'; playerCount: number }
   // The server acknowledged a count this phone sent.
   | { type: 'playerCountSaved'; playerCount: number }
+  // The server told the team's phones its joker changed.
+  | { type: 'jokerSynced'; joker: TeamJoker | null }
+  // The server acknowledged a joker pick this phone sent.
+  | { type: 'jokerSaved'; joker: TeamJoker }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
@@ -288,6 +295,7 @@ const EMPTY_TEAM_DATA = {
   myRoundRatings: {},
   myFeedback: EMPTY_FEEDBACK,
   myPlayerCount: null,
+  myJoker: null,
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
 
@@ -566,6 +574,7 @@ function acceptJoin(
     myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
     myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
     myPlayerCount: payload.playerCount ?? null,
+    myJoker: payload.joker ?? null,
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -740,6 +749,9 @@ export function teamLink(
     case 'playerCountSynced':
     case 'playerCountSaved':
       return unchanged({ ...state, myPlayerCount: input.playerCount });
+    case 'jokerSynced':
+    case 'jokerSaved':
+      return unchanged({ ...state, myJoker: input.joker });
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
       if (input.connectionId !== state.joinSentFor) return unchanged(state);

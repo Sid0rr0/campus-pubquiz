@@ -13,6 +13,7 @@ import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
 import { SessionWrite } from '@/game/state/session-write';
+import { JokerService } from '@/joker/joker.service';
 import { LeagueTableService } from '@/league/league-table.service';
 import { LeagueService } from '@/league/league.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
@@ -33,6 +34,7 @@ import { TeamService } from '@/team/team.service';
 @Module({
   imports: [AuthModule],
   providers: [
+    JokerService,
     SeedService,
     TeamService,
     TeamHistoryService,

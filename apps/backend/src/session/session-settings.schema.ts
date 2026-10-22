@@ -2,6 +2,8 @@ import { z } from 'zod';
 import {
   BONUS_CATEGORIES,
   DEFAULT_SESSION_SETTINGS,
+  hasJokersWithoutOverview,
+  JOKERS_NEED_OVERVIEW_MESSAGE,
   type BonusCategory,
   type SessionSettings,
 } from '@campus-pubquiz/types';
@@ -29,6 +31,7 @@ export const sessionSettingsPartialSchema = z
     autoplayMedia: z.boolean(),
     playLockCountdownSound: z.boolean(),
     showRoundOverview: z.boolean(),
+    jokersEnabled: z.boolean(),
     rules: z
       .array(z.string().trim().min(1).max(RULE_MAX_LENGTH))
       .max(MAX_RULES),
@@ -39,7 +42,12 @@ export const sessionSettingsPartialSchema = z
     collectFeedback: z.boolean(),
     funFactsEnabled: z.boolean(),
   })
-  .partial();
+  .partial()
+  // Only catches a patch naming both; a patch naming one is checked against the
+  // other, as stored, where the settings are merged (see SessionSettingsChanges).
+  .refine((settings) => !hasJokersWithoutOverview(settings), {
+    message: JOKERS_NEED_OVERVIEW_MESSAGE,
+  });
 
 export type SessionSettingsPartial = z.infer<
   typeof sessionSettingsPartialSchema

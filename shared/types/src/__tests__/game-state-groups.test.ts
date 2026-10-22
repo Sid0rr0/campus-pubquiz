@@ -30,6 +30,7 @@ const MEMBERSHIP: Record<GameStatus, Membership> = {
   lobby: m(),
   rules: m(),
   round_overview: m(),
+  joker_pick: m(),
   round_intro: m({ answering: true, blockStarted: true }),
   question_open: m({
     answering: true,
@@ -94,7 +95,7 @@ describe('game status groups', () => {
     for (const [, set] of GROUPS) {
       for (const status of set) expect(everyStatus.has(status)).toBe(true);
     }
-    expect(statuses).toHaveLength(12);
+    expect(statuses).toHaveLength(13);
   });
 
   it.each(GROUPS)(

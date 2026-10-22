@@ -14,6 +14,7 @@ import {
   joinPlayersPayloadSchema,
   kickTeamPayloadSchema,
   leaveSessionPayloadSchema,
+  pickJokerPayloadSchema,
   rateRoundPayloadSchema,
   sendFeedbackPayloadSchema,
   setPlayerCountPayloadSchema,
@@ -111,6 +112,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.ADMIN,
     rejection: 'Only admin clients may set a team’s player count',
     logFields: ['teamId', 'playerCount'],
+  }),
+  pickJoker: declareSocketEvent({
+    event: SOCKET_EVENTS.PICK_JOKER,
+    schema: pickJokerPayloadSchema,
+    allowedRoom: SOCKET_ROOMS.PLAYERS,
+    rejection: 'Only player clients may pick a joker',
+    logFields: ['roundId'],
   }),
   gradeAnswer: declareSocketEvent({
     event: SOCKET_EVENTS.GRADE_ANSWER,

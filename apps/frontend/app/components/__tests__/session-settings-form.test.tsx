@@ -222,6 +222,55 @@ describe('SessionSettingsForm', () => {
     });
   });
 
+  it('turns the round overview on with Jokers, and starts with Jokers off', async () => {
+    const onChange = vi.fn();
+    render(
+      <SessionSettingsForm
+        value={{ ...DEFAULT_SESSION_SETTINGS, showRoundOverview: false }}
+        onChange={onChange}
+      />,
+    );
+    const toggle = screen.getByLabelText(/^jokers$/i);
+    expect(toggle).not.toBeChecked();
+
+    await userEvent.click(toggle);
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      showRoundOverview: true,
+      jokersEnabled: true,
+    });
+  });
+
+  it('keeps the round overview switch on and disabled while Jokers is on', () => {
+    render(
+      <SessionSettingsForm
+        value={{
+          ...DEFAULT_SESSION_SETTINGS,
+          showRoundOverview: true,
+          jokersEnabled: true,
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const overview = screen.getByLabelText(/show round overview/i);
+    expect(overview).toBeChecked();
+    expect(overview).toBeDisabled();
+    expect(screen.getByLabelText(/^jokers$/i)).toBeChecked();
+  });
+
+  it('lets the round overview switch be used again once Jokers is off', () => {
+    render(
+      <SessionSettingsForm
+        value={{ ...DEFAULT_SESSION_SETTINGS, showRoundOverview: true }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText(/show round overview/i)).toBeEnabled();
+  });
+
   it('toggles collectFeedback off, and it starts on', async () => {
     const onChange = vi.fn();
     render(

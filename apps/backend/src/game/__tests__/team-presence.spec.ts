@@ -43,6 +43,7 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
         isConnected: true,
         playerCount: null,
         isOverPlayerCap: false,
+        joker: null,
       },
     ]);
   });
@@ -70,6 +71,7 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
         isConnected: false,
         playerCount: null,
         isOverPlayerCap: false,
+        joker: null,
       },
     ]);
   });
@@ -103,6 +105,7 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
         isConnected: false,
         playerCount: null,
         isOverPlayerCap: false,
+        joker: null,
       },
       {
         teamId: teamB.teamId,
@@ -110,6 +113,7 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
         isConnected: true,
         playerCount: null,
         isOverPlayerCap: false,
+        joker: null,
       },
     ]);
   });

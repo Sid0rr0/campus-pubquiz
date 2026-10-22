@@ -32,6 +32,7 @@ describe('GameStateService — core snapshot', () => {
       new BlockGradingService(game.answerService),
       game.leagueTableService,
       game.leagueService,
+      game.jokerService,
     );
 
     await expect(
@@ -73,6 +74,7 @@ describe('GameStateService — core snapshot', () => {
         isConnected: true,
         playerCount: null,
         isOverPlayerCap: false,
+        joker: null,
       },
     ]);
 
@@ -85,6 +87,7 @@ describe('GameStateService — core snapshot', () => {
         isConnected: false,
         playerCount: null,
         isOverPlayerCap: false,
+        joker: null,
       },
     ]);
   });

@@ -3,6 +3,7 @@ import {
   type ServerToClientProtocol,
   type SessionState,
   SOCKET_EVENTS,
+  type TeamJoker,
 } from '@campus-pubquiz/types';
 
 /** One server-to-client event paired with its protocol payload, so a mismatched pair doesn't compile. An event that carries no payload (`TEAM_KICKED`) takes `undefined`. */
@@ -32,17 +33,24 @@ export interface PlayerCountSync extends TeamSync {
   playerCount: number;
 }
 
-/** The session's auto-lock deadlines (epoch-ms, or null when none is due) after a write that moved either. */
+/** A connected team whose phone needs its joker (null: none), with the socket it is on. */
+export interface JokerSync extends TeamSync {
+  joker: TeamJoker | null;
+}
+
+/** The session's phase timer deadlines (epoch-ms, or null when none is due) after a write that moved any of them. */
 export interface DeadlineChange {
   questionLockAt: number | null;
   kahootQuestionEndsAt: number | null;
+  jokerPickEndsAt: number | null;
 }
 
-/** The auto-lock deadlines of a session, the one place the pair is built. */
+/** The phase timer deadlines of a session, the one place the set is built. */
 export function deadlinesOf(session: DeadlineChange): DeadlineChange {
   return {
     questionLockAt: session.questionLockAt,
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
+    jokerPickEndsAt: session.jokerPickEndsAt,
   };
 }
 
@@ -64,6 +72,8 @@ export interface SessionOutcome {
   teamSyncs: readonly TeamSync[];
   /** Connected teams whose own player count changed, each told its new number (never sent room-wide). */
   playerCountSyncs: readonly PlayerCountSync[];
+  /** Connected teams whose own joker changed (a pick, a draw when the pick closed), each told the joker it now holds (never sent room-wide). */
+  jokerSyncs: readonly JokerSync[];
   /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
   bonusSyncs: readonly TeamSync[];
   notices: readonly SocketNotice[];
@@ -98,6 +108,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   answerListQuestionIds: [],
   teamSyncs: [],
   playerCountSyncs: [],
+  jokerSyncs: [],
   bonusSyncs: [],
   notices: [],
   socketsToClose: [],

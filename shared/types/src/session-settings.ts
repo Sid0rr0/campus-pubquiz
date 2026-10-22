@@ -17,6 +17,8 @@ export interface SessionSettings {
   playLockCountdownSound: boolean;
   /** Whether ADVANCE from 'rules' shows a 'round_overview' screen (listing every round's title) before round 0's own 'round_intro' — lets an admin who doesn't want to spoil the round lineup turn it off. */
   showRoundOverview: boolean;
+  /** Whether each team picks one joker round (its points count double) in a 'joker_pick' step after the round overview. Builds on the overview, so it is only ever on with `showRoundOverview` on. */
+  jokersEnabled: boolean;
   /** One entry per rendered /rules bullet line — display text only, no enforcement. */
   rules: string[];
   /** Caps how many times a single team may be awarded a given bonus category this session (e.g. shot: 2, selfie: 1); a category absent from the map has no cap. */
@@ -31,6 +33,20 @@ export interface SessionSettings {
   collectFeedback: boolean;
   /** Whether the break screen on /display rotates fun facts. Off means the server sends the display an empty `funFacts`. */
   funFactsEnabled: boolean;
+}
+
+/** What a refused jokers-without-overview settings change says. */
+export const JOKERS_NEED_OVERVIEW_MESSAGE = 'Jokers need the round overview';
+
+/** Whether `settings` turn Jokers on with the round overview off — the one combination the session refuses, since the joker pick follows the overview. A field left out is not read as either value. */
+export function hasJokersWithoutOverview(
+  settings: Partial<
+    Pick<SessionSettings, 'jokersEnabled' | 'showRoundOverview'>
+  >,
+): boolean {
+  return (
+    settings.jokersEnabled === true && settings.showRoundOverview === false
+  );
 }
 
 /** Default prefill for kahootQuestionTimerSeconds when the frontend detects the quiz being started contains a kahootMode round — see session-picker-panel.tsx. */
@@ -53,6 +69,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   autoplayMedia: true,
   playLockCountdownSound: true,
   showRoundOverview: false,
+  jokersEnabled: false,
   maxBonusAwardsPerCategory: Object.freeze({
     shot: 2,
     selfie: 1,

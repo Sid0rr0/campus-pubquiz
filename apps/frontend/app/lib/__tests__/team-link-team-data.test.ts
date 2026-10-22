@@ -35,6 +35,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   roundRatings: [{ roundId: 11, stars: 4 }],
   feedback: { comment: 'Loved it', topics: ['Geography'] },
   playerCount: null,
+  joker: null,
 };
 
 const STORED = {

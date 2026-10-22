@@ -101,6 +101,42 @@ describe('AdminPage — status and teams', () => {
     expect(sidebar).toHaveTextContent('Beer Necessities');
   });
 
+  it('lists every team’s joker round and how it came to hold it in the sidebar', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'joker_pick' },
+        rounds: [
+          { title: 'Pop Music', questions: [{}] },
+          { title: 'World Capitals', questions: [{}] },
+        ],
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
+          { teamId: 3, teamName: 'Slow Pokes' },
+        ],
+        jokers: {
+          1: { roundId: 2, source: 'chosen' },
+          2: { roundId: 1, source: 'drawn' },
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    const sidebar = screen.getByRole('complementary');
+    const jokerOf = (teamName: string) =>
+      (within(sidebar).getByText(teamName).closest('li') as HTMLElement)
+        .textContent;
+    expect(jokerOf('The Quizzards')).toContain(
+      'Round 2 — World Capitals (picked)',
+    );
+    expect(jokerOf('Beer Necessities')).toContain(
+      'Round 1 — Pop Music (drawn)',
+    );
+    expect(jokerOf('Slow Pokes')).not.toContain('Round');
+  });
+
   describe('teams table round columns', () => {
     const roundHeaders = () =>
       within(screen.getByRole('table'))

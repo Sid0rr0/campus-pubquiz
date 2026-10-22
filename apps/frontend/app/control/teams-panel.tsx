@@ -1,10 +1,17 @@
 'use client';
 
 import { Cross2Icon } from '@radix-ui/react-icons';
-import type { AdminTeamView } from '@campus-pubquiz/types';
+import type { AdminTeamView, JokerSource } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { PlayerCountEditor } from '@/app/control/player-count-editor';
+
+/** How a team came to hold its joker, as the quiz master reads it. */
+const JOKER_SOURCE_LABELS: Record<JokerSource, string> = {
+  chosen: 'picked',
+  drawn: 'drawn',
+  set_by_quiz_master: 'set by you',
+};
 
 interface TeamsPanelProps {
   teams: AdminTeamView[];
@@ -88,6 +95,14 @@ export function TeamsPanel({
                   onConfirm={() => onKickTeam(team.teamId)}
                 />
               </div>
+              {team.joker && (
+                <p className="ml-5 text-xs font-bold text-background/70">
+                  🃏 Round {team.joker.roundNumber} — {team.joker.roundTitle}{' '}
+                  <span className="font-normal text-background/50">
+                    ({JOKER_SOURCE_LABELS[team.joker.source]})
+                  </span>
+                </p>
+              )}
               <PlayerCountEditor
                 team={team}
                 onSetPlayerCount={onSetPlayerCount}

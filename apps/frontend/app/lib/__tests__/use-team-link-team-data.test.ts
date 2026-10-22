@@ -303,6 +303,64 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(result.current.game?.myPlayerCount).toBe(7);
   });
 
+  it('restores the joker the join carried, sends a pick, keeps it once acknowledged and follows the server when it syncs a change', async () => {
+    const { result, socket } = renderPlayingTeam();
+    expect(result.current.game?.myJoker).toBeNull();
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        ...ACCEPTED,
+        joker: { roundId: 12, source: 'chosen' },
+      }),
+    );
+    expect(result.current.game?.myJoker).toEqual({
+      roundId: 12,
+      source: 'chosen',
+    });
+
+    let sent!: Promise<AckResult>;
+    act(() => {
+      sent = joinedGame(result).pickJoker(13);
+    });
+    expect(socket.lastEmitOf(SOCKET_EVENTS.PICK_JOKER).payload).toEqual({
+      roundId: 13,
+    });
+    expect(result.current.game?.myJoker?.roundId).toBe(12);
+    await act(async () => socket.acknowledge(SOCKET_EVENTS.PICK_JOKER));
+    await expect(sent).resolves.toMatchObject({ success: true });
+    expect(result.current.game?.myJoker).toEqual({
+      roundId: 13,
+      source: 'chosen',
+    });
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
+        joker: { roundId: 14, source: 'drawn' },
+      }),
+    );
+    expect(result.current.game?.myJoker).toEqual({
+      roundId: 14,
+      source: 'drawn',
+    });
+  });
+
+  it('keeps the old joker when the server refuses a pick', async () => {
+    const { result, socket } = renderPlayingTeam();
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
+        joker: { roundId: 12, source: 'chosen' },
+      }),
+    );
+
+    let sent!: Promise<AckResult>;
+    act(() => {
+      sent = joinedGame(result).pickJoker(13);
+    });
+    await act(async () => socket.reject(SOCKET_EVENTS.PICK_JOKER, 'Too late'));
+
+    await expect(sent).resolves.toMatchObject({ success: false });
+    expect(result.current.game?.myJoker?.roundId).toBe(12);
+  });
+
   it('keeps the old count and resolves a refusal when the server refuses a new one', async () => {
     const { result, socket } = renderPlayingTeam();
     act(() =>

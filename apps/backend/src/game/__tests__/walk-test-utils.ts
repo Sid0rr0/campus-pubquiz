@@ -89,6 +89,7 @@ export const HEADING_BY_SCREEN: Record<OnAirScreen['kind'], RegExp> = {
   lobby: /^Lobby$/,
   rules: /^Rules$/,
   round_overview: /^Round overview$/,
+  joker_pick: /^Joker pick$/,
   round_title: /^Round \d+ title$/,
   question: /^R\d+ Q\d+$/,
   locking: /^Locking answers$/,

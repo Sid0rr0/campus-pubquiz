@@ -83,6 +83,50 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
     });
   });
 
+  it('moves from round_overview to the joker pick when jokers are on', () => {
+    const roundOverview: GameProgress = { ...lobby, status: 'round_overview' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+      jokersEnabled: true,
+    };
+    const next = getNextGameState(roundOverview, 'ADVANCE', context);
+    expect(next).toMatchObject({
+      status: 'joker_pick',
+      roundIndex: 0,
+      questionIndex: 0,
+      revealIndex: 0,
+    });
+  });
+
+  it("moves from the joker pick to round 0's intro card", () => {
+    const jokerPick: GameProgress = { ...lobby, status: 'joker_pick' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+      jokersEnabled: true,
+    };
+    const next = getNextGameState(jokerPick, 'ADVANCE', context);
+    expect(next).toMatchObject({
+      status: 'round_intro',
+      roundIndex: 0,
+      questionIndex: 0,
+      revealIndex: 0,
+    });
+  });
+
+  it('takes the unchanged path past round_overview when jokers are off', () => {
+    const roundOverview: GameProgress = { ...lobby, status: 'round_overview' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+      jokersEnabled: false,
+    };
+    expect(getNextGameState(roundOverview, 'ADVANCE', context).status).toBe(
+      'round_intro',
+    );
+  });
+
   it('opens the first question of the round when advancing past its intro card', () => {
     const roundIntro: GameProgress = { ...lobby, status: 'round_intro' };
     const next = getNextGameState(

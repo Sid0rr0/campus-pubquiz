@@ -162,6 +162,8 @@ function PlayPageContent() {
     sendFeedback,
     myPlayerCount,
     setPlayerCount,
+    myJoker,
+    pickJoker,
     seenQuestions,
     submitShowdownGuess,
   } = game;
@@ -298,6 +300,9 @@ function PlayPageContent() {
               onSend={setPlayerCount}
             />
           }
+          jokerPick={view.jokerPick}
+          myJoker={myJoker}
+          onPickJoker={pickJoker}
           onSubmitShowdownGuess={submitShowdownGuess}
         />
         {feedback?.kind === 'final_form' && (

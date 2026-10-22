@@ -11,6 +11,7 @@ const TEAMS: AdminTeamView[] = [
     isConnected: true,
     playerCount: 4,
     isOverPlayerCap: false,
+    joker: null,
   },
   {
     teamId: 2,
@@ -18,6 +19,7 @@ const TEAMS: AdminTeamView[] = [
     isConnected: false,
     playerCount: null,
     isOverPlayerCap: false,
+    joker: null,
   },
 ];
 

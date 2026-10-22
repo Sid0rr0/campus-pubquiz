@@ -57,6 +57,33 @@ describe('DisplayScreenView — without a live context', () => {
     expectNoLiveParts();
   });
 
+  it('draws the joker pick: every round with its category and author, and the countdown, but no team’s choice', () => {
+    drawWithoutLiveContext({
+      rounds: [
+        {
+          title: 'General Knowledge',
+          category: 'Trivia',
+          author: 'Sam',
+          questions: [{ prompt: 'Capital of France?' }],
+        },
+        { title: 'Science', questions: [{ prompt: 'Largest planet?' }] },
+      ],
+      progress: { status: 'joker_pick' },
+      timers: { jokerPickEndsAt: Date.now() + 42_000 },
+      jokers: { 1: { roundId: 2, source: 'chosen' } },
+    });
+
+    expect(screen.getByText('Pick your joker')).toBeInTheDocument();
+    expect(screen.getByText('General Knowledge')).toBeInTheDocument();
+    expect(screen.getByText('Trivia')).toBeInTheDocument();
+    expect(screen.getByText('by Sam')).toBeInTheDocument();
+    expect(screen.getByText('Science')).toBeInTheDocument();
+    expect(
+      screen.getByRole('timer', { name: /time left to pick a joker/i }),
+    ).toHaveTextContent('0:42');
+    expectNoLiveParts();
+  });
+
   it('draws the round title', () => {
     drawWithoutLiveContext({
       rounds: TWO_ROUNDS,

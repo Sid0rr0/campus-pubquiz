@@ -10,12 +10,13 @@ import type {
   SessionOutcome,
 } from '@/game/state/session-outcome';
 
-/** Injection token for swapping the phase timers' schedulers; nothing provides it in production, so both timers use real timers. */
+/** Injection token for swapping the phase timers' schedulers; nothing provides it in production, so all three timers use real timers. */
 export const PHASE_TIMER_SCHEDULERS = Symbol('PHASE_TIMER_SCHEDULERS');
 
 export interface PhaseTimerSchedulers {
   lock: TimerScheduler;
   kahoot: TimerScheduler;
+  jokerPick: TimerScheduler;
 }
 
 /** Hands an expiry's outcome to the outcome delivery step, which re-arms through `arm`. */
@@ -33,10 +34,11 @@ export interface PhaseTimersDeps {
 }
 
 /**
- * Owns both auto-lock timers for every live session: the question lock (the
+ * Owns the three phase timers for every live session: the question lock (the
  * last question of a breakAfter round has been open for the session's
- * settings.lockGraceSeconds) and the kahoot question deadline (a kahootMode
- * question has been open for settings.kahootQuestionTimerSeconds). An expiry
+ * settings.lockGraceSeconds), the kahoot question deadline (a kahootMode
+ * question has been open for settings.kahootQuestionTimerSeconds) and the
+ * joker pick deadline (the pick has been open for its fixed minute). An expiry
  * auto-advances exactly as if the admin had clicked "Advance" themselves.
  *
  * A plain class the gateway builds, not a Nest provider.
@@ -49,6 +51,7 @@ export class PhaseTimers {
   private readonly logger: Logger;
   private readonly lockTimers: QuestionLockTimerRegistry;
   private readonly kahootQuestionTimers: QuestionLockTimerRegistry;
+  private readonly jokerPickTimers: QuestionLockTimerRegistry;
 
   constructor(deps: PhaseTimersDeps) {
     this.orm = deps.orm;
@@ -59,9 +62,12 @@ export class PhaseTimers {
     this.kahootQuestionTimers = new QuestionLockTimerRegistry(
       deps.schedulers?.kahoot,
     );
+    this.jokerPickTimers = new QuestionLockTimerRegistry(
+      deps.schedulers?.jokerPick,
+    );
   }
 
-  /** (Re)arms both this session's timers to `deadlines`, clearing any stale ones first; a null deadline clears that timer. */
+  /** (Re)arms this session's three timers to `deadlines`, clearing any stale ones first; a null deadline clears that timer. */
   arm(joinCode: string, deadlines: DeadlineChange): void {
     this.lockTimers.rearm(joinCode, deadlines.questionLockAt, () =>
       this.handleQuestionLockExpired(joinCode),
@@ -70,6 +76,9 @@ export class PhaseTimers {
       joinCode,
       deadlines.kahootQuestionEndsAt,
       () => this.handleKahootQuestionExpired(joinCode),
+    );
+    this.jokerPickTimers.rearm(joinCode, deadlines.jokerPickEndsAt, () =>
+      this.handleJokerPickExpired(joinCode),
     );
   }
 
@@ -83,6 +92,7 @@ export class PhaseTimers {
   clearAll(): void {
     this.lockTimers.clearAll();
     this.kahootQuestionTimers.clearAll();
+    this.jokerPickTimers.clearAll();
   }
 
   @CreateRequestContext()
@@ -95,8 +105,13 @@ export class PhaseTimers {
     await this.advanceFromTimer(joinCode, 'Kahoot auto-lock');
   }
 
+  @CreateRequestContext()
+  private async handleJokerPickExpired(joinCode: string): Promise<void> {
+    await this.advanceFromTimer(joinCode, 'Joker pick close');
+  }
+
   /**
-   * Both timers share the admin's ADVANCE path: the Live session's press,
+   * All three timers share the admin's ADVANCE path: the Live session's press,
    * delivered like any event, whose outcome arms the next deadline. A failure
    * is logged (there's no client to tell) and leaves the timers as the failed
    * write left them.

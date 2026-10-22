@@ -1,5 +1,6 @@
 import { describeFunFacts, type FunFact } from './fun-facts';
 import { getBreakNumber, isShowingLastBreak } from './game-state-structure';
+import { toJokerPickRounds, type JokerPickRound } from './joker';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import type { OnAirScreen } from './on-air-screen';
 import type {
@@ -22,6 +23,8 @@ export type DisplayScreen =
   | { kind: 'lobby' }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
+  /** Every round of the quiz and the pick's deadline; never any team's choice. */
+  | { kind: 'joker_pick'; endsAt: number | null; rounds: JokerPickRound[] }
   | { kind: 'join_overlay' }
   | {
       kind: 'round_title';
@@ -114,6 +117,12 @@ export function describeDisplayScreen({
     case 'round_overview':
     case 'join_overlay':
       return { kind: onAir.kind };
+    case 'joker_pick':
+      return {
+        kind: 'joker_pick',
+        endsAt: session.jokerPickEndsAt,
+        rounds: toJokerPickRounds(rounds, rounds),
+      };
     case 'round_title': {
       const round = rounds[onAir.roundIndex];
       if (!round) return BLANK;

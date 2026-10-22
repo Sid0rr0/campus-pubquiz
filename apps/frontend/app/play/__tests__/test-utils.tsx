@@ -58,6 +58,8 @@ export function teamLinkResult({
         // the player count tests pass null.
         myPlayerCount: 3,
         setPlayerCount: vi.fn().mockResolvedValue({ success: true }),
+        myJoker: null,
+        pickJoker: vi.fn().mockResolvedValue({ success: true }),
         sendFeedback: vi.fn().mockResolvedValue({ success: true }),
         roundRatingsEpoch: 0,
         rateRound: vi.fn().mockResolvedValue({ success: true }),

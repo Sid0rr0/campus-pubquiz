@@ -23,6 +23,7 @@ import {
   isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
+import type { JokerChanges } from '@/game/state/joker-changes';
 import type { LiveResultsRead } from '@/game/state/live-results-read';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
@@ -57,6 +58,7 @@ export class MoveCommitter {
     private readonly readLeagueTop: (
       gameSessionId: number,
     ) => Promise<LeagueTop | null>,
+    private readonly jokers: Pick<JokerChanges, 'closePick' | 'loadAll'>,
   ) {}
 
   /**
@@ -133,7 +135,9 @@ export class MoveCommitter {
     // The league top is not a live result (see LiveResultsRead): placement
     // asks the league change module for it by name.
     const leagueTop = await this.readLeagueTop(placed.seededGame.gameSessionId);
-    return { ...withResults, leagueTop };
+    // Jokers are stored, not derived: the placed session starts from them.
+    const jokers = await this.jokers.loadAll(placed.seededGame.gameSessionId);
+    return { ...withResults, leagueTop, jokers };
   }
 
   private async commitProgressMove(
@@ -143,8 +147,16 @@ export class MoveCommitter {
   ): Promise<CommittedMove> {
     const { progress } = step;
 
+    // Leaving the joker pick by any route closes it: teams without a joker
+    // are given a drawn one before the quiz moves on.
+    const closedPick =
+      session.progress.status === 'joker_pick' &&
+      progress.status !== 'joker_pick'
+        ? await this.jokers.closePick(session)
+        : null;
+
     const { session: refreshed, staleAnswerListIds } =
-      await this.grading.gradeForMove(session, progress);
+      await this.grading.gradeForMove(closedPick?.session ?? session, progress);
     // settleMove carries a raw ADVANCE under the leaderboard out as the action
     // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
     // reveal count, the kahoot timer and everything else downstream treat it
@@ -168,6 +180,7 @@ export class MoveCommitter {
               committed.teams.map((team) => team.teamId),
             )
           : [],
+        jokerSyncs: closedPick?.jokerSyncs ?? [],
       },
       touchedScores: true,
     };

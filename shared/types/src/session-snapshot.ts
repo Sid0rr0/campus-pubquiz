@@ -10,6 +10,12 @@ import {
   getUpcomingQuestionPositions,
 } from './block-questions';
 import { isAnsweringStatus } from './game-state-groups';
+import {
+  pickableRounds,
+  toJokerPickRounds,
+  type AdminTeamJoker,
+  type JokerPickRound,
+} from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
@@ -104,6 +110,42 @@ export function buildScreenOperatorFields(
   };
 }
 
+/** Whether the joker pick is open for choosing right now: it is the status and its deadline is armed. The one rule behind the players view, the phone screen and the pick gate. */
+export function isJokerPickOpen(session: SessionState): boolean {
+  return (
+    session.progress.status === 'joker_pick' && session.jokerPickEndsAt !== null
+  );
+}
+
+/** The session's rounds as the joker pick lists them; with `onlyPickable`, only those with no opened question. */
+export function describeJokerPickRounds(
+  session: SessionState,
+  onlyPickable: boolean,
+): JokerPickRound[] {
+  const { rounds } = session.seededGame;
+  return toJokerPickRounds(
+    rounds,
+    onlyPickable ? pickableRounds(rounds, session.openedQuestionIds) : rounds,
+  );
+}
+
+/** The team's joker with its round named, or null when it has none (or its round is gone from the quiz). */
+function describeAdminTeamJoker(
+  session: SessionState,
+  teamId: number,
+): AdminTeamJoker | null {
+  const joker = session.jokers[teamId];
+  if (!joker) return null;
+  const { rounds } = session.seededGame;
+  const index = rounds.findIndex((round) => round.id === joker.roundId);
+  if (index === -1) return null;
+  return {
+    ...joker,
+    roundNumber: index + 1,
+    roundTitle: rounds[index].title,
+  };
+}
+
 /** The fields only /display reads — added to its view alone by the Screen projection. */
 export function buildDisplayFields(
   session: SessionState,
@@ -137,6 +179,7 @@ export function buildAdminFields(
         playerCount,
         isOverPlayerCap:
           playerCount !== null && playerCount > maxPlayersPerTeam,
+        joker: describeAdminTeamJoker(session, team.teamId),
       };
     }),
     ungradedQuestionIds: session.ungradedQuestionIds,
@@ -147,10 +190,20 @@ export function buildAdminFields(
 /** The fields only /play reads — added to the players view alone. */
 export function buildPlayersFields(
   session: SessionState,
-): Pick<PlayersStatePayload, 'upcomingQuestions' | 'pastRevealedQuestions'> {
+): Pick<
+  PlayersStatePayload,
+  'upcomingQuestions' | 'pastRevealedQuestions' | 'jokerPick'
+> {
   return {
     upcomingQuestions: getUpcomingQuestionPositions(session),
     pastRevealedQuestions: getPastRevealedQuestions(session),
+    jokerPick:
+      session.progress.status === 'joker_pick'
+        ? {
+            endsAt: session.jokerPickEndsAt,
+            rounds: describeJokerPickRounds(session, true),
+          }
+        : null,
   };
 }
 

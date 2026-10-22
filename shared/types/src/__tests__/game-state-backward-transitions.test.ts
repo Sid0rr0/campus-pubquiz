@@ -93,6 +93,25 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
     });
   });
 
+  it('steps back from the joker pick to round_overview', () => {
+    const jokerPick: GameProgress = { ...lobby, status: 'joker_pick' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+      jokersEnabled: true,
+    };
+    const next = getNextGameState(jokerPick, 'PREVIOUS', context);
+    expect(next).toEqual({
+      status: 'round_overview',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    });
+  });
+
   it('reveals the specific just-locked question when Previous is pressed from break_intro, never decrementing past it', () => {
     const breakIntro: GameProgress = {
       status: 'break_intro',

@@ -9,6 +9,7 @@ import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
+import { type JokerChanges, withJoker } from '@/game/state/joker-changes';
 import {
   BROADCAST_STATE_OUTCOME,
   type SessionOutcome,
@@ -43,6 +44,7 @@ export class TeamRosterChanges {
     private readonly bonusService: BonusService,
     private readonly feedbackService: FeedbackService,
     private readonly playerCountService: PlayerCountService,
+    private readonly jokerChanges: JokerChanges,
   ) {}
 
   /**
@@ -83,12 +85,17 @@ export class TeamRosterChanges {
       gameSessionId,
       team.id,
     );
+    const joker = await this.jokerChanges.loadForTeam(gameSessionId, team.id);
     return {
       session: withTeams(
-        withPlayerCount(
-          withTeamConnected(session, team.id, socketId),
+        withJoker(
+          withPlayerCount(
+            withTeamConnected(session, team.id, socketId),
+            team.id,
+            playerCount,
+          ),
           team.id,
-          playerCount,
+          joker,
         ),
         await this.teamService.listForSession(gameSessionId),
       ),
@@ -132,6 +139,7 @@ export class TeamRosterChanges {
           gameSessionId,
           team.id,
         ),
+        joker: await this.jokerChanges.loadForTeam(gameSessionId, team.id),
       },
     };
   }

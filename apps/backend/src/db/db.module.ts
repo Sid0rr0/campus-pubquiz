@@ -12,6 +12,7 @@ import { Round } from '@/db/entities/round.entity';
 import { RoundRating } from '@/db/entities/round-rating.entity';
 import { SessionFeedback } from '@/db/entities/session-feedback.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
+import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
 import { Session } from '@/db/entities/session.entity';
 import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
@@ -32,6 +33,7 @@ export const DB_ENTITIES = [
   RoundRating,
   SessionFeedback,
   SessionPlayerCount,
+  SessionTeamJoker,
   League,
   LeagueSession,
   User,

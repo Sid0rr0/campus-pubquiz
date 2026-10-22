@@ -185,12 +185,34 @@ export function SessionSettingsForm({
         <input
           type="checkbox"
           checked={value.showRoundOverview}
+          // Jokers build on the overview, so it stays on while they are.
+          disabled={value.jokersEnabled}
           onChange={(event) =>
             onChange({ ...value, showRoundOverview: event.target.checked })
           }
         />
         Show round overview after rules
       </label>
+
+      <label className="flex items-center gap-2 text-sm font-extrabold">
+        <input
+          type="checkbox"
+          checked={value.jokersEnabled}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              jokersEnabled: event.target.checked,
+              // Turning jokers on turns the overview on with them.
+              ...(event.target.checked ? { showRoundOverview: true } : {}),
+            })
+          }
+        />
+        Jokers
+      </label>
+      <p className="-mt-3 text-xs text-foreground/60">
+        After the round overview each team picks one round whose points count
+        double.
+      </p>
 
       <label className="flex items-center gap-2 text-sm font-extrabold">
         <input

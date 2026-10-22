@@ -50,6 +50,8 @@ function describeOnAirScreenText(
         heading: 'Round overview',
         body: seededGame.rounds.map((round) => round.title).join(' · '),
       };
+    case 'joker_pick':
+      return { heading: 'Joker pick', body: 'Teams choose their joker round' };
     case 'round_title':
       return {
         heading: `Round ${screen.roundIndex + 1} title`,

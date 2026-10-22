@@ -48,6 +48,9 @@ function renderScreens(
       isConnected={isConnected}
       leaderboard={[]}
       playerCountCard={null}
+      jokerPick={null}
+      myJoker={null}
+      onPickJoker={vi.fn()}
       onSubmitShowdownGuess={vi.fn()}
     />
   );

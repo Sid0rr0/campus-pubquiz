@@ -66,6 +66,7 @@ describe('GameGateway — join, leave and kick land in one order', () => {
         isConnected: true,
         playerCount: null,
         isOverPlayerCap: false,
+        joker: null,
       },
     ]);
     expectRosterAndLeaderboardAgree(snapshot);

@@ -18,6 +18,7 @@ export type OnAirScreen =
   | { kind: 'lobby' }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
+  | { kind: 'joker_pick' }
   | { kind: 'round_title'; roundIndex: number }
   | {
       kind: 'question';
@@ -134,6 +135,7 @@ function getScreen(
     case 'lobby':
     case 'rules':
     case 'round_overview':
+    case 'joker_pick':
       return { kind: progress.status };
     case 'round_intro':
       return { kind: 'round_title', roundIndex: progress.roundIndex };
@@ -239,7 +241,7 @@ export function describeOnAirScreen(input: OnAirInput): OnAirDescription {
   };
 }
 
-const PRE_QUIZ_SCREENS = 3;
+const PRE_QUIZ_SCREENS = 4;
 const ROUND_SPAN = 1_000;
 const REGION_SPAN = 10_000;
 /** Regions of one question's slot, in the order the quiz walks them. */
@@ -280,6 +282,8 @@ export function screenPositionOf(progress: GameProgress): number {
       return 1;
     case 'round_overview':
       return 2;
+    case 'joker_pick':
+      return 3;
     case 'ended':
       return ENDED_POSITION;
     default:
@@ -401,6 +405,8 @@ export type PhoneScreen =
   | { kind: 'lobby' }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
+  /** The joker pick: `isOpen` while teams may still choose, false once it has closed (the phone then shows the result). */
+  | { kind: 'joker_pick'; isOpen: boolean }
   | { kind: 'round_title'; title: string }
   | { kind: 'ended' }
   | { kind: 'showdown_guessing' }
@@ -436,6 +442,8 @@ export interface PlayersScreenInput extends OnAirInput {
   isAnswerable: boolean;
   /** Whether the active showdown round has been decided (false when there is none). */
   isShowdownResolved: boolean;
+  /** Whether the joker pick is open for choosing right now (false outside the pick). */
+  isJokerPickOpen: boolean;
 }
 
 function roundTitleOf(
@@ -484,6 +492,8 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
     case 'rules':
     case 'round_overview':
       return { kind: screen.kind };
+    case 'joker_pick':
+      return { kind: 'joker_pick', isOpen: input.isJokerPickOpen };
     case 'round_title':
       return { kind: 'round_title', title: input.roundTitle ?? '' };
     case 'reveal':

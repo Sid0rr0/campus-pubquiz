@@ -2,6 +2,7 @@ import { getBlockInPlayIds, getPastBlockIds } from './block-in-play';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import type { GameAction, GameContext, GameProgress } from './game-state-types';
 import { computeLeaderboardRevealCount } from './leaderboard-reveal';
+import { JOKER_PICK_SECONDS } from './joker';
 import { computePhaseTimerFields } from './phase-timer';
 import { getGameContext, type SessionState } from './session-state';
 import { revealStepAfterMove } from './stepped-reveal';
@@ -44,7 +45,7 @@ export interface SettleInput {
 
 /**
  * Returns the session with every progress-dependent field consistent with
- * `progress`: the phase timer, the auto-lock and kahoot deadlines, the break
+ * `progress`: the phase timer, the auto-lock, kahoot and joker pick deadlines, the break
  * end time, the leaderboard reveal count and the closest_guess step. The
  * order is fixed — the phase timer first, since the kahoot deadline reads it.
  */
@@ -94,6 +95,7 @@ export function settleSession({
       livePhaseKey,
       phaseStartedAt,
     ),
+    jokerPickEndsAt: computeJokerPickEndsAt(session, progress, now),
     breakEndsAt: computeBreakEndsAt(session, progress, now),
     leaderboardRevealCount: computeLeaderboardRevealCount(
       action,
@@ -135,6 +137,27 @@ function computeKahootQuestionEndsAt(
   if (phaseStartedAt === null) return null;
   if (getTimedPhaseKey(progress, context) !== livePhaseKey) return null;
   return phaseStartedAt + kahootQuestionTimerSeconds * 1000;
+}
+
+/**
+ * Armed only while the joker pick is the status, a fixed minute from the move
+ * into it (a restart re-arms a full minute, like the lock countdown). A move
+ * that stays on the pick (the leaderboard or join overlay) keeps the deadline
+ * it had, so showing an overlay never hands the teams extra time.
+ */
+function computeJokerPickEndsAt(
+  session: SessionState,
+  progress: GameProgress,
+  now: number,
+): number | null {
+  if (progress.status !== 'joker_pick') return null;
+  if (
+    session.progress.status === 'joker_pick' &&
+    session.jokerPickEndsAt !== null
+  ) {
+    return session.jokerPickEndsAt;
+  }
+  return now + JOKER_PICK_SECONDS * 1000;
 }
 
 /**

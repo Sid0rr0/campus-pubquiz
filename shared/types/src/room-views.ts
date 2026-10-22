@@ -8,6 +8,7 @@ import type {
   PlayersScreenFields,
 } from './on-air-screen';
 import type { GameProgress, QuizStructureSummary } from './game-state';
+import type { AdminTeamJoker, JokerPickPlayersView } from './joker';
 import type { LeagueTop } from './league';
 import type {
   BlockQuestionView,
@@ -77,6 +78,8 @@ export interface AdminTeamView extends TeamView {
   playerCount: number | null;
   /** True when `playerCount` exceeds the session's max players per team, worked out by the server. */
   isOverPlayerCap: boolean;
+  /** The team's joker round and how it came to hold it, or null while it has none. The quiz master sees every team's; no other room is sent one. */
+  joker: AdminTeamJoker | null;
 }
 
 export interface StateSnapshotPayload {
@@ -267,6 +270,13 @@ export interface PlayersStatePayload
   revealQuestions: PlayersRevealQuestionView[];
   /** Whether the current block can be answered right now — the same rule the answer-submission gate enforces. */
   isAnswerable: boolean;
+  /**
+   * The joker pick while the status is `joker_pick`: its deadline (null once
+   * closed) and the rounds a team may still choose. Never any team's choice —
+   * a phone gets its own joker from its team data (`JOIN_ACCEPTED`,
+   * `TEAM_JOKER_SYNCED`). Null outside the pick.
+   */
+  jokerPick: JokerPickPlayersView | null;
   /**
    * Positions (and round titles) of the current block's remaining
    * questions — not open yet, shown as disabled slots in the block picker

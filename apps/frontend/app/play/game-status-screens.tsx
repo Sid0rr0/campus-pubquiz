@@ -5,11 +5,15 @@ import Link from 'next/link';
 import { readStoredIdentity } from '@/app/lib/team-storage';
 import type {
   ActiveShowdownView,
+  AckResult,
+  JokerPickPlayersView,
   LeaderboardEntry,
   PhoneScreen,
   PlayersStatePayload,
   QuizStructureSummary,
+  TeamJoker,
 } from '@campus-pubquiz/types';
+import { JokerPickScreen } from '@/app/play/joker-pick-screen';
 import { LeaderboardScreen } from '@/app/play/leaderboard-screen';
 import {
   RulesContent,
@@ -38,6 +42,11 @@ interface GameStatusScreensProps {
   leaderboard: readonly LeaderboardEntry[];
   /** The "How many players does your team have?" card the lobby screen shows under its waiting line. */
   playerCountCard: ReactNode;
+  /** The joker pick's deadline and rounds; present only while the status is `joker_pick`. */
+  jokerPick: JokerPickPlayersView | null;
+  /** The team's own joker as the server last said it. */
+  myJoker: TeamJoker | null;
+  onPickJoker: (roundId: number) => Promise<AckResult>;
   onSubmitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -97,6 +106,9 @@ export function GameStatusScreens({
   onSubmitShowdownGuess,
   leaderboard,
   playerCountCard,
+  jokerPick,
+  myJoker,
+  onPickJoker,
 }: GameStatusScreensProps) {
   const isMyTurn =
     phoneScreen.kind === 'showdown_guessing' &&
@@ -157,6 +169,15 @@ export function GameStatusScreens({
       );
     case 'round_overview':
       return <LookAtTheScreen className="text-magenta">Rounds</LookAtTheScreen>;
+    case 'joker_pick':
+      return jokerPick ? (
+        <JokerPickScreen
+          jokerPick={jokerPick}
+          isOpen={phoneScreen.isOpen}
+          myJoker={myJoker}
+          onPick={onPickJoker}
+        />
+      ) : null;
     case 'round_title':
       return (
         <div
