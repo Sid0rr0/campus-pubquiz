@@ -10,7 +10,7 @@ Parent spec: `.scratch/question-outcome-module/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `teamsCorrect` is still null outside a reveal, and null on a question for which `hasMeaningfulCorrectRate` is false. Otherwise its counts come from the Question outcome over fun fact data.
 - [ ] The verdict tallies read, the verdict tally type, the session's tally field, its default and the live results read's tally entry are gone. No reference to them is left in the backend, shared types, frontend or test fixtures.

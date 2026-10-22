@@ -3,7 +3,8 @@ import {
   getBlockPositionForQuestion,
   isBreakPointQuestion,
 } from './game-state-block-position';
-import { planNextPress } from './move-plan';
+import { previewMove } from './dry-run-press';
+import { nextPressAction } from './move-plan';
 import type { QuizStructureSummary } from './game-state-structure';
 import type { GameProgress } from './game-state-types';
 import { projectScreen } from './screen-projection';
@@ -125,6 +126,9 @@ const NIGHT_SCREEN_KINDS: readonly DisplayScreen['kind'][] = [
   'reveal',
 ];
 
+/** The fixed time the walk presses at; no screen the preview keeps reads a deadline. */
+const PREVIEW_PRESS_TIME = 0;
+
 /** Safety stop for the dry run; a real quiz ends long before. */
 const MAX_NIGHT_PRESSES = 5000;
 
@@ -178,9 +182,9 @@ function questionPositions(rounds: readonly SeededRound[]) {
 }
 
 /**
- * The order the room sees: the real Advance plan is walked as a dry run
- * (Start quiz, then Advance until nothing moves; no grading writes, nothing
- * saved) and only the screens with quiz content are kept.
+ * The order the room sees: the shared dry-run press (Move plan and Settle
+ * step) is walked (Start quiz, then Advance until nothing moves; no grading
+ * writes, nothing saved) and only the screens with quiz content are kept.
  */
 function buildNightSteps(fullSession: SessionState): BareStep[] {
   const { rounds } = fullSession.seededGame;
@@ -281,7 +285,7 @@ function walkNightSteps(
         ),
       );
     }
-    const next = dryRunPress(session);
+    const next = pressNext(session);
     if (!next) break;
     session = next;
   }
@@ -312,25 +316,28 @@ function renumberRounds(
   }
 }
 
-/** The session after the next Advance press, or null when a press would move nothing (the end of the quiz). Nothing is graded or saved. */
-function dryRunPress(session: SessionState): SessionState | null {
-  const move = planNextPress(session);
-  switch (move.kind) {
-    case 'transition':
-    case 'leaderboard_hide':
-    case 'join_overlay_hide':
-      return { ...session, progress: move.progress };
-    case 'leaderboard_reveal':
-      return {
-        ...session,
-        leaderboardRevealCount: session.leaderboardRevealCount + 1,
-      };
-    case 'reveal_step':
-      return move.session;
+/** The session after the next press, by the shared dry-run press, or null when a press would move nothing (the end of the quiz). Nothing is graded or saved. */
+function pressNext(session: SessionState): SessionState | null {
+  const { step, session: next } = previewMove(
+    session,
+    nextPressAction(session),
+    PREVIEW_PRESS_TIME,
+  );
+  switch (step.kind) {
     case 'showdown_waiting':
     case 'grading_pending':
     case 'blocked':
       return null;
+    case 'transition':
+    case 'leaderboard_reveal':
+    case 'leaderboard_hide':
+    case 'join_overlay_hide':
+    case 'reveal_step':
+      return next;
+    default: {
+      const unhandled: never = step;
+      return unhandled;
+    }
   }
 }
 

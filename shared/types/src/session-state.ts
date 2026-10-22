@@ -50,12 +50,6 @@ export interface SeededGame {
   settings: SessionSettings;
 }
 
-/** The teams whose answer to one question got a `correct` and a `partial` verdict. */
-export interface VerdictTally {
-  correct: number;
-  partial: number;
-}
-
 /** DB-only roster shape — live connection state is layered on by the backend. */
 export interface TeamRosterEntry {
   teamId: number;
@@ -124,15 +118,9 @@ export interface SessionState {
    */
   priorStandings: PriorStandings | null;
   /**
-   * How many teams got each question right or partly right, keyed by
-   * questionId (a question nobody got right or partly right has no entry).
-   * Read with the standings at the end of every session write and on
-   * placement, so it always matches the stored verdicts. Ephemeral.
-   */
-  verdictTallies: Record<number, VerdictTally>;
-  /**
    * The session's stored answers and bonus awards, the input to the fun facts
-   * the big screen shows during a break. Read with the standings at the end of
+   * the big screen shows during a break and to the reveal's teams-correct
+   * count. Read with the standings at the end of
    * every session write and on placement, so it always matches what is stored.
    * Never sent as it is: the display view carries only the facts built from it.
    * Ephemeral.
@@ -222,7 +210,6 @@ export function freshSessionState(
     leaderboard: [],
     leaderboardRevealCount: 0,
     priorStandings: null,
-    verdictTallies: {},
     funFactData: { answers: [], bonusAwards: [] },
     leagueTop: null,
     teams: [],

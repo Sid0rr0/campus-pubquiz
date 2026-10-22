@@ -66,7 +66,7 @@ describe('DisplayPage — reveal moment', () => {
   describe('teams-correct count', () => {
     it('shows how many of the teams got the question right, with the close ones', () => {
       showDisplayAt(
-        atReveal({ verdictTallies: { 1: { correct: 2, partial: 1 } } }),
+        atReveal({ answerVerdicts: { 1: ['correct', 'correct', 'partial'] } }),
       );
 
       render(<DisplayPage />);
@@ -77,7 +77,7 @@ describe('DisplayPage — reveal moment', () => {
 
     it('leaves out "close" when no team was partly right', () => {
       showDisplayAt(
-        atReveal({ verdictTallies: { 1: { correct: 3, partial: 0 } } }),
+        atReveal({ answerVerdicts: { 1: ['correct', 'correct', 'correct'] } }),
       );
 
       render(<DisplayPage />);

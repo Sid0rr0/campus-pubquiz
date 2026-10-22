@@ -3,8 +3,8 @@ import type { SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
 
 /**
- * The live results read: the session's live results (leaderboard, verdict
- * tallies, fun fact data) are the figures derived from its stored answers and
+ * The live results read: the session's live results (leaderboard, fun
+ * fact data) are the figures derived from its stored answers and
  * bonus awards. Given a session, it returns that session with every live
  * result replaced by a fresh read from the Standings module. It stores
  * nothing; the caller does.
@@ -26,7 +26,7 @@ export class LiveResultsRead {
 
   async read(session: SessionState): Promise<SessionState> {
     const { gameSessionId } = session.seededGame;
-    const [leaderboard, verdictTallies, funFactData] = await Promise.all([
+    const [leaderboard, funFactData] = await Promise.all([
       this.readOrKeep(
         session,
         'Standings',
@@ -35,18 +35,12 @@ export class LiveResultsRead {
       ),
       this.readOrKeep(
         session,
-        'Verdict tally',
-        () => this.standingsService.verdictTallies(gameSessionId),
-        session.verdictTallies,
-      ),
-      this.readOrKeep(
-        session,
         'Fun fact data',
         () => this.standingsService.funFactData(gameSessionId),
         session.funFactData,
       ),
     ]);
-    return { ...session, leaderboard, verdictTallies, funFactData };
+    return { ...session, leaderboard, funFactData };
   }
 
   private async readOrKeep<R>(

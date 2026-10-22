@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { planNextPress } from '../move-plan';
 import { buildQuizPreview } from '../quiz-preview';
-import { projectScreen } from '../screen-projection';
-import { DEFAULT_SESSION_SETTINGS } from '../session-settings';
-import { freshSessionState, type SeededRound } from '../session-state';
-import { SOCKET_ROOMS } from '../socket-events';
+import type { SeededRound } from '../session-state';
 import type { SeededQuestion } from '../question-views';
 
 function question(
@@ -62,39 +58,6 @@ const NIGHT_KINDS = [
   'reveal',
 ];
 
-/** The display screens a real session reaches pressing Start quiz, then Advance, to the end. */
-function screensByAdvancing(rounds: SeededRound[]) {
-  let session = freshSessionState({
-    quizId: 0,
-    gameSessionId: 0,
-    joinCode: '',
-    rounds,
-    settings: {
-      ...DEFAULT_SESSION_SETTINGS,
-      funFactsEnabled: false,
-      showRoundOverview: true,
-    },
-  });
-  const screens = [projectScreen(session, SOCKET_ROOMS.DISPLAY).screen];
-  for (let press = 0; press < 200; press += 1) {
-    const step = planNextPress(session);
-    if (step.kind === 'transition' || step.kind === 'leaderboard_hide') {
-      session = { ...session, progress: step.progress };
-    } else if (step.kind === 'leaderboard_reveal') {
-      session = {
-        ...session,
-        leaderboardRevealCount: session.leaderboardRevealCount + 1,
-      };
-    } else if (step.kind === 'reveal_step') {
-      session = step.session;
-    } else {
-      break;
-    }
-    screens.push(projectScreen(session, SOCKET_ROOMS.DISPLAY).screen);
-  }
-  return screens;
-}
-
 describe('buildQuizPreview, night', () => {
   const multiBlockQuiz = () => [
     round(1, [question(1), question(2)]),
@@ -102,17 +65,6 @@ describe('buildQuizPreview, night', () => {
     round(3, [question(5)], { breakAfter: false }),
     round(4, [question(6)]),
   ];
-
-  it('shows the screens a real session reaches by Advance, kind for kind, minus the left-out kinds', () => {
-    const rounds = multiBlockQuiz();
-    const expected = screensByAdvancing(rounds)
-      .filter(({ kind }) => NIGHT_KINDS.includes(kind))
-      .map(({ kind }) => kind);
-    const { steps } = buildQuizPreview(rounds, 'night');
-    expect(steps.map(({ screen }) => screen.kind)).toEqual(expected);
-    // The quiz really passes through the kinds the preview leaves out.
-    expect(screensByAdvancing(rounds).length).toBeGreaterThan(expected.length);
-  });
 
   it('orders a block as questions, break intro, reveal intro, then its reveals', () => {
     const { steps } = buildQuizPreview(

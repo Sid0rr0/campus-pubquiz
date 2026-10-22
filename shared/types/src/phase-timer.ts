@@ -1,8 +1,5 @@
-import {
-  getTimedPhaseKey,
-  type GameContext,
-  type GameProgress,
-} from '@campus-pubquiz/types';
+import type { GameContext, GameProgress } from './game-state-types';
+import { getTimedPhaseKey } from './game-state-timed-phase';
 
 /**
  * Computes the next "live frontier" state for one transition.

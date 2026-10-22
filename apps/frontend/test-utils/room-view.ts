@@ -23,6 +23,7 @@ import {
   DEFAULT_SESSION_SETTINGS,
   type ActiveShowdownRoundState,
   type ClosestGuessRevealData,
+  type FunFactAnswer,
   type GameProgress,
   type LeaderboardEntry,
   type SeededQuestion,
@@ -85,8 +86,8 @@ export interface SessionDescription {
   priorStandings?: LeaderboardDescription[];
   /** The closest_guess reveal sub-step on air (0-indexed); the phone is sent each step's stats and answer only once it is reached. */
   closestGuessRevealStep?: number;
-  /** Teams with a correct / partial verdict, by question id (the teams-correct count of the reveal). */
-  verdictTallies?: SessionState['verdictTallies'];
+  /** The verdict of each team's answer, by question id (the teams-correct count of the reveal reads them from the fun fact data). */
+  answerVerdicts?: Record<number, FunFactAnswer['verdict'][]>;
   timers?: Partial<
     Pick<
       SessionState,
@@ -268,7 +269,20 @@ export function buildSessionState(
       description.showdown?.revealStep ??
       description.closestGuessRevealStep ??
       0,
-    verdictTallies: description.verdictTallies ?? {},
+    funFactData: {
+      answers: Object.entries(description.answerVerdicts ?? {}).flatMap(
+        ([questionId, verdicts]) =>
+          verdicts.map((verdict, index) => ({
+            questionId: Number(questionId),
+            teamId: index + 1,
+            teamName: `Team ${index + 1}`,
+            verdict,
+            pointsAwarded: verdict === 'correct' ? 1 : 0,
+            responseMs: null,
+          })),
+      ),
+      bonusAwards: [],
+    },
     closestGuessSummaries: closestGuessSummariesOf(roundDescriptions, rounds),
     answeredTeamIdsByQuestion: description.answeredTeams ?? {},
     activeShowdownRound: description.showdown?.round ?? null,

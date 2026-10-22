@@ -1,5 +1,6 @@
-import type { GameContext, GameProgress } from '@campus-pubquiz/types';
-import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { GameContext, GameProgress } from '../game-state-types';
+import { computePhaseTimerFields } from '../phase-timer';
 
 const context: GameContext = {
   rounds: [
@@ -23,12 +24,12 @@ function progressAt(overrides: Partial<GameProgress>): GameProgress {
 
 describe('computePhaseTimerFields', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('opens the very first live phase when nothing has ever been live', () => {
@@ -120,7 +121,7 @@ describe('computePhaseTimerFields', () => {
 
   it('closes the old frontier and opens a genuinely new question', () => {
     const startedAt = Date.now();
-    jest.advanceTimersByTime(7_000);
+    vi.advanceTimersByTime(7_000);
     const newProgress = progressAt({
       status: 'question_open',
       questionIndex: 1,
@@ -143,7 +144,7 @@ describe('computePhaseTimerFields', () => {
 
   it('closes the last question and opens the break the first time it starts', () => {
     const startedAt = Date.now();
-    jest.advanceTimersByTime(9_000);
+    vi.advanceTimersByTime(9_000);
     const newProgress = progressAt({
       status: 'break_intro',
       roundIndex: 1,

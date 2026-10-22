@@ -263,8 +263,8 @@ against that session and stores nothing when it is refused: a team's last-second
 answer is either stored (and seen by the press that follows, so a closest_guess
 answer is graded by the break) or refused with "Answers are locked for this
 question", never stored unseen. Sessions don't wait for
-each other. The final read covers every **live result** (the leaderboard, verdict
-tallies and fun fact data; see Live results in the glossary). If a read fails,
+each other. The final read covers every **live result** (the leaderboard and
+fun fact data; see Live results in the glossary). If a read fails,
 the write still counts as done (a press has already saved its progress, so
 memory must match the database and clients must hear about it): the failure is
 logged, that figure keeps its earlier value (the others still update), and the
@@ -483,10 +483,12 @@ teamCount }` for that question, and `/display` draws it as a count-up "7 of 12
 teams" with "+2 close" when `partial` is above 0. `correct` and `partial` count
 the roster teams whose answer has that verdict (see Verdict in the glossary);
 `teamCount` is every roster team, so teams that did not answer are in the
-total. It is `null` outside a reveal and on a closest_guess question, whose
-reveal already names the closest teams. The session holds the per-question
-tallies as one of its **Live results** (see the glossary for when they are
-read), so they follow hand grades, lock grading and key fixes.
+total. The counts come from the session's fun fact data (one of its **Live
+results**; see the glossary for when they are read), so they follow hand
+grades, lock grading and key fixes. It is `null` outside a reveal and on a
+question whose type has no correct rate (today only closest_guess, whose
+reveal already names the closest teams): no count follows the question type's
+correct-rate setting.
 
 **The break's fun facts (`funFacts`).** While the break screen is on air
 (`screen.kind === 'break_intro'`; not over the leaderboard, not while
@@ -1115,12 +1117,13 @@ or counted. It is a read of the quiz.
   - `night` ("like the night"): the screens in the order the room sees them:
     the round overview, round title cards, a block's questions, the break
     intro, the reveal intro, then that block's reveals, block after block. The
-    order is a dry run of the real Advance plan over the team-less session (no
-    grading writes, nothing saved), keeping only `round_overview`,
+    order is a dry run of the real press (the Move plan and the Settle step)
+    over the team-less session (no grading writes, nothing saved), keeping only `round_overview`,
     `round_title`, `question`, `break_intro`, `reveal_intro` and `reveal`;
     lobby, rules, join overlay, locking, break review, break round title,
     leaderboard, showdown and ended never appear. The break intro has no
     deadline, no feedback prompt and no fun facts. A round with no questions
+    (not allowed in a live session, but the preview reads unfinished quizzes)
     can't be walked by the real Advance plan, so the dry run skips it and its
     title card is shown in front of the next round's (or last, when no round
     follows); the other rounds keep their place in the quiz's numbering.
@@ -1432,7 +1435,10 @@ admin/moderator landing page for managing them:
 - `GET /sessions` — list running sessions (auth-gated).
 - `POST /sessions` (`{ quizId, name?, settings?, leagueIds? }`) — start a new
   session, producing a fresh join code. `leagueIds` (default none) are the
-  leagues the session counts towards (see Leagues).
+  leagues the session counts towards (see Leagues). Rounds without questions
+  are not allowed: saving a quiz with one is rejected by the editor's
+  validation, and `POST /sessions` answers 400 naming the round (for a quiz
+  that already holds one) and creates nothing.
 - `PATCH /sessions/:joinCode/settings` — settings (lobby only, 409 once
   started) and/or `leagueIds`, which replaces the session's leagues and is
   accepted until the session ends. A body of only `leagueIds` leaves settings

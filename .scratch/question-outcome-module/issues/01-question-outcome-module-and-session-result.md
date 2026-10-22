@@ -21,7 +21,7 @@ Parent spec: `.scratch/question-outcome-module/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Question outcome module is pure and has no dependency on the session record. It sits beside the shared correct-rate rule, which keeps `answerCredit` and `hasMeaningfulCorrectRate`.
 - [ ] It never filters answers by question, team or roster, and never decides which teams count. The caller passes that question's answers and its chosen team count.

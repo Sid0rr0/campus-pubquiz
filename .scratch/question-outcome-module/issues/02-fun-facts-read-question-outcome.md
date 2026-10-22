@@ -8,7 +8,7 @@ Parent spec: `.scratch/question-outcome-module/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The fun facts' outcomes step builds each revealed question's outcome with the Question outcome module, and its own credit loop is deleted.
 - [ ] The fun facts keep their own rules on top:

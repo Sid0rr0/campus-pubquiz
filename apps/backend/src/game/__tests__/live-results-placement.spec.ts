@@ -96,9 +96,6 @@ describe('Live session — placement and the live results read', () => {
       .spyOn(StandingsService.prototype, 'leaderboard')
       .mockRejectedValueOnce(new Error('standings unavailable'));
     jest
-      .spyOn(StandingsService.prototype, 'verdictTallies')
-      .mockRejectedValueOnce(new Error('tallies unavailable'));
-    jest
       .spyOn(StandingsService.prototype, 'funFactData')
       .mockRejectedValueOnce(new Error('fun facts unavailable'));
     const restarted = await oneBlock.restart();
@@ -125,7 +122,7 @@ describe('Live session — placement and the live results read', () => {
       breakView.screen.kind === 'break_intro' && breakView.screen.funFacts,
     ).toContainEqual(expect.objectContaining({ kind: 'bonus_awards_so_far' }));
 
-    // The verdict tallies came back: the reveal counts the correct team.
+    // The fun fact data came back: the reveal counts the correct team.
     await restarted.act('ADVANCE');
     await restarted.act('ADVANCE');
     expect((await restarted.resync('display')).teamsCorrect).toEqual({

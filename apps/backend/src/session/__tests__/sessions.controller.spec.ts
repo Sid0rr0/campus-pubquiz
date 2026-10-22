@@ -18,6 +18,7 @@ import {
   type LiveSessionRest,
 } from '@/game/rest/live-session-rest.service';
 import {
+  QuizHasEmptyRoundError,
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
   type GameStateService,
@@ -440,6 +441,19 @@ describe('SessionsController', () => {
         controller.create({ quizId: 2, leagueIds: [9] }),
       ).rejects.toThrow(BadRequestException);
       expect(gameState.createSession).not.toHaveBeenCalled();
+    });
+
+    it('400s with the round named when the quiz has a round with no questions', async () => {
+      const { controller, gameState } = makeController();
+      gameState.createSession.mockRejectedValue(
+        new QuizHasEmptyRoundError(2, 'Music'),
+      );
+
+      await expect(controller.create({ quizId: 2 })).rejects.toThrow(
+        new BadRequestException(
+          'Cannot start a session: Round 2 "Music" has no questions',
+        ),
+      );
     });
 
     it('400s on a malformed leagueIds', async () => {

@@ -97,6 +97,7 @@ flowchart TD
   subgraph shared["shared/types — pure rules"]
     project["projectScreen<br/>per-room views"]
     plan["Move plan<br/>what one press does"]
+    settle["Settle step + dry-run press<br/>session-settle.ts · dry-run-press.ts"]
     block["Block module<br/>block-in-play.ts<br/>which questions are in the block in play"]
   end
 
@@ -136,7 +137,8 @@ flowchart TD
   mover --> progress
   mover --> plan
   grading --> block
-  mover -->|"settle step"| block
+  mover -->|"settles every press"| settle
+  settle --> block
   project -->|"reveal views"| block
   gss --> project
   fixtures["frontend test fixtures<br/>test-utils/room-view.ts"] --> project
@@ -176,7 +178,12 @@ Key seams:
   A press grades through `BlockGradingService.gradeForMove`; placing a session
   (creation, restart restore) grades through `gradeForPlacement`, which only
   rebuilds the closest_guess summaries and the ungraded set and re-scores
-  nothing.
+  nothing. The Settle step itself lives in `shared/types` with the Move plan
+  (`session-settle.ts`, with the phase timer and leaderboard reveal count it
+  uses); `MoveCommitter` calls it for every press and placement. The presenter
+  preview's dry-run press (`dry-run-press.ts`, taking the time as an argument)
+  runs the same plan and Settle step without grading, saving or resolving a
+  showdown.
 - **`projectScreen`** builds each room's view, so nothing a room hasn't been
   shown ever leaves the server. It lives in `shared/types` with the Move plan
   and the other pure rules it reads; the backend calls it, and the frontend's
