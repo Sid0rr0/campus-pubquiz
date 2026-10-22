@@ -113,7 +113,7 @@ describe('DisplayScreenView — without a live context', () => {
         },
       ],
       progress: { status: 'reveal', revealIndex: 0 },
-      verdictTallies: { 1: { correct: 2, partial: 0 } },
+      answerVerdicts: { 1: ['correct', 'correct'] },
     });
 
     expect(screen.getByText('Largest planet?')).toBeInTheDocument();

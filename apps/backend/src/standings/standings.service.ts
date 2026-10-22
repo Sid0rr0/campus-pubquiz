@@ -5,7 +5,6 @@ import type {
   FunFactBonusAward,
   FunFactData,
   LeaderboardEntry,
-  VerdictTally,
 } from '@campus-pubquiz/types';
 import { compareTeamNames, rankTeams } from '@campus-pubquiz/types';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
@@ -104,42 +103,9 @@ export class StandingsService {
   }
 
   /**
-   * How many roster teams got each question right or partly right, by
-   * question id. A question with neither has no entry. A team that has left
-   * the roster is not counted, so the numbers stay within the roster total.
-   */
-  async verdictTallies(
-    gameSessionId: number,
-  ): Promise<Record<number, VerdictTally>> {
-    const knex = this.gameSessionTeams.getKnex();
-    const rows = (await knex('answers as a')
-      .join('game_session_teams as gst', function joinRoster() {
-        this.on('gst.game_session_id', 'a.game_session_id').andOn(
-          'gst.team_id',
-          'a.team_id',
-        );
-      })
-      .where('a.game_session_id', gameSessionId)
-      .whereIn('a.verdict', ['correct', 'partial'])
-      .groupBy('a.question_id', 'a.verdict')
-      .select('a.question_id as questionId', 'a.verdict as verdict')
-      .select(knex.raw('count(*) as count'))) as {
-      questionId: number;
-      verdict: 'correct' | 'partial';
-      count: string | number;
-    }[];
-
-    const tallies: Record<number, VerdictTally> = {};
-    for (const { questionId, verdict, count } of rows) {
-      const tally = tallies[questionId] ?? { correct: 0, partial: 0 };
-      tallies[questionId] = { ...tally, [verdict]: Number(count) };
-    }
-    return tallies;
-  }
-
-  /**
-   * The session's answers (roster teams only, like the verdict tallies) and
-   * bonus awards, in the shape the fun facts are built from.
+   * The session's answers (roster teams only, so a team that has left the
+   * roster stays out of the fun facts and the reveal's teams-correct count)
+   * and bonus awards, in the shape both are built from.
    */
   async funFactData(gameSessionId: number): Promise<FunFactData> {
     const knex = this.gameSessionTeams.getKnex();

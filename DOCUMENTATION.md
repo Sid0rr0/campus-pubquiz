@@ -263,8 +263,8 @@ against that session and stores nothing when it is refused: a team's last-second
 answer is either stored (and seen by the press that follows, so a closest_guess
 answer is graded by the break) or refused with "Answers are locked for this
 question", never stored unseen. Sessions don't wait for
-each other. The final read covers every **live result** (the leaderboard, verdict
-tallies and fun fact data; see Live results in the glossary). If a read fails,
+each other. The final read covers every **live result** (the leaderboard and
+fun fact data; see Live results in the glossary). If a read fails,
 the write still counts as done (a press has already saved its progress, so
 memory must match the database and clients must hear about it): the failure is
 logged, that figure keeps its earlier value (the others still update), and the
@@ -480,10 +480,12 @@ teamCount }` for that question, and `/display` draws it as a count-up "7 of 12
 teams" with "+2 close" when `partial` is above 0. `correct` and `partial` count
 the roster teams whose answer has that verdict (see Verdict in the glossary);
 `teamCount` is every roster team, so teams that did not answer are in the
-total. It is `null` outside a reveal and on a closest_guess question, whose
-reveal already names the closest teams. The session holds the per-question
-tallies as one of its **Live results** (see the glossary for when they are
-read), so they follow hand grades, lock grading and key fixes.
+total. The counts come from the session's fun fact data (one of its **Live
+results**; see the glossary for when they are read), so they follow hand
+grades, lock grading and key fixes. It is `null` outside a reveal and on a
+question whose type has no correct rate (today only closest_guess, whose
+reveal already names the closest teams): no count follows the question type's
+correct-rate setting.
 
 **The break's fun facts (`funFacts`).** While the break screen is on air
 (`screen.kind === 'break_intro'`; not over the leaderboard, not while

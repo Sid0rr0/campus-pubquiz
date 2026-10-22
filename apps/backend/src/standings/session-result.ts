@@ -1,7 +1,6 @@
 import {
-  answerCredit,
-  hasMeaningfulCorrectRate,
   type LeaderboardEntry,
+  questionOutcome,
   type QuestionType,
   type Verdict,
 } from '@campus-pubquiz/types';
@@ -131,18 +130,16 @@ export function sessionResult(input: SessionResultInput): SessionResult {
     ],
     questions: questions.map((question) => {
       const given = answersByQuestion.get(question.id) ?? [];
-      const credit = given.reduce(
-        (sum, a) => sum + answerCredit(a, question.points),
-        0,
+      const { answeredCount, correctCount, correctRate } = questionOutcome(
+        question,
+        given,
+        participantCount,
       );
       return {
         questionId: question.id,
-        answeredCount: given.length,
-        correctCount: given.filter((a) => a.verdict === 'correct').length,
-        correctRate:
-          hasMeaningfulCorrectRate(question.type) && participantCount > 0
-            ? credit / participantCount
-            : null,
+        answeredCount,
+        correctCount,
+        correctRate,
       };
     }),
     participantCount,
