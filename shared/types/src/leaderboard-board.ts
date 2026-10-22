@@ -1,4 +1,5 @@
 import { getBlockInPlay } from './block-in-play';
+import { isGradedStatus, isQuestionOnAirStatus } from './game-state-groups';
 import {
   isCurrentRoundKahoot,
   isQuestionHiddenBehindKahootLeaderboard,
@@ -11,13 +12,6 @@ import type {
   RankTrend,
 } from './room-views';
 import type { SessionState } from './session-state';
-
-/** The trend basis: the board a team's rank is compared against, and whether it is a real prior board. */
-interface TrendBasis {
-  board: LeaderboardEntry[];
-  /** False for the round-backed-out approximation. */
-  isPriorBoard: boolean;
-}
 
 function zeroedOut(entry: LeaderboardEntry): LeaderboardEntry {
   return {
@@ -41,12 +35,11 @@ function describeCountUpBoard(
   session: SessionState,
   entries: LeaderboardEntry[],
 ): LeaderboardEntry[] | undefined {
-  if (session.priorStandings.length === 0) return undefined;
+  const priorBoard = session.priorStandings?.board ?? [];
+  if (priorBoard.length === 0) return undefined;
   const shownTeamIds = new Set(entries.map((entry) => entry.teamId));
-  const priorTeamIds = new Set(
-    session.priorStandings.map((entry) => entry.teamId),
-  );
-  const fromPriorBoard = session.priorStandings.filter((entry) =>
+  const priorTeamIds = new Set(priorBoard.map((entry) => entry.teamId));
+  const fromPriorBoard = priorBoard.filter((entry) =>
     shownTeamIds.has(entry.teamId),
   );
   const newcomers = entries
@@ -55,59 +48,16 @@ function describeCountUpBoard(
   return rankTeams([...fromPriorBoard, ...newcomers]);
 }
 
-/** The rounds the board's latest scoring came from: every round of the block in play (graded and revealed together), and always the current round. */
-function roundIndexesOfLatestScoring(session: SessionState): Set<number> {
-  const blockRoundIndexes = getBlockInPlay(
-    session.seededGame.rounds,
-    session.progress,
-  ).map(({ roundIndex }) => roundIndex);
-  return new Set([...blockRoundIndexes, session.progress.roundIndex]);
-}
-
-/** This team's cumulative total with just those rounds' points removed. */
-function totalBeforeRounds(
-  entry: LeaderboardEntry,
-  roundIndexes: Set<number>,
-): number {
-  const removed = [...roundIndexes].reduce(
-    (sum, roundIndex) => sum + (entry.roundPoints[roundIndex]?.points ?? 0),
-    0,
-  );
-  return entry.totalPoints - removed;
-}
-
 /**
- * The board to compare ranks against: the prior standings in a kahoot round
- * (a round can span several questions, so backing the round out would net out
- * more than the last one), otherwise the standings with the points of the
- * whole block in play backed out (a block can span several rounds, all scored
- * together at its break).
+ * True while the prior standings (more than one team) have every team still
+ * tied, e.g. everyone on 0 before the game's first block. Comparing ranks
+ * against that tie would hand a dash to the new leader and a down arrow to
+ * everyone else, so every team shows as having moved up onto the board.
  */
-function describeTrendBasis(session: SessionState): TrendBasis {
-  if (isCurrentRoundKahoot(session) && session.priorStandings.length > 0) {
-    return { board: session.priorStandings, isPriorBoard: true };
-  }
-  const roundIndexes = roundIndexesOfLatestScoring(session);
-  return {
-    board: session.leaderboard.map((entry) => ({
-      ...entry,
-      totalPoints: totalBeforeRounds(entry, roundIndexes),
-    })),
-    isPriorBoard: false,
-  };
-}
-
-/**
- * True while a real prior board (more than one team) has every team still
- * tied, e.g. everyone on 0 before the game's first kahoot question. Comparing
- * ranks against that tie would hand a dash to the new leader and a down arrow
- * to everyone else, so every team shows as having moved up onto the board.
- */
-function isAllTiedPriorBoard({ board, isPriorBoard }: TrendBasis): boolean {
+function isAllTied(priorBoard: LeaderboardEntry[]): boolean {
   return (
-    isPriorBoard &&
-    board.length > 1 &&
-    new Set(board.map((entry) => entry.totalPoints)).size === 1
+    priorBoard.length > 1 &&
+    new Set(priorBoard.map((entry) => entry.totalPoints)).size === 1
   );
 }
 
@@ -117,15 +67,20 @@ function rankTrend(currentRank: number, previousRank: number): RankTrend {
   return 'same';
 }
 
-/** Rank movement of each shown team against the trend basis; a team missing from the basis has none. */
+/**
+ * Rank movement of each shown team against the prior standings, in every
+ * round. A team missing from them (it joined after they were taken) has none,
+ * and so has every team when there are none (after a backend restart, until
+ * the next block's first question opens).
+ */
 function describeTrends(
-  session: SessionState,
+  { priorStandings }: SessionState,
   entries: LeaderboardEntry[],
 ): Record<number, RankTrend> {
-  const basis = describeTrendBasis(session);
-  const isForcedUp = isAllTiedPriorBoard(basis);
+  const priorBoard = priorStandings?.board ?? [];
+  const isForcedUp = isAllTied(priorBoard);
   const previousRankByTeamId = new Map(
-    rankTeams(basis.board).map((team) => [team.teamId, team.rank]),
+    rankTeams(priorBoard).map((team) => [team.teamId, team.rank]),
   );
   return Object.fromEntries(
     entries.flatMap((entry) => {
@@ -136,6 +91,62 @@ function describeTrends(
       ];
     }),
   );
+}
+
+/** A question is on air and the leaderboard is not covering it: teams can see it and answer. */
+function isQuestionBeingAnswered({ progress }: SessionState): boolean {
+  return (
+    isQuestionOnAirStatus(progress.status) && !progress.isLeaderboardVisible
+  );
+}
+
+/** The block in play's first question id when that first question is the one on air, else null. */
+function firstQuestionIdOfBlockOnAir(session: SessionState): number | null {
+  const { roundIndex, questionIndex } = session.progress;
+  const [blockStart] = getBlockInPlay(
+    session.seededGame.rounds,
+    session.progress,
+  );
+  const isBlockStart =
+    blockStart !== undefined &&
+    blockStart.roundIndex === roundIndex &&
+    blockStart.questionIndex === questionIndex;
+  return isBlockStart ? blockStart.questionId : null;
+}
+
+/**
+ * The session a write ends with, its prior standings brought up to date. The
+ * write that first puts the block in play's first question in front of the
+ * teams (on air, leaderboard hidden, from anything that wasn't, and not
+ * stepping back into it out of a graded status) makes the leaderboard it
+ * started from the prior standings, tagged with that block. Nothing scored in
+ * the block has landed yet, so it is the board before the block. A later
+ * question or round of the block, Previous and Advance back into its first
+ * question, and a leaderboard toggle over it take nothing, since the prior
+ * standings are already this block's. In a kahoot round every question is its
+ * own block. Pure: the Session write applies it once per write, before the
+ * new standings are read.
+ */
+export function withPriorStandings(
+  started: SessionState,
+  session: SessionState,
+): SessionState {
+  const isQuestionOpening =
+    isQuestionBeingAnswered(session) &&
+    !isQuestionBeingAnswered(started) &&
+    !isGradedStatus(started.progress.status);
+  if (!isQuestionOpening) return session;
+  const blockFirstQuestionId = firstQuestionIdOfBlockOnAir(session);
+  if (
+    blockFirstQuestionId === null ||
+    blockFirstQuestionId === session.priorStandings?.blockFirstQuestionId
+  ) {
+    return session;
+  }
+  return {
+    ...session,
+    priorStandings: { board: started.leaderboard, blockFirstQuestionId },
+  };
 }
 
 /**

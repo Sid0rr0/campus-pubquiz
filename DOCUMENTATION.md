@@ -443,15 +443,18 @@ from the session, so a reloaded or second big screen draws the same thing):
   count is taken over the same capped entries).
 - `countUpBoard` — present only for the between-questions kahoot board: the
   prior standings of the teams in `entries`, which the board holds, counts up
-  from, then reorders into `entries`. Absent everywhere else, and on the first
-  board after a backend restart (the prior standings are ephemeral).
+  from, then reorders into `entries`. Absent everywhere else, and after a
+  backend restart until the next block's first question opens (the prior
+  standings are ephemeral).
 - `trends` — `up` / `down` / `same` per team id, shown once the board settles.
-  The basis is the prior standings in a kahoot round (between questions, round
-  end, quiz end), otherwise the standings with the points of every round of
-  the block in play backed out (a block can span several rounds, all scored
-  together at its break). When the prior standings are a real board with more than one team
-  all tied (e.g. everyone on 0), every team is `up`. A team missing from the
-  basis has no trend. Ranks are compared with the shared ranking rule.
+  The basis is the prior standings in every round: the board as it stood
+  before the block in play's first question opened (in a kahoot round, before
+  the question), kept through every round of the block, its break and its
+  reveal. When the prior standings have more than one team all tied (e.g.
+  everyone on 0), every team on them is `up`. A team missing from the basis
+  (it joined during the block) has no trend, and no team has one when there is
+  no basis (after a backend restart, until the next block's first question
+  opens). Ranks are compared with the shared ranking rule.
 
 `leaderboardRevealCount` stays a separate display field: how many ranks,
 counting up from last place, are revealed.

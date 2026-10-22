@@ -258,7 +258,13 @@ export function buildSessionState(
     teams,
     leaderboard,
     leaderboardRevealCount: description.leaderboardRevealCount ?? 0,
-    priorStandings: buildLeaderboard(description.priorStandings ?? []),
+    priorStandings:
+      description.priorStandings === undefined
+        ? null
+        : {
+            board: buildLeaderboard(description.priorStandings),
+            blockFirstQuestionId: rounds[0].questions[0].id,
+          },
     revealStep:
       description.showdown?.revealStep ??
       description.closestGuessRevealStep ??

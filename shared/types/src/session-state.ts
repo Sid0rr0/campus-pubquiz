@@ -112,13 +112,11 @@ export interface SessionState {
    */
   leaderboardRevealCount: number;
   /**
-   * The standings as they stood before the latest scoring the leaderboard
-   * should show: the leaderboard the session had when a question was put in
-   * front of the teams (on air, board hidden), frozen until the next one is.
-   * Empty before any such write (and after a restart). Ephemeral like
-   * leaderboardRevealCount.
+   * The standings as they stood before the block in play, taken by
+   * withPriorStandings. Null before any such write (fresh or restored session,
+   * so after a restart). Ephemeral like leaderboardRevealCount.
    */
-  priorStandings: LeaderboardEntry[];
+  priorStandings: PriorStandings | null;
   /**
    * The session's stored answers and bonus awards, the input to the fun facts
    * the big screen shows during a break and to the reveal's teams-correct
@@ -156,6 +154,17 @@ export interface SessionState {
   ungradedQuestionIds: number[];
   /** The in-progress/just-resolved showdown tiebreaker round, or null between rounds — see ActiveShowdownRoundState. */
   activeShowdownRound: ActiveShowdownRoundState | null;
+}
+
+/**
+ * The Prior standings: the leaderboard the session had when the block in
+ * play's first question was first put in front of the teams (on air, board
+ * hidden), kept for the rest of the block.
+ */
+export interface PriorStandings {
+  board: LeaderboardEntry[];
+  /** The block they were taken for, identified by its first question's id. */
+  blockFirstQuestionId: number;
 }
 
 /** One participating team's seat + guess within the active showdown round — the server-side cache backing ActiveShowdownView; the answer/guess fields are always held here in plaintext and only selectively projected out per showdownRevealStep by buildActiveShowdownView. */
@@ -200,7 +209,7 @@ export function freshSessionState(
     openedQuestionIds: [],
     leaderboard: [],
     leaderboardRevealCount: 0,
-    priorStandings: [],
+    priorStandings: null,
     funFactData: { answers: [], bonusAwards: [] },
     leagueTop: null,
     teams: [],

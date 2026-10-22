@@ -6,9 +6,14 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
+  CAPITAL_QUESTION,
+  advanceToBlockBoard,
+  advanceUntil,
   freezeClockAt,
   restoreClock,
   setupRealStoreGatewayTest,
+  submitAnswer,
+  submitAnswers,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
@@ -16,14 +21,6 @@ const KAHOOT_TIMER_SECONDS = 10;
 const BONUS_POINTS = 3;
 const BIG_BONUS_POINTS = 6;
 const TEAM_COUNT = 7;
-
-const QUESTION = {
-  type: 'multiple_choice' as const,
-  prompt: 'Capital of France?',
-  answer: 'Paris',
-  points: 10,
-  payload: { options: ['Paris', 'London'] },
-};
 
 describe('GameGateway — the leaderboard description on the display view', () => {
   const harness = setupRealStoreGatewayTest();
@@ -45,7 +42,10 @@ describe('GameGateway — the leaderboard description on the display view', () =
         {
           title: 'Speed Round',
           kahootMode: true,
-          questions: [QUESTION, { ...QUESTION, prompt: 'Capital of UK?' }],
+          questions: [
+            CAPITAL_QUESTION,
+            { ...CAPITAL_QUESTION, prompt: 'Capital of UK?' },
+          ],
         },
       ],
       settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
@@ -81,19 +81,6 @@ describe('GameGateway — the leaderboard description on the display view', () =
       category: 'shot',
       points,
     });
-  }
-
-  /** Each team (by index) submits its value to the round's `questionIndex`th question, scored on the spot like a kahoot answer. */
-  async function submitAnswers(questionIndex: number, values: string[]) {
-    const questionId = game.rounds[0].questionIds[questionIndex];
-    for (const [teamIndex, value] of values.entries()) {
-      const { socket, teamId } = game.teams[teamIndex];
-      await game.gateway.handleSubmitAnswer(asSocket(socket), {
-        questionId,
-        teamId,
-        value,
-      });
-    }
   }
 
   async function actAll(actions: GameAction[]) {
@@ -164,7 +151,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
 
     it('counts up from the board before the question, however many answers landed on air', async () => {
       await openKahootRound(['First', 'Second']);
-      await submitAnswers(0, ['Paris', 'London']); // First scores on air
+      await submitAnswers(game, ['Paris', 'London']); // First scores on air
       await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE']); // -> q1 behind the board
 
       const { countUpBoard, trends } = board();
@@ -178,9 +165,9 @@ describe('GameGateway — the leaderboard description on the display view', () =
 
     it('compares trends against the standings before the last question when its answers landed on air', async () => {
       await openKahootRound(['First', 'Second']);
-      await submitAnswers(0, ['Paris', 'London']);
+      await submitAnswers(game, ['Paris', 'London']);
       await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE', 'TOGGLE_LEADERBOARD']);
-      await submitAnswers(1, ['London', 'Paris']); // Second draws level
+      await submitAnswers(game, ['London', 'Paris'], { questionIndex: 1 }); // Second draws level
       await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE']);
 
       expect(board().trends).toEqual({
@@ -292,15 +279,17 @@ describe('GameGateway — the leaderboard description on the display view', () =
   });
 
   describe('in an ordinary block of several rounds', () => {
-    it('backs out every round of the block, so a team that kept its rank shows no movement', async () => {
+    it('compares against the board before the whole block, so a team that kept its rank shows no movement', async () => {
       game = await harness.createGateway({
         teamNames: ['Leader', 'Chaser', 'Outsider'],
         rounds: [
-          { title: 'One', questions: [QUESTION] },
+          { title: 'One', questions: [CAPITAL_QUESTION] },
           {
             title: 'Two',
             breakAfter: true,
-            questions: [{ ...QUESTION, prompt: 'Capital of UK?', points: 25 }],
+            questions: [
+              { ...CAPITAL_QUESTION, prompt: 'Capital of UK?', points: 25 },
+            ],
           },
         ],
       });
@@ -308,22 +297,14 @@ describe('GameGateway — the leaderboard description on the display view', () =
       await awardBonus(leader, 30);
       await awardBonus(chaser, 20);
       await awardBonus(outsider, 10);
-      const advanceUntil = async (status: string) => {
-        while (game.sessionWrite.read(game.joinCode).progress.status !== status)
-          await game.act('ADVANCE');
-      };
       await game.act('START_QUIZ');
-      await advanceUntil('question_open');
-      await submitAnswers(0, ['London', 'Paris', 'London']); // Chaser draws level on 30
-      await advanceUntil('round_intro'); // -> round two
-      await advanceUntil('question_open');
-      const { socket, teamId } = game.teams[outsider];
-      await game.gateway.handleSubmitAnswer(asSocket(socket), {
-        questionId: game.rounds[1].questionIds[0],
-        teamId,
-        value: 'Paris', // Outsider passes them both on 35
-      });
-      await advanceUntil('break_intro');
+      await advanceUntil(game, 'question_open');
+      await submitAnswers(game, ['London', 'Paris', 'London']); // Chaser draws level on 30
+      await advanceUntil(game, 'round_intro'); // -> round two
+      await advanceUntil(game, 'question_open');
+      // Outsider passes them both on 35
+      await submitAnswer(game, outsider, 'Paris', { roundIndex: 1 });
+      await advanceUntil(game, 'break_intro');
       await game.act('TOGGLE_LEADERBOARD');
 
       expect(board().trends).toEqual({
@@ -334,28 +315,166 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
   });
 
-  describe('in an ordinary round', () => {
-    it('sends every team, no count-up board, and trends against the round backed out', async () => {
-      game = await harness.createGateway({ teamNames: ['First', 'Second'] });
-      await actAll(['START_QUIZ', 'ADVANCE', 'ADVANCE']); // -> first question
-      for (const [{ socket, teamId }, value] of [
-        [game.teams[0], 'Paris'],
-        [game.teams[1], 'London'],
-      ] as const) {
-        await game.gateway.handleSubmitAnswer(asSocket(socket), {
-          questionId: game.questionIds.multipleChoice,
-          teamId,
-          value,
-        });
-      }
+  describe('in an ordinary block', () => {
+    /** Two ordinary blocks: round One (two questions, then a break) and round Two (one question, then a break). */
+    async function createTwoBlockQuiz(teamNames: string[]): Promise<void> {
+      game = await harness.createGateway({
+        teamNames,
+        rounds: [
+          {
+            title: 'One',
+            breakAfter: true,
+            questions: [
+              CAPITAL_QUESTION,
+              { ...CAPITAL_QUESTION, prompt: 'Capital of UK?' },
+            ],
+          },
+          {
+            title: 'Two',
+            breakAfter: true,
+            questions: [{ ...CAPITAL_QUESTION, prompt: 'Capital of Spain?' }],
+          },
+        ],
+      });
+    }
 
-      await game.act('TOGGLE_LEADERBOARD');
+    /** Starts the quiz and opens the first block's first question. */
+    async function openFirstBlock() {
+      await game.act('START_QUIZ');
+      await advanceUntil(game, 'question_open');
+    }
+
+    it('sends every team, no count-up board, and every team up from an all-tied start', async () => {
+      await createTwoBlockQuiz(['First', 'Second']);
+      await openFirstBlock();
+      await submitAnswers(game, ['Paris', 'London']);
+
+      await advanceToBlockBoard(game);
 
       const { entries, countUpBoard, trends } = board();
       expect(entries).toHaveLength(2);
       expect(countUpBoard).toBeUndefined();
       expect(trends).toEqual({
+        [game.teams[0].teamId]: 'up',
+        [game.teams[1].teamId]: 'up',
+      });
+    });
+
+    it('counts a bonus awarded in the break as movement on the board after the reveal', async () => {
+      await createTwoBlockQuiz(['Leader', 'Chaser']);
+      await awardBonus(0, BIG_BONUS_POINTS); // before the block
+      await openFirstBlock();
+      await advanceUntil(game, 'break_intro');
+      await awardBonus(1, BIG_BONUS_POINTS * 2); // Chaser passes Leader
+
+      await advanceToBlockBoard(game);
+
+      expect(board().trends).toEqual({
+        [game.teams[1].teamId]: 'up',
+        [game.teams[0].teamId]: 'down',
+      });
+    });
+
+    it('counts a bonus awarded before the block opens as part of the board before it', async () => {
+      await createTwoBlockQuiz(['Leader', 'Chaser']);
+      await game.act('START_QUIZ');
+      await advanceUntil(game, 'round_intro');
+      await awardBonus(0); // before the block's first question opens
+      await advanceUntil(game, 'question_open');
+
+      await advanceToBlockBoard(game);
+
+      expect(board().trends).toEqual({
         [game.teams[0].teamId]: 'same',
+        [game.teams[1].teamId]: 'same',
+      });
+    });
+
+    it('keeps the board before the block after Previous and Advance again, so points scored on air still move', async () => {
+      await createTwoBlockQuiz(['Leader', 'Chaser']);
+      await awardBonus(0); // Leader leads before the block
+      await openFirstBlock();
+      await submitAnswers(game, ['London', 'Paris']); // Chaser passes Leader on air
+      await game.act('PREVIOUS'); // -> round_intro
+      await game.act('ADVANCE'); // -> the block's first question again
+
+      await advanceToBlockBoard(game);
+
+      expect(board().trends).toEqual({
+        [game.teams[1].teamId]: 'up',
+        [game.teams[0].teamId]: 'down',
+      });
+    });
+
+    it('keeps the board before the block when the leaderboard is toggled mid-block', async () => {
+      await createTwoBlockQuiz(['Leader', 'Chaser']);
+      await awardBonus(0);
+      await openFirstBlock();
+      await submitAnswers(game, ['London', 'Paris']);
+      await actAll(['TOGGLE_LEADERBOARD', 'TOGGLE_LEADERBOARD']);
+
+      await advanceToBlockBoard(game);
+
+      expect(board().trends).toEqual({
+        [game.teams[1].teamId]: 'up',
+        [game.teams[0].teamId]: 'down',
+      });
+    });
+
+    it('gives a team that joined during the block no trend', async () => {
+      await createTwoBlockQuiz(['Leader', 'Chaser']);
+      await awardBonus(0);
+      await openFirstBlock();
+      const late = await game.joinTeam('Late');
+
+      await advanceToBlockBoard(game);
+
+      const { entries, trends } = board();
+      expect(entries.map((entry) => entry.teamId)).toContain(late.teamId);
+      expect(trends).toEqual({
+        [game.teams[0].teamId]: 'same',
+        [game.teams[1].teamId]: 'same',
+      });
+    });
+
+    it('sends a big screen that resyncs mid-block the same trends on the reveal board as one connected throughout', async () => {
+      await createTwoBlockQuiz(['Leader', 'Chaser']);
+      await awardBonus(0); // Leader leads before the block
+      await openFirstBlock();
+      await submitAnswers(game, ['London', 'Paris']); // Chaser passes Leader on air
+      await game.resync('display'); // the big screen reconnects mid-block
+
+      await advanceToBlockBoard(game);
+
+      const { trends } = leaderboardScreen(await game.resync('display')).board;
+      expect(trends).toEqual(board().trends);
+      expect(trends).toEqual({
+        [game.teams[1].teamId]: 'up',
+        [game.teams[0].teamId]: 'down',
+      });
+    });
+
+    it('gives no trends on the block a backend restart interrupted, and trends again on the next', async () => {
+      await createTwoBlockQuiz(['Leader', 'Chaser']);
+      await awardBonus(0);
+      await openFirstBlock();
+      await game.act('ADVANCE'); // -> the block's second question
+      await game.act('TOGGLE_LEADERBOARD'); // shown over it
+      const { teams } = game;
+      game = { ...(await game.restart()), teams };
+      await game.act('TOGGLE_LEADERBOARD'); // it is answered again, not the block's first
+      await awardBonus(1, BIG_BONUS_POINTS); // Chaser passes Leader
+
+      await advanceToBlockBoard(game);
+      expect(board().trends).toEqual({});
+
+      await game.act('TOGGLE_LEADERBOARD'); // -> round Two's intro
+      await advanceUntil(game, 'question_open'); // the next block's first question
+      await awardBonus(0, BIG_BONUS_POINTS); // Leader passes Chaser back
+      await advanceToBlockBoard(game);
+
+      expect(board().trends).toEqual({
+        [game.teams[0].teamId]: 'up',
         [game.teams[1].teamId]: 'down',
       });
     });
