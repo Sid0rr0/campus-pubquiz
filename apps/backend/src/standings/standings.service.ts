@@ -6,7 +6,11 @@ import type {
   FunFactData,
   LeaderboardEntry,
 } from '@campus-pubquiz/types';
-import { compareTeamNames, rankTeams } from '@campus-pubquiz/types';
+import {
+  compareTeamNames,
+  JOKER_MULTIPLIER,
+  rankTeams,
+} from '@campus-pubquiz/types';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -89,7 +93,8 @@ function roundPointsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
       // joker round: that round's answer points count double (ADR 0004).
       .select(
         knex.raw(
-          'sum(a.points_awarded * case when j.id is null then 1 else 2 end) as total',
+          'sum(a.points_awarded * case when j.id is null then 1 else ?::int end) as total',
+          [JOKER_MULTIPLIER],
         ),
       )
   );

@@ -1,3 +1,5 @@
+import { jokerRoundPoints } from '@campus-pubquiz/types';
+
 /**
  * The points a team shows for one answer in a read model that lays answers out
  * cell by cell (the scoresheet, the session detail, the team history). Every
@@ -10,5 +12,7 @@ export function cellPoints(answer: {
   /** The answer is to a question of its team's joker round (absent reads as false). */
   isJoker?: boolean;
 }): number {
-  return answer.isJoker ? answer.pointsAwarded * 2 : answer.pointsAwarded;
+  return answer.isJoker
+    ? jokerRoundPoints(answer.pointsAwarded)
+    : answer.pointsAwarded;
 }
