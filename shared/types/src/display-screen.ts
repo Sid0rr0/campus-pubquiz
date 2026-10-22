@@ -1,6 +1,10 @@
 import { describeFunFacts, type FunFact } from './fun-facts';
 import { getBreakNumber, isShowingLastBreak } from './game-state-structure';
-import { toJokerPickRounds, type JokerPickRound } from './joker';
+import {
+  pickableRounds,
+  toJokerPickRounds,
+  type JokerPickRound,
+} from './joker';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import type { OnAirScreen } from './on-air-screen';
 import type {
@@ -121,7 +125,10 @@ export function describeDisplayScreen({
       return {
         kind: 'joker_pick',
         endsAt: session.jokerPickEndsAt,
-        rounds: toJokerPickRounds(rounds, rounds),
+        rounds: toJokerPickRounds(
+          rounds,
+          pickableRounds(rounds, session.openedQuestionIds),
+        ),
       };
     case 'round_title': {
       const round = rounds[onAir.roundIndex];

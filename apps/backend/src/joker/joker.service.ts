@@ -42,6 +42,20 @@ export class JokerService {
     );
   }
 
+  /** Removes every drawn joker of the session (chosen and quiz-master-set ones stay) and returns the ids of the teams that held one. */
+  async clearDrawn(gameSessionId: number): Promise<number[]> {
+    const drawnTeamIds = [...(await this.listForSession(gameSessionId))]
+      .filter(([, joker]) => joker.source === 'drawn')
+      .map(([teamId]) => teamId);
+    if (drawnTeamIds.length > 0) {
+      await this.jokers.nativeDelete({
+        gameSession: gameSessionId,
+        source: 'drawn',
+      });
+    }
+    return drawnTeamIds;
+  }
+
   /** The joker the team holds this session, or null when it has none. */
   async getForTeam(
     gameSessionId: number,

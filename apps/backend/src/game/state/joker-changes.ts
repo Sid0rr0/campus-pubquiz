@@ -127,6 +127,28 @@ export class JokerChanges {
     };
   }
 
+  /**
+   * Reopens the pick `session` is entering: drawn jokers are cleared so those
+   * teams get a real chance to choose (a fresh draw follows if they still
+   * don't), while chosen and quiz-master-set ones stay. Every connected team
+   * whose drawn joker was cleared is told it has none.
+   */
+  async reopenPick(session: SessionState): Promise<ClosedJokerPick> {
+    const clearedTeamIds = await this.jokerService.clearDrawn(
+      session.seededGame.gameSessionId,
+    );
+    const cleared = new Set(clearedTeamIds);
+    const jokers = Object.fromEntries(
+      Object.entries(session.jokers).filter(
+        ([teamId]) => !cleared.has(Number(teamId)),
+      ),
+    );
+    return {
+      session: { ...session, jokers },
+      jokerSyncs: jokerSyncsFor(session, clearedTeamIds, jokers),
+    };
+  }
+
   /** Every stored joker of the session by team id, for a session being placed. */
   async loadAll(gameSessionId: number): Promise<Record<number, TeamJoker>> {
     return Object.fromEntries(

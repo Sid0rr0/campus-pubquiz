@@ -428,6 +428,170 @@ describe('GameGateway — the joker pick', () => {
     });
   });
 
+  describe('reopening the pick', () => {
+    beforeEach(() => freezeClockAt(FROZEN_NOW));
+    afterEach(() => restoreClock());
+
+    /** Closes the pick and steps back into it from round 0's intro. */
+    async function reopen(game: RealStoreGateway) {
+      await game.act('ADVANCE'); // closes the pick -> round_intro
+      game.clearEmits();
+      return game.act('PREVIOUS');
+    }
+
+    it('goes back from round 0’s intro to the pick with a fresh minute', async () => {
+      const game = await jokerNight();
+      await openPick(game);
+      await game.act('ADVANCE');
+      advanceClockBy(45_000);
+
+      const back = await game.act('PREVIOUS');
+
+      expect(back.progress.status).toBe('joker_pick');
+      expect(game.timers().jokerPick.dueAt()).toBe(
+        Date.now() + JOKER_PICK_SECONDS * 1000,
+      );
+      expect((await game.resync('players')).jokerPick?.endsAt).toBe(
+        Date.now() + JOKER_PICK_SECONDS * 1000,
+      );
+    });
+
+    it('keeps chosen and quiz-master-set jokers and clears drawn ones', async () => {
+      const game = await jokerNight({
+        teamNames: ['Alpha', 'Bravo', 'Charlie'],
+        jokerRandom: () => 0,
+      });
+      await openPick(game);
+      const [alpha, , charlie] = game.teams;
+      await pick(game, alpha, game.rounds[1].id);
+      await game.inRequestContext(() =>
+        game.jokerService.set(game.gameSessionId, charlie.teamId, {
+          roundId: game.rounds[2].id,
+          source: 'set_by_quiz_master',
+        }),
+      );
+      await game.act('ADVANCE'); // Bravo is drawn round 1
+
+      await game.act('PREVIOUS');
+
+      expect(await adminJokers(game)).toEqual({
+        Alpha: { roundId: game.rounds[1].id, source: 'chosen' },
+        Bravo: null,
+        Charlie: { roundId: game.rounds[2].id, source: 'set_by_quiz_master' },
+      });
+      expect(Object.keys(await storedJokers(game))).not.toContain(
+        String(game.teams[1].teamId),
+      );
+    });
+
+    it('tells a team whose drawn joker was cleared that it has none', async () => {
+      const game = await jokerNight({ jokerRandom: () => 0 });
+      await openPick(game);
+      const [alpha, bravo] = game.teams;
+      await pick(game, alpha, game.rounds[1].id);
+
+      await reopen(game);
+
+      expect(syncsTo(game, bravo)).toEqual([{ joker: null }]);
+      expect(syncsTo(game, alpha)).toEqual([]);
+    });
+
+    it('gives the teams that did not choose a fresh draw when it closes again', async () => {
+      const game = await jokerNight({ jokerRandom: () => 0.99 });
+      await openPick(game);
+      const [, bravo] = game.teams;
+      await game.act('ADVANCE'); // both drawn the last round
+      await game.act('PREVIOUS');
+      await pick(game, bravo, game.rounds[0].id);
+
+      await game.act('ADVANCE');
+
+      expect(await adminJokers(game)).toEqual({
+        Alpha: { roundId: game.rounds[2].id, source: 'drawn' },
+        Bravo: { roundId: game.rounds[0].id, source: 'chosen' },
+      });
+    });
+
+    describe('once a round has started', () => {
+      /** Opens round 0's question, then steps back into the pick. */
+      async function reopenAfterRoundStarted(game: RealStoreGateway) {
+        await openPick(game);
+        await game.act('ADVANCE'); // closes the pick -> round_intro
+        await game.act('ADVANCE'); // -> question_open, round 0 started
+        await game.act('PREVIOUS'); // -> round_intro
+        game.clearEmits();
+        return game.act('PREVIOUS'); // -> joker_pick
+      }
+
+      it('offers only the rounds with no opened question', async () => {
+        const game = await jokerNight();
+        await reopenAfterRoundStarted(game);
+
+        const players = await game.resync('players');
+
+        expect(players.jokerPick?.rounds.map((round) => round.title)).toEqual([
+          'Round 2',
+          'Round 3',
+        ]);
+        const display = await game.resync('display');
+        if (display.screen.kind !== 'joker_pick') throw new Error('not pick');
+        expect(display.screen.rounds.map((round) => round.roundNumber)).toEqual(
+          [2, 3],
+        );
+      });
+
+      it('refuses a pick of the started round and stores nothing', async () => {
+        const game = await jokerNight();
+        await reopenAfterRoundStarted(game);
+        const [alpha] = game.teams;
+
+        const ack = await pick(game, alpha, game.rounds[0].id);
+
+        expect(ack.success).toBe(false);
+        expect((await adminJokers(game)).Alpha).toBeNull();
+      });
+
+      it('still lets a team move to a round that has not started', async () => {
+        const game = await jokerNight();
+        await reopenAfterRoundStarted(game);
+        const [alpha] = game.teams;
+
+        const ack = await pick(game, alpha, game.rounds[1].id);
+
+        expect(ack).toEqual({ success: true });
+      });
+
+      it('never draws the started round', async () => {
+        const game = await jokerNight({ jokerRandom: () => 0 });
+        await reopenAfterRoundStarted(game);
+
+        await game.act('ADVANCE');
+
+        expect(await adminJokers(game)).toEqual({
+          Alpha: { roundId: game.rounds[1].id, source: 'drawn' },
+          Bravo: { roundId: game.rounds[1].id, source: 'drawn' },
+        });
+      });
+
+      it('keeps a chosen joker that sits on the started round', async () => {
+        const game = await jokerNight();
+        await openPick(game);
+        const [alpha] = game.teams;
+        await pick(game, alpha, game.rounds[0].id);
+        await game.act('ADVANCE');
+        await game.act('ADVANCE');
+        await game.act('PREVIOUS');
+
+        await game.act('PREVIOUS');
+
+        expect((await adminJokers(game)).Alpha).toEqual({
+          roundId: game.rounds[0].id,
+          source: 'chosen',
+        });
+      });
+    });
+  });
+
   describe('reconnecting and rejoining', () => {
     it('hands a rejoining phone its own joker in JOIN_ACCEPTED', async () => {
       const game = await jokerNight();

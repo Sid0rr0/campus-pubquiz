@@ -75,6 +75,17 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
     });
   });
 
+  it('steps back from round 0 intro to the joker pick when jokers are on', () => {
+    const roundIntro: GameProgress = { ...lobby, status: 'round_intro' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+      jokersEnabled: true,
+    };
+    const next = getNextGameState(roundIntro, 'PREVIOUS', context);
+    expect(next).toMatchObject({ status: 'joker_pick', roundIndex: 0 });
+  });
+
   it('steps back from round_overview to the rules screen', () => {
     const roundOverview: GameProgress = { ...lobby, status: 'round_overview' };
     const context: GameContext = {
