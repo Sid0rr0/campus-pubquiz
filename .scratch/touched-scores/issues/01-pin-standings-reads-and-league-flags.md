@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The session-write gateway spec's "events that do not touch scores" group shows, for each such event, that no standings read runs (through the write gate's standings point or a standings read spy, as the spec already does): round rated, feedback sent, a team's own player count, an admin-set player count, a disconnect, the break end time, the display text size, the display sound mute, a showdown guess, a new showdown round, and a settings and leagues change. Cases already covered are not duplicated
 - [ ] The spec's existing groups still show that answers, grades, bonus awards (award, edit, remove), joins, leaves, kicks, presses, timer expiries and quiz edits read standings. A touching event with no case yet gets one

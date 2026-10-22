@@ -37,6 +37,7 @@ export class SessionSettingsChanges {
     return Promise.resolve({
       session: withBreakEndTime(session, breakEndsAt),
       outcome: BROADCAST_STATE_OUTCOME,
+      touchedScores: false,
     });
   }
 
@@ -48,6 +49,7 @@ export class SessionSettingsChanges {
     return Promise.resolve({
       session: withDisplayTextScale(session, displayTextScale),
       outcome: BROADCAST_STATE_OUTCOME,
+      touchedScores: false,
     });
   }
 
@@ -59,6 +61,7 @@ export class SessionSettingsChanges {
     return Promise.resolve({
       session: withDisplaySoundMuted(session, isDisplaySoundMuted),
       outcome: BROADCAST_STATE_OUTCOME,
+      touchedScores: false,
     });
   }
 
@@ -73,6 +76,7 @@ export class SessionSettingsChanges {
         seededGame: { ...session.seededGame, customName },
       },
       outcome: undefined,
+      touchedScores: false,
     });
   }
 
@@ -99,6 +103,7 @@ export class SessionSettingsChanges {
     return {
       session: { ...session, seededGame: { ...session.seededGame, settings } },
       outcome: undefined,
+      touchedScores: false,
     };
   }
 }

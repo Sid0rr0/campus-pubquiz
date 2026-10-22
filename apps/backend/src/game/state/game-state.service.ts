@@ -64,9 +64,6 @@ export { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 
-/** The option for a session write whose event doesn't change scores: skips the standings read. */
-const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
-
 /** The one place a held session becomes its picker summary. */
 function summarizeSession(session: SessionState): ActiveSessionSummary {
   const { seededGame } = session;
@@ -157,10 +154,8 @@ export class GameStateService implements OnModuleInit {
       if (joinCode === exceptJoinCode) continue;
       try {
         const before = this.sessionWrite.read(joinCode).leagueTop;
-        await this.sessionWrite.write(
-          joinCode,
-          (session) => this.leagueChanges.refreshTop(session),
-          NOT_TOUCHING_SCORES,
+        await this.sessionWrite.write(joinCode, (session) =>
+          this.leagueChanges.refreshTop(session),
         );
         const after = this.sessionWrite.read(joinCode).leagueTop;
         if (JSON.stringify(before) !== JSON.stringify(after)) {
@@ -230,10 +225,8 @@ export class GameStateService implements OnModuleInit {
     if (!held) return;
     const { joinCode } = held.seededGame;
     try {
-      await this.sessionWrite.write(
-        joinCode,
-        (session) => this.settingsChanges.customName(session, customName),
-        NOT_TOUCHING_SCORES,
+      await this.sessionWrite.write(joinCode, (session) =>
+        this.settingsChanges.customName(session, customName),
       );
     } catch (error) {
       // Closed between the lookup and the write: nothing left to update.
@@ -342,10 +335,8 @@ export class GameStateService implements OnModuleInit {
       }),
     );
     if (leagueIds.length > 0) {
-      await this.sessionWrite.write(
-        seededGame.joinCode,
-        (session) => this.leagueChanges.setLeagues(session, leagueIds),
-        NOT_TOUCHING_SCORES,
+      await this.sessionWrite.write(seededGame.joinCode, (session) =>
+        this.leagueChanges.setLeagues(session, leagueIds),
       );
     }
     return seededGame.joinCode;
@@ -357,10 +348,8 @@ export class GameStateService implements OnModuleInit {
     payload: RateRoundPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) => this.feedbackChanges.roundRated(session, payload, socketId),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.feedbackChanges.roundRated(session, payload, socketId),
     );
   }
 
@@ -370,11 +359,8 @@ export class GameStateService implements OnModuleInit {
     payload: SetPlayerCountPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) =>
-        this.playerCountChanges.playerCountSet(session, payload, socketId),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.playerCountChanges.playerCountSet(session, payload, socketId),
     );
   }
 
@@ -383,10 +369,8 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     payload: SetTeamPlayerCountPayload,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) => this.playerCountChanges.teamPlayerCountSet(session, payload),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.playerCountChanges.teamPlayerCountSet(session, payload),
     );
   }
 
@@ -396,11 +380,8 @@ export class GameStateService implements OnModuleInit {
     payload: SendFeedbackPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) =>
-        this.feedbackChanges.feedbackSent(session, payload, socketId),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.feedbackChanges.feedbackSent(session, payload, socketId),
     );
   }
 
@@ -440,10 +421,8 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     socketId: string,
   ): Promise<SessionOutcome | null> {
-    return this.sessionWrite.write<SessionOutcome | null>(
-      joinCode,
-      (session) => this.rosterChanges.disconnect(session, socketId),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write<SessionOutcome | null>(joinCode, (session) =>
+      this.rosterChanges.disconnect(session, socketId),
     );
   }
 
@@ -474,10 +453,8 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     breakEndsAt: number | null,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) => this.settingsChanges.breakEndTime(session, breakEndsAt),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.settingsChanges.breakEndTime(session, breakEndsAt),
     );
   }
 
@@ -486,11 +463,8 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     displayTextScale: number,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) =>
-        this.settingsChanges.displayTextScale(session, displayTextScale),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.settingsChanges.displayTextScale(session, displayTextScale),
     );
   }
 
@@ -499,11 +473,8 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     isDisplaySoundMuted: boolean,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) =>
-        this.settingsChanges.displaySoundMuted(session, isDisplaySoundMuted),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.settingsChanges.displaySoundMuted(session, isDisplaySoundMuted),
     );
   }
 
@@ -513,10 +484,8 @@ export class GameStateService implements OnModuleInit {
     payload: SubmitShowdownGuessPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) => this.showdownsChanges.guess(session, payload, socketId),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.showdownsChanges.guess(session, payload, socketId),
     );
   }
 
@@ -525,10 +494,8 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     payload: CreateShowdownRoundPayload,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(
-      joinCode,
-      (session) => this.showdownsChanges.newRound(session, payload),
-      NOT_TOUCHING_SCORES,
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.showdownsChanges.newRound(session, payload),
     );
   }
 
@@ -542,11 +509,8 @@ export class GameStateService implements OnModuleInit {
     partial: Partial<SessionSettings>,
     leagueIds?: number[],
   ): Promise<void> {
-    await this.sessionWrite.write(
-      joinCode,
-      (session) =>
-        this.leagueChanges.settingsAndLeagues(session, partial, leagueIds),
-      NOT_TOUCHING_SCORES,
+    await this.sessionWrite.write(joinCode, (session) =>
+      this.leagueChanges.settingsAndLeagues(session, partial, leagueIds),
     );
   }
 

@@ -138,6 +138,20 @@ describe('Live results — league tops refresh when a league table may have chan
     expect(displayLeagueTops(otherCode)).toEqual([]);
   });
 
+  it('sends the other session nothing for feedback on an ended session', async () => {
+    await game.act('END_QUIZ');
+    game.clearEmits();
+
+    const ack = await game.gateway.handleSendFeedback(asSocket(scorer.socket), {
+      comment: 'Loved it',
+      topics: [],
+    });
+
+    expect(ack).toEqual({ success: true });
+    expect(emitsTo(otherCode)).toEqual([]);
+    expect(displayLeagueTops(otherCode)).toEqual([]);
+  });
+
   it('behaves the same for an end delivered with no sender, as a phase timer does', async () => {
     const outcome = await game.inRequestContext(() =>
       game.gameState.applyAdminAction(game.joinCode, 'END_QUIZ'),

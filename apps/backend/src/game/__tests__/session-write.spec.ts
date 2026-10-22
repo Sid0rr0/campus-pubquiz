@@ -587,6 +587,31 @@ describe('GameGateway — session write: a timer expiry', () => {
         ?.bonusPoints,
     ).toBe(2);
   });
+
+  it('reads standings for a lock timer’s expiry', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Timed Team'],
+      rounds: [
+        {
+          title: 'Round A',
+          breakAfter: true,
+          questions: [{ type: 'free_text', prompt: 'QA1', answer: 'A1' }],
+        },
+      ],
+    });
+    await game.connectAdmin();
+    for (const action of ['START_QUIZ', 'ADVANCE', 'ADVANCE'] as const) {
+      await game.act(action);
+    }
+    await game.act('ADVANCE'); // -> locking, lock armed
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    await game.timers().lock.fireNow();
+
+    expect((await game.snapshot()).progress.status).toBe('break_intro');
+    expect(leaderboard).toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
 });
 
 describe('GameGateway — session write: quiz edits and re-imports', () => {
@@ -819,6 +844,206 @@ describe('GameGateway — session write: events that do not touch scores', () =>
   });
 });
 
+describe('GameGateway — session write: player counts and sound mute', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('does not read standings for a team’s own player count, an admin-set player count or a sound mute', async () => {
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const admin = await game.connectAdmin();
+    const [team] = game.teams;
+    await game.openFirstQuestion(admin);
+    const before = await game.snapshot();
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    await game.gateway.handleSetPlayerCount(asSocket(team.socket), {
+      playerCount: 4,
+    });
+    await game.gateway.handleSetTeamPlayerCount(asSocket(admin), {
+      teamId: team.teamId,
+      playerCount: 5,
+    });
+    await game.gateway.handleSetDisplaySoundMuted(asSocket(admin), {
+      isDisplaySoundMuted: true,
+    });
+
+    expect(leaderboard).not.toHaveBeenCalled();
+    const after = await game.snapshot();
+    expect(after.isDisplaySoundMuted).toBe(true);
+    expect(after.leaderboard).toEqual(before.leaderboard);
+  });
+});
+
+describe('GameGateway — session write: round rating and feedback', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  const ROUNDS = [
+    {
+      title: 'Music',
+      questions: [
+        { type: 'free_text' as const, prompt: 'Q1', answer: 'a', points: 1 },
+      ],
+    },
+    {
+      title: 'Film',
+      breakAfter: true,
+      questions: [
+        { type: 'free_text' as const, prompt: 'Q2', answer: 'b', points: 1 },
+      ],
+    },
+    {
+      title: 'Science',
+      breakAfter: true,
+      questions: [
+        { type: 'free_text' as const, prompt: 'Q3', answer: 'c', points: 1 },
+      ],
+    },
+  ];
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  async function advanceUntilStatus(
+    game: RealStoreGateway,
+    status: string,
+  ): Promise<void> {
+    let snapshot = await game.snapshot();
+    for (let i = 0; i < 40; i += 1) {
+      if (snapshot.progress.status === status) return;
+      snapshot = await game.act('ADVANCE');
+    }
+    throw new Error(`Never reached status "${status}"`);
+  }
+
+  it('does not read standings for a round rating or for feedback', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      rounds: ROUNDS,
+    });
+    const [team] = game.teams;
+    await game.act('START_QUIZ');
+    await advanceUntilStatus(game, 'break_intro');
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    const rated = await game.gateway.handleRateRound(asSocket(team.socket), {
+      roundId: game.rounds[0].id,
+      stars: 4,
+    });
+    expect(rated).toEqual({ success: true });
+    expect(leaderboard).not.toHaveBeenCalled();
+
+    await advanceUntilStatus(game, 'ended');
+    leaderboard.mockClear();
+    const sent = await game.gateway.handleSendFeedback(asSocket(team.socket), {
+      comment: 'Loved it',
+      topics: ['Geography'],
+    });
+
+    expect(sent).toEqual({ success: true });
+    expect(leaderboard).not.toHaveBeenCalled();
+  });
+});
+
+describe('GameGateway — session write: events that touch scores read standings', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let team: JoinedTeam;
+  let leaderboard: jest.SpyInstance;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    admin = await game.connectAdmin();
+    [team] = game.teams;
+    await game.openFirstQuestion(admin);
+    leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  async function awardBonus(): Promise<number> {
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
+      category: 'shot',
+      points: 1,
+    });
+    const [award] = await game.inRequestContext(() =>
+      game.bonusService.listForTeamAdmin(game.gameSessionId, team.teamId),
+    );
+    return award.id;
+  }
+
+  it('reads standings for a bonus award, edit and removal', async () => {
+    const awardId = await awardBonus();
+    expect(leaderboard).toHaveBeenCalledTimes(1);
+
+    await game.inRequestContext(() =>
+      game.rest.editBonus(game.joinCode, awardId, 3, undefined),
+    );
+    expect(leaderboard).toHaveBeenCalledTimes(2);
+
+    await game.inRequestContext(() =>
+      game.rest.removeBonus(game.joinCode, awardId),
+    );
+    expect(leaderboard).toHaveBeenCalledTimes(3);
+  });
+
+  it('reads standings for an answer and a grade', async () => {
+    await game.act('ADVANCE'); // -> free_text
+    const questionId = game.questionIds.freeText;
+    leaderboard.mockClear();
+
+    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId,
+      teamId: team.teamId,
+      value: 'Saturn',
+    });
+    expect(leaderboard).toHaveBeenCalledTimes(1);
+
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: answer.answerId,
+      pointsAwarded: 1,
+    });
+    expect(leaderboard).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads standings for a join, a leave and a kick', async () => {
+    const joiner = await game.joinTeam('Latecomers');
+    expect(leaderboard).toHaveBeenCalledTimes(1);
+
+    await game.gateway.handleLeaveSession(asSocket(joiner.socket), {
+      teamId: joiner.teamId,
+    });
+    expect(leaderboard).toHaveBeenCalledTimes(2);
+
+    await game.gateway.handleKickTeam(asSocket(admin), {
+      teamId: team.teamId,
+    });
+    expect(leaderboard).toHaveBeenCalledTimes(3);
+  });
+
+  it('reads standings for a press', async () => {
+    await game.act('ADVANCE');
+
+    expect(leaderboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads standings for a quiz edit', async () => {
+    await game.saveQuizEdit();
+
+    expect(leaderboard).toHaveBeenCalled();
+  });
+});
+
 describe('GameGateway — session write: showdown', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
@@ -1003,6 +1228,16 @@ describe('GameGateway — session write: lobby settings', () => {
 
     expect(leaderboard).not.toHaveBeenCalled();
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
+  });
+
+  it('does not read standings for a leagues change', async () => {
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    await game.inRequestContext(() =>
+      game.gameState.updateSessionSettings(game.joinCode, {}, []),
+    );
+
+    expect(leaderboard).not.toHaveBeenCalled();
   });
 });
 

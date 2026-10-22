@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Pin which events read standings and flag league tables)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The result every change returns to the Session write has a required touched-scores flag with no default; building a result without it fails `pnpm typecheck`
 - [ ] Each change module sets it per operation, matching today's call sites. Touched scores: answer submit and grade; bonus award, edit and remove; roster join, leave and kick; the quiz-edit change (regrading and lobby reloads); Commit a move (presses and timer expiries). Didn't touch scores: round rated and feedback sent; both player counts; roster disconnect; break end time, display text size and display sound mute; showdown guess and new showdown round; settings and leagues, league top refresh, and setting leagues at session creation
