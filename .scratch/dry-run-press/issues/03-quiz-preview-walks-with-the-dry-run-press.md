@@ -8,7 +8,7 @@ Parent spec: `.scratch/dry-run-press/spec.md`
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The walk presses the Move plan's next press (Start quiz in the lobby, Advance everywhere else) through the shared dry-run press, with a fixed time.
 - [ ] The walk stops at the end of the quiz, or on any step that doesn't move the quiz.

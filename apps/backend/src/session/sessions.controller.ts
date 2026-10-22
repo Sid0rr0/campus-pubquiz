@@ -21,6 +21,7 @@ import { SeedService } from '@/db/seed.service';
 import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import {
   GameStateService,
+  QuizHasEmptyRoundError,
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
 } from '@/game/state/game-state.service';
@@ -120,12 +121,14 @@ export class SessionsController {
     const name = parseName(body.name);
     const leagueIds = parseLeagueIds(body.leagueIds) ?? [];
     await mapLeagueErrors(() => this.leagues.assertAssignable(leagueIds));
-    const snapshot = await this.gameState.createSession(
-      quizId,
-      settings,
-      name,
-      leagueIds,
-    );
+    const snapshot = await this.gameState
+      .createSession(quizId, settings, name, leagueIds)
+      .catch((error: unknown) => {
+        if (error instanceof QuizHasEmptyRoundError) {
+          throw new BadRequestException(error.message);
+        }
+        throw error;
+      });
     const titles = await this.quizService.findTitles([quizId]);
     const quizTitle = titles.get(quizId) ?? UNKNOWN_QUIZ_TITLE;
     const startedAtByJoinCode = await this.seedService.findStartedAtByJoinCodes(

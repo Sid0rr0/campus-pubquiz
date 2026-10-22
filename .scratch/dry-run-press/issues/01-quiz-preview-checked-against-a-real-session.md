@@ -10,7 +10,7 @@ Parent spec: `.scratch/dry-run-press/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A real-store gateway spec seeds a multi-block quiz with:
   - a plain round;
@@ -22,6 +22,6 @@ Parent spec: `.scratch/dry-run-press/spec.md`
 
 - [ ] It asserts that the Quiz preview of the seeded quiz, in the `night` order, has exactly the live run's screen kinds after leaving out lobby, rules, join overlay, locking, break review, break round title, leaderboard, showdown and ended.
 - [ ] It asserts that the live run passed through kinds the preview leaves out.
-- [ ] A second case adds a round with no questions and checks the preview against the live run in the same way. The empty round's title card is the one expected difference, shown in front of the next round's (or last).
+- Dropped: the empty-round case. Live sessions reject rounds without questions, so a live run can never pass through one (see ticket 04).
 - [ ] The shared Quiz preview spec's "kind for kind like a real session" case and its hand-written press helper are deleted. Every other case in that spec passes unchanged.
 - [ ] Typecheck, lint and tests pass.

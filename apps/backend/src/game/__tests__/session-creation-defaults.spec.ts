@@ -6,6 +6,8 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
+import { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
+
 const START_OF_TIME = '2024-01-01T00:00:00.000Z';
 const KAHOOT_TIMER_SECONDS = 30;
 const BREAK_END_TIME = Date.parse('2024-01-01T01:00:00.000Z');
@@ -69,5 +71,41 @@ describe('GameGateway — a freshly created session', () => {
     const admin = await game.resync('admin', created.joinCode);
     expect(admin.phaseStartedAt).toBeNull();
     expect(admin.phaseElapsedMs).toBeNull();
+  });
+});
+
+describe('GameGateway — creating a session on a quiz with an empty round', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('is refused, naming the round, and stores nothing', async () => {
+    const unfinished = await harness.createGateway({
+      rounds: [
+        {
+          title: 'Warm-up',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Capital of France?',
+              answer: 'Paris',
+            },
+          ],
+        },
+        { title: 'Music', questions: [] },
+      ],
+    });
+
+    const sessionsBefore = unfinished.gameState.listSessions().length;
+    await expect(
+      unfinished.inRequestContext(() =>
+        unfinished.gameState.createSession(unfinished.quizId),
+      ),
+    ).rejects.toThrow(QuizHasEmptyRoundError);
+    await expect(
+      unfinished.inRequestContext(() =>
+        unfinished.gameState.createSession(unfinished.quizId),
+      ),
+    ).rejects.toThrow(/Round 2 "Music"/);
+    expect(unfinished.gameState.listSessions()).toHaveLength(sessionsBefore);
   });
 });

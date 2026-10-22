@@ -133,7 +133,7 @@ The quiz master's switch that silences everything the big screen plays: the quiz
 _Avoid_: display sound (sounds like only the quiz's own effects), media pause (stops the picture too)
 
 **Quiz preview**:
-A saved quiz's display screens, stepped through by staff without a session, to check its content before the night. Nothing is played, stored or counted, and no team can join. Not the same as the presenter preview, which describes the next press in a live session.
+A saved quiz's display screens, stepped through by staff without a session, to check its content before the night. Nothing is played, stored or counted, and no team can join. Its "like the night" order is walked by the same dry-run press as the presenter preview (see **Commit a move**). Not the same as the presenter preview, which describes the next press in a live session.
 _Avoid_: rehearsal, test session, dry run
 
 **Phone screen**:
@@ -283,7 +283,7 @@ The two auto-lock timers every live session can have: the question lock (the las
 Everything the backend pushes to connected clients, through one delivery step for every outcome: the replies to the sender, the room broadcasts, the admin answer lists, the team syncs (a team's graded answers, its player count and its bonus awards, the last when an award is edited or deleted) and any socket closes, in a fixed order, after re-arming the phase timers from the outcome's deadline change. A socket event, a phase-timer expiry, a Live edit save and a REST change all end here, so none of them knows about Socket.IO. It also sends the out-of-band notices (a session was closed, a deactivated user's sockets are dropped) and owns the phase timers. The gateway only receives events and hands each outcome over.
 
 **Commit a move**:
-Carrying out one planned press from start to finish: plan it, grade what it implies (refused while anything is ungraded when leaving a break for the reveal), settle the session, save its progress. An admin press and both timer expiries go through it. The session only moves once its progress is saved, so a press that can't be saved is refused and nothing changes. Session creation and restart restore reach their starting point through the same module, without a save. The presenter preview is a dry-run commit: the same plan and Settle step, with no grading writes, no showdown resolve and nothing saved, so /remote's "next" line describes the session as the press would leave it.
+Carrying out one planned press from start to finish: plan it, grade what it implies (refused while anything is ungraded when leaving a break for the reveal), settle the session, save its progress. An admin press and both timer expiries go through it. The session only moves once its progress is saved, so a press that can't be saved is refused and nothing changes. Session creation and restart restore reach their starting point through the same module, without a save. The presenter preview and the Quiz preview's "like the night" order are both dry-run commits through the same dry-run press: the same plan and Settle step, with no grading writes, no showdown resolve and nothing saved, so /remote's "next" line describes the session as the press would leave it.
 \_Avoid\*: apply action
 
 **Session write**:

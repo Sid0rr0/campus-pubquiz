@@ -45,6 +45,7 @@ import { ShowdownsChanges } from '@/game/state/showdowns-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
+import { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   type DeadlineChange,
@@ -57,6 +58,7 @@ import { LeagueService } from '@/league/league.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 
+export { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 
@@ -244,6 +246,17 @@ export class GameStateService implements OnModuleInit {
     name?: string,
     leagueIds: number[] = [],
   ): Promise<StateSnapshotPayload> {
+    // Refused before the session row is written, so a refused start stores nothing.
+    const quizRounds = await this.seedService.loadQuizRounds(quizId);
+    const emptyRoundIndex = quizRounds.findIndex(
+      (round) => round.questions.length === 0,
+    );
+    if (emptyRoundIndex !== -1) {
+      throw new QuizHasEmptyRoundError(
+        emptyRoundIndex + 1,
+        quizRounds[emptyRoundIndex].title,
+      );
+    }
     const created = await this.seedService.createSession(
       quizId,
       settings,

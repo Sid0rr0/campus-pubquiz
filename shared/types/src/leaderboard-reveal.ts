@@ -1,9 +1,6 @@
-import {
-  getLeaderboardRevealStepCount,
-  type GameAction,
-  type GameProgress,
-  type LeaderboardEntry,
-} from '@campus-pubquiz/types';
+import type { GameAction, GameProgress } from './game-state-types';
+import { getLeaderboardRevealStepCount } from './leaderboard-tiebreak';
+import type { LeaderboardEntry } from './room-views';
 
 /**
  * Toggling the board resets the reveal to nothing shown; from then on,

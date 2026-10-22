@@ -1,12 +1,15 @@
 import {
   type ActiveShowdownRoundState,
-  effectiveActionOf,
   type GameAction,
   type GameProgress,
   type LeagueTop,
   type MoveStep,
   planMove,
+  type ProgressMoveStep,
+  type SavedPhaseTimer,
   type SessionState,
+  settleMove,
+  settleSession,
   ShowdownGuessesPendingError,
 } from '@campus-pubquiz/types';
 import { BlockGradingService } from '@/game/state/block-grading.service';
@@ -20,10 +23,6 @@ import {
   isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import {
-  settleSession,
-  type SavedPhaseTimer,
-} from '@/game/state/session-settle.util';
 import type { LiveResultsRead } from '@/game/state/live-results-read';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
@@ -37,18 +36,6 @@ export interface CommittedMove {
   session: SessionState;
   outcome: SessionOutcome;
 }
-
-type ProgressMoveStep = Extract<
-  MoveStep,
-  {
-    kind:
-      | 'transition'
-      | 'grading_pending'
-      | 'leaderboard_reveal'
-      | 'leaderboard_hide'
-      | 'join_overlay_hide';
-  }
->;
 
 /**
  * Carries out one planned press from start to finish — the one place the
@@ -159,7 +146,7 @@ export class MoveCommitter {
     // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
     // reveal count, the kahoot timer and everything else downstream treat it
     // identically.
-    const committed = settleMove(refreshed, step, pressed);
+    const committed = settleMove(refreshed, step, pressed, Date.now());
 
     await this.progressRepository.save(
       committed.seededGame.gameSessionId,
@@ -200,52 +187,6 @@ export class MoveCommitter {
       resolved: true,
     };
     return { ...session, activeShowdownRound: resolvedRound };
-  }
-}
-
-/** The Settle step for a progress-moving step, carried out as the action it plans. */
-function settleMove(
-  session: SessionState,
-  step: ProgressMoveStep,
-  pressed: GameAction,
-): SessionState {
-  return settleSession({
-    session,
-    progress: step.progress,
-    step: { kind: step.kind, action: effectiveActionOf(step, pressed) },
-    now: Date.now(),
-  });
-}
-
-/** What a press would do, with the session as it would then stand. */
-export interface PreviewedMove {
-  step: MoveStep;
-  /** The session after the press; `step`'s own session for the ephemeral steps, the current one for a press that moves nothing. */
-  session: SessionState;
-}
-
-/**
- * A dry-run commit: the same plan and Settle step as `commit`, with no
- * grading writes, no showdown resolve and nothing saved. The session passed
- * in is never changed.
- */
-export function previewMove(
-  session: SessionState,
-  action: GameAction,
-): PreviewedMove {
-  const step = planMove(session, action);
-  switch (step.kind) {
-    case 'transition':
-    case 'leaderboard_reveal':
-    case 'leaderboard_hide':
-    case 'join_overlay_hide':
-      return { step, session: settleMove(session, step, action) };
-    case 'reveal_step':
-      return { step, session: step.session };
-    case 'grading_pending':
-    case 'showdown_waiting':
-    case 'blocked':
-      return { step, session };
   }
 }
 

@@ -10,7 +10,7 @@ Parent spec: `.scratch/dry-run-press/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Settle step's interface is unchanged:
   - it takes the session, the target progress, the step kind (a planned press with its action, or placing a session), the time, and the saved phase timer on restore;

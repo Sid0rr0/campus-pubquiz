@@ -7,15 +7,13 @@ import {
   nextPressAction,
   type OnAirScreen,
   type PresenterContextPayload,
+  type PreviewedMove,
+  previewMove,
   projectScreen,
   type ScreenPreview,
   type SessionState,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
-import {
-  previewMove,
-  type PreviewedMove,
-} from '@/game/state/commit-a-move.service';
 
 function describeBreakIntro(session: SessionState): ScreenPreview {
   const { progress } = session;
@@ -165,7 +163,7 @@ export function describeNextScreen(
 ): ScreenPreview | null {
   return describePreviewedMove(
     session,
-    previewMove(session, nextPressAction(session)),
+    previewMove(session, nextPressAction(session), Date.now()),
   );
 }
 

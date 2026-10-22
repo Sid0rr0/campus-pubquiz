@@ -38,6 +38,7 @@ import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import { LeagueTableService } from '@/league/league-table.service';
 import { LeagueService } from '@/league/league.service';
 import { QuizService } from '@/quiz/quiz.service';
+import { QuizPreviewService } from '@/quiz/quiz-preview.service';
 import { ManualTimerScheduler } from '@/game/__tests__/manual-timer-scheduler';
 import {
   PHASE_TIMER_SCHEDULERS,
@@ -224,6 +225,8 @@ export interface RealStoreGateway extends PlayableQuiz {
   showdownService: ShowdownService;
   seedService: SeedService;
   quizService: QuizService;
+  /** The Quiz preview read, over the same stores — call it inside `inRequestContext`. */
+  quizPreviewService: QuizPreviewService;
   /** The Live edit module — saves a quiz's title and rounds the way the editor's save does. */
   liveEdit: LiveEditService;
   /** The REST entry — the module every REST route calls; drive a route's method through it the way a controller does (inside `inRequestContext`). */
@@ -599,6 +602,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       seedService: moduleRef.get(SeedService),
       progressRepository: moduleRef.get(GameProgressRepository),
       quizService: moduleRef.get(QuizService),
+      quizPreviewService: moduleRef.get(QuizPreviewService),
     };
     const saveQuizEdit = (
       edit: (rounds: ImportRoundPreview[]) => ImportRoundPreview[] = (rounds) =>
