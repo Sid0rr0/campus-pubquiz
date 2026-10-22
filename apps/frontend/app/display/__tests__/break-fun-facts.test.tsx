@@ -167,6 +167,57 @@ describe('BreakIntroScreen — fun facts', () => {
       ['Alpha', 'Beta', 'Clean sweep'],
     ],
     [
+      'joker_favourite_round',
+      {
+        kind: 'joker_favourite_round',
+        roundNumber: 4,
+        roundTitle: 'Music',
+        teamCount: 5,
+      },
+      ['Round 4 — Music', '5 teams', 'joker'],
+    ],
+    [
+      'joker_favourite_round for a single team',
+      {
+        kind: 'joker_favourite_round',
+        roundNumber: 4,
+        roundTitle: 'Music',
+        teamCount: 1,
+      },
+      ['Round 4 — Music', '1 team '],
+    ],
+    [
+      'joker_snubbed_round',
+      { kind: 'joker_snubbed_round', roundNumber: 6, roundTitle: 'Sport' },
+      ['Nobody trusted themselves with Round 6 — Sport'],
+    ],
+    [
+      'joker_drawn_count',
+      { kind: 'joker_drawn_count', teamCount: 3 },
+      ['3 teams', 'random joker'],
+    ],
+    [
+      'best_joker',
+      {
+        kind: 'best_joker',
+        teamName: 'Quizzly Bears',
+        roundNumber: 2,
+        roundTitle: 'Music',
+        extraPoints: 14,
+      },
+      ['Quizzly Bears', 'Best joker', 'Round 2 — Music', '+14'],
+    ],
+    [
+      'joker_backfired',
+      {
+        kind: 'joker_backfired',
+        teamName: 'Quizzly Bears',
+        roundNumber: 2,
+        roundTitle: 'Music',
+      },
+      ['Quizzly Bears', 'backfired', 'Round 2 — Music'],
+    ],
+    [
       'bonus_awards_so_far',
       {
         kind: 'bonus_awards_so_far',

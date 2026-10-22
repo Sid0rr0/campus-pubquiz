@@ -141,6 +141,14 @@ export function canSetJoker(
   );
 }
 
+/** What a joker multiplies its round's answer points by. */
+export const JOKER_MULTIPLIER = 2;
+
+/** A team's answer points in its joker round, as they count towards its total. */
+export function jokerRoundPoints(rawPoints: number): number {
+  return rawPoints * JOKER_MULTIPLIER;
+}
+
 /** Whether a team may choose `roundId` as its joker: only while the pick is open, and only a round that has not started. */
 export function canChooseJoker(
   pick: { isPickOpen: boolean; pickableRoundIds: readonly number[] },

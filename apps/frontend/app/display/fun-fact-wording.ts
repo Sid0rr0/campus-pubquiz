@@ -73,6 +73,31 @@ export function describeFunFactLine(fact: FunFact): FunFactLine {
         headline: fact.teamNames.join(', '),
         detail: 'Clean sweep: every question right in the last block',
       };
+    case 'joker_favourite_round':
+      return {
+        headline: `Round ${fact.roundNumber} — ${fact.roundTitle}`,
+        detail: `${plural(fact.teamCount, 'team', 'teams')} bet their joker on it`,
+      };
+    case 'joker_snubbed_round':
+      return {
+        headline: `Nobody trusted themselves with Round ${fact.roundNumber} — ${fact.roundTitle}`,
+        detail: 'Not one joker on it',
+      };
+    case 'joker_drawn_count':
+      return {
+        headline: plural(fact.teamCount, 'team', 'teams'),
+        detail: 'ran out of time and got a random joker',
+      };
+    case 'best_joker':
+      return {
+        headline: fact.teamName,
+        detail: `Best joker so far: Round ${fact.roundNumber} — ${fact.roundTitle}, +${fact.extraPoints}`,
+      };
+    case 'joker_backfired':
+      return {
+        headline: fact.teamName,
+        detail: `Joker backfired: Round ${fact.roundNumber} — ${fact.roundTitle} was their worst round`,
+      };
     case 'bonus_awards_so_far':
       return {
         headline: fact.counts

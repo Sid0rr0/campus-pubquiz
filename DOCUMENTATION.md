@@ -518,14 +518,19 @@ admin views have no such field. Each fact is a typed object, not a sentence:
 `/display` words it. The server builds the list in the shared `describeFunFacts`
 module, in this order, and skips a fact with no data:
 
-| `kind`                   | Fields                               | Meaning                                                                                                                                                         |
-| ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fastest_correct_answer` | `teamName`, `responseMs`, `question` | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the first team in leaderboard name order                        |
-| `toughest_question`      | `correctRate` (0-1), `question`      | Lowest correct rate above 0 of the revealed questions, never the question `nobody_got_it` names; skipped when none is below 1; never a `closest_guess` question |
-| `room_split`             | `correctRate` (0-1), `question`      | Revealed question whose correct rate is closest to one half (strictly between 0 and 1); never a `closest_guess` question                                        |
-| `nobody_got_it`          | `question`                           | First revealed question with no `correct` answer (a question nobody answered is skipped); never a `closest_guess` question                                      |
-| `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted           |
-| `bonus_awards_so_far`    | `counts: { category, count }[]`      | Positive bonus awards per category, in category order (`shot`, `selfie`, `custom`)                                                                              |
+| `kind`                   | Fields                                                 | Meaning                                                                                                                                                                           |
+| ------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fastest_correct_answer` | `teamName`, `responseMs`, `question`                   | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the first team in leaderboard name order                                          |
+| `toughest_question`      | `correctRate` (0-1), `question`                        | Lowest correct rate above 0 of the revealed questions, never the question `nobody_got_it` names; skipped when none is below 1; never a `closest_guess` question                   |
+| `room_split`             | `correctRate` (0-1), `question`                        | Revealed question whose correct rate is closest to one half (strictly between 0 and 1); never a `closest_guess` question                                                          |
+| `nobody_got_it`          | `question`                                             | First revealed question with no `correct` answer (a question nobody answered is skipped); never a `closest_guess` question                                                        |
+| `clean_sweep`            | `teamNames`                                            | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted                             |
+| `joker_favourite_round`  | `roundNumber`, `roundTitle`, `teamCount`               | Jokers on only: the round most teams have as their joker, and how many; a tie goes to the earlier round; names no team                                                            |
+| `joker_snubbed_round`    | `roundNumber`, `roundTitle`                            | Jokers on only: the first round no team has as its joker; skipped when every round is someone's joker; names no team                                                              |
+| `joker_drawn_count`      | `teamCount`                                            | Jokers on only: how many teams got a drawn joker; skipped at 0; names no team                                                                                                     |
+| `best_joker`             | `teamName`, `roundNumber`, `roundTitle`, `extraPoints` | Jokers on only: among joker rounds already revealed, the team whose joker added the most points (its raw points in that round); skipped at 0; ties go to leaderboard name order   |
+| `joker_backfired`        | `teamName`, `roundNumber`, `roundTitle`                | Jokers on only: among joker rounds already revealed, the first team in leaderboard name order whose joker round, as it counts, scored less than each of its other revealed rounds |
+| `bonus_awards_so_far`    | `counts: { category, count }[]`                        | Positive bonus awards per category, in category order (`shot`, `selfie`, `custom`)                                                                                                |
 
 `question` is `{ questionId, roundNumber, questionNumberInRound, prompt, answer }`;
 `answer` is the current answer key's correct answer worded by `formatAnswer` (a
@@ -541,8 +546,12 @@ correct rate says nothing and it always has a winner: it is left out of
 `fastest_correct_answer` stays kahoot-only. The
 facts about questions read only the blocks before the block in play (whose
 answers stay hidden until its reveal); the block in play contributes nothing.
-At the first break nothing is revealed, so only `bonus_awards_so_far` can
-appear (and the list is `[]` when no bonus was awarded). The session holds the
+At the first break nothing is revealed, so only `bonus_awards_so_far` and the
+three joker facts that name no team can appear (and the list is `[]` when no
+bonus was awarded and Jokers is off). The joker facts that name a team
+(`best_joker`, `joker_backfired`) read only joker rounds whose questions are
+all revealed, so no pick leaks before its leaderboard; the other three count
+the roster's jokers and give no pick away. The session holds the
 answers and bonus awards (`funFactData`) and re-reads them with the standings
 at the end of every session write and when a session is placed, so the facts
 follow hand grades and key fixes.

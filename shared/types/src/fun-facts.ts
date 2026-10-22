@@ -1,6 +1,7 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import { formatAnswer, type Verdict } from './answer-kind';
+import { jokerRoundPoints } from './joker';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import { questionOutcome } from './question-outcome';
 import type { QuestionType } from './question-types';
@@ -81,6 +82,29 @@ export type FunFact =
     }
   | { kind: 'nobody_got_it'; question: FunFactQuestion }
   | { kind: 'clean_sweep'; teamNames: string[] }
+  | {
+      kind: 'joker_favourite_round';
+      roundNumber: number;
+      roundTitle: string;
+      /** How many teams have this round as their joker. */
+      teamCount: number;
+    }
+  | { kind: 'joker_snubbed_round'; roundNumber: number; roundTitle: string }
+  | { kind: 'joker_drawn_count'; teamCount: number }
+  | {
+      kind: 'best_joker';
+      teamName: string;
+      roundNumber: number;
+      roundTitle: string;
+      /** The points the joker added: the team's raw points in the round. */
+      extraPoints: number;
+    }
+  | {
+      kind: 'joker_backfired';
+      teamName: string;
+      roundNumber: number;
+      roundTitle: string;
+    }
   | { kind: 'bonus_awards_so_far'; counts: FunFactBonusCount[] };
 
 const HALF = 0.5;
@@ -226,6 +250,144 @@ function bonusAwardsSoFar(
   return counts.length === 0 ? null : { kind: 'bonus_awards_so_far', counts };
 }
 
+interface JokerRound {
+  roundId: number;
+  roundNumber: number;
+  roundTitle: string;
+}
+
+/**
+ * The joker facts, in order. The first three count jokers only and name no
+ * team; the last two name a team and read only joker rounds whose questions
+ * are all revealed, so no pick leaks before its leaderboard. Empty when the
+ * session plays without jokers.
+ */
+function jokerFacts(
+  session: SessionState,
+  revealedAnswers: readonly FunFactAnswer[],
+  pastIds: ReadonlySet<number>,
+): FunFact[] {
+  if (!session.seededGame.settings.jokersEnabled) return [];
+  const rounds = session.seededGame.rounds.map((round, index) => ({
+    roundId: round.id,
+    roundNumber: index + 1,
+    roundTitle: round.title,
+    questionIds: round.questions.map((question) => question.id),
+  }));
+  const roundById = new Map(rounds.map((round) => [round.roundId, round]));
+  // Only teams on the roster (the leaderboard) with a joker on a round that exists.
+  const holders = [...session.leaderboard]
+    .sort((a, b) => compareTeamNames(a.teamName, b.teamName))
+    .flatMap((team) => {
+      const joker = session.jokers[team.teamId];
+      const round = joker && roundById.get(joker.roundId);
+      return joker && round ? [{ team, joker, round }] : [];
+    });
+  if (holders.length === 0) return [];
+
+  const teamsPerRound = new Map<number, number>();
+  for (const { round } of holders) {
+    teamsPerRound.set(
+      round.roundId,
+      (teamsPerRound.get(round.roundId) ?? 0) + 1,
+    );
+  }
+  const toJokerRound = ({
+    roundNumber,
+    roundTitle,
+  }: JokerRound): Pick<JokerRound, 'roundNumber' | 'roundTitle'> => ({
+    roundNumber,
+    roundTitle,
+  });
+
+  const facts: (FunFact | null)[] = [];
+  // Rounds are in quiz order, so a tie goes to the earlier round.
+  const favourite = pickLowest(
+    rounds,
+    (r) => -(teamsPerRound.get(r.roundId) ?? 0),
+  );
+  facts.push(
+    favourite && teamsPerRound.has(favourite.roundId)
+      ? {
+          kind: 'joker_favourite_round',
+          roundNumber: favourite.roundNumber,
+          roundTitle: favourite.roundTitle,
+          teamCount: teamsPerRound.get(favourite.roundId)!,
+        }
+      : null,
+  );
+  const snubbed = rounds.find((r) => !teamsPerRound.has(r.roundId));
+  facts.push(
+    snubbed
+      ? {
+          kind: 'joker_snubbed_round',
+          roundNumber: snubbed.roundNumber,
+          roundTitle: snubbed.roundTitle,
+        }
+      : null,
+  );
+  const drawn = holders.filter(({ joker }) => joker.source === 'drawn').length;
+  facts.push(
+    drawn > 0 ? { kind: 'joker_drawn_count', teamCount: drawn } : null,
+  );
+
+  const revealedRounds = rounds.filter((r) =>
+    r.questionIds.every((id) => pastIds.has(id)),
+  );
+  const rawPoints = (teamId: number, questionIds: readonly number[]) =>
+    revealedAnswers
+      .filter((a) => a.teamId === teamId && questionIds.includes(a.questionId))
+      .reduce((sum, a) => sum + a.pointsAwarded, 0);
+  const revealedJokers = holders.filter(({ round }) =>
+    revealedRounds.includes(round),
+  );
+
+  const best = pickLowest(
+    revealedJokers.map(({ team, round }) => ({
+      team,
+      round,
+      extra:
+        jokerRoundPoints(rawPoints(team.teamId, round.questionIds)) -
+        rawPoints(team.teamId, round.questionIds),
+    })),
+    ({ extra }) => -extra,
+  );
+  facts.push(
+    best && best.extra > 0
+      ? {
+          kind: 'best_joker',
+          teamName: best.team.teamName,
+          ...toJokerRound(best.round),
+          extraPoints: best.extra,
+        }
+      : null,
+  );
+
+  // Backfired: the joker round, as it counts, scored less than every other revealed round.
+  const backfired = revealedJokers.find(({ team, round }) => {
+    const others = revealedRounds.filter((r) => r !== round);
+    const jokerPoints = jokerRoundPoints(
+      rawPoints(team.teamId, round.questionIds),
+    );
+    return (
+      others.length > 0 &&
+      others.every(
+        (other) => rawPoints(team.teamId, other.questionIds) > jokerPoints,
+      )
+    );
+  });
+  facts.push(
+    backfired
+      ? {
+          kind: 'joker_backfired',
+          teamName: backfired.team.teamName,
+          ...toJokerRound(backfired.round),
+        }
+      : null,
+  );
+  return facts.filter((fact): fact is FunFact => fact !== null);
+}
+
 /**
  * The fun facts for the break the session is in, in the order they rotate.
  * Pure, and the one place that decides what a fun fact may say: the facts
@@ -283,6 +445,7 @@ export function describeFunFacts(session: SessionState): FunFact[] {
       ? { kind: 'nobody_got_it', question: toFunFactQuestion(nobody.question) }
       : null,
     cleanSweep(session, revealed, revealedAnswers),
+    ...jokerFacts(session, revealedAnswers, pastIds),
     bonusAwardsSoFar(session.funFactData),
   ];
   return facts.filter((fact): fact is FunFact => fact !== null);
