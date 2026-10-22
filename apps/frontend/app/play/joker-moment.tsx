@@ -66,7 +66,7 @@ export function JokerMoment({
     >
       <span className="flex flex-col items-center gap-1 rounded-2xl border-4 border-yellow bg-background/95 px-8 py-5 font-display text-4xl uppercase text-yellow">
         <span aria-hidden="true">🃏</span>
-        2× POINTS
+        <span>2× POINTS</span>
       </span>
     </motion.div>
   );
