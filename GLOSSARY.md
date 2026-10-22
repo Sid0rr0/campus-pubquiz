@@ -165,6 +165,20 @@ _Avoid_: bonus (on its own), extra points
 **Bonus category**:
 What a bonus award was given for: shot, selfie, or custom. A custom award carries a reason the quiz master writes.
 
+## Jokers
+
+**Joker**:
+A team's one chance per session to score double on a round it chooses, in a session played with jokers. A team "plays its joker" on a round.
+_Avoid_: double points (that's the effect), power-up, 2× round
+
+**Joker round**:
+The round a team played its joker on: the team's points from its answers to that round's questions count double, while bonus awards never do. Once the joker pick closes every team has exactly one, chosen or drawn at random, and the quiz master can change it until that round starts.
+_Avoid_: double round, doubled round
+
+**Joker pick**:
+The timed window after the round overview in which teams choose their joker round on their phones. It closes when its minute runs out or the quiz master moves on, and stepping back onto it reopens it with a fresh minute. A team that hasn't chosen when it closes gets a random round.
+_Avoid_: joker vote, joker selection
+
 ## Team link
 
 **Player count**:

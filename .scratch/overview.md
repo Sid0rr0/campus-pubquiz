@@ -4,8 +4,9 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 ## Not implemented
 
-| Spec | Title | Tickets | Blocked by |
-| ---- | ----- | ------- | ---------- |
+| Spec   | Title                                                               | Tickets | Blocked by |
+| ------ | ------------------------------------------------------------------- | ------- | ---------- |
+| jokers | [Jokers: each team doubles one round of its choice](jokers/spec.md) | 12      | —          |
 
 ## Won't do
 
