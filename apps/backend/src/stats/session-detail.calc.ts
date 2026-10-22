@@ -13,6 +13,7 @@ import {
   type SessionDetailStandingRow,
   type SessionDetailStats,
 } from '@campus-pubquiz/types';
+import { cellPoints } from '@/standings/cell-points';
 import { sessionResult, type TeamResult } from '@/standings/session-result';
 import type { SessionStandings } from '@/standings/standings.service';
 import { summarisePlayerCounts } from '@/stats/player-count.calc';
@@ -395,7 +396,7 @@ export function computeSessionDetail(
     scoresheet: answers.map((a) => ({
       teamId: a.teamId,
       questionId: a.questionId,
-      pointsAwarded: a.pointsAwarded,
+      pointsAwarded: cellPoints(a),
       verdict: a.verdict,
       answer: a.answer,
     })),

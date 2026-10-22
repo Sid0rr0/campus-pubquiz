@@ -57,14 +57,35 @@ function inSessions<Q extends { whereIn(column: string, ids: number[]): Q }>(
     : query;
 }
 
+/**
+ * The one step that adds up answer points: a team's points in each round of a
+ * session (`game_session_id`, `round_id`, `team_id`, `total`). Every figure
+ * built from answers' points (round points, quiz points, the winner's total)
+ * reads this query, so a rule that changes what an answer counts for (the
+ * joker, ADR 0004) is applied here and nowhere else.
+ */
+function roundPointsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
+  return inSessions(
+    knex('answers as a').join('questions as q', 'q.id', 'a.question_id'),
+    gameSessionIds,
+  )
+    .groupBy('a.game_session_id', 'q.round_id', 'a.team_id')
+    .select('a.game_session_id as game_session_id')
+    .select('q.round_id as round_id', 'a.team_id as team_id')
+    .select(knex.raw('sum(a.points_awarded) as total'));
+}
+
 // The two totals are pre-aggregated as subqueries (rather than two leftJoins
 // straight off the participants) so a team with several answers *and* several
 // bonus awards doesn't fan out into a cross product that inflates both sums.
+// A team's quiz points are the sum of its round points.
 function answerTotalsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
-  return inSessions(knex('answers'), gameSessionIds)
-    .groupBy('game_session_id', 'team_id')
-    .select('game_session_id', 'team_id')
-    .select(knex.raw('sum(points_awarded) as total'));
+  return knex
+    .from(roundPointsQuery(knex, gameSessionIds).as('rp'))
+    .groupBy('rp.game_session_id', 'rp.team_id')
+    .select('rp.game_session_id as game_session_id')
+    .select('rp.team_id as team_id')
+    .select(knex.raw('sum(rp.total) as total'));
 }
 
 function bonusTotalsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
@@ -389,12 +410,10 @@ export class StandingsService {
   ): Promise<RoundTotalRow[]> {
     if (gameSessionIds.length === 0) return [];
     const knex = this.gameSessionTeams.getKnex();
-    return (await knex('answers as a')
-      .join('questions as q', 'q.id', 'a.question_id')
-      .whereIn('a.game_session_id', [...gameSessionIds])
-      .groupBy('a.game_session_id', 'q.round_id', 'a.team_id')
-      .select('a.game_session_id as gameSessionId')
-      .select('q.round_id as roundId', 'a.team_id as teamId')
-      .select(knex.raw('sum(a.points_awarded) as total'))) as RoundTotalRow[];
+    return (await knex
+      .from(roundPointsQuery(knex, gameSessionIds).as('rp'))
+      .select('rp.game_session_id as gameSessionId')
+      .select('rp.round_id as roundId', 'rp.team_id as teamId')
+      .select('rp.total as total')) as RoundTotalRow[];
   }
 }
