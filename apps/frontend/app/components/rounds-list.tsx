@@ -24,15 +24,17 @@ export function RoundsList({ rounds }: RoundsListProps) {
 
   return (
     <ul className="flex flex-col gap-2">
-      {rounds.map((round) => (
+      {rounds.map((round, roundIndex) => (
+        // Titles and prompts can repeat (e.g. two "Music" rounds, a stock
+        // prompt reused per song), and this list is never reordered: key by position.
         <li
-          key={round.title}
+          key={roundIndex}
           className="rounded-lg border border-foreground/15 p-3"
         >
           <p className="font-extrabold">{round.title}</p>
           <ul className="ml-4 list-disc text-sm">
-            {round.questions.map((question) => (
-              <li key={question.prompt}>
+            {round.questions.map((question, questionIndex) => (
+              <li key={questionIndex}>
                 ({question.type}) {question.prompt}
                 {question.options && question.options.length > 0 && (
                   <p className="text-xs text-foreground/60">
