@@ -178,7 +178,7 @@ export function SessionSettingsForm({
             })
           }
         />
-        Play countdown sound
+        Countdown sound
       </label>
 
       <label className="flex items-center gap-2 text-sm font-extrabold">

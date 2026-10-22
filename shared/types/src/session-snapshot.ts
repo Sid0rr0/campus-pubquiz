@@ -151,13 +151,18 @@ export function buildDisplayFields(
   session: SessionState,
 ): Pick<
   DisplayStatePayload,
-  'roundCategories' | 'roundAuthors' | 'kahootQuestionEndsAt' | 'teamsCorrect'
+  | 'roundCategories'
+  | 'roundAuthors'
+  | 'kahootQuestionEndsAt'
+  | 'jokerPickEndsAt'
+  | 'teamsCorrect'
 > {
   const { rounds } = session.seededGame;
   return {
     roundCategories: rounds.map((round) => round.category ?? ''),
     roundAuthors: rounds.map((round) => round.author ?? ''),
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
+    jokerPickEndsAt: session.jokerPickEndsAt,
     teamsCorrect: describeTeamsCorrect(session),
   };
 }

@@ -13,7 +13,7 @@ export interface SessionSettings {
   enabledBonusCategories: BonusCategory[];
   /** Controls <audio autoPlay> and YouTube's autoplay=1 on /display. */
   autoplayMedia: boolean;
-  /** Plays a ~60s countdown track during the 'locking' phase on /display and /admin, timed to end exactly at questionLockAt regardless of lockGraceSeconds. */
+  /** The "Countdown sound": plays a ~60s countdown track on /display during the 'locking' phase, timed to end exactly at questionLockAt regardless of lockGraceSeconds, and during the joker pick, timed to end at its deadline. Also governs the time-up sound that closes the pick. */
   playLockCountdownSound: boolean;
   /** Whether ADVANCE from 'rules' shows a 'round_overview' screen (listing every round's title) before round 0's own 'round_intro' — lets an admin who doesn't want to spoil the round lineup turn it off. */
   showRoundOverview: boolean;

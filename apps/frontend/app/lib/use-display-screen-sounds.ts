@@ -17,12 +17,14 @@ export interface DisplayScreenFrame {
  * position grew on a connected display) it plays what the table says for the
  * move from the screen last seen to the current one. The fanfare also fires
  * confetti, and both are skipped when the final leaderboard already crowned a
- * winner live.
+ * winner live. The time-up that closes the joker pick also needs the countdown
+ * sound setting on.
  */
 export function useDisplayScreenSounds(
   frame: DisplayScreenFrame | null,
   isConnected: boolean,
   hasWinnerBeenCelebratedRef: RefObject<boolean>,
+  isCountdownSoundOn: boolean,
 ): void {
   const screen = frame?.screen ?? null;
   const previousScreenRef = useRef<DisplayScreen | null>(null);
@@ -32,6 +34,9 @@ export function useDisplayScreenSounds(
     if (!previous || !screen) return;
     const sound = soundFor(previous, screen);
     if (!sound) return;
+    // The joker pick's time-up closes a countdown, so the countdown sound
+    // setting governs it with the countdown track.
+    if (previous.kind === 'joker_pick' && !isCountdownSoundOn) return;
     if (sound === 'fanfare') {
       if (hasWinnerBeenCelebratedRef.current) return;
       fireConfetti();

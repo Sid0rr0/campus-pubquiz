@@ -81,7 +81,74 @@ describe('DisplayScreenView — without a live context', () => {
     expect(
       screen.getByRole('timer', { name: /time left to pick a joker/i }),
     ).toHaveTextContent('0:42');
+    expect(screen.getByText('0/0 picked')).toBeInTheDocument();
     expectNoLiveParts();
+  });
+
+  describe('the joker pick with the live teams', () => {
+    const LIVE_TEAMS: DisplayLiveContext = {
+      teams: [
+        { teamId: 1, teamName: 'The Quizzards', isConnected: true },
+        { teamId: 2, teamName: 'Second Place', isConnected: true },
+        { teamId: 3, teamName: 'Late Comers', isConnected: false },
+      ],
+      answeredTeamIds: [],
+      leaderboard: [],
+      leagueTop: null,
+      teamsCorrect: null,
+      joinCode: 'ABCDEF',
+      isConnected: true,
+      kahootQuestionEndsAt: null,
+      onPickAnotherGame: () => undefined,
+      onWinnerCelebrated: () => undefined,
+    };
+
+    function drawPick(jokers: NonNullable<SessionDescription['jokers']>) {
+      const view = roomView(SOCKET_ROOMS.DISPLAY, {
+        teams: LIVE_TEAMS.teams.map(({ teamId, teamName }) => ({
+          teamId,
+          teamName,
+        })),
+        rounds: TWO_ROUNDS,
+        progress: { status: 'joker_pick' },
+        jokers,
+      });
+      render(
+        <DisplayScreenView
+          screen={view.screen}
+          quiz={{
+            settings: view.settings,
+            quizStructure: view.quizStructure,
+            roundTitles: view.roundTitles,
+            roundCategories: view.roundCategories,
+            roundAuthors: view.roundAuthors,
+          }}
+          live={LIVE_TEAMS}
+        />,
+      );
+    }
+
+    it('ticks off the names of the teams that have picked and counts them, never saying which round', () => {
+      drawPick({
+        1: { roundId: 2, source: 'chosen' },
+        3: { roundId: 1, source: 'chosen' },
+      });
+
+      expect(screen.getByText('2/3 picked')).toBeInTheDocument();
+      const picked = screen.getByRole('list', { name: /teams that picked/i });
+      expect(picked).toHaveTextContent('The Quizzards');
+      expect(picked).toHaveTextContent('Late Comers');
+      expect(picked).not.toHaveTextContent('Second Place');
+    });
+
+    it('counts 0/M with no names before anyone has picked', () => {
+      drawPick({});
+
+      expect(screen.getByText('0/3 picked')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('list', { name: /teams that picked/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('draws the round title', () => {

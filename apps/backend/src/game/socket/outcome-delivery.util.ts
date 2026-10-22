@@ -9,6 +9,7 @@ import type { BonusService } from '@/bonus/bonus.service';
 import { buildAnswersUpdatedPayload } from '@/game/socket/answers-updated-payload.util';
 import {
   broadcastAdminState,
+  broadcastDisplayState,
   broadcastGameState,
 } from '@/game/socket/game-broadcast.util';
 import type { GameStateService } from '@/game/state/game-state.service';
@@ -78,8 +79,13 @@ async function deliverEmits(
   }
   if (outcome.shouldBroadcastState) {
     broadcastGameState(server, joinCode, gameState);
-  } else if (outcome.shouldBroadcastAdminState) {
-    broadcastAdminState(server, joinCode, gameState);
+  } else {
+    if (outcome.shouldBroadcastAdminState) {
+      broadcastAdminState(server, joinCode, gameState);
+    }
+    if (outcome.shouldBroadcastDisplayState) {
+      broadcastDisplayState(server, joinCode, gameState);
+    }
   }
 
   for (const questionId of outcome.answerListQuestionIds) {

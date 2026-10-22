@@ -117,7 +117,14 @@ export function DisplayScreenView({
         />
       );
     case 'joker_pick':
-      return <JokerPickScreen endsAt={screen.endsAt} rounds={screen.rounds} />;
+      return (
+        <JokerPickScreen
+          endsAt={screen.endsAt}
+          rounds={screen.rounds}
+          teams={live?.teams ?? []}
+          pickedTeamIds={screen.pickedTeamIds}
+        />
+      );
     case 'round_title':
       return (
         <RoundTitleCard

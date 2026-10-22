@@ -290,7 +290,7 @@ what it draws:
 | Kind                                               | Carries                                                                                                                                                  |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `lobby`, `rules`, `round_overview`, `join_overlay` | Nothing; they draw the shared top-level fields (teams, settings, quiz structure, round lists, league)                                                    |
-| `joker_pick`                                       | `endsAt` (the pick's deadline, null once closed), `rounds` (every round: `roundId`, `roundNumber`, `title`, `category`, `author`); never a team's choice |
+| `joker_pick`                                       | `endsAt` (the pick's deadline, null once closed), `rounds` (every round: `roundId`, `roundNumber`, `title`, `category`, `author`), `pickedTeamIds` (roster teams that chose a joker themselves; the screen ticks their names off and shows "N/M picked"); never which round a team picked |
 | `round_title`                                      | `roundNumber`, `title`, `category`, `author`, `note` ('' when the round has none or hides its note)                                                      |
 | `break_round_title`                                | `roundNumber`, `title`, `note`                                                                                                                           |
 | `reveal_intro`                                     | `roundNumber`, `title`                                                                                                                                   |
@@ -394,11 +394,22 @@ which sound the move from the previous Display screen to the new one plays:
 the round sting onto a round intro (not the break round intro or the reveal
 intro), the reveal sting onto each revealed answer (not the steps of a
 closest-guess reveal), time-up once when the block locks (not again through the
-break), and the fanfare with confetti onto `ended` (skipped when the final
-leaderboard already crowned the winner). Because the room can't see a screen
-hidden under the join overlay, no screen sound plays for a move made while an
-overlay covers the screen (the lock countdown sound, a timer, still does), and
-returning to `ended` after an end-of-quiz showdown doesn't replay the fanfare.
+break) or when the joker pick closes (onto the first round intro, which then
+plays no sting), and the fanfare with confetti onto `ended` (skipped when the
+final leaderboard already crowned the winner). Because the room can't see a
+screen hidden under the join overlay, no screen sound plays for a move made
+while an overlay covers the screen (the countdown track, a timer, still does),
+and returning to `ended` after an end-of-quiz showdown doesn't replay the
+fanfare.
+
+The **Countdown sound** setting (`playLockCountdownSound`, on by default; the
+field keeps its name) governs both countdowns: the lock-countdown track, which
+plays on `/display` from `questionLockAt` and ends as the block locks, and the
+same 60-second track from the joker pick's deadline (`jokerPickEndsAt` on the
+display view), which plays from the moment the pick opens, ends as it closes,
+stops if it closes early and keeps playing under the join overlay. Time-up on
+closing the pick is silent with the setting off (the block's time-up is not
+governed by it). The big-screen mute silences both.
 
 ### The snapshot
 
@@ -426,8 +437,8 @@ questions to it.
 
 Browsers block audio until a tap, so `/display` shows an "Enable sound" button
 until it is tapped, whenever any display sound can play (that is, unless the
-big-screen mute is on), whatever the lock-countdown setting says. The mute also
-silences the lock-countdown track, and it silences every question's media as
+big-screen mute is on), whatever the Countdown sound setting says. The mute also
+silences the countdown track, and it silences every question's media as
 well (YouTube, audio and video, while the question is asked and at reveal).
 Muted media keeps playing, so unmuting brings the sound back where the clip has
 got to, and a mute that is already on applies to media that mounts later.
@@ -437,7 +448,7 @@ got to, and a mute that is already on applies to media that mounts later.
 | View                            | Fields                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                                                                                                                                                                                                                                 |
-| Display (`DisplayStatePayload`) | `screen` (the Display screen), `screenPosition` (the Screen position: grows on every forward move through the quiz, falls on Previous, unmoved by overlays and steps within a screen; the admin and players views don't carry it), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
+| Display (`DisplayStatePayload`) | `screen` (the Display screen), `screenPosition` (the Screen position: grows on every forward move through the quiz, falls on Previous, unmoved by overlays and steps within a screen; the admin and players views don't carry it), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `jokerPickEndsAt` (the open pick's deadline, apart from `screen` so the countdown track outlives an overlay), `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
 | Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`); each `teams` entry also carries the team's `joker` (round id, number, title and source, or `null`)                                                                                                                                                                                                            |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`, `jokerPick` (while the status is `joker_pick`: the deadline, `null` once closed, and the pickable rounds; never a team's choice)                                                                                                                                                                                                                                        |
 
@@ -588,12 +599,14 @@ choice (last write wins). One row is kept per (session, team) in
 with the round and a `source` of `chosen`, `drawn` or `set_by_quiz_master`; it
 is not stored on the roster row because a kick deletes that row and the joker
 must survive a kick and a rejoin. It goes through the session write as a change
-that touches scores. The big screen and the players room are told nothing: the
-server sends `TEAM_JOKER_SYNCED` (`{ joker: { roundId, source } | null }`) to the
+that touches scores. The players room is told nothing, and the big screen is sent
+a fresh view of itself with the team added to `pickedTeamIds` (never the round):
+the server sends `TEAM_JOKER_SYNCED` (`{ joker: { roundId, source } | null }`) to the
 team's own connected phones through the per-team sync, `JOIN_ACCEPTED` carries
 the team's `joker` (so a reconnect, a second phone or a rejoin after a kick
-restores it), and the admin room alone gets a fresh `STATE_UPDATED`. A team's
-joker is never sent to another team's phone or the big screen. The service that
+restores it), and the admin room and the big screen alone get a fresh
+`STATE_UPDATED`. A team's joker round is never sent to another team's phone or
+the big screen. The service that
 reads and writes it is `JokerService` (`apps/backend/src/joker/`), and the pure
 rules (pickable rounds, the draw, who may choose) are in
 `shared/types/src/joker.ts`. A joker's doubling of points is derived, never

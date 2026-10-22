@@ -184,6 +184,8 @@ export interface DisplayStatePayload
   roundAuthors: string[];
   /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
   kahootQuestionEndsAt: number | null;
+  /** Epoch-ms deadline of the open joker pick, or null when none is open. Carried apart from `screen` so the countdown music keeps playing under the join overlay, like the lock countdown. */
+  jokerPickEndsAt: number | null;
   /** The revealed question's teams-correct count; null outside a reveal and on closest_guess, whose reveal names the closest teams. */
   teamsCorrect: TeamsCorrect | null;
   /** The session's league for the lobby screen: its name and top rows, or null when the session is in no league. */

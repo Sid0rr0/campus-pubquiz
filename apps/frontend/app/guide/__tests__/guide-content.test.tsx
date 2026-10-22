@@ -58,6 +58,8 @@ describe('GuideContent', () => {
     expect(text).toContain('joker pick');
     expect(text).toContain('Close pick');
     expect(text).toContain('random round');
+    expect(text).toContain('N/M picked');
+    expect(text).toContain('"Countdown sound"');
   });
 
   it('describes every question type from the registry', () => {

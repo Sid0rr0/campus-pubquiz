@@ -197,7 +197,7 @@ describe('SessionSettingsForm', () => {
       />,
     );
 
-    await userEvent.click(screen.getByLabelText(/play countdown sound/i));
+    await userEvent.click(screen.getByLabelText(/^countdown sound$/i));
 
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_SESSION_SETTINGS,

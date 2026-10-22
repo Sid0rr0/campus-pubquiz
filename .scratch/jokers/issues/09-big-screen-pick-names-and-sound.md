@@ -6,7 +6,7 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Display view on `joker_pick` carries the ids of teams that have picked; the screen shows their names and "N/M picked"
 - [ ] `soundFor`: countdown track on entering `joker_pick` live, stopped on leaving early; `time-up` once on leaving it forward; keeps playing under an overlay like the lock countdown

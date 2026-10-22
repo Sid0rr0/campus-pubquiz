@@ -27,8 +27,14 @@ export type DisplayScreen =
   | { kind: 'lobby' }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
-  /** Every round of the quiz and the pick's deadline; never any team's choice. */
-  | { kind: 'joker_pick'; endsAt: number | null; rounds: JokerPickRound[] }
+  /** Every round of the quiz, the pick's deadline and the ids of the teams that have picked; never which round any team picked. */
+  | {
+      kind: 'joker_pick';
+      endsAt: number | null;
+      rounds: JokerPickRound[];
+      /** Roster teams that chose a joker themselves, in roster order. */
+      pickedTeamIds: number[];
+    }
   | { kind: 'join_overlay' }
   | {
       kind: 'round_title';
@@ -129,6 +135,9 @@ export function describeDisplayScreen({
           rounds,
           pickableRounds(rounds, session.openedQuestionIds),
         ),
+        pickedTeamIds: session.teams
+          .filter(({ teamId }) => session.jokers[teamId]?.source === 'chosen')
+          .map(({ teamId }) => teamId),
       };
     case 'round_title': {
       const round = rounds[onAir.roundIndex];

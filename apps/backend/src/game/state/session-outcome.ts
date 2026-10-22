@@ -66,6 +66,8 @@ export interface SessionOutcome {
   shouldBroadcastState: boolean;
   /** The admin room's view alone, afresh, for a change only the quiz master's screens show (a team's player count). Redundant when `shouldBroadcastState` is set. */
   shouldBroadcastAdminState: boolean;
+  /** The big screen's view alone, afresh, for a change only it shows (a team ticked off the joker pick). Redundant when `shouldBroadcastState` is set. */
+  shouldBroadcastDisplayState: boolean;
   /** Questions whose answer list the admin room needs afresh. */
   answerListQuestionIds: readonly number[];
   /** Connected teams whose own graded-answer list needs a per-team sync. */
@@ -105,6 +107,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   replies: [],
   shouldBroadcastState: true,
   shouldBroadcastAdminState: false,
+  shouldBroadcastDisplayState: false,
   answerListQuestionIds: [],
   teamSyncs: [],
   playerCountSyncs: [],

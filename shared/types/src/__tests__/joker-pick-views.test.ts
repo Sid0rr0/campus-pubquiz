@@ -83,13 +83,15 @@ describe('the joker pick views', () => {
     expect(toggled.jokerPickEndsAt).toBe(picking.jokerPickEndsAt);
   });
 
-  it('shows the big screen every round and the deadline, and no team’s choice', () => {
+  it('shows the big screen every round, the deadline and who has picked, but no team’s round', () => {
     const picking = onPick(jokerNight());
     const view = projectScreen(picking, SOCKET_ROOMS.DISPLAY);
 
+    expect(view.jokerPickEndsAt).toBe(picking.jokerPickEndsAt);
     expect(view.screen).toEqual({
       kind: 'joker_pick',
       endsAt: picking.jokerPickEndsAt,
+      pickedTeamIds: [1],
       rounds: [
         {
           roundId: 10,

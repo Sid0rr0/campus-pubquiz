@@ -3,6 +3,7 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type AckResult,
+  type DisplayStatePayload,
   type TeamJoker,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
@@ -269,9 +270,67 @@ describe('GameGateway — the joker pick', () => {
       expect(
         game.payloadsTo(SOCKET_ROOMS.PLAYERS, SOCKET_EVENTS.STATE_UPDATED),
       ).toEqual([]);
-      expect(
-        game.payloadsTo(SOCKET_ROOMS.DISPLAY, SOCKET_EVENTS.STATE_UPDATED),
-      ).toEqual([]);
+    });
+
+    it('ticks the team off on the big screen live, without saying which round', async () => {
+      const game = await jokerNight();
+      await openPick(game);
+      const [alpha, bravo] = game.teams;
+      game.clearEmits();
+
+      await pick(game, alpha, game.rounds[1].id);
+
+      const updates = game.payloadsTo<DisplayStatePayload>(
+        SOCKET_ROOMS.DISPLAY,
+        SOCKET_EVENTS.STATE_UPDATED,
+      );
+      expect(updates).toHaveLength(1);
+      expect(updates[0].screen).toMatchObject({
+        kind: 'joker_pick',
+        pickedTeamIds: [alpha.teamId],
+      });
+      expect(JSON.stringify(updates[0])).not.toContain('"chosen"');
+      const resynced = await game.resync('display');
+      expect(resynced.screen).toMatchObject({
+        pickedTeamIds: [alpha.teamId],
+      });
+      await pick(game, bravo, game.rounds[0].id);
+      expect((await game.resync('display')).screen).toMatchObject({
+        pickedTeamIds: [alpha.teamId, bravo.teamId],
+      });
+    });
+
+    it('lists no team as picked before anyone has picked', async () => {
+      const game = await jokerNight();
+      await openPick(game);
+
+      const display = await game.resync('display');
+
+      expect(display.screen).toMatchObject({
+        kind: 'joker_pick',
+        pickedTeamIds: [],
+      });
+    });
+
+    it('hands the big screen the pick deadline apart from the screen, so the countdown music outlives an overlay', async () => {
+      freezeClockAt(FROZEN_NOW);
+      try {
+        const game = await jokerNight();
+        await openPick(game);
+        const endsAt = Date.now() + JOKER_PICK_SECONDS * 1000;
+
+        await game.act('TOGGLE_JOIN_OVERLAY');
+        const covered = await game.resync('display');
+        await game.act('TOGGLE_JOIN_OVERLAY');
+        await game.act('ADVANCE');
+        const left = await game.resync('display');
+
+        expect(covered.screen.kind).toBe('join_overlay');
+        expect(covered.jokerPickEndsAt).toBe(endsAt);
+        expect(left.jokerPickEndsAt).toBeNull();
+      } finally {
+        restoreClock();
+      }
     });
 
     it('offers the phone every round while none has started', async () => {

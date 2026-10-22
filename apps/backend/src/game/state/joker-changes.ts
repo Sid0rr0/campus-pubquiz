@@ -48,9 +48,9 @@ export class JokerChanges {
    * A team chooses `roundId` as its joker from `socketId`, replacing its
    * earlier choice (last write wins). Refused unless the socket owns a team,
    * the pick is open and the round has no opened question. Only the team's own
-   * phones are told, and the admin room gets a fresh view of itself; the big
-   * screen and the players room hear nothing, so no pick is shown to anyone
-   * else.
+   * phones are told which round; the admin room and the big screen get a fresh
+   * view of themselves (the big screen ticks the team off, never naming the
+   * round), and the players room hears nothing.
    */
   async pick(
     session: SessionState,
@@ -86,6 +86,7 @@ export class JokerChanges {
         ...BROADCAST_STATE_OUTCOME,
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
+        shouldBroadcastDisplayState: true,
         jokerSyncs: jokerSyncsFor(session, [teamId], { [teamId]: joker }),
       },
       touchedScores: true,
