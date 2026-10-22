@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (The admin view carries control availability, and /control and /remote render it)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Planning `REPLAY_MEDIA` when nothing replayable is playing, or `TOGGLE_MEDIA_PAUSE` when nothing pausable is, returns a blocked move with an illegal-transition cause, using the playing-media rule from 01 (not a second copy)
 - [ ] Commit a move refuses such a press as it does any blocked move. Progress is unchanged and nothing is broadcast
