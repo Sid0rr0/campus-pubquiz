@@ -67,6 +67,7 @@ export class ShowdownsChanges {
     return {
       session: withShowdownGuess(session, teamId, value),
       outcome: BROADCAST_STATE_OUTCOME,
+      touchedScores: false,
     };
   }
 
@@ -99,6 +100,7 @@ export class ShowdownsChanges {
     return {
       session: withActiveShowdownRound(session, round),
       outcome: BROADCAST_STATE_OUTCOME,
+      touchedScores: false,
     };
   }
 

@@ -35,6 +35,8 @@ export type SavedPlacement = SavedPhaseTimer & {
 export interface CommittedMove {
   session: SessionState;
   outcome: SessionOutcome;
+  /** Always true: a press can grade at the lock, so its standings are always re-read. */
+  touchedScores: true;
 }
 
 /**
@@ -82,6 +84,7 @@ export class MoveCommitter {
         return {
           session: await this.resolveShowdownIfFinished(step),
           outcome: BROADCAST_STATE_OUTCOME,
+          touchedScores: true,
         };
       case 'transition':
       case 'grading_pending':
@@ -166,6 +169,7 @@ export class MoveCommitter {
             )
           : [],
       },
+      touchedScores: true,
     };
   }
 

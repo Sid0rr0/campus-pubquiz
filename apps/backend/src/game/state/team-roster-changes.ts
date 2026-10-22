@@ -99,6 +99,7 @@ export class TeamRosterChanges {
           socketsToClose: takenOver ? [takenOver] : [],
         },
       },
+      touchedScores: true,
     };
   }
 
@@ -143,10 +144,11 @@ export class TeamRosterChanges {
     const teamId = findTeamIdBySocketId(session, socketId);
     return Promise.resolve(
       teamId === null
-        ? { session, outcome: null }
+        ? { session, outcome: null, touchedScores: false }
         : {
             session: withoutTeamConnection(session, teamId),
             outcome: BROADCAST_STATE_OUTCOME,
+            touchedScores: false,
           },
     );
   }
@@ -208,6 +210,7 @@ export class TeamRosterChanges {
         notices,
         socketsToClose: notices.map((notice) => notice.socketId),
       },
+      touchedScores: true,
     };
   }
 }

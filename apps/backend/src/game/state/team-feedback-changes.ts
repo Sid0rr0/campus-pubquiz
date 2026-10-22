@@ -86,6 +86,10 @@ export class TeamFeedbackChanges {
       throw new SessionRefusal(rules.closedReason);
     }
     await rules.store(session.seededGame.gameSessionId, teamId);
-    return { session, outcome: NOTHING_TO_PUSH_OUTCOME };
+    return {
+      session,
+      outcome: NOTHING_TO_PUSH_OUTCOME,
+      touchedScores: false,
+    };
   }
 }

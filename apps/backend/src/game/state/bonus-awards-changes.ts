@@ -140,5 +140,6 @@ function bonusChange(
   return {
     session,
     outcome: { ...BROADCAST_STATE_OUTCOME, notices, bonusSyncs },
+    touchedScores: true,
   };
 }

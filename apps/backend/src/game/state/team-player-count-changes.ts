@@ -97,6 +97,7 @@ export class TeamPlayerCountChanges {
           playerCount,
         })),
       },
+      touchedScores: false,
     };
   }
 }

@@ -62,6 +62,7 @@ export class AnswersChanges {
     const refreshed = await this.refreshAnswers(session, questionId);
     return {
       session: refreshed.session,
+      touchedScores: refreshed.touchedScores,
       outcome: {
         ...refreshed.outcome,
         replies: [
@@ -145,6 +146,7 @@ export class AnswersChanges {
         ...BROADCAST_STATE_OUTCOME,
         answerListQuestionIds: [questionId],
       },
+      touchedScores: true,
     };
   }
 }

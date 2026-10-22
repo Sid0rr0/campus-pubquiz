@@ -54,6 +54,7 @@ export class LeagueChanges {
         leagueTop: await this.table.topFor(session.seededGame.gameSessionId),
       },
       outcome: undefined,
+      touchedScores: false,
     };
   }
 
@@ -94,7 +95,9 @@ export class LeagueChanges {
     if (Object.keys(partial).length > 0 || !leagueIds) {
       current = (await this.settings.lobbySettings(current, partial)).session;
     }
-    if (!leagueIds) return { session: current, outcome: undefined };
+    if (!leagueIds) {
+      return { session: current, outcome: undefined, touchedScores: false };
+    }
     return this.setLeagues(current, leagueIds);
   }
 }

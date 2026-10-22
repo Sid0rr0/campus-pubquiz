@@ -41,13 +41,21 @@ export function quizEditChange(
   return async (started) => {
     const reloaded = await withReloadedQuiz(seedService, started);
     if (regradeQuestionIds.length === 0) {
-      return { session: reloaded, outcome: BROADCAST_STATE_OUTCOME };
+      return {
+        session: reloaded,
+        outcome: BROADCAST_STATE_OUTCOME,
+        touchedScores: true,
+      };
     }
 
     const { session, regradedQuestionIds, answeringTeamIds } =
       await grading.regradeForKeyFix(reloaded, started, regradeQuestionIds);
     if (regradedQuestionIds.length === 0) {
-      return { session, outcome: BROADCAST_STATE_OUTCOME };
+      return {
+        session,
+        outcome: BROADCAST_STATE_OUTCOME,
+        touchedScores: true,
+      };
     }
 
     const teamSyncs = connectedTeamSyncs(
@@ -63,6 +71,7 @@ export function quizEditChange(
         answerListQuestionIds: regradedQuestionIds,
         teamSyncs,
       },
+      touchedScores: true,
     };
   };
 }

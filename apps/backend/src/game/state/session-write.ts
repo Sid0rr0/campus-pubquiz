@@ -10,33 +10,28 @@ import {
 import { LiveResultsRead } from '@/game/state/live-results-read';
 import { deadlinesOf, type SessionOutcome } from '@/game/state/session-outcome';
 
-/** What a change returns: the new session and the outcome the write resolves to. */
+/**
+ * What a change returns: the new session and the outcome the write resolves
+ * to, plus whether the change touched scores (wrote answers, grades, bonus
+ * awards or the roster). Required, no default: the write reads standings and
+ * flags league tables only when it is set.
+ */
 export interface SessionChange<T> {
   session: SessionState;
   outcome: T;
-}
-
-export interface SessionWriteOptions {
-  /** False for an event that doesn't change scores: skips the standings read. */
-  refreshStandings?: boolean;
+  touchedScores: boolean;
 }
 
 /**
- * The write a hold's task gets: same change and options as the queued write,
- * but run without queueing (the hold already owns the queues). Throws for a
- * join code outside the hold and for any call after the hold is released.
+ * The write a hold's task gets: same change as the queued write, but run
+ * without queueing (the hold already owns the queues). Throws for a join code
+ * outside the hold and for any call after the hold is released.
  */
 export interface HeldWriter {
   write<T>(
     joinCode: string,
     change: (session: SessionState) => Promise<SessionChange<T>>,
-    options?: SessionWriteOptions,
   ): Promise<T>;
-}
-
-/** Standings are read unless the write opts out. */
-function shouldRefreshStandings(options?: SessionWriteOptions): boolean {
-  return options?.refreshStandings ?? true;
 }
 
 function isSessionOutcome(value: unknown): value is SessionOutcome {
@@ -166,7 +161,7 @@ export class SessionWrite {
   /**
    * A session write: runs `change` against the session as the previous write
    * for this join code left it, refreshes the live results once as the
-   * last step (unless the write says it doesn't change scores), stores the
+   * last step (only when the change says it touched scores), stores the
    * result and returns the change's outcome. A change that throws stores
    * nothing and doesn't hold up the next write; a failed live result read,
    * after the change has done its work, is logged and the session is stored
@@ -176,12 +171,8 @@ export class SessionWrite {
   write<T>(
     joinCode: string,
     change: (session: SessionState) => Promise<SessionChange<T>>,
-    options?: SessionWriteOptions,
   ): Promise<T> {
-    const refreshStandings = shouldRefreshStandings(options);
-    return this.runQueued(joinCode, () =>
-      this.writeNow(joinCode, change, refreshStandings),
-    );
+    return this.runQueued(joinCode, () => this.writeNow(joinCode, change));
   }
 
   /** Puts `work` on the join code's queue, telling the gate it is queued first. */
@@ -220,7 +211,7 @@ export class SessionWrite {
     const heldCodes = new Set(joinCodes);
     let isReleased = false;
     const held: HeldWriter = {
-      write: async (joinCode, change, options) => {
+      write: async (joinCode, change) => {
         if (isReleased) {
           throw new Error(
             `Held writer used after its hold was released (join code "${joinCode}")`,
@@ -231,7 +222,7 @@ export class SessionWrite {
             `Held writer refused: join code "${joinCode}" is not part of the hold`,
           );
         }
-        return this.writeNow(joinCode, change, shouldRefreshStandings(options));
+        return this.writeNow(joinCode, change);
       },
     };
     for (const joinCode of heldCodes) this.gate.queued(joinCode);
@@ -250,12 +241,11 @@ export class SessionWrite {
   private async writeNow<T>(
     joinCode: string,
     change: (session: SessionState) => Promise<SessionChange<T>>,
-    refreshStandings: boolean,
   ): Promise<T> {
     const started = this.read(joinCode);
     const changed = await change(started);
     await this.gate.reached('change', joinCode);
-    return this.commit(joinCode, started, changed, refreshStandings);
+    return this.commit(joinCode, started, changed);
   }
 
   /**
@@ -266,8 +256,11 @@ export class SessionWrite {
   private async commit<T>(
     joinCode: string,
     started: SessionState,
-    { session: changedSession, outcome }: SessionChange<T>,
-    refreshStandings: boolean,
+    {
+      session: changedSession,
+      outcome,
+      touchedScores: refreshStandings,
+    }: SessionChange<T>,
   ): Promise<T> {
     // The change has already done its database work (a press has saved its
     // progress), so it counts as done even if a live result read fails: the
