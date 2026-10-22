@@ -296,7 +296,10 @@ describe('SessionDetailPanel', () => {
         await screen.findByRole('button', { name: 'Copy' }),
       );
 
-      expect(mockFetchSessionBrief).toHaveBeenCalledWith(1);
+      expect(mockFetchSessionBrief).toHaveBeenCalledWith(
+        1,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      );
       await waitFor(() => expect(writeText).toHaveBeenCalledWith(BRIEF));
       expect(await screen.findByText('Copied')).toBeInTheDocument();
     });
@@ -323,6 +326,8 @@ describe('SessionDetailPanel', () => {
       mockFetchSessionDetail.mockResolvedValue({
         ...DETAIL,
         name: 'Spring Quiz: Week #3',
+        // Midday UTC is the same calendar day in every time zone the tests may run in.
+        playedAt: '2026-01-05T12:00:00.000Z',
       });
       renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
 

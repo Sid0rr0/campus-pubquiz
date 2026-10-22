@@ -74,10 +74,11 @@ export async function fetchSessionDetail(
 /** The Night brief of an ended session: Markdown text. */
 export async function fetchSessionBrief(
   gameSessionId: number,
+  timeZone: string,
   signal?: AbortSignal,
 ): Promise<string> {
   const response = await fetch(
-    `${getBackendUrl()}/stats/sessions/${gameSessionId}/brief`,
+    `${getBackendUrl()}/stats/sessions/${gameSessionId}/brief?timeZone=${encodeURIComponent(timeZone)}`,
     { credentials: 'include', signal },
   );
   if (!response.ok) {

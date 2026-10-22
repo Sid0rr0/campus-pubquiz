@@ -5,10 +5,8 @@ import { z } from 'zod';
 import {
   classifyMediaUrl,
   MIN_RATINGS_FOR_RANKING,
-  QUESTION_KINDS,
   TREND_ROUNDS_LIMIT,
   type BonusCategory,
-  type QuestionType,
   type FeedbackTrends,
   type FeedbackTrendsRound,
   type PlayedSessionsListedPayload,
@@ -25,6 +23,9 @@ import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import {
   briefMediaKind,
   computeSessionBrief,
+  type SessionBriefInput,
+  type SessionBriefQuestionInputRow,
+  type SessionBriefRoundInputRow,
 } from '@/stats/session-brief.calc';
 import {
   computeSessionDetail,
@@ -186,7 +187,10 @@ export class StatsService {
    * No team column beyond what Standings and the answers already carry is read,
    * and the calc never writes any of them.
    */
-  async getSessionBrief(gameSessionId: number): Promise<string> {
+  async getSessionBrief(
+    gameSessionId: number,
+    timeZone?: string,
+  ): Promise<string> {
     const knex = this.gameSessions.getKnex();
     const rows = await this.loadSessionRows(gameSessionId);
 
@@ -198,24 +202,20 @@ export class StatsService {
         'r.author',
         'r.note',
         'r.kahoot_mode as isKahoot',
-      )) as {
-      roundId: number;
-      author: string | null;
-      note: string | null;
-      isKahoot: boolean;
-    }[];
+      )) as Pick<
+      SessionBriefRoundInputRow,
+      'roundId' | 'author' | 'note' | 'isKahoot'
+    >[];
     const roundExtrasById = new Map(roundExtras.map((r) => [r.roundId, r]));
 
     const questionExtras = (await knex('questions as q')
       .join('rounds as r', 'r.id', 'q.round_id')
       .join('game_sessions as gs', 'gs.quiz_id', 'r.quiz_id')
       .where('gs.id', gameSessionId)
-      .select('q.id as questionId', 'q.type', 'q.notes', 'q.payload')) as {
-      questionId: number;
-      type: QuestionType;
-      notes: string | null;
-      payload: unknown;
-    }[];
+      .select('q.id as questionId', 'q.type', 'q.notes', 'q.payload')) as (Pick<
+      SessionBriefQuestionInputRow,
+      'questionId' | 'type' | 'notes'
+    > & { payload: unknown })[];
     const questionExtrasById = new Map(
       questionExtras.map((q) => {
         const payload = readQuestionPayload({
@@ -227,10 +227,7 @@ export class StatsService {
           q.questionId,
           {
             notes: q.notes,
-            options:
-              QUESTION_KINDS[q.type].briefWrongAnswers === 'options'
-                ? payload.options
-                : undefined,
+            options: payload.options,
             media: {
               question: briefMediaKind(classifyMediaUrl(payload.mediaUrl)),
               answer: briefMediaKind(classifyMediaUrl(payload.answerMediaUrl)),
@@ -241,12 +238,10 @@ export class StatsService {
     );
 
     // Every question the session opened; null for a session saved before that was tracked.
-    const { openedQuestionIds: reachedQuestionIds } = (await knex(
-      'game_sessions',
-    )
+    const { openedQuestionIds } = (await knex('game_sessions')
       .where('id', gameSessionId)
       .select('opened_question_ids as openedQuestionIds')
-      .first()) as { openedQuestionIds: number[] | null };
+      .first()) as Pick<SessionBriefInput, 'openedQuestionIds'>;
 
     return computeSessionBrief({
       ...rows,
@@ -259,13 +254,17 @@ export class StatsService {
           isKahoot: extras?.isKahoot ?? false,
         };
       }),
-      questions: rows.questions.map((question) => ({
-        ...question,
-        notes: questionExtrasById.get(question.questionId)?.notes ?? null,
-        options: questionExtrasById.get(question.questionId)?.options,
-        media: questionExtrasById.get(question.questionId)?.media ?? {},
-      })),
-      reachedQuestionIds,
+      questions: rows.questions.map((question) => {
+        const extras = questionExtrasById.get(question.questionId);
+        return {
+          ...question,
+          notes: extras?.notes ?? null,
+          options: extras?.options,
+          media: extras?.media ?? {},
+        };
+      }),
+      openedQuestionIds,
+      timeZone,
     });
   }
 

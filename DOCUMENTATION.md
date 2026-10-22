@@ -1550,7 +1550,9 @@ the brief is data only.
 - **Endpoint:** `GET /stats/sessions/:id/brief`, same guards as the other stats
   reads (admin and moderator). Returns `text/markdown`; a running or unknown
   session gets the session detail's 404, a non-numeric id a 400. It is computed
-  per request and never cached.
+  per request and never cached. An optional `timeZone` query (an IANA zone, a
+  400 when unknown; UTC when absent) sets the zone the date is written in; the
+  page sends the browser's, so the date matches the one the page shows.
 - **Built by one pure calc** (`apps/backend/src/stats/session-brief.calc.ts`)
   from the same rows and the same Question outcome as the session detail, with
   the same team count (departed teams included), so the figures match the page.
@@ -1566,7 +1568,9 @@ the brief is data only.
   "Joint 2nd", or "left" for a departed team), points (bonus awards counted,
   not itemised), share of max points and player count, in the Session result's
   order and ties. **Highlights** name the hardest and easiest question by round
-  and question number, by the stats page's rules (`closest_guess` never counts).
+  and question number with its prompt, by the stats page's rules
+  (`closest_guess` never counts). A kahoot round is marked with a plain
+  "Kahoot round" line.
   Each round carries its star rating (average and count, or "no ratings") and
   its correct rate (absent when the round has no question with a rate).
   **Feedback** lists topic suggestions grouped by `groupTopics` with counts and
@@ -1595,7 +1599,8 @@ the brief is data only.
 - **No team identity:** no team name, code or id appears in the text.
 - **On `/stats/:id`** the header's "Night brief" control has **Copy** (writes the
   text to the clipboard and shows a "Copied" toast, or an error toast) and
-  **Download** (saves `night-brief-<session-name-slug>-<YYYY-MM-DD>.md`). The
+  **Download** (saves `night-brief-<session-name-slug>-<YYYY-MM-DD>.md`, the
+  date being the browser-local day the page shows). The
   `/stats` list does not get it.
 
 ### Feedback trends

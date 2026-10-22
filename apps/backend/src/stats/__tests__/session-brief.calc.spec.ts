@@ -145,7 +145,7 @@ function buildInput(
     ],
     answers,
     bonusAwards: [],
-    reachedQuestionIds: [10, 11, 12],
+    openedQuestionIds: [10, 11, 12],
     ...overrides,
   };
 }
@@ -207,7 +207,7 @@ function briefOfQuestion(
       },
     ],
     answers,
-    reachedQuestionIds: [50],
+    openedQuestionIds: [50],
     ...extra,
   });
   return computeSessionBrief(input);
@@ -323,12 +323,34 @@ describe('computeSessionBrief wrong answers', () => {
   });
 });
 
+describe('computeSessionBrief answer wording', () => {
+  it('words a sort key as an arrow chain and a match key as pairs', () => {
+    expect(
+      briefOfQuestion({ type: 'sort', answer: 'Ant|Bee|Cat' }, []),
+    ).toContain('- Answer: Ant → Bee → Cat');
+    expect(
+      briefOfQuestion(
+        { type: 'match', answer: 'Paris|Rome', options: ['France', 'Italy'] },
+        [],
+      ),
+    ).toContain('- Answer: France → Paris, Italy → Rome');
+  });
+
+  it('words a team\'s "I don\'t know" like the stats page does', () => {
+    const brief = briefOfQuestion({ type: 'free_text' }, [
+      said(50, 1, 'incorrect', '__idk__'),
+    ]);
+
+    expect(brief).toContain("- Wrong answers: 🤷 I don't know (1)");
+  });
+});
+
 describe('computeSessionBrief unplayed questions', () => {
   it('marks a question the session never reached "not played" and one reached with no answers "0 answered"', () => {
     const brief = computeSessionBrief(
       buildInput({
         answers: [answer(10, 1, 'correct', 2)],
-        reachedQuestionIds: [10, 11],
+        openedQuestionIds: [10, 11],
       }),
     );
 
@@ -343,13 +365,13 @@ describe('computeSessionBrief unplayed questions', () => {
     const brief = computeSessionBrief(
       buildInput({
         answers: [answer(10, 1, 'correct', 2)],
-        reachedQuestionIds: null,
+        openedQuestionIds: null,
       }),
     );
     const gap = computeSessionBrief(
       buildInput({
         answers: [answer(10, 1, 'correct', 2), answer(12, 1, 'correct', 3)],
-        reachedQuestionIds: null,
+        openedQuestionIds: null,
       }),
     );
 
@@ -360,7 +382,7 @@ describe('computeSessionBrief unplayed questions', () => {
   });
 
   it('treats a question with answers as played even when not listed as reached', () => {
-    const brief = computeSessionBrief(buildInput({ reachedQuestionIds: [] }));
+    const brief = computeSessionBrief(buildInput({ openedQuestionIds: [] }));
 
     expect(brief).not.toContain('not played');
   });
@@ -375,6 +397,22 @@ describe('computeSessionBrief', () => {
     expect(brief).toContain('Teams: 3');
   });
 
+  it("dates the session in the viewer's time zone, UTC by default", () => {
+    const late = {
+      ...buildInput().session,
+      playedAt: '2026-03-05T23:30:00.000Z',
+    };
+
+    expect(computeSessionBrief(buildInput({ session: late }))).toContain(
+      'Date: 2026-03-05',
+    );
+    expect(
+      computeSessionBrief(
+        buildInput({ session: late, timeZone: 'Asia/Tokyo' }),
+      ),
+    ).toContain('Date: 2026-03-06');
+  });
+
   it('writes each round with category, author, note and kahoot flag, leaving out the author line when there is none', () => {
     const brief = computeSessionBrief(buildInput());
 
@@ -385,7 +423,8 @@ describe('computeSessionBrief', () => {
     expect(geography).toContain('Note: Warm-up round');
     expect(geography).not.toMatch(/kahoot/i);
     expect(speed).toContain('Round 2: Speed Round');
-    expect(speed).toMatch(/kahoot/i);
+    expect(speed).toContain('Kahoot round\n');
+    expect(speed).not.toMatch(/scale|speed:/i);
     expect(speed).not.toContain('Author');
   });
 
@@ -501,8 +540,12 @@ describe('computeSessionBrief', () => {
 
       const highlights = section(brief, 'Highlights');
       // Q1 round 1 is 67%, Q1 round 2 is 33%.
-      expect(highlights).toContain('Hardest question: Round 2 Q1');
-      expect(highlights).toContain('Easiest question: Round 1 Q1');
+      expect(highlights).toContain(
+        'Hardest question: Round 2 Q1 "Name a primary colour" (33% correct)',
+      );
+      expect(highlights).toContain(
+        'Easiest question: Round 1 Q1 "Capital of France?" (67% correct)',
+      );
       expect(highlights).not.toContain('Everest');
     });
 
@@ -588,7 +631,9 @@ describe('computeSessionBrief', () => {
 
     expect(detail.teamCount).toBe(3);
     for (const row of detail.questions) {
-      const block = brief.split(/^### /m).find((b) => b.includes(row.prompt))!;
+      const block = brief
+        .split(/^### /m)
+        .find((b) => b.split('\n')[1] === row.prompt)!;
       expect(block).toContain(`Answered ${row.answeredCount}`);
       expect(block).toContain(`correct ${row.correctCount}`);
       if (row.correctRate !== null) {

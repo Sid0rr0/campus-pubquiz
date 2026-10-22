@@ -26,6 +26,7 @@ import {
   feedbackTrendsQuerySchema,
   playedSessionsQuerySchema,
   renameSessionSchema,
+  sessionBriefQuerySchema,
 } from '@/stats/stats-query.schema';
 
 // No @Roles(...) — open to admin and moderator alike, same as teams/sessions.
@@ -74,8 +75,15 @@ export class StatsController {
   @Header('Content-Type', 'text/markdown; charset=utf-8')
   async getSessionBrief(
     @Param('id', ParseIntPipe) id: number,
+    @Query() query: Record<string, unknown>,
   ): Promise<string> {
-    return this.statsService.getSessionBrief(id);
+    const parsed = sessionBriefQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException(
+        parsed.error.issues[0]?.message ?? 'Invalid query',
+      );
+    }
+    return this.statsService.getSessionBrief(id, parsed.data.timeZone);
   }
 
   // Admin-only, unlike the reads above — matches QuizController.remove:

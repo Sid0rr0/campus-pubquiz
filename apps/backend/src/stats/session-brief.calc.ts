@@ -1,5 +1,6 @@
 import { groupTopics } from '@/stats/session-feedback.calc';
 import {
+  formatAnswer,
   parseFiniteNumber,
   QUESTION_KINDS,
   questionNotesOf,
@@ -31,7 +32,7 @@ export interface SessionBriefQuestionInputRow extends SessionDetailQuestionInput
   /** The raw stored notes, settings group included. */
   notes: string | null;
   media: { question?: BriefMediaKind; answer?: BriefMediaKind };
-  /** The stored options of a `multiple_choice` question, in stored order. */
+  /** The stored options in stored order: the choices, the sort items or the match left items. */
   options?: string[];
 }
 
@@ -51,7 +52,9 @@ export interface SessionBriefInput extends Omit<
    * question with no answers outside this list reads "not played". Null for a
    * session saved before opened questions were tracked.
    */
-  reachedQuestionIds: readonly number[] | null;
+  openedQuestionIds: readonly number[] | null;
+  /** IANA zone the date is written in (the viewer's, as the stats page shows it); UTC when absent. */
+  timeZone?: string;
 }
 
 /** A brief says "video" for both YouTube links and video files. */
@@ -84,6 +87,21 @@ function median(sorted: readonly number[]): number {
     : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+/** The calendar day (YYYY-MM-DD) the session was played on in the given zone. */
+function dateOf(playedAt: string | Date, timeZone = 'UTC'): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(playedAt));
+}
+
+/** A question as `formatAnswer` reads it: its type and the options sort/match answers line up with. */
+function wordingOf(question: SessionBriefQuestionInputRow) {
+  return { type: question.type, options: question.options };
+}
+
 function sessionSection(
   input: SessionBriefInput,
   detail: SessionDetailStats,
@@ -96,7 +114,7 @@ function sessionSection(
   return [
     `# ${session.name}`,
     '',
-    `Date: ${new Date(session.playedAt).toISOString().slice(0, 10)}`,
+    `Date: ${dateOf(session.playedAt, input.timeZone)}`,
     `Teams: ${detail.teamCount}`,
     `Players: ${playerCount.total} (${playerCount.reportedTeams} of ${detail.teamCount} teams reported)`,
     ...(shares.length > 0
@@ -138,7 +156,7 @@ function highlightsSection(
       .filter((q) => q.roundId === row.roundId)
       .findIndex((q) => q.questionId === row.questionId);
     return [
-      `- ${label}: Round ${roundNumberById.get(row.roundId)} Q${number + 1} (${percent(row.correctRate)} correct)`,
+      `- ${label}: Round ${roundNumberById.get(row.roundId)} Q${number + 1} "${row.prompt}" (${percent(row.correctRate)} correct)`,
     ];
   };
   const lines = [
@@ -179,7 +197,7 @@ function roundSection(
     `## Round ${roundNumber}: ${round.title}`,
     ...(round.category ? [`Category: ${round.category}`] : []),
     ...(round.author ? [`Author: ${round.author}`] : []),
-    ...(round.isKahoot ? ['Kahoot round: points scale with speed'] : []),
+    ...(round.isKahoot ? ['Kahoot round'] : []),
     ...(round.note ? [`Note: ${round.note}`] : []),
     rating
       ? `Rating: ${rating.average.toFixed(1)} stars (${plural(rating.count, 'rating')})`
@@ -192,21 +210,17 @@ function roundSection(
 /** How many of the most common wrong answers a brief shows. */
 const WRONG_ANSWERS_SHOWN = 3;
 
+/** Teams' answers worded as the stats page words them, grouped the way topics are. */
 function groupedAnswers(
-  texts: readonly string[],
+  question: SessionBriefQuestionInputRow,
+  answers: readonly SessionBriefInput['answers'][number][],
   limit = Infinity,
 ): string | null {
-  const groups = groupTopics([[...texts]]).slice(0, limit);
+  const texts = answers.map((a) => formatAnswer(a.answer, wordingOf(question)));
+  const groups = groupTopics([texts]).slice(0, limit);
   return groups.length === 0
     ? null
     : groups.map((g) => `${g.topic} (${g.count})`).join(', ');
-}
-
-function medianOf(sorted: readonly number[]): number {
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1
-    ? sorted[mid]
-    : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /** What went wrong on one question, by type; sort and match add nothing. */
@@ -217,11 +231,13 @@ function wrongAnswerLines(
   switch (QUESTION_KINDS[question.type].briefWrongAnswers) {
     case 'typed': {
       const wrong = groupedAnswers(
-        given.filter((a) => a.verdict === 'incorrect').map((a) => a.answer),
+        question,
+        given.filter((a) => a.verdict === 'incorrect'),
         WRONG_ANSWERS_SHOWN,
       );
       const ungraded = groupedAnswers(
-        given.filter((a) => a.verdict === null).map((a) => a.answer),
+        question,
+        given.filter((a) => a.verdict === null),
       );
       return [
         ...(wrong ? [`- Wrong answers: ${wrong}`] : []),
@@ -244,7 +260,7 @@ function wrongAnswerLines(
         .sort((a, b) => a - b);
       if (guesses.length === 0) return [];
       return [
-        `- Guesses: lowest ${guesses[0]}, median ${medianOf(guesses)}, highest ${guesses[guesses.length - 1]}`,
+        `- Guesses: lowest ${guesses[0]}, median ${median(guesses)}, highest ${guesses[guesses.length - 1]}`,
       ];
     }
     case 'none':
@@ -257,12 +273,12 @@ function wrongAnswerLines(
  * the session row kept one; a session saved before that was tracked (null)
  * falls back to every question up to the last one with an answer, in play order.
  */
-function reachedQuestionIdsOf(
+function openedQuestionIdsOf(
   input: SessionBriefInput,
   sortedRounds: readonly SessionBriefRoundInputRow[],
 ): ReadonlySet<number> {
-  if (input.reachedQuestionIds !== null) {
-    return new Set(input.reachedQuestionIds);
+  if (input.openedQuestionIds !== null) {
+    return new Set(input.openedQuestionIds);
   }
   const inPlayOrder = sortedRounds.flatMap((round) =>
     input.questions
@@ -283,7 +299,7 @@ function questionSection(
   questionNumber: number,
   input: SessionBriefInput,
   teamCount: number,
-  reachedIds: ReadonlySet<number>,
+  openedIds: ReadonlySet<number>,
 ): string[] {
   const given = input.answers.filter(
     (a) => a.questionId === question.questionId,
@@ -293,14 +309,14 @@ function questionSection(
     '',
     `### Q${questionNumber} (${question.type}, ${question.points} pts)`,
     question.prompt,
-    `- Answer: ${question.answer}`,
+    `- Answer: ${formatAnswer(question.answer, wordingOf(question))}`,
     ...(notes ? [`- Notes: ${notes}`] : []),
     ...(question.media.question ? [`- Media: ${question.media.question}`] : []),
     ...(question.media.answer
       ? [`- Answer media: ${question.media.answer}`]
       : []),
   ];
-  if (given.length === 0 && !reachedIds.has(question.questionId)) {
+  if (given.length === 0 && !openedIds.has(question.questionId)) {
     return [...header, '- (not played)'];
   }
   const outcome = questionOutcome(question, given, teamCount);
@@ -327,20 +343,14 @@ export function computeSessionBrief(input: SessionBriefInput): string {
   const detail = computeSessionDetail(input);
   const teamCount = detail.teamCount;
   const rounds = [...input.rounds].sort((a, b) => a.orderIndex - b.orderIndex);
-  const reachedIds = reachedQuestionIdsOf(input, rounds);
+  const openedIds = openedQuestionIdsOf(input, rounds);
 
   const roundSections = rounds.flatMap((round, roundIndex) => {
     const questions = input.questions
       .filter((q) => q.roundId === round.roundId)
       .sort((a, b) => a.orderIndex - b.orderIndex);
     const questionLines = questions.flatMap((question, questionIndex) =>
-      questionSection(
-        question,
-        questionIndex + 1,
-        input,
-        teamCount,
-        reachedIds,
-      ),
+      questionSection(question, questionIndex + 1, input, teamCount, openedIds),
     );
     const detailRow = detail.rounds.find((r) => r.roundId === round.roundId);
     return [

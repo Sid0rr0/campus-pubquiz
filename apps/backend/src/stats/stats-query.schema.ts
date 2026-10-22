@@ -40,4 +40,19 @@ export const renameSessionSchema = z.object({
   name: z.string().trim().max(MAX_SESSION_NAME_LENGTH),
 });
 
+/** The viewer's IANA time zone, so the brief dates the session the way the stats page shows it. */
+export const sessionBriefQuerySchema = z.object({
+  timeZone: z
+    .string()
+    .refine((zone) => {
+      try {
+        new Intl.DateTimeFormat('en-CA', { timeZone: zone });
+        return true;
+      } catch {
+        return false;
+      }
+    }, 'Unknown time zone')
+    .optional(),
+});
+
 export type RenameSessionBody = z.infer<typeof renameSessionSchema>;

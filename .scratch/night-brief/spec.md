@@ -84,6 +84,7 @@ The brief contains:
   - `sort` and `match`: none.
 - **Ungraded answers** (left after a force-end or a live answer-key fix) are grouped the same way and listed on their own line, never among the wrong answers.
 - **"Not played":** a question with no stored answers that the session never reached. Being reached is derived from where the session stood when it ended (every question up to the last one put in front of teams), not from having answers, so a played question that nobody answered still reads "0 answered". The implementer checks what the stored session row keeps for this; if it can't tell, the fallback is "not played" for every question after the last one with an answer, and the spec gets a comment saying so.
+  - _Comment (implemented):_ the session row stores `opened_question_ids`, so "not played" is exact for sessions saved with it. The fallback above applies only to older sessions, where that column is null.
 - **No team identity:** no team name, team code or team id is selected for the brief, and standings rows carry only placing, points, share, player count and "left". Comments and wrong answers are passed through as written; the moderator reviews the text before pasting it.
 - **Media:** a flag naming the media kind for `media_url` and for `answer_media_url`, never the URL.
 - **Round author** is the round's free-text author as stored; a round without one shows no author line. Authors are not grouped across sessions here.

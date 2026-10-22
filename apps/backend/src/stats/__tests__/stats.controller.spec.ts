@@ -207,8 +207,8 @@ describe('StatsController', () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method -- inspected for metadata only, never invoked
       const handler = StatsController.prototype.getSessionBrief;
 
-      await expect(controller.getSessionBrief(3)).resolves.toBe('# Night');
-      expect(statsService.getSessionBrief).toHaveBeenCalledWith(3);
+      await expect(controller.getSessionBrief(3, {})).resolves.toBe('# Night');
+      expect(statsService.getSessionBrief).toHaveBeenCalledWith(3, undefined);
       expect(Reflect.getMetadata('roles', handler)).toBeUndefined();
       expect(Reflect.getMetadata('__httpCode__', handler)).toBeUndefined();
       const headers = Reflect.getMetadata('__headers__', handler) as {
@@ -219,6 +219,20 @@ describe('StatsController', () => {
         name: 'Content-Type',
         value: expect.stringContaining('text/markdown') as string,
       });
+    });
+
+    it("passes the viewer's time zone on, and rejects an unknown one with a 400", async () => {
+      const { controller, statsService } = makeController();
+      statsService.getSessionBrief.mockResolvedValue('# Night');
+
+      await controller.getSessionBrief(3, { timeZone: 'Asia/Tokyo' });
+      expect(statsService.getSessionBrief).toHaveBeenCalledWith(
+        3,
+        'Asia/Tokyo',
+      );
+      await expect(
+        controller.getSessionBrief(3, { timeZone: 'Mars/Olympus' }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('rejects a non-numeric id with a 400 through the id pipe', async () => {

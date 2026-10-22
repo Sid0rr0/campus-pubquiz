@@ -23,7 +23,8 @@ export function nightBriefFilename(
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  const date = new Date(playedAt).toISOString().slice(0, 10);
+  // The day the stats page shows: the viewer's local one.
+  const date = new Date(playedAt).toLocaleDateString('en-CA');
   return `night-brief-${slug ? `${slug}-` : ''}${date}.md`;
 }
 
@@ -41,7 +42,12 @@ export function NightBriefControl({
   ) {
     setIsBusy(true);
     try {
-      await action(await fetchSessionBrief(gameSessionId));
+      await action(
+        await fetchSessionBrief(
+          gameSessionId,
+          Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ),
+      );
     } catch {
       toast.error(failureMessage);
     } finally {
