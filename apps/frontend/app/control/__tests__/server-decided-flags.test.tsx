@@ -95,4 +95,89 @@ describe('AdminPage — server-decided break and showdown controls', () => {
 
     expect(screen.queryByText(/tied for 1st/i)).not.toBeInTheDocument();
   });
+
+  describe('media buttons from the admin view control availability', () => {
+    function renderClosestGuessReveal(closestGuessRevealStep: number) {
+      mockUseAdminGame.mockReturnValue({
+        session: {
+          progress: { status: 'reveal' },
+          closestGuessRevealStep,
+          rounds: [
+            {
+              questions: [
+                {
+                  id: 55,
+                  type: 'closest_guess',
+                  prompt: 'How many?',
+                  answer: '10',
+                  answerMediaUrl: 'https://example.com/answer.mp4',
+                  closestGuess: {
+                    hasSubmissions: true,
+                    minGuess: '5',
+                    maxGuess: '20',
+                    closestGuesses: [{ teamName: 'Team A', value: '9' }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      renderWithQuery(<AdminPage />);
+    }
+
+    it('offers Play again and Pause for a video on the big screen', () => {
+      mockUseAdminGame.mockReturnValue({
+        session: {
+          progress: { status: 'question_open' },
+          rounds: [
+            {
+              questions: [
+                {
+                  id: 55,
+                  type: 'free_text',
+                  prompt: 'Name it.',
+                  mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+                },
+              ],
+            },
+          ],
+        },
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      renderWithQuery(<AdminPage />);
+
+      expect(
+        screen.getAllByRole('button', { name: /play video again/i }).length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByRole('button', { name: 'Pause' }).length,
+      ).toBeGreaterThan(0);
+    });
+
+    it('offers neither before a closest guess reveal reaches its answer step', () => {
+      renderClosestGuessReveal(2);
+
+      expect(
+        screen.queryByRole('button', { name: /play video again/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Pause' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('offers both once the closest guess reveal reaches its answer step', () => {
+      renderClosestGuessReveal(3);
+
+      expect(
+        screen.getAllByRole('button', { name: /play video again/i }).length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByRole('button', { name: 'Pause' }).length,
+      ).toBeGreaterThan(0);
+    });
+  });
 });

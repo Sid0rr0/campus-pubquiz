@@ -653,6 +653,51 @@ describe('RemotePage — content', () => {
     expect(sendAction).toHaveBeenCalledWith('REPLAY_MEDIA');
   });
 
+  it.each([
+    [2, false],
+    [3, true],
+  ])(
+    'at closest_guess reveal step %i offers Play Again and Pause: %s',
+    (closestGuessRevealStep, isOffered) => {
+      mockUseAdminGame.mockReturnValue({
+        session: {
+          progress: { status: 'reveal' },
+          closestGuessRevealStep,
+          rounds: [
+            {
+              questions: [
+                {
+                  id: 55,
+                  type: 'closest_guess',
+                  prompt: 'How many?',
+                  answer: '10',
+                  answerMediaUrl: 'https://example.com/answer.mp4',
+                  closestGuess: {
+                    hasSubmissions: true,
+                    minGuess: '5',
+                    maxGuess: '20',
+                    closestGuesses: [{ teamName: 'Team A', value: '9' }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        connectionError: null,
+        sendAction: vi.fn(),
+        presenterContext: null,
+      });
+      renderWithQuery(<RemotePage />);
+
+      expect(
+        screen.queryByRole('button', { name: /play video again/i }) !== null,
+      ).toBe(isOffered);
+      expect(screen.queryByRole('button', { name: 'Pause' }) !== null).toBe(
+        isOffered,
+      );
+    },
+  );
+
   function mockOpenQuestionWithMedia(
     mediaUrl: string,
     sendAction = vi.fn(),

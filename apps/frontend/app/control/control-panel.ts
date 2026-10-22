@@ -1,6 +1,8 @@
-import type { AdminStatePayload } from '@campus-pubquiz/types';
+import type {
+  AdminStatePayload,
+  ControlAvailability,
+} from '@campus-pubquiz/types';
 import type { UseAdminGameResult } from '@/app/lib/use-admin-game';
-import type { AdminControls } from '@/app/control/admin-controls';
 
 /** The slice of the admin view the sidebars show, passed through unchanged. */
 export type ControlPanelView = Pick<
@@ -37,6 +39,6 @@ export interface ControlPanel {
   /** From the REST quiz list, not the socket. */
   quiz: { id: number | null; title: string | null };
   connectionError: string | null;
-  controls: AdminControls;
+  controls: ControlAvailability;
   actions: ControlPanelActions;
 }

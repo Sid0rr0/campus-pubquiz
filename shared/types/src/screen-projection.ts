@@ -5,12 +5,17 @@ import {
 } from './admin-view-flags';
 import { getBlockSeededQuestions } from './block-questions';
 import { getFeedbackField } from './feedback-rounds';
-import { describeDisplayScreen } from './display-screen';
+import { describeControlAvailability } from './control-availability';
+import type { DisplayScreen } from './display-screen';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
-import { FULLY_REVEALED_STEP, shownAtStep } from './closest-guess-reveal';
+import { FULLY_REVEALED_STEP } from './closest-guess-reveal';
+import {
+  assembleDisplayScreen,
+  trimOnAirQuestion,
+} from './session-display-screen';
 import { revealStepOf } from './stepped-reveal';
 import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
@@ -35,19 +40,6 @@ import {
   isBlockAnswerable,
 } from './session-snapshot';
 import { SOCKET_ROOMS, type SocketRoomName } from './socket-events';
-
-/** The question on air in 'reveal', shown only as far as its closest-guess step has got; earlier reveal questions, and every question outside 'reveal', are sent whole. */
-function trimOnAirQuestion(
-  revealQuestions: readonly BlockRevealQuestionView[],
-  { status, revealIndex }: GameProgress,
-  closestGuessRevealStep: number,
-): PlayersRevealQuestionView[] {
-  return revealQuestions.map((question, index) =>
-    status === 'reveal' && index === revealIndex
-      ? shownAtStep(question, closestGuessRevealStep)
-      : question,
-  );
-}
 
 /**
  * The reveal questions the big screen has shown so far: everything before
@@ -123,20 +115,14 @@ export function projectScreen(
     ...snapshot,
     closestGuessRevealStep,
   });
+  // The Display screen /display is sent. The admin view reads the media the big
+  // screen is playing from it, so the two can't disagree.
+  const buildDisplayScreen = (): DisplayScreen =>
+    assembleDisplayScreen(session, snapshot, screen, closestGuessRevealStep);
 
   switch (audience) {
     case SOCKET_ROOMS.DISPLAY: {
-      const revealQuestions = trimOnAirQuestion(
-        snapshot.revealQuestions,
-        snapshot.progress,
-        closestGuessRevealStep,
-      );
-      const displayScreen = describeDisplayScreen({
-        session,
-        onAir: screen,
-        snapshot,
-        revealQuestions,
-      });
+      const displayScreen = buildDisplayScreen();
       if (displayScreen.kind === 'blank') options?.onBlankScreen?.(screen);
       // The content the Display screen carries is not sent a second time.
       /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -170,6 +156,11 @@ export function projectScreen(
         ...buildAdminFields(session),
         onAirScreen: screen,
         ...describeAdminIndicators(snapshot),
+        controlAvailability: describeControlAvailability({
+          progress: snapshot.progress,
+          leaderboard: snapshot.leaderboard,
+          displayScreen: buildDisplayScreen(),
+        }),
         advanceStep: describeAdvanceStep(session),
         previousState: describePreviousState(session),
         activeBlockStartIndex: getActiveBlockStartIndex(session),

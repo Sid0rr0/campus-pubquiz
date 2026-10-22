@@ -42,6 +42,12 @@ export function isVideoUrl(url: string | undefined): boolean {
   return kind === 'youtube' || kind === 'video-file';
 }
 
+/** Whether `url` is media /display can pause and resume (video or audio) — what the pause button gates on. Images have no playback to pause. */
+export function isPausableMediaUrl(url: string | undefined): boolean {
+  const kind = classifyMediaUrl(url);
+  return kind !== undefined && kind !== 'image';
+}
+
 /** Whether the question's own media or its answer media is a video — the questions that carry a reveal clip. */
 export function hasVideoMedia(media: {
   mediaUrl?: string;

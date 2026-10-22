@@ -23,7 +23,6 @@ import { PhaseTimer } from '@/app/control/phase-timer';
 import { MobileAdminBar } from '@/app/control/mobile-admin-bar';
 import { SessionSettingsPanel } from '@/app/control/session-settings-panel';
 import type { ControlPanel } from '@/app/control/control-panel';
-import { getAdminControls } from '@/app/control/admin-controls';
 import { useAdminKeyboardShortcuts } from '@/app/control/use-admin-keyboard-shortcuts';
 
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
@@ -203,7 +202,7 @@ function AdminPageContent() {
   }
 
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
-  const controls = snapshot ? getAdminControls(snapshot) : undefined;
+  const controls = snapshot?.controlAvailability;
   // What the Advance slot and Previous do next is decided by the server (the
   // admin view). This hook runs before the null-snapshot early return below,
   // so the fallbacks (including `?? false` below) cover "no view yet", when there is nothing to act on.
@@ -260,7 +259,7 @@ function AdminPageContent() {
     view: snapshot,
     quiz: { id: activeQuizId, title: activeQuizTitle },
     connectionError,
-    controls: getAdminControls(snapshot),
+    controls: snapshot.controlAvailability,
     actions: {
       sendAction,
       kickTeam,

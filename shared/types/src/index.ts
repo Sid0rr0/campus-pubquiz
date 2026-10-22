@@ -44,6 +44,7 @@ export * from './league';
 export * from './scoring';
 export * from './on-air-screen';
 export * from './display-screen';
+export * from './control-availability';
 export * from './question-types';
 export * from './question-row-schema';
 export * from './question-csv-codec';
