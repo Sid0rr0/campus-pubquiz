@@ -662,6 +662,24 @@ same way: `TEAM_JOKER_SYNCED` to that team's own connected phones and a fresh
 `STATE_UPDATED` to the admin room alone. The team can pick again while the pick is
 still open, which replaces the quiz master's choice.
 
+**One joker per team.** In a session with Jokers every team always holds exactly
+one joker:
+
+- A team that joins during `joker_pick` gets the picker like everyone else.
+- A team that joins after the pick closed (the status is past `joker_pick`) and
+  holds no joker is drawn one with equal chance among the rounds with no opened
+  question, stored as `drawn`. `JOIN_ACCEPTED` carries the joker the team held
+  before the draw (`null`), and `TEAM_JOKER_SYNCED` follows, so the phone toasts
+  "A joker was drawn for your team". A team that joins before the pick opens is
+  drawn one when the pick closes, like the rest.
+- A team that is kicked and rejoins with its name and code gets its joker back:
+  the joker row is not the roster row.
+- A Live edit save keeps jokers on their rounds inside the same save. A round is
+  recognised by its questions, so a round moved by a reorder takes its jokers with
+  it, and a joker whose round is deleted (none of its questions is left) is
+  redrawn from the rounds with no opened question, stored as `drawn`. Every team
+  whose joker moved or was redrawn gets `TEAM_JOKER_SYNCED`.
+
 The phone shows a toast when `TEAM_JOKER_SYNCED` brings a joker the team did not
 pick and does not already hold: "Your joker was changed by the quiz master"
 (`set_by_quiz_master`) or "A joker was drawn for your team" (`drawn`). The team's

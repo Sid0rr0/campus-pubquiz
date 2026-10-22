@@ -2,6 +2,7 @@ import {
   canChooseJoker,
   canSetJoker,
   drawJoker,
+  hasJokerPickOpened,
   isJokerPickOpen,
   pickableRounds,
   type PickJokerPayload,
@@ -203,6 +204,80 @@ export class JokerChanges {
     };
   }
 
+  /**
+   * A team that joined after the pick closed and holds no joker is drawn one
+   * from the rounds with no opened question. Returns the drawn joker, or null
+   * when the team needs none: it holds one, the session plays without jokers,
+   * the pick has not closed yet (it is drawn one when it does, or may still
+   * choose), or no round is left to draw.
+   */
+  async drawForLateJoiner(
+    session: SessionState,
+    teamId: number,
+    held: TeamJoker | null,
+  ): Promise<TeamJoker | null> {
+    const { status } = session.progress;
+    const isPickClosed =
+      hasJokerPickOpened(status) &&
+      status !== 'joker_pick' &&
+      status !== 'ended';
+    if (held || !session.seededGame.settings.jokersEnabled || !isPickClosed) {
+      return null;
+    }
+    const roundId = drawJoker(pickableRoundIdsOf(session), this.random);
+    if (roundId === null) return null;
+    const drawn: TeamJoker = { roundId, source: 'drawn' };
+    await this.jokerService.set(
+      session.seededGame.gameSessionId,
+      teamId,
+      drawn,
+    );
+    return drawn;
+  }
+
+  /**
+   * Keeps every team's joker on its round after a live edit reloaded the
+   * quiz (`reloaded`; `started` is the session before the reload). A round
+   * keeps its identity through its questions: the round now holding the
+   * joker round's questions is the joker's round, whatever row or position it
+   * sits on. A joker whose round is gone (none of its questions is left) is
+   * drawn anew from the rounds with no opened question, and its team is told.
+   * Done inside the live-edit save. Stored and cached jokers move together.
+   */
+  async followRoundsAfterEdit(
+    started: SessionState,
+    reloaded: SessionState,
+  ): Promise<{ session: SessionState; jokerSyncs: JokerSync[] }> {
+    const held = Object.entries(started.jokers);
+    if (held.length === 0) return { session: reloaded, jokerSyncs: [] };
+
+    const { gameSessionId } = reloaded.seededGame;
+    const pickableRoundIds = pickableRoundIdsOf(reloaded);
+    const jokers: Record<number, TeamJoker> = {};
+    const changedTeamIds: number[] = [];
+    for (const [key, joker] of held) {
+      const teamId = Number(key);
+      const followed = roundNowHolding(started, reloaded, joker.roundId);
+      let next: TeamJoker | null = joker;
+      if (followed === null) {
+        const roundId = drawJoker(pickableRoundIds, this.random);
+        next = roundId === null ? null : { roundId, source: 'drawn' };
+      } else if (followed !== joker.roundId) {
+        next = { ...joker, roundId: followed };
+      }
+      if (next !== null) jokers[teamId] = next;
+      if (next === joker) continue;
+      if (next !== null) {
+        await this.jokerService.set(gameSessionId, teamId, next);
+      }
+      changedTeamIds.push(teamId);
+    }
+    return {
+      session: { ...reloaded, jokers },
+      jokerSyncs: jokerSyncsFor(reloaded, changedTeamIds, jokers),
+    };
+  }
+
   /** Every stored joker of the session by team id, for a session being placed. */
   async loadAll(gameSessionId: number): Promise<Record<number, TeamJoker>> {
     return Object.fromEntries(
@@ -228,6 +303,40 @@ export function withJoker(
   return joker === null
     ? session
     : { ...session, jokers: { ...session.jokers, [teamId]: joker } };
+}
+
+/** The ids of the session's rounds with no opened question. */
+function pickableRoundIdsOf(session: SessionState): number[] {
+  return pickableRounds(
+    session.seededGame.rounds,
+    session.openedQuestionIds,
+  ).map((round) => round.id);
+}
+
+/**
+ * The id of the round in `reloaded` that now holds most of the questions the
+ * round `roundId` held in `started`, or null when none of them is left.
+ */
+function roundNowHolding(
+  started: SessionState,
+  reloaded: SessionState,
+  roundId: number,
+): number | null {
+  const before = started.seededGame.rounds.find(
+    (round) => round.id === roundId,
+  );
+  if (!before) return null;
+  const questionIds = new Set(before.questions.map((question) => question.id));
+  let best: { roundId: number; kept: number } | null = null;
+  for (const round of reloaded.seededGame.rounds) {
+    const kept = round.questions.filter((question) =>
+      questionIds.has(question.id),
+    ).length;
+    if (kept > 0 && (best === null || kept > best.kept)) {
+      best = { roundId: round.id, kept };
+    }
+  }
+  return best?.roundId ?? null;
 }
 
 function jokerSyncsFor(

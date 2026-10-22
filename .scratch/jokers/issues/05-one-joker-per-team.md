@@ -6,7 +6,7 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 03, 04
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Join during `joker_pick`: the phone gets the picker
 - [ ] Join after the pick closed: a drawn joker from the pickable rounds, with the toast

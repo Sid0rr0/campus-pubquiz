@@ -444,7 +444,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     const gameSessionId = this.getGameSessionId(joinCode);
     try {
-      const { team, joined } = await this.sessionWrite.write(
+      const { team, heldJoker, joined } = await this.sessionWrite.write(
         joinCode,
         (session) =>
           this.rosterChanges.join(session, { request, socketId, isSocketLive }),
@@ -452,7 +452,9 @@ export class GameStateService implements OnModuleInit {
 
       return {
         ...joined,
-        replies: [await this.rosterChanges.joinReply(gameSessionId, team)],
+        replies: [
+          await this.rosterChanges.joinReply(gameSessionId, team, heldJoker),
+        ],
       };
     } catch (error) {
       if (error instanceof SessionRefusal) throw error;

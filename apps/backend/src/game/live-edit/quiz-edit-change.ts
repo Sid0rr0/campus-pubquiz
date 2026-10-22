@@ -1,5 +1,6 @@
 import type { SessionState } from '@campus-pubquiz/types';
 import type { SeedService } from '@/db/seed.service';
+import type { JokerChanges } from '@/game/state/joker-changes';
 import type { BlockGradingService } from '@/game/state/block-grading.service';
 import {
   BROADCAST_STATE_OUTCOME,
@@ -36,14 +37,22 @@ async function withReloadedQuiz(
 export function quizEditChange(
   seedService: SeedService,
   grading: BlockGradingService,
+  jokers: Pick<JokerChanges, 'followRoundsAfterEdit'>,
   regradeQuestionIds: readonly number[],
 ): (started: SessionState) => Promise<SessionChange<SessionOutcome>> {
   return async (started) => {
-    const reloaded = await withReloadedQuiz(seedService, started);
+    // Jokers follow their rounds (and are redrawn for a deleted one) before
+    // anything is graded, so the regrade and every total see the final jokers.
+    const { session: reloaded, jokerSyncs } =
+      await jokers.followRoundsAfterEdit(
+        started,
+        await withReloadedQuiz(seedService, started),
+      );
+    const broadcast = { ...BROADCAST_STATE_OUTCOME, jokerSyncs };
     if (regradeQuestionIds.length === 0) {
       return {
         session: reloaded,
-        outcome: BROADCAST_STATE_OUTCOME,
+        outcome: broadcast,
         touchedScores: true,
       };
     }
@@ -53,7 +62,7 @@ export function quizEditChange(
     if (regradedQuestionIds.length === 0) {
       return {
         session,
-        outcome: BROADCAST_STATE_OUTCOME,
+        outcome: broadcast,
         touchedScores: true,
       };
     }
@@ -67,7 +76,7 @@ export function quizEditChange(
     return {
       session,
       outcome: {
-        ...BROADCAST_STATE_OUTCOME,
+        ...broadcast,
         answerListQuestionIds: regradedQuestionIds,
         teamSyncs,
       },
