@@ -1,3 +1,4 @@
+import { getPlayingMediaUrl } from './display-screen';
 import { getNextGameState } from './game-state';
 import {
   IllegalGameTransitionError,
@@ -5,7 +6,9 @@ import {
   type GameProgress,
 } from './game-state-types';
 import { getLeaderboardRevealStepCount } from './leaderboard-tiebreak';
+import { isPausableMediaUrl, isVideoUrl } from './media';
 import type { AdvanceSlotStep, PreviousState } from './room-views';
+import { describeSessionDisplayScreen } from './session-display-screen';
 import { getGameContext, type SessionState } from './session-state';
 import { stepRevealOnAir, type SteppedRevealKind } from './stepped-reveal';
 
@@ -84,7 +87,27 @@ export function planNextPress(session: SessionState): MoveStep {
   return planMove(session, nextPressAction(session));
 }
 
+/** Whether the media action has something to act on: a replay needs a video on the big screen, a pause a video or audio. Other actions are never gated. */
+function isMediaActionAvailable(
+  session: SessionState,
+  action: GameAction,
+): boolean {
+  if (action !== 'REPLAY_MEDIA' && action !== 'TOGGLE_MEDIA_PAUSE') return true;
+  const playingMediaUrl = getPlayingMediaUrl(
+    describeSessionDisplayScreen(session),
+  );
+  return action === 'REPLAY_MEDIA'
+    ? isVideoUrl(playingMediaUrl)
+    : isPausableMediaUrl(playingMediaUrl);
+}
+
 function planTransition(session: SessionState, action: GameAction): MoveStep {
+  if (!isMediaActionAvailable(session, action)) {
+    return {
+      kind: 'blocked',
+      cause: new IllegalGameTransitionError(session.progress.status, action),
+    };
+  }
   try {
     return {
       kind: 'transition',

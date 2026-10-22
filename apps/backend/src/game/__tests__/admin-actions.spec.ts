@@ -75,18 +75,87 @@ describe('GameGateway — admin actions', () => {
     expect(snapshot.progress.isMediaFullscreen).toBe(true);
   });
 
-  it('replays media and broadcasts the bumped mediaReplayToken', async () => {
-    const snapshot = await game.act('REPLAY_MEDIA');
+  describe('with a video playing on the big screen', () => {
+    beforeEach(async () => {
+      game = await harness.createGateway({
+        joinCode: 'CLIPS1',
+        rounds: [
+          {
+            title: 'Clips',
+            breakAfter: true,
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Which film is this?',
+                answer: 'Jaws',
+                payload: { mediaUrl: 'https://example.com/clip.mp4' },
+              },
+            ],
+          },
+        ],
+      });
+      await game.openFirstQuestion(await game.connectAdmin());
+    });
 
-    expect(snapshot.progress.mediaReplayToken).toBe(1);
+    it('replays media and broadcasts the bumped mediaReplayToken', async () => {
+      const snapshot = await game.act('REPLAY_MEDIA');
+
+      expect(snapshot.progress.mediaReplayToken).toBe(1);
+    });
+
+    it('toggles media pause, broadcasts it, and resumes on replay', async () => {
+      const paused = await game.act('TOGGLE_MEDIA_PAUSE');
+      expect(paused.progress.isMediaPaused).toBe(true);
+
+      const replayed = await game.act('REPLAY_MEDIA');
+      expect(replayed.progress.isMediaPaused).toBe(false);
+    });
   });
 
-  it('toggles media pause, broadcasts it, and resumes on replay', async () => {
-    const paused = await game.act('TOGGLE_MEDIA_PAUSE');
-    expect(paused.progress.isMediaPaused).toBe(true);
+  describe('with nothing playing on the big screen', () => {
+    it.each(['REPLAY_MEDIA', 'TOGGLE_MEDIA_PAUSE'] as const)(
+      'refuses %s without changing progress or broadcasting',
+      async (action) => {
+        const admin = await game.connectAdmin();
+        const before = await game.snapshot();
+        game.clearEmits();
 
-    const replayed = await game.act('REPLAY_MEDIA');
-    expect(replayed.progress.isMediaPaused).toBe(false);
+        await expect(
+          game.gateway.handleAdminAction(asSocket(admin), { action }),
+        ).resolves.toMatchObject({ success: false });
+
+        expect(game.roomEmits()).toEqual([]);
+        expect((await game.snapshot()).progress).toEqual(before.progress);
+      },
+    );
+
+    it('refuses a pause while only an image is playing', async () => {
+      game = await harness.createGateway({
+        joinCode: 'PICTS1',
+        rounds: [
+          {
+            title: 'Pictures',
+            breakAfter: true,
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Which landmark?',
+                answer: 'Eiffel Tower',
+                payload: { mediaUrl: 'https://example.com/landmark.jpg' },
+              },
+            ],
+          },
+        ],
+      });
+      const admin = await game.connectAdmin();
+      await game.openFirstQuestion(admin);
+
+      await expect(
+        game.gateway.handleAdminAction(asSocket(admin), {
+          action: 'TOGGLE_MEDIA_PAUSE',
+        }),
+      ).resolves.toMatchObject({ success: false });
+    });
   });
 
   it('rejects an admin action from a non-admin client without broadcasting', async () => {

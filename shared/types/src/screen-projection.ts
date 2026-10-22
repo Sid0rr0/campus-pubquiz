@@ -11,7 +11,8 @@ import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
-import { FULLY_REVEALED_STEP, shownAtStep } from './closest-guess-reveal';
+import { FULLY_REVEALED_STEP } from './closest-guess-reveal';
+import { trimOnAirQuestion } from './session-display-screen';
 import { revealStepOf } from './stepped-reveal';
 import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
@@ -36,19 +37,6 @@ import {
   isBlockAnswerable,
 } from './session-snapshot';
 import { SOCKET_ROOMS, type SocketRoomName } from './socket-events';
-
-/** The question on air in 'reveal', shown only as far as its closest-guess step has got; earlier reveal questions, and every question outside 'reveal', are sent whole. */
-function trimOnAirQuestion(
-  revealQuestions: readonly BlockRevealQuestionView[],
-  { status, revealIndex }: GameProgress,
-  closestGuessRevealStep: number,
-): PlayersRevealQuestionView[] {
-  return revealQuestions.map((question, index) =>
-    status === 'reveal' && index === revealIndex
-      ? shownAtStep(question, closestGuessRevealStep)
-      : question,
-  );
-}
 
 /**
  * The reveal questions the big screen has shown so far: everything before
