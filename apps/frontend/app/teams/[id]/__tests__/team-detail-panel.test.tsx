@@ -139,6 +139,20 @@ describe('TeamDetailPanel', () => {
     expect(within(leftRow).getByText('left')).toBeInTheDocument();
   });
 
+  it('caps a session’s share at 100% when a joker took the total past the quiz maximum', async () => {
+    mockFetchTeamDetail.mockResolvedValue({
+      ...DETAIL,
+      sessions: [
+        sessionRow({ name: 'Joker Night', totalPoints: 46, maxPoints: 40 }),
+      ],
+    });
+    renderWithQuery(<TeamDetailPanel teamId={7} />);
+
+    await waitFor(() => screen.getByText('Joker Night'));
+    const row = screen.getByText('Joker Night').closest('tr')!;
+    expect(within(row).getByText('100%')).toBeInTheDocument();
+  });
+
   it('sorts the sessions table when a header is clicked', async () => {
     const user = userEvent.setup();
     renderWithQuery(<TeamDetailPanel teamId={7} />);

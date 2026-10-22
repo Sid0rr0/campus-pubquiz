@@ -30,7 +30,10 @@ const features = tableFeatures({
 const helper = createColumnHelper<typeof features, TeamSessionRow>();
 
 function sharePercent(row: TeamSessionRow): number {
-  return row.maxPoints > 0 ? (row.totalPoints / row.maxPoints) * 100 : 0;
+  // A joker can take a total past the quiz maximum: the share caps at 100%.
+  return row.maxPoints > 0
+    ? Math.min((row.totalPoints / row.maxPoints) * 100, 100)
+    : 0;
 }
 
 const buildColumns = (
