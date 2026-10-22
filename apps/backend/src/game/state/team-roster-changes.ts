@@ -10,10 +10,13 @@ import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
-import { type JokerChanges, withJoker } from '@/game/state/joker-changes';
+import {
+  type JokerChanges,
+  jokerSyncsFor,
+  withJoker,
+} from '@/game/state/joker-changes';
 import {
   BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import {
@@ -121,10 +124,7 @@ export class TeamRosterChanges {
           ...BROADCAST_STATE_OUTCOME,
           socketsToClose: takenOver ? [takenOver] : [],
           jokerSyncs: drawnJoker
-            ? connectedTeamSyncs(joined, [team.id]).map((sync) => ({
-                ...sync,
-                joker: drawnJoker,
-              }))
+            ? jokerSyncsFor(joined, [team.id], { [team.id]: drawnJoker })
             : [],
         },
       },

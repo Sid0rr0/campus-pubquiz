@@ -67,33 +67,18 @@ export class JokerChanges {
     if (!isJokerPickOpen(session)) {
       throw new SessionRefusal('The joker pick is not open');
     }
-    const pickableRoundIds = pickableRounds(
-      session.seededGame.rounds,
-      session.openedQuestionIds,
-    ).map((round) => round.id);
+    const pickableRoundIds = pickableRoundIdsOf(session);
     if (!canChooseJoker({ isPickOpen: true, pickableRoundIds }, roundId)) {
       throw new SessionRefusal(
         'That round cannot be your joker: it has already started',
       );
     }
-
-    const joker: TeamJoker = { roundId, source: 'chosen' };
-    await this.jokerService.set(
-      session.seededGame.gameSessionId,
+    return await this.storeJoker(
+      session,
       teamId,
-      joker,
+      { roundId, source: 'chosen' },
+      { shouldBroadcastDisplayState: true },
     );
-    return {
-      session: withJoker(session, teamId, joker),
-      outcome: {
-        ...BROADCAST_STATE_OUTCOME,
-        shouldBroadcastState: false,
-        shouldBroadcastAdminState: true,
-        shouldBroadcastDisplayState: true,
-        jokerSyncs: jokerSyncsFor(session, [teamId], { [teamId]: joker }),
-      },
-      touchedScores: true,
-    };
   }
 
   /**
@@ -111,15 +96,11 @@ export class JokerChanges {
     if (!session.teams.some((team) => team.teamId === teamId)) {
       throw new SessionRefusal(`Team ${teamId} is not in this session`);
     }
-    const pickableRoundIds = pickableRounds(
-      session.seededGame.rounds,
-      session.openedQuestionIds,
-    ).map((round) => round.id);
     const canSet = canSetJoker(
       {
         isEnabled: session.seededGame.settings.jokersEnabled,
         status: session.progress.status,
-        pickableRoundIds,
+        pickableRoundIds: pickableRoundIdsOf(session),
       },
       roundId,
     );
@@ -128,8 +109,21 @@ export class JokerChanges {
         'That round cannot be the joker: it has already started, or the joker pick has not opened',
       );
     }
+    return await this.storeJoker(
+      session,
+      teamId,
+      { roundId, source: 'set_by_quiz_master' },
+      {},
+    );
+  }
 
-    const joker: TeamJoker = { roundId, source: 'set_by_quiz_master' };
+  /** Saves `joker` for the team, then tells its phones and refreshes the admin room (and the big screen when asked). */
+  private async storeJoker(
+    session: SessionState,
+    teamId: number,
+    joker: TeamJoker,
+    broadcast: { shouldBroadcastDisplayState?: boolean },
+  ): Promise<SessionChange<SessionOutcome>> {
     await this.jokerService.set(
       session.seededGame.gameSessionId,
       teamId,
@@ -141,6 +135,7 @@ export class JokerChanges {
         ...BROADCAST_STATE_OUTCOME,
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
+        ...broadcast,
         jokerSyncs: jokerSyncsFor(session, [teamId], { [teamId]: joker }),
       },
       touchedScores: true,
@@ -155,13 +150,10 @@ export class JokerChanges {
    * overwritten nor skipped. Every connected team is told its joker.
    */
   async closePick(session: SessionState): Promise<ClosedJokerPick> {
-    const { gameSessionId, rounds } = session.seededGame;
+    const { gameSessionId } = session.seededGame;
     const stored = await this.jokerService.listForSession(gameSessionId);
     const roster = await this.teamService.listForSession(gameSessionId);
-    const pickableRoundIds = pickableRounds(
-      rounds,
-      session.openedQuestionIds,
-    ).map((round) => round.id);
+    const pickableRoundIds = pickableRoundIdsOf(session);
 
     const jokers: Record<number, TeamJoker> = Object.fromEntries(stored);
     for (const { teamId } of roster) {
@@ -339,7 +331,8 @@ function roundNowHolding(
   return best?.roundId ?? null;
 }
 
-function jokerSyncsFor(
+/** A sync per connected team of `teamIds`, telling it its joker in `jokers` (null when it has none). */
+export function jokerSyncsFor(
   session: SessionState,
   teamIds: readonly number[],
   jokers: Record<number, TeamJoker>,
