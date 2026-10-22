@@ -34,18 +34,48 @@ function roundWithIntroOnAir(
   return session.seededGame.rounds[screen.roundIndex];
 }
 
+/** The question a screen puts in front of the room on its own (asked, locking, shown again in break review or revealed); null on every screen that shows none. */
+function questionIdOnScreen(screen: OnAirScreen): number | null {
+  switch (screen.kind) {
+    case 'question':
+    case 'locking':
+    case 'break_review':
+    case 'reveal':
+      return screen.questionId;
+    default:
+      return null;
+  }
+}
+
+/** The host-only text that belongs to one On-air screen; each field is '' when there is none. */
+export interface HostOnlyText {
+  roundNote: string;
+  questionNotes: string;
+}
+
 /**
- * The note of the round whose intro, break round intro or reveal intro is on
- * air; null on every other screen or when that round has none. Host-only: for
- * the presenter context, never a broadcast view (the big screen never shows
- * it on the reveal intro, see getDisplayRoundNote).
+ * The host-only text of an On-air screen: the round note on the round intro,
+ * break round intro and reveal intro (whatever the round's show-on-screen
+ * setting), and the notes of the question on the question, locking, break
+ * review and reveal screens, looked up by question id across the rounds.
+ * Host-only: never a broadcast view.
  */
-export function getRoundNoteOnAir(
-  session: SessionState,
+export function getHostOnlyText(
+  rounds: readonly SeededRound[],
   screen: OnAirScreen,
-): string | null {
-  if (!isRoundNoteScreen(screen) || screen.roundIndex === null) return null;
-  return session.seededGame.rounds[screen.roundIndex]?.note ?? null;
+): HostOnlyText {
+  const roundNote =
+    isRoundNoteScreen(screen) && screen.roundIndex !== null
+      ? (rounds[screen.roundIndex]?.note ?? '')
+      : '';
+  const questionId = questionIdOnScreen(screen);
+  const questionNotes =
+    questionId === null
+      ? ''
+      : (rounds
+          .map((round) => round.questionNotesById?.[questionId])
+          .find((notes) => notes != null) ?? '');
+  return { roundNote, questionNotes };
 }
 
 /** The round note the big screen draws: the on-air round note when that round shows it on screen, else ''. */

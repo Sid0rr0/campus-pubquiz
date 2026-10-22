@@ -8,7 +8,7 @@ Parent spec: `.scratch/host-only-text/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The rule is one pure function in shared types, beside the round note helpers. Given the quiz's seeded rounds and an On-air screen, it returns a round note and question notes, each empty when there is none.
 - [ ] The round note is the on-air round's note on the round intro, the break round intro and the reveal intro, whatever the round's show-on-screen setting. It is empty on every other screen.

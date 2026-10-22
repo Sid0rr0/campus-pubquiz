@@ -466,7 +466,11 @@ describe('buildQuizPreview, host-only text', () => {
       });
       expect(
         steps
-          .filter((step) => step.screen.kind !== 'round_title')
+          .filter(
+            (step) =>
+              step.screen.kind !== 'round_title' &&
+              step.screen.kind !== 'reveal_intro',
+          )
           .every((step) => step.hostOnly.roundNote === null),
       ).toBe(true);
     },
@@ -487,6 +491,32 @@ describe('buildQuizPreview, host-only text', () => {
       expect(title?.screen).toMatchObject({ note: 'Read slowly' });
     },
   );
+
+  it('carries a round note on its reveal intro step like the night', () => {
+    const rounds = [
+      round(1, [question(1)], { note: 'Read before the answers' }),
+    ];
+    const { steps } = buildQuizPreview(rounds, 'night');
+    const intro = steps.find((step) => step.screen.kind === 'reveal_intro');
+    expect(intro?.hostOnly).toEqual({
+      roundNote: 'Read before the answers',
+      questionNote: null,
+    });
+  });
+
+  it('keeps a round note shown on screen on the reveal intro but off the round intro', () => {
+    const rounds = [
+      round(1, [question(1)], {
+        note: 'Read slowly',
+        showNoteOnScreen: true,
+      }),
+    ];
+    const { steps } = buildQuizPreview(rounds, 'night');
+    const title = steps.find((step) => step.screen.kind === 'round_title');
+    const intro = steps.find((step) => step.screen.kind === 'reveal_intro');
+    expect(title?.hostOnly.roundNote).toBeNull();
+    expect(intro?.hostOnly.roundNote).toBe('Read slowly');
+  });
 
   it('carries nothing on steps with neither a note', () => {
     const { steps } = buildQuizPreview(

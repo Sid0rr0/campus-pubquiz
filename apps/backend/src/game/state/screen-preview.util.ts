@@ -3,7 +3,7 @@ import {
   getBreakNumber,
   getGameContext,
   getQuizStructureSummary,
-  getRoundNoteOnAir,
+  getHostOnlyText,
   nextPressAction,
   type OnAirScreen,
   type PresenterContextPayload,
@@ -167,19 +167,6 @@ export function describeNextScreen(
   );
 }
 
-/** The question a screen puts in front of the room on its own (asked, shown again in break review or revealed); null on every screen that shows none. */
-function questionOnScreen(screen: OnAirScreen): number | null {
-  switch (screen.kind) {
-    case 'question':
-    case 'locking':
-    case 'break_review':
-    case 'reveal':
-      return screen.questionId;
-    default:
-      return null;
-  }
-}
-
 /**
  * Host notes for the question on the big screen + what /display shows now and after the
  * next Advance, for the /remote presenter view alone. Callers MUST only forward this over an
@@ -190,17 +177,14 @@ export function buildPresenterContext(
   session: SessionState,
 ): PresenterContextPayload {
   const { onAirScreen } = projectScreen(session, SOCKET_ROOMS.ADMIN);
-  const questionId = questionOnScreen(onAirScreen);
-  const currentQuestionNotes =
-    questionId === null
-      ? null
-      : (session.seededGame.rounds
-          .map((round) => round.questionNotesById?.[questionId])
-          .find((notes) => notes != null) ?? null);
+  const { roundNote, questionNotes } = getHostOnlyText(
+    session.seededGame.rounds,
+    onAirScreen,
+  );
 
   return {
-    currentQuestionNotes,
-    currentRoundNote: getRoundNoteOnAir(session, onAirScreen),
+    currentQuestionNotes: questionNotes || null,
+    currentRoundNote: roundNote || null,
     currentScreen: describeOnAirScreenText(session, onAirScreen),
     nextScreen: describeNextScreen(session),
   };
