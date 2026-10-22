@@ -587,6 +587,31 @@ describe('GameGateway — session write: a timer expiry', () => {
         ?.bonusPoints,
     ).toBe(2);
   });
+
+  it('reads standings for a lock timer’s expiry', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Timed Team'],
+      rounds: [
+        {
+          title: 'Round A',
+          breakAfter: true,
+          questions: [{ type: 'free_text', prompt: 'QA1', answer: 'A1' }],
+        },
+      ],
+    });
+    await game.connectAdmin();
+    for (const action of ['START_QUIZ', 'ADVANCE', 'ADVANCE'] as const) {
+      await game.act(action);
+    }
+    await game.act('ADVANCE'); // -> locking, lock armed
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    await game.timers().lock.fireNow();
+
+    expect((await game.snapshot()).progress.status).toBe('break_intro');
+    expect(leaderboard).toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
 });
 
 describe('GameGateway — session write: quiz edits and re-imports', () => {
