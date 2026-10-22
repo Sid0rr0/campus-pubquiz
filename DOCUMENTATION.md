@@ -609,6 +609,17 @@ refused, so a team cannot double a round whose questions it has seen; draws use
 the same rule. A kept joker on a started round stays, but can only be moved to a
 pickable round.
 
+While the status is `joker_pick`, the `/control` teams panel shows "N/M picked":
+the teams whose joker is `chosen` out of the whole roster (drawn and quiz-master-set
+jokers do not count). A team's share of max points on the team pages is capped at
+100%, since a joker can take its doubled total past the quiz's raw maximum.
+
+**Known limits.** After a backend restart during the pick, the deadline is
+re-armed a full 60 seconds, not restored to the time that was left. The 2× stamp
+on the big-screen leaderboard is missing after a restart until the next block's
+first question opens, because the prior standings it is derived from live in
+memory only; the totals themselves are unaffected.
+
 `PICK_JOKER` — `{ roundId }` (players only) — saves the team's **joker**: the
 round whose points will count double. It is accepted only while the pick is open
 and for a round with no opened question; the ack is the result, with "The joker
