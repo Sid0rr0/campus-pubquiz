@@ -51,6 +51,7 @@ function renderScreens(
       jokerPick={null}
       myJoker={null}
       onPickJoker={vi.fn()}
+      isJokerBadgeShown={false}
       onSubmitShowdownGuess={vi.fn()}
     />
   );

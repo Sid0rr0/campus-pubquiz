@@ -36,6 +36,8 @@ interface MobileQuizActionsBarProps {
 export interface JokerChipProps {
   roundNumber: number;
   roundTitle: string;
+  /** Once the joker round's block has been revealed the chip reads "played". */
+  isPlayed: boolean;
 }
 
 interface MobileDrawerTriggerProps {
@@ -145,12 +147,14 @@ export function MobileQuizActionsBar({
           isOpen={isJokerOpen}
           onOpenChange={setIsJokerOpen}
           icon={null}
-          label={`🃏 R${joker.roundNumber}`}
+          label={`🃏 R${joker.roundNumber}${joker.isPlayed ? ' · played' : ''}`}
           title="Your joker"
           closeLabel="Close joker"
         >
           <p className="text-lg font-bold">
-            {`Round ${joker.roundNumber} — ${joker.roundTitle} scores double`}
+            {`Round ${joker.roundNumber} — ${joker.roundTitle} ${
+              joker.isPlayed ? 'scored' : 'scores'
+            } double`}
           </p>
         </MobileDrawerTrigger>
       )}

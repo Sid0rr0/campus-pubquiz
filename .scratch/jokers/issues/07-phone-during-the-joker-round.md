@@ -6,11 +6,11 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Border on joker-round questions in every block browser mode, none on other rounds' questions
-- [ ] "2× POINTS" animation on the joker round's `round_intro`, live moves only (same live-change helper as the "Locked" stamp); respects reduced motion
-- [ ] Static badge on the joker round's `break_round_intro` and `reveal_intro`
-- [ ] Chip shows "played" once the joker round's block is revealed (the players view says so)
-- [ ] Page specs from the `roomView` fixture for each state
-- [ ] `DOCUMENTATION.md` phone column updated
+- [x] Border on joker-round questions in every block browser mode, none on other rounds' questions
+- [x] "2× POINTS" animation on the joker round's `round_intro`, live moves only (same live-change helper as the "Locked" stamp); respects reduced motion
+- [x] Static badge on the joker round's `break_round_intro` and `reveal_intro`
+- [x] Chip shows "played" once the joker round's block is revealed (the players view says so)
+- [x] Page specs from the `roomView` fixture for each state
+- [x] `DOCUMENTATION.md` phone column updated

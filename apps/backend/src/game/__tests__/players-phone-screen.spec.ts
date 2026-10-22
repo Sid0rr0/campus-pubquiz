@@ -108,6 +108,7 @@ describe('Screen projection — the players view phone screen', () => {
     expect(phoneScreen(state)).toEqual({
       kind: 'round_title',
       title: 'Round 1',
+      roundNumber: 1,
     });
   });
 
@@ -198,6 +199,7 @@ describe('Screen projection — the players view phone screen', () => {
     expect(phoneScreen(state)).toEqual({
       kind: 'round_title',
       title: 'Round 2',
+      roundNumber: 2,
     });
   });
 
@@ -207,6 +209,7 @@ describe('Screen projection — the players view phone screen', () => {
     expect(phoneScreen(state)).toEqual({
       kind: 'round_title',
       title: 'Round 2',
+      roundNumber: 2,
     });
   });
 

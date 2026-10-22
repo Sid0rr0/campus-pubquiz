@@ -52,6 +52,8 @@ interface QuestionBrowserProps {
   ) => void;
   /** Set only when the team has turned off auto-advance — renders Prev/Next controls bounded to questions already opened. */
   navigation?: QuestionNavigation;
+  /** Whether the selected question belongs to the team's joker round — its answers count double, so the browser wears a joker border. */
+  isJokerQuestion?: boolean;
 }
 
 interface RevealBodyProps {
@@ -105,11 +107,17 @@ export function QuestionBrowser({
   onSelectQuestion,
   onSubmitAnswer,
   navigation,
+  isJokerQuestion = false,
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      data-testid={isJokerQuestion ? 'joker-border' : undefined}
+      className={`flex flex-col gap-6 ${
+        isJokerQuestion ? 'rounded-2xl border-4 border-yellow p-4' : ''
+      }`}
+    >
       {navigation && (
         <div className="flex items-center justify-between gap-2">
           <Button

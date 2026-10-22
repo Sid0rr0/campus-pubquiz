@@ -19,6 +19,8 @@ import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
+import { JokerMoment } from '@/app/play/joker-moment';
+import { isJokerRoundPlayed } from '@/app/play/joker-round';
 import { ReconnectingBar } from '@/app/play/reconnecting-bar';
 import {
   SavedConfirmation,
@@ -205,6 +207,15 @@ function PlayPageContent() {
   const jokerRound = view.jokerRounds.find(
     (round) => round.roundId === myJoker?.roundId,
   );
+  const isJokerTitleCard =
+    phoneScreen.kind === 'round_title' &&
+    jokerRound !== undefined &&
+    phoneScreen.roundNumber === jokerRound.roundNumber;
+  const isJokerQuestion =
+    jokerRound !== undefined &&
+    selectedQuestion !== null &&
+    blockQuestions.find((question) => question.id === selectedQuestion.id)
+      ?.roundNumber === jokerRound.roundNumber;
   const hasMobileActionBar =
     hasBonusPanel || openedQuestions.length > 0 || jokerRound !== undefined;
 
@@ -268,6 +279,11 @@ function PlayPageContent() {
           lockAt={view.questionLockAt}
           isConnected={connectionError === null}
         />
+        <JokerMoment
+          progress={progress}
+          isJokerIntro={isJokerTitleCard && progress.status === 'round_intro'}
+          isConnected={connectionError === null}
+        />
         {feedback?.kind === 'break_card' && (
           // A join payload replaces the saved ratings, so a reconnect starts
           // the card afresh: a tap still waiting on the old connection's ack
@@ -307,6 +323,9 @@ function PlayPageContent() {
           jokerPick={view.jokerPick}
           myJoker={myJoker}
           onPickJoker={pickJoker}
+          isJokerBadgeShown={
+            isJokerTitleCard && progress.status !== 'round_intro'
+          }
           onSubmitShowdownGuess={submitShowdownGuess}
         />
         {feedback?.kind === 'final_form' && (
@@ -338,6 +357,7 @@ function PlayPageContent() {
               onSelectQuestion={selectQuestion}
               onSubmitAnswer={submitAndConfirm}
               navigation={navigation}
+              isJokerQuestion={isJokerQuestion}
             />
           </div>
         )}
@@ -369,6 +389,11 @@ function PlayPageContent() {
             ? {
                 roundNumber: jokerRound.roundNumber,
                 roundTitle: jokerRound.title,
+                isPlayed: isJokerRoundPlayed(
+                  jokerRound.roundNumber,
+                  progress.status,
+                  view.pastRevealedQuestions,
+                ),
               }
             : null
         }

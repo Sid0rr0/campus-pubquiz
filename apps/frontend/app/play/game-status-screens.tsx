@@ -14,6 +14,7 @@ import type {
   TeamJoker,
 } from '@campus-pubquiz/types';
 import { JokerPickScreen } from '@/app/play/joker-pick-screen';
+import { JokerBadge } from '@/app/play/joker-moment';
 import { LeaderboardScreen } from '@/app/play/leaderboard-screen';
 import {
   RulesContent,
@@ -47,6 +48,8 @@ interface GameStatusScreensProps {
   /** The team's own joker as the server last said it. */
   myJoker: TeamJoker | null;
   onPickJoker: (roundId: number) => Promise<AckResult>;
+  /** Whether a title card carries the static joker badge: it is the team's joker round's card when it comes back (break round intro, reveal intro). */
+  isJokerBadgeShown: boolean;
   onSubmitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -109,6 +112,7 @@ export function GameStatusScreens({
   jokerPick,
   myJoker,
   onPickJoker,
+  isJokerBadgeShown,
 }: GameStatusScreensProps) {
   const isMyTurn =
     phoneScreen.kind === 'showdown_guessing' &&
@@ -192,6 +196,7 @@ export function GameStatusScreens({
           <EntranceLine line="title">
             <h1 className="font-display text-2xl">{phoneScreen.title}</h1>
           </EntranceLine>
+          {isJokerBadgeShown && <JokerBadge />}
         </div>
       );
     case 'ended':

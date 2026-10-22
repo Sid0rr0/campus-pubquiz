@@ -407,7 +407,8 @@ export type PhoneScreen =
   | { kind: 'round_overview' }
   /** The joker pick: `isOpen` while teams may still choose, false once it has closed (the phone then shows the result). */
   | { kind: 'joker_pick'; isOpen: boolean }
-  | { kind: 'round_title'; title: string }
+  /** A round's title card; `roundNumber` is the 1-based position of that round in the quiz, so a phone can tell whether it is the team's joker round. */
+  | { kind: 'round_title'; title: string; roundNumber: number }
   | { kind: 'ended' }
   | { kind: 'showdown_guessing' }
   | { kind: 'showdown_reveal' };
@@ -446,16 +447,16 @@ export interface PlayersScreenInput extends OnAirInput {
   isJokerPickOpen: boolean;
 }
 
-function roundTitleOf(
+function roundTitleCardOf(
   questions:
-    | readonly Pick<BlockQuestionView, 'id' | 'roundTitle'>[]
+    | readonly Pick<BlockQuestionView, 'id' | 'roundTitle' | 'roundNumber'>[]
     | undefined,
   questionId: number | null,
-): string | null {
-  return (
-    questions?.find((question) => question.id === questionId)?.roundTitle ??
-    null
-  );
+): { title: string; roundNumber: number } | null {
+  const question = questions?.find((candidate) => candidate.id === questionId);
+  return question
+    ? { title: question.roundTitle, roundNumber: question.roundNumber }
+    : null;
 }
 
 /**
@@ -495,20 +496,24 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
     case 'joker_pick':
       return { kind: 'joker_pick', isOpen: input.isJokerPickOpen };
     case 'round_title':
-      return { kind: 'round_title', title: input.roundTitle ?? '' };
+      return {
+        kind: 'round_title',
+        title: input.roundTitle ?? '',
+        roundNumber: screen.roundIndex + 1,
+      };
     case 'reveal':
       return { kind: 'block', mode, onScreenQuestionId: screen.questionId };
     case 'reveal_intro':
     case 'break_round_title': {
-      const title = roundTitleOf(
+      const card = roundTitleCardOf(
         screen.kind === 'reveal_intro'
           ? input.revealQuestions
           : input.blockQuestions,
         screen.questionId,
       );
-      return title === null
+      return card === null
         ? { kind: 'block', mode, onScreenQuestionId: null }
-        : { kind: 'round_title', title };
+        : { kind: 'round_title', ...card };
     }
     case 'ended':
       return { kind: 'ended' };
