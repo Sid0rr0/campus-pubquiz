@@ -26,6 +26,8 @@ interface TeamsPanelProps {
   /** The rounds a team's joker may be moved to (none: the list is left out). */
   jokerRounds: JokerPickRound[];
   onSetJoker: (teamId: number, roundId: number) => void;
+  /** Whether the joker pick is on: the heading then counts the teams that have picked. */
+  isJokerPick?: boolean;
   className?: string;
 }
 
@@ -86,6 +88,7 @@ export function TeamsPanel({
   onSetPlayerCount,
   jokerRounds,
   onSetJoker,
+  isJokerPick = false,
   className = '',
 }: TeamsPanelProps) {
   if (teams.length === 0) {
@@ -106,6 +109,12 @@ export function TeamsPanel({
       <h2 className="text-xs font-extrabold tracking-wide text-background/60">
         Teams ({teams.length})
       </h2>
+      {isJokerPick && (
+        <p className="text-xs font-bold text-background/70">
+          {teams.filter((team) => team.joker?.source === 'chosen').length}/
+          {teams.length} picked
+        </p>
+      )}
       <ul className="flex flex-col gap-1.5">
         {teams.map((team) => {
           const hasAnswered =

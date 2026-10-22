@@ -72,6 +72,7 @@ export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
         onSetPlayerCount={actions.setTeamPlayerCount}
         jokerRounds={view.settableJokerRounds}
         onSetJoker={actions.setTeamJoker}
+        isJokerPick={progress.status === 'joker_pick'}
         className="mt-auto border-t border-background/20 pt-4"
       />
     </aside>
