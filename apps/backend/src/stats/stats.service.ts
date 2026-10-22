@@ -226,6 +226,7 @@ export class StatsService {
           q.questionId,
           {
             notes: q.notes,
+            options: q.type === 'multiple_choice' ? payload.options : undefined,
             media: {
               question: briefMediaKind(classifyMediaUrl(payload.mediaUrl)),
               answer: briefMediaKind(classifyMediaUrl(payload.answerMediaUrl)),
@@ -234,6 +235,14 @@ export class StatsService {
         ];
       }),
     );
+
+    // Every question the session opened; null for a session saved before that was tracked.
+    const { openedQuestionIds: reachedQuestionIds } = (await knex(
+      'game_sessions',
+    )
+      .where('id', gameSessionId)
+      .select('opened_question_ids as openedQuestionIds')
+      .first()) as { openedQuestionIds: number[] | null };
 
     return computeSessionBrief({
       ...rows,
@@ -249,8 +258,10 @@ export class StatsService {
       questions: rows.questions.map((question) => ({
         ...question,
         notes: questionExtrasById.get(question.questionId)?.notes ?? null,
+        options: questionExtrasById.get(question.questionId)?.options,
         media: questionExtrasById.get(question.questionId)?.media ?? {},
       })),
+      reachedQuestionIds,
     });
   }
 

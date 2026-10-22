@@ -145,9 +145,226 @@ function buildInput(
     ],
     answers,
     bonusAwards: [],
+    reachedQuestionIds: [10, 11, 12],
     ...overrides,
   };
 }
+
+/** A fixture answer with a chosen text, for the wrong-answer cases. */
+function said(
+  questionId: number,
+  teamId: number,
+  verdict: 'correct' | 'partial' | 'incorrect' | null,
+  text: string,
+) {
+  return {
+    questionId,
+    teamId,
+    teamName: `Team ${teamId}`,
+    pointsAwarded: 0,
+    gradedAt: verdict === null ? null : '2026-03-05T20:00:00.000Z',
+    verdict,
+    responseMs: 1200,
+    answer: text,
+  };
+}
+
+/** A brief for one question of the given type, with answers from numbered teams. */
+function briefOfQuestion(
+  question: Partial<SessionBriefInput['questions'][number]>,
+  answers: SessionBriefInput['answers'],
+  extra: Partial<SessionBriefInput> = {},
+): string {
+  const teams = Array.from({ length: 12 }, (_, i) => ({
+    teamId: i + 1,
+    teamName: `Team ${i + 1}`,
+  }));
+  const input = buildInput({
+    standings: standingsFor(teams, answers),
+    rounds: [
+      {
+        roundId: 100,
+        title: 'Only Round',
+        category: null,
+        orderIndex: 0,
+        author: null,
+        note: null,
+        isKahoot: false,
+      },
+    ],
+    questions: [
+      {
+        questionId: 50,
+        roundId: 100,
+        orderIndex: 0,
+        prompt: 'The prompt',
+        type: 'free_text',
+        answer: 'Paris',
+        points: 2,
+        notes: null,
+        media: {},
+        ...question,
+      },
+    ],
+    answers,
+    reachedQuestionIds: [50],
+    ...extra,
+  });
+  return computeSessionBrief(input);
+}
+
+describe('computeSessionBrief wrong answers', () => {
+  it('lists the top 3 incorrect free_text answers grouped across spellings, ties alphabetical, partials left out', () => {
+    const brief = briefOfQuestion({ type: 'free_text' }, [
+      said(50, 1, 'incorrect', 'London'),
+      said(50, 2, 'incorrect', ' london '),
+      said(50, 3, 'incorrect', 'LONDON'),
+      said(50, 4, 'incorrect', 'Berlin'),
+      said(50, 5, 'incorrect', 'berlin'),
+      said(50, 6, 'incorrect', 'Rome'),
+      said(50, 7, 'incorrect', 'Madrid'),
+      said(50, 8, 'incorrect', 'Athens'),
+      said(50, 9, 'partial', 'Pariss'),
+      said(50, 10, 'correct', 'Paris'),
+    ]);
+
+    expect(brief).toContain(
+      '- Wrong answers: London (3), Berlin (2), Athens (1)',
+    );
+    expect(brief).not.toContain('Pariss');
+    expect(brief).not.toContain('Madrid');
+  });
+
+  it('shows the most common spelling of a group', () => {
+    const brief = briefOfQuestion({ type: 'free_text' }, [
+      said(50, 1, 'incorrect', 'lisbon'),
+      said(50, 2, 'incorrect', 'Lisbon'),
+      said(50, 3, 'incorrect', 'Lisbon'),
+    ]);
+
+    expect(brief).toContain('- Wrong answers: Lisbon (3)');
+  });
+
+  it('groups number answers the same way', () => {
+    const brief = briefOfQuestion({ type: 'number', answer: '42' }, [
+      said(50, 1, 'incorrect', '41'),
+      said(50, 2, 'incorrect', '41'),
+      said(50, 3, 'incorrect', '7'),
+    ]);
+
+    expect(brief).toContain('- Wrong answers: 41 (2), 7 (1)');
+  });
+
+  it('writes no wrong-answers line when nobody was wrong', () => {
+    const brief = briefOfQuestion({ type: 'free_text' }, [
+      said(50, 1, 'correct', 'Paris'),
+    ]);
+
+    expect(brief).not.toContain('Wrong answers');
+  });
+
+  it('lists every multiple_choice option in stored order with its pick count and the correct one marked', () => {
+    const brief = briefOfQuestion(
+      {
+        type: 'multiple_choice',
+        answer: 'Paris',
+        options: ['Rome', 'Paris', 'Oslo'],
+      },
+      [
+        said(50, 1, 'correct', 'Paris'),
+        said(50, 2, 'incorrect', 'Rome'),
+        said(50, 3, 'incorrect', 'Rome'),
+      ],
+    );
+
+    expect(brief).toContain(
+      '- Options: Rome (2), Paris (1) [correct], Oslo (0)',
+    );
+    expect(brief).not.toContain('Wrong answers');
+  });
+
+  it('shows the lowest, median and highest closest_guess guess', () => {
+    const brief = briefOfQuestion({ type: 'closest_guess', answer: '100' }, [
+      said(50, 1, 'incorrect', '10'),
+      said(50, 2, 'incorrect', '30'),
+      said(50, 3, 'incorrect', '250'),
+      said(50, 4, 'incorrect', '60'),
+    ]);
+
+    expect(brief).toContain('- Guesses: lowest 10, median 45, highest 250');
+  });
+
+  it('adds nothing for sort and match questions', () => {
+    for (const type of ['sort', 'match'] as const) {
+      const brief = briefOfQuestion({ type, answer: 'a|b' }, [
+        said(50, 1, 'incorrect', 'b → a'),
+        said(50, 2, null, 'x'),
+      ]);
+
+      expect(brief).not.toContain('Wrong answers');
+      expect(brief).not.toContain('Ungraded');
+      expect(brief).not.toContain('b → a');
+    }
+  });
+
+  it('lists ungraded answers on their own line, never among the wrong answers', () => {
+    const brief = briefOfQuestion({ type: 'free_text' }, [
+      said(50, 1, 'incorrect', 'London'),
+      said(50, 2, null, 'Parris'),
+      said(50, 3, null, 'parris'),
+      said(50, 4, null, 'Pari'),
+    ]);
+
+    expect(brief).toContain('- Wrong answers: London (1)');
+    expect(brief).toContain('- Ungraded answers: Parris (2), Pari (1)');
+    expect(brief.split('- Wrong answers')[1].split('\n')[0]).not.toContain(
+      'Parris',
+    );
+  });
+});
+
+describe('computeSessionBrief unplayed questions', () => {
+  it('marks a question the session never reached "not played" and one reached with no answers "0 answered"', () => {
+    const brief = computeSessionBrief(
+      buildInput({
+        answers: [answer(10, 1, 'correct', 2)],
+        reachedQuestionIds: [10, 11],
+      }),
+    );
+
+    const [, , reachedUnanswered, unreached] = brief.split(/^### /m);
+    expect(reachedUnanswered).toContain('Answered 0');
+    expect(reachedUnanswered).not.toContain('not played');
+    expect(unreached).toContain('not played');
+    expect(unreached).not.toMatch(/Answered|correct rate/);
+  });
+
+  it('for a session that never tracked opened questions, calls every question after the last answered one "not played"', () => {
+    const brief = computeSessionBrief(
+      buildInput({
+        answers: [answer(10, 1, 'correct', 2)],
+        reachedQuestionIds: null,
+      }),
+    );
+    const gap = computeSessionBrief(
+      buildInput({
+        answers: [answer(10, 1, 'correct', 2), answer(12, 1, 'correct', 3)],
+        reachedQuestionIds: null,
+      }),
+    );
+
+    const [, , second, third] = brief.split(/^### /m);
+    expect(second).toContain('not played');
+    expect(third).toContain('not played');
+    expect(gap.split(/^### /m)[2]).toContain('Answered 0');
+  });
+
+  it('treats a question with answers as played even when not listed as reached', () => {
+    const brief = computeSessionBrief(buildInput({ reachedQuestionIds: [] }));
+
+    expect(brief).not.toContain('not played');
+  });
+});
 
 describe('computeSessionBrief', () => {
   it('opens with the session name, date and team count, departed teams included', () => {
@@ -212,7 +429,6 @@ describe('computeSessionBrief', () => {
       'Quizzy Rascals',
       'Gone Fishing',
       'ABCDEF',
-      'Guess of team',
     ]) {
       expect(brief).not.toContain(leaked);
     }

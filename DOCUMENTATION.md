@@ -1572,6 +1572,24 @@ the brief is data only.
   **Feedback** lists topic suggestions grouped by `groupTopics` with counts and
   the comments as written, newest first, blanks skipped; with `collectFeedback`
   off it is one line, "Feedback was off."
+- **What went wrong on a question**, by type (answers are worded by
+  `formatAnswer` and passed through as written):
+  - `free_text` and `number`: a "Wrong answers" line with the top 3 incorrect
+    answers and counts, grouped like topics (`groupTopics`: trim, collapse
+    whitespace, ignore case, most common spelling, ties alphabetical). Partial
+    answers are not wrong answers.
+  - `multiple_choice`: an "Options" line with every option in stored order, its
+    pick count, and the correct one marked `[correct]`.
+  - `closest_guess`: a "Guesses" line with the lowest, median and highest guess.
+  - `sort` and `match`: nothing added.
+  - **Ungraded answers** (only left by a force-end or a live answer-key fix) of
+    `free_text` and `number` questions are grouped the same way on their own
+    "Ungraded answers" line, never among the wrong answers.
+- **Not played:** a question with no stored answers that the session never
+  opened reads `(not played)` instead of counts; one that was opened but got no
+  answers reads "Answered 0". "Opened" comes from the session row's
+  `opened_question_ids`; a session saved before that was tracked (null) falls
+  back to "not played" for every question after the last one with an answer.
 - **Media** shows its kind (`image`, `audio` or `video`) for the question's
   media and, separately, its answer media. The URL is never written.
 - **No team identity:** no team name, code or id appears in the text.

@@ -659,6 +659,24 @@ describe('StatsService (Postgres integration)', () => {
       expect(brief).not.toContain('BRIEF1');
     });
 
+    it('reads a question as not played unless the session row says it was opened', async () => {
+      const { quiz, questions } = await createQuiz('Quiz Opened', [[5, 5]]);
+      const [q1, q2] = questions[0];
+      const session = await createSession(quiz, 'BRIEF2', 'ended');
+      session.openedQuestionIds = [q1.id];
+      const teamA = await joinTeam(session, 'Team A');
+      await grade(session, q1, teamA, 5);
+      await em.flush();
+
+      const before = await statsService.getSessionBrief(session.id);
+      expect(before.split(/^### /m)[2]).toContain('not played');
+
+      session.openedQuestionIds = [q1.id, q2.id];
+      await em.flush();
+      const after = await statsService.getSessionBrief(session.id);
+      expect(after.split(/^### /m)[2]).toContain('Answered 0');
+    });
+
     it('throws NotFoundException for an unknown or running session', async () => {
       const { quiz } = await createQuiz('Quiz Running', [[1]]);
       const live = await createSession(quiz, 'LIVE01', 'lobby');

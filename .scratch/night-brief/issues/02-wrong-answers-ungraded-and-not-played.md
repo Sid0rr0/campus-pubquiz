@@ -13,9 +13,9 @@ Parent spec: `.scratch/night-brief/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Pure calc tests for each type's line, including grouping across spellings and ties
-- [ ] Ungraded answers listed apart (session force-ended mid-block)
-- [ ] "Not played" vs. "0 answered"
-- [ ] `DOCUMENTATION.md` Night brief subsection updated
+- [x] Pure calc tests for each type's line, including grouping across spellings and ties
+- [x] Ungraded answers listed apart (session force-ended mid-block)
+- [x] "Not played" vs. "0 answered"
+- [x] `DOCUMENTATION.md` Night brief subsection updated
