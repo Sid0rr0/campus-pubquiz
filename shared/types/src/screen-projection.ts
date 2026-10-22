@@ -5,7 +5,8 @@ import {
 } from './admin-view-flags';
 import { getBlockSeededQuestions } from './block-questions';
 import { getFeedbackField } from './feedback-rounds';
-import { describeDisplayScreen } from './display-screen';
+import { describeControlAvailability } from './control-availability';
+import { describeDisplayScreen, type DisplayScreen } from './display-screen';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
@@ -123,20 +124,23 @@ export function projectScreen(
     ...snapshot,
     closestGuessRevealStep,
   });
-
-  switch (audience) {
-    case SOCKET_ROOMS.DISPLAY: {
-      const revealQuestions = trimOnAirQuestion(
+  // The Display screen /display is sent. The admin view reads the media the big
+  // screen is playing from it, so the two can't disagree.
+  const buildDisplayScreen = (): DisplayScreen =>
+    describeDisplayScreen({
+      session,
+      onAir: screen,
+      snapshot,
+      revealQuestions: trimOnAirQuestion(
         snapshot.revealQuestions,
         snapshot.progress,
         closestGuessRevealStep,
-      );
-      const displayScreen = describeDisplayScreen({
-        session,
-        onAir: screen,
-        snapshot,
-        revealQuestions,
-      });
+      ),
+    });
+
+  switch (audience) {
+    case SOCKET_ROOMS.DISPLAY: {
+      const displayScreen = buildDisplayScreen();
       if (displayScreen.kind === 'blank') options?.onBlankScreen?.(screen);
       // The content the Display screen carries is not sent a second time.
       /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -170,6 +174,11 @@ export function projectScreen(
         ...buildAdminFields(session),
         onAirScreen: screen,
         ...describeAdminIndicators(snapshot),
+        controlAvailability: describeControlAvailability({
+          progress: snapshot.progress,
+          leaderboard: snapshot.leaderboard,
+          displayScreen: buildDisplayScreen(),
+        }),
         advanceStep: describeAdvanceStep(session),
         previousState: describePreviousState(session),
         activeBlockStartIndex: getActiveBlockStartIndex(session),

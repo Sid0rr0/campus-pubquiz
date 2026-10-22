@@ -52,7 +52,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Media and sound',
     paragraphs: [
-      'On a video or audio question (or its reveal), Pause and "Play again" sit below the Leaderboard row on Control. Moving on restarts the media.',
+      'On a video or audio question (or its reveal), Pause and "Play again" sit below the Leaderboard row on Control. On a closest guess reveal they appear once the answer video or audio is on the big screen, not before. Moving on restarts the media.',
       'The Display sound toggle mutes the big screen, clips included; phones stay silent.',
     ],
   },

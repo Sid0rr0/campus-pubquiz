@@ -211,10 +211,12 @@ action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
 `REPLAY_MEDIA` resets it; the leaderboard and join overlay toggles leave it
 alone. `/control` and `/remote` show Pause/Resume only while media is playing on
 the big screen: an open question whose media is a video (YouTube or file) or
-audio, or a reveal (an `answer`-kind one, not a closest-guess) showing answer
-media of that kind, else the question's own (the media the reveal shows). The
-admin view carries what decides this (`onAirScreen` and `revealQuestions`), so
-there is no protocol change. On `/remote`, Space pauses/resumes while the
+audio, or a reveal showing answer media of that kind, else the question's own
+(the media the reveal shows). A closest-guess reveal counts once its walk has
+reached the answer step. The admin view's `controlAvailability`
+(`canReplayMedia`, `canPauseMedia`, plus start/end/close, the join overlay
+toggle, answer status and the teams tied for first) is read from the Display
+screen on air, so the buttons and `/display` can't disagree. On `/remote`, Space pauses/resumes while the
 button is shown, under the same rules as on `/control` (ignored in form fields
 and with modifier keys); it is `/remote`'s only shortcut. Browsers may refuse the
 display's `play()` on resume if it has had no user interaction (autoplay
@@ -296,7 +298,7 @@ what it draws:
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `shared/types/src/screen-projection.ts`, a pure module the backend calls):
 the display view carries the **Display screen** (`screen`: the screen on air with the content it draws, or `blank` when that content can't be found, which the server logs); the admin view names the **On-air screen** (`onAirScreen`) and adds what `/control`
-marks as on air plus server-decided Advance/Previous availability, and gives each
+marks as on air plus server-decided Advance/Previous availability and **control availability** (`controlAvailability`: what the quiz master can do right now, built from the same Display screen `/display` is sent, which the admin room itself never receives), and gives each
 roster team its player count and over-cap flag; the
 players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state; its `block` kind carries a mode of `answering`, `locked` or `revealing`), and drops anything teams haven't been shown
 yet (a kahoot question hidden behind the leaderboard is removed server-side,

@@ -72,6 +72,26 @@ export interface DisplayScreenInput {
   revealQuestions: readonly PlayersRevealQuestionView[];
 }
 
+/**
+ * The media link the big screen is playing, read from the Display screen /display
+ * is sent: the open question's own media, or on a reveal screen the answer media
+ * (which replaces the question's own), else the question's own. A closest_guess
+ * reveal still before its answer step plays nothing. Screens that show no
+ * question play nothing.
+ */
+export function getPlayingMediaUrl(screen: DisplayScreen): string | undefined {
+  switch (screen.kind) {
+    case 'question':
+      return screen.question.mediaUrl;
+    case 'reveal':
+      return screen.question.revealKind === 'closest_guess_pending'
+        ? undefined
+        : (screen.question.answerMediaUrl ?? screen.question.mediaUrl);
+    default:
+      return undefined;
+  }
+}
+
 const BLANK: DisplayScreen = { kind: 'blank' };
 
 /** Names the content each On-air screen draws; `blank` when a kind's content can't be found. */

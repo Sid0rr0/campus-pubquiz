@@ -15,12 +15,6 @@ import {
 import { useMediaPause } from '@/app/display/use-media-pause';
 import { useVideoLoadFailure, VideoFile } from '@/app/display/video-file';
 
-/** Whether `url` is media /display can pause and resume (video or audio) — what the pause button gates on. Images have no playback to pause. */
-export function isPausableMediaUrl(url: string | undefined): boolean {
-  const kind = classifyMediaUrl(url);
-  return kind !== undefined && kind !== 'image';
-}
-
 function buildYoutubeEmbedSrc(
   videoId: string,
   autoplay: boolean,

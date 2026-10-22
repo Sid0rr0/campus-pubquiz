@@ -1,3 +1,4 @@
+import type { ControlAvailability } from './control-availability';
 import type { DisplayScreen } from './display-screen';
 import type {
   AdminIndicators,
@@ -215,6 +216,8 @@ export interface AdminStatePayload
   /** The roster, each team with its player count and over-cap flag. */
   teams: AdminTeamView[];
   onAirScreen: OnAirScreen;
+  /** What the quiz master can do right now, read from the same Display screen /display is sent. */
+  controlAvailability: ControlAvailability;
   /** What a press of the Advance slot does next — the Move plan's step for ADVANCE. */
   advanceStep: AdvanceSlotStep;
   /** Whether PREVIOUS works, is covered by the leaderboard, or is unavailable — the Move plan's verdict for PREVIOUS. */
