@@ -13,9 +13,9 @@ Parent spec: `.scratch/night-brief/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Pure calc tests: standings order and ties match the Session result; departed teams shown as "left"; no team name anywhere (assert fixture names absent)
-- [ ] Ratings and correct rates per round; a round of only `closest_guess` questions has no rate
-- [ ] Feedback on and off; topics grouped; blank comments skipped
-- [ ] `DOCUMENTATION.md` Night brief subsection updated
+- [x] Pure calc tests: standings order and ties match the Session result; departed teams shown as "left"; no team name anywhere (assert fixture names absent)
+- [x] Ratings and correct rates per round; a round of only `closest_guess` questions has no rate
+- [x] Feedback on and off; topics grouped; blank comments skipped
+- [x] `DOCUMENTATION.md` Night brief subsection updated

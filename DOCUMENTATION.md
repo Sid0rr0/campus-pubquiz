@@ -1560,6 +1560,18 @@ the brief is data only.
   points, notes (without the `{…}` settings group; blank notes left out), a
   media flag, and answered, correct and partial counts with the correct rate
   (none for `closest_guess`).
+- **Session level:** player totals ("7 (2 of 3 teams reported)") and a score
+  spread line (top, median and bottom share of max points, across every team
+  that took part). **Standings** list one line per team with placing ("1st",
+  "Joint 2nd", or "left" for a departed team), points (bonus awards counted,
+  not itemised), share of max points and player count, in the Session result's
+  order and ties. **Highlights** name the hardest and easiest question by round
+  and question number, by the stats page's rules (`closest_guess` never counts).
+  Each round carries its star rating (average and count, or "no ratings") and
+  its correct rate (absent when the round has no question with a rate).
+  **Feedback** lists topic suggestions grouped by `groupTopics` with counts and
+  the comments as written, newest first, blanks skipped; with `collectFeedback`
+  off it is one line, "Feedback was off."
 - **Media** shows its kind (`image`, `audio` or `video`) for the question's
   media and, separately, its answer media. The URL is never written.
 - **No team identity:** no team name, code or id appears in the text.

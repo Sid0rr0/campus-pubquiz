@@ -161,7 +161,7 @@ describe('computeSessionBrief', () => {
   it('writes each round with category, author, note and kahoot flag, leaving out the author line when there is none', () => {
     const brief = computeSessionBrief(buildInput());
 
-    const [, geography, speed] = brief.split(/^## /m);
+    const [, geography, speed] = brief.split(/^## (?=Round )/m);
     expect(geography).toContain('Round 1: Geography');
     expect(geography).toContain('Category: Places');
     expect(geography).toContain('Author: Alex');
@@ -199,7 +199,7 @@ describe('computeSessionBrief', () => {
   it('shows no correct rate for a closest_guess question', () => {
     const brief = computeSessionBrief(buildInput());
 
-    const second = brief.split(/^### /m)[2];
+    const second = brief.split(/^### /m)[2].split(/^## /m)[0];
     expect(second).toContain('closest_guess');
     expect(second).not.toMatch(/correct rate/i);
   });
@@ -216,6 +216,153 @@ describe('computeSessionBrief', () => {
     ]) {
       expect(brief).not.toContain(leaked);
     }
+  });
+
+  describe('standings, ratings and feedback', () => {
+    function section(brief: string, heading: string): string {
+      return (
+        brief.split(/^## /m).find((s) => s.startsWith(`${heading}\n`)) ?? ''
+      );
+    }
+
+    it('gives player totals and the score spread as shares of max points', () => {
+      const brief = computeSessionBrief(
+        buildInput({
+          playerCounts: new Map([
+            [1, 4],
+            [2, 3],
+          ]),
+        }),
+      );
+
+      // 2 of 3 teams reported: 4 + 3 players. Max points 7; totals 6, 0, 2.
+      expect(brief).toContain('Players: 7 (2 of 3 teams reported)');
+      expect(brief).toContain('Score spread: top 86%, median 29%, bottom 0%');
+    });
+
+    it('lists standings with placing, points, share and players, departed teams as left', () => {
+      const brief = computeSessionBrief(
+        buildInput({ playerCounts: new Map([[1, 4]]) }),
+      );
+
+      const standings = section(brief, 'Standings');
+      expect(standings).toContain('- 1st: 6 pts (86%), 4 players');
+      expect(standings).toContain('- 2nd: 0 pts (0%)');
+      expect(standings).toContain('- left: 2 pts (29%)');
+      expect(standings.indexOf('1st')).toBeLessThan(standings.indexOf('2nd'));
+    });
+
+    it('counts bonus awards in the points without itemising them', () => {
+      const answers = [
+        answer(10, 1, 'correct', 2),
+        answer(10, 2, 'correct', 2),
+      ];
+      const input = buildInput({ answers });
+      input.standings.leaderboard[0].totalPoints += 1;
+      input.standings.leaderboard[0].bonusPoints = 1;
+      input.standings.leaderboard[0].positiveBonusPoints = 1;
+      input.standings.leaderboard = rankTeams([...input.standings.leaderboard]);
+      const brief = computeSessionBrief(input);
+      const detail = computeSessionDetail(input);
+
+      expect(detail.standings[0].total).toBe(3);
+      expect(section(brief, 'Standings')).toContain('- 1st: 3 pts');
+      expect(section(brief, 'Standings')).toContain('- 2nd: 2 pts');
+    });
+
+    it('writes Joint for a shared placing', () => {
+      const answers = [
+        answer(10, 1, 'correct', 2),
+        answer(10, 2, 'correct', 2),
+      ];
+      const brief = computeSessionBrief(buildInput({ answers }));
+
+      expect(section(brief, 'Standings')).toContain('- Joint 1st: 2 pts');
+    });
+
+    it('names the hardest and easiest question', () => {
+      const brief = computeSessionBrief(buildInput());
+
+      const highlights = section(brief, 'Highlights');
+      // Q1 round 1 is 67%, Q1 round 2 is 33%.
+      expect(highlights).toContain('Hardest question: Round 2 Q1');
+      expect(highlights).toContain('Easiest question: Round 1 Q1');
+      expect(highlights).not.toContain('Everest');
+    });
+
+    it('gives each round its star rating and correct rate', () => {
+      const brief = computeSessionBrief(
+        buildInput({
+          roundRatings: [{ roundId: 100, average: 4.25, count: 3 }],
+        }),
+      );
+
+      const [, geography, speed] = brief.split(/^## Round /m);
+      expect(geography).toContain('Rating: 4.3 stars (3 ratings)');
+      // Q1 67% only; the closest_guess question has no rate.
+      expect(geography).toContain('Correct rate: 67%');
+      expect(speed).toContain('Rating: no ratings');
+    });
+
+    it('gives a round of only closest_guess questions no correct rate', () => {
+      const input = buildInput();
+      input.questions[0].type = 'closest_guess';
+      const brief = computeSessionBrief(input);
+
+      const geography = brief.split(/^## Round /m)[1];
+      expect(geography).not.toContain('Correct rate');
+    });
+
+    it('writes topics with counts and comments newest first, skipping blanks', () => {
+      const brief = computeSessionBrief(
+        buildInput({
+          feedback: [
+            {
+              comment: 'Too hard',
+              topics: ['Films', 'music'],
+              submittedAt: '2026-03-05T21:00:00.000Z',
+            },
+            {
+              comment: '   ',
+              topics: ['films'],
+              submittedAt: '2026-03-05T21:05:00.000Z',
+            },
+            {
+              comment: 'Loved it',
+              topics: [],
+              submittedAt: '2026-03-05T21:10:00.000Z',
+            },
+          ],
+        }),
+      );
+
+      const feedback = section(brief, 'Feedback');
+      expect(feedback).toContain('- Films: 2');
+      expect(feedback).toContain('- music: 1');
+      expect(feedback.indexOf('Loved it')).toBeGreaterThan(-1);
+      expect(feedback.indexOf('Loved it')).toBeLessThan(
+        feedback.indexOf('Too hard'),
+      );
+      expect(feedback.match(/- "/g)).toHaveLength(2);
+    });
+
+    it('says feedback was off instead of listing it', () => {
+      const brief = computeSessionBrief(
+        buildInput({ isFeedbackCollected: false }),
+      );
+
+      expect(section(brief, 'Feedback')).toContain('Feedback was off');
+    });
+
+    it('writes no fixture team name anywhere', () => {
+      const brief = computeSessionBrief(
+        buildInput({ playerCounts: new Map([[1, 4]]) }),
+      );
+
+      for (const name of TEAMS.map((t) => t.teamName)) {
+        expect(brief).not.toContain(name);
+      }
+    });
   });
 
   it('agrees with computeSessionDetail on counts and rates for the same rows', () => {
