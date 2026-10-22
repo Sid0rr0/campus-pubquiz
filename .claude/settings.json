@@ -66,12 +66,5 @@
         ]
       }
     ]
-  },
-  "env": {
-    "GATEGUARD_EXEMPT_GLOBS": "**,/private/tmp/claude-501/**",
-    "GATEGUARD_BASH_ROUTINE_DISABLED": "1",
-    "ECC_DISABLED_HOOKS": "pre:bash:gateguard-fact-force,pre:edit-write:gateguard-fact-force,pre:config-protection",
-    "ECC_SKIP_LLM_SUMMARY": "1",
-    "ECC_SESSION_START_CONTEXT": "off"
   }
 }
