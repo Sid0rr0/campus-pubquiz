@@ -205,6 +205,10 @@ How one question went: its answered, correct and partial counts and its correct 
 An ended session's points per team per question, on the stats page: one row per team that took part, one column per question, each cell the points that team earned on that question and its verdict. Teams that left are on it too.
 _Avoid_: answer grid, results matrix, standings (that's the ranked totals)
 
+**Night brief**:
+One ended session written up as a single text for whoever writes the next quiz (a person or an AI chat it's pasted into): every question with its answer, notes and how it went, including its most common wrong answers, plus the rounds' ratings, the feedback and the standings. It is read by staff and never names a team.
+_Avoid_: stats export, AI export, session report
+
 **Team page**:
 A team's own public page at `/team`, opened with its team code instead of a login. It shows the team's history across ended sessions (the same figures staff see on the team stats page, minus anything staff-only), and for each ended session every question with the team's own answer, its verdict and the right answer. It never shows other teams' answers or feedback.
 _Avoid_: team profile, team stats page (that is the staff page at `/teams/[id]`)
