@@ -199,6 +199,7 @@ export function buildAdminFields(
         isConnected: Boolean(session.connectedTeamSockets[team.teamId]),
         playerCount,
         isOverPlayerCap:
+          // Stryker disable next-line ConditionalExpression: equivalent for the `true &&` variant, null > number is false anyway; the null guard is for the type checker
           playerCount !== null && playerCount > maxPlayersPerTeam,
         joker: describeAdminTeamJoker(session, team.teamId),
       };

@@ -58,6 +58,7 @@ function getBlockBoundary(
   // This follows the question on screen, not furthestOpenIndex: if End Quiz
   // was pressed mid-block after Previous, questions opened past the one on
   // screen fall outside it. That is today's behaviour, kept on purpose.
+  // Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement: equivalent, the branch returns exactly what the fall-through below returns; it only documents the ended case
   if (status === 'ended') {
     return getBlockPositionForQuestion(roundIndex, questionIndex, context);
   }
@@ -90,6 +91,7 @@ export function getBlockInPlay(
   const context = toGameContext(rounds);
   const boundary = getBlockBoundary(progress, context);
   // -1: a fresh block, nothing opened yet.
+  // Stryker disable next-line ConditionalExpression: equivalent, Array.from with length 0 is the same empty list
   if (boundary < 0) return [];
 
   const blockStart = getBlockStartPosition(
@@ -133,6 +135,7 @@ export function getBlockRoundIndexes(
   );
   if (startRoundIndex < 0) return [];
   const startQuestionIndex = rounds[startRoundIndex].questions.findIndex(
+    // Stryker disable next-line ConditionalExpression,EqualityOperator,ArrowFunction: equivalent, only the round of the block's end is read, and a block never ends in a different round for another start question of the same round
     ({ id }) => id === blockFirstQuestionId,
   );
   const { roundIndex: endRoundIndex } = getBlockEndPosition(
@@ -167,6 +170,7 @@ export function getPastBlockIds(
     ...rounds
       .slice(0, blockStart.roundIndex)
       .flatMap((round) => questionIdsOf(round)),
+    // Stryker disable next-line ConditionalExpression,EqualityOperator: equivalent, a zero count slices to the same empty list the guard returns
     ...(blockStart.questionIndex > 0
       ? questionIdsOf(rounds[blockStart.roundIndex], blockStart.questionIndex)
       : []),
