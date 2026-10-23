@@ -1,8 +1,14 @@
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
   ParseIntPipe,
 } from '@nestjs/common';
+import {
+  TeamMergeNotFoundError,
+  TeamMergeRefusedError,
+  type TeamMergeService,
+} from '@/team/team-merge.service';
 import type { TeamHistoryService } from '@/team/team-history.service';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
@@ -16,11 +22,17 @@ function makeController() {
     getTeamCode: jest.fn(),
   };
   const teamHistory = { detail: jest.fn() };
+  const teamMerge = {
+    candidates: jest.fn(),
+    pairPreview: jest.fn(),
+    merge: jest.fn(),
+  };
   const controller = new TeamsController(
     teamService as unknown as TeamService,
     teamHistory as unknown as TeamHistoryService,
+    teamMerge as unknown as TeamMergeService,
   );
-  return { controller, teamService, teamHistory };
+  return { controller, teamService, teamHistory, teamMerge };
 }
 
 describe('TeamsController', () => {
@@ -139,6 +151,98 @@ describe('TeamsController', () => {
       await expect(
         pipe.transform('abc', { type: 'param', data: 'id' }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('merge', () => {
+    it('delegates to the merge module and returns the kept team', async () => {
+      const { controller, teamMerge } = makeController();
+      teamMerge.merge.mockResolvedValue({ keptTeamId: 8 });
+
+      await expect(
+        controller.merge(7, { otherTeamId: 8, name: 'Quizzly Bears' }),
+      ).resolves.toEqual({ keptTeamId: 8 });
+      expect(teamMerge.merge).toHaveBeenCalledWith(7, 8, 'Quizzly Bears');
+    });
+
+    it.each([
+      {},
+      { otherTeamId: 'x', name: 'A' },
+      { otherTeamId: 8, name: '' },
+      { otherTeamId: 8 },
+    ])('rejects the invalid body %j with 400', async (body) => {
+      const { controller, teamMerge } = makeController();
+
+      await expect(controller.merge(7, body)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(teamMerge.merge).not.toHaveBeenCalled();
+    });
+
+    it('turns a refusal into 409 with the reason', async () => {
+      const { controller, teamMerge } = makeController();
+      teamMerge.merge.mockRejectedValue(
+        new TeamMergeRefusedError('Both teams took part in Night 1'),
+      );
+
+      const attempt = controller.merge(7, { otherTeamId: 8, name: 'A' });
+      await expect(attempt).rejects.toThrow(ConflictException);
+      await expect(attempt).rejects.toThrow('Both teams took part in Night 1');
+    });
+
+    it('turns an unknown team into 404', async () => {
+      const { controller, teamMerge } = makeController();
+      teamMerge.merge.mockRejectedValue(new TeamMergeNotFoundError(8));
+
+      await expect(
+        controller.merge(7, { otherTeamId: 8, name: 'A' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('mergePreview', () => {
+    it('lists the candidates without an other-team id', async () => {
+      const { controller, teamMerge } = makeController();
+      teamMerge.candidates.mockResolvedValue([]);
+
+      await expect(controller.mergePreview(7, {})).resolves.toEqual({
+        candidates: [],
+      });
+      expect(teamMerge.candidates).toHaveBeenCalledWith(7);
+    });
+
+    it('previews the pair with an other-team id', async () => {
+      const { controller, teamMerge } = makeController();
+      const preview = { newerTeamId: 8 };
+      teamMerge.pairPreview.mockResolvedValue(preview);
+
+      await expect(
+        controller.mergePreview(7, { otherTeamId: '8' }),
+      ).resolves.toBe(preview);
+      expect(teamMerge.pairPreview).toHaveBeenCalledWith(7, 8);
+    });
+
+    it('rejects a bad other-team id with 400', async () => {
+      const { controller } = makeController();
+
+      await expect(
+        controller.mergePreview(7, { otherTeamId: 'abc' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('maps a refused pair to 409 and an unknown team to 404', async () => {
+      const { controller, teamMerge } = makeController();
+      teamMerge.pairPreview.mockRejectedValueOnce(
+        new TeamMergeRefusedError('no'),
+      );
+      teamMerge.candidates.mockRejectedValueOnce(new TeamMergeNotFoundError(7));
+
+      await expect(
+        controller.mergePreview(7, { otherTeamId: '8' }),
+      ).rejects.toThrow(ConflictException);
+      await expect(controller.mergePreview(7, {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

@@ -955,6 +955,37 @@ table (`GameSessionTeam`).
   connection (`forceReconnect`); the rejoin goes through the normal join path.
   Join refusals and the kick notice keep their inline text.
 
+- **Merge** — a team that forgot its code and rejoined under a slightly
+  different name is two `Team` rows. Staff (admin or moderator) merge them from
+  `/teams/[id]` ("Merge with…": a searchable list of every other team, a choice
+  of the two names, and a "This can't be undone" confirm that shows the kept
+  team's code). REST on the staff teams controller:
+  `GET /teams/:id/merge-preview` (every other team with its sessions played and
+  either no refusal or a `shared_session` / `unended_session` reason; with
+  `?otherTeamId=` the confirm step's figures) and `POST /teams/:id/merge` with
+  `{ otherTeamId, name }`, which returns `{ keptTeamId }`. An invalid body is a
+  `400`, an unknown team a `404`, a refusal a `409` with the reason.
+  - **Kept team.** The newer row (created later) is kept: it keeps its id, token
+    and **code**, takes the chosen name (it must be one of the two current names)
+    and the earlier joined date. Phones holding the newer team's token stay
+    signed in and receive the current name; a phone holding only the older
+    token rejoins with name and code like any phone.
+  - **What moves.** In one transaction every reference to the older team
+    (roster, answers, bonus awards, round ratings, feedback, jokers, player
+    counts, showdown seats and the showdown winner) moves to the kept team, the
+    older team is deleted (freeing its name) and the kept team takes the name.
+    Every derived read (team history, team page, league table, stats) shows the
+    merged team at once.
+  - **Eligibility**, re-checked inside the transaction (`team-merge.service.ts`,
+    shared by both previews): refused, changing nothing, when the two teams are
+    the same or either is unknown, when the name is neither team's current name,
+    when any session has rows for both teams in any team table (including a stray
+    rating or feedback row), or when either team **took part** in a session that
+    hasn't ended, lobby included (a kicked team that left answers in a running
+    session counts). Three or more duplicates are merged one pair at a time.
+  - Nothing about a merge is stored: no record of who merged or the old name,
+    and no undo.
+
 **One device per team.** A team's seat (`connectedTeamSockets[teamId]`) is held
 by one live socket, and answers are accepted only from it ("You may only submit
 answers for your own team" otherwise). A join is refused ("… is already

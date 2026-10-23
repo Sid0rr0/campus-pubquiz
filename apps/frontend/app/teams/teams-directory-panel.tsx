@@ -59,7 +59,6 @@ export function TeamsDirectoryPanel() {
             </Link>
           ),
         }),
-        helper.accessor('code', { header: 'Code', enableSorting: false }),
         helper.accessor('joinedAt', {
           header: 'Joined',
           cell: (ctx) => new Date(ctx.getValue()).toLocaleDateString(),

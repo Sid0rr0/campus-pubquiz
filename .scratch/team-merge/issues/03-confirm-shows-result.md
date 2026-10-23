@@ -15,8 +15,8 @@ Parent spec: `.scratch/team-merge/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Pair preview in the team-merge module. Real-Postgres spec: the combined sessions equal what the team history shows after the merge, and the newer team and its code are the ones the merge keeps.
-- [ ] Preview read accepts the optional other-team id (Zod-validated), with payload types in shared types. Controller unit spec.
-- [ ] Confirm step shows both teams' sessions, the combined result, the carry-over line and the kept team's code. Vitest with mocked fetch.
+- [x] Pair preview in the team-merge module. Real-Postgres spec: the combined sessions equal what the team history shows after the merge, and the newer team and its code are the ones the merge keeps.
+- [x] Preview read accepts the optional other-team id (Zod-validated), with payload types in shared types. Controller unit spec.
+- [x] Confirm step shows both teams' sessions, the combined result, the carry-over line and the kept team's code. Vitest with mocked fetch.

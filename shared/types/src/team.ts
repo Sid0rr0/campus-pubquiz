@@ -107,6 +107,57 @@ export interface TeamNightDetail {
   questions: TeamNightQuestion[];
 }
 
+/** Why two teams can't be merged. */
+export type TeamMergeRefusal =
+  /** Both teams took part in (or have rows for) the same session(s), named. */
+  | { kind: 'shared_session'; sessionNames: string[] }
+  /** One of the teams took part in a session that hasn't ended. */
+  | { kind: 'unended_session'; teamId: number; teamName: string };
+
+/** The refusal as a lower-case phrase, shared by the picker and the API's error message. */
+export function teamMergeRefusalReason(refusal: TeamMergeRefusal): string {
+  return refusal.kind === 'shared_session'
+    ? `both teams took part in ${refusal.sessionNames.join(', ')}`
+    : `${refusal.teamName} is in a session that hasn't ended`;
+}
+
+/** One other team in the merge picker: mergeable, or refused with the reason. */
+export interface TeamMergeCandidate {
+  id: number;
+  name: string;
+  sessionsPlayed: number;
+  /** Null when the team can be merged with the one being viewed. */
+  refusal: TeamMergeRefusal | null;
+}
+
+/** `GET /teams/:id/merge-preview`: every other team, mergeable or refused. */
+export interface TeamMergeCandidatesPayload {
+  candidates: TeamMergeCandidate[];
+}
+
+/** `GET /teams/:id/merge-preview?otherTeamId=`: the confirm step of one pair. */
+export interface TeamMergePairPreview {
+  teams: { id: number; name: string; sessionsPlayed: number }[];
+  /** Sessions played by the kept team after the merge. */
+  combinedSessionsPlayed: number;
+  /** The newer team: its code and phones carry over. */
+  newerTeamId: number;
+  newerTeamName: string;
+  /** The kept team's code, to read out to the team. */
+  keptCode: string;
+}
+
+/** Body of `POST /teams/:id/merge`. `name` must be one of the two teams' current names. */
+export interface TeamMergeRequest {
+  otherTeamId: number;
+  name: string;
+}
+
+/** Reply of `POST /teams/:id/merge`. */
+export interface TeamMergedPayload {
+  keptTeamId: number;
+}
+
 export const TEAMS_SORT_COLUMNS = [
   'joinedAt',
   'sessionsJoined',

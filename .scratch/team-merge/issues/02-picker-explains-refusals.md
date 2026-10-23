@@ -13,10 +13,10 @@ Parent spec: `.scratch/team-merge/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Preview operation in the team-merge module, built on the same eligibility rule as the merge
-- [ ] Real-Postgres spec: for each refusal case from 01, the preview gives the same verdict and reason as the merge, and mergeable pairs are marked mergeable
-- [ ] Preview read on the staff teams controller, with payload types in shared types. Controller unit spec.
-- [ ] Picker lists sessions played per team, greys out refused teams with their reason, and offers only mergeable teams for the next step. Vitest with mocked fetch.
-- [ ] `DOCUMENTATION.md` Teams section mentions the preview read
+- [x] Preview operation in the team-merge module, built on the same eligibility rule as the merge
+- [x] Real-Postgres spec: for each refusal case from 01, the preview gives the same verdict and reason as the merge, and mergeable pairs are marked mergeable
+- [x] Preview read on the staff teams controller, with payload types in shared types. Controller unit spec.
+- [x] Picker lists sessions played per team, greys out refused teams with their reason, and offers only mergeable teams for the next step. Vitest with mocked fetch.
+- [x] `DOCUMENTATION.md` Teams section mentions the preview read

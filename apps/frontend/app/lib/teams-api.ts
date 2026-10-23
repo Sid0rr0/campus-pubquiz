@@ -1,6 +1,10 @@
 import type {
   TeamCodeView,
   TeamDetail,
+  TeamMergeCandidatesPayload,
+  TeamMergePairPreview,
+  TeamMergeRequest,
+  TeamMergedPayload,
   TeamNightDetail,
   TeamPageHistory,
   TeamsListedPayload,
@@ -8,6 +12,7 @@ import type {
   TeamsSortOrder,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
 export class TeamsApiError extends Error {
   constructor(
@@ -110,6 +115,52 @@ export function fetchTeamNight(
     'Could not load this night',
     signal,
   );
+}
+
+/** Every other team for the merge picker, mergeable or refused with a reason. */
+export async function fetchMergeCandidates(
+  teamId: number,
+  signal?: AbortSignal,
+): Promise<TeamMergeCandidatesPayload> {
+  const response = await fetch(
+    `${getBackendUrl()}/teams/${teamId}/merge-preview`,
+    { credentials: 'include', signal },
+  );
+  if (!response.ok) {
+    return throwApiError(response, 'Could not load the other teams');
+  }
+  return (await response.json()) as TeamMergeCandidatesPayload;
+}
+
+/** The confirm step's figures for merging two teams. */
+export async function fetchMergePair(
+  teamId: number,
+  otherTeamId: number,
+  signal?: AbortSignal,
+): Promise<TeamMergePairPreview> {
+  const response = await fetch(
+    `${getBackendUrl()}/teams/${teamId}/merge-preview?otherTeamId=${otherTeamId}`,
+    { credentials: 'include', signal },
+  );
+  if (!response.ok) {
+    return throwApiError(response, 'Could not preview the merge');
+  }
+  return (await response.json()) as TeamMergePairPreview;
+}
+
+/** Merges the other team into this one; the reply names the team that was kept. */
+export async function mergeTeams(
+  teamId: number,
+  request: TeamMergeRequest,
+): Promise<TeamMergedPayload> {
+  const response = await fetch(`${getBackendUrl()}/teams/${teamId}/merge`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) return throwApiError(response, 'Could not merge the teams');
+  return (await response.json()) as TeamMergedPayload;
 }
 
 export async function fetchTeamCode(

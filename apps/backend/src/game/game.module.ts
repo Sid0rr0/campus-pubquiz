@@ -22,6 +22,7 @@ import { QuizService } from '@/quiz/quiz.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { StandingsService } from '@/standings/standings.service';
 import { TeamHistoryService } from '@/team/team-history.service';
+import { TeamMergeService } from '@/team/team-merge.service';
 import { TeamService } from '@/team/team.service';
 
 /**
@@ -38,6 +39,7 @@ import { TeamService } from '@/team/team.service';
     SeedService,
     TeamService,
     TeamHistoryService,
+    TeamMergeService,
     AnswerService,
     EndedSessionsRead,
     StandingsService,
@@ -68,6 +70,7 @@ import { TeamService } from '@/team/team.service';
     BonusService,
     TeamService,
     TeamHistoryService,
+    TeamMergeService,
     PlayerCountService,
     QuizService,
     QuizPreviewService,
