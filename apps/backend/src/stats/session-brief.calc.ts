@@ -61,6 +61,7 @@ export interface SessionBriefInput extends Omit<
 export function briefMediaKind(
   kind: MediaKind | undefined,
 ): BriefMediaKind | undefined {
+  // Stryker disable next-line ConditionalExpression: without the early return an undefined kind falls through the ternary and comes back undefined too.
   if (kind === undefined) return undefined;
   return kind === 'youtube' || kind === 'video-file' ? 'video' : kind;
 }
@@ -130,7 +131,7 @@ function standingsSection(detail: SessionDetailStats): string[] {
   const rows = detail.standings.map((s) => {
     const placing = s.hasLeft
       ? 'left'
-      : `${s.rankTo !== null && s.rankTo !== s.rank ? 'Joint ' : ''}${ordinal(s.rank ?? 0)}`;
+      : `${s.rankTo !== s.rank ? 'Joint ' : ''}${ordinal(s.rank ?? 0)}`;
     const share =
       detail.maxPoints > 0 ? percent(s.total / detail.maxPoints) : '0%';
     const players =
@@ -218,6 +219,7 @@ function groupedAnswers(
 ): string | null {
   const texts = answers.map((a) => formatAnswer(a.answer, wordingOf(question)));
   const groups = groupTopics([texts]).slice(0, limit);
+  // Stryker disable next-line ConditionalExpression: with no groups the join gives '', which the callers treat as absent exactly as they do null.
   return groups.length === 0
     ? null
     : groups.map((g) => `${g.topic} (${g.count})`).join(', ');

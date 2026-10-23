@@ -58,6 +58,28 @@ describe('assembleImportPreview', () => {
     expect(preview.rounds[0].breakAfter).toBe(true);
   });
 
+  it('keeps a round breaking when a later row of it has a blank break_after', () => {
+    const rows: SheetRow[] = [
+      makeRow({ rowNumber: 2, round: 'History', breakAfter: '1' }),
+      makeRow({
+        rowNumber: 3,
+        round: 'History',
+        question: 'Name this flag.',
+        breakAfter: '',
+      }),
+      makeRow({
+        rowNumber: 4,
+        round: 'Music',
+        question: 'Name this song.',
+        breakAfter: '',
+      }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.rounds[0].breakAfter).toBe(true);
+  });
+
   it('always forces the last round to break, even when every one of its rows is blank/0', () => {
     const rows: SheetRow[] = [
       makeRow({ rowNumber: 2, round: 'History', breakAfter: '1' }),

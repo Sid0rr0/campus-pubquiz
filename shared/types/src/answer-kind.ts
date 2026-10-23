@@ -56,6 +56,7 @@ const correct = (question: ResolvedAnswerKey): ScoreResult => ({
 });
 
 function normalizeFreeText(value: string): string {
+  // Stryker disable next-line MethodExpression: equivalent, both sides are normalized the same way so upper or lower case compares alike
   return value.trim().toLowerCase();
 }
 

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { classifyMediaUrl, isVideoUrl } from '../media';
+import { MAX_MEDIA_UPLOAD_BYTES, classifyMediaUrl, isVideoUrl } from '../media';
+
+describe('MAX_MEDIA_UPLOAD_BYTES', () => {
+  it('is five mebibytes', () => {
+    expect(MAX_MEDIA_UPLOAD_BYTES).toBe(5_242_880);
+  });
+});
 
 describe('classifyMediaUrl', () => {
   it.each([
@@ -18,6 +24,11 @@ describe('classifyMediaUrl', () => {
     ['data:video/mp4;base64,AAAA', undefined],
     ['javascript:alert(1)', undefined],
     ['clip.mp4', undefined],
+    // The extension must end the path (or precede a query), not just appear in it.
+    ['https://cdn.example.com/clip.mp4.png', 'image'],
+    ['https://cdn.example.com/song.mp3.png', 'image'],
+    // The scheme must start the link.
+    ['see https://cdn.example.com/photo.png', undefined],
   ] as const)('classifies %s as %s', (url, expected) => {
     expect(classifyMediaUrl(url)).toBe(expected);
   });

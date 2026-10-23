@@ -208,11 +208,13 @@ function planUnderlyingMove(
     case 'wait':
       return { kind: 'showdown_waiting' };
     case 'fall_through':
+    // Stryker disable next-line BlockStatement,ConditionalExpression: equivalent, the switch has no default, so dropping this label falls out of it the same way
     case 'none':
       break;
   }
 
   const step = planTransition(session, movement);
+  // Stryker disable next-line ConditionalExpression: equivalent for `true`, PREVIOUS never enters the reveal, so the gate hands its step back unchanged
   return movement === 'ADVANCE' ? planGradingGate(session, step) : step;
 }
 

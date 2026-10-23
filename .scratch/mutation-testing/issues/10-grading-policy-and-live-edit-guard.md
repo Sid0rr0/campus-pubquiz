@@ -1,6 +1,6 @@
 # 10: Backend grading policy and live-edit guard
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 

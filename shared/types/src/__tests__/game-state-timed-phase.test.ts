@@ -5,7 +5,10 @@ import {
   type GameContext,
   type GameProgress,
 } from '../game-state';
-import { twoRoundsWithBreakAfterSecond } from './game-state-fixtures';
+import {
+  kahootRoundAfterNormalRound,
+  twoRoundsWithBreakAfterSecond,
+} from './game-state-fixtures';
 
 function progressAt(overrides: Partial<GameProgress>): GameProgress {
   return {
@@ -97,6 +100,44 @@ describe('getTimedPhaseKey', () => {
     expect(getTimedPhaseKey(firstBreak, threeBlocks)).not.toBe(
       getTimedPhaseKey(secondBreak, threeBlocks),
     );
+  });
+
+  describe('a question opened behind the leaderboard', () => {
+    it('is untimed in a kahootMode round while the leaderboard is visible', () => {
+      const behindLeaderboard = progressAt({
+        status: 'question_open',
+        roundIndex: 1,
+        questionIndex: 1,
+        isLeaderboardVisible: true,
+      });
+      expect(
+        getTimedPhaseKey(behindLeaderboard, kahootRoundAfterNormalRound),
+      ).toBeNull();
+    });
+
+    it('is timed in a kahootMode round once the leaderboard is dismissed', () => {
+      const live = progressAt({
+        status: 'question_open',
+        roundIndex: 1,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+      });
+      expect(getTimedPhaseKey(live, kahootRoundAfterNormalRound)).toEqual(
+        expect.any(String),
+      );
+    });
+
+    it('stays timed in a normal round while the leaderboard is visible', () => {
+      const normal = progressAt({
+        status: 'question_open',
+        roundIndex: 0,
+        questionIndex: 0,
+        isLeaderboardVisible: true,
+      });
+      expect(getTimedPhaseKey(normal, kahootRoundAfterNormalRound)).toEqual(
+        expect.any(String),
+      );
+    });
   });
 
   it.each([

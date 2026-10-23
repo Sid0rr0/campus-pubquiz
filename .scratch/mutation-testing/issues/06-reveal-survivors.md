@@ -1,6 +1,6 @@
 # 06: Reveals: closest-guess walk, stepped reveal, showdown, leaderboard
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: 01
 

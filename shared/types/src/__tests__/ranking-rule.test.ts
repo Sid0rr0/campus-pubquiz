@@ -70,6 +70,14 @@ describe('rankTeams', () => {
     expect(summarize(input)).toEqual(expected);
   });
 
+  it('orders teams with the same name and total by team id, whatever the input order', () => {
+    const ids = (entries: ReturnType<typeof team>[]) =>
+      rankTeams(entries).map((row) => row.teamId);
+
+    expect(ids([team(5, 'Same', 3), team(2, 'Same', 3)])).toEqual([2, 5]);
+    expect(ids([team(2, 'Same', 3), team(5, 'Same', 3)])).toEqual([2, 5]);
+  });
+
   it('keeps the entry fields and does not mutate the input', () => {
     const input = [{ ...team(1, 'B', 1), extra: 'x' }, team(2, 'A', 2)];
     const snapshot = structuredClone(input);

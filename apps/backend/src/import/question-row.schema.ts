@@ -180,7 +180,8 @@ export function assembleImportPreview(
     breakAfter:
       index === roundTitles.length - 1
         ? true
-        : (breakAfterByRound.get(title) ?? false),
+        : // Stryker disable next-line BooleanLiteral: equivalent, every round title in questionsByRound has a breakAfterByRound entry, so the fallback is never read
+          (breakAfterByRound.get(title) ?? false),
     ...(categoryByRound.has(title)
       ? { category: categoryByRound.get(title) }
       : {}),

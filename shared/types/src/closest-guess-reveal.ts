@@ -59,6 +59,7 @@ function getRevealTargetQuestion(
   const blockStart = getBlockStartPosition(roundIndex, questionIndex, context);
   const { roundIndex: targetRound, questionIndex: targetQuestion } =
     getRoundAndQuestionForBlockPosition(blockStart, revealIndex, context);
+  // Stryker disable next-line OptionalChaining: equivalent, the only caller checks revealIndex against the block size first, so the target always exists
   return session.seededGame.rounds[targetRound]?.questions[targetQuestion];
 }
 

@@ -191,6 +191,7 @@ export function findLiveEditViolations(
     );
 
     const roundDescription = described[roundIndex];
+    // Stryker disable next-line ConditionalExpression: equivalent, this loop only visits reached rounds, which are never 'free' (a free round pins no questions, so skipping it changes nothing)
     if (roundDescription.structureEditing === 'free') continue;
 
     issues.push(

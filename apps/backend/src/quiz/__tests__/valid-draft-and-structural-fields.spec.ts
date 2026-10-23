@@ -245,6 +245,173 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
     });
   });
 
+  describe('messages the editor shows', () => {
+    it('words the quiz-level and round-level structural issues', () => {
+      const issues = validateQuizDraft(
+        makeRequest({
+          title: ' ',
+          rounds: [makeRound({ title: ' ', questions: [] })],
+        }),
+      );
+
+      expect(issues).toEqual([
+        {
+          roundIndex: -1,
+          questionIndex: null,
+          field: 'title',
+          message: 'Missing quiz title',
+        },
+        {
+          roundIndex: 0,
+          questionIndex: null,
+          field: 'title',
+          message: 'Missing round title',
+        },
+        {
+          roundIndex: 0,
+          questionIndex: null,
+          field: 'questions',
+          message: 'Round needs at least one question',
+        },
+      ]);
+    });
+
+    it('words the no-rounds issue', () => {
+      expect(validateQuizDraft(makeRequest({ rounds: [] }))).toEqual([
+        {
+          roundIndex: -1,
+          questionIndex: null,
+          field: 'rounds',
+          message: 'Quiz needs at least one round',
+        },
+      ]);
+    });
+
+    it('words the kahootMode issue', () => {
+      const issues = validateQuizDraft(
+        makeRequest({
+          rounds: [makeRound({ kahootMode: 'yes' as unknown as boolean })],
+        }),
+      );
+
+      expect(issues).toContainEqual({
+        roundIndex: 0,
+        questionIndex: null,
+        field: 'kahootMode',
+        message: 'Kahoot mode must be true or false',
+      });
+    });
+
+    it('files an issue that has no field path under "question"', () => {
+      const issues = validateQuizDraft(
+        makeRequest({
+          rounds: [
+            makeRound({
+              // A valid type on something that is not an object: zod fails at the root, with an empty path.
+              questions: [
+                Object.assign([], {
+                  type: 'free_text',
+                }) as unknown as ReturnType<typeof makeQuestion>,
+              ],
+            }),
+          ],
+        }),
+      );
+
+      expect(issues).toContainEqual(
+        expect.objectContaining({
+          roundIndex: 0,
+          questionIndex: 0,
+          field: 'question',
+        }),
+      );
+    });
+  });
+
+  describe('round author, note and show-on-screen setting', () => {
+    it('accepts a text author, a text note and a boolean setting', () => {
+      const request = makeRequest({
+        rounds: [
+          makeRound({
+            author: 'Sam',
+            note: 'Say hi.',
+            showNoteOnScreen: false,
+          }),
+        ],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([]);
+    });
+
+    it('rejects an author that is not text', () => {
+      const request = makeRequest({
+        rounds: [makeRound({ author: 5 as unknown as string })],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([
+        {
+          roundIndex: 0,
+          questionIndex: null,
+          field: 'author',
+          message: 'Author must be text',
+        },
+      ]);
+    });
+
+    it('rejects a show-on-screen setting that is not a boolean', () => {
+      const request = makeRequest({
+        rounds: [makeRound({ showNoteOnScreen: 'yes' as unknown as boolean })],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([
+        {
+          roundIndex: 0,
+          questionIndex: null,
+          field: 'showNoteOnScreen',
+          message: 'Show on screen must be true or false',
+        },
+      ]);
+    });
+
+    it('rejects a note that is not text', () => {
+      const request = makeRequest({
+        rounds: [makeRound({ note: 5 as unknown as string })],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([
+        {
+          roundIndex: 0,
+          questionIndex: null,
+          field: 'note',
+          message: 'Round note must be text',
+        },
+      ]);
+    });
+
+    it('accepts a note of exactly 500 characters, ignoring surrounding whitespace', () => {
+      const request = makeRequest({
+        rounds: [makeRound({ note: `  ${'a'.repeat(500)}  ` })],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([]);
+    });
+
+    it('rejects a note of 501 characters', () => {
+      const request = makeRequest({
+        rounds: [makeRound({ note: 'a'.repeat(501) })],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([
+        {
+          roundIndex: 0,
+          questionIndex: null,
+          field: 'note',
+          message: 'Round note must be at most 500 characters',
+        },
+      ]);
+    });
+  });
+
   describe('category', () => {
     it('accepts a category from the fixed list', () => {
       const request = makeRequest({
@@ -269,13 +436,13 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
         ],
       });
 
-      expect(validateQuizDraft(request)).toContainEqual(
-        expect.objectContaining({
-          roundIndex: 0,
-          questionIndex: null,
-          field: 'category',
-        }),
-      );
+      expect(validateQuizDraft(request)).toContainEqual({
+        roundIndex: 0,
+        questionIndex: null,
+        field: 'category',
+        message:
+          'Category must be one of: General knowledge, History, Geography, Science & nature, Sports, Music, Film & TV, Literature & books, Art & culture, News, Food & drink, Other',
+      });
     });
   });
 });

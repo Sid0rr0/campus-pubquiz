@@ -1,6 +1,6 @@
 # 07: Question schemas and CSV codecs (import boundary)
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 

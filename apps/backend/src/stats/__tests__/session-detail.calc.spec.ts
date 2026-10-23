@@ -1186,4 +1186,260 @@ describe('computeSessionDetail', () => {
       expect(highlights.hardestRoundId).toBe(100);
     });
   });
+
+  describe('response times, ordering and averages', () => {
+    const question = (
+      questionId: number,
+      roundId: number,
+      orderIndex: number,
+      points = 2,
+    ) => ({
+      questionId,
+      roundId,
+      orderIndex,
+      prompt: `Q${questionId}`,
+      answer: 'A',
+      type: 'free_text' as const,
+      points,
+    });
+    const answer = (
+      questionId: number,
+      teamId: number,
+      teamName: string,
+      responseMs: number | null,
+      pointsAwarded = 0,
+    ) => ({
+      questionId,
+      teamId,
+      teamName,
+      pointsAwarded,
+      gradedAt: '2026-01-01T00:00:01.000Z',
+      verdict:
+        pointsAwarded > 0 ? ('correct' as const) : ('incorrect' as const),
+      responseMs,
+      answer: 'a',
+    });
+    const standingsInOrder = (names: [number, string][]): SessionStandings => {
+      const entries = names.map(([teamId, teamName]) => ({
+        teamId,
+        teamName,
+        totalPoints: 0,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      }));
+      const leaderboard = entries.map((e) => ({ ...e, rank: 1, rankTo: 2 }));
+      return {
+        leaderboard,
+        departed: [],
+        participantCount: entries.length,
+        winner: leaderboard[0],
+      };
+    };
+
+    it('names the fastest answer whatever order the answers and teams come in', () => {
+      // Equal times: the name that sorts first wins (capitals before lowercase).
+      const tied = [answer(10, 1, 'apple', 2000), answer(10, 2, 'Zed', 2000)];
+      for (const answers of [tied, [...tied].reverse()]) {
+        for (const order of [
+          [
+            [1, 'apple'],
+            [2, 'Zed'],
+          ],
+          [
+            [2, 'Zed'],
+            [1, 'apple'],
+          ],
+        ] as [number, string][][]) {
+          const { highlights } = computeSessionDetail(
+            buildInput({
+              standings: standingsInOrder(order),
+              questions: [question(10, 100, 0)],
+              answers,
+            }),
+          );
+          expect(highlights.fastestAnswer?.teamName).toBe('Zed');
+          expect(highlights.fastestTeam?.teamName).toBe('Zed');
+        }
+      }
+    });
+
+    it('prefers the quicker time over the name that sorts first', () => {
+      const answers = [
+        answer(10, 1, 'apple', 1000),
+        answer(10, 2, 'Zed', 3000),
+      ];
+      for (const list of [answers, [...answers].reverse()]) {
+        for (const order of [
+          [
+            [1, 'apple'],
+            [2, 'Zed'],
+          ],
+          [
+            [2, 'Zed'],
+            [1, 'apple'],
+          ],
+        ] as [number, string][][]) {
+          const { highlights } = computeSessionDetail(
+            buildInput({
+              standings: standingsInOrder(order),
+              questions: [question(10, 100, 0)],
+              answers: list,
+            }),
+          );
+          expect(highlights.fastestAnswer).toEqual({
+            teamName: 'apple',
+            questionId: 10,
+            responseMs: 1000,
+          });
+          expect(highlights.fastestTeam).toEqual({
+            teamName: 'apple',
+            avgResponseMs: 1000,
+          });
+        }
+      }
+    });
+
+    it('keeps the first of two equally fast answers from the same team', () => {
+      const { highlights } = computeSessionDetail(
+        buildInput({
+          teams: [{ teamId: 1, teamName: 'apple' }],
+          questions: [question(10, 100, 0), question(11, 100, 1)],
+          answers: [answer(10, 1, 'apple', 2000), answer(11, 1, 'apple', 2000)],
+        }),
+      );
+
+      expect(highlights.fastestAnswer?.questionId).toBe(10);
+    });
+
+    it('averages a team response times and takes the minimum per question', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams: [
+            { teamId: 1, teamName: 'A' },
+            { teamId: 2, teamName: 'B' },
+          ],
+          questions: [question(10, 100, 0), question(11, 100, 1)],
+          answers: [
+            answer(10, 1, 'A', 1000),
+            answer(11, 1, 'A', 3000),
+            answer(10, 2, 'B', 4000),
+            answer(11, 2, 'B', null),
+          ],
+        }),
+      );
+
+      const byTeam = new Map(result.standings.map((s) => [s.teamId, s]));
+      expect(byTeam.get(1)?.avgResponseMs).toBe(2000);
+      expect(byTeam.get(2)?.avgResponseMs).toBe(4000);
+      const byQuestion = new Map(
+        result.questions.map((q) => [q.questionId, q]),
+      );
+      expect(byQuestion.get(10)?.fastestResponseMs).toBe(1000);
+      // Only team A's 3000: the untimed answer and the other question's are left out.
+      expect(byQuestion.get(11)?.fastestResponseMs).toBe(3000);
+    });
+
+    it('gives a question with no timed answer no fastest time', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams: [{ teamId: 1, teamName: 'A' }],
+          questions: [question(10, 100, 0), question(11, 100, 1)],
+          answers: [answer(10, 1, 'A', 500)],
+        }),
+      );
+
+      expect(result.questions.map((q) => q.fastestResponseMs)).toEqual([
+        500,
+        null,
+      ]);
+    });
+
+    it('orders rounds, then questions within a round, by their order index', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams: [{ teamId: 1, teamName: 'A' }],
+          rounds: [
+            { roundId: 300, title: 'Third', category: null, orderIndex: 2 },
+            { roundId: 100, title: 'First', category: null, orderIndex: 0 },
+            { roundId: 200, title: 'Second', category: null, orderIndex: 1 },
+          ],
+          questions: [
+            question(31, 300, 0),
+            question(12, 100, 1),
+            question(21, 200, 0),
+            question(11, 100, 0),
+          ],
+        }),
+      );
+
+      expect(result.rounds.map((r) => r.roundId)).toEqual([100, 200, 300]);
+      expect(result.questions.map((q) => q.questionId)).toEqual([
+        11, 12, 21, 31,
+      ]);
+      expect(result.questions.map((q) => q.roundTitle)).toEqual([
+        'First',
+        'First',
+        'Second',
+        'Third',
+      ]);
+    });
+
+    it('gives a question of an unlisted round an empty round title', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams: [{ teamId: 1, teamName: 'A' }],
+          questions: [question(10, 999, 0)],
+        }),
+      );
+
+      expect(result.questions[0].roundTitle).toBe('');
+    });
+
+    it('counts only a question own answers', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams: [{ teamId: 1, teamName: 'A' }],
+          questions: [question(10, 100, 0), question(11, 100, 1)],
+          answers: [answer(10, 1, 'A', 700), answer(11, 1, 'A', 300)],
+        }),
+      );
+
+      expect(result.questions.map((q) => q.fastestResponseMs)).toEqual([
+        700, 300,
+      ]);
+    });
+
+    it('works the quiz difficulty out as the average team points over the maximum', () => {
+      // Max 4; two teams, 3 answer points in all: 1.5 each = 37.5%.
+      const result = computeSessionDetail(
+        buildInput({
+          teams: [
+            { teamId: 1, teamName: 'A' },
+            { teamId: 2, teamName: 'B' },
+          ],
+          questions: [question(10, 100, 0, 4)],
+          answers: [answer(10, 1, 'A', null, 2), answer(10, 2, 'B', null, 1)],
+        }),
+      );
+
+      expect(result.difficulty.averagePercent).toBe(37.5);
+      expect(result.difficulty.label).toBe('Hard');
+    });
+
+    it('has zero difficulty and round percentage when no question is worth points', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams: [{ teamId: 1, teamName: 'A' }],
+          rounds: [{ roundId: 100, title: 'R', category: null, orderIndex: 0 }],
+          questions: [question(10, 100, 0, 0)],
+          answers: [answer(10, 1, 'A', null, 0)],
+        }),
+      );
+
+      expect(result.difficulty.averagePercent).toBe(0);
+      expect(result.rounds[0].pointsPercent).toBe(0);
+    });
+  });
 });

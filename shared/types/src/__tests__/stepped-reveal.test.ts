@@ -5,9 +5,14 @@ import {
   LOBBY_PROGRESS,
   type ActiveShowdownRoundState,
 } from '../session-state';
+import type { GameAction, GameProgress } from '../game-state-types';
+import type { SessionState } from '../session-state';
+import { closestGuessQuestion, round, sessionWith } from './session-fixtures';
 import {
   isFinalStep,
   revealOnAir,
+  revealStartStep,
+  revealStepAfterMove,
   revealStepOf,
   startStepOf,
   stepReveal,
@@ -207,6 +212,192 @@ describe('reading a reveal step', () => {
         kind: 'hold',
         reveal: 'showdown',
       });
+    });
+  });
+});
+
+describe('a closest_guess reveal on air', () => {
+  const guessed = { hasSubmissions: true, closestGuesses: [] };
+  // Round 0 has no break after it, so rounds 0 and 1 are one block of q1-q3.
+  const rounds = [
+    {
+      ...round(1, [1, 2], { breakAfter: false }),
+      questions: [closestGuessQuestion(1), closestGuessQuestion(2)],
+    },
+    { ...round(2, [3]), questions: [closestGuessQuestion(3)] },
+  ];
+  const at = (
+    roundIndex: number,
+    questionIndex: number,
+    revealIndex: number,
+    status: GameProgress['status'] = 'reveal',
+  ): Partial<GameProgress> => ({
+    status,
+    roundIndex,
+    questionIndex,
+    revealIndex,
+    furthestOpenIndex: 2,
+  });
+  const session = (
+    progress: Partial<GameProgress>,
+    overrides: Partial<SessionState> = {},
+  ) =>
+    sessionWith(rounds, progress, {
+      closestGuessSummaries: { 1: guessed, 2: guessed, 3: guessed },
+      revealStep: 2,
+      ...overrides,
+    });
+  const LAST_STEP = 4;
+
+  it('is on air at the reveal with the counter as its step', () => {
+    expect(revealOnAir(session(at(1, 0, 0)))).toMatchObject({
+      reveal: 'closest_guess',
+      step: 2,
+      descriptor: { stepCount: 5, atStart: 'fall_through' },
+    });
+    expect(revealStepOf(session(at(1, 0, 0)), 'closest_guess')).toBe(2);
+    expect(revealStepOf(session(at(1, 0, 0)), 'showdown')).toBe(0);
+  });
+
+  it('is not on air when the quiz has ended with no showdown and no reveal', () => {
+    expect(revealOnAir(session(at(1, 0, 0, 'ended')))).toBeNull();
+  });
+
+  it('steps forward through the session with its new counter', () => {
+    const move = stepRevealOnAir(session(at(1, 0, 0)), 'ADVANCE');
+    expect(move).toMatchObject({
+      kind: 'step',
+      reveal: 'closest_guess',
+      isFinal: false,
+    });
+    expect((move as { session: SessionState }).session.revealStep).toBe(3);
+    expect(stepRevealOnAir(session(at(1, 0, 0)), 'PREVIOUS')).toMatchObject({
+      kind: 'step',
+      isFinal: false,
+    });
+    expect(
+      stepRevealOnAir(
+        session(at(1, 0, 0), { revealStep: LAST_STEP }),
+        'ADVANCE',
+      ),
+    ).toEqual({ kind: 'fall_through', reveal: 'closest_guess' });
+  });
+
+  describe('where a move starts the reveal', () => {
+    it('starts at step 0 landing forward and at the last step landing on Previous', () => {
+      expect(
+        revealStartStep(
+          session(at(1, 0, 0)),
+          at(1, 0, 1) as GameProgress,
+          'ADVANCE',
+        ),
+      ).toBe(0);
+      expect(
+        revealStartStep(
+          session(at(1, 0, 0)),
+          at(1, 0, 1) as GameProgress,
+          'PREVIOUS',
+        ),
+      ).toBe(LAST_STEP);
+    });
+
+    it('is 0 when nothing is on air', () => {
+      expect(
+        revealStartStep(
+          session(at(1, 0, 0)),
+          at(1, 0, 0, 'break') as GameProgress,
+          'PREVIOUS',
+        ),
+      ).toBe(0);
+    });
+
+    it('starts the showdown on its last step landing on Previous once the quiz has ended', () => {
+      const showdown = {
+        id: 1,
+        question: 'Q',
+        answer: '1',
+        participants: [
+          { teamId: 1, teamName: 'A', seatIndex: 0, guess: '1' },
+          { teamId: 2, teamName: 'B', seatIndex: 1, guess: '2' },
+        ],
+        winnerTeamId: null,
+        isTie: false,
+        resolved: false,
+      };
+      const ended = session(at(1, 0, 0, 'ended'), {
+        activeShowdownRound: showdown,
+      });
+      expect(revealStartStep(ended, ended.progress, 'PREVIOUS')).toBe(3);
+      expect(revealStartStep(ended, ended.progress, 'ADVANCE')).toBe(0);
+      // The showdown composed early does not take over a block still on reveal.
+      const early = session(at(1, 0, 0), { activeShowdownRound: showdown });
+      expect(revealOnAir(early)?.reveal).toBe('closest_guess');
+    });
+  });
+
+  describe('the step a move settles on', () => {
+    const next = (progress: Partial<GameProgress>, action: GameAction | null) =>
+      revealStepAfterMove(
+        session(at(1, 0, 0)),
+        { ...at(1, 0, 0), ...progress } as GameProgress,
+        action,
+      );
+
+    it('keeps the step while the same reveal stays on air', () => {
+      expect(next({}, 'TOGGLE_LEADERBOARD')).toBe(2);
+      expect(next({ isLeaderboardVisible: true }, 'PREVIOUS')).toBe(2);
+    });
+
+    it('restarts when placing, whatever stays on air', () => {
+      expect(next({}, null)).toBe(0);
+    });
+
+    it('restarts on another reveal index, landing by the action', () => {
+      expect(next({ revealIndex: 1 }, 'ADVANCE')).toBe(0);
+      expect(next({ revealIndex: 1 }, 'PREVIOUS')).toBe(LAST_STEP);
+    });
+
+    it('restarts on another round of the block', () => {
+      expect(next({ roundIndex: 0, questionIndex: 1 }, 'PREVIOUS')).toBe(
+        LAST_STEP,
+      );
+      expect(next({ roundIndex: 0 }, 'PREVIOUS')).toBe(LAST_STEP);
+    });
+
+    it('restarts when the quiz has ended under a reveal', () => {
+      expect(next({ status: 'ended' }, 'PREVIOUS')).toBe(0);
+    });
+
+    it('restarts on another question index of the same round', () => {
+      const current = session(at(0, 1, 0));
+      expect(
+        revealStepAfterMove(current, at(0, 0, 0) as GameProgress, 'PREVIOUS'),
+      ).toBe(LAST_STEP);
+    });
+
+    it('restarts when the status changes', () => {
+      const current = session(at(1, 0, 0, 'break'));
+      expect(
+        revealStepAfterMove(current, at(1, 0, 0) as GameProgress, 'PREVIOUS'),
+      ).toBe(LAST_STEP);
+      expect(next({ status: 'break' }, 'PREVIOUS')).toBe(0);
+    });
+
+    it('keeps the step across the ended screen the showdown stands on', () => {
+      const ended = session(at(1, 0, 0, 'ended'));
+      expect(
+        revealStepAfterMove(
+          ended,
+          at(1, 0, 0, 'ended') as GameProgress,
+          'ADVANCE',
+        ),
+      ).toBe(2);
+      expect(
+        revealStepAfterMove(ended, at(1, 0, 0, 'ended') as GameProgress, null),
+      ).toBe(0);
+      expect(
+        revealStepAfterMove(ended, at(1, 0, 0) as GameProgress, 'PREVIOUS'),
+      ).toBe(LAST_STEP);
     });
   });
 });

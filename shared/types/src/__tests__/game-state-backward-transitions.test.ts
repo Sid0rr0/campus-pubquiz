@@ -39,6 +39,30 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
     ).toThrow(IllegalGameTransitionError);
   });
 
+  it('rejects moving back from a status that is not ended, even with a stale previousStatus', () => {
+    const stale: GameProgress = { ...lobby, previousStatus: 'break' };
+    expect(() =>
+      getNextGameState(stale, 'PREVIOUS', twoRoundsWithBreakAfterSecond),
+    ).toThrow(IllegalGameTransitionError);
+  });
+
+  it('steps back from a break round title card to the same block’s previous question when it is not the block’s first', () => {
+    const roundTitle: GameProgress = {
+      status: 'break_round_intro',
+      roundIndex: 1,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 2,
+      furthestOpenIndex: 3,
+    };
+    const next = getNextGameState(
+      roundTitle,
+      'PREVIOUS',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({ ...roundTitle, status: 'break', revealIndex: 1 });
+  });
+
   it('steps back from a round intro card to the rules screen for round 0 (showRoundOverview off/undefined)', () => {
     const roundIntro: GameProgress = { ...lobby, status: 'round_intro' };
     const next = getNextGameState(

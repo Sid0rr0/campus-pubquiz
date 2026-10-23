@@ -74,6 +74,7 @@ export function parseSheetCsv(csvText: string): SheetRow[] {
   const columns = headerCells.map(
     (cell) => HEADER_ALIASES[normalizeHeaderCell(cell)] ?? null,
   );
+  // Stryker disable next-line MethodExpression: equivalent, a null entry for an unknown header is never one of the required columns checked against the set
   const presentColumns = new Set(columns.filter(Boolean));
   const missingColumns = REQUIRED_COLUMNS.filter(
     (column) => !presentColumns.has(column),
@@ -91,6 +92,7 @@ export function parseSheetCsv(csvText: string): SheetRow[] {
     }
     const cellFor = (column: SheetColumn): string => {
       const columnIndex = columns.indexOf(column);
+      // Stryker disable next-line ConditionalExpression: equivalent, record[-1] is undefined and falls through to the same ''
       return columnIndex === -1 ? '' : (record[columnIndex] ?? '');
     };
     return [

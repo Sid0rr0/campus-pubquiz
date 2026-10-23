@@ -1,6 +1,6 @@
 # 04: Session snapshot, settle and block-in-play
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 

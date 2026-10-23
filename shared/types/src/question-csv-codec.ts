@@ -114,6 +114,7 @@ export function toCanonicalMatchAnswer(
   }
 
   const rightByLeft = new Map(pairs.map((pair) => [pair!.left, pair!.right]));
+  // Stryker disable next-line ConditionalExpression: a short map leaves some left item without a right item, which the loop below refuses
   if (rightByLeft.size !== left.length) return undefined;
 
   const usedRight = new Set<string>();

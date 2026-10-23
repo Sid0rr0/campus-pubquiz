@@ -257,6 +257,41 @@ describe('buildQuizPreview, night', () => {
       ]);
     });
 
+    it('keeps the title cards of several empty rounds in a row, in order', () => {
+      expect(
+        nightLabels([
+          round(1, []),
+          round(2, []),
+          round(3, [question(1)]),
+          round(4, []),
+          round(5, []),
+        ]),
+      ).toEqual([
+        'round_overview',
+        'title:1',
+        'title:2',
+        'title:3',
+        'q:1',
+        'break_intro',
+        'reveal_intro',
+        'a:1',
+        'title:4',
+        'title:5',
+      ]);
+    });
+
+    it('puts each reveal intro on its own round', () => {
+      const { steps } = buildQuizPreview(
+        [round(1, [question(1)]), round(2, [question(2)])],
+        'night',
+      );
+      expect(
+        steps.flatMap((step) =>
+          step.screen.kind === 'reveal_intro' ? [step.roundIndex] : [],
+        ),
+      ).toEqual([0, 1]);
+    });
+
     it('numbers the rounds after it by their place in the quiz', () => {
       const { steps } = buildQuizPreview(
         [round(1, []), round(2, [question(1)])],
@@ -338,6 +373,37 @@ describe('buildQuizPreview, answer_after_question', () => {
       [1, 1],
       [1, 1],
     ]);
+  });
+
+  it('ends the last block on the last answer, even when the last round has no break', () => {
+    const { steps } = buildQuizPreview(
+      [round(1, [question(1), question(2)], { breakAfter: false })],
+      'answer_after_question',
+    );
+    // title, q1, a1, q2, a2
+    expect(steps.map((step) => step.isBlockEnd)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  it('ends the last block on the last answer when empty rounds follow it', () => {
+    const { steps } = buildQuizPreview(
+      [
+        round(1, [question(1)], { breakAfter: false }),
+        round(2, [], { breakAfter: false }),
+      ],
+      'answer_after_question',
+    );
+    const blockEnds = steps.flatMap((step) =>
+      step.isBlockEnd && step.screen.kind === 'reveal'
+        ? [step.screen.question.id]
+        : [],
+    );
+    expect(blockEnds).toEqual([1]);
   });
 
   it('shows a kahoot round like any other: question then answer', () => {
@@ -577,6 +643,25 @@ describe('buildQuizPreview, host-only text', () => {
     expect(title?.hostOnly.roundNote).toBeNull();
     expect(intro?.hostOnly.roundNote).toBe('Read slowly');
   });
+
+  it.each(['answer_after_question', 'night'] as const)(
+    'treats a note of only spaces as no note (%s)',
+    (mode) => {
+      const rounds = [
+        round(1, [question(1)], {
+          note: '   ',
+          questionNotesById: { 1: '  ' },
+        }),
+      ];
+      const { steps } = buildQuizPreview(rounds, mode);
+      expect(steps.every((step) => step.hostOnly.roundNote === null)).toBe(
+        true,
+      );
+      expect(steps.every((step) => step.hostOnly.questionNote === null)).toBe(
+        true,
+      );
+    },
+  );
 
   it('carries nothing on steps with neither a note', () => {
     const { steps } = buildQuizPreview(

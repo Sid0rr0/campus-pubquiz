@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { getNextGameState, type GameContext } from '../game-state';
-import { lobby, twoRoundsWithBreakAfterSecond } from './game-state-fixtures';
+import {
+  getNextGameState,
+  type GameContext,
+  type GameProgress,
+} from '../game-state';
+import {
+  kahootRoundAfterNormalRound,
+  lobby,
+  twoRoundsWithBreakAfterSecond,
+} from './game-state-fixtures';
 
 describe('getNextGameState — furthestOpenIndex tracking', () => {
   it("carries furthestOpenIndex forward as ADVANCE opens questions, and doesn't shrink it when Previous walks back", () => {
@@ -75,6 +83,44 @@ describe('getNextGameState — furthestOpenIndex tracking', () => {
       status: 'round_intro',
       roundIndex: 1,
       furthestOpenIndex: -1,
+    });
+  });
+
+  it('does not move furthestOpenIndex backwards when Advance reopens the first question after Previous', () => {
+    const backAtIntro: GameProgress = {
+      ...lobby,
+      status: 'round_intro',
+      furthestOpenIndex: 1,
+    };
+    const reopened = getNextGameState(
+      backAtIntro,
+      'ADVANCE',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(reopened).toMatchObject({
+      status: 'question_open',
+      questionIndex: 0,
+      furthestOpenIndex: 1,
+    });
+  });
+
+  it('does not move furthestOpenIndex backwards when a kahoot reveal opens the next question', () => {
+    const revealing: GameProgress = {
+      ...lobby,
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 0,
+      furthestOpenIndex: 2,
+    };
+    const next = getNextGameState(
+      revealing,
+      'ADVANCE',
+      kahootRoundAfterNormalRound,
+    );
+    expect(next).toMatchObject({
+      status: 'question_open',
+      questionIndex: 1,
+      furthestOpenIndex: 2,
     });
   });
 

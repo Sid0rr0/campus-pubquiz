@@ -1,6 +1,6 @@
 # 11: Backend stats, team history and league calculations
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 

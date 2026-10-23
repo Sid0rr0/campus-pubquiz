@@ -37,6 +37,17 @@ describe('parseGoogleSheetUrl', () => {
     expect(() => parseGoogleSheetUrl('not a url')).toThrow(SheetFetchError);
   });
 
+  it('names its error SheetFetchError', () => {
+    let caught: unknown;
+    try {
+      parseGoogleSheetUrl('not a url');
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toHaveProperty('name', 'SheetFetchError');
+  });
+
   it('rejects a host that is not docs.google.com', () => {
     expect(() =>
       parseGoogleSheetUrl('https://evil.com/spreadsheets/d/abc123/edit'),
@@ -70,6 +81,40 @@ describe('parseGoogleSheetUrl', () => {
       parseGoogleSheetUrl('https://docs.google.com/document/d/abc123/edit'),
     ).toThrow(SheetFetchError);
   });
+
+  it('rejects a spreadsheet path that has a prefix before /spreadsheets/d/', () => {
+    expect(() =>
+      parseGoogleSheetUrl(
+        'https://docs.google.com/evil/spreadsheets/d/abc123/edit',
+      ),
+    ).toThrow(SheetFetchError);
+  });
+
+  it.each([
+    'https://docs.google.com/spreadsheets/d/abc123/edit?gid=x12',
+    'https://docs.google.com/spreadsheets/d/abc123/edit?gid=12x',
+    'https://docs.google.com/spreadsheets/d/abc123/edit?gid=',
+    'https://docs.google.com/spreadsheets/d/abc123/edit#gid=x12',
+  ])('drops a gid that is not all digits (%s)', (url) => {
+    expect(parseGoogleSheetUrl(url)).toEqual({
+      spreadsheetId: 'abc123',
+      gid: undefined,
+    });
+  });
+
+  it('explains each refusal in words the moderator can act on', () => {
+    expect(() => parseGoogleSheetUrl('not a url')).toThrow(
+      'That does not look like a valid URL.',
+    );
+    expect(() => parseGoogleSheetUrl('https://evil.com/x')).toThrow(
+      'The URL must be a docs.google.com link (e.g. https://docs.google.com/spreadsheets/d/.../edit).',
+    );
+    expect(() =>
+      parseGoogleSheetUrl('https://docs.google.com/document/d/abc/edit'),
+    ).toThrow(
+      'Could not find a spreadsheet id in that URL — expected a link like https://docs.google.com/spreadsheets/d/{id}/edit.',
+    );
+  });
 });
 
 const CDN_URL =
@@ -78,6 +123,22 @@ const CDN_URL =
 function redirectResponse(location: string): Response {
   return new Response(null, { status: 307, headers: { location } });
 }
+
+function csvResponse(
+  body: BodyInit | null,
+  extraHeaders: Record<string, string> = {},
+): Response {
+  return new Response(body, {
+    status: 200,
+    headers: { 'content-type': 'text/csv', ...extraHeaders },
+  });
+}
+
+const NOT_SHARED_MESSAGE =
+  'Could not fetch that sheet — make sure it\'s shared as "Anyone with the ' +
+  'link can view", or try again if the network dropped.';
+const TIMEOUT_MESSAGE =
+  'Fetching that sheet took too long — check your connection and try again.';
 
 describe('fetchSheetCsv redirect handling', () => {
   const originalFetch = global.fetch;
@@ -140,35 +201,113 @@ describe('fetchSheetCsv redirect handling', () => {
     );
   });
 
-  it('rejects a redirect to a host other than googleusercontent.com (e.g. a sign-in page for a non-public sheet)', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(
-        redirectResponse('https://accounts.google.com/ServiceLogin'),
+  // Each rejection test queues a good CSV after the bad redirect, so a fetch
+  // that wrongly followed the redirect would succeed instead of failing later.
+  it.each([
+    [
+      'a sign-in page for a non-public sheet',
+      'https://accounts.google.com/ServiceLogin',
+    ],
+    [
+      'a lookalike host that merely contains googleusercontent.com',
+      'https://googleusercontent.com.evil.com/export',
+    ],
+    [
+      'a host that only ends in googleusercontent.com without a dot',
+      'https://evilgoogleusercontent.com/export',
+    ],
+    [
+      'a CDN host over plain http',
+      'http://doc-14-2s-sheets.googleusercontent.com/export',
+    ],
+    ['an unparseable location', 'https://'],
+  ])(
+    'refuses a redirect to %s without following it',
+    async (_label, location) => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(redirectResponse(location))
+        .mockResolvedValueOnce(csvResponse('a,b\n1,2\n'));
+      global.fetch = fetchMock;
+
+      const error: unknown = await fetchSheetCsv('abc123').catch(
+        (caught: unknown) => caught,
       );
 
-    await expect(fetchSheetCsv('abc123')).rejects.toThrow(SheetFetchError);
+      expect(error).toBeInstanceOf(SheetFetchError);
+      expect((error as SheetFetchError).message).toBe(NOT_SHARED_MESSAGE);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('refuses a redirect that carries no location header', async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 307 }))
+      .mockResolvedValueOnce(csvResponse('a,b\n1,2\n'));
+    global.fetch = fetchMock;
+
+    await expect(fetchSheetCsv('abc123')).rejects.toThrow(NOT_SHARED_MESSAGE);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects a lookalike redirect host that merely contains googleusercontent.com', async () => {
+  it('trusts a redirect to the bare googleusercontent.com host', async () => {
     global.fetch = jest
       .fn()
-      .mockResolvedValue(
-        redirectResponse('https://googleusercontent.com.evil.com/export'),
-      );
+      .mockResolvedValueOnce(
+        redirectResponse('https://googleusercontent.com/export'),
+      )
+      .mockResolvedValueOnce(csvResponse('a,b\n1,2\n'));
 
-    await expect(fetchSheetCsv('abc123')).rejects.toThrow(SheetFetchError);
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.csvText).toBe('a,b\n1,2\n');
   });
+
+  it.each([300, 399])(
+    'follows a %i redirect to the export CDN',
+    async (status) => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(null, { status, headers: { location: CDN_URL } }),
+        )
+        .mockResolvedValueOnce(csvResponse('a,b\n1,2\n'));
+
+      const result = await fetchSheetCsv('abc123');
+
+      expect(result.csvText).toBe('a,b\n1,2\n');
+    },
+  );
+
+  it.each([400, 404])(
+    'does not follow a %i response even when it carries a CDN location',
+    async (status) => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(null, { status, headers: { location: CDN_URL } }),
+        )
+        .mockResolvedValueOnce(csvResponse('a,b\n1,2\n'));
+      global.fetch = fetchMock;
+
+      await expect(fetchSheetCsv('abc123')).rejects.toThrow(SheetFetchError);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('rejects a second redirect from the CDN itself rather than following it', async () => {
-    global.fetch = jest
+    const fetchMock = jest
       .fn()
       .mockResolvedValueOnce(redirectResponse(CDN_URL))
       .mockResolvedValueOnce(
         redirectResponse('https://other.googleusercontent.com/elsewhere'),
-      );
+      )
+      .mockResolvedValueOnce(csvResponse('a,b\n1,2\n'));
+    global.fetch = fetchMock;
 
     await expect(fetchSheetCsv('abc123')).rejects.toThrow(SheetFetchError);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -187,7 +326,143 @@ describe('fetchSheetCsv', () => {
         new DOMException('The operation was aborted.', 'TimeoutError'),
       );
 
-    await expect(fetchSheetCsv('abc123')).rejects.toThrow(/took too long/i);
+    await expect(fetchSheetCsv('abc123')).rejects.toThrow(TIMEOUT_MESSAGE);
+  });
+
+  it.each([
+    ['a network failure', new TypeError('fetch failed')],
+    ['an abort that is not a timeout', new DOMException('x', 'AbortError')],
+    [
+      'a plain error that only borrows the timeout name',
+      Object.assign(new Error('x'), { name: 'TimeoutError' }),
+    ],
+  ])(
+    'reports %s as a sharing failure, not a timeout',
+    async (_label, error) => {
+      global.fetch = jest.fn().mockRejectedValue(error);
+
+      const caught: unknown = await fetchSheetCsv('abc123').catch(
+        (e: unknown) => e,
+      );
+
+      expect((caught as SheetFetchError).message).toBe(NOT_SHARED_MESSAGE);
+    },
+  );
+
+  it('reports a non-OK response with the sharing message', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(new Response('', { status: 403 }));
+
+    await expect(fetchSheetCsv('abc123')).rejects.toThrow(NOT_SHARED_MESSAGE);
+  });
+
+  it('reports an HTML login page with the sharing message', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response('<html></html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      }),
+    );
+
+    await expect(fetchSheetCsv('abc123')).rejects.toThrow(NOT_SHARED_MESSAGE);
+  });
+
+  it('refuses a response with no readable body', async () => {
+    global.fetch = jest.fn().mockResolvedValue(csvResponse(null));
+
+    await expect(fetchSheetCsv('abc123')).rejects.toThrow(
+      'Could not read the sheet response.',
+    );
+  });
+
+  it('accepts a body of exactly the size limit', async () => {
+    const exact = 'x'.repeat(MAX_SHEET_RESPONSE_BYTES);
+    global.fetch = jest.fn().mockResolvedValue(csvResponse(exact));
+
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.csvText).toHaveLength(MAX_SHEET_RESPONSE_BYTES);
+  });
+
+  it('says the sheet is too large when the body exceeds the limit', async () => {
+    const oversized = 'x'.repeat(MAX_SHEET_RESPONSE_BYTES + 1);
+    global.fetch = jest.fn().mockResolvedValue(csvResponse(oversized));
+
+    await expect(fetchSheetCsv('abc123')).rejects.toThrow(
+      'That sheet is too large to import.',
+    );
+  });
+
+  it('decodes a multi-byte character split across two chunks', async () => {
+    // '€' is the three bytes e2 82 ac; the chunk boundary falls inside it.
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array([0x61, 0xe2, 0x82]));
+        controller.enqueue(new Uint8Array([0xac, 0x62]));
+        controller.close();
+      },
+    });
+    global.fetch = jest.fn().mockResolvedValue(csvResponse(stream));
+
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.csvText).toBe('a€b');
+  });
+
+  it('reads an unquoted ASCII filename', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      csvResponse('a,b\n', {
+        'content-disposition': 'attachment; filename=Trivia Night.csv',
+      }),
+    );
+
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.sheetName).toBe('Trivia Night');
+  });
+
+  it('trims the name, with or without a tab segment', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        csvResponse('a,b\n', {
+          'content-disposition': 'attachment; filename="Trivia Night .csv"',
+        }),
+      )
+      .mockResolvedValueOnce(
+        csvResponse('a,b\n', {
+          'content-disposition':
+            'attachment; filename="Trivia Night  - Tab.csv"',
+        }),
+      );
+
+    expect((await fetchSheetCsv('abc123')).sheetName).toBe('Trivia Night');
+    expect((await fetchSheetCsv('abc123')).sheetName).toBe('Trivia Night');
+  });
+
+  it('drops only a trailing .csv extension', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      csvResponse('a,b\n', {
+        'content-disposition': 'attachment; filename="Notes.csv backup.csv"',
+      }),
+    );
+
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.sheetName).toBe('Notes.csv backup');
+  });
+
+  it('leaves the name undefined when the filename is only an extension', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      csvResponse('a,b\n', {
+        'content-disposition': 'attachment; filename=".csv"',
+      }),
+    );
+
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.sheetName).toBeUndefined();
   });
 
   it('throws on a non-OK response', async () => {

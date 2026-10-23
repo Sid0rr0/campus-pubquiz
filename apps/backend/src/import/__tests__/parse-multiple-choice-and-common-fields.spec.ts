@@ -72,6 +72,25 @@ describe('parseQuestionRow - multiple choice and common fields', () => {
     });
   });
 
+  it('quotes the trimmed type and lists every valid type in the unknown-type message', () => {
+    const result = parseQuestionRow(makeRow({ type: '  karaoke  ' }));
+
+    expect(result).toEqual({
+      ok: false,
+      issues: [
+        expect.objectContaining({
+          message:
+            'Unknown question type "karaoke" — expected one of: multiple_choice, free_text, sort, match, closest_guess, number',
+        }),
+      ],
+    });
+  });
+
+  it('reads a type written with a run of spaces or hyphens as its underscored name', () => {
+    expect(parseQuestionRow(makeRow({ type: 'free  text' })).ok).toBe(true);
+    expect(parseQuestionRow(makeRow({ type: 'free - text' })).ok).toBe(true);
+  });
+
   it('rejects a missing answer', () => {
     const result = parseQuestionRow(makeRow({ answer: '  ' }));
 

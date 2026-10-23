@@ -100,6 +100,7 @@ export function getPlayingMediaUrl(screen: DisplayScreen): string | undefined {
       return screen.question.revealKind === 'closest_guess_pending'
         ? undefined
         : (screen.question.answerMediaUrl ?? screen.question.mediaUrl);
+    // Stryker disable next-line ConditionalExpression: an empty last `default:` falls out of the switch to the same `undefined`
     default:
       return undefined;
   }

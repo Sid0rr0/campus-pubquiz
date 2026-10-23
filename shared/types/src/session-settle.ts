@@ -103,6 +103,7 @@ export function settleSession({
       progress,
       session.leaderboard,
       session.leaderboardRevealCount,
+      // Stryker disable next-line OptionalChaining,BooleanLiteral: equivalent, the progress's round always exists (getPastBlockIds above would throw otherwise) and getGameContext always sets kahootMode
       context.rounds[progress.roundIndex]?.kahootMode ?? false,
     ),
     revealStep: revealStepAfterMove(session, progress, action),
@@ -133,6 +134,7 @@ function computeKahootQuestionEndsAt(
 ): number | null {
   if (progress.status !== 'question_open') return null;
   if (kahootQuestionTimerSeconds === null) return null;
+  // Stryker disable next-line OptionalChaining: equivalent, a question_open progress always points at an existing round
   if (!context.rounds[progress.roundIndex]?.kahootMode) return null;
   if (phaseStartedAt === null) return null;
   if (getTimedPhaseKey(progress, context) !== livePhaseKey) return null;

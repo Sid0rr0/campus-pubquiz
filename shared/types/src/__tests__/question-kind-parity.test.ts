@@ -8,6 +8,7 @@ import {
   BATCH_GRADED_TYPES,
   KAHOOT_ALLOWED_TYPES,
   hasNumericAnswerKey,
+  joinNames,
   kahootTypeNames,
 } from '../scoring';
 
@@ -348,6 +349,15 @@ describe('question kind grading flags', () => {
     expect(kahootTypeNames()).toBe(
       `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`,
     );
+  });
+
+  it.each([
+    [[], ''],
+    [['number'], 'number'],
+    [['sort', 'number'], 'sort and number'],
+    [['a', 'b', 'c'], 'a, b and c'],
+  ])('joins %j as a sentence list', (names, expected) => {
+    expect(joinNames(names)).toBe(expected);
   });
 
   it('keeps free_text out of kahoot rounds although it grades itself on a match (ADR 0001)', () => {

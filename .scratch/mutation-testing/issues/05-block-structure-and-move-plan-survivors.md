@@ -1,6 +1,6 @@
 # 05: Block questions, move plan and live-edit frontier
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 

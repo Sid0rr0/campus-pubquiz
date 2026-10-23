@@ -345,6 +345,28 @@ describe('Grading policy: key fix', () => {
       expect((fix(10_000) as { points: number }).points).toBeLessThan(2);
     });
 
+    it('converts the timer seconds to milliseconds: half the timer gives 75% of the points', () => {
+      const [write] = gradeOnKeyFix({
+        question: AUTO,
+        previous: AUTO,
+        rows: [row({ value: 'Paris', responseMs: 5000 })],
+        kahootTimerSeconds: 10,
+        hasBatchRun: false,
+      }).writes;
+      expect(write).toEqual({ kind: 'set', points: 1.5, verdict: 'correct' });
+    });
+
+    it('applies no speed scaling, not even half-point rounding, without a kahoot timer', () => {
+      const [write] = gradeOnKeyFix({
+        question: { ...AUTO, points: 2.3 },
+        previous: AUTO,
+        rows: [row({ value: 'Paris', responseMs: 5000 })],
+        kahootTimerSeconds: null,
+        hasBatchRun: false,
+      }).writes;
+      expect(write).toEqual({ kind: 'set', points: 2.3, verdict: 'correct' });
+    });
+
     it('is rescored even with no rows', () => {
       expect(
         gradeOnKeyFix({
@@ -391,6 +413,25 @@ describe('Grading policy: key fix', () => {
       // Indistinguishable from the automatic grade, so it counts as automatic.
       expect(fix([graded('apple', 'correct', 3)]).writes).toEqual([
         { kind: 'clear' },
+      ]);
+    });
+
+    it('keeps a graded row whose points differ from the automatic grade', () => {
+      expect(fix([graded('apple', 'correct', 2)]).writes).toEqual([
+        { kind: 'keep' },
+      ]);
+    });
+
+    it('keeps a row with the automatic verdict and points but no grade timestamp', () => {
+      expect(
+        fix([row({ value: 'apple', verdict: 'correct', pointsAwarded: 3 })])
+          .writes,
+      ).toEqual([{ kind: 'keep' }]);
+    });
+
+    it('keeps a graded row whose verdict differs from the automatic grade', () => {
+      expect(fix([graded('apple', 'partial', 3)]).writes).toEqual([
+        { kind: 'keep' },
       ]);
     });
 

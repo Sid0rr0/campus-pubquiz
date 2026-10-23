@@ -34,6 +34,7 @@ export function getBreakNumber(
   quizStructure: QuizStructureSummary,
 ): number {
   const index = quizStructure.breakRoundNumbers.indexOf(roundIndex + 1);
+  // Stryker disable next-line ConditionalExpression: equivalent, `-1 + 1` is already the `0` the guard returns
   return index === -1 ? 0 : index + 1;
 }
 

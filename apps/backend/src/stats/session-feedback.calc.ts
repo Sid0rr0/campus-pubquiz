@@ -6,6 +6,7 @@ import type { SessionDetailFeedbackInputRow } from '@/stats/session-detail.calc'
 
 /** Same topic regardless of capitals and spaces: trimmed, inner whitespace collapsed, lower-cased. */
 function topicKey(topic: string): string {
+  // Stryker disable next-line MethodExpression,Regex: the only caller passes a topic cleanTopic already trimmed and collapsed, and the key is only compared, so upper-casing it or re-trimming changes nothing.
   return topic.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
@@ -28,6 +29,7 @@ export function groupTopics(
 
   return [...groups.values()]
     .map((spellings) => {
+      // Stryker disable next-line StringLiteral: every group holds a spelling with count >= 1, so the first iteration always replaces this seed.
       let best = '';
       let bestCount = 0;
       let count = 0;
