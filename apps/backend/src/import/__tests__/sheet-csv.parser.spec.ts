@@ -212,9 +212,14 @@ describe('parseSheetCsv', () => {
   });
 
   it('names its error SheetFormatError', () => {
-    expect(() => parseSheetCsv('')).toThrow(
-      expect.objectContaining({ name: 'SheetFormatError' }),
-    );
+    let caught: unknown;
+    try {
+      parseSheetCsv('');
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toHaveProperty('name', 'SheetFormatError');
   });
 
   it('throws SheetFormatError when a required column is missing', () => {

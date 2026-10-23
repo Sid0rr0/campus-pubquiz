@@ -38,9 +38,14 @@ describe('parseGoogleSheetUrl', () => {
   });
 
   it('names its error SheetFetchError', () => {
-    expect(() => parseGoogleSheetUrl('not a url')).toThrow(
-      expect.objectContaining({ name: 'SheetFetchError' }),
-    );
+    let caught: unknown;
+    try {
+      parseGoogleSheetUrl('not a url');
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toHaveProperty('name', 'SheetFetchError');
   });
 
   it('rejects a host that is not docs.google.com', () => {
