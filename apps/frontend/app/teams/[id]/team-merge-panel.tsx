@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type {
-  TeamMergeCandidate,
-  TeamMergeRefusal,
+import {
+  teamMergeRefusalReason,
+  type TeamMergeCandidate,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
@@ -19,12 +19,6 @@ import {
 
 function sessionsPlayedText(count: number): string {
   return `${count} ${count === 1 ? 'session' : 'sessions'} played`;
-}
-
-function refusalText(refusal: TeamMergeRefusal): string {
-  return refusal.kind === 'shared_session'
-    ? `both took part in ${refusal.sessionNames.join(', ')}`
-    : `${refusal.teamName} is in a session that hasn't ended`;
 }
 
 interface TeamMergePanelProps {
@@ -136,7 +130,7 @@ function TeamPicker({
               <span className="text-xs text-foreground/60">
                 {sessionsPlayedText(candidate.sessionsPlayed)}
                 {candidate.refusal &&
-                  ` — can't merge: ${refusalText(candidate.refusal)}`}
+                  ` — can't merge: ${teamMergeRefusalReason(candidate.refusal)}`}
               </span>
             </button>
           </li>

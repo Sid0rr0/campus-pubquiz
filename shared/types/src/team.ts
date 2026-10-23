@@ -114,6 +114,13 @@ export type TeamMergeRefusal =
   /** One of the teams took part in a session that hasn't ended. */
   | { kind: 'unended_session'; teamId: number; teamName: string };
 
+/** The refusal as a lower-case phrase, shared by the picker and the API's error message. */
+export function teamMergeRefusalReason(refusal: TeamMergeRefusal): string {
+  return refusal.kind === 'shared_session'
+    ? `both teams took part in ${refusal.sessionNames.join(', ')}`
+    : `${refusal.teamName} is in a session that hasn't ended`;
+}
+
 /** One other team in the merge picker: mergeable, or refused with the reason. */
 export interface TeamMergeCandidate {
   id: number;

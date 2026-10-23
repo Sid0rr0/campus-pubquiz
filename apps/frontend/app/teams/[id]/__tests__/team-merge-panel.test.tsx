@@ -99,7 +99,9 @@ describe('TeamMergePanel', () => {
     await openPicker();
 
     expect(screen.getByRole('button', { name: /Rival/ })).toBeDisabled();
-    expect(screen.getByText(/both took part in Night 1/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/both teams took part in Night 1/),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Lobby Lads/ })).toBeDisabled();
     expect(
       screen.getByText(/Lobby Lads is in a session that hasn't ended/),

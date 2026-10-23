@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type { EntityManager } from '@mikro-orm/postgresql';
-import type {
-  TeamMergeCandidate,
-  TeamMergePairPreview,
-  TeamMergeRefusal,
-  TeamMergedPayload,
+import {
+  teamMergeRefusalReason,
+  type TeamMergeCandidate,
+  type TeamMergePairPreview,
+  type TeamMergeRefusal,
+  type TeamMergedPayload,
 } from '@campus-pubquiz/types';
 import { Team } from '@/db/entities/team.entity';
 import { TeamRepository } from '@/db/repositories/team.repository';
@@ -64,7 +65,7 @@ const TOOK_PART_SQL = `
 `;
 
 /** Every table column that holds a team id and is repointed to the kept team. */
-const TEAM_COLUMNS: readonly [table: string, column: string][] = [
+export const TEAM_COLUMNS: readonly [table: string, column: string][] = [
   ['game_session_teams', 'team_id'],
   ['answers', 'team_id'],
   ['bonus_awards', 'team_id'],
@@ -77,9 +78,10 @@ const TEAM_COLUMNS: readonly [table: string, column: string][] = [
 ];
 
 export function refusalMessage(refusal: TeamMergeRefusal): string {
+  const reason = teamMergeRefusalReason(refusal);
   return refusal.kind === 'shared_session'
-    ? `Both teams took part in ${refusal.sessionNames.join(', ')}, so they can't be merged`
-    : `${refusal.teamName} is in a session that hasn't ended`;
+    ? `${reason.charAt(0).toUpperCase()}${reason.slice(1)}, so they can't be merged`
+    : reason;
 }
 
 /**
