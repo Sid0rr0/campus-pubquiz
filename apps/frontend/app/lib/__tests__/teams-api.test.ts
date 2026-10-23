@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchTeamCode, fetchTeams, TeamsApiError } from '@/app/lib/teams-api';
+import {
+  fetchTeamCode,
+  fetchTeams,
+  mergeTeams,
+  TeamsApiError,
+} from '@/app/lib/teams-api';
 
 const originalFetch = global.fetch;
 
@@ -81,6 +86,33 @@ describe('teams-api', () => {
       expect(error).toBeInstanceOf(TeamsApiError);
       expect((error as TeamsApiError).status).toBe(404);
       expect((error as TeamsApiError).message).toBe('Team not found');
+    });
+  });
+
+  describe('mergeTeams', () => {
+    it('posts the merge with the CSRF header the backend requires', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ keptTeamId: 2 }),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const result = await mergeTeams(1, {
+        otherTeamId: 2,
+        name: 'Quizzly Bears',
+      });
+
+      expect(result).toEqual({ keptTeamId: 2 });
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/teams/1/merge',
+        expect.objectContaining({
+          method: 'POST',
+          credentials: 'include',
+          headers: expect.objectContaining({
+            'X-Requested-With': 'XMLHttpRequest',
+          }),
+        }),
+      );
     });
   });
 });

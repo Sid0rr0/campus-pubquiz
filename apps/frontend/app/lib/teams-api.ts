@@ -12,6 +12,7 @@ import type {
   TeamsSortOrder,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
 export class TeamsApiError extends Error {
   constructor(
@@ -155,7 +156,7 @@ export async function mergeTeams(
   const response = await fetch(`${getBackendUrl()}/teams/${teamId}/merge`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   });
   if (!response.ok) return throwApiError(response, 'Could not merge the teams');
