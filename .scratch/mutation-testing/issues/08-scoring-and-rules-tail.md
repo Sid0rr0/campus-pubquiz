@@ -1,6 +1,6 @@
 # 08: Scoring, margin, ranking and joker: the last few survivors
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 

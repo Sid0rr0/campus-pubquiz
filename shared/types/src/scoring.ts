@@ -49,13 +49,20 @@ export const BATCH_GRADED_TYPES = typesWhere(
  */
 export const KAHOOT_ALLOWED_TYPES = typesWhere((kind) => kind.kahootAllowed);
 
-/** The kahoot-accepted types as people read them: lowercased labels in type-picker order, commas and "and" before the last ("multiple choice, sort / order and number"). */
-export function kahootTypeNames(): string {
-  const names = KAHOOT_ALLOWED_TYPES.map((type) =>
-    QUESTION_KINDS[type].label.toLowerCase(),
-  );
+/** Names as a sentence list: commas, and "and" before the last ("a, b and c"); one name alone, nothing for none. */
+export function joinNames(names: readonly string[]): string {
+  // Stryker disable next-line StringLiteral: equivalent, the separator never shows with at most one name
   if (names.length <= 1) return names.join('');
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/** The kahoot-accepted types as people read them: lowercased labels in type-picker order, commas and "and" before the last ("multiple choice, sort / order and number"). */
+export function kahootTypeNames(): string {
+  return joinNames(
+    KAHOOT_ALLOWED_TYPES.map((type) =>
+      QUESTION_KINDS[type].label.toLowerCase(),
+    ),
+  );
 }
 
 /** Whether the type carries a margin: how far an answer may be from the key and still be correct (Number only). */

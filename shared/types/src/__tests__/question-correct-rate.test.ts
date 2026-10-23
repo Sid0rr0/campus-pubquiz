@@ -37,6 +37,13 @@ describe('answerCredit', () => {
     );
     expect(answerCredit({ verdict: null, pointsAwarded: 0 }, 1000)).toBe(0);
   });
+
+  it('counts nothing for a non-partial verdict even when points were awarded', () => {
+    expect(
+      answerCredit({ verdict: 'incorrect', pointsAwarded: 500 }, 1000),
+    ).toBe(0);
+    expect(answerCredit({ verdict: null, pointsAwarded: 500 }, 1000)).toBe(0);
+  });
 });
 
 describe('hasMeaningfulCorrectRate', () => {

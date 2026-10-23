@@ -19,6 +19,7 @@ export type RankedTeam<T extends RankableTeam> = T & {
  */
 export function compareTeamNames(a: string, b: string): number {
   if (a === b) return 0;
+  // Stryker disable next-line EqualityOperator: equivalent, equal names already returned 0 above
   return a < b ? -1 : 1;
 }
 

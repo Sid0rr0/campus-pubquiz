@@ -111,6 +111,16 @@ describe('isWithinMargin at margin 0', () => {
     ).toBe(false);
   });
 
+  it('keeps an answer on the edge correct at large magnitudes, where the float error grows with the numbers', () => {
+    // 1e9 + 0.1 - 1e9 is 0.10000002384185791 in binary floating point
+    expect(
+      isWithinMargin(1e9, 1e9 + 0.1, { value: 0.1, unit: 'absolute' }),
+    ).toBe(true);
+    expect(
+      isWithinMargin(1e9 + 0.1, 1e9, { value: 0.1, unit: 'absolute' }),
+    ).toBe(true);
+  });
+
   it('still counts an answer on the edge of a positive margin', () => {
     expect(isWithinMargin(0.5, 0.55, { value: 0.05, unit: 'absolute' })).toBe(
       true,

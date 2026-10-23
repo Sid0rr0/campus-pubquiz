@@ -42,6 +42,10 @@ describe('drawJoker', () => {
     expect(draw(0.999)).toBe(30);
   });
 
+  it('still lands on the last pickable round when random rounds up to 1', () => {
+    expect(drawJoker([10, 20, 30], () => 1)).toBe(30);
+  });
+
   it('never returns a round outside the pickable ones', () => {
     for (let step = 0; step < 100; step++) {
       expect([20, 30]).toContain(drawJoker([20, 30], () => step / 100));
