@@ -1,3 +1,7 @@
+# One project name from any checkout, so `docker compose up` in a worktree
+# reuses the running Postgres instead of starting a second one on the same port.
+name: campus-pubquiz
+
 services:
   postgres:
     image: postgres:16-alpine
