@@ -1,2 +1,6 @@
 # Applied migrations are history: reformatting one rewrites a file production already ran.
 apps/backend/src/db/migrations/
+
+# Aligning a markdown table rewrites every row when one cell widens, so parallel
+# tickets editing DOCUMENTATION.md conflict on lines neither of them changed.
+*.md
