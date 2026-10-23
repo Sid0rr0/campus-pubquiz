@@ -47,6 +47,8 @@ interface MobileDrawerTriggerProps {
   label: string;
   title: string;
   closeLabel: string;
+  /** Sizing of the trigger in the bar; fills an equal share by default. */
+  triggerClassName?: string;
   children: ReactNode;
 }
 
@@ -57,6 +59,7 @@ function MobileDrawerTrigger({
   label,
   title,
   closeLabel,
+  triggerClassName = 'flex-1',
   children,
 }: MobileDrawerTriggerProps) {
   return (
@@ -65,7 +68,7 @@ function MobileDrawerTrigger({
         <Button
           type="button"
           variant="outline-muted"
-          className="flex min-h-11 flex-1 items-center justify-center gap-1 text-sm"
+          className={`flex min-h-11 items-center justify-center gap-1 text-sm ${triggerClassName}`}
         >
           {icon}
           {label}
@@ -150,6 +153,7 @@ export function MobileQuizActionsBar({
           label={`🃏 R${joker.roundNumber}${joker.isPlayed ? ' · played' : ''}`}
           title="Your joker"
           closeLabel="Close joker"
+          triggerClassName="flex-none px-3"
         >
           <p className="text-lg font-bold">
             {`Round ${joker.roundNumber} — ${joker.roundTitle} ${
