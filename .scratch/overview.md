@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| team-merge | [Merge two teams that are the same real team](team-merge/spec.md) | 3 | — |
 
 ## Won't do
 

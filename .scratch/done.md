@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| team-merge                      | [Merge two teams that are the same real team](team-merge/spec.md)                                                                                                          | 3       |
 | jokers                          | [Jokers: each team doubles one round of its choice](jokers/spec.md)                                                                                                        | 12      |
 | night-brief                     | [A Night brief for writing next week's quiz](night-brief/spec.md)                                                                                                          | 3       |
 | touched-scores                  | [Each change says whether it touched scores](touched-scores/spec.md)                                                                                                       | 2       |
