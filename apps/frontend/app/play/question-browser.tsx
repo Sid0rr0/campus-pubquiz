@@ -44,6 +44,8 @@ interface QuestionBrowserProps {
   myAnswerPoints: number | null;
   /** How the selected question's answer was judged, null until graded; colours "Your answer" on the reveal. */
   myAnswerVerdict: Verdict | null;
+  /** The extra points the joker adds to this answer ("+1"), null outside the joker round. */
+  myAnswerJokerExtra?: number | null;
   onSelectQuestion: (questionId: BlockQuestionView['id']) => void;
   onSubmitAnswer: (
     questionId: BlockQuestionView['id'],
@@ -104,6 +106,7 @@ export function QuestionBrowser({
   myAnswers,
   myAnswerPoints,
   myAnswerVerdict,
+  myAnswerJokerExtra = null,
   onSelectQuestion,
   onSubmitAnswer,
   navigation,
@@ -176,6 +179,11 @@ export function QuestionBrowser({
           {myAnswerPoints !== null && (
             <p className="font-body text-3xl font-extrabold text-foreground/55">
               {myAnswerPoints} / {revealQuestion.points} points
+              {myAnswerJokerExtra !== null && (
+                <span className="ml-2 whitespace-nowrap text-foreground">
+                  {`🃏 +${myAnswerJokerExtra}`}
+                </span>
+              )}
             </p>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { act, screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
+import type { TeamJoker } from '@campus-pubquiz/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { AUTO_ADVANCE_STORAGE_KEY } from '@/app/lib/player-settings-storage';
@@ -74,6 +75,7 @@ describe('PlayPage — reveal verdict card', () => {
     options: {
       myAnswers?: Record<number, string>;
       connectionError?: string | null;
+      myJoker?: TeamJoker | null;
     } = {},
   ) {
     mockUseTeamLink.mockReturnValue(
@@ -83,6 +85,7 @@ describe('PlayPage — reveal verdict card', () => {
         game: {
           myAnswers: options.myAnswers ?? MY_ANSWERS,
           myAnswerGrades: MY_GRADES,
+          myJoker: options.myJoker ?? null,
         },
       }),
     );
@@ -149,6 +152,43 @@ describe('PlayPage — reveal verdict card', () => {
     rerender(<PlayPage />);
 
     expect(screen.getByRole('status')).toHaveTextContent('Close! +1.5');
+  });
+
+  describe('in the team’s joker round', () => {
+    const JOKER_ON_ROUND_1: TeamJoker = { roundId: 1, source: 'chosen' };
+    const jokerReveal = (revealIndex: number): SessionDescription => ({
+      ...atReveal(revealIndex),
+      settings: { showRoundOverview: true, jokersEnabled: true },
+    });
+
+    it('adds the joker’s extra points under the verdict', () => {
+      const { rerender } = renderPhoneAt(jokerReveal(0));
+
+      showPhoneAt(jokerReveal(1), { myJoker: JOKER_ON_ROUND_1 });
+      rerender(<PlayPage />);
+
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Close! +1.5🃏 Joker +1.5',
+      );
+    });
+
+    it('adds no joker line when the answer earned nothing', () => {
+      const { rerender } = renderPhoneAt(jokerReveal(1));
+
+      showPhoneAt(jokerReveal(2), { myJoker: JOKER_ON_ROUND_1 });
+      rerender(<PlayPage />);
+
+      expect(screen.getByRole('status')).not.toHaveTextContent('Joker');
+    });
+
+    it('adds no joker line without a joker', () => {
+      const { rerender } = renderPhoneAt(jokerReveal(0));
+
+      showPhoneAt(jokerReveal(1));
+      rerender(<PlayPage />);
+
+      expect(screen.getByRole('status')).not.toHaveTextContent('Joker');
+    });
   });
 
   it('dismisses itself after about three seconds', () => {

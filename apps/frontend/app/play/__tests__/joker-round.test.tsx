@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TeamJoker } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import type { SessionDescription } from '@/test-utils/room-view';
-import { teamLinkResult } from './test-utils';
+import { seenQuestionsOf, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -243,5 +243,50 @@ describe('PlayPage — the joker chip once played', () => {
     expect(
       screen.getByRole('button', { name: /🃏 R2.*played/ }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('PlayPage — the joker’s extra points on the reveal', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    searchParamsRef.current = new URLSearchParams();
+  });
+
+  function renderReveal(myJoker: TeamJoker | null) {
+    const session = night({
+      progress: { status: 'reveal', roundIndex: 1, revealIndex: 1 },
+    });
+    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session,
+        join: { team: JOINED_TEAM },
+        game: {
+          myJoker,
+          myAnswers: { 2: 'Paris' },
+          myAnswerGrades: {
+            2: {
+              pointsAwarded: 1,
+              gradedAt: '2024-01-01T00:00:00.000Z',
+              verdict: 'correct',
+            },
+          },
+          seenQuestions: seenQuestionsOf(session),
+        },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+  }
+
+  it('shows the extra points next to the points in the joker round', () => {
+    renderReveal(JOKER_ON_ROUND_2);
+
+    expect(screen.getByText(/^1 \/ \d+ points/)).toHaveTextContent('🃏 +1');
+  });
+
+  it('shows no extra points outside the joker round', () => {
+    renderReveal(null);
+
+    expect(screen.getByText(/^1 \/ \d+ points/)).not.toHaveTextContent('🃏');
   });
 });

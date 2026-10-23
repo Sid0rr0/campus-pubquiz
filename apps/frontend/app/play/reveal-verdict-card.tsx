@@ -6,6 +6,7 @@ import type { PlayersStatePayload } from '@campus-pubquiz/types';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import type { MyAnswerGrade } from '@/app/lib/team-link';
 import { vibrate } from '@/app/lib/vibrate';
+import { jokerExtraPoints } from '@/app/play/joker-round';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import {
   describeVerdictCard,
@@ -24,7 +25,12 @@ interface RevealVerdictCardProps {
   myAnswers: Record<number, string>;
   myAnswerGrades: Record<number, MyAnswerGrade>;
   isConnected: boolean;
+  /** The round number of the team's joker round, or null while it has none. */
+  jokerRoundNumber: number | null;
 }
+
+/** The verdict plus the extra points the joker adds to it (null outside the joker round). */
+type RevealedVerdict = VerdictCardContent & { jokerExtra: number | null };
 
 /**
  * How far the quiz has revealed, as a number that only grows going forward:
@@ -49,7 +55,8 @@ function describeLandedQuestion({
   view,
   myAnswers,
   myAnswerGrades,
-}: RevealVerdictCardProps): VerdictCardContent | null {
+  jokerRoundNumber,
+}: RevealVerdictCardProps): RevealedVerdict | null {
   const { progress, revealQuestions } = view;
   const landed = revealQuestions[progress.revealIndex];
   if (
@@ -64,7 +71,14 @@ function describeLandedQuestion({
     myAnswers,
     myAnswerGrades,
   );
-  return describeVerdictCard(entry);
+  return {
+    ...describeVerdictCard(entry),
+    jokerExtra: jokerExtraPoints(
+      entry.pointsAwarded,
+      entry.roundNumber,
+      jokerRoundNumber,
+    ),
+  };
 }
 
 /**
@@ -75,7 +89,7 @@ function describeLandedQuestion({
  */
 export function RevealVerdictCard(props: RevealVerdictCardProps) {
   const [card, setCard] = useState<{
-    content: VerdictCardContent;
+    content: RevealedVerdict;
     id: number;
   } | null>(null);
 
@@ -105,6 +119,11 @@ export function RevealVerdictCard(props: RevealVerdictCardProps) {
           className={`pointer-events-none fixed inset-x-5 top-16 z-30 mx-auto max-w-sm rounded-2xl border-4 bg-white px-6 py-4 text-center font-display text-3xl shadow-lg ${VERDICT_TONE_BORDER_CLASS[card.content.tone]} ${VERDICT_TONE_TEXT_CLASS[card.content.tone]}`}
         >
           {card.content.text}
+          {card.content.jokerExtra !== null && (
+            <div className="mt-1 text-2xl">
+              {`🃏 Joker +${card.content.jokerExtra}`}
+            </div>
+          )}
         </motion.div>
       )}
     </MotionConfig>

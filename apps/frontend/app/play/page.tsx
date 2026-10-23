@@ -20,7 +20,7 @@ import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
 import { JokerMoment } from '@/app/play/joker-moment';
-import { isJokerRoundPlayed } from '@/app/play/joker-round';
+import { isJokerRoundPlayed, jokerExtraPoints } from '@/app/play/joker-round';
 import { ReconnectingBar } from '@/app/play/reconnecting-bar';
 import {
   SavedConfirmation,
@@ -216,6 +216,13 @@ function PlayPageContent() {
     selectedQuestion !== null &&
     blockQuestions.find((question) => question.id === selectedQuestion.id)
       ?.roundNumber === jokerRound.roundNumber;
+  const selectedQuestionJokerExtra = selectedEntry
+    ? jokerExtraPoints(
+        selectedEntry.pointsAwarded,
+        selectedEntry.roundNumber,
+        jokerRound?.roundNumber ?? null,
+      )
+    : null;
   const hasMobileActionBar =
     hasBonusPanel || openedQuestions.length > 0 || jokerRound !== undefined;
 
@@ -354,6 +361,7 @@ function PlayPageContent() {
               myAnswers={myAnswers}
               myAnswerPoints={selectedQuestionPoints}
               myAnswerVerdict={selectedQuestionVerdict}
+              myAnswerJokerExtra={selectedQuestionJokerExtra}
               onSelectQuestion={selectQuestion}
               onSubmitAnswer={submitAndConfirm}
               navigation={navigation}
@@ -414,6 +422,7 @@ function PlayPageContent() {
         myAnswers={myAnswers}
         myAnswerGrades={myAnswerGrades}
         isConnected={connectionError === null}
+        jokerRoundNumber={jokerRound?.roundNumber ?? null}
       />
       <SavedConfirmation isVisible={isSaved} />
       <SettingsModal
