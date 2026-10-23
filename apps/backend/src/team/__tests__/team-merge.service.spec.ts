@@ -417,15 +417,17 @@ describe('TeamMergeService (Postgres integration)', () => {
   });
 
   it('repoints every column that references the teams table', async () => {
-    const rows = (await em.getConnection().execute(
-      `select cl.relname as table_name, att.attname as column_name
+    const rows: { table_name: string; column_name: string }[] = await em
+      .getConnection()
+      .execute(
+        `select cl.relname as table_name, att.attname as column_name
        from pg_constraint con
        join pg_class cl on cl.oid = con.conrelid
        join pg_class ref on ref.oid = con.confrelid
        join lateral unnest(con.conkey) as k(attnum) on true
        join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
        where con.contype = 'f' and ref.relname = 'teams'`,
-    )) as { table_name: string; column_name: string }[];
+      );
 
     expect(rows.length).toBeGreaterThan(0);
     const listed = TEAM_COLUMNS.map(([table, column]) => `${table}.${column}`);
