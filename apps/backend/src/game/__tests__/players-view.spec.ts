@@ -35,7 +35,11 @@ describe('Screen projection — the players view', () => {
       });
       const steps: [GameAction, boolean, PhoneScreen][] = [
         ['START_QUIZ', false, { kind: 'rules' }],
-        ['ADVANCE', false, { kind: 'round_title', title: 'General Knowledge' }], // fresh round intro
+        [
+          'ADVANCE',
+          false,
+          { kind: 'round_title', title: 'General Knowledge', roundNumber: 1 },
+        ], // fresh round intro
         ['ADVANCE', true, block('answering')], // r1q1
         ['ADVANCE', true, block('answering')], // r1q2
         ['ADVANCE', true, block('answering')], // round intro over questions already open
@@ -43,10 +47,18 @@ describe('Screen projection — the players view', () => {
         ['ADVANCE', true, block('answering')], // r2q2
         ['ADVANCE', true, block('answering')], // locking
         ['ADVANCE', false, block('locked')], // break_intro
-        ['ADVANCE', false, { kind: 'round_title', title: 'General Knowledge' }], // reveal_intro
+        [
+          'ADVANCE',
+          false,
+          { kind: 'round_title', title: 'General Knowledge', roundNumber: 1 },
+        ], // reveal_intro
         ['ADVANCE', false, block('revealing', round1[0])],
         ['ADVANCE', false, block('revealing', round1[1])],
-        ['ADVANCE', false, { kind: 'round_title', title: 'Landmarks & Flags' }], // reveal_intro for round 2
+        [
+          'ADVANCE',
+          false,
+          { kind: 'round_title', title: 'Landmarks & Flags', roundNumber: 2 },
+        ], // reveal_intro for round 2
         ['ADVANCE', false, block('revealing', round2[0])],
       ];
 

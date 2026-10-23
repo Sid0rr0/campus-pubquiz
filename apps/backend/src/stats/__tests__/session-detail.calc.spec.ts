@@ -37,7 +37,7 @@ function standingsFor(
       .reduce((sum, b) => sum + b.points, 0);
     const answerPoints = answers
       .filter((a) => a.teamId === team.teamId)
-      .reduce((sum, a) => sum + a.pointsAwarded, 0);
+      .reduce((sum, a) => sum + a.pointsAwarded * (a.isJoker ? 2 : 1), 0);
     return {
       hasLeft: team.hasLeft === true,
       entry: {
@@ -168,6 +168,7 @@ describe('computeSessionDetail', () => {
         teamId: 1,
         questionId: 10,
         pointsAwarded: 2,
+        isJoker: false,
         verdict: 'correct',
         answer: 'Answer 1',
       },
@@ -175,10 +176,77 @@ describe('computeSessionDetail', () => {
         teamId: 2,
         questionId: 10,
         pointsAwarded: 0,
+        isJoker: false,
         verdict: null,
         answer: 'Answer 2',
       },
     ]);
+  });
+
+  describe('with a joker round', () => {
+    const answerRow = (
+      teamId: number,
+      questionId: number,
+      isJoker: boolean,
+    ) => ({
+      questionId,
+      teamId,
+      teamName: `Team ${teamId}`,
+      pointsAwarded: 2,
+      gradedAt: '2026-01-01T00:00:01.000Z',
+      verdict: 'correct' as const,
+      responseMs: null,
+      answer: 'a',
+      isJoker,
+    });
+    const question = (questionId: number, roundId: number) => ({
+      questionId,
+      roundId,
+      orderIndex: 0,
+      prompt: 'Q',
+      answer: 'A',
+      type: 'free_text' as const,
+      points: 2,
+    });
+    const jokerNight = () =>
+      computeSessionDetail(
+        buildInput({
+          teams: [{ teamId: 1, teamName: 'Team 1' }],
+          rounds: [
+            { roundId: 100, title: 'R1', category: null, orderIndex: 0 },
+            { roundId: 200, title: 'R2', category: null, orderIndex: 1 },
+          ],
+          questions: [question(10, 100), question(20, 200)],
+          answers: [answerRow(1, 10, true), answerRow(1, 20, false)],
+        }),
+      );
+
+    it('shows a joker round cell doubled and flagged, so the row adds up to the total', () => {
+      const result = jokerNight();
+
+      expect(
+        result.scoresheet.map((c) => [
+          c.questionId,
+          c.pointsAwarded,
+          c.isJoker,
+        ]),
+      ).toEqual([
+        [10, 4, true],
+        [20, 2, false],
+      ]);
+      expect(
+        result.scoresheet.reduce((sum, c) => sum + c.pointsAwarded, 0),
+      ).toBe(result.standings[0].total);
+    });
+
+    it('leaves correct rate, max points and the round and difficulty percentages raw', () => {
+      const result = jokerNight();
+
+      expect(result.maxPoints).toBe(4);
+      expect(result.questions.map((q) => q.correctRate)).toEqual([1, 1]);
+      expect(result.rounds.map((r) => r.pointsPercent)).toEqual([100, 100]);
+      expect(result.difficulty.averagePercent).toBe(100);
+    });
   });
 
   it('uses the participant count, departed teams included, as every denominator', () => {

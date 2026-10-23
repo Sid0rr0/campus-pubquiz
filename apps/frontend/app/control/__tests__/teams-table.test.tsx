@@ -183,6 +183,34 @@ describe('TeamsTable', () => {
     ]);
   });
 
+  it("marks a team's joker round cell, and only that cell", () => {
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={[
+          {
+            ...LEADERBOARD[0],
+            roundPoints: [
+              { roundTitle: 'Animals', points: 8, isJoker: true },
+              { roundTitle: 'History', points: 2, isJoker: false },
+            ],
+          },
+        ]}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    const cells = within(
+      screen.getByText('The Quizzards').closest('tr')!,
+    ).getAllByRole('cell');
+    // Position, Team, round 1, round 2, ...
+    expect(within(cells[2]).getByLabelText('Joker round')).toBeInTheDocument();
+    expect(cells[2]).toHaveTextContent('8');
+    expect(within(cells[3]).queryByLabelText('Joker round')).toBeNull();
+  });
+
   it('shows 0 for every team in a round nobody has scored in', () => {
     renderWithQuery(
       <TeamsTable

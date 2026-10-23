@@ -23,6 +23,7 @@ import {
   isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
+import type { ClosedJokerPick, JokerChanges } from '@/game/state/joker-changes';
 import type { LiveResultsRead } from '@/game/state/live-results-read';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
@@ -57,6 +58,10 @@ export class MoveCommitter {
     private readonly readLeagueTop: (
       gameSessionId: number,
     ) => Promise<LeagueTop | null>,
+    private readonly jokers: Pick<
+      JokerChanges,
+      'closePick' | 'reopenPick' | 'loadAll'
+    >,
   ) {}
 
   /**
@@ -133,7 +138,9 @@ export class MoveCommitter {
     // The league top is not a live result (see LiveResultsRead): placement
     // asks the league change module for it by name.
     const leagueTop = await this.readLeagueTop(placed.seededGame.gameSessionId);
-    return { ...withResults, leagueTop };
+    // Jokers are stored, not derived: the placed session starts from them.
+    const jokers = await this.jokers.loadAll(placed.seededGame.gameSessionId);
+    return { ...withResults, leagueTop, jokers };
   }
 
   private async commitProgressMove(
@@ -143,8 +150,20 @@ export class MoveCommitter {
   ): Promise<CommittedMove> {
     const { progress } = step;
 
+    // Leaving the joker pick by any route closes it: teams without a joker
+    // are given a drawn one before the quiz moves on. Entering it (again)
+    // reopens it: drawn jokers are cleared so those teams can really choose.
+    const wasPicking = session.progress.status === 'joker_pick';
+    const isPicking = progress.status === 'joker_pick';
+    let closedPick: ClosedJokerPick | null = null;
+    if (wasPicking && !isPicking) {
+      closedPick = await this.jokers.closePick(session);
+    } else if (!wasPicking && isPicking) {
+      closedPick = await this.jokers.reopenPick(session);
+    }
+
     const { session: refreshed, staleAnswerListIds } =
-      await this.grading.gradeForMove(session, progress);
+      await this.grading.gradeForMove(closedPick?.session ?? session, progress);
     // settleMove carries a raw ADVANCE under the leaderboard out as the action
     // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
     // reveal count, the kahoot timer and everything else downstream treat it
@@ -168,6 +187,7 @@ export class MoveCommitter {
               committed.teams.map((team) => team.teamId),
             )
           : [],
+        jokerSyncs: closedPick?.jokerSyncs ?? [],
       },
       touchedScores: true,
     };

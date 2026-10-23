@@ -10,6 +10,7 @@ import { Team } from '@/db/entities/team.entity';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { cellPoints } from '@/standings/cell-points';
 import { StandingsService } from '@/standings/standings.service';
 import {
   summarizeTeamHistory,
@@ -101,7 +102,7 @@ export class TeamHistoryService {
         points: question.points,
         teamAnswer: answer?.answer ?? null,
         verdict: answer?.verdict ?? null,
-        pointsAwarded: answer?.pointsAwarded ?? 0,
+        pointsAwarded: answer ? cellPoints(answer) : 0,
         correctAnswer: question.answer,
       };
     });

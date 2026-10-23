@@ -16,7 +16,11 @@ export type RulesSettings = Pick<
   | 'enabledBonusCategories'
   | 'maxPlayersPerTeam'
   | 'extraPlayerPenaltyPoints'
+  | 'jokersEnabled'
 >;
+
+const JOKER_RULE =
+  "Joker: pick one round to score double. You'll choose after the round overview.";
 
 /** Standalone, with no live session to read from: default house rules and team size, and no bonus bullets (those are session config). */
 const STANDALONE_RULES_SETTINGS: RulesSettings = {
@@ -24,12 +28,13 @@ const STANDALONE_RULES_SETTINGS: RulesSettings = {
   enabledBonusCategories: [],
   maxPlayersPerTeam: DEFAULT_SESSION_SETTINGS.maxPlayersPerTeam,
   extraPlayerPenaltyPoints: DEFAULT_SESSION_SETTINGS.extraPlayerPenaltyPoints,
+  jokersEnabled: false,
 };
 
 interface RulesContentProps {
   /** Omitted when shown standalone with no live game session to read the structure from. */
   quizStructure?: QuizStructureSummary;
-  /** The session's settings: `rules` is one bullet per entry, `enabledBonusCategories` appends a bullet per category with a fixed explanation (shot, selfie; "custom" has none), and `maxPlayersPerTeam` with `extraPlayerPenaltyPoints` make a generated bullet shown first. Omitted when there is no live session. */
+  /** The session's settings: `rules` is one bullet per entry, `enabledBonusCategories` appends a bullet per category with a fixed explanation (shot, selfie; "custom" has none), and `maxPlayersPerTeam` with `extraPlayerPenaltyPoints` make a generated bullet shown first, and `jokersEnabled` appends the joker line. Omitted when there is no live session. */
   settings?: RulesSettings;
 }
 
@@ -81,6 +86,7 @@ export function RulesContent({
     enabledBonusCategories,
     maxPlayersPerTeam,
     extraPlayerPenaltyPoints,
+    jokersEnabled,
   } = settings;
   const bonusRules = BONUS_CATEGORIES.filter(
     (category) =>
@@ -91,7 +97,12 @@ export function RulesContent({
       `${BONUS_CATEGORY_LABELS[category]} bonus: ${BONUS_CATEGORY_EXPLANATIONS[category]}`,
   );
   const teamSizeRule = `Max ${maxPlayersPerTeam} players per team, every additional player costs the team −${extraPlayerPenaltyPoints} points.`;
-  const displayedRules = [teamSizeRule, ...rules, ...bonusRules];
+  const displayedRules = [
+    teamSizeRule,
+    ...rules,
+    ...bonusRules,
+    ...(jokersEnabled ? [JOKER_RULE] : []),
+  ];
 
   return (
     <div className="flex flex-col gap-6 text-center">

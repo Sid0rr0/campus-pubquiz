@@ -75,7 +75,9 @@ export class QuizController {
       );
     }
     try {
-      return await this.quizPreview.preview(id, parsed.data.mode);
+      return await this.quizPreview.preview(id, parsed.data.mode, {
+        withJokers: parsed.data.jokers,
+      });
     } catch (error) {
       throw toQuizHttpError(error);
     }

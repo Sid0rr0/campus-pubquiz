@@ -218,6 +218,34 @@ describe('GET /quizzes/:id/preview (Postgres integration)', () => {
     ]);
   });
 
+  it('puts the joker pick after the overview when asked for jokers=true in the night order', async () => {
+    const quizId = await saveQuiz();
+
+    const response = await get(
+      `/quizzes/${quizId}/preview?mode=night&jokers=true`,
+      'admin-token',
+    );
+
+    expect(response.status).toBe(200);
+    const body = response.body as QuizPreviewPayload;
+    expect(body.steps.slice(0, 3).map(({ screen }) => screen.kind)).toEqual([
+      'round_overview',
+      'joker_pick',
+      'round_title',
+    ]);
+  });
+
+  it('answers 400 for a jokers value that is not true or false', async () => {
+    const quizId = await saveQuiz();
+
+    const response = await get(
+      `/quizzes/${quizId}/preview?mode=night&jokers=maybe`,
+      'admin-token',
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it('answers 400 for a mode that is not one of the preview modes', async () => {
     const quizId = await saveQuiz();
 

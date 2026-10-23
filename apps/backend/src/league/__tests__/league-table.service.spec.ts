@@ -8,6 +8,7 @@ import { LeagueSession } from '@/db/entities/league-session.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
+import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
 import { Team } from '@/db/entities/team.entity';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
@@ -146,6 +147,31 @@ describe('LeagueTableService (Postgres integration)', () => {
         averagePlacing: 1.5,
         position: 1,
       },
+    ]);
+  });
+
+  it('lets a joker decide who won the night and so the league points', async () => {
+    const league = await newLeague();
+    const [alpha, beta] = [await newTeam('Alpha'), await newTeam('Beta')];
+    const night = await newSession();
+    await join(league, night);
+    await play(night, alpha, 3);
+    await play(night, beta, 5);
+    em.create(SessionTeamJoker, {
+      gameSession: night,
+      team: alpha,
+      round: question.round,
+      source: 'chosen',
+    });
+    await em.flush();
+
+    const table = await service.table(league.id);
+
+    expect(
+      table?.rows.map((r) => [r.teamName, r.nightsWon, r.position]),
+    ).toEqual([
+      ['Alpha', 1, 1],
+      ['Beta', 0, 2],
     ]);
   });
 

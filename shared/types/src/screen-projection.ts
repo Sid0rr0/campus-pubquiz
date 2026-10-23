@@ -38,6 +38,7 @@ import {
   buildScreenOperatorFields,
   buildSnapshot,
   isBlockAnswerable,
+  isJokerPickOpen,
 } from './session-snapshot';
 import { SOCKET_ROOMS, type SocketRoomName } from './socket-events';
 
@@ -183,6 +184,7 @@ export function projectScreen(
           ...snapshot,
           isAnswerable,
           isShowdownResolved: session.activeShowdownRound?.resolved ?? false,
+          isJokerPickOpen: isJokerPickOpen(session),
         }),
         isAnswerable,
         feedback: getFeedbackField(session),

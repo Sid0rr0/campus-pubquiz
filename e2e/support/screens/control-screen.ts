@@ -3,7 +3,7 @@ import { recordMove } from '../coverage';
 
 /** The Advance slot's label depends on the status (and on the leaderboard); this matches every one. */
 const ADVANCE_SLOT_LABEL =
-  /^(Advance|Begin Quiz|Continue|Start Round|Show Next Team|Hide Leaderboard|Hide Join Overlay)$/;
+  /^(Advance|Begin Quiz|Continue|Close pick|Start Round|Show Next Team|Hide Leaderboard|Hide Join Overlay)$/;
 
 /** A team's recovery code: three upper-case words, such as QUICK-JADE-FOX. */
 const TEAM_CODE_PATTERN = /^[A-Z]+(-[A-Z]+){2}$/;

@@ -41,6 +41,9 @@ function getAdvanceSlotLabel(
   if (progressStatus === 'round_overview') {
     return 'Continue';
   }
+  if (progressStatus === 'joker_pick') {
+    return 'Close pick';
+  }
   if (progressStatus === 'round_intro') {
     return 'Start Round';
   }

@@ -573,6 +573,231 @@ describe('describeFunFacts', () => {
     });
   });
 
+  describe('joker facts', () => {
+    function withJokers(
+      session: SessionState,
+      jokers: SessionState['jokers'],
+      isOn = true,
+    ): SessionState {
+      return {
+        ...session,
+        seededGame: {
+          ...session.seededGame,
+          settings: {
+            ...session.seededGame.settings,
+            showRoundOverview: isOn,
+            jokersEnabled: isOn,
+          },
+        },
+        jokers,
+      };
+    }
+
+    const jokers: SessionState['jokers'] = {
+      1: { roundId: 1, source: 'chosen' },
+      2: { roundId: 1, source: 'chosen' },
+      3: { roundId: 2, source: 'drawn' },
+      4: { roundId: 1, source: 'chosen' },
+    };
+
+    it('names the favourite round, a snubbed round and the drawn count without any team, from the first break', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(0, 1), {}),
+        jokers,
+      );
+
+      expect(describeFunFacts(session)).toEqual([
+        {
+          kind: 'joker_favourite_round',
+          roundNumber: 1,
+          roundTitle: 'One',
+          teamCount: 3,
+        },
+        { kind: 'joker_snubbed_round', roundNumber: 3, roundTitle: 'Three' },
+        { kind: 'joker_drawn_count', teamCount: 1 },
+      ]);
+    });
+
+    it('breaks a favourite tie towards the earlier round', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(0, 1), {}),
+        {
+          1: { roundId: 2, source: 'chosen' },
+          2: { roundId: 1, source: 'chosen' },
+        },
+      );
+
+      expect(describeFunFacts(session)[0]).toMatchObject({
+        kind: 'joker_favourite_round',
+        roundNumber: 1,
+      });
+    });
+
+    it('skips the snubbed round when every round is someone’s joker and the drawn count at 0', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(0, 1), {}),
+        {
+          1: { roundId: 1, source: 'chosen' },
+          2: { roundId: 2, source: 'chosen' },
+          3: { roundId: 3, source: 'set_by_quiz_master' },
+        },
+      );
+
+      expect(kinds(session)).toEqual(['joker_favourite_round']);
+    });
+
+    it('says nothing without any joker', () => {
+      expect(
+        kinds(withJokers(sessionOf(THREE_ROUNDS, breakProgress(0, 1), {}), {})),
+      ).toEqual([]);
+    });
+
+    it('says nothing when Jokers is off, even if jokers are stored', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(0, 1), {}),
+        jokers,
+        false,
+      );
+
+      expect(kinds(session)).toEqual([]);
+    });
+
+    it('ignores a joker of a team that has left the roster', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(0, 1), {}),
+        {
+          99: { roundId: 3, source: 'drawn' },
+          1: { roundId: 1, source: 'chosen' },
+        },
+      );
+
+      expect(kinds(session)).toEqual([
+        'joker_favourite_round',
+        'joker_snubbed_round',
+      ]);
+      expect(describeFunFacts(session)[1]).toMatchObject({ roundNumber: 2 });
+    });
+
+    it('names the best joker by its extra points, using revealed rounds only', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+          answers: [
+            answer(1, 0, 'correct'),
+            answer(2, 0, 'correct'),
+            answer(1, 1, 'correct'),
+            // Round 2 is the block in play: team 3's joker there stays secret.
+            answer(3, 2, 'correct'),
+            answer(4, 2, 'correct'),
+          ],
+        }),
+        jokers,
+      );
+
+      expect(
+        describeFunFacts(session).find((fact) => fact.kind === 'best_joker'),
+      ).toEqual({
+        kind: 'best_joker',
+        teamName: 'Alpha',
+        roundNumber: 1,
+        roundTitle: 'One',
+        extraPoints: 2000,
+      });
+    });
+
+    it('breaks a best-joker tie in leaderboard name order and skips it with no extra points', () => {
+      const tied = withJokers(
+        sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+          answers: [answer(1, 1, 'correct'), answer(1, 0, 'correct')],
+        }),
+        jokers,
+      );
+      expect(
+        describeFunFacts(tied).find((fact) => fact.kind === 'best_joker'),
+      ).toMatchObject({ teamName: 'Alpha', extraPoints: 1000 });
+
+      const flopped = withJokers(
+        sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+          answers: [answer(1, 0, 'incorrect')],
+        }),
+        jokers,
+      );
+      expect(kinds(flopped)).not.toContain('best_joker');
+    });
+
+    it('names a team whose revealed joker round was its lowest-scoring round', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+          answers: [
+            // Alpha: joker round 1 scored well. Bravo: joker round 1 scored 0 against 1000 in round 2.
+            answer(1, 0, 'correct'),
+            answer(1, 1, 'incorrect'),
+            answer(3, 1, 'correct'),
+          ],
+        }),
+        jokers,
+      );
+
+      expect(
+        describeFunFacts(session).find(
+          (fact) => fact.kind === 'joker_backfired',
+        ),
+      ).toEqual({
+        kind: 'joker_backfired',
+        teamName: 'Bravo',
+        roundNumber: 1,
+        roundTitle: 'One',
+      });
+    });
+
+    it('does not call a joker a backfire before a second round is revealed or while it is not the lowest', () => {
+      const firstRevealed = withJokers(
+        sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+          answers: [answer(1, 1, 'incorrect')],
+        }),
+        jokers,
+      );
+      expect(kinds(firstRevealed)).not.toContain('joker_backfired');
+
+      const fine = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+          answers: [answer(1, 0, 'correct'), answer(3, 0, 'correct')],
+        }),
+        { 1: { roundId: 1, source: 'chosen' } },
+      );
+      expect(kinds(fine)).not.toContain('joker_backfired');
+    });
+
+    it('puts the joker facts after the existing facts and before the bonus awards', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+          answers: [
+            answer(1, 0, 'correct'),
+            answer(1, 1, 'incorrect'),
+            answer(2, 0, 'incorrect'),
+            answer(2, 1, 'incorrect'),
+            answer(3, 1, 'correct'),
+            answer(4, 1, 'correct'),
+          ],
+          bonusAwards: [{ category: 'shot', points: 100 }],
+        }),
+        jokers,
+      );
+
+      expect(kinds(session)).toEqual([
+        'toughest_question',
+        'room_split',
+        'nobody_got_it',
+        'clean_sweep',
+        'joker_favourite_round',
+        'joker_snubbed_round',
+        'joker_drawn_count',
+        'best_joker',
+        'joker_backfired',
+        'bonus_awards_so_far',
+      ]);
+    });
+  });
+
   describe('the block in play', () => {
     it('never contributes: a question nobody got right in it does not appear', () => {
       const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {

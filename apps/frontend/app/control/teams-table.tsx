@@ -24,6 +24,7 @@ import { BonusAwardForm } from '@/app/control/bonus-award-form';
 import { BonusAwardsListModal } from '@/app/control/bonus-awards-list-modal';
 import { TeamCodeModal } from '@/app/control/team-code-modal';
 import { Button } from '@/app/components/button';
+import { JokerMark } from '@/app/components/joker-mark';
 import { SortableTable } from '@/app/components/sortable-table';
 import { formatBonusAwardConfirmation } from '@/app/lib/bonus-categories';
 import { formatRankLabel } from '@/app/lib/rank-label';
@@ -91,6 +92,14 @@ export function TeamsTable({
             id: `round-${index}`,
             header: `${index + 1}`,
             sortFn: sortFn_basic,
+            cell: (context) => (
+              <span className="inline-flex items-center gap-1">
+                {context.getValue()}
+                {context.row.original.roundPoints[index]?.isJoker && (
+                  <JokerMark />
+                )}
+              </span>
+            ),
           }),
         ),
         helper.accessor('bonusPoints', {

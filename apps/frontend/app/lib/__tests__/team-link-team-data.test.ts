@@ -35,6 +35,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   roundRatings: [{ roundId: 11, stars: 4 }],
   feedback: { comment: 'Loved it', topics: ['Geography'] },
   playerCount: null,
+  joker: null,
 };
 
 const STORED = {
@@ -180,6 +181,68 @@ describe('team link: the team data', () => {
     });
     expect(ofType(penalty.commands, 'toast')[0]).toMatchObject({
       tone: 'neutral',
+    });
+  });
+
+  describe('the joker', () => {
+    it('toasts a joker the quiz master set, and one drawn for the team', () => {
+      const bySetting = run(linkedPhone(), {
+        type: 'jokerSynced',
+        joker: { roundId: 12, source: 'set_by_quiz_master' },
+      });
+      expect(bySetting.state.myJoker).toEqual({
+        roundId: 12,
+        source: 'set_by_quiz_master',
+      });
+      expect(ofType(bySetting.commands, 'toast')).toEqual([
+        expect.objectContaining({
+          message: 'Your joker was changed by the quiz master',
+        }),
+      ]);
+
+      const byDraw = run(linkedPhone(), {
+        type: 'jokerSynced',
+        joker: { roundId: 12, source: 'drawn' },
+      });
+      expect(ofType(byDraw.commands, 'toast')).toEqual([
+        expect.objectContaining({ message: 'A joker was drawn for your team' }),
+      ]);
+    });
+
+    it('does not toast the team’s own pick', () => {
+      const { commands } = run(linkedPhone(), {
+        type: 'jokerSynced',
+        joker: { roundId: 12, source: 'chosen' },
+      });
+      expect(ofType(commands, 'toast')).toEqual([]);
+    });
+
+    it('does not toast a joker it already holds, as when the pick closes and re-sends every joker', () => {
+      const held = run(linkedPhone(), {
+        type: 'jokerSynced',
+        joker: { roundId: 12, source: 'set_by_quiz_master' },
+      }).state;
+
+      const { commands } = run(held, {
+        type: 'jokerSynced',
+        joker: { roundId: 12, source: 'set_by_quiz_master' },
+      });
+      expect(ofType(commands, 'toast')).toEqual([]);
+    });
+
+    it('does not toast a joker restored by a join (a reconnect only updates the chip)', () => {
+      const { state, commands } = run(
+        initialTeamLink({ url: {}, stored: STORED }),
+        accepted({
+          ...ACCEPTED,
+          joker: { roundId: 12, source: 'set_by_quiz_master' },
+        }),
+      );
+      expect(state.myJoker).toEqual({
+        roundId: 12,
+        source: 'set_by_quiz_master',
+      });
+      expect(ofType(commands, 'toast')).toEqual([]);
     });
   });
 

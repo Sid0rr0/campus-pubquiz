@@ -10,10 +10,12 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import type {
-  ActiveSessionSummary,
-  CreateSessionPayload,
-  SessionSettings,
+import {
+  hasJokersWithoutOverview,
+  JOKERS_NEED_OVERVIEW_MESSAGE,
+  type ActiveSessionSummary,
+  type CreateSessionPayload,
+  type SessionSettings,
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
@@ -22,6 +24,7 @@ import {
   GameStateService,
   QuizHasEmptyRoundError,
   SessionCloseBlockedError,
+  SessionSettingsInvalidError,
   SessionSettingsUpdateBlockedError,
 } from '@/game/state/game-state.service';
 import { leagueIdsSchema } from '@/league/league.schema';
@@ -111,6 +114,10 @@ export class SessionsController {
     const settings = resolveSessionSettings(
       parseSettingsPartial(body.settings),
     );
+    // A patch naming only Jokers is checked against the default overview setting.
+    if (hasJokersWithoutOverview(settings)) {
+      throw new BadRequestException(JOKERS_NEED_OVERVIEW_MESSAGE);
+    }
     const name = parseName(body.name);
     const leagueIds = parseLeagueIds(body.leagueIds) ?? [];
     await mapLeagueErrors(() => this.leagues.assertAssignable(leagueIds));
@@ -142,6 +149,9 @@ export class SessionsController {
     } catch (error) {
       if (error instanceof SessionSettingsUpdateBlockedError) {
         throw new ConflictException(error.message);
+      }
+      if (error instanceof SessionSettingsInvalidError) {
+        throw new BadRequestException(error.message);
       }
       throw error;
     }

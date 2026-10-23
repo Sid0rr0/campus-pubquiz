@@ -42,6 +42,15 @@ export function broadcastAdminState(
   sendStateUpdate(server, joinCode, gameState, SOCKET_ROOMS.ADMIN);
 }
 
+/** A fresh view for the big screen alone, for a change only it shows. */
+export function broadcastDisplayState(
+  server: GameServer,
+  joinCode: string,
+  gameState: GameStateService,
+): void {
+  sendStateUpdate(server, joinCode, gameState, SOCKET_ROOMS.DISPLAY);
+}
+
 /** One room's own view, sent to that room — typed so no room is sent another's. */
 function sendStateUpdate<R extends SocketRoomName>(
   server: GameServer,

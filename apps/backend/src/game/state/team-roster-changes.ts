@@ -3,12 +3,18 @@ import {
   SEAT_TAKEN_REFUSAL_MARKER,
   type SessionState,
   SOCKET_EVENTS,
+  type TeamJoker,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
+import {
+  type JokerChanges,
+  jokerSyncsFor,
+  withJoker,
+} from '@/game/state/joker-changes';
 import {
   BROADCAST_STATE_OUTCOME,
   type SessionOutcome,
@@ -26,6 +32,8 @@ import { TeamService, type TeamIdentity } from '@/team/team.service';
 /** What a join's write yields: the resolved team, and the outcome to deliver once the reply is built. */
 export interface JoinOutcome {
   team: TeamIdentity;
+  /** The joker the team held when it joined, before any draw: the reply carries this, so a drawn joker reaches the phone as a change. */
+  heldJoker: TeamJoker | null;
   joined: SessionOutcome;
 }
 
@@ -43,6 +51,7 @@ export class TeamRosterChanges {
     private readonly bonusService: BonusService,
     private readonly feedbackService: FeedbackService,
     private readonly playerCountService: PlayerCountService,
+    private readonly jokerChanges: JokerChanges,
   ) {}
 
   /**
@@ -83,20 +92,40 @@ export class TeamRosterChanges {
       gameSessionId,
       team.id,
     );
-    return {
-      session: withTeams(
+    const heldJoker = await this.jokerChanges.loadForTeam(
+      gameSessionId,
+      team.id,
+    );
+    // A team joining after the pick closed is drawn a joker, which its phone
+    // hears as a change (a toast) right after the reply.
+    const drawnJoker = await this.jokerChanges.drawForLateJoiner(
+      session,
+      team.id,
+      heldJoker,
+    );
+    const joined = withTeams(
+      withJoker(
         withPlayerCount(
           withTeamConnected(session, team.id, socketId),
           team.id,
           playerCount,
         ),
-        await this.teamService.listForSession(gameSessionId),
+        team.id,
+        drawnJoker ?? heldJoker,
       ),
+      await this.teamService.listForSession(gameSessionId),
+    );
+    return {
+      session: joined,
       outcome: {
         team,
+        heldJoker,
         joined: {
           ...BROADCAST_STATE_OUTCOME,
           socketsToClose: takenOver ? [takenOver] : [],
+          jokerSyncs: drawnJoker
+            ? jokerSyncsFor(joined, [team.id], { [team.id]: drawnJoker })
+            : [],
         },
       },
       touchedScores: true,
@@ -107,6 +136,7 @@ export class TeamRosterChanges {
   async joinReply(
     gameSessionId: number,
     team: TeamIdentity,
+    joker: TeamJoker | null,
   ): Promise<SessionOutcome['replies'][number]> {
     return {
       event: SOCKET_EVENTS.JOIN_ACCEPTED,
@@ -132,6 +162,7 @@ export class TeamRosterChanges {
           gameSessionId,
           team.id,
         ),
+        joker,
       },
     };
   }

@@ -47,17 +47,25 @@ export function QuizPreviewPanel({ quizId }: QuizPreviewPanelProps) {
   const mode: QuizPreviewMode =
     QUIZ_PREVIEW_MODES.find((option) => option === modeParam) ??
     DEFAULT_QUIZ_PREVIEW_MODE;
-  // The default order and the first step (at === null) are left out of the URL.
-  const writeUrl = (nextMode: QuizPreviewMode, at: string | null) =>
+  // Jokers add a joker pick to the night order only; the other order ignores the switch.
+  const withJokers = mode === 'night' && searchParams.get('jokers') === 'true';
+  // The default order, jokers off and the first step (at === null) are left out of the URL.
+  const writeUrl = (
+    nextMode: QuizPreviewMode,
+    nextWithJokers: boolean,
+    at: string | null,
+  ) =>
     router.replace(
       quizPreviewHref(quizId, {
         mode: nextMode === DEFAULT_QUIZ_PREVIEW_MODE ? undefined : nextMode,
+        withJokers: nextMode === 'night' && nextWithJokers,
         at: at ?? undefined,
       }),
     );
   const query = useQuery({
-    queryKey: queryKeys.quizzes.preview(numericQuizId, mode),
-    queryFn: ({ signal }) => fetchQuizPreview(numericQuizId, mode, signal),
+    queryKey: queryKeys.quizzes.preview(numericQuizId, mode, withJokers),
+    queryFn: ({ signal }) =>
+      fetchQuizPreview(numericQuizId, mode, withJokers, signal),
     // A preview is a read of the saved quiz: always fetch it fresh on open.
     gcTime: 0,
     retry: false,
@@ -91,13 +99,15 @@ export function QuizPreviewPanel({ quizId }: QuizPreviewPanelProps) {
 
   return (
     <PreviewStepper
-      key={mode}
+      key={`${mode}-${withJokers}`}
       preview={query.data}
       mode={mode}
+      withJokers={withJokers}
       // Read when the stepper mounts (on load, or after the order changed); stepping only writes it.
       initialAt={searchParams.get('at')}
-      onPositionChange={(at) => writeUrl(mode, at)}
-      onModeChange={(next, at) => writeUrl(next, at)}
+      onPositionChange={(at) => writeUrl(mode, withJokers, at)}
+      onModeChange={(next, at) => writeUrl(next, withJokers, at)}
+      onJokersChange={(next, at) => writeUrl(mode, next, at)}
     />
   );
 }
@@ -234,7 +244,7 @@ function ModeToggle({
   onModeChange: (mode: QuizPreviewMode) => void;
 }) {
   return (
-    <div className="ml-auto flex gap-2">
+    <div className="flex gap-2">
       {QUIZ_PREVIEW_MODES.map((option) => (
         <Button
           key={option}
@@ -256,18 +266,23 @@ function ModeToggle({
 function PreviewStepper({
   preview,
   mode,
+  withJokers,
   initialAt,
   onPositionChange,
   onModeChange,
+  onJokersChange,
 }: {
   preview: QuizPreviewPayload;
   mode: QuizPreviewMode;
+  withJokers: boolean;
   /** The `?at=` the page opened with; an unknown one means the first step. */
   initialAt: string | null;
   /** Called with the new step's position, or null on the first step. */
   onPositionChange: (at: string | null) => void;
   /** Called with the chosen order and the current position, which the new order keeps if it has it. */
   onModeChange: (mode: QuizPreviewMode, at: string | null) => void;
+  /** Called with the chosen joker switch and the current position, which the new steps keep if they have it. */
+  onJokersChange: (withJokers: boolean, at: string | null) => void;
 }) {
   const { steps, quiz } = preview;
   const [index, setIndex] = useState(() => stepIndexAt(steps, initialAt));
@@ -339,10 +354,24 @@ function PreviewStepper({
               Block ends here
             </span>
           )}
-          <ModeToggle
-            mode={mode}
-            onModeChange={(next) => onModeChange(next, positionAt(index))}
-          />
+          <div className="ml-auto flex items-center gap-4">
+            {mode === 'night' && (
+              <label className="flex items-center gap-2 text-xs font-extrabold">
+                <input
+                  type="checkbox"
+                  checked={withJokers}
+                  onChange={(event) =>
+                    onJokersChange(event.target.checked, positionAt(index))
+                  }
+                />
+                With jokers
+              </label>
+            )}
+            <ModeToggle
+              mode={mode}
+              onModeChange={(next) => onModeChange(next, positionAt(index))}
+            />
+          </div>
           <Button
             type="button"
             size="md"

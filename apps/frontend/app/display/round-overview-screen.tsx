@@ -17,7 +17,7 @@ export function RoundOverviewScreen({
       <h1 className="font-display text-display-3xl">
         <span className="text-magenta">Rounds</span>
       </h1>
-      <ol className="mx-auto flex max-w-[calc(36rem*var(--display-text-scale,1))] flex-col gap-3 text-left">
+      <ol className="mx-auto flex max-w-[calc(56rem*var(--display-text-scale,1))] flex-col gap-3 text-left">
         {roundTitles.map((title, index) => {
           const category = roundCategories[index];
           const author = roundAuthors[index];
@@ -31,7 +31,11 @@ export function RoundOverviewScreen({
               </span>
               <span>
                 <span>{title}</span>
-                {category && <span className="ml-2 text-cyan">{category}</span>}
+                {category && (
+                  <span className="ml-2 text-display-lg text-cyan">
+                    {category}
+                  </span>
+                )}
                 {author && (
                   <span className="block text-display-base font-bold text-foreground/60">
                     by {author}

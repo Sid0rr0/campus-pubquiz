@@ -101,6 +101,82 @@ describe('AdminPage — status and teams', () => {
     expect(sidebar).toHaveTextContent('Beer Necessities');
   });
 
+  it('lists every team’s joker round and how it came to hold it in the sidebar', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'joker_pick' },
+        rounds: [
+          { title: 'Pop Music', questions: [{}] },
+          { title: 'World Capitals', questions: [{}] },
+        ],
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
+          { teamId: 3, teamName: 'Slow Pokes' },
+        ],
+        jokers: {
+          1: { roundId: 2, source: 'chosen' },
+          2: { roundId: 1, source: 'drawn' },
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    const sidebar = screen.getByRole('complementary');
+    const jokerOf = (teamName: string) =>
+      (within(sidebar).getByText(teamName).closest('li') as HTMLElement)
+        .textContent;
+    expect(jokerOf('The Quizzards')).toContain(
+      'Round 2 — World Capitals (picked)',
+    );
+    expect(jokerOf('Beer Necessities')).toContain(
+      'Round 1 — Pop Music (drawn)',
+    );
+    expect(jokerOf('Slow Pokes')).not.toContain('Round');
+  });
+
+  it('counts the teams that have picked during the joker pick, not drawn or set ones', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'joker_pick' },
+        rounds: [
+          { title: 'Pop Music', questions: [{}] },
+          { title: 'World Capitals', questions: [{}] },
+        ],
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
+          { teamId: 3, teamName: 'Slow Pokes' },
+        ],
+        jokers: {
+          1: { roundId: 2, source: 'chosen' },
+          2: { roundId: 1, source: 'set_by_quiz_master' },
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    expect(screen.getByRole('complementary')).toHaveTextContent('1/3 picked');
+  });
+
+  it('shows no pick count outside the joker pick', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'lobby' },
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    expect(screen.getByRole('complementary')).not.toHaveTextContent('picked');
+  });
+
   describe('teams table round columns', () => {
     const roundHeaders = () =>
       within(screen.getByRole('table'))

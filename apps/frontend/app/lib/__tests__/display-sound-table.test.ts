@@ -35,6 +35,16 @@ describe('soundFor', () => {
     expect(soundFor(screen('question'), screen('break_intro'))).toBe('timeUp');
   });
 
+  it('plays time-up, not the sting, when the joker pick closes onto the first round intro', () => {
+    expect(soundFor(screen('joker_pick'), screen('round_title'))).toBe(
+      'timeUp',
+    );
+  });
+
+  it('plays nothing on the move onto the joker pick (its countdown track is not a one-off sound)', () => {
+    expect(soundFor(screen('round_overview'), screen('joker_pick'))).toBeNull();
+  });
+
   it('plays the fanfare on a move onto the ended screen', () => {
     expect(soundFor(screen('reveal'), screen('ended'))).toBe('fanfare');
   });

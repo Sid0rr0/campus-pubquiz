@@ -27,6 +27,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   roundRatings: [],
   feedback: { comment: '', topics: [] },
   playerCount: null,
+  joker: null,
 };
 
 /** Feeds inputs in order and returns the final state with every command emitted along the way. */

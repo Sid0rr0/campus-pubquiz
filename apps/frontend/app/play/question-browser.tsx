@@ -44,6 +44,8 @@ interface QuestionBrowserProps {
   myAnswerPoints: number | null;
   /** How the selected question's answer was judged, null until graded; colours "Your answer" on the reveal. */
   myAnswerVerdict: Verdict | null;
+  /** The extra points the joker adds to this answer ("+1"), null outside the joker round. */
+  myAnswerJokerExtra?: number | null;
   onSelectQuestion: (questionId: BlockQuestionView['id']) => void;
   onSubmitAnswer: (
     questionId: BlockQuestionView['id'],
@@ -52,6 +54,8 @@ interface QuestionBrowserProps {
   ) => void;
   /** Set only when the team has turned off auto-advance — renders Prev/Next controls bounded to questions already opened. */
   navigation?: QuestionNavigation;
+  /** Whether the selected question belongs to the team's joker round — its answers count double, so the browser wears a joker border. */
+  isJokerQuestion?: boolean;
 }
 
 interface RevealBodyProps {
@@ -102,14 +106,21 @@ export function QuestionBrowser({
   myAnswers,
   myAnswerPoints,
   myAnswerVerdict,
+  myAnswerJokerExtra = null,
   onSelectQuestion,
   onSubmitAnswer,
   navigation,
+  isJokerQuestion = false,
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      data-testid={isJokerQuestion ? 'joker-border' : undefined}
+      className={`flex flex-col gap-6 ${
+        isJokerQuestion ? 'rounded-2xl border-4 border-yellow p-4' : ''
+      }`}
+    >
       {navigation && (
         <div className="flex items-center justify-between gap-2">
           <Button
@@ -168,6 +179,11 @@ export function QuestionBrowser({
           {myAnswerPoints !== null && (
             <p className="font-body text-3xl font-extrabold text-foreground/55">
               {myAnswerPoints} / {revealQuestion.points} points
+              {myAnswerJokerExtra !== null && (
+                <span className="ml-2 whitespace-nowrap text-foreground">
+                  {`🃏 +${myAnswerJokerExtra}`}
+                </span>
+              )}
             </p>
           )}
         </div>

@@ -18,6 +18,7 @@ import { BreakReviewScreen } from '@/app/display/break-review-screen';
 import { DisplayShowdown } from '@/app/display/display-showdown';
 import { EndedScreen } from '@/app/display/ended-screen';
 import { JoinOverlayScreen } from '@/app/display/join-overlay-screen';
+import { JokerPickScreen } from '@/app/display/joker-pick-screen';
 import { LobbyScreen } from '@/app/display/lobby-screen';
 import { QuestionDisplay } from '@/app/display/question-display';
 import {
@@ -113,6 +114,15 @@ export function DisplayScreenView({
           roundTitles={quiz.roundTitles}
           roundCategories={quiz.roundCategories}
           roundAuthors={quiz.roundAuthors}
+        />
+      );
+    case 'joker_pick':
+      return (
+        <JokerPickScreen
+          endsAt={screen.endsAt}
+          rounds={screen.rounds}
+          teams={live?.teams ?? []}
+          pickedTeamIds={screen.pickedTeamIds}
         />
       );
     case 'round_title':

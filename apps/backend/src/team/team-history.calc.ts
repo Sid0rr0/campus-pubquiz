@@ -80,9 +80,10 @@ export function summarizeTeamHistory(
 ): TeamStatsSummary {
   const placings = placingsOf(rows);
   // A session with no points to win has no share, so it stays out of the mean.
+  // A joker (or bonus) can take a total past the quiz maximum: a share caps at 100%.
   const shares = rows
     .filter((row) => row.maxPoints > 0)
-    .map((row) => (row.totalPoints / row.maxPoints) * 100);
+    .map((row) => Math.min((row.totalPoints / row.maxPoints) * 100, 100));
   const playerCounts = rows.flatMap((row) =>
     row.playerCount === null ? [] : [row.playerCount],
   );

@@ -1,0 +1,39 @@
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: "Status: joker_pick"
+    - button "Previous"
+    - button "Close pick"
+    - button "Leaderboard"
+    - button "Join overlay"
+    - button "End Quiz"
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem:
+        - text: /Connected Team A [a-z0-9]{6}/
+        - button "Kick"
+        - paragraph: 🃏 Round 1 — Warm-up (picked)
+        - combobox /Joker round for Team A [a-z0-9]{6}/:
+          - option "Round 1 — Warm-up" [selected]
+          - option "Round 2 — Music"
+          - option "Round 3 — Sport"
+      - listitem:
+        - text: /Connected Team B [a-z0-9]{6}/
+        - button "Kick"
+        - combobox /Joker round for Team B [a-z0-9]{6}/:
+          - option "No joker yet" [disabled] [selected]
+          - option "Round 1 — Warm-up"
+          - option "Round 2 — Music"
+          - option "Round 3 — Sport"
+  - heading "Grade Questions" [level=2]
+  - heading "Teams" [level=2]
+  - table:
+    - rowgroup:
+      - row /Position Team 1 2 3 Bonus Total Actions/:
+        - columnheader "Position"
+        - columnheader "Team"
+    - rowgroup:
+      - row /Team A [a-z0-9]{6}/:
+        - cell "0 Joker round":
+          - img "Joker round": 🃏
+      - row /Team B [a-z0-9]{6}/

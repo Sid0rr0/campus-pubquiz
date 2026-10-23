@@ -19,6 +19,8 @@ import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
+import { JokerMoment } from '@/app/play/joker-moment';
+import { isJokerRoundPlayed, jokerExtraPoints } from '@/app/play/joker-round';
 import { ReconnectingBar } from '@/app/play/reconnecting-bar';
 import {
   SavedConfirmation,
@@ -162,6 +164,8 @@ function PlayPageContent() {
     sendFeedback,
     myPlayerCount,
     setPlayerCount,
+    myJoker,
+    pickJoker,
     seenQuestions,
     submitShowdownGuess,
   } = game;
@@ -200,7 +204,27 @@ function PlayPageContent() {
   // last bit of inline content underneath it.
   const hasBonusPanel = settings.enabledBonusCategories.length > 0;
   const showBonusAvailability = !isShowingLastBreak(progress, quizStructure);
-  const hasMobileActionBar = hasBonusPanel || openedQuestions.length > 0;
+  const jokerRound = view.jokerRounds.find(
+    (round) => round.roundId === myJoker?.roundId,
+  );
+  const isJokerTitleCard =
+    phoneScreen.kind === 'round_title' &&
+    jokerRound !== undefined &&
+    phoneScreen.roundNumber === jokerRound.roundNumber;
+  const isJokerQuestion =
+    jokerRound !== undefined &&
+    selectedQuestion !== null &&
+    blockQuestions.find((question) => question.id === selectedQuestion.id)
+      ?.roundNumber === jokerRound.roundNumber;
+  const selectedQuestionJokerExtra = selectedEntry
+    ? jokerExtraPoints(
+        selectedEntry.pointsAwarded,
+        selectedEntry.roundNumber,
+        jokerRound?.roundNumber ?? null,
+      )
+    : null;
+  const hasMobileActionBar =
+    hasBonusPanel || openedQuestions.length > 0 || jokerRound !== undefined;
 
   return (
     <main
@@ -262,6 +286,11 @@ function PlayPageContent() {
           lockAt={view.questionLockAt}
           isConnected={connectionError === null}
         />
+        <JokerMoment
+          progress={progress}
+          isJokerIntro={isJokerTitleCard && progress.status === 'round_intro'}
+          isConnected={connectionError === null}
+        />
         {feedback?.kind === 'break_card' && (
           // A join payload replaces the saved ratings, so a reconnect starts
           // the card afresh: a tap still waiting on the old connection's ack
@@ -298,6 +327,12 @@ function PlayPageContent() {
               onSend={setPlayerCount}
             />
           }
+          jokerPick={view.jokerPick}
+          myJoker={myJoker}
+          onPickJoker={pickJoker}
+          isJokerBadgeShown={
+            isJokerTitleCard && progress.status !== 'round_intro'
+          }
           onSubmitShowdownGuess={submitShowdownGuess}
         />
         {feedback?.kind === 'final_form' && (
@@ -326,9 +361,11 @@ function PlayPageContent() {
               myAnswers={myAnswers}
               myAnswerPoints={selectedQuestionPoints}
               myAnswerVerdict={selectedQuestionVerdict}
+              myAnswerJokerExtra={selectedQuestionJokerExtra}
               onSelectQuestion={selectQuestion}
               onSubmitAnswer={submitAndConfirm}
               navigation={navigation}
+              isJokerQuestion={isJokerQuestion}
             />
           </div>
         )}
@@ -355,6 +392,19 @@ function PlayPageContent() {
         historyEntries={openedQuestions}
         jumpableHistoryIds={jumpableQuestionIds}
         onSelectHistoryQuestion={selectQuestion}
+        joker={
+          jokerRound
+            ? {
+                roundNumber: jokerRound.roundNumber,
+                roundTitle: jokerRound.title,
+                isPlayed: isJokerRoundPlayed(
+                  jokerRound.roundNumber,
+                  progress.status,
+                  view.pastRevealedQuestions,
+                ),
+              }
+            : null
+        }
         bonus={
           hasBonusPanel
             ? {
@@ -372,6 +422,7 @@ function PlayPageContent() {
         myAnswers={myAnswers}
         myAnswerGrades={myAnswerGrades}
         isConnected={connectionError === null}
+        jokerRoundNumber={jokerRound?.roundNumber ?? null}
       />
       <SavedConfirmation isVisible={isSaved} />
       <SettingsModal

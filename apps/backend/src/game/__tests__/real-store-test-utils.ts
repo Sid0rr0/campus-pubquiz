@@ -23,6 +23,8 @@ import { StandingsService } from '@/standings/standings.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { JokerService } from '@/joker/joker.service';
+import { JOKER_RANDOM } from '@/game/state/joker-changes';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
@@ -181,7 +183,7 @@ export interface JoinedTeam {
   teamCode: string;
 }
 
-/** One of a session's phase timers (the question lock, or the kahoot question deadline), under test control. */
+/** One of a session's phase timers (the question lock, the kahoot question deadline or the joker pick deadline), under test control. */
 export interface PhaseTimerControl {
   isArmed: () => boolean;
   /** Epoch-ms the timer is due, or null when none is armed. */
@@ -223,6 +225,7 @@ export interface RealStoreGateway extends PlayableQuiz {
   bonusService: BonusService;
   feedbackService: FeedbackService;
   playerCountService: PlayerCountService;
+  jokerService: JokerService;
   showdownService: ShowdownService;
   seedService: SeedService;
   quizService: QuizService;
@@ -295,14 +298,15 @@ export interface RealStoreGateway extends PlayableQuiz {
    */
   letOthersRun: () => Promise<void>;
   /**
-   * The auto-lock timer and the kahoot question timer of the seeded session
-   * (or another by `joinCode`). Nothing waits in real time: read `isArmed` /
-   * `dueAt`, or `fireNow` to expire one. Armed timers are cleared when the
-   * test ends.
+   * The auto-lock timer, the kahoot question timer and the joker pick timer
+   * of the seeded session (or another by `joinCode`). Nothing waits in real
+   * time: read `isArmed` / `dueAt`, or `fireNow` to expire one. Armed timers
+   * are cleared when the test ends.
    */
   timers: (joinCode?: string) => {
     lock: PhaseTimerControl;
     kahoot: PhaseTimerControl;
+    jokerPick: PhaseTimerControl;
   };
   /** Sends an admin action through the gateway (connecting an admin on first use) and returns the snapshot the admin room received for it. Throws whatever the gateway rejects with. */
   act: (action: GameAction) => Promise<AdminStatePayload>;
@@ -328,6 +332,8 @@ export interface CreateGatewayOptions {
   rounds?: QuizRoundSpec[];
   /** Overrides on top of DEFAULT_SESSION_SETTINGS (e.g. a 1s lockGraceSeconds so a timer fires within a test). */
   settings?: Partial<SessionSettings>;
+  /** The random source behind joker draws; defaults to `Math.random`. Survives `restart()`. */
+  jokerRandom?: () => number;
 }
 
 export interface RealStoreHarness {
@@ -423,6 +429,18 @@ function phaseTimerSchedulersModule(
   class PhaseTimerSchedulersModule {}
 
   return { module: PhaseTimerSchedulersModule };
+}
+
+/** Provides the random source behind joker draws, which production leaves unprovided (`Math.random` is used). */
+function jokerRandomModule(random: () => number): DynamicModule {
+  @Global()
+  @Module({
+    providers: [{ provide: JOKER_RANDOM, useValue: random }],
+    exports: [JOKER_RANDOM],
+  })
+  class JokerRandomModule {}
+
+  return { module: JokerRandomModule };
 }
 
 /** Provides the Session write's Write gate, which production leaves unprovided (the pass-through gate is used). */
@@ -553,7 +571,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     options: CreateGatewayOptions = {},
   ): Promise<RealStoreGateway> {
     const quiz = await seedPlayableQuiz(options);
-    const game = await assemble(quiz);
+    const game = await assemble(quiz, options.jokerRandom);
     for (const teamName of options.teamNames ?? []) {
       game.teams.push(await game.joinTeam(teamName));
     }
@@ -562,10 +580,14 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
 
   // Builds the module and gateway over the database as it stands — the
   // first boot of a freshly seeded quiz, or a restart over the same one.
-  async function assemble(quiz: PlayableQuiz): Promise<RealStoreGateway> {
+  async function assemble(
+    quiz: PlayableQuiz,
+    jokerRandom?: () => number,
+  ): Promise<RealStoreGateway> {
     const sessionService = createFakeSessionService();
     const lockScheduler = new ManualTimerScheduler();
     const kahootScheduler = new ManualTimerScheduler();
+    const jokerPickScheduler = new ManualTimerScheduler();
     const gate = new TestWriteGate();
     gates.push(gate);
     // Nest runs module init (the session store loads), then application
@@ -577,7 +599,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         phaseTimerSchedulersModule({
           lock: lockScheduler,
           kahoot: kahootScheduler,
+          jokerPick: jokerPickScheduler,
         }),
+        jokerRandomModule(jokerRandom ?? Math.random),
         writeGateModule(gate),
       ],
     })
@@ -600,6 +624,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       bonusService: moduleRef.get(BonusService),
       feedbackService: moduleRef.get(FeedbackService),
       playerCountService: moduleRef.get(PlayerCountService),
+      jokerService: moduleRef.get(JokerService),
       showdownService: moduleRef.get(ShowdownService),
       seedService: moduleRef.get(SeedService),
       progressRepository: moduleRef.get(GameProgressRepository),
@@ -802,6 +827,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       timers: (joinCode = quiz.joinCode) => ({
         lock: controlTimer(lockScheduler, joinCode),
         kahoot: controlTimer(kahootScheduler, joinCode),
+        jokerPick: controlTimer(jokerPickScheduler, joinCode),
       }),
       connectAdmin,
       connectPlayer,
@@ -813,7 +839,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       act,
       resync,
       snapshot,
-      restart: () => assemble(quiz),
+      restart: () => assemble(quiz, jokerRandom),
     };
   }
 

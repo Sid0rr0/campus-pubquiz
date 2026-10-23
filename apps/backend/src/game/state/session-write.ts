@@ -42,10 +42,12 @@ function haveDeadlinesMoved(
   before: SessionState,
   after: SessionState,
 ): boolean {
-  const { questionLockAt, kahootQuestionEndsAt } = deadlinesOf(before);
+  const { questionLockAt, kahootQuestionEndsAt, jokerPickEndsAt } =
+    deadlinesOf(before);
   return (
     questionLockAt !== after.questionLockAt ||
-    kahootQuestionEndsAt !== after.kahootQuestionEndsAt
+    kahootQuestionEndsAt !== after.kahootQuestionEndsAt ||
+    jokerPickEndsAt !== after.jokerPickEndsAt
   );
 }
 

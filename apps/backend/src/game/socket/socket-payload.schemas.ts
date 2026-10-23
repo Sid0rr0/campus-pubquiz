@@ -97,6 +97,15 @@ export const setPlayerCountPayloadSchema = z.object({
 export const setTeamPlayerCountPayloadSchema =
   setPlayerCountPayloadSchema.extend({ teamId: positiveInt });
 
+export const pickJokerPayloadSchema = z.object({
+  roundId: positiveInt,
+});
+
+export const setTeamJokerPayloadSchema = z.object({
+  teamId: positiveInt,
+  roundId: positiveInt,
+});
+
 export const gradeAnswerPayloadSchema = z.object({
   answerId: positiveInt,
   pointsAwarded: finiteNumber,

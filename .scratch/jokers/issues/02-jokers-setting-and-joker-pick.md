@@ -6,7 +6,7 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Session setting `jokersEnabled`, default off, lobby-only; a stored settings JSON without it reads as off; the settings schema refuses Jokers on with the round overview off (including a PATCH that changes only one of them)
 - [ ] `/control` settings panel: a "Jokers" switch that turns the round overview on and disables the overview switch while on

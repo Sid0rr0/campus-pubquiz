@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   buildQuizPreview,
   type QuizPreviewMode,
+  type QuizPreviewOptions,
   type QuizPreviewPayload,
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
@@ -19,11 +20,12 @@ export class QuizPreviewService {
   async preview(
     quizId: number,
     mode: QuizPreviewMode,
+    options: QuizPreviewOptions = {},
   ): Promise<QuizPreviewPayload> {
     if (!(await this.quizService.exists(quizId))) {
       throw new QuizNotFoundError(quizId);
     }
     const rounds = await this.seedService.loadQuizRounds(quizId);
-    return buildQuizPreview(rounds, mode);
+    return buildQuizPreview(rounds, mode, options);
   }
 }

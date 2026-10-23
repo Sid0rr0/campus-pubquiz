@@ -94,6 +94,8 @@ export class SeedService {
         ...gameSessionRow.settings,
         collectFeedback: gameSessionRow.settings.collectFeedback ?? true,
         funFactsEnabled: gameSessionRow.settings.funFactsEnabled ?? true,
+        // ...and before the "Jokers" setting, jokers are off.
+        jokersEnabled: gameSessionRow.settings.jokersEnabled ?? false,
       },
     };
   }

@@ -32,12 +32,15 @@ function DisplayPageContent() {
   );
   const isRefused = connectionIssue === 'refused';
   const isConnected = snapshot !== null && !connectionError;
+  const isCountdownSoundOn =
+    snapshot?.settings.playLockCountdownSound ??
+    DEFAULT_SESSION_SETTINGS.playLockCountdownSound;
+  // One countdown track serves the block's lock and the joker pick; the two
+  // never run at once.
   const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
     useLockCountdownSound({
-      lockAt: snapshot?.questionLockAt ?? null,
-      enabled:
-        snapshot?.settings.playLockCountdownSound ??
-        DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
+      lockAt: snapshot?.questionLockAt ?? snapshot?.jokerPickEndsAt ?? null,
+      enabled: isCountdownSoundOn,
       isMuted: snapshot?.isDisplaySoundMuted ?? false,
       isRegistryInUse: true,
     });
@@ -46,7 +49,12 @@ function DisplayPageContent() {
   const hasWinnerBeenCelebratedRef = useRef(false);
   // Round sting, reveal sting, time-up and the fanfare with confetti follow
   // the Display screen the room sees, on a live forward move only.
-  useDisplayScreenSounds(snapshot, isConnected, hasWinnerBeenCelebratedRef);
+  useDisplayScreenSounds(
+    snapshot,
+    isConnected,
+    hasWinnerBeenCelebratedRef,
+    isCountdownSoundOn,
+  );
 
   useDisplaySoundMuted(snapshot?.isDisplaySoundMuted ?? false);
 

@@ -70,7 +70,7 @@ function cell(
   pointsAwarded: number,
   answer = 'Their answer',
 ): SessionDetailScoresheetCell {
-  return { teamId, questionId, verdict, pointsAwarded, answer };
+  return { teamId, questionId, verdict, pointsAwarded, isJoker: false, answer };
 }
 
 const ROUNDS = [round(100, 'Music'), round(200, 'Films')];
@@ -174,6 +174,24 @@ describe('ScoresheetTable', () => {
     expect(cells[3]).toHaveClass('bg-yellow/35');
     expect(cells[4].className).not.toMatch(/bg-/);
     expect(within(cells[4]).getByText('?')).toHaveAttribute('title', 'Jaw');
+  });
+
+  it('marks the cells of a team’s joker round with the doubled points', () => {
+    renderScoresheet(
+      [team(1, 'Alpha', { total: 5 })],
+      [
+        { ...cell(1, 1, 'correct', 4), isJoker: true },
+        { ...cell(1, 2, 'incorrect', 0), isJoker: true },
+        cell(1, 3, 'correct', 1),
+      ],
+    );
+
+    const cells = within(rowOf('Alpha')).getAllByRole('cell');
+    // Rank, Team, Q1, Q2, Q3, Bonus, Total.
+    expect(cells[2]).toHaveTextContent('4');
+    expect(within(cells[2]).getByLabelText('Joker round')).toBeInTheDocument();
+    expect(within(cells[3]).getByLabelText('Joker round')).toBeInTheDocument();
+    expect(within(cells[4]).queryByLabelText('Joker round')).toBeNull();
   });
 
   it('shows a dash for a question the team never answered', () => {

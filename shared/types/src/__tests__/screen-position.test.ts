@@ -19,6 +19,7 @@ import { lobby } from './game-state-fixtures';
 /** A block spanning two rounds, a plain block, a kahoot round, and a last block; with the round overview on. */
 const seededQuiz: GameContext = {
   showRoundOverview: true,
+  jokersEnabled: true,
   rounds: [
     { questionCount: 2, breakAfter: false },
     { questionCount: 1, breakAfter: true },
@@ -151,6 +152,7 @@ describe('screenPositionOf', () => {
         'lobby',
         'rules',
         'round_overview',
+        'joker_pick',
         'round_intro',
         'question_open',
         'locking',
@@ -267,7 +269,6 @@ describe('screenPositionOf', () => {
 
 describe('the screen position on the wire', () => {
   const session = sessionAt({ ...lobby, status: 'rules' });
-
   it('is on the display view', () => {
     expect(projectScreen(session, SOCKET_ROOMS.DISPLAY)).toHaveProperty(
       'screenPosition',

@@ -6,7 +6,11 @@ import type {
   FunFactData,
   LeaderboardEntry,
 } from '@campus-pubquiz/types';
-import { compareTeamNames, rankTeams } from '@campus-pubquiz/types';
+import {
+  compareTeamNames,
+  JOKER_MULTIPLIER,
+  rankTeams,
+} from '@campus-pubquiz/types';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -45,26 +49,68 @@ interface RoundTotalRow {
   total: string | number;
 }
 
+interface JokerRoundRow {
+  gameSessionId: number;
+  teamId: number;
+  roundId: number;
+}
+
 type Knex = ReturnType<GameSessionTeamRepository['getKnex']>;
 
 /** Narrows a query to the given sessions; every session when no ids are given. */
 function inSessions<Q extends { whereIn(column: string, ids: number[]): Q }>(
   query: Q,
   gameSessionIds: readonly number[] | undefined,
+  column = 'game_session_id',
 ): Q {
-  return gameSessionIds
-    ? query.whereIn('game_session_id', [...gameSessionIds])
-    : query;
+  return gameSessionIds ? query.whereIn(column, [...gameSessionIds]) : query;
+}
+
+/**
+ * The one step that adds up answer points: a team's points in each round of a
+ * session (`game_session_id`, `round_id`, `team_id`, `total`). Every figure
+ * built from answers' points (round points, quiz points, the winner's total)
+ * reads this query, so a rule that changes what an answer counts for (the
+ * joker, ADR 0004) is applied here and nowhere else.
+ */
+function roundPointsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
+  return (
+    inSessions(
+      knex('answers as a')
+        .join('questions as q', 'q.id', 'a.question_id')
+        .leftJoin('session_team_jokers as j', function joinJoker() {
+          this.on('j.game_session_id', 'a.game_session_id')
+            .andOn('j.team_id', 'a.team_id')
+            .andOn('j.round_id', 'q.round_id');
+        }),
+      gameSessionIds,
+      'a.game_session_id',
+    )
+      .groupBy('a.game_session_id', 'q.round_id', 'a.team_id')
+      .select('a.game_session_id as game_session_id')
+      .select('q.round_id as round_id', 'a.team_id as team_id')
+      // The joker joins on the answer's own round, so it matches only a team's
+      // joker round: that round's answer points count double (ADR 0004).
+      .select(
+        knex.raw(
+          'sum(a.points_awarded * case when j.id is null then 1 else ?::int end) as total',
+          [JOKER_MULTIPLIER],
+        ),
+      )
+  );
 }
 
 // The two totals are pre-aggregated as subqueries (rather than two leftJoins
 // straight off the participants) so a team with several answers *and* several
 // bonus awards doesn't fan out into a cross product that inflates both sums.
+// A team's quiz points are the sum of its round points.
 function answerTotalsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
-  return inSessions(knex('answers'), gameSessionIds)
-    .groupBy('game_session_id', 'team_id')
-    .select('game_session_id', 'team_id')
-    .select(knex.raw('sum(points_awarded) as total'));
+  return knex
+    .from(roundPointsQuery(knex, gameSessionIds).as('rp'))
+    .groupBy('rp.game_session_id', 'rp.team_id')
+    .select('rp.game_session_id as game_session_id')
+    .select('rp.team_id as team_id')
+    .select(knex.raw('sum(rp.total) as total'));
 }
 
 function bonusTotalsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
@@ -163,11 +209,15 @@ export class StandingsService {
   async forSessions(
     gameSessionIds: readonly number[],
   ): Promise<Map<number, SessionStandings>> {
-    const [teams, rounds, roundTotals] = await Promise.all([
+    const [teams, rounds, roundTotals, jokers] = await Promise.all([
       this.loadTeamTotals(gameSessionIds),
       this.loadRounds(gameSessionIds),
       this.loadRoundTotals(gameSessionIds),
+      this.loadJokerRounds(gameSessionIds),
     ]);
+    const jokerRoundByTeam = new Map(
+      jokers.map((row) => [`${row.gameSessionId}:${row.teamId}`, row.roundId]),
+    );
 
     const pointsByRoundAndTeam = new Map(
       roundTotals.map((row) => [
@@ -198,6 +248,9 @@ export class StandingsService {
                 pointsByRoundAndTeam.get(
                   `${gameSessionId}:${round.roundId}:${row.teamId}`,
                 ) ?? 0,
+              isJoker:
+                jokerRoundByTeam.get(`${gameSessionId}:${row.teamId}`) ===
+                round.roundId,
             })),
           } satisfies DepartedTeam,
         }));
@@ -384,17 +437,27 @@ export class StandingsService {
       .select('r.id as roundId', 'r.title as roundTitle')) as RoundRow[];
   }
 
+  /** Each team's joker round per session, for the mark on its round cell. The points already carry the doubling. */
+  private async loadJokerRounds(
+    gameSessionIds: readonly number[],
+  ): Promise<JokerRoundRow[]> {
+    if (gameSessionIds.length === 0) return [];
+    const knex = this.gameSessionTeams.getKnex();
+    return (await knex('session_team_jokers')
+      .whereIn('game_session_id', [...gameSessionIds])
+      .select('game_session_id as gameSessionId')
+      .select('team_id as teamId', 'round_id as roundId')) as JokerRoundRow[];
+  }
+
   private async loadRoundTotals(
     gameSessionIds: readonly number[],
   ): Promise<RoundTotalRow[]> {
     if (gameSessionIds.length === 0) return [];
     const knex = this.gameSessionTeams.getKnex();
-    return (await knex('answers as a')
-      .join('questions as q', 'q.id', 'a.question_id')
-      .whereIn('a.game_session_id', [...gameSessionIds])
-      .groupBy('a.game_session_id', 'q.round_id', 'a.team_id')
-      .select('a.game_session_id as gameSessionId')
-      .select('q.round_id as roundId', 'a.team_id as teamId')
-      .select(knex.raw('sum(a.points_awarded) as total'))) as RoundTotalRow[];
+    return (await knex
+      .from(roundPointsQuery(knex, gameSessionIds).as('rp'))
+      .select('rp.game_session_id as gameSessionId')
+      .select('rp.round_id as roundId', 'rp.team_id as teamId')
+      .select('rp.total as total')) as RoundTotalRow[];
   }
 }

@@ -39,6 +39,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   roundRatings: [],
   feedback: { comment: '', topics: [] },
   playerCount: null,
+  joker: null,
 };
 
 const SEAT_TAKEN = `"T" ${SEAT_TAKEN_REFUSAL_MARKER} — ask the quiz master`;

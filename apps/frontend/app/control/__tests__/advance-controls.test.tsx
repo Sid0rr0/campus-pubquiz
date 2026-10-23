@@ -135,6 +135,23 @@ describe('AdminPage — advance controls', () => {
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
+  it('shows a "Close pick" button that sends ADVANCE during the joker pick', async () => {
+    const sendAction = vi.fn();
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'joker_pick' },
+        rounds: [{ title: 'Picture Round', questions: [{}, {}] }],
+      },
+      connectionError: null,
+      sendAction,
+    });
+    renderWithQuery(<AdminPage />);
+
+    await userEvent.click(getDesktopButton(/close pick/i));
+
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
+
   it('shows an Advance button that sends ADVANCE during the locking countdown, to skip it early', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({

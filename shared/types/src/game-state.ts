@@ -166,6 +166,15 @@ function applyTransition(
       if (progress.status === 'round_overview') {
         return {
           ...progress,
+          status: context.jokersEnabled ? 'joker_pick' : 'round_intro',
+          roundIndex: 0,
+          questionIndex: 0,
+          revealIndex: 0,
+        };
+      }
+      if (progress.status === 'joker_pick') {
+        return {
+          ...progress,
           status: 'round_intro',
           roundIndex: 0,
           questionIndex: 0,
@@ -245,6 +254,13 @@ function applyTransition(
         return {
           ...progress,
           status: 'rules',
+          questionIndex: 0,
+          revealIndex: 0,
+        };
+      if (progress.status === 'joker_pick')
+        return {
+          ...progress,
+          status: 'round_overview',
           questionIndex: 0,
           revealIndex: 0,
         };

@@ -9,6 +9,7 @@ import type { BonusService } from '@/bonus/bonus.service';
 import { buildAnswersUpdatedPayload } from '@/game/socket/answers-updated-payload.util';
 import {
   broadcastAdminState,
+  broadcastDisplayState,
   broadcastGameState,
 } from '@/game/socket/game-broadcast.util';
 import type { GameStateService } from '@/game/state/game-state.service';
@@ -42,7 +43,7 @@ export type DeliverFn = (
  * already stored. Then, always in the same order:
  * replies to the sender, presenter context to admin, the state snapshot to
  * all three rooms, admin answer lists, per-team answer syncs, per-team player
- * count and bonus award syncs, per-socket notices, then the sockets to close.
+ * count, joker and bonus award syncs, per-socket notices, then the sockets to close.
  * The closes run even if an earlier step fails, since the event was already
  * applied by then. `sender` is absent for events no socket sent (timer
  * expiries), which have no replies.
@@ -78,8 +79,13 @@ async function deliverEmits(
   }
   if (outcome.shouldBroadcastState) {
     broadcastGameState(server, joinCode, gameState);
-  } else if (outcome.shouldBroadcastAdminState) {
-    broadcastAdminState(server, joinCode, gameState);
+  } else {
+    if (outcome.shouldBroadcastAdminState) {
+      broadcastAdminState(server, joinCode, gameState);
+    }
+    if (outcome.shouldBroadcastDisplayState) {
+      broadcastDisplayState(server, joinCode, gameState);
+    }
   }
 
   for (const questionId of outcome.answerListQuestionIds) {
@@ -107,6 +113,10 @@ async function deliverEmits(
     server
       .to(socketId)
       .emit(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, { playerCount });
+  }
+
+  for (const { socketId, joker } of outcome.jokerSyncs) {
+    server.to(socketId).emit(SOCKET_EVENTS.TEAM_JOKER_SYNCED, { joker });
   }
 
   for (const { teamId, socketId } of outcome.bonusSyncs) {

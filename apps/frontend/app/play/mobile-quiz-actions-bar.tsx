@@ -28,6 +28,16 @@ interface MobileQuizActionsBarProps {
   onSelectHistoryQuestion: (questionId: number) => void;
   /** Null when the quiz has no bonus categories enabled — omits that trigger entirely. */
   bonus: BonusBarProps | null;
+  /** The team's joker round, or null while it has none — omits the chip entirely. */
+  joker: JokerChipProps | null;
+}
+
+/** The team's joker round as the chip names it: the round's number and title. */
+export interface JokerChipProps {
+  roundNumber: number;
+  roundTitle: string;
+  /** Once the joker round's block has been revealed the chip reads "played". */
+  isPlayed: boolean;
 }
 
 interface MobileDrawerTriggerProps {
@@ -37,6 +47,8 @@ interface MobileDrawerTriggerProps {
   label: string;
   title: string;
   closeLabel: string;
+  /** Sizing of the trigger in the bar; fills an equal share by default. */
+  triggerClassName?: string;
   children: ReactNode;
 }
 
@@ -47,6 +59,7 @@ function MobileDrawerTrigger({
   label,
   title,
   closeLabel,
+  triggerClassName = 'flex-1',
   children,
 }: MobileDrawerTriggerProps) {
   return (
@@ -55,7 +68,7 @@ function MobileDrawerTrigger({
         <Button
           type="button"
           variant="outline-muted"
-          className="flex min-h-11 flex-1 items-center justify-center gap-1 text-sm"
+          className={`flex min-h-11 items-center justify-center gap-1 text-sm ${triggerClassName}`}
         >
           {icon}
           {label}
@@ -87,9 +100,10 @@ function MobileDrawerTrigger({
 }
 
 /**
- * Mobile-only bottom bar holding the answer-history and bonus-points
- * drawer triggers side by side (history on the left, bonus on the right),
- * so both stay one tap away without scrolling. Desktop renders each as its
+ * Mobile-only bottom bar holding the answer-history, joker and bonus-points
+ * drawer triggers side by side (history on the left, bonus on the right, the
+ * joker chip between them when the team has one), so each stays one tap away
+ * without scrolling. Desktop renders each as its
  * own sticky sidebar instead (see AnsweredQuestionsPanel/BonusProgressPanel).
  */
 export function MobileQuizActionsBar({
@@ -97,12 +111,14 @@ export function MobileQuizActionsBar({
   jumpableHistoryIds,
   onSelectHistoryQuestion,
   bonus,
+  joker,
 }: MobileQuizActionsBarProps) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isBonusOpen, setIsBonusOpen] = useState(false);
+  const [isJokerOpen, setIsJokerOpen] = useState(false);
   const hasHistory = historyEntries.length > 0;
 
-  if (!hasHistory && !bonus) {
+  if (!hasHistory && !bonus && !joker) {
     return null;
   }
 
@@ -127,6 +143,23 @@ export function MobileQuizActionsBar({
             jumpableIds={jumpableHistoryIds}
             onSelectQuestion={handleHistorySelectQuestion}
           />
+        </MobileDrawerTrigger>
+      )}
+      {joker && (
+        <MobileDrawerTrigger
+          isOpen={isJokerOpen}
+          onOpenChange={setIsJokerOpen}
+          icon={null}
+          label={`🃏 R${joker.roundNumber}${joker.isPlayed ? ' · played' : ''}`}
+          title="Your joker"
+          closeLabel="Close joker"
+          triggerClassName="flex-none px-3"
+        >
+          <p className="text-lg font-bold">
+            {`Round ${joker.roundNumber} — ${joker.roundTitle} ${
+              joker.isPlayed ? 'scored' : 'scores'
+            } double`}
+          </p>
         </MobileDrawerTrigger>
       )}
       {bonus && (

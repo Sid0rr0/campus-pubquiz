@@ -65,6 +65,39 @@ describe('sessionSettingsPartialSchema', () => {
     ).toBe(false);
   });
 
+  it('accepts jokersEnabled as a boolean and rejects anything else', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({
+        jokersEnabled: true,
+        showRoundOverview: true,
+      }).data,
+    ).toEqual({ jokersEnabled: true, showRoundOverview: true });
+    expect(
+      sessionSettingsPartialSchema.safeParse({ jokersEnabled: 'yes' }).success,
+    ).toBe(false);
+  });
+
+  it('refuses jokers on with the round overview off in the same patch', () => {
+    const result = sessionSettingsPartialSchema.safeParse({
+      jokersEnabled: true,
+      showRoundOverview: false,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toBe(
+      'Jokers need the round overview',
+    );
+  });
+
+  it('accepts jokers off with the round overview off', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({
+        jokersEnabled: false,
+        showRoundOverview: false,
+      }).success,
+    ).toBe(true);
+  });
+
   it('rejects an empty enabledBonusCategories array', () => {
     expect(
       sessionSettingsPartialSchema.safeParse({ enabledBonusCategories: [] })

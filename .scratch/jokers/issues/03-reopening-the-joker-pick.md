@@ -6,7 +6,7 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Previous from round 0's `round_intro` → `joker_pick` when Jokers is on; a fresh 60 s deadline is armed
 - [ ] Re-entering clears drawn jokers and keeps chosen and quiz-master-set ones

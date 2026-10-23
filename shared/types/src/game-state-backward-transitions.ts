@@ -44,7 +44,8 @@ export function previousFromQuestionOpen(
 
 /**
  * Steps back from a round's intro card to whatever preceded it: the rules
- * screen (or round_overview, when context.showRoundOverview) before round 0,
+ * screen (or round_overview, when context.showRoundOverview; or the joker
+ * pick, reopened, when context.jokersEnabled) before round 0,
  * the previous round's last question if it ran in the same open block (no
  * break, and not kahootMode — a kahootMode round's questions are never
  * reopenable once past), or the previous block's last reveal question if a
@@ -57,7 +58,11 @@ export function previousFromRoundIntro(
   if (progress.roundIndex === 0) {
     return {
       ...progress,
-      status: context.showRoundOverview ? 'round_overview' : 'rules',
+      status: context.jokersEnabled
+        ? 'joker_pick'
+        : context.showRoundOverview
+          ? 'round_overview'
+          : 'rules',
       questionIndex: 0,
       revealIndex: 0,
     };

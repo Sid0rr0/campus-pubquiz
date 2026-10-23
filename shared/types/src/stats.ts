@@ -234,7 +234,10 @@ export interface SessionDetailStats {
 export interface SessionDetailScoresheetCell {
   teamId: number;
   questionId: number;
+  /** Doubled when the answer is to a question of the team's joker round, so a row adds up to the team's total. */
   pointsAwarded: number;
+  /** The question is in the team's joker round: the cell draws a joker mark. */
+  isJoker: boolean;
   /** Null while the answer is ungraded. */
   verdict: Verdict | null;
   /** The team's answer as people read it. */

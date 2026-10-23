@@ -17,6 +17,7 @@ import {
   isTopThreeReveal,
   rankEntrance,
 } from '@/app/components/leaderboard-entrance';
+import { JokerStamp } from '@/app/components/joker-stamp';
 import { Podium, podiumEntries } from '@/app/components/podium';
 import { fireConfetti } from '@/app/lib/confetti';
 import { displaySounds } from '@/app/lib/display-sounds';
@@ -198,6 +199,16 @@ export function Leaderboard({
 
   const visibleRows = selectLeaderboardRows({ board, revealCount, phase });
   const newestRankIndex = visibleRows[0]?.rankIndex;
+  // Stamps already there on first draw (a reload, a reconnect) are not slammed
+  // down again; only one that appears after the board is on screen lands.
+  const [alreadyStampedTeamIds] = useState(
+    () =>
+      new Set(
+        visibleRows
+          .filter((row) => row.isJokerStamped)
+          .map((row) => row.entry.teamId),
+      ),
+  );
 
   // Rank reveal stays one rank per Advance; the drumroll marks the three that
   // matter. A reload or reconnect remounts the board, so it stays silent.
@@ -244,6 +255,7 @@ export function Leaderboard({
             isAnimatedIn={revealCount !== undefined}
             isNewest={row.rankIndex === newestRankIndex}
             hasOldState={hasOldState}
+            isStampLanding={!alreadyStampedTeamIds.has(row.entry.teamId)}
           />
         ))}
       </ol>
@@ -258,14 +270,17 @@ interface LeaderboardRowItemProps {
   /** Whether this row holds the most recently revealed rank. */
   isNewest: boolean;
   hasOldState: boolean;
+  /** Whether the row's joker stamp, if it has one, slams down rather than just being there. */
+  isStampLanding: boolean;
 }
 
 /** One row. Its entrance runs once on mount and is cut straight to its end as soon as a newer rank is revealed, so an Advance never waits for it. */
 function LeaderboardRowItem({
-  row: { entry, rankIndex, label, trend },
+  row: { entry, rankIndex, label, trend, isJokerStamped },
   isAnimatedIn,
   isNewest,
   hasOldState,
+  isStampLanding,
 }: LeaderboardRowItemProps) {
   const isReducedMotion = useReducedMotion() ?? false;
   const [entrance] = useState(() => rankEntrance(rankIndex, isReducedMotion));
@@ -306,6 +321,7 @@ function LeaderboardRowItem({
       <span className="flex-1 font-bold text-display-3xl">
         {entry.teamName}
       </span>
+      {isJokerStamped && <JokerStamp isLanding={isStampLanding} />}
       <BonusIndicator
         positiveBonusPoints={entry.positiveBonusPoints}
         negativeBonusPoints={entry.negativeBonusPoints}

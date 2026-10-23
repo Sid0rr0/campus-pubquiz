@@ -1,6 +1,7 @@
 import type { TeamAnswerView } from './answers';
 import type { TeamBonusAwardView } from './bonus';
 import type { RoundRatingView, TeamFeedbackView } from './feedback';
+import type { TeamJoker } from './joker';
 
 export interface JoinPlayersPayload {
   teamName: string;
@@ -39,6 +40,8 @@ export interface JoinAcceptedPayload {
   feedback: TeamFeedbackView;
   /** The team's own player count this session (null until reported), so a reconnect, a second phone or a rejoin after a kick shows it. */
   playerCount: number | null;
+  /** The team's own joker this session (null until it has one), so a reconnect, a second phone or a rejoin after a kick restores it. Never another team's. */
+  joker: TeamJoker | null;
 }
 
 export interface KickTeamPayload {

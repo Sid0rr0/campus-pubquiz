@@ -23,6 +23,9 @@ export function soundFor(
   previous: DisplayScreen,
   next: DisplayScreen,
 ): DisplaySoundName | null {
+  // The pick closing is a countdown ending, like the block locking; checked
+  // before the round sting, since the first round intro is what follows it.
+  if (previous.kind === 'joker_pick') return 'timeUp';
   if (next.kind === 'round_title') return 'sting';
   if (next.kind === 'ended') return 'fanfare';
   if (

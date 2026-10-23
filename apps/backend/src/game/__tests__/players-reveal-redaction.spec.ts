@@ -103,7 +103,11 @@ describe('Screen projection — players view reveal redaction', () => {
     );
 
     expect(view.revealQuestions.map((q) => q.id)).toEqual([10, 11]);
-    expect(view.phoneScreen).toEqual({ kind: 'round_title', title: 'Round 2' });
+    expect(view.phoneScreen).toEqual({
+      kind: 'round_title',
+      title: 'Round 2',
+      roundNumber: 2,
+    });
   });
 
   it('trims the same when the leaderboard covers the reveal', () => {

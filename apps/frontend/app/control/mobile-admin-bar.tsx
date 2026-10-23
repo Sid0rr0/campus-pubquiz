@@ -121,6 +121,9 @@ export function MobileAdminBar({ panel, user, onLogout }: MobileAdminBarProps) {
               answeredTeamIds={view.answeredTeamIds}
               onKickTeam={actions.kickTeam}
               onSetPlayerCount={actions.setTeamPlayerCount}
+              jokerRounds={view.settableJokerRounds}
+              onSetJoker={actions.setTeamJoker}
+              isJokerPick={progress.status === 'joker_pick'}
               className="mt-auto border-t border-background/20 pt-4"
             />
           </Dialog.Content>

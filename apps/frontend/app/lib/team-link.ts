@@ -17,6 +17,7 @@ import {
   type TeamAnswerView,
   type TeamBonusAwardView,
   type TeamFeedbackView,
+  type TeamJoker,
   type Verdict,
 } from '@campus-pubquiz/types';
 
@@ -33,6 +34,9 @@ import {
 export const KICK_NOTICE = 'You were removed from this team by the quiz master';
 /** Award toasts outlast the default so a team passing the phone around still sees them. */
 export const BONUS_AWARD_TOAST_DURATION_MS = 8000;
+
+/** A joker change toast stays long enough for the team to read which round it moved to. */
+const JOKER_TOAST_MS = 6000;
 
 /** How long a refused rejoin waits before asking again: the old socket holding the seat is gone once the server's ping timeout (~45 s) notices it. */
 export const JOIN_RETRY_DELAY_MS = 3000;
@@ -157,6 +161,8 @@ export interface TeamLinkState {
   myFeedback: TeamFeedbackView;
   /** How many players the server holds for this team, or null until one is reported. */
   myPlayerCount: number | null;
+  /** The team's own joker as the server last said it (the join, a sync, or an acknowledged pick), or null while it has none. */
+  myJoker: TeamJoker | null;
   /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
   roundRatingsEpoch: number;
   /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
@@ -194,6 +200,10 @@ export type TeamLinkInput =
   | { type: 'playerCountSynced'; playerCount: number }
   // The server acknowledged a count this phone sent.
   | { type: 'playerCountSaved'; playerCount: number }
+  // The server told the team's phones its joker changed.
+  | { type: 'jokerSynced'; joker: TeamJoker | null }
+  // The server acknowledged a joker pick this phone sent.
+  | { type: 'jokerSaved'; joker: TeamJoker }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
@@ -288,6 +298,7 @@ const EMPTY_TEAM_DATA = {
   myRoundRatings: {},
   myFeedback: EMPTY_FEEDBACK,
   myPlayerCount: null,
+  myJoker: null,
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
 
@@ -566,6 +577,7 @@ function acceptJoin(
     myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
     myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
     myPlayerCount: payload.playerCount ?? null,
+    myJoker: payload.joker ?? null,
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -669,6 +681,34 @@ function awardBonus(
   };
 }
 
+/**
+ * The server told the team's phones its joker. A joker the team did not pick
+ * itself (the quiz master's change, a draw) that differs from the one held is
+ * announced once; the team's own pick, and a joker already held (the pick
+ * closing re-sends every joker), change the chip quietly.
+ */
+function syncJoker(
+  state: TeamLinkState,
+  joker: TeamJoker | null,
+): TeamLinkStep {
+  const next = { ...state, myJoker: joker };
+  const isChange =
+    joker !== null &&
+    (joker.roundId !== state.myJoker?.roundId ||
+      joker.source !== state.myJoker?.source);
+  if (!isChange || joker.source === 'chosen') return unchanged(next);
+  const message =
+    joker.source === 'drawn'
+      ? 'A joker was drawn for your team'
+      : 'Your joker was changed by the quiz master';
+  return {
+    state: next,
+    commands: [
+      { type: 'toast', tone: 'neutral', message, durationMs: JOKER_TOAST_MS },
+    ],
+  };
+}
+
 export function teamLink(
   state: TeamLinkState,
   input: TeamLinkInput,
@@ -740,6 +780,10 @@ export function teamLink(
     case 'playerCountSynced':
     case 'playerCountSaved':
       return unchanged({ ...state, myPlayerCount: input.playerCount });
+    case 'jokerSynced':
+      return syncJoker(state, input.joker);
+    case 'jokerSaved':
+      return unchanged({ ...state, myJoker: input.joker });
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
       if (input.connectionId !== state.joinSentFor) return unchanged(state);

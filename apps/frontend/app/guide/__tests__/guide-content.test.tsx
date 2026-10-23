@@ -24,7 +24,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1200;
+const MAX_GUIDE_WORDS = 1300;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -48,6 +48,41 @@ describe('GuideContent', () => {
     expect(text).toContain('Rate these rounds');
     expect(text).toContain('Quiz complete!');
     expect(text).toContain('session stats');
+  });
+
+  it('explains the Jokers setting and how to run the joker pick', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('"Jokers" switch');
+    expect(text).toContain('round overview');
+    expect(text).toContain('joker pick');
+    expect(text).toContain('Close pick');
+    expect(text).toContain('random round');
+    expect(text).toContain('N/M picked');
+    expect(text).toContain('"Countdown sound"');
+  });
+
+  it('explains that the joker round counts double and how the Teams table marks it', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('count double');
+    expect(text).toContain('bonus awards never');
+    expect(text).toContain('🃏');
+  });
+
+  it('explains changing a team’s joker', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('joker list');
+    expect(text).toContain('until that round has started');
+    expect(text).toContain('changed by the quiz master');
+  });
+
+  it('explains the 2× stamp on the leaderboard', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('"2×" stamp');
+    expect(text).toContain('even on 0 points');
   });
 
   it('describes every question type from the registry', () => {
@@ -96,7 +131,7 @@ describe('GuideContent', () => {
     }
   });
 
-  it('stays short: 1,000 to 1,200 words and no paragraph over 300 characters', () => {
+  it('stays short: 1,000 to 1,300 words and no paragraph over 300 characters', () => {
     const { container } = render(<GuideContent />);
     const blocks = Array.from(
       container.querySelectorAll('h1, h2, p, li > span:last-child, a'),

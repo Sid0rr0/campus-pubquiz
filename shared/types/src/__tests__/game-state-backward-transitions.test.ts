@@ -75,6 +75,17 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
     });
   });
 
+  it('steps back from round 0 intro to the joker pick when jokers are on', () => {
+    const roundIntro: GameProgress = { ...lobby, status: 'round_intro' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+      jokersEnabled: true,
+    };
+    const next = getNextGameState(roundIntro, 'PREVIOUS', context);
+    expect(next).toMatchObject({ status: 'joker_pick', roundIndex: 0 });
+  });
+
   it('steps back from round_overview to the rules screen', () => {
     const roundOverview: GameProgress = { ...lobby, status: 'round_overview' };
     const context: GameContext = {
@@ -84,6 +95,25 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
     const next = getNextGameState(roundOverview, 'PREVIOUS', context);
     expect(next).toEqual({
       status: 'rules',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    });
+  });
+
+  it('steps back from the joker pick to round_overview', () => {
+    const jokerPick: GameProgress = { ...lobby, status: 'joker_pick' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+      jokersEnabled: true,
+    };
+    const next = getNextGameState(jokerPick, 'PREVIOUS', context);
+    expect(next).toEqual({
+      status: 'round_overview',
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,

@@ -2,6 +2,7 @@ export type GameStatus =
   | 'lobby'
   | 'rules'
   | 'round_overview'
+  | 'joker_pick'
   | 'round_intro'
   | 'question_open'
   | 'locking'
@@ -52,6 +53,14 @@ export interface GameContext {
    * (today's direct rules -> round_intro jump).
    */
   showRoundOverview?: boolean;
+  /**
+   * Whether ADVANCE from 'round_overview' stops on a 'joker_pick' screen
+   * (every team picks its joker round) before round 0's own 'round_intro' —
+   * the session's Jokers setting. Only meaningful with showRoundOverview on
+   * (the settings refuse one without the other). Optional, like
+   * showRoundOverview; undefined behaves as false.
+   */
+  jokersEnabled?: boolean;
 }
 
 export interface GameProgress {

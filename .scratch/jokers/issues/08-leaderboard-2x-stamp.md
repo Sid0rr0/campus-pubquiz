@@ -6,10 +6,10 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The leaderboard description (built from the Prior standings) carries a per-row flag: the team's joker round has a question in the block just scored
-- [ ] The big screen stamps the row when its rank is revealed; the phone stamps the team's own row; no replay on reload
-- [ ] Shown on 0 points; per question in a kahoot joker round; not on later blocks' leaderboards
-- [ ] Real-store harness specs for the flag; page specs for both screens
-- [ ] `DOCUMENTATION.md` and `/guide` updated
+- [x] The leaderboard description (built from the Prior standings) carries a per-row flag: the team's joker round has a question in the block just scored
+- [x] The big screen stamps the row when its rank is revealed; the phone stamps the team's own row; no replay on reload
+- [x] Shown on 0 points; per question in a kahoot joker round; not on later blocks' leaderboards
+- [x] Real-store harness specs for the flag; page specs for both screens
+- [x] `DOCUMENTATION.md` and `/guide` updated

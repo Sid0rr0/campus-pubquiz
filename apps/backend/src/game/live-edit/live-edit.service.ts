@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   getSessionLiveEditFrontier,
   mergeLiveEditFrontiers,
@@ -9,6 +9,13 @@ import {
   type SessionState,
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
+import { JokerService } from '@/joker/joker.service';
+import { TeamService } from '@/team/team.service';
+import {
+  JOKER_RANDOM,
+  JokerChanges,
+  type RandomSource,
+} from '@/game/state/joker-changes';
 import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { quizEditChange } from '@/game/live-edit/quiz-edit-change';
 import { BlockGradingService } from '@/game/state/block-grading.service';
@@ -65,13 +72,24 @@ interface PendingDelivery {
 export class LiveEditService {
   private readonly logger = new Logger(LiveEditService.name);
 
+  private readonly jokerChanges: JokerChanges;
+
   constructor(
     private readonly quizService: QuizService,
     private readonly broadcaster: SessionBroadcaster,
     private readonly sessionWrite: SessionWrite,
     private readonly seedService: SeedService,
     private readonly grading: BlockGradingService,
-  ) {}
+    jokerService: JokerService,
+    teamService: TeamService,
+    @Optional() @Inject(JOKER_RANDOM) random?: RandomSource,
+  ) {
+    this.jokerChanges = new JokerChanges(
+      jokerService,
+      teamService,
+      random ?? Math.random,
+    );
+  }
 
   /** Every session on `quizId` that has not ended, lobby sessions included. */
   private listUnfinishedSessions(quizId: number): SessionState[] {
@@ -168,6 +186,7 @@ export class LiveEditService {
                 quizEditChange(
                   this.seedService,
                   this.grading,
+                  this.jokerChanges,
                   regradeQuestionIds,
                 ),
               ),
@@ -186,7 +205,12 @@ export class LiveEditService {
           joinCode: reloadJoinCode,
           outcome: await this.sessionWrite.write(
             reloadJoinCode,
-            quizEditChange(this.seedService, this.grading, []),
+            quizEditChange(
+              this.seedService,
+              this.grading,
+              this.jokerChanges,
+              [],
+            ),
           ),
         });
       }
@@ -214,7 +238,7 @@ export class LiveEditService {
         joinCode: seededGame.joinCode,
         outcome: await held.write(
           seededGame.joinCode,
-          quizEditChange(this.seedService, this.grading, []),
+          quizEditChange(this.seedService, this.grading, this.jokerChanges, []),
         ),
       });
     }

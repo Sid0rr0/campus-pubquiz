@@ -1,4 +1,4 @@
-import { getBlockInPlay } from './block-in-play';
+import { getBlockInPlay, getBlockRoundIndexes } from './block-in-play';
 import { isGradedStatus, isQuestionOnAirStatus } from './game-state-groups';
 import {
   isCurrentRoundKahoot,
@@ -150,6 +150,36 @@ export function withPriorStandings(
 }
 
 /**
+ * The shown teams whose joker round has a question in the block the prior
+ * standings were taken for, i.e. the block just scored. Only while the
+ * leaderboard is on air, so a pick never leaves the server early.
+ */
+function describeJokerTeamIds(
+  session: SessionState,
+  entries: LeaderboardEntry[],
+): number[] {
+  const blockFirstQuestionId = session.priorStandings?.blockFirstQuestionId;
+  if (
+    !session.progress.isLeaderboardVisible ||
+    blockFirstQuestionId === undefined
+  ) {
+    return [];
+  }
+  const { rounds } = session.seededGame;
+  const blockRoundIds = new Set(
+    getBlockRoundIndexes(rounds, blockFirstQuestionId).map(
+      (roundIndex) => rounds[roundIndex].id,
+    ),
+  );
+  return entries
+    .filter(({ teamId }) => {
+      const joker = session.jokers[teamId];
+      return joker !== undefined && blockRoundIds.has(joker.roundId);
+    })
+    .map(({ teamId }) => teamId);
+}
+
+/**
  * The leaderboard the big screen draws, decided once on the server: the
  * entries (capped for a kahoot round), the board to count up from (only for
  * the between-questions kahoot board, where the next question is already open
@@ -168,9 +198,11 @@ export function describeLeaderboardBoard(
   const countUpBoard = isBetweenKahootQuestions
     ? describeCountUpBoard(session, entries)
     : undefined;
+  const jokerTeamIds = describeJokerTeamIds(session, entries);
   return {
     entries,
     ...(countUpBoard === undefined ? {} : { countUpBoard }),
     trends: describeTrends(session, entries),
+    ...(jokerTeamIds.length === 0 ? {} : { jokerTeamIds }),
   };
 }

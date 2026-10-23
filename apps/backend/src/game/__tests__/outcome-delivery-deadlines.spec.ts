@@ -5,7 +5,7 @@ const TIMER_SECONDS = 60;
 const LOCK_AT = 4_000_000_000_000;
 const KAHOOT_AT = 4_000_000_500_000;
 
-describe('GameGateway — outcome delivery re-arms the auto-lock timers', () => {
+describe('GameGateway — outcome delivery re-arms the phase timers', () => {
   const harness = setupRealStoreGatewayTest();
 
   async function openKahootQuestion() {
@@ -23,12 +23,16 @@ describe('GameGateway — outcome delivery re-arms the auto-lock timers', () => 
     return game;
   }
 
-  it('arms both timers to the deadlines an outcome carries', async () => {
+  it('arms the timers to the deadlines an outcome carries', async () => {
     const game = await openKahootQuestion();
 
     await game.broadcaster.deliver(game.joinCode, {
       ...BROADCAST_STATE_OUTCOME,
-      deadlineChange: { questionLockAt: LOCK_AT, kahootQuestionEndsAt: null },
+      deadlineChange: {
+        questionLockAt: LOCK_AT,
+        kahootQuestionEndsAt: null,
+        jokerPickEndsAt: null,
+      },
     });
 
     expect(game.timers().lock.dueAt()).toBe(LOCK_AT);
@@ -58,6 +62,7 @@ describe('GameGateway — outcome delivery re-arms the auto-lock timers', () => 
         deadlineChange: {
           questionLockAt: null,
           kahootQuestionEndsAt: KAHOOT_AT,
+          jokerPickEndsAt: null,
         },
       }),
     ).rejects.toThrow('socket hiccup');

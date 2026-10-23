@@ -82,7 +82,7 @@ flowchart TD
     dispatch["dispatchSocketEvent<br/>validate → find session → check room<br/>→ run the event's one Live session call → deliver"]
     deliver["deliverOutcome<br/>re-arm timers from the outcome's deadline change<br/>replies · broadcast · admin answer lists<br/>team syncs · socket closes"]
     broadcast["broadcastGameState<br/>one view per room"]
-    timers["PhaseTimers<br/>question lock + kahoot question timers<br/>(timer registry per timer)"]
+    timers["PhaseTimers<br/>question lock + kahoot question + joker pick timers<br/>(timer registry per timer)"]
   end
 
   subgraph state["game/state — the live session module"]
@@ -274,6 +274,8 @@ stateDiagram-v2
   rules --> round_overview
   rules --> round_intro: overview off
   round_overview --> round_intro
+  round_overview --> joker_pick: Jokers on
+  joker_pick --> round_intro: pick closes
 
   state "answering" as answering {
     round_intro --> question_open
@@ -332,6 +334,10 @@ erDiagram
 
   GAME_SESSION ||--o{ SESSION_FEEDBACK : ""
   TEAM ||--o{ SESSION_FEEDBACK : ""
+
+  GAME_SESSION ||--o{ SESSION_TEAM_JOKER : ""
+  ROUND ||--o{ SESSION_TEAM_JOKER : ""
+  TEAM ||--o{ SESSION_TEAM_JOKER : ""
 
   GAME_SESSION ||--o{ SHOWDOWN_ROUND : ""
   SHOWDOWN_ROUND ||--o{ SHOWDOWN_ROUND_TEAM : ""

@@ -8,6 +8,11 @@ import type {
   PlayersScreenFields,
 } from './on-air-screen';
 import type { GameProgress, QuizStructureSummary } from './game-state';
+import type {
+  AdminTeamJoker,
+  JokerPickPlayersView,
+  JokerPickRound,
+} from './joker';
 import type { LeagueTop } from './league';
 import type {
   BlockQuestionView,
@@ -23,7 +28,10 @@ import type { ActiveShowdownView } from './showdown';
 
 export interface RoundPoints {
   roundTitle: string;
+  /** Already doubled when this is the team's joker round. */
   points: number;
+  /** Whether this is the team's joker round (absent reads as false). Drives the joker mark on the `/control` score table. */
+  isJoker?: boolean;
 }
 
 export interface LeaderboardEntry {
@@ -63,6 +71,8 @@ export interface LeaderboardBoard {
   countUpBoard?: LeaderboardEntry[];
   /** Rank movement per team id, shown once the board settles; a team missing from the prior standings has none, and every team has none when there are none. */
   trends: Record<number, RankTrend>;
+  /** Ids of the shown teams whose joker round has a question in the block just scored: their row gets the 2× stamp, even on 0 points. Present only when there is one (never while the leaderboard is not on air, so a pick is not leaked). */
+  jokerTeamIds?: number[];
 }
 
 export interface TeamView {
@@ -77,6 +87,8 @@ export interface AdminTeamView extends TeamView {
   playerCount: number | null;
   /** True when `playerCount` exceeds the session's max players per team, worked out by the server. */
   isOverPlayerCap: boolean;
+  /** The team's joker round and how it came to hold it, or null while it has none. The quiz master sees every team's; no other room is sent one. */
+  joker: AdminTeamJoker | null;
 }
 
 export interface StateSnapshotPayload {
@@ -181,6 +193,8 @@ export interface DisplayStatePayload
   roundAuthors: string[];
   /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
   kahootQuestionEndsAt: number | null;
+  /** Epoch-ms deadline of the open joker pick, or null when none is open. Carried apart from `screen` so the countdown music keeps playing under the join overlay, like the lock countdown. */
+  jokerPickEndsAt: number | null;
   /** The revealed question's teams-correct count; null outside a reveal and on closest_guess, whose reveal names the closest teams. */
   teamsCorrect: TeamsCorrect | null;
   /** The session's league for the lobby screen: its name and top rows, or null when the session is in no league. */
@@ -215,6 +229,8 @@ export interface AdminStatePayload
     ScreenOperatorFields {
   /** The roster, each team with its player count and over-cap flag. */
   teams: AdminTeamView[];
+  /** The rounds the quiz master may give a team as its joker: those with no opened question, once the joker pick has opened in a session with jokers; empty otherwise. */
+  settableJokerRounds: JokerPickRound[];
   onAirScreen: OnAirScreen;
   /** What the quiz master can do right now, read from the same Display screen /display is sent. */
   controlAvailability: ControlAvailability;
@@ -267,6 +283,20 @@ export interface PlayersStatePayload
   revealQuestions: PlayersRevealQuestionView[];
   /** Whether the current block can be answered right now — the same rule the answer-submission gate enforces. */
   isAnswerable: boolean;
+  /**
+   * The joker pick while the status is `joker_pick`: its deadline (null once
+   * closed) and the rounds a team may still choose. Never any team's choice —
+   * a phone gets its own joker from its team data (`JOIN_ACCEPTED`,
+   * `TEAM_JOKER_SYNCED`). Null outside the pick.
+   */
+  jokerPick: JokerPickPlayersView | null;
+  /**
+   * Every round of a session played with jokers, by id, number and title, from
+   * the joker pick onward (empty before it and without jokers), so a phone can
+   * name its joker round ("🃏 R4", "Round 4 — Music") whatever the status. Never
+   * any team's choice.
+   */
+  jokerRounds: JokerPickRound[];
   /**
    * Positions (and round titles) of the current block's remaining
    * questions — not open yet, shown as disabled slots in the block picker

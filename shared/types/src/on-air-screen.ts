@@ -18,6 +18,7 @@ export type OnAirScreen =
   | { kind: 'lobby' }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
+  | { kind: 'joker_pick' }
   | { kind: 'round_title'; roundIndex: number }
   | {
       kind: 'question';
@@ -134,6 +135,7 @@ function getScreen(
     case 'lobby':
     case 'rules':
     case 'round_overview':
+    case 'joker_pick':
       return { kind: progress.status };
     case 'round_intro':
       return { kind: 'round_title', roundIndex: progress.roundIndex };
@@ -239,7 +241,7 @@ export function describeOnAirScreen(input: OnAirInput): OnAirDescription {
   };
 }
 
-const PRE_QUIZ_SCREENS = 3;
+const PRE_QUIZ_SCREENS = 4;
 const ROUND_SPAN = 1_000;
 const REGION_SPAN = 10_000;
 /** Regions of one question's slot, in the order the quiz walks them. */
@@ -280,6 +282,8 @@ export function screenPositionOf(progress: GameProgress): number {
       return 1;
     case 'round_overview':
       return 2;
+    case 'joker_pick':
+      return 3;
     case 'ended':
       return ENDED_POSITION;
     default:
@@ -401,7 +405,10 @@ export type PhoneScreen =
   | { kind: 'lobby' }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
-  | { kind: 'round_title'; title: string }
+  /** The joker pick: `isOpen` while teams may still choose, false once it has closed (the phone then shows the result). */
+  | { kind: 'joker_pick'; isOpen: boolean }
+  /** A round's title card; `roundNumber` is the 1-based position of that round in the quiz, so a phone can tell whether it is the team's joker round. */
+  | { kind: 'round_title'; title: string; roundNumber: number }
   | { kind: 'ended' }
   | { kind: 'showdown_guessing' }
   | { kind: 'showdown_reveal' };
@@ -436,18 +443,20 @@ export interface PlayersScreenInput extends OnAirInput {
   isAnswerable: boolean;
   /** Whether the active showdown round has been decided (false when there is none). */
   isShowdownResolved: boolean;
+  /** Whether the joker pick is open for choosing right now (false outside the pick). */
+  isJokerPickOpen: boolean;
 }
 
-function roundTitleOf(
+function roundTitleCardOf(
   questions:
-    | readonly Pick<BlockQuestionView, 'id' | 'roundTitle'>[]
+    | readonly Pick<BlockQuestionView, 'id' | 'roundTitle' | 'roundNumber'>[]
     | undefined,
   questionId: number | null,
-): string | null {
-  return (
-    questions?.find((question) => question.id === questionId)?.roundTitle ??
-    null
-  );
+): { title: string; roundNumber: number } | null {
+  const question = questions?.find((candidate) => candidate.id === questionId);
+  return question
+    ? { title: question.roundTitle, roundNumber: question.roundNumber }
+    : null;
 }
 
 /**
@@ -484,21 +493,27 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
     case 'rules':
     case 'round_overview':
       return { kind: screen.kind };
+    case 'joker_pick':
+      return { kind: 'joker_pick', isOpen: input.isJokerPickOpen };
     case 'round_title':
-      return { kind: 'round_title', title: input.roundTitle ?? '' };
+      return {
+        kind: 'round_title',
+        title: input.roundTitle ?? '',
+        roundNumber: screen.roundIndex + 1,
+      };
     case 'reveal':
       return { kind: 'block', mode, onScreenQuestionId: screen.questionId };
     case 'reveal_intro':
     case 'break_round_title': {
-      const title = roundTitleOf(
+      const card = roundTitleCardOf(
         screen.kind === 'reveal_intro'
           ? input.revealQuestions
           : input.blockQuestions,
         screen.questionId,
       );
-      return title === null
+      return card === null
         ? { kind: 'block', mode, onScreenQuestionId: null }
-        : { kind: 'round_title', title };
+        : { kind: 'round_title', ...card };
     }
     case 'ended':
       return { kind: 'ended' };

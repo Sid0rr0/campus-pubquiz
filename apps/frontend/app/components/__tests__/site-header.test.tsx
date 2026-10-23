@@ -262,6 +262,7 @@ describe('SiteHeader', () => {
           roundRatings: [],
           feedback: { comment: '', topics: [] },
           playerCount: null,
+          joker: null,
         },
         onLogOut,
       }),
@@ -308,6 +309,7 @@ describe('SiteHeader', () => {
           roundRatings: [],
           feedback: { comment: '', topics: [] },
           playerCount: null,
+          joker: null,
         },
       }),
     );

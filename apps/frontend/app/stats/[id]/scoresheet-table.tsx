@@ -15,6 +15,7 @@ import type {
   SessionDetailStats,
   Verdict,
 } from '@campus-pubquiz/types';
+import { JokerMark } from '@/app/components/joker-mark';
 import { formatRankLabel } from '@/app/lib/rank-label';
 
 interface ScoresheetTableProps {
@@ -74,7 +75,17 @@ function ScoresheetCellContent({
       </span>
     );
   }
-  return <span title={cell.answer}>{cell.pointsAwarded}</span>;
+  return (
+    <span title={cell.answer}>
+      {cell.pointsAwarded}
+      {cell.isJoker && (
+        <>
+          {' '}
+          <JokerMark />
+        </>
+      )}
+    </span>
+  );
 }
 
 /** The Scoresheet: one row per team that took part, one column per question, grouped by round. */

@@ -10,6 +10,13 @@ import {
   getUpcomingQuestionPositions,
 } from './block-questions';
 import { isAnsweringStatus } from './game-state-groups';
+import {
+  hasJokerPickOpened,
+  pickableRounds,
+  toJokerPickRounds,
+  type AdminTeamJoker,
+  type JokerPickRound,
+} from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
@@ -104,18 +111,67 @@ export function buildScreenOperatorFields(
   };
 }
 
+/** Whether the joker pick is open for choosing right now: it is the status and its deadline is armed. The one rule behind the players view, the phone screen and the pick gate. */
+export function isJokerPickOpen(session: SessionState): boolean {
+  return (
+    session.progress.status === 'joker_pick' && session.jokerPickEndsAt !== null
+  );
+}
+
+/** Whether the session plays with jokers and has reached the joker pick, so the rounds can be named for a joker. */
+function isJokerLineupKnown(session: SessionState): boolean {
+  return (
+    session.seededGame.settings.jokersEnabled &&
+    hasJokerPickOpened(session.progress.status)
+  );
+}
+
+/** The session's rounds as the joker pick lists them; with `onlyPickable`, only those with no opened question. */
+export function describeJokerPickRounds(
+  session: SessionState,
+  onlyPickable: boolean,
+): JokerPickRound[] {
+  const { rounds } = session.seededGame;
+  return toJokerPickRounds(
+    rounds,
+    onlyPickable ? pickableRounds(rounds, session.openedQuestionIds) : rounds,
+  );
+}
+
+/** The team's joker with its round named, or null when it has none (or its round is gone from the quiz). */
+function describeAdminTeamJoker(
+  session: SessionState,
+  teamId: number,
+): AdminTeamJoker | null {
+  const joker = session.jokers[teamId];
+  if (!joker) return null;
+  const { rounds } = session.seededGame;
+  const index = rounds.findIndex((round) => round.id === joker.roundId);
+  if (index === -1) return null;
+  return {
+    ...joker,
+    roundNumber: index + 1,
+    roundTitle: rounds[index].title,
+  };
+}
+
 /** The fields only /display reads — added to its view alone by the Screen projection. */
 export function buildDisplayFields(
   session: SessionState,
 ): Pick<
   DisplayStatePayload,
-  'roundCategories' | 'roundAuthors' | 'kahootQuestionEndsAt' | 'teamsCorrect'
+  | 'roundCategories'
+  | 'roundAuthors'
+  | 'kahootQuestionEndsAt'
+  | 'jokerPickEndsAt'
+  | 'teamsCorrect'
 > {
   const { rounds } = session.seededGame;
   return {
     roundCategories: rounds.map((round) => round.category ?? ''),
     roundAuthors: rounds.map((round) => round.author ?? ''),
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
+    jokerPickEndsAt: session.jokerPickEndsAt,
     teamsCorrect: describeTeamsCorrect(session),
   };
 }
@@ -125,10 +181,17 @@ export function buildAdminFields(
   session: SessionState,
 ): Pick<
   AdminStatePayload,
-  'teams' | 'ungradedQuestionIds' | 'phaseStartedAt' | 'phaseElapsedMs'
+  | 'teams'
+  | 'settableJokerRounds'
+  | 'ungradedQuestionIds'
+  | 'phaseStartedAt'
+  | 'phaseElapsedMs'
 > {
   const { maxPlayersPerTeam } = session.seededGame.settings;
   return {
+    settableJokerRounds: isJokerLineupKnown(session)
+      ? describeJokerPickRounds(session, true)
+      : [],
     teams: session.teams.map((team): AdminTeamView => {
       const playerCount = session.playerCounts[team.teamId] ?? null;
       return {
@@ -137,6 +200,7 @@ export function buildAdminFields(
         playerCount,
         isOverPlayerCap:
           playerCount !== null && playerCount > maxPlayersPerTeam,
+        joker: describeAdminTeamJoker(session, team.teamId),
       };
     }),
     ungradedQuestionIds: session.ungradedQuestionIds,
@@ -147,10 +211,23 @@ export function buildAdminFields(
 /** The fields only /play reads — added to the players view alone. */
 export function buildPlayersFields(
   session: SessionState,
-): Pick<PlayersStatePayload, 'upcomingQuestions' | 'pastRevealedQuestions'> {
+): Pick<
+  PlayersStatePayload,
+  'upcomingQuestions' | 'pastRevealedQuestions' | 'jokerPick' | 'jokerRounds'
+> {
   return {
+    jokerRounds: isJokerLineupKnown(session)
+      ? describeJokerPickRounds(session, false)
+      : [],
     upcomingQuestions: getUpcomingQuestionPositions(session),
     pastRevealedQuestions: getPastRevealedQuestions(session),
+    jokerPick:
+      session.progress.status === 'joker_pick'
+        ? {
+            endsAt: session.jokerPickEndsAt,
+            rounds: describeJokerPickRounds(session, true),
+          }
+        : null,
   };
 }
 

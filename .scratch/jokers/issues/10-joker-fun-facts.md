@@ -6,7 +6,7 @@ Parent spec: `.scratch/jokers/spec.md`
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `describeFunFacts` kinds `joker_favourite_round`, `joker_snubbed_round`, `joker_drawn_count`, `best_joker`, `joker_backfired`, in that order before `bonus_awards_so_far`; each skipped when it has no data
 - [ ] Team-naming facts read only revealed joker rounds; ties go to leaderboard name order; extra points come from the shared doubling step

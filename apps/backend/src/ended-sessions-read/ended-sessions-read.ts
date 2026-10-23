@@ -71,6 +71,8 @@ export interface NightAnswer {
   gradedAt: Date | null;
   responseMs: number | null;
   answer: string;
+  /** The question is in the team's joker round: its points count double. */
+  isJoker: boolean;
 }
 
 export interface Night {
@@ -315,6 +317,25 @@ export class EndedSessionsRead {
       'a.value as value',
     )) as NightAnswerRow[];
 
+    // Which round each team doubled: an answer to a question of it is a joker answer.
+    let jokersQuery = knex('session_team_jokers').where(
+      'game_session_id',
+      gameSessionId,
+    );
+    if (teamId !== undefined) {
+      jokersQuery = jokersQuery.where('team_id', teamId);
+    }
+    const jokerRows = (await jokersQuery.select(
+      'team_id as teamId',
+      'round_id as roundId',
+    )) as { teamId: number; roundId: number }[];
+    const jokerRoundByTeam = new Map(
+      jokerRows.map((row) => [row.teamId, row.roundId]),
+    );
+    const roundIdByQuestion = new Map(
+      questionRows.map((row) => [row.questionId, row.roundId]),
+    );
+
     // One parse per question, shared by the key and every answer to it.
     const wordingById = new Map<number, AnswerWording>();
     const roundNumberById = new Map<number, number>();
@@ -359,6 +380,9 @@ export class EndedSessionsRead {
         gradedAt: row.gradedAt === null ? null : new Date(row.gradedAt),
         responseMs: row.responseMs === null ? null : Number(row.responseMs),
         answer: formatAnswer(row.value, wordingById.get(row.questionId)!),
+        isJoker:
+          jokerRoundByTeam.get(row.teamId) ===
+          roundIdByQuestion.get(row.questionId),
       }),
     );
     return { questions, answers };

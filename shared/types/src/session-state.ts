@@ -1,5 +1,6 @@
 import type { FunFactData } from './fun-facts';
 import type { GameContext, GameProgress } from './game-state-types';
+import type { TeamJoker } from './joker';
 import type { LeagueTop } from './league';
 import type { ClosestGuessRevealData, SeededQuestion } from './question-views';
 import type { LeaderboardEntry } from './room-views';
@@ -80,6 +81,10 @@ export interface SessionState {
   questionLockAt: number | null;
   /** Epoch-ms deadline for auto-locking the currently-open kahootMode question, or null when none is armed — see computeKahootQuestionEndsAt. */
   kahootQuestionEndsAt: number | null;
+  /** Epoch-ms deadline at which the joker pick closes and the quiz moves on by itself, or null while no pick is open — see computeJokerPickEndsAt. Like questionLockAt it is re-armed fresh (a full minute) when a restart restores a session on the pick. */
+  jokerPickEndsAt: number | null;
+  /** teamId -> the team's joker, for teams that have one. A cache of the stored jokers, read when the session is placed and as teams join, and updated as teams pick and as the pick closes, so the views stay synchronous. */
+  jokers: Record<number, TeamJoker>;
   /** Epoch-ms time the admin expects the break to end, or null when unset — see StateSnapshotPayload.breakEndsAt. */
   breakEndsAt: number | null;
   /** Text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
@@ -206,6 +211,8 @@ export function freshSessionState(
     progress,
     questionLockAt: null,
     kahootQuestionEndsAt: null,
+    jokerPickEndsAt: null,
+    jokers: {},
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
     isDisplaySoundMuted: false,
@@ -237,5 +244,6 @@ export function getGameContext(session: SessionState): GameContext {
       kahootMode: round.kahootMode ?? false,
     })),
     showRoundOverview: session.seededGame.settings.showRoundOverview,
+    jokersEnabled: session.seededGame.settings.jokersEnabled,
   };
 }

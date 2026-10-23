@@ -1,5 +1,10 @@
 import { describeFunFacts, type FunFact } from './fun-facts';
 import { getBreakNumber, isShowingLastBreak } from './game-state-structure';
+import {
+  pickableRounds,
+  toJokerPickRounds,
+  type JokerPickRound,
+} from './joker';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import type { OnAirScreen } from './on-air-screen';
 import type {
@@ -22,6 +27,14 @@ export type DisplayScreen =
   | { kind: 'lobby' }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
+  /** Every round of the quiz, the pick's deadline and the ids of the teams that have picked; never which round any team picked. */
+  | {
+      kind: 'joker_pick';
+      endsAt: number | null;
+      rounds: JokerPickRound[];
+      /** Roster teams that chose a joker themselves, in roster order. */
+      pickedTeamIds: number[];
+    }
   | { kind: 'join_overlay' }
   | {
       kind: 'round_title';
@@ -114,6 +127,18 @@ export function describeDisplayScreen({
     case 'round_overview':
     case 'join_overlay':
       return { kind: onAir.kind };
+    case 'joker_pick':
+      return {
+        kind: 'joker_pick',
+        endsAt: session.jokerPickEndsAt,
+        rounds: toJokerPickRounds(
+          rounds,
+          pickableRounds(rounds, session.openedQuestionIds),
+        ),
+        pickedTeamIds: session.teams
+          .filter(({ teamId }) => session.jokers[teamId]?.source === 'chosen')
+          .map(({ teamId }) => teamId),
+      };
     case 'round_title': {
       const round = rounds[onAir.roundIndex];
       if (!round) return BLANK;

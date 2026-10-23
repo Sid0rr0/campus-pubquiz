@@ -63,7 +63,11 @@ export async function sendFeedback(
       await page.getByRole('button', { name: '+ Add another' }).click();
     await page.getByLabel(`Topic ${index + 1}`).fill(topic);
   }
-  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  // The player-count stepper on the same screen has a Send button of its own, so the form is found through its comment box.
+  const form = page
+    .getByLabel('Anything else?')
+    .locator('xpath=ancestor::div[1]');
+  await form.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByText('Sent ✓')).toBeVisible();
 }
 

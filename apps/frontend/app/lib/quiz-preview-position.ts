@@ -13,6 +13,7 @@ const KIND_SUFFIXES: Partial<
   reveal_intro: '-reveals',
   break_intro: '-break',
   round_overview: '-overview',
+  joker_pick: '-jokers',
 };
 
 /** The position of a round's title card, or of a question when `questionIndex` is given. */
@@ -44,13 +45,14 @@ export function stepIndexAt(
   );
 }
 
-/** The preview page of a saved quiz, optionally in an order and at a position. The default order and the first step are left out. */
+/** The preview page of a saved quiz, optionally in an order, with jokers and at a position. The default order, jokers off and the first step are left out. */
 export function quizPreviewHref(
   quizId: number | string,
-  options: { mode?: QuizPreviewMode; at?: string } = {},
+  options: { mode?: QuizPreviewMode; withJokers?: boolean; at?: string } = {},
 ): string {
   const params = new URLSearchParams();
   if (options.mode) params.set('mode', options.mode);
+  if (options.withJokers) params.set('jokers', 'true');
   if (options.at) params.set('at', options.at);
   const query = params.toString();
   return `/quizzes/${quizId}/preview${query ? `?${query}` : ''}`;

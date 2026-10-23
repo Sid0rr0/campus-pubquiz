@@ -9,6 +9,8 @@ export interface MyStanding {
   entry: LeaderboardEntry;
   /** The server's rank movement for this team; absent for a team with no previous standing. */
   trend?: RankTrend;
+  /** The team's joker round was in the block just scored: its row gets the 2× stamp. */
+  isJokerStamped: boolean;
 }
 
 /**
@@ -29,7 +31,8 @@ export function findMyStanding(
     phase: 'settled',
   }).find(({ entry }) => entry.teamId === teamId);
   if (!row) return null;
-  return row.trend === undefined
-    ? { entry: row.entry }
-    : { entry: row.entry, trend: row.trend };
+  const { entry, trend, isJokerStamped } = row;
+  return trend === undefined
+    ? { entry, isJokerStamped }
+    : { entry, trend, isJokerStamped };
 }

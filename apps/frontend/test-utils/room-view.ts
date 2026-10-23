@@ -18,6 +18,7 @@ import {
   freshSessionState,
   getGameContext,
   getTimedPhaseKey,
+  JOKER_PICK_SECONDS,
   LOBBY_PROGRESS,
   projectScreen,
   DEFAULT_SESSION_SETTINGS,
@@ -32,6 +33,7 @@ import {
   type SessionState,
   type SocketRoomName,
   type StateViewByRoom,
+  type TeamJoker,
   type TeamRosterEntry,
 } from '@campus-pubquiz/types';
 
@@ -88,12 +90,18 @@ export interface SessionDescription {
   closestGuessRevealStep?: number;
   /** The verdict of each team's answer, by question id (the teams-correct count of the reveal reads them from the fun fact data). */
   answerVerdicts?: Record<number, FunFactAnswer['verdict'][]>;
+  /** `jokerPickEndsAt` defaults to a minute from now while the status is `joker_pick` (an open pick); pass `null` for a closed one. */
   timers?: Partial<
     Pick<
       SessionState,
-      'questionLockAt' | 'kahootQuestionEndsAt' | 'breakEndsAt'
+      | 'questionLockAt'
+      | 'kahootQuestionEndsAt'
+      | 'jokerPickEndsAt'
+      | 'breakEndsAt'
     >
   >;
+  /** Each team's joker by team id (the quiz master's view lists them; no other view carries one). */
+  jokers?: Record<number, TeamJoker>;
   showdown?: { round: ActiveShowdownRoundState; revealStep?: number };
   settings?: Partial<SessionSettings>;
   /** The league the lobby shows beside the roster; omit for a session in no league. */
@@ -223,6 +231,18 @@ function buildPhaseTimer(
   };
 }
 
+/** The joker pick's deadline: what the description says (null for a closed pick), else a minute from now while the status is `joker_pick`. */
+function describeJokerPickEndsAt(
+  description: SessionDescription,
+): number | null {
+  if (description.timers && 'jokerPickEndsAt' in description.timers) {
+    return description.timers.jokerPickEndsAt ?? null;
+  }
+  return description.progress?.status === 'joker_pick'
+    ? Date.now() + JOKER_PICK_SECONDS * 1000
+    : null;
+}
+
 /** Full session state for a partial description. */
 export function buildSessionState(
   description: SessionDescription = {},
@@ -248,6 +268,8 @@ export function buildSessionState(
       buildProgress(description.progress),
     ),
     ...description.timers,
+    jokerPickEndsAt: describeJokerPickEndsAt(description),
+    jokers: description.jokers ?? {},
     ...(description.displayTextScale === undefined
       ? {}
       : { displayTextScale: description.displayTextScale }),

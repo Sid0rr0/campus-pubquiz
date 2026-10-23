@@ -43,6 +43,16 @@ const GUIDE_SECTIONS: GuideSection[] = [
     ],
   },
   {
+    title: 'Jokers',
+    paragraphs: [
+      'The "Jokers" switch in Session Settings (lobby only) turns on the round overview too. Each team picks a round whose points count double, bonus awards never (🃏 in Teams).',
+      'Next is the joker pick; the big screen shows "N/M picked". "Countdown sound" covers the music.',
+      'Close pick (Advance) ends it early; unpicked teams get a random round. Previous reopens it.',
+      'Change a joker in the joker list until that round has started; its phone says it was changed by the quiz master.',
+      'After a joker round, the team\'s leaderboard row gets a "2×" stamp, even on 0 points.',
+    ],
+  },
+  {
     title: 'Running questions',
     paragraphs: [
       'Each round opens with a round title card, then Advance opens questions one at a time. Teams can change answers to any question opened this block.',

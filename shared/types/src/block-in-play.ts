@@ -7,7 +7,10 @@ import {
   isAnsweringStatus,
   isBlockStartedStatus,
 } from './game-state';
-import { getPreviousQuestionPosition } from './game-state-block-position';
+import {
+  getBlockEndPosition,
+  getPreviousQuestionPosition,
+} from './game-state-block-position';
 
 /** The part of a seeded round the Block module reads — a SeededRound fits. */
 interface BlockRound {
@@ -114,6 +117,33 @@ export function getBlockInPlayIds(
   progress: GameProgress,
 ): number[] {
   return getBlockInPlay(rounds, progress).map(({ questionId }) => questionId);
+}
+
+/**
+ * The indexes of the rounds holding a question of the block that starts at
+ * `blockFirstQuestionId` (every question of a kahoot round is its own block).
+ * Empty when no question has that id.
+ */
+export function getBlockRoundIndexes(
+  rounds: readonly BlockRound[],
+  blockFirstQuestionId: number,
+): number[] {
+  const startRoundIndex = rounds.findIndex((round) =>
+    round.questions.some(({ id }) => id === blockFirstQuestionId),
+  );
+  if (startRoundIndex < 0) return [];
+  const startQuestionIndex = rounds[startRoundIndex].questions.findIndex(
+    ({ id }) => id === blockFirstQuestionId,
+  );
+  const { roundIndex: endRoundIndex } = getBlockEndPosition(
+    startRoundIndex,
+    startQuestionIndex,
+    toGameContext(rounds),
+  );
+  return Array.from(
+    { length: endRoundIndex - startRoundIndex + 1 },
+    (_, offset) => startRoundIndex + offset,
+  );
 }
 
 /**

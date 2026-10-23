@@ -23,6 +23,11 @@ import type {
 } from './bonus';
 import type { RateRoundPayload, SendFeedbackPayload } from './feedback';
 import type {
+  PickJokerPayload,
+  SetTeamJokerPayload,
+  TeamJokerSyncedPayload,
+} from './joker';
+import type {
   SetPlayerCountPayload,
   SetTeamPlayerCountPayload,
   TeamPlayerCountSyncedPayload,
@@ -85,6 +90,11 @@ export interface ClientToServerProtocol {
     payload: SetTeamPlayerCountPayload;
     ack: void;
   };
+  [SOCKET_EVENTS.PICK_JOKER]: { payload: PickJokerPayload; ack: void };
+  [SOCKET_EVENTS.SET_TEAM_JOKER]: {
+    payload: SetTeamJokerPayload;
+    ack: void;
+  };
 }
 
 export type ClientToServerEvent = keyof ClientToServerProtocol;
@@ -114,6 +124,7 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED]: TeamBonusAwardsSyncedPayload;
   [SOCKET_EVENTS.SESSION_CLOSED]: SessionClosedPayload;
   [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
+  [SOCKET_EVENTS.TEAM_JOKER_SYNCED]: TeamJokerSyncedPayload;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
   exception: ExceptionPayload | string;
 }

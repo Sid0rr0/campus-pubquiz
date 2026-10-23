@@ -14,6 +14,7 @@ import {
   type AckResult,
   type JoinAcceptedPayload,
   type LeaveSessionPayload,
+  type PickJokerPayload,
   type RateRoundPayload,
   type SendFeedbackPayload,
   type SetPlayerCountPayload,
@@ -21,6 +22,7 @@ import {
   type SubmitShowdownGuessPayload,
   type TeamBonusAwardView,
   type TeamFeedbackView,
+  type TeamJoker,
 } from '@campus-pubquiz/types';
 import {
   NOT_CONNECTED_MESSAGE,
@@ -129,6 +131,10 @@ export interface TeamLinkGame {
   myPlayerCount: number | null;
   /** Resolves to the server's verdict on the count; the card shows it, so nothing is toasted here. */
   setPlayerCount: (playerCount: number) => Promise<AckResult>;
+  /** The team's own joker as the server last said it, or null while it has none. */
+  myJoker: TeamJoker | null;
+  /** Resolves to the server's verdict on a joker pick; the picker shows it ("Saved ✓", or the reason), so nothing is toasted here. */
+  pickJoker: (roundId: number) => Promise<AckResult>;
   submitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -333,6 +339,9 @@ export function useTeamLink(
           playerCount: payload.playerCount,
         }),
       );
+      socket.on(SOCKET_EVENTS.TEAM_JOKER_SYNCED, (payload) =>
+        dispatch({ type: 'jokerSynced', joker: payload.joker }),
+      );
       socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload) =>
         dispatch({ type: 'bonusAwarded', payload }),
       );
@@ -472,6 +481,18 @@ export function useTeamLink(
     [emitWithAck, dispatch],
   );
 
+  const pickJoker = useCallback(
+    async (roundId: number) => {
+      const payload: PickJokerPayload = { roundId };
+      const result = await emitWithAck(SOCKET_EVENTS.PICK_JOKER, payload);
+      if (result.success) {
+        dispatch({ type: 'jokerSaved', joker: { roundId, source: 'chosen' } });
+      }
+      return result;
+    },
+    [emitWithAck, dispatch],
+  );
+
   const submitShowdownGuess = useCallback(
     async (showdownRoundId: number, teamId: number, value: string) => {
       const payload: SubmitShowdownGuessPayload = {
@@ -560,6 +581,8 @@ export function useTeamLink(
           rateRound,
           sendFeedback,
           setPlayerCount,
+          myJoker: link.myJoker,
+          pickJoker,
           submitShowdownGuess,
         }
       : undefined,

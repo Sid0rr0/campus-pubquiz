@@ -36,14 +36,21 @@ export interface LeaderboardRow {
   label: string;
   /** Rank movement as sent by the server; only in 'settled'. */
   trend?: RankTrend;
+  /** The server flagged the team's joker round as in the block just scored; only in 'settled'. */
+  isJokerStamped: boolean;
 }
 
-/** The entries in their own (server-ranked) order, with the sent trends. */
-function settledRows({ entries, trends }: LeaderboardBoard): LeaderboardRow[] {
+/** The entries in their own (server-ranked) order, with the sent trends and joker flags. */
+function settledRows({
+  entries,
+  trends,
+  jokerTeamIds = [],
+}: LeaderboardBoard): LeaderboardRow[] {
   return entries.map((entry) => ({
     entry,
     rankIndex: entry.rank - 1,
     label: formatRankLabel(entry),
+    isJokerStamped: jokerTeamIds.includes(entry.teamId),
     ...(trends[entry.teamId] === undefined
       ? {}
       : { trend: trends[entry.teamId] }),
@@ -69,6 +76,7 @@ function oldStateRows(
         : oldEntry,
     rankIndex: oldEntry.rank - 1,
     label: formatRankLabel(oldEntry),
+    isJokerStamped: false,
   }));
 }
 
