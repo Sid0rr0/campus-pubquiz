@@ -199,6 +199,10 @@ A team took part in a session if it is on the roster, or was kicked or departed 
 **Sessions played**:
 The ended sessions a team took part in. Shown the same in the team directory and on the team page.
 
+**Merge**:
+Making two teams that are the same real team into one, after the team joined a later night under another name. The **kept team** carries on with both teams' sessions and either team's name; the **duplicate team** stops existing. Two teams that took part in the same session can't be merged, and a merge can't be undone.
+_Avoid_: combine, link, alias
+
 **Session result**:
 What one ended session's results mean, computed by a pure module beside Standings from the session's Standings and its stored questions and answers. Per team: placing, whether it left, totals, whether it answered, its correct count, whether it won the night and whether it is the session winner. Per question: how many teams answered, how many were correct and its correct rate. For the session: the participant count and the max points. It never ranks or re-sums; placing, ties and participation stay with Standings.
 
