@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getPlayingMediaUrl, type DisplayScreen } from '../display-screen';
 import type { GameProgress } from '../game-state';
 import type {
   BlockRevealQuestionView,
@@ -173,6 +174,246 @@ describe('describeSessionDisplayScreen', () => {
       kind: 'reveal',
       question: { id: 10, answer: 'Answer 10' },
     });
+  });
+});
+
+describe('the Display screen content', () => {
+  /** Two rounds in one block (round 1 has no break), questions 10, 11 and 12. */
+  const blockRounds = [
+    round(1, [10, 11], { title: 'Alpha', breakAfter: false }),
+    round(2, [12], { title: 'Bravo' }),
+  ];
+
+  function inBreak(
+    status: GameProgress['status'],
+    revealIndex: number,
+  ): SessionState {
+    return sessionWith(blockRounds, {
+      status,
+      roundIndex: 1,
+      questionIndex: 0,
+      revealIndex,
+      furthestOpenIndex: 2,
+    });
+  }
+
+  it('names the round title card with its category, author and number', () => {
+    const screen = describeSessionDisplayScreen(
+      sessionWith(
+        [round(1, [10], { title: 'Alpha', category: 'Music', author: 'Sam' })],
+        { status: 'round_intro' },
+      ),
+    );
+
+    expect(screen).toEqual({
+      kind: 'round_title',
+      roundNumber: 1,
+      title: 'Alpha',
+      category: 'Music',
+      author: 'Sam',
+      note: '',
+    });
+  });
+
+  it('leaves the category and author empty when the round has none', () => {
+    const screen = describeSessionDisplayScreen(
+      sessionWith([round(1, [10], { title: 'Alpha' })], {
+        status: 'round_intro',
+      }),
+    );
+
+    expect(screen).toMatchObject({ category: '', author: '' });
+  });
+
+  it('sends blank for a round title card whose round does not exist', () => {
+    const session = sessionWith([round(1, [10])]);
+
+    expect(
+      assembleDisplayScreen(
+        session,
+        buildSnapshot(session),
+        { kind: 'round_title', roundIndex: 5 },
+        0,
+      ),
+    ).toEqual({ kind: 'blank' });
+  });
+
+  it('carries the question under review on the break review screen', () => {
+    expect(describeSessionDisplayScreen(inBreak('break', 1))).toMatchObject({
+      kind: 'break_review',
+      question: { id: 11 },
+    });
+  });
+
+  it('sends blank for a break review whose question is not in the block', () => {
+    const session = inBreak('break', 0);
+
+    expect(
+      assembleDisplayScreen(
+        session,
+        buildSnapshot(session),
+        { kind: 'break_review', questionId: 99 },
+        0,
+      ),
+    ).toEqual({ kind: 'blank' });
+  });
+
+  it('names the break round title card after the question it introduces', () => {
+    expect(
+      describeSessionDisplayScreen(inBreak('break_round_intro', 2)),
+    ).toEqual({
+      kind: 'break_round_title',
+      roundNumber: 2,
+      title: 'Bravo',
+      note: '',
+    });
+  });
+
+  it('sends blank for a break round title whose question is not in the block', () => {
+    const session = inBreak('break_round_intro', 0);
+
+    expect(
+      assembleDisplayScreen(
+        session,
+        buildSnapshot(session),
+        { kind: 'break_round_title', roundIndex: 0, questionId: 99 },
+        0,
+      ),
+    ).toEqual({ kind: 'blank' });
+  });
+
+  it('names the ended screen, with the feedback prompt following the setting', () => {
+    const collecting = sessionWith(blockRounds, { status: 'ended' });
+    const silent: SessionState = {
+      ...collecting,
+      seededGame: {
+        ...collecting.seededGame,
+        settings: { ...collecting.seededGame.settings, collectFeedback: false },
+      },
+    };
+
+    expect(describeSessionDisplayScreen(collecting)).toEqual({
+      kind: 'ended',
+      isFeedbackPromptShown: true,
+    });
+    expect(describeSessionDisplayScreen(silent)).toEqual({
+      kind: 'ended',
+      isFeedbackPromptShown: false,
+    });
+  });
+
+  describe('the leaderboard crowning the winners', () => {
+    const twoBlocks = [round(1, [10]), round(2, [11])];
+
+    function isFinal(session: SessionState): unknown {
+      return (describeSessionDisplayScreen(session) as { isFinal: unknown })
+        .isFinal;
+    }
+
+    it('is not final mid-quiz', () => {
+      expect(
+        isFinal(
+          sessionWith(twoBlocks, {
+            status: 'question_open',
+            isLeaderboardVisible: true,
+          }),
+        ),
+      ).toBe(false);
+    });
+
+    it('is not final in a break that is not the last', () => {
+      expect(
+        isFinal(
+          sessionWith(twoBlocks, {
+            status: 'break_intro',
+            roundIndex: 0,
+            isLeaderboardVisible: true,
+          }),
+        ),
+      ).toBe(false);
+    });
+
+    it('is final in the last break', () => {
+      expect(
+        isFinal(
+          sessionWith(twoBlocks, {
+            status: 'break_intro',
+            roundIndex: 1,
+            isLeaderboardVisible: true,
+          }),
+        ),
+      ).toBe(true);
+    });
+
+    it('is final once the quiz has ended', () => {
+      expect(
+        isFinal(
+          sessionWith(twoBlocks, {
+            status: 'ended',
+            isLeaderboardVisible: true,
+          }),
+        ),
+      ).toBe(true);
+    });
+  });
+});
+
+describe('getPlayingMediaUrl', () => {
+  const question = (extra: object) =>
+    ({ kind: 'question', question: extra }) as unknown as DisplayScreen;
+  const reveal = (extra: object) =>
+    ({ kind: 'reveal', question: extra }) as unknown as DisplayScreen;
+
+  it('plays the open question’s own media', () => {
+    expect(getPlayingMediaUrl(question({ mediaUrl: 'q.mp3' }))).toBe('q.mp3');
+  });
+
+  it('plays the answer media on a reveal, replacing the question’s own', () => {
+    expect(
+      getPlayingMediaUrl(
+        reveal({
+          revealKind: 'answer',
+          mediaUrl: 'q.mp3',
+          answerMediaUrl: 'a.mp3',
+        }),
+      ),
+    ).toBe('a.mp3');
+  });
+
+  it('falls back to the question’s own media on a reveal with no answer media', () => {
+    expect(
+      getPlayingMediaUrl(reveal({ revealKind: 'answer', mediaUrl: 'q.mp3' })),
+    ).toBe('q.mp3');
+  });
+
+  it('plays the answer media on a reveal whose question has no media of its own', () => {
+    expect(
+      getPlayingMediaUrl(
+        reveal({ revealKind: 'answer', answerMediaUrl: 'a.mp3' }),
+      ),
+    ).toBe('a.mp3');
+  });
+
+  it('plays nothing before a closest-guess answer step', () => {
+    expect(
+      getPlayingMediaUrl(
+        reveal({
+          revealKind: 'closest_guess_pending',
+          mediaUrl: 'q.mp3',
+          answerMediaUrl: 'a.mp3',
+        }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it.each([
+    { kind: 'lobby' },
+    { kind: 'break_review', question: { mediaUrl: 'q.mp3' } },
+    { kind: 'blank' },
+  ])('plays nothing on $kind', (screen) => {
+    expect(
+      getPlayingMediaUrl(screen as unknown as DisplayScreen),
+    ).toBeUndefined();
   });
 });
 

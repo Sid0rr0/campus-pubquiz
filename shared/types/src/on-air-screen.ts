@@ -286,6 +286,7 @@ export function screenPositionOf(progress: GameProgress): number {
       return 3;
     case 'ended':
       return ENDED_POSITION;
+    // Stryker disable next-line ConditionalExpression: an empty `default:` falls out of the switch exactly as `break` does
     default:
       break;
   }

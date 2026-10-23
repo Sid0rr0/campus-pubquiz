@@ -183,6 +183,7 @@ export function projectScreen(
         ...describePlayersScreen({
           ...snapshot,
           isAnswerable,
+          // Stryker disable next-line BooleanLiteral: the phone only reads it on a showdown screen, which needs an active round, so the fallback is never read
           isShowdownResolved: session.activeShowdownRound?.resolved ?? false,
           isJokerPickOpen: isJokerPickOpen(session),
         }),

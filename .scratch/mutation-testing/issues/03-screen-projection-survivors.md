@@ -1,6 +1,6 @@
 # 03: What the big screen shows: on-air screen and screen projection
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: 01
 
