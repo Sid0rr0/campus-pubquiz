@@ -1,6 +1,8 @@
 # 07: Question schemas and CSV codecs (import boundary)
 
-Status: needs-triage
+Status: ready-for-agent
+
+Blocked by: None
 
 The import boundary is where a bad sheet has to be refused before it reaches the stage (CLAUDE.md "JSON payload column").
 
@@ -21,3 +23,10 @@ Examples:
 - `question-preview-schema.ts:21`: the URL protocol regex `/^https?$/` survives losing either anchor, or the `?` (which would refuse plain `http`).
 
 Likely equivalent or noise: `question-kind.ts:87-135` are the help-text strings shown to authors. Either assert one of them, or add a `// Stryker disable StringLiteral` block with a reason.
+
+## Decisions (2026-10-23)
+
+- Disable `StringLiteral` across the help-text block in `question-kind.ts:87-135` with the reason "author-facing copy, not behaviour". Don't assert the copy.
+- Every trimming, blank-filter and URL-protocol survivor gets a test.
+
+Done when the per-file run (spec.md, "How to work an issue") on every file this ticket names shows no surviving and no "no coverage" mutants, apart from ones disabled with a `// Stryker disable` reason.

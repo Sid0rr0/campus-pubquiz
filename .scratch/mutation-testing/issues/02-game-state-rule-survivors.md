@@ -1,6 +1,8 @@
 # 02: Game state machine: close the survivors in the transition rules
 
-Status: needs-triage
+Status: ready-for-agent
+
+Blocked by: None
 
 The state machine scores 94–98%, but the survivors that remain change real game flow:
 
@@ -13,3 +15,10 @@ The state machine scores 94–98%, but the survivors that remain change real gam
 - `game-state-forward-transitions.ts:52`: the error message text survives. That's probably fine (equivalent unless a test asserts the message).
 
 Priority: high. These are the moves the moderator presses live.
+
+## Decisions (2026-10-23)
+
+- Disable the error-message mutant at `game-state-forward-transitions.ts:52` with a reason (invalid-config error text, not player-facing). Every other survivor listed above gets a test.
+- Priority: high.
+
+Done when the per-file run (spec.md, "How to work an issue") on every file this ticket names shows no surviving and no "no coverage" mutants, apart from ones disabled with a `// Stryker disable` reason.

@@ -1,6 +1,8 @@
 # 08: Scoring, margin, ranking and joker: the last few survivors
 
-Status: needs-triage
+Status: ready-for-agent
+
+Blocked by: None
 
 These files score 92–98%. Triage the few survivors one by one:
 
@@ -10,3 +12,11 @@ These files score 92–98%. Triage the few survivors one by one:
 - `joker.ts:107`: `pickableRoundIds.length - 1` → `+ 1` survives.
 - `question-correct-rate.ts:15`: the `verdict !== 'partial' || questionPoints <= 0` guard can be forced to `false`.
 - `answer-kind.ts:59`: `toLowerCase()` → `toUpperCase()` is equivalent for a case-insensitive comparison. Disable it with a reason.
+
+## Decisions (2026-10-23)
+
+- Disable `ranking-rule.ts:22` (`<` → `<=`) as equivalent: the line above already returns 0 when `a === b`.
+- Disable `answer-kind.ts:59` (`toLowerCase` → `toUpperCase`) as equivalent for a case-insensitive compare.
+- The other survivors listed above get tests.
+
+Done when the per-file run (spec.md, "How to work an issue") on every file this ticket names shows no surviving and no "no coverage" mutants, apart from ones disabled with a `// Stryker disable` reason.

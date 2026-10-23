@@ -1,6 +1,8 @@
 # 03: What the big screen shows: on-air screen and screen projection
 
-Status: needs-triage
+Status: ready-for-agent
+
+Blocked by: 01
 
 | File                        | Survived | No coverage | Killed |
 | --------------------------- | -------- | ----------- | ------ |
@@ -16,3 +18,9 @@ Examples:
 - `display-screen.ts:102`: `answerMediaUrl ?? mediaUrl` → `answerMediaUrl && mediaUrl` survives (the answer media rule from the control-availability spec).
 
 Check issue 01 first: some of this may be tested from the frontend.
+
+## Decisions (2026-10-23)
+
+- No open choices. Starts after 01, which writes the direct `session-display-screen` spec; extend that spec rather than adding a second one.
+
+Done when the per-file run (spec.md, "How to work an issue") on every file this ticket names shows no surviving and no "no coverage" mutants, apart from ones disabled with a `// Stryker disable` reason.

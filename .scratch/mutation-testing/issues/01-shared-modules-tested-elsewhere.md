@@ -2,6 +2,8 @@
 
 Status: ready-for-agent
 
+Blocked by: None
+
 **Type:** decision
 
 Several `shared/types` modules have no spec in `shared/types/src/__tests__/`. They're only exercised through frontend or backend tests, so Stryker kills nothing in them:

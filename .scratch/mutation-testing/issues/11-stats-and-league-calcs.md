@@ -1,6 +1,8 @@
 # 11: Backend stats, team history and league calculations
 
-Status: needs-triage
+Status: ready-for-agent
+
+Blocked by: None
 
 | File (`apps/backend/src/`)     | Survived | No coverage | Killed |
 | ------------------------------ | -------- | ----------- | ------ |
@@ -19,3 +21,9 @@ Examples:
 - `team-history.calc.ts:53`: the empty-values `null` can be dropped. `:84-85`: the `maxPoints > 0` filter survives `>=` and `true`, so a zero-point night isn't tested.
 
 Priority: low. These are reads after the night, not live play.
+
+## Decisions (2026-10-23)
+
+- Priority: low (post-night reads). No open choices.
+
+Done when the per-file run (spec.md, "How to work an issue") on every file this ticket names shows no surviving and no "no coverage" mutants, apart from ones disabled with a `// Stryker disable` reason.
