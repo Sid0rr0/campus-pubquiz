@@ -25,7 +25,6 @@ import type { SessionFeedbackRepository } from '@/db/repositories/session-feedba
 import type { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import type { SessionTeamJokerRepository } from '@/db/repositories/session-team-joker.repository';
 import type { TeamRepository } from '@/db/repositories/team.repository';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { BonusService } from '@/bonus/bonus.service';
 import { buildEndedSessionsRead } from '@/ended-sessions-read/__tests__/ended-sessions-read-test-utils';
 import { FeedbackService } from '@/feedback/feedback.service';
@@ -292,7 +291,7 @@ describe('TeamMergeService (Postgres integration)', () => {
 
     const bonuses = new BonusService(
       em.getRepository<BonusAward, BonusAwardRepository>(BonusAward),
-      em.getRepository(GameSessionTeam) as GameSessionTeamRepository,
+      em.getRepository(GameSessionTeam),
     );
     await expect(bonuses.listForTeam(night1.id, newer.id)).resolves.toEqual([
       expect.objectContaining({ category: 'shot', points: 2 }),
@@ -374,7 +373,7 @@ describe('TeamMergeService (Postgres integration)', () => {
     const teams = new TeamService(
       em.getRepository<Team, TeamRepository>(Team),
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
-      em.getRepository(GameSessionTeam) as GameSessionTeamRepository,
+      em.getRepository(GameSessionTeam),
       history,
       buildEndedSessionsRead(em),
     );

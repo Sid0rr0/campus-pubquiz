@@ -94,7 +94,7 @@ export class TeamMergeService {
   constructor(@InjectRepository(Team) private readonly teams: TeamRepository) {}
 
   private get em(): EntityManager {
-    return this.teams.getEntityManager() as EntityManager;
+    return this.teams.getEntityManager();
   }
 
   private runOn(em: EntityManager, transacting: boolean): Run {
@@ -105,7 +105,7 @@ export class TeamMergeService {
         params,
         'all',
         transacting ? em.getTransactionContext() : undefined,
-      ) as Promise<unknown[]>;
+      );
   }
 
   /** Every other team with its sessions played and, if it can't be merged with this one, why. */
@@ -159,7 +159,7 @@ export class TeamMergeService {
     name: string,
   ): Promise<TeamMergedPayload> {
     return this.em.transactional(async (tem) => {
-      const run = this.runOn(tem as EntityManager, true);
+      const run = this.runOn(tem, true);
       // Lock both rows (lowest id first, so two merges can't deadlock) so the
       // checks below hold until commit.
       if (teamId !== otherTeamId) {
