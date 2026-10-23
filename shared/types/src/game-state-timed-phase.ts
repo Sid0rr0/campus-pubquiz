@@ -26,6 +26,7 @@ export function getTimedPhaseKey(
     // arms a fresh full-duration timer the moment isLeaderboardVisible
     // flips back to false, with no extra state needed.
     if (
+      // Stryker disable next-line OptionalChaining: equivalent, an out-of-range round throws in getBlockStartPosition below either way
       context.rounds[progress.roundIndex]?.kahootMode &&
       progress.isLeaderboardVisible
     ) {

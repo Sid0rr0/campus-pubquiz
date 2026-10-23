@@ -1,6 +1,6 @@
 # 02: Game state machine: close the survivors in the transition rules
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getBlockEndPosition,
   getBlockStartPosition,
   getBreakNumber,
   getQuizStructureSummary,
@@ -109,6 +110,28 @@ describe('getBlockStartPosition', () => {
   });
 });
 
+describe('getBlockEndPosition', () => {
+  it('stops at the quiz’s last question when no break point follows it', () => {
+    const noFinalBreak: GameContext = {
+      rounds: [
+        { questionCount: 1, breakAfter: false },
+        { questionCount: 2, breakAfter: false },
+      ],
+    };
+    expect(getBlockEndPosition(0, 0, noFinalBreak)).toEqual({
+      roundIndex: 1,
+      questionIndex: 1,
+    });
+  });
+
+  it('walks across a round boundary to the next break point', () => {
+    expect(getBlockEndPosition(0, 0, twoRoundsWithBreakAfterSecond)).toEqual({
+      roundIndex: 1,
+      questionIndex: 1,
+    });
+  });
+});
+
 describe('getBreakNumber', () => {
   it('returns 0 for a round that is not a block-ending round', () => {
     expect(
@@ -205,6 +228,11 @@ describe('isShowingLastBreak', () => {
         threeBlocksSummary,
       ),
     ).toBe(true);
+  });
+
+  it('is false on a round that is no block boundary, even for a summary with no blocks', () => {
+    const noBlocks = getQuizStructureSummary({ rounds: [] });
+    expect(isShowingLastBreak(progressAt('break', 0), noBlocks)).toBe(false);
   });
 
   it('is true for a single-block quiz’s only break, since it is also the last one', () => {
