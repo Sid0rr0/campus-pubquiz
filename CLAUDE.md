@@ -24,6 +24,7 @@ pnpm workspace, run from repo root unless noted:
 - Backend (`apps/backend`) uses **Jest**: `pnpm --filter backend test <path>` to run a single spec, not the whole suite
 - Frontend (`apps/frontend`) uses **Vitest**: `pnpm --filter frontend test <filename>` to run a single spec (a filename substring: a path through `[id]` matches nothing)
 - `pnpm e2e` — Playwright journeys (`e2e/` workspace) against production builds on :8889/:3001 and the throwaway `campus_pubquiz_e2e` database; needs the docker-compose Postgres running (`docker compose up -d postgres`). Never touches the dev servers, `.next` or `campus_pubquiz`. Local only: not part of `pnpm test`, the pre-commit hook or CI. See README "Running E2E". `E2E_SKIP_BUILD=1` reuses the last builds; `pnpm e2e --repeat-each=5` checks a journey for flakiness; `pnpm e2e:ui` opens Playwright UI mode
+- `pnpm mutate` — Stryker mutation testing (`shared/types`, and the backend's DB-free slice), incremental by default; `pnpm --filter <workspace> mutate` for one. Local only: not part of `pnpm test`, the pre-commit hook or CI, and never fails on score. See README "Running mutation tests"
 - `pnpm --filter backend db:migrate` applies pending MikroORM migrations locally (Postgres must be running — see `docker-compose.yml`); `db:migrate:create` generates one after an entity change
 
 ## Constraints

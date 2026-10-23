@@ -1,7 +1,9 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // A Stryker run that crashes leaves its sandbox copy of the tests behind.
+    exclude: [...configDefaults.exclude, '.stryker-tmp/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

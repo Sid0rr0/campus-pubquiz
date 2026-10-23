@@ -193,6 +193,38 @@ test that logs in through the UI waits for a free slot first, so
 `--repeat-each` does not trip the limit. If you add a test that logs in, take a
 slot with `takeLoginSlot()` (`e2e/support/login-budget.ts`) first.
 
+## Running mutation tests
+
+[Stryker](https://stryker-mutator.io/docs/) changes the source in small ways
+(flips a `<`, drops a branch, empties a string) and runs the tests against each
+change. A change no test notices ("survived") points at an assertion that's
+missing. It's a local audit tool: not in `pnpm test`, the pre-commit hook or
+CI, and it never fails on a low score.
+
+```bash
+pnpm mutate                                # every workspace that has it
+pnpm --filter @campus-pubquiz/types mutate # shared/types only
+pnpm --filter backend mutate               # backend only
+```
+
+Runs are incremental: Stryker keeps its results in `<workspace>/reports/stryker-incremental.json`
+and on the next run only retests mutants in changed code or under changed
+tests. Delete that file for a clean full run. The HTML report lands in
+`<workspace>/reports/mutation/mutation.html`. `reports/` and `.stryker-tmp/`
+are gitignored.
+
+**What it covers:**
+
+- `shared/types`: all of `src/` except the tests and `index.ts`.
+- `backend`: only the DB-free slice, so no Docker is needed. `apps/backend/stryker.files.cjs`
+  picks it from imports on every run: it mutates source files that don't
+  import `@mikro-orm`, `@nestjs` or `@/db/`, and runs only the specs that
+  don't reach the test database (`jest.stryker.config.cjs`). A survivor or
+  "no coverage" mutant in that slice may still be caught by a DB-backed spec
+  Stryker didn't run (most of `game/state/*-changes.ts` is only reached that
+  way).
+- `frontend`: not covered.
+
 ## Docs
 
 Each file has one job; link to it rather than repeating it elsewhere.

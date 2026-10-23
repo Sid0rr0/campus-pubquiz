@@ -25,5 +25,6 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "types": ["jest", "node", "multer"]
-  }
+  },
+  "exclude": ["node_modules", "dist", ".stryker-tmp"]
 }

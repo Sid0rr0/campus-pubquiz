@@ -9,6 +9,7 @@
     "typecheck": "pnpm --filter @campus-pubquiz/types build && pnpm -r typecheck",
     "bootstrap": "pnpm install --frozen-lockfile && pnpm --filter @campus-pubquiz/types build",
     "test": "pnpm -r test",
+    "mutate": "pnpm -r --if-present mutate",
     "e2e": "pnpm --filter e2e run e2e",
     "e2e:ui": "pnpm --filter e2e run e2e:ui",
     "dev:frontend": "pnpm --filter frontend dev",

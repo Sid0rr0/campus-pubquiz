@@ -54,3 +54,7 @@ scripts/.simulated-teams.json
 .claude/skills/*
 !.claude/skills/ecc/
 !.claude/skills/regen-architecture-docs/
+
+# Mutation testing (Stryker)
+.stryker-tmp/
+reports/
