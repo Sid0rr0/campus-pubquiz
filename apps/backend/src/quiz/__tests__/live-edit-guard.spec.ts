@@ -4,6 +4,7 @@ import type {
   LiveEditFrontier,
 } from '@campus-pubquiz/types';
 import {
+  QuizLiveEditBlockedError,
   findLiveEditViolations,
   findRegradeQuestionIds,
 } from '@/quiz/live-edit-guard';
@@ -1056,7 +1057,159 @@ describe('findLiveEditViolations — the current round after its opened question
   });
 });
 
+describe('QuizLiveEditBlockedError', () => {
+  it('names the number of conflicting changes and carries the issues', () => {
+    const issues = [
+      { roundIndex: 0, questionIndex: null, field: 'breakAfter', message: 'a' },
+      { roundIndex: 1, questionIndex: null, field: 'kahootMode', message: 'b' },
+    ];
+
+    const error = new QuizLiveEditBlockedError(issues);
+
+    expect(error.name).toBe('QuizLiveEditBlockedError');
+    expect(error.message).toBe(
+      'Cannot save — 2 change(s) conflict with the live session on this quiz',
+    );
+    expect(error.issues).toBe(issues);
+  });
+});
+
+describe('findLiveEditViolations — the last round as a block end', () => {
+  it('treats the last round as breaking even when its stored breakAfter is false', () => {
+    const current = [
+      roundOf('R0', [question(1)]),
+      roundOf('R1', [question(2)]),
+    ];
+    const incoming = [
+      roundOf('R0', [question(1)]),
+      { ...roundOf('R1', [question(2)]), breakAfter: true },
+      roundOf('R2', [question(undefined)]),
+    ];
+
+    expect(findLiveEditViolations(current, incoming, frontier([1], 1))).toEqual(
+      [],
+    );
+  });
+
+  it('reports a changed breakAfter with the field named in the message', () => {
+    const current = [
+      roundOf('R0', [question(1)]),
+      roundOf('R1', [question(2)]),
+    ];
+    const incoming = [
+      { ...roundOf('R0', [question(1)]), breakAfter: true },
+      roundOf('R1', [question(2)]),
+    ];
+
+    const issues = findLiveEditViolations(current, incoming, frontier([1], 1));
+
+    expect(issues.map((issue) => issue.message)).toEqual([
+      'Cannot change the breakAfter of a round a live session has reached',
+    ]);
+  });
+});
+
+describe('findLiveEditViolations — issue messages', () => {
+  const current = () => [
+    roundOf('R0', [question(1), question(2)]),
+    roundOf('R1', [question(3), question(4)]),
+  ];
+
+  it('says opened questions cannot be removed or moved out of the current round', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [roundOf('R0', [question(1), question(2)]), roundOf('R1', [question(3)])],
+      frontier([1, 2, 3, 4], 1),
+    );
+
+    expect(issues.map((issue) => issue.message)).toEqual([
+      'Cannot remove or move opened questions out of this round',
+    ]);
+  });
+
+  it('says a frozen round cannot reorder or replace questions, and why', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        roundOf('R0', [question(2), question(1)]),
+        roundOf('R1', [question(3), question(4)]),
+      ],
+      frontier([1, 2], 1),
+    );
+
+    expect(issues.map((issue) => issue.message)).toEqual([
+      'Cannot reorder or replace questions in this round — a live session has already reached it',
+      'Cannot reorder or replace questions in this round — a live session has already reached it',
+    ]);
+  });
+
+  it("says an opened question's type or choices cannot change", () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        roundOf('R0', [question(1, { type: 'number' }), question(2)]),
+        roundOf('R1', [question(3), question(4)]),
+      ],
+      frontier([1, 2], 1),
+    );
+
+    expect(issues.map((issue) => issue.message)).toEqual([
+      "Cannot change this question's type or choices — it is an opened question that teams may have answered",
+    ]);
+  });
+
+  it('lets the type of an unopened question in a frozen round change', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        roundOf('R0', [question(1), question(2, { type: 'number' })]),
+        roundOf('R1', [question(3), question(4)]),
+      ],
+      frontier([1], 1),
+    );
+
+    expect(issues).toEqual([]);
+  });
+
+  it('lets the type of an unsaved question in a frozen round change', () => {
+    const issues = findLiveEditViolations(
+      [roundOf('R0', [question(undefined)]), roundOf('R1', [question(3)])],
+      [
+        roundOf('R0', [question(undefined, { type: 'number' })]),
+        roundOf('R1', [question(3)]),
+      ],
+      frontier([], 1),
+    );
+
+    expect(issues).toEqual([]);
+  });
+});
+
 describe('findRegradeQuestionIds', () => {
+  it('skips an opened question whose slot in the incoming draft is gone', () => {
+    const current = [roundOf('R0', [question(1), question(2)])];
+    const incoming = [roundOf('R0', [question(1)])];
+
+    expect(findRegradeQuestionIds(current, incoming, [1, 2])).toEqual([]);
+  });
+
+  it('skips an opened question when its whole round is gone from the incoming draft', () => {
+    const current = [
+      roundOf('R0', [question(1)]),
+      roundOf('R1', [question(2, { answer: 'B' })]),
+    ];
+    const incoming = [roundOf('R0', [question(1)])];
+
+    expect(findRegradeQuestionIds(current, incoming, [1, 2])).toEqual([]);
+  });
+
+  it('skips an opened question replaced by a different question with another answer', () => {
+    const current = [roundOf('R0', [question(1)])];
+    const incoming = [roundOf('R0', [question(9, { answer: 'B' })])];
+
+    expect(findRegradeQuestionIds(current, incoming, [1])).toEqual([]);
+  });
+
   function withFirstQuestion(
     overrides: Partial<ImportRoundPreview['questions'][number]>,
   ): ImportRoundPreview[] {
