@@ -31,3 +31,7 @@ The rules every change to this repo follows. Implementers write to them; `/code-
 - **Stored JSON payloads are parsed** with `parseQuestionPayload`. **(lint)** bans `.payload as …` and `as QuestionPayload` in backend code outside tests.
 - **Uploads are untrusted.** Media type is sniffed from magic bytes, storage keys are server-generated UUIDs, and media providers sit behind the `MediaStorage` interface.
 - **A socket event is declared once, in the socket protocol map;** both ends emit and listen through sockets typed by it, never with a hand-written payload type. A field only one room reads goes in that room's view, not the shared snapshot.
+
+## Tests
+
+- **Logic in `shared/types` is tested in `shared/types`.** A module with behaviour has its own spec in `shared/types/src/__tests__/`; being run as a side effect of a frontend or backend test (a projection a fixture builds, a DB-backed spec) doesn't count, because those assert the end result rather than the rule, and `pnpm mutate` can't see them. Files holding only types, constants or error classes are exempt.
