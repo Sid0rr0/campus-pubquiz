@@ -4,7 +4,6 @@ import type { SheetRow } from '@campus-pubquiz/types';
 export class SheetFormatError extends Error {
   constructor(message: string) {
     super(message);
-    // Stryker disable next-line StringLiteral: the error name is never shown or branched on, callers match with instanceof
     this.name = 'SheetFormatError';
   }
 }

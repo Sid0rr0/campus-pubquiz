@@ -175,9 +175,9 @@ export function buildQuizPreview(
   const fullSession = freshSessionState({
     quizId: 0,
     gameSessionId: 0,
-    // Stryker disable next-line StringLiteral: no kept screen or quiz context carries the join code
+    // Stryker disable next-line StringLiteral: equivalent, only the session snapshot (which the preview never builds) reads the join code; no display screen projection does
     joinCode: '',
-    // Stryker disable next-line StringLiteral: no kept screen or quiz context carries the quiz title
+    // Stryker disable next-line StringLiteral: equivalent, no display screen projection reads the quiz title
     quizTitle: '',
     customName: null,
     startedAt: new Date(0),
@@ -343,7 +343,7 @@ function walkNightSteps(
 ): BareStep[] {
   const steps: BareStep[] = [];
   let session = start;
-  // Stryker disable next-line EqualityOperator,AssignmentOperator: only the safety stop reads this counter; a real quiz ends the walk by break long before it
+  // Stryker disable next-line EqualityOperator,AssignmentOperator: only the safety stop reads this counter, and the walk always ends by `pressNext` returning null first; telling `<=` from `<` (or `-=` from `+=`) takes a quiz of over 5000 presses, i.e. well over a thousand questions, which no test builds
   for (let press = 0; press <= MAX_NIGHT_PRESSES; press += 1) {
     const { screen } = projectScreen(session, SOCKET_ROOMS.DISPLAY);
     if (NIGHT_SCREEN_KINDS.includes(screen.kind)) {

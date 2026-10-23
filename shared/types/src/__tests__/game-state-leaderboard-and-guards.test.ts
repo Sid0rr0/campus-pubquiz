@@ -475,4 +475,21 @@ describe('getNextGameState — illegal transitions and config guards', () => {
       InvalidQuizConfigError,
     );
   });
+
+  it('names the offending round and the reason in that error', () => {
+    const badContext: GameContext = {
+      rounds: [{ questionCount: 1, breakAfter: false }],
+    };
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    expect(() => getNextGameState(open, 'ADVANCE', badContext)).toThrow(
+      'Round 0 is the last round but has breakAfter: false — its answers could never be revealed.',
+    );
+  });
 });

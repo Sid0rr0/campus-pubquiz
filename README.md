@@ -219,7 +219,8 @@ are gitignored.
 - `backend`: only the DB-free slice, so no Docker is needed. `apps/backend/stryker.files.cjs`
   picks it from imports on every run: it mutates source files that don't
   import `@mikro-orm`, `@nestjs` or `@/db/`, that at least one DB-free spec
-  imports directly (an `@/…` path), and that aren't under `errors/`; it runs
+  imports directly (an `@/…` or relative path), and that aren't under
+  `game/state/errors/` (trivial error classes); it runs
   only the specs that don't reach the test database (`jest.stryker.config.cjs`).
   Files only DB-backed specs reach (most of `game/state/*-changes.ts`) are
   left out, since the real-store specs are their intended test level. A

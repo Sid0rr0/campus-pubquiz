@@ -7,9 +7,9 @@ import {
   isBreakPointQuestion,
   isShowingLastBreak,
   type GameContext,
-  type GameProgress,
 } from '../game-state';
 import { twoRoundsWithBreakAfterSecond } from './game-state-fixtures';
+import { progressAt } from './session-progress-fixtures';
 
 describe('isBreakPointQuestion', () => {
   it('is true on the last question of a round with breakAfter: true', () => {
@@ -183,48 +183,52 @@ describe('isShowingLastBreak', () => {
     ],
   });
 
-  function progressAt(
-    status: GameProgress['status'],
-    roundIndex: number,
-  ): GameProgress {
-    return {
-      status,
-      roundIndex,
-      questionIndex: 0,
-      isLeaderboardVisible: false,
-      revealIndex: 0,
-      furthestOpenIndex: 0,
-    };
-  }
-
   it('is false outside a break-related status, even during the last break’s round', () => {
     expect(
-      isShowingLastBreak(progressAt('reveal', 5), threeBlocksSummary),
+      isShowingLastBreak(
+        progressAt('reveal', { roundIndex: 5 }),
+        threeBlocksSummary,
+      ),
     ).toBe(false);
     expect(
-      isShowingLastBreak(progressAt('question_open', 5), threeBlocksSummary),
+      isShowingLastBreak(
+        progressAt('question_open', { roundIndex: 5 }),
+        threeBlocksSummary,
+      ),
     ).toBe(false);
   });
 
   it('is false during an earlier break, even in a break-related status', () => {
     expect(
-      isShowingLastBreak(progressAt('break_intro', 1), threeBlocksSummary),
+      isShowingLastBreak(
+        progressAt('break_intro', { roundIndex: 1 }),
+        threeBlocksSummary,
+      ),
     ).toBe(false);
-    expect(isShowingLastBreak(progressAt('break', 3), threeBlocksSummary)).toBe(
-      false,
-    );
+    expect(
+      isShowingLastBreak(
+        progressAt('break', { roundIndex: 3 }),
+        threeBlocksSummary,
+      ),
+    ).toBe(false);
   });
 
   it('is true for every break-related status during the quiz’s last break', () => {
     expect(
-      isShowingLastBreak(progressAt('break_intro', 5), threeBlocksSummary),
+      isShowingLastBreak(
+        progressAt('break_intro', { roundIndex: 5 }),
+        threeBlocksSummary,
+      ),
     ).toBe(true);
-    expect(isShowingLastBreak(progressAt('break', 5), threeBlocksSummary)).toBe(
-      true,
-    );
     expect(
       isShowingLastBreak(
-        progressAt('break_round_intro', 5),
+        progressAt('break', { roundIndex: 5 }),
+        threeBlocksSummary,
+      ),
+    ).toBe(true);
+    expect(
+      isShowingLastBreak(
+        progressAt('break_round_intro', { roundIndex: 5 }),
         threeBlocksSummary,
       ),
     ).toBe(true);
@@ -232,13 +236,13 @@ describe('isShowingLastBreak', () => {
 
   it('is false on a round that is no block boundary, even for a summary with no blocks', () => {
     const noBlocks = getQuizStructureSummary({ rounds: [] });
-    expect(isShowingLastBreak(progressAt('break', 0), noBlocks)).toBe(false);
+    expect(isShowingLastBreak(progressAt('break'), noBlocks)).toBe(false);
   });
 
   it('is true for a single-block quiz’s only break, since it is also the last one', () => {
     expect(
       isShowingLastBreak(
-        progressAt('break_intro', 1),
+        progressAt('break_intro', { roundIndex: 1 }),
         getQuizStructureSummary(twoRoundsWithBreakAfterSecond),
       ),
     ).toBe(true);

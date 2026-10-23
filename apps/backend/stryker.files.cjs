@@ -26,7 +26,7 @@ const NOT_MUTATED = [
   /^(main|instrument)\.ts$/,
   /\.typecheck\.ts$/,
   /\/fixtures\//,
-  /\/errors\//, // error classes: message/name strings, not worth asserting
+  /^game\/state\/errors\//, // trivial error classes (message/name strings); the only errors/ directory
 ];
 
 function listTs(dir) {
@@ -37,9 +37,14 @@ function listTs(dir) {
   });
 }
 
+/**
+ * The local files `file` imports (`@/…` or relative, resolved against the
+ * file's own directory). Matches the specifier after `from`, so an import
+ * spread over several lines is read like a one-liner.
+ */
 function localImports(file) {
   const source = fs.readFileSync(file, 'utf8');
-  return [...source.matchAll(/from '((?:@\/|\.\.?\/)[^']+)'/g)]
+  return [...source.matchAll(/from\s+'((?:@\/|\.\.?\/)[^']+)'/g)]
     .map(([, spec]) =>
       spec.startsWith('@/')
         ? path.join(SRC, spec.slice(2))
@@ -65,18 +70,9 @@ function dbFreeSpecs() {
     .filter((f) => !OUTSIDE_WORKSPACE_SPECS.includes(path.relative(SRC, f)));
 }
 
-/** Source files that at least one DB-free spec imports directly via `@/`. */
+/** Source files that at least one DB-free spec imports directly (an `@/…` path or a relative one). */
 function directlyImportedByDbFreeSpecs() {
-  const imported = new Set();
-  for (const spec of dbFreeSpecs()) {
-    const source = fs.readFileSync(spec, 'utf8');
-    for (const [, target] of source.matchAll(/from '@\/([^']+)'/g)) {
-      const base = path.join(SRC, target);
-      imported.add(`${base}.ts`);
-      imported.add(path.join(base, 'index.ts'));
-    }
-  }
-  return imported;
+  return new Set(dbFreeSpecs().flatMap(localImports));
 }
 
 /** Backend-relative globs of the source files Stryker mutates. */

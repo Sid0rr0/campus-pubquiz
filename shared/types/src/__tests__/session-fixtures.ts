@@ -1,5 +1,5 @@
 import type { GameProgress } from '../game-state';
-import type { SeededQuestion } from '../question-views';
+import type { ClosestGuessRevealData, SeededQuestion } from '../question-views';
 import type { LeaderboardEntry } from '../room-views';
 import { DEFAULT_SESSION_SETTINGS } from '../session-settings';
 import {
@@ -29,6 +29,14 @@ export function closestGuessQuestion(id: number): SeededQuestion {
     answer: '55',
   } as unknown as SeededQuestion;
 }
+
+/** A closest_guess reveal summary with submissions, as the settled session stores it. */
+export const SUMMARY: ClosestGuessRevealData = {
+  hasSubmissions: true,
+  minGuess: '10',
+  maxGuess: '90',
+  closestGuesses: [{ teamName: 'Team A', value: '50' }],
+};
 
 /** A round of free_text questions with the given ids. */
 export function round(

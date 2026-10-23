@@ -49,7 +49,6 @@ export function advanceFromQuestionOpen(
   const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
   if (isLastRound) {
     throw new InvalidQuizConfigError(
-      // Stryker disable next-line StringLiteral: invalid-config error text, not player-facing
       `Round ${progress.roundIndex} is the last round but has breakAfter: false — its answers could never be revealed.`,
     );
   }

@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getPlayingMediaUrl, type DisplayScreen } from '../display-screen';
 import type { GameProgress } from '../game-state';
-import type {
-  BlockRevealQuestionView,
-  ClosestGuessRevealData,
-} from '../question-views';
+import type { BlockRevealQuestionView } from '../question-views';
 import {
   assembleDisplayScreen,
   describeSessionDisplayScreen,
@@ -12,15 +9,13 @@ import {
 } from '../session-display-screen';
 import type { SessionState } from '../session-state';
 import { buildSnapshot } from '../session-snapshot';
-import { lobby } from './game-state-fixtures';
-import { closestGuessQuestion, round, sessionWith } from './session-fixtures';
-
-const SUMMARY: ClosestGuessRevealData = {
-  hasSubmissions: true,
-  minGuess: '10',
-  maxGuess: '90',
-  closestGuesses: [{ teamName: 'Team A', value: '50' }],
-};
+import {
+  closestGuessQuestion,
+  round,
+  sessionWith,
+  SUMMARY,
+} from './session-fixtures';
+import { progressAt } from './session-progress-fixtures';
 
 function revealView(
   id: number,
@@ -33,20 +28,13 @@ function revealView(
   } as unknown as BlockRevealQuestionView & { id: number };
 }
 
-function progressAt(
-  status: GameProgress['status'],
-  revealIndex = 0,
-): GameProgress {
-  return { ...lobby, status, revealIndex };
-}
-
 describe('trimOnAirQuestion', () => {
   const views = [revealView(10), revealView(11)];
 
   it('shows only the on-air question as far as its step has got, in reveal', () => {
     const [earlier, onAir] = trimOnAirQuestion(
       views,
-      progressAt('reveal', 1),
+      progressAt('reveal', { revealIndex: 1 }),
       0,
     );
 
@@ -59,21 +47,21 @@ describe('trimOnAirQuestion', () => {
   });
 
   it('leaves the later questions of the block whole too', () => {
-    const [onAir, later] = trimOnAirQuestion(views, progressAt('reveal', 0), 0);
+    const [onAir, later] = trimOnAirQuestion(views, progressAt('reveal'), 0);
 
     expect(onAir).toMatchObject({ revealKind: 'closest_guess_pending' });
     expect(later).toBe(views[1]);
   });
 
   it('sends every question whole outside reveal, whatever the step', () => {
-    const trimmed = trimOnAirQuestion(views, progressAt('break', 0), 0);
+    const trimmed = trimOnAirQuestion(views, progressAt('break'), 0);
 
     expect(trimmed[0]).toBe(views[0]);
     expect(trimmed[1]).toBe(views[1]);
   });
 
   it('shows more of the on-air question as the step advances', () => {
-    const [onAir] = trimOnAirQuestion(views, progressAt('reveal', 0), 3);
+    const [onAir] = trimOnAirQuestion(views, progressAt('reveal'), 3);
 
     expect(onAir).toMatchObject({
       revealKind: 'closest_guess',

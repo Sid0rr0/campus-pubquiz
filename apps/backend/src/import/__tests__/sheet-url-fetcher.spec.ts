@@ -37,6 +37,12 @@ describe('parseGoogleSheetUrl', () => {
     expect(() => parseGoogleSheetUrl('not a url')).toThrow(SheetFetchError);
   });
 
+  it('names its error SheetFetchError', () => {
+    expect(() => parseGoogleSheetUrl('not a url')).toThrow(
+      expect.objectContaining({ name: 'SheetFetchError' }),
+    );
+  });
+
   it('rejects a host that is not docs.google.com', () => {
     expect(() =>
       parseGoogleSheetUrl('https://evil.com/spreadsheets/d/abc123/edit'),

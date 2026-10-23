@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { previewMove } from '../dry-run-press';
 import type { GameProgress } from '../game-state';
-import type { ClosestGuessRevealData } from '../question-views';
 import type { SessionState } from '../session-state';
 import {
   closestGuessQuestion,
   leaderboardEntry,
   round,
   sessionWith,
+  SUMMARY,
 } from './session-fixtures';
 
 const NOW = 1_000_000;
@@ -26,13 +26,6 @@ function at(
     overrides,
   );
 }
-
-const SUMMARY: ClosestGuessRevealData = {
-  hasSubmissions: true,
-  minGuess: '10',
-  maxGuess: '90',
-  closestGuesses: [{ teamName: 'Team A', value: '50' }],
-};
 
 describe('previewMove', () => {
   it('previews a state machine move as the session after the press', () => {

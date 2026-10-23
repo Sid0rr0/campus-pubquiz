@@ -131,8 +131,7 @@ function standingsSection(detail: SessionDetailStats): string[] {
   const rows = detail.standings.map((s) => {
     const placing = s.hasLeft
       ? 'left'
-      : // Stryker disable next-line ConditionalExpression: a team still on the roster always has a `rankTo`, so the null check never decides the outcome; it only narrows the type.
-        `${s.rankTo !== null && s.rankTo !== s.rank ? 'Joint ' : ''}${ordinal(s.rank ?? 0)}`;
+      : `${s.rankTo !== s.rank ? 'Joint ' : ''}${ordinal(s.rank ?? 0)}`;
     const share =
       detail.maxPoints > 0 ? percent(s.total / detail.maxPoints) : '0%';
     const players =

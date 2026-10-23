@@ -7,7 +7,6 @@ import {
   planMove,
   planNextPress,
 } from '../move-plan';
-import type { ClosestGuessRevealData } from '../question-views';
 import type { ActiveShowdownRoundState, SessionState } from '../session-state';
 import {
   closestGuessQuestion,
@@ -15,6 +14,7 @@ import {
   leaderboardEntry,
   round,
   sessionWith,
+  SUMMARY,
 } from './session-fixtures';
 
 const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -60,13 +60,6 @@ const teams = [
   leaderboardEntry(2, 'B', 20),
   leaderboardEntry(3, 'C', 10),
 ];
-
-const SUMMARY: ClosestGuessRevealData = {
-  hasSubmissions: true,
-  minGuess: '10',
-  maxGuess: '90',
-  closestGuesses: [{ teamName: 'Team A', value: '50' }],
-};
 
 /** A closest_guess question on its reveal, five steps long, standing on `revealStep`. */
 function closestGuessReveal(revealStep: number): SessionState {

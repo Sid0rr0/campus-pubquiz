@@ -211,6 +211,12 @@ describe('parseSheetCsv', () => {
     expect(() => parseSheetCsv('')).toThrow('The CSV file is empty');
   });
 
+  it('names its error SheetFormatError', () => {
+    expect(() => parseSheetCsv('')).toThrow(
+      expect.objectContaining({ name: 'SheetFormatError' }),
+    );
+  });
+
   it('throws SheetFormatError when a required column is missing', () => {
     const csv = [
       'round,question,answer',
