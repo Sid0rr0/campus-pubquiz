@@ -26,6 +26,7 @@ const NOT_MUTATED = [
   /^(main|instrument)\.ts$/,
   /\.typecheck\.ts$/,
   /\/fixtures\//,
+  /\/errors\//, // error classes: message/name strings, not worth asserting
 ];
 
 function listTs(dir) {
@@ -64,11 +65,27 @@ function dbFreeSpecs() {
     .filter((f) => !OUTSIDE_WORKSPACE_SPECS.includes(path.relative(SRC, f)));
 }
 
+/** Source files that at least one DB-free spec imports directly via `@/`. */
+function directlyImportedByDbFreeSpecs() {
+  const imported = new Set();
+  for (const spec of dbFreeSpecs()) {
+    const source = fs.readFileSync(spec, 'utf8');
+    for (const [, target] of source.matchAll(/from '@\/([^']+)'/g)) {
+      const base = path.join(SRC, target);
+      imported.add(`${base}.ts`);
+      imported.add(path.join(base, 'index.ts'));
+    }
+  }
+  return imported;
+}
+
 /** Backend-relative globs of the source files Stryker mutates. */
 function dbFreeSources() {
+  const covered = directlyImportedByDbFreeSpecs();
   return listTs(SRC)
     .filter((f) => !NOT_MUTATED.some((re) => re.test(path.relative(SRC, f))))
     .filter((f) => !DB_OR_NEST_IMPORT.test(fs.readFileSync(f, 'utf8')))
+    .filter((f) => covered.has(f))
     .map((f) => path.relative(__dirname, f));
 }
 

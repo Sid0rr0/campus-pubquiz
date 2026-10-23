@@ -218,11 +218,13 @@ are gitignored.
 - `shared/types`: all of `src/` except the tests and `index.ts`.
 - `backend`: only the DB-free slice, so no Docker is needed. `apps/backend/stryker.files.cjs`
   picks it from imports on every run: it mutates source files that don't
-  import `@mikro-orm`, `@nestjs` or `@/db/`, and runs only the specs that
-  don't reach the test database (`jest.stryker.config.cjs`). A survivor or
-  "no coverage" mutant in that slice may still be caught by a DB-backed spec
-  Stryker didn't run (most of `game/state/*-changes.ts` is only reached that
-  way).
+  import `@mikro-orm`, `@nestjs` or `@/db/`, that at least one DB-free spec
+  imports directly (an `@/…` path), and that aren't under `errors/`; it runs
+  only the specs that don't reach the test database (`jest.stryker.config.cjs`).
+  Files only DB-backed specs reach (most of `game/state/*-changes.ts`) are
+  left out, since the real-store specs are their intended test level. A
+  survivor in the slice may still be caught by a DB-backed spec Stryker
+  didn't run.
 - `frontend`: not covered.
 
 ## Docs

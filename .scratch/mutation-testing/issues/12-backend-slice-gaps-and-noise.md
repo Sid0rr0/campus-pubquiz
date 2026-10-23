@@ -1,6 +1,6 @@
 # 12: Backend DB-free slice: files only the DB specs reach, and error-class noise
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 
