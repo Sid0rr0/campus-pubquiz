@@ -6,6 +6,7 @@ import { fetchTeamDetail, TeamsApiError } from '@/app/lib/teams-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { SummaryTiles } from '@/app/teams/[id]/summary-tiles';
+import { TeamMergePanel } from '@/app/teams/[id]/team-merge-panel';
 import { TeamSessionsTable } from '@/app/teams/[id]/team-sessions-table';
 
 const NOT_FOUND_STATUS = 404;
@@ -72,6 +73,8 @@ export function TeamDetailPanel({ teamId }: TeamDetailPanelProps) {
         </Link>
         <h1 className="font-display text-2xl">{data.name}</h1>
       </div>
+
+      <TeamMergePanel teamId={teamId} />
 
       {data.sessions.length === 0 ? (
         <p className="text-foreground/60">

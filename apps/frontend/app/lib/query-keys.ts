@@ -35,6 +35,10 @@ export const queryKeys = {
     }) => ['teams', 'list', params] as const,
     code: (teamId: number) => ['teams', 'code', teamId] as const,
     detail: (teamId: number) => ['teams', 'detail', teamId] as const,
+    mergeCandidates: (teamId: number) =>
+      ['teams', 'merge', teamId, 'candidates'] as const,
+    mergePair: (teamId: number, otherTeamId: number) =>
+      ['teams', 'merge', teamId, 'pair', otherTeamId] as const,
     page: (teamCode: string) => ['teams', 'page', teamCode] as const,
     night: (teamCode: string, gameSessionId: number) =>
       ['teams', 'page', teamCode, 'night', gameSessionId] as const,

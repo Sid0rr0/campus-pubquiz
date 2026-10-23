@@ -24,7 +24,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1300;
+const MAX_GUIDE_WORDS = 1350;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -163,6 +163,15 @@ describe('GuideContent', () => {
 
     expect(text).toContain('check it with Quiz preview');
     expect(text).toContain('not a throwaway session');
+  });
+
+  it('tells the moderator what to do when a team forgot its code', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('A team forgot its code');
+    expect(text).toContain('rejoin with its name and code');
+    expect(text).toContain('Merge with…');
+    expect(text).toContain("can't be undone");
   });
 
   it('says an over-cap penalty is a negative bonus', () => {
