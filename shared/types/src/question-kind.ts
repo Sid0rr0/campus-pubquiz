@@ -84,6 +84,7 @@ export const QUESTION_KINDS: {
     revealKind: 'answer',
     label: 'Free text',
     moderatorNote:
+      // Stryker disable next-line StringLiteral: author-facing copy, not behaviour
       'No options. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it, and you can override any mark by hand.',
     inputKind: 'text',
     schema: freeTextPreviewSchema,
@@ -100,6 +101,7 @@ export const QUESTION_KINDS: {
     revealKind: 'answer',
     label: 'Multiple choice',
     moderatorNote:
+      // Stryker disable next-line StringLiteral: author-facing copy, not behaviour
       'Options are separated by pipes (Paris|London|Berlin) and the answer must match one option exactly. Graded automatically when a team submits; you can override by hand.',
     inputKind: 'choice',
     schema: multipleChoicePreviewSchema,
@@ -116,6 +118,7 @@ export const QUESTION_KINDS: {
     revealKind: 'answer',
     label: 'Sort / order',
     moderatorNote:
+      // Stryker disable next-line StringLiteral: author-facing copy, not behaviour
       'Options are pipe-separated in any order and the answer lists them in the correct order. Graded automatically when a team submits; you can override by hand.',
     inputKind: 'sort',
     schema: sortPreviewSchema,
@@ -132,6 +135,7 @@ export const QUESTION_KINDS: {
     revealKind: 'answer',
     label: 'Match pairs',
     moderatorNote:
+      // Stryker disable next-line StringLiteral: author-facing copy, not behaviour
       'Options hold both lists as left1|left2+right1|right2 and the answer pairs them (Paris+France|Tokyo+Japan). Graded automatically when a team submits; you can override by hand.',
     inputKind: 'match',
     schema: matchPreviewSchema,
@@ -148,6 +152,7 @@ export const QUESTION_KINDS: {
     revealKind: 'closest_guess',
     label: 'Closest guess',
     moderatorNote:
+      // Stryker disable next-line StringLiteral: author-facing copy, not behaviour
       'The answer is a number. Graded in one batch once the block locks: every team tied for the closest guess gets full points and everyone else gets zero. From then on you can override any mark by hand.',
     inputKind: 'number',
     schema: closestGuessPreviewSchema,
@@ -164,6 +169,7 @@ export const QUESTION_KINDS: {
     revealKind: 'answer',
     label: 'Number',
     moderatorNote:
+      // Stryker disable next-line StringLiteral: author-facing copy, not behaviour
       'The answer is a number, and the question carries a margin (10% of the answer unless the editor says otherwise). An answer within the margin, edges included, is graded correct when a team submits; anything else is graded incorrect. Teams answer on a number keypad, and you can override any mark by hand.',
     inputKind: 'number',
     schema: numberPreviewSchema,

@@ -46,6 +46,7 @@ const ROUND_CATEGORY_BY_LOWERCASE = new Map(
 /** Resolves a raw category cell to its canonical casing, or '' if it's blank or doesn't match any known category — an unrecognized category is left blank rather than blocking the import. */
 function resolveCategoryCell(rawCategory: string): string {
   const trimmed = rawCategory.trim();
+  // Stryker disable next-line ConditionalExpression,StringLiteral: a blank cell finds no category and falls to the same ''
   if (trimmed === '') return trimmed;
   return ROUND_CATEGORY_BY_LOWERCASE.get(trimmed.toLowerCase()) ?? '';
 }

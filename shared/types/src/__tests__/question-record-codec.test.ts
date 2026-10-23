@@ -3,6 +3,8 @@ import { parseQuestionPayload } from '../question-kind';
 import type { QuestionPayload } from '../question-payload-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
 import {
+  clipNotesFieldsFor,
+  gradingSettingsFor,
   previewToStoredFields,
   rowToPreview,
   type StoredQuestionRow,
@@ -16,6 +18,7 @@ import {
 
 const IMAGE = 'https://example.com/a.png';
 const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+const YOUTUBE_FILE = 'https://example.com/clip.mp4';
 const CLIP_NOTES = 'Hint\nYouTube clip: {start: "0:05", end: "0:20"}';
 
 function rowOf(type: QuestionType, notes: string | null): StoredQuestionRow {
@@ -157,5 +160,73 @@ describe('question record codec', () => {
         mediaEndSeconds: 20,
       },
     });
+  });
+
+  it('carries no value that means "none": a false flag and a blank link stay out of the payload', () => {
+    const { payload } = previewToStoredFields({
+      type: 'free_text',
+      prompt: 'Q?',
+      answer: 'A',
+      points: 1,
+      mediaUrl: YOUTUBE_FILE,
+      answerMediaUrl: '',
+      isVideoHidden: false,
+    });
+
+    expect(payload).toStrictEqual({ mediaUrl: YOUTUBE_FILE });
+  });
+
+  it('reads a video row as not hidden when neither the payload nor the notes hide it', () => {
+    const preview = rowToPreview(rowOf('free_text', null), {
+      mediaUrl: YOUTUBE_FILE,
+    });
+
+    expect(preview).not.toHaveProperty('isVideoHidden');
+  });
+
+  it('reads a hidden video from the payload', () => {
+    const preview = rowToPreview(rowOf('free_text', null), {
+      mediaUrl: YOUTUBE_FILE,
+      isVideoHidden: true,
+    });
+
+    expect(preview.isVideoHidden).toBe(true);
+  });
+});
+
+describe('clipNotesFieldsFor', () => {
+  it('names only the clip fields the preview sets, with no key for an unset one', () => {
+    expect(
+      clipNotesFieldsFor({ mediaUrl: YOUTUBE_FILE, mediaStartSeconds: 5 }),
+    ).toStrictEqual({ startSeconds: 5 });
+    expect(
+      clipNotesFieldsFor({ mediaUrl: YOUTUBE_FILE, mediaEndSeconds: 9 }),
+    ).toStrictEqual({ endSeconds: 9 });
+    expect(
+      clipNotesFieldsFor({ mediaUrl: YOUTUBE_FILE, revealStartSeconds: 2 }),
+    ).toStrictEqual({ revealStartSeconds: 2 });
+    expect(
+      clipNotesFieldsFor({ mediaUrl: YOUTUBE_FILE, revealEndSeconds: 3 }),
+    ).toStrictEqual({ revealEndSeconds: 3 });
+    expect(clipNotesFieldsFor({ mediaUrl: YOUTUBE_FILE })).toStrictEqual({});
+  });
+});
+
+describe('gradingSettingsFor', () => {
+  it('keeps only the grading settings of the type, even from a whole preview', () => {
+    const wholePreview = {
+      margin: { value: 5, unit: 'percent' as const },
+      matchScoringMode: 'all_or_nothing' as const,
+      mediaUrl: IMAGE,
+      options: ['a', 'b'],
+    };
+
+    expect(gradingSettingsFor('number', wholePreview)).toStrictEqual({
+      margin: { value: 5, unit: 'percent' },
+    });
+    expect(gradingSettingsFor('match', wholePreview)).toStrictEqual({
+      matchScoringMode: 'all_or_nothing',
+    });
+    expect(gradingSettingsFor('free_text', wholePreview)).toStrictEqual({});
   });
 });

@@ -175,7 +175,9 @@ export function buildQuizPreview(
   const fullSession = freshSessionState({
     quizId: 0,
     gameSessionId: 0,
+    // Stryker disable next-line StringLiteral: no kept screen or quiz context carries the join code
     joinCode: '',
+    // Stryker disable next-line StringLiteral: no kept screen or quiz context carries the quiz title
     quizTitle: '',
     customName: null,
     startedAt: new Date(0),
@@ -253,6 +255,7 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
             onAir: { kind: 'round_overview' },
             roundIndex: 0,
             questionIndex: null,
+            // Stryker disable next-line BooleanLiteral: the block-end pass below overwrites every night step's flag
             isBlockEnd: false,
           },
           ...(fullSession.seededGame.settings.jokersEnabled
@@ -262,6 +265,7 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
                   onAir: { kind: 'joker_pick' } as const,
                   roundIndex: 0,
                   questionIndex: null,
+                  // Stryker disable next-line BooleanLiteral: the block-end pass below overwrites every night step's flag
                   isBlockEnd: false,
                 },
               ]
@@ -280,7 +284,9 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
   let nextEmpty = 0;
   const pushEmptyTitlesBefore = (roundIndex: number) => {
     while (
+      // Stryker disable next-line ConditionalExpression,EqualityOperator: past the end the next line reads undefined, and `undefined < n` is false anyway
       nextEmpty < emptyRounds.length &&
+      // Stryker disable next-line EqualityOperator: an empty round never shares an index with a walked round, and every one is below rounds.length
       emptyRounds[nextEmpty] < roundIndex
     ) {
       steps.push(emptyRoundTitle(fullSession, emptyRounds[nextEmpty]));
@@ -324,6 +330,7 @@ function emptyRoundTitle(
     onAir: onAirScreenAt(fullSession, progress),
     roundIndex,
     questionIndex: null,
+    // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
     isBlockEnd: false,
   };
 }
@@ -336,6 +343,7 @@ function walkNightSteps(
 ): BareStep[] {
   const steps: BareStep[] = [];
   let session = start;
+  // Stryker disable next-line EqualityOperator,AssignmentOperator: only the safety stop reads this counter; a real quiz ends the walk by break long before it
   for (let press = 0; press <= MAX_NIGHT_PRESSES; press += 1) {
     const { screen } = projectScreen(session, SOCKET_ROOMS.DISPLAY);
     if (NIGHT_SCREEN_KINDS.includes(screen.kind)) {
@@ -416,6 +424,7 @@ function nightStep(
         roundIndex,
         questionIndex: null,
       };
+      // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
       return { screen, ...position, isBlockEnd: false };
     }
     case 'reveal_intro':
@@ -423,6 +432,7 @@ function nightStep(
         screen,
         roundIndex: screen.roundNumber - 1,
         questionIndex: null,
+        // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
         isBlockEnd: false,
       };
     case 'break_intro':
@@ -431,9 +441,11 @@ function nightStep(
         screen: { ...screen, isFeedbackPromptShown: false },
         roundIndex,
         questionIndex: null,
+        // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
         isBlockEnd: false,
       };
     default:
+      // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
       return { screen, roundIndex, questionIndex: null, isBlockEnd: false };
   }
 }
