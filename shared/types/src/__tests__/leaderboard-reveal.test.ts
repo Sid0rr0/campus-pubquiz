@@ -112,6 +112,89 @@ describe('computeLeaderboardRevealCount', () => {
     expect(result).toBe(0);
   });
 
+  it('starts the reveal over when the join overlay takes a visible board down', () => {
+    const boardGone = progress({ isLeaderboardVisible: false });
+    expect(
+      computeLeaderboardRevealCount(
+        'TOGGLE_JOIN_OVERLAY',
+        true,
+        boardGone,
+        leaderboardOfSize(4),
+        3,
+        false,
+      ),
+    ).toBe(0);
+    expect(
+      computeLeaderboardRevealCount(
+        'TOGGLE_JOIN_OVERLAY',
+        false,
+        boardGone,
+        leaderboardOfSize(4),
+        3,
+        false,
+      ),
+    ).toBe(3);
+  });
+
+  it('keeps the count when Advance leaves the board hidden, or another action leaves it showing', () => {
+    const shown = progress({ isLeaderboardVisible: true });
+    const hidden = progress({ isLeaderboardVisible: false });
+    expect(
+      computeLeaderboardRevealCount(
+        'ADVANCE',
+        true,
+        hidden,
+        leaderboardOfSize(4),
+        2,
+        false,
+      ),
+    ).toBe(2);
+    expect(
+      computeLeaderboardRevealCount(
+        'PREVIOUS',
+        true,
+        shown,
+        leaderboardOfSize(4),
+        2,
+        false,
+      ),
+    ).toBe(2);
+    expect(
+      computeLeaderboardRevealCount(
+        null,
+        true,
+        shown,
+        leaderboardOfSize(4),
+        2,
+        false,
+      ),
+    ).toBe(2);
+  });
+
+  it('starts from empty when a toggle or a transition newly shows the board', () => {
+    const shown = progress({ isLeaderboardVisible: true });
+    expect(
+      computeLeaderboardRevealCount(
+        'TOGGLE_LEADERBOARD',
+        true,
+        shown,
+        leaderboardOfSize(4),
+        3,
+        false,
+      ),
+    ).toBe(0);
+    expect(
+      computeLeaderboardRevealCount(
+        'ADVANCE',
+        false,
+        shown,
+        leaderboardOfSize(4),
+        3,
+        false,
+      ),
+    ).toBe(0);
+  });
+
   it('reveals tied teams together, needing one click per distinct rank', () => {
     // Points 30, 20, 20, 20, 10, 10 → three distinct ranks.
     const tiedTeams = leaderboardOfSize(6).map((entry, index) => ({
