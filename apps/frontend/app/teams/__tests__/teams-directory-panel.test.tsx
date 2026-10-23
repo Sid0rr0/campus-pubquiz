@@ -66,14 +66,16 @@ describe('TeamsDirectoryPanel', () => {
     );
   });
 
-  it('renders Team/Code headers without a sort toggle', async () => {
+  it('renders the Team header without a sort toggle and hides the code column', async () => {
     renderWithQuery(<TeamsDirectoryPanel />);
     await waitFor(() => screen.getByText('The Quizzards'));
 
     const teamHeader = screen.getByRole('columnheader', { name: 'Team' });
-    const codeHeader = screen.getByRole('columnheader', { name: 'Code' });
     expect(within(teamHeader).queryByRole('button')).not.toBeInTheDocument();
-    expect(within(codeHeader).queryByRole('button')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('columnheader', { name: 'Code' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('ABC-DEF-GHI')).not.toBeInTheDocument();
   });
 
   it('toggles sort order on the Joined header and refetches accordingly', async () => {
