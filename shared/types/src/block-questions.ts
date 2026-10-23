@@ -151,6 +151,7 @@ export function getPastRevealedQuestions(
     ),
   );
 
+  // Stryker disable next-line ConditionalExpression: equivalent, a block starting at question 0 slices to the same empty partial round the guard skips
   if (blockStart.questionIndex === 0) return views;
 
   const round = rounds[blockStart.roundIndex];
@@ -229,6 +230,7 @@ export function getUpcomingQuestionPositions(
   }
   const target = getFurthestOpenPosition(session);
   const rounds = session.seededGame.rounds;
+  // Stryker disable next-line ConditionalExpression,BlockStatement: equivalent, unreachable guard: getFurthestOpenPosition throws on a round that does not exist before this runs
   if (!rounds[target.roundIndex]) {
     return [];
   }

@@ -3,11 +3,14 @@ import {
   describeLiveEditRounds,
   getOpenedPrefixLength,
   getRoundStructureEditing,
+  getSessionLiveEditFrontier,
   isRoundReached,
   isRoundStructureFrozen,
   mergeLiveEditFrontiers,
   type LiveEditFrontier,
 } from '../live-edit-frontier';
+import type { GameProgress } from '../game-state';
+import { round, sessionWith } from './session-fixtures';
 
 function frontierOf(
   currentRoundIndex: number,
@@ -20,6 +23,69 @@ function frontierOf(
     hasCurrentBlockStartedLocking,
   };
 }
+
+describe('getSessionLiveEditFrontier', () => {
+  const rounds = [round(1, [10, 11]), round(2, [20, 21]), round(3, [30])];
+
+  const frontierAt = (
+    progress: Partial<GameProgress>,
+    openedQuestionIds: number[] = [],
+  ) =>
+    getSessionLiveEditFrontier(
+      sessionWith(rounds, progress, { openedQuestionIds }),
+    );
+
+  it('carries the questions that have opened', () => {
+    expect(
+      frontierAt({ status: 'question_open' }, [10, 11]).openedQuestionIds,
+    ).toEqual([10, 11]);
+  });
+
+  it('puts the line on the current round when nothing later has opened', () => {
+    expect(
+      frontierAt({ status: 'round_intro', roundIndex: 2 }, [10, 11, 20, 21])
+        .currentRoundIndex,
+    ).toBe(2);
+  });
+
+  it('never lets the line fall behind the furthest round with an opened question', () => {
+    expect(
+      frontierAt({ status: 'question_open', roundIndex: 0 }, [10, 11, 20])
+        .currentRoundIndex,
+    ).toBe(1);
+  });
+
+  it('finds the furthest round by any one question opened in it', () => {
+    expect(
+      frontierAt({ status: 'question_open', roundIndex: 0 }, [10, 20])
+        .currentRoundIndex,
+    ).toBe(1);
+  });
+
+  it.each([
+    ['question_open', false],
+    ['round_intro', false],
+    ['locking', true],
+    ['break_intro', true],
+    ['break', true],
+    ['reveal', true],
+  ] as const)(
+    'on the current round, %s has the block locking: %s',
+    (status, expected) => {
+      expect(
+        frontierAt({ status, roundIndex: 1 }, [10, 11, 20])
+          .hasCurrentBlockStartedLocking,
+      ).toBe(expected);
+    },
+  );
+
+  it('keeps a round frozen when the session stepped back before the furthest opened round', () => {
+    expect(
+      frontierAt({ status: 'question_open', roundIndex: 0 }, [10, 20])
+        .hasCurrentBlockStartedLocking,
+    ).toBe(true);
+  });
+});
 
 describe('mergeLiveEditFrontiers', () => {
   it('takes the further-on session’s current round as the line', () => {
