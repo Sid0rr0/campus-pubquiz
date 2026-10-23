@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.18.0",
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
+    "dev": "mkdir -p .logs && pnpm -r --parallel dev 2>&1 | tee .logs/dev.log",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm --filter @campus-pubquiz/types build && pnpm -r typecheck",

@@ -19,7 +19,7 @@ This file holds only the commands, constraints and conventions future work must 
 
 pnpm workspace, run from repo root unless noted:
 
-- `pnpm dev` — all workspaces in parallel; `pnpm dev:backend` / `pnpm dev:frontend` for just one
+- `pnpm dev` — all workspaces in parallel, output also in `.logs/dev.log` (read it to debug the running servers); `pnpm dev:backend` / `pnpm dev:frontend` for just one
 - `pnpm build` / `pnpm lint` / `pnpm typecheck` / `pnpm test` — run across all workspaces; the pre-commit hook and CI both run `typecheck`
 - Backend (`apps/backend`) uses **Jest**: `pnpm --filter backend test <path>` to run a single spec, not the whole suite
 - Frontend (`apps/frontend`) uses **Vitest**: `pnpm --filter frontend test <filename>` to run a single spec (a filename substring: a path through `[id]` matches nothing)

@@ -58,3 +58,7 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ in four runs `git rebase <integration> ticket/…` failed with "already used by worktree" because the implementer's worktree still had the branch checked out; one merger gave up with "Not landed".
 - **implement-spec step 4 (2026-10-21 retro)**: the full backend run is plain `pnpm --filter backend test`; the backend `test` script now carries `--maxWorkers=2` itself.
   _Why:_ the orchestrator's root `pnpm test` ran Jest unbounded and backend suites crashed under parallel load (a different suite each run), costing reruns and flake investigations.
+- **to-tickets step 3 (2026-10-23 retro)**: all of a spec's `/guide` text goes in one final ticket, blocked by the tickets it describes; the other tickets say their guide text goes there.
+  _Why:_ the guide test caps the whole page at 1300 words, so in the jokers run parallel tickets failed it ~50 times, trimmed each other's text, hit 14 rebase conflicts on the guide and its test, and one ticket skipped its guide line.
+- **implement, browser check (2026-10-23 retro)**: when the diff touches `apps/frontend/app`, screenshot each changed screen on :8888 with chrome-devtools before review; `.logs/dev.log` holds the dev servers' output.
+  _Why:_ chrome-devtools went unused across nine sessions; the round-note change shipped "layout unchecked" and the jokers PR needed three layout fixes from the user.
