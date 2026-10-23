@@ -2,6 +2,7 @@ import { rankTeams } from '@campus-pubquiz/types';
 import type { SessionStandings } from '@/standings/standings.service';
 import { computeSessionDetail } from '@/stats/session-detail.calc';
 import {
+  briefMediaKind,
   computeSessionBrief,
   type SessionBriefInput,
 } from '@/stats/session-brief.calc';
@@ -642,5 +643,515 @@ describe('computeSessionBrief', () => {
         );
       }
     }
+  });
+});
+
+describe('briefMediaKind', () => {
+  it('says video for YouTube links and video files, and keeps image and audio', () => {
+    expect(briefMediaKind(undefined)).toBeUndefined();
+    expect(briefMediaKind('youtube')).toBe('video');
+    expect(briefMediaKind('video-file')).toBe('video');
+    expect(briefMediaKind('image')).toBe('image');
+    expect(briefMediaKind('audio')).toBe('audio');
+  });
+});
+
+describe('computeSessionBrief layout', () => {
+  const EMPTY_STANDINGS: SessionStandings = {
+    leaderboard: [],
+    departed: [],
+    participantCount: 0,
+    winner: undefined,
+  };
+
+  /** A standings entry with no points, placed as given. */
+  const placed = (teamId: number, rank: number, rankTo = rank) => ({
+    teamId,
+    teamName: `Team ${teamId}`,
+    totalPoints: 0,
+    bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
+    roundPoints: [],
+    rank,
+    rankTo,
+  });
+
+  const linesOf = (input: SessionBriefInput) =>
+    computeSessionBrief(input).split('\n');
+
+  const round = (
+    roundId: number,
+    orderIndex: number,
+    overrides: Partial<SessionBriefInput['rounds'][number]> = {},
+  ) => ({
+    roundId,
+    title: `Round ${roundId}`,
+    category: null,
+    orderIndex,
+    author: null,
+    note: null,
+    isKahoot: false,
+    ...overrides,
+  });
+
+  const question = (
+    questionId: number,
+    roundId: number,
+    orderIndex: number,
+    overrides: Partial<SessionBriefInput['questions'][number]> = {},
+  ): SessionBriefInput['questions'][number] => ({
+    questionId,
+    roundId,
+    orderIndex,
+    prompt: `Prompt ${questionId}`,
+    type: 'free_text',
+    answer: 'A',
+    points: 2,
+    notes: null,
+    media: {},
+    ...overrides,
+  });
+
+  /** The brief's lines from the blank line before the first question up to the feedback section. */
+  const questionBlock = (brief: string) => {
+    const lines = brief.split('\n');
+    const start = lines.findIndex((l) => l.startsWith('### Q1'));
+    return lines.slice(start - 1, lines.indexOf('## Feedback') - 1);
+  };
+
+  it('writes an empty session as its header, an empty standings section and the feedback note', () => {
+    const brief = computeSessionBrief(
+      buildInput({
+        standings: EMPTY_STANDINGS,
+        rounds: [],
+        questions: [],
+        answers: [],
+        openedQuestionIds: [],
+        isFeedbackCollected: false,
+      }),
+    );
+
+    expect(brief).toBe(
+      [
+        '# Spring Quiz Week 3',
+        '',
+        'Date: 2026-03-05',
+        'Teams: 0',
+        'Players: 0 (0 of 0 teams reported)',
+        '',
+        '## Standings',
+        '',
+        '## Feedback',
+        'Feedback was off.',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('writes collected feedback with nothing in it as none', () => {
+    const lines = linesOf(
+      buildInput({
+        standings: EMPTY_STANDINGS,
+        rounds: [],
+        questions: [],
+        answers: [],
+        openedQuestionIds: [],
+      }),
+    );
+
+    expect(lines.slice(lines.indexOf('## Feedback') - 1)).toEqual([
+      '',
+      '## Feedback',
+      '',
+      'Topic suggestions:',
+      '- none',
+      '',
+      'Comments (newest first):',
+      '- none',
+      '',
+    ]);
+  });
+
+  it('writes topics with counts and trimmed comments', () => {
+    const lines = linesOf(
+      buildInput({
+        standings: EMPTY_STANDINGS,
+        rounds: [],
+        questions: [],
+        answers: [],
+        openedQuestionIds: [],
+        feedback: [
+          {
+            comment: '  lovely night  ',
+            topics: ['Music'],
+            submittedAt: '2026-03-05T21:00:00.000Z',
+          },
+          {
+            comment: '',
+            topics: ['music'],
+            submittedAt: '2026-03-05T21:01:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    expect(lines.slice(lines.indexOf('## Feedback') - 1)).toEqual([
+      '',
+      '## Feedback',
+      '',
+      'Topic suggestions:',
+      '- Music: 2',
+      '',
+      'Comments (newest first):',
+      '- "lovely night"',
+      '',
+    ]);
+  });
+
+  it('words placings with the right suffix, joint places, departed teams and player counts', () => {
+    const ranks = [1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101, 111, 112, 113];
+    const leaderboard = [
+      ...ranks.map((rank, i) => placed(i + 1, rank)),
+      placed(20, 120, 121),
+    ];
+    const departed = [
+      {
+        teamId: 30,
+        teamName: 'Gone',
+        totalPoints: 0,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+    ];
+    const lines = linesOf(
+      buildInput({
+        standings: {
+          leaderboard,
+          departed,
+          participantCount: leaderboard.length + 1,
+          winner: leaderboard[0],
+        },
+        // Team 1 has one player, team 2 two, the rest none reported.
+        playerCounts: new Map([
+          [1, 1],
+          [2, 2],
+        ]),
+        rounds: [],
+        questions: [],
+        answers: [],
+        openedQuestionIds: [],
+      }),
+    );
+
+    const start = lines.indexOf('## Standings');
+    expect(lines.slice(start + 1, start + 18)).toEqual([
+      '- 1st: 0 pts (0%), 1 player',
+      '- 2nd: 0 pts (0%), 2 players',
+      '- 3rd: 0 pts (0%)',
+      '- 4th: 0 pts (0%)',
+      '- 11th: 0 pts (0%)',
+      '- 12th: 0 pts (0%)',
+      '- 13th: 0 pts (0%)',
+      '- 21st: 0 pts (0%)',
+      '- 22nd: 0 pts (0%)',
+      '- 23rd: 0 pts (0%)',
+      '- 101st: 0 pts (0%)',
+      '- 111th: 0 pts (0%)',
+      '- 112th: 0 pts (0%)',
+      '- 113th: 0 pts (0%)',
+      '- Joint 120th: 0 pts (0%)',
+      '- left: 0 pts (0%)',
+      '',
+    ]);
+    // With no points to win the spread is zero, not a division by zero.
+    expect(lines).toContain('Score spread: top 0%, median 0%, bottom 0%');
+  });
+
+  it('numbers the rounds and questions by order index, whatever order the rows come in', () => {
+    const lines = linesOf(
+      buildInput({
+        standings: standingsFor(TEAMS, []),
+        rounds: [round(200, 1), round(100, 0)],
+        questions: [
+          question(23, 200, 3),
+          question(22, 200, 2),
+          question(21, 200, 1),
+          question(13, 100, 3),
+          question(12, 100, 2),
+          question(11, 100, 1),
+        ],
+        answers: [],
+        openedQuestionIds: [11, 12, 13, 21, 22, 23],
+      }),
+    );
+
+    expect(
+      lines.filter((l) => l.startsWith('## Round') || l.startsWith('### Q')),
+    ).toEqual([
+      '## Round 1: Round 100',
+      '### Q1 (free_text, 2 pts)',
+      '### Q2 (free_text, 2 pts)',
+      '### Q3 (free_text, 2 pts)',
+      '## Round 2: Round 200',
+      '### Q1 (free_text, 2 pts)',
+      '### Q2 (free_text, 2 pts)',
+      '### Q3 (free_text, 2 pts)',
+    ]);
+    expect(lines.filter((l) => l.startsWith('Prompt'))).toEqual([
+      'Prompt 11',
+      'Prompt 12',
+      'Prompt 13',
+      'Prompt 21',
+      'Prompt 22',
+      'Prompt 23',
+    ]);
+  });
+
+  it('names the hardest and easiest question by their round and question number', () => {
+    const team = (teamId: number) => ({
+      teamId,
+      teamName: `Team ${teamId}`,
+    });
+    const right = (questionId: number, teamId: number) => ({
+      ...said(questionId, teamId, 'correct', 'a'),
+      pointsAwarded: 2,
+    });
+    const wrong = (questionId: number, teamId: number) =>
+      said(questionId, teamId, 'incorrect', 'b');
+    const answers = [
+      // Prompt 11: half right. Prompt 12: nobody. Prompt 21: everybody.
+      right(11, 1),
+      wrong(11, 2),
+      wrong(12, 1),
+      wrong(12, 2),
+      right(21, 1),
+      right(21, 2),
+    ];
+    const lines = linesOf(
+      buildInput({
+        standings: standingsFor([team(1), team(2)], answers),
+        rounds: [round(200, 1), round(100, 0)],
+        questions: [
+          question(21, 200, 0),
+          question(12, 100, 1),
+          question(11, 100, 0),
+        ],
+        answers,
+        openedQuestionIds: [11, 12, 21],
+      }),
+    );
+
+    const start = lines.indexOf('## Highlights');
+    expect(lines.slice(start - 1, start + 3)).toEqual([
+      '',
+      '## Highlights',
+      '- Hardest question: Round 1 Q2 "Prompt 12" (0% correct)',
+      '- Easiest question: Round 2 Q1 "Prompt 21" (100% correct)',
+    ]);
+  });
+
+  it('writes no highlights when no question has a correct rate', () => {
+    const lines = linesOf(buildInput({ questions: [], openedQuestionIds: [] }));
+
+    expect(lines).not.toContain('## Highlights');
+  });
+
+  it('writes a round with its category, author, kahoot flag and note, and one without', () => {
+    const lines = linesOf(
+      buildInput({
+        standings: standingsFor(TEAMS, []),
+        rounds: [
+          round(100, 0, {
+            title: 'Full',
+            category: 'Places',
+            author: 'Alex',
+            isKahoot: true,
+            note: 'Warm-up',
+          }),
+          round(101, 1, { title: 'Bare' }),
+        ],
+        questions: [],
+        answers: [],
+        openedQuestionIds: [],
+      }),
+    );
+
+    const start = lines.indexOf('## Round 1: Full');
+    expect(lines.slice(start - 1, lines.indexOf('## Feedback') - 1)).toEqual([
+      '',
+      '## Round 1: Full',
+      'Category: Places',
+      'Author: Alex',
+      'Kahoot round',
+      'Note: Warm-up',
+      'Rating: no ratings',
+      '',
+      '## Round 2: Bare',
+      'Rating: no ratings',
+    ]);
+  });
+
+  it('writes a round rating and its correct rate', () => {
+    const answers = [
+      { ...said(11, 1, 'correct', 'a'), pointsAwarded: 2 },
+      said(11, 2, 'incorrect', 'b'),
+    ];
+    const lines = linesOf(
+      buildInput({
+        standings: standingsFor(
+          [
+            { teamId: 1, teamName: 'Team 1' },
+            { teamId: 2, teamName: 'Team 2' },
+          ],
+          answers,
+        ),
+        rounds: [round(100, 0), round(101, 1)],
+        roundRatings: [
+          { roundId: 100, average: 4.5, count: 2 },
+          { roundId: 101, average: 3, count: 1 },
+        ],
+        questions: [question(11, 100, 0)],
+        answers,
+        openedQuestionIds: [11],
+      }),
+    );
+
+    expect(lines).toContain('Rating: 4.5 stars (2 ratings)');
+    expect(lines).toContain('Rating: 3.0 stars (1 rating)');
+    expect(lines).toContain('Correct rate: 50%');
+    expect(lines.filter((l) => l.startsWith('Correct rate'))).toHaveLength(1);
+  });
+
+  describe('question blocks', () => {
+    it('writes a question with notes, media, counts and wrong answers', () => {
+      const brief = briefOfQuestion(
+        {
+          notes: 'Think of Europe',
+          media: { question: 'image', answer: 'video' },
+        },
+        [
+          { ...said(50, 1, 'correct', 'Paris'), pointsAwarded: 2 },
+          said(50, 2, 'incorrect', 'London'),
+        ],
+      );
+
+      expect(questionBlock(brief)).toEqual([
+        '',
+        '### Q1 (free_text, 2 pts)',
+        'The prompt',
+        '- Answer: Paris',
+        '- Notes: Think of Europe',
+        '- Media: image',
+        '- Answer media: video',
+        '- Answered 2, correct 1, partial 0, correct rate 8%',
+        '- Wrong answers: London (1)',
+      ]);
+    });
+
+    it('writes a bare question with no notes, media or wrong answers', () => {
+      const brief = briefOfQuestion({}, [
+        { ...said(50, 1, 'correct', 'Paris'), pointsAwarded: 2 },
+      ]);
+
+      expect(questionBlock(brief)).toEqual([
+        '',
+        '### Q1 (free_text, 2 pts)',
+        'The prompt',
+        '- Answer: Paris',
+        '- Answered 1, correct 1, partial 0, correct rate 8%',
+      ]);
+    });
+
+    it('writes ungraded answers on their own line', () => {
+      const brief = briefOfQuestion({}, [said(50, 1, null, 'Parris')]);
+
+      expect(questionBlock(brief).slice(-2)).toEqual([
+        '- Answered 1, correct 0, partial 0, correct rate 0%',
+        '- Ungraded answers: Parris (1)',
+      ]);
+    });
+
+    it('writes a closest guess with its answered count but no correct rate', () => {
+      const brief = briefOfQuestion({ type: 'closest_guess', answer: '100' }, [
+        said(50, 1, 'incorrect', 'abc'),
+        said(50, 2, 'incorrect', '10'),
+        said(50, 3, 'incorrect', '30'),
+      ]);
+
+      expect(questionBlock(brief).slice(-2)).toEqual([
+        '- Answered 3, correct 0, partial 0',
+        '- Guesses: lowest 10, median 20, highest 30',
+      ]);
+    });
+
+    it('writes no guesses line when no guess is a number', () => {
+      const brief = briefOfQuestion({ type: 'closest_guess', answer: '100' }, [
+        said(50, 1, 'incorrect', 'abc'),
+      ]);
+
+      expect(questionBlock(brief).slice(-1)).toEqual([
+        '- Answered 1, correct 0, partial 0',
+      ]);
+    });
+
+    it('writes no options line for a multiple_choice question without options', () => {
+      for (const options of [undefined, []]) {
+        const brief = briefOfQuestion(
+          { type: 'multiple_choice', answer: 'Paris', options },
+          [said(50, 1, 'incorrect', 'Rome')],
+        );
+
+        expect(questionBlock(brief).slice(-1)).toEqual([
+          '- Answered 1, correct 0, partial 0, correct rate 0%',
+        ]);
+      }
+    });
+
+    it('writes only the counts for a sort question', () => {
+      const brief = briefOfQuestion({ type: 'sort', answer: 'a|b' }, [
+        said(50, 1, 'incorrect', 'b|a'),
+      ]);
+
+      expect(questionBlock(brief).slice(-1)).toEqual([
+        '- Answered 1, correct 0, partial 0, correct rate 0%',
+      ]);
+    });
+  });
+
+  describe('questions never reached', () => {
+    const rounds = [round(200, 1), round(100, 0)];
+    const questions = [
+      question(31, 200, 0),
+      question(13, 100, 3),
+      question(12, 100, 2),
+      question(11, 100, 1),
+    ];
+
+    it('without a stored opened list, ends at the last answered question in play order', () => {
+      const answers = [said(12, 1, 'incorrect', 'x')];
+      const lines = linesOf(
+        buildInput({
+          standings: standingsFor(TEAMS, answers),
+          rounds,
+          questions,
+          answers,
+          openedQuestionIds: null,
+        }),
+      );
+
+      expect(
+        lines.filter((l) => l.startsWith('Prompt') || l.includes('0 answered')),
+      ).toEqual(['Prompt 11', 'Prompt 12', 'Prompt 13', 'Prompt 31']);
+      expect(lines.filter((l) => l === '- (not played)')).toHaveLength(2);
+      expect(lines.indexOf('Prompt 13')).toBeLessThan(
+        lines.indexOf('- (not played)'),
+      );
+      expect(lines.indexOf('Prompt 12')).toBeLessThan(
+        lines.indexOf('Prompt 13'),
+      );
+    });
   });
 });

@@ -169,6 +169,7 @@ function pickFastestTeam(
   const fastest = timed.reduce((current, row) =>
     row.avgResponseMs < current.avgResponseMs ||
     (row.avgResponseMs === current.avgResponseMs &&
+      // Stryker disable next-line EqualityOperator: under `<= 0` an equal name swaps in a row with the same teamName and avgResponseMs, and only those two are returned.
       compareTeamNames(row.teamName, current.teamName) < 0)
       ? row
       : current,

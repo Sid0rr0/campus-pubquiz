@@ -188,6 +188,61 @@ describe('buildLeagueTable', () => {
       expect(table.map((row) => row.position)).toEqual([1, 2]);
     });
 
+    it('does not share a position when only the league points differ', () => {
+      // Both average 6th and won no night; P has 2 points, Q has 1.
+      const table = buildLeagueTable([
+        night('Q', 6),
+        night('P', 6),
+        night('P', 6),
+      ]);
+
+      expect(table.map((row) => [row.teamName, row.position])).toEqual([
+        ['P', 1],
+        ['Q', 2],
+      ]);
+    });
+
+    it('does not share a position when only the nights won differ', () => {
+      // Both placed 1st once for 6 points, but only P is credited the night.
+      const table = buildLeagueTable([
+        night('Q', 1, { wonNight: false }),
+        night('P', 1),
+      ]);
+
+      expect(table.map((row) => [row.teamName, row.position])).toEqual([
+        ['P', 1],
+        ['Q', 2],
+      ]);
+    });
+
+    it('lists teams that both have no placing by name, whatever the input order', () => {
+      const forwards = buildLeagueTable([
+        night('Amy', null),
+        night('Zed', null),
+      ]);
+      const backwards = buildLeagueTable([
+        night('Zed', null),
+        night('Amy', null),
+      ]);
+
+      expect(forwards.map((row) => row.teamName)).toEqual(['Amy', 'Zed']);
+      expect(backwards.map((row) => row.teamName)).toEqual(['Amy', 'Zed']);
+    });
+
+    it('lists teams with the same name by team id', () => {
+      const forwards = buildLeagueTable([
+        night('Twin', 2, { teamId: 3 }),
+        night('Twin', 2, { teamId: 9 }),
+      ]);
+      const backwards = buildLeagueTable([
+        night('Twin', 2, { teamId: 9 }),
+        night('Twin', 2, { teamId: 3 }),
+      ]);
+
+      expect(forwards.map((row) => row.teamId)).toEqual([3, 9]);
+      expect(backwards.map((row) => row.teamId)).toEqual([3, 9]);
+    });
+
     it('otherwise shares the position and lists by name', () => {
       const table = buildLeagueTable([
         night('Zed', 2),
