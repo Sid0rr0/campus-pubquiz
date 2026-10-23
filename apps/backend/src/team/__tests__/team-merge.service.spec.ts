@@ -489,6 +489,83 @@ describe('TeamMergeService (Postgres integration)', () => {
       ).rejects.toBeInstanceOf(TeamMergeRefusedError);
     });
 
+    describe('gives the verdict and reason the merge refuses with', () => {
+      async function expectPreviewMatchesMerge(
+        teamId: number,
+        otherId: number,
+      ): Promise<void> {
+        const refusal = await merge
+          .merge(teamId, otherId, 'Quizzly Bears')
+          .then(() => null)
+          .catch((error: unknown) => {
+            if (error instanceof TeamMergeRefusedError) return error.refusal;
+            throw error;
+          });
+        expect(refusal).not.toBeNull();
+        const candidate = (await merge.candidates(teamId)).find(
+          (c) => c.id === otherId,
+        );
+        expect(candidate?.refusal).toEqual(refusal);
+      }
+
+      it('for a stray rating or stray feedback overlap', async () => {
+        const { old, newer, night2 } = await scenario();
+        em.create(RoundRating, {
+          gameSession: night2,
+          round,
+          team: old,
+          stars: 3,
+        });
+        await em.flush();
+        await expectPreviewMatchesMerge(old.id, newer.id);
+
+        const fresh = await newTeam('Fresh', new Date('2026-03-01'));
+        const night3 = await newSession('ended', 'Night 3');
+        await play(night3, fresh, 1);
+        em.create(SessionFeedback, {
+          gameSession: night3,
+          team: old,
+          comment: 'hi',
+          topics: [],
+        });
+        await em.flush();
+        await expectPreviewMatchesMerge(old.id, fresh.id);
+      });
+
+      it('naming every clashing session', async () => {
+        const { old, newer, night1, night2 } = await scenario();
+        await play(night1, newer, 1);
+        await play(night2, old, 1);
+        await expectPreviewMatchesMerge(old.id, newer.id);
+        expect(
+          (await merge.candidates(old.id)).find((c) => c.id === newer.id),
+        ).toMatchObject({
+          refusal: {
+            kind: 'shared_session',
+            sessionNames: ['Night 1', 'Night 2'],
+          },
+        });
+      });
+
+      it.each(['lobby', 'question_open'] as const)(
+        'for a team in a %s session, naming that team',
+        async (status) => {
+          const { old, newer } = await scenario();
+          const live = await newSession(status);
+          await seat(live, old);
+          await expectPreviewMatchesMerge(newer.id, old.id);
+          await expectPreviewMatchesMerge(old.id, newer.id);
+        },
+      );
+
+      it('for a kicked team that left answers in a running session', async () => {
+        const { old, newer } = await scenario();
+        const live = await newSession('question_open');
+        await answer(live, newer, 4);
+        await expectPreviewMatchesMerge(old.id, newer.id);
+      });
+    });
+
     it('previews a pair with the combined sessions played and the newer team’s code', async () => {
       const { old, newer } = await scenario();
 

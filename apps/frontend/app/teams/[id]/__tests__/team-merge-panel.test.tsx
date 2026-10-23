@@ -96,6 +96,18 @@ describe('TeamMergePanel', () => {
     expect(screen.getByRole('button', { name: /Quizzly Bearz/ })).toBeEnabled();
   });
 
+  it('lists the sessions played per team and offers only mergeable teams for the next step', async () => {
+    const user = await openPicker();
+
+    expect(screen.getByText(/2 sessions played/)).toBeInTheDocument();
+    expect(screen.getByText(/0 sessions played/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Rival/ }));
+    await user.click(screen.getByRole('button', { name: /Lobby Lads/ }));
+
+    expect(mockPair).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Search teams')).toBeInTheDocument();
+  });
+
   it('shows the confirm step with the code and the can’t-be-undone warning', async () => {
     const user = await openPicker();
 
