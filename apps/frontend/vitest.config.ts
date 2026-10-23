@@ -2,6 +2,10 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
+// Tests read the shared types' source, so a stale `dist/` can't fail them.
+const sharedTypesEntry = fileURLToPath(
+  new URL('../../shared/types/src/index.ts', import.meta.url),
+);
 
 // Parallel agent runs load the machine enough that unbounded workers time
 // tests out at random; half the cores keeps most of the speed. CI keeps
@@ -15,6 +19,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': rootDir,
+      '@campus-pubquiz/types': sharedTypesEntry,
     },
   },
   test: {

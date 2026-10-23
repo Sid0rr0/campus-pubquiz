@@ -84,7 +84,8 @@
     ],
     "rootDir": "src",
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
+      "^@/(.*)$": "<rootDir>/$1",
+      "^@campus-pubquiz/types$": "<rootDir>/../../../shared/types/src/index.ts"
     },
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
