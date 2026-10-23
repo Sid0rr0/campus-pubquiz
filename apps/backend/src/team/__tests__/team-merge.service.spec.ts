@@ -34,11 +34,12 @@ import { PlayerCountService } from '@/player-count/player-count.service';
 import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { TeamHistoryService } from '@/team/team-history.service';
 import {
+  TEAM_COLUMNS,
   TeamMergeNotFoundError,
   TeamMergeRefusedError,
   TeamMergeService,
 } from '@/team/team-merge.service';
-import { TeamService } from '@/team/team.service';
+import { TeamCodeRequiredError, TeamService } from '@/team/team.service';
 import { useTestDatabase } from '@/test-db/test-database';
 
 // Every table that references a team, listed here independently of the service.
@@ -387,7 +388,61 @@ describe('TeamMergeService (Postgres integration)', () => {
     ).resolves.toMatchObject({ name: 'Quizzly Bearz' });
   });
 
+  it('falls back to name and code for a join with only the older team’s token', async () => {
+    const { old, newer } = await scenario();
+    const live = await newSession('lobby');
+    await merge.merge(old.id, newer.id, 'Quizzly Bears');
+    em.clear();
+    const teams = new TeamService(
+      em.getRepository<Team, TeamRepository>(Team),
+      em.getRepository<GameSession, GameSessionRepository>(GameSession),
+      em.getRepository(GameSessionTeam),
+      history,
+      buildEndedSessionsRead(em),
+    );
+
+    await expect(
+      teams.join(live.id, 'Quizzly Bears', {
+        teamToken: old.token,
+        joinCode: live.joinCode,
+      }),
+    ).rejects.toBeInstanceOf(TeamCodeRequiredError);
+    await expect(
+      teams.join(live.id, 'Quizzly Bears', {
+        teamToken: old.token,
+        joinCode: live.joinCode,
+        teamCode: newer.code,
+      }),
+    ).resolves.toMatchObject({ id: newer.id, name: 'Quizzly Bears' });
+  });
+
+  it('repoints every column that references the teams table', async () => {
+    const rows = (await em.getConnection().execute(
+      `select cl.relname as table_name, att.attname as column_name
+       from pg_constraint con
+       join pg_class cl on cl.oid = con.conrelid
+       join pg_class ref on ref.oid = con.confrelid
+       join lateral unnest(con.conkey) as k(attnum) on true
+       join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
+       where con.contype = 'f' and ref.relname = 'teams'`,
+    )) as { table_name: string; column_name: string }[];
+
+    expect(rows.length).toBeGreaterThan(0);
+    const listed = TEAM_COLUMNS.map(([table, column]) => `${table}.${column}`);
+    const referencing = rows.map((r) => `${r.table_name}.${r.column_name}`);
+    expect(listed).toEqual(expect.arrayContaining(referencing));
+  });
+
   describe('refusals', () => {
+    it('leaves every row unchanged when the merge is refused', async () => {
+      const { old, rival } = await scenario();
+      const before = await snapshot();
+      await expect(
+        merge.merge(old.id, rival.id, 'Rival'),
+      ).rejects.toBeInstanceOf(TeamMergeRefusedError);
+      expect(await snapshot()).toBe(before);
+    });
+
     it('refuses teams that took part in the same session', async () => {
       const { old, newer, night1 } = await scenario();
       await play(night1, newer, 1);
