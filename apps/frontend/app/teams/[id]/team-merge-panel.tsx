@@ -17,6 +17,10 @@ import {
   TeamsApiError,
 } from '@/app/lib/teams-api';
 
+function sessionsPlayedText(count: number): string {
+  return `${count} ${count === 1 ? 'session' : 'sessions'} played`;
+}
+
 function refusalText(refusal: TeamMergeRefusal): string {
   return refusal.kind === 'shared_session'
     ? `both took part in ${refusal.sessionNames.join(', ')}`
@@ -130,7 +134,7 @@ function TeamPicker({
             >
               <span className="font-bold">{candidate.name}</span>
               <span className="text-xs text-foreground/60">
-                {candidate.sessionsPlayed} sessions played
+                {sessionsPlayedText(candidate.sessionsPlayed)}
                 {candidate.refusal &&
                   ` — can't merge: ${refusalText(candidate.refusal)}`}
               </span>
@@ -211,7 +215,7 @@ function MergeConfirm({
         {pair.teams.map((team) => (
           <li key={team.id}>
             <span className="font-bold">{team.name}</span>:{' '}
-            {team.sessionsPlayed} sessions played
+            {sessionsPlayedText(team.sessionsPlayed)}
           </li>
         ))}
       </ul>
@@ -232,8 +236,8 @@ function MergeConfirm({
       <p className="text-sm">
         Code and phones carry over from{' '}
         <span className="font-bold">{pair.newerTeamName}</span>. The merged team
-        will have {pair.combinedSessionsPlayed} sessions played. Its team code
-        is <span className="font-mono font-bold">{pair.keptCode}</span>.
+        will have {sessionsPlayedText(pair.combinedSessionsPlayed)}. Its team
+        code is <span className="font-mono font-bold">{pair.keptCode}</span>.
       </p>
       <p className="text-sm font-extrabold text-magenta">
         This can&apos;t be undone.

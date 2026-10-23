@@ -59,6 +59,17 @@ const PAIR: TeamMergePairPreview = {
   keptCode: 'ABC123',
 };
 
+/** Matches an element by its full rendered text, which JSX splits across text nodes and spans. */
+function textOf(tag: string, text: string, prefix = false) {
+  return (_content: string, element: Element | null): boolean => {
+    const actual = element?.textContent ?? '';
+    return (
+      element?.tagName === tag &&
+      (prefix ? actual.startsWith(text) : actual === text)
+    );
+  };
+}
+
 async function openPicker() {
   const user = userEvent.setup();
   renderWithQuery(<TeamMergePanel teamId={7} />);
@@ -101,6 +112,9 @@ describe('TeamMergePanel', () => {
 
     expect(screen.getByText(/2 sessions played/)).toBeInTheDocument();
     expect(screen.getByText(/0 sessions played/)).toBeInTheDocument();
+    expect(
+      screen.getByText(textOf('SPAN', '1 session played')),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Rival/ }));
     await user.click(screen.getByRole('button', { name: /Lobby Lads/ }));
 
@@ -120,6 +134,17 @@ describe('TeamMergePanel', () => {
       screen.getByText(/Code and phones carry over from/),
     ).toBeInTheDocument();
     expect(screen.getByText(/4 sessions played/)).toBeInTheDocument();
+    expect(
+      screen.getByText(textOf('LI', 'Quizzly Bears: 3 sessions played')),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(textOf('LI', 'Quizzly Bearz: 1 session played')),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        textOf('P', 'Code and phones carry over from Quizzly Bearz.', true),
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('Quizzly Bears')).toBeChecked();
   });
 

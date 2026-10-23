@@ -581,6 +581,27 @@ describe('TeamMergeService (Postgres integration)', () => {
       });
     });
 
+    it('previews what the team history shows after the merge, with the team and code the merge keeps', async () => {
+      const { old, newer } = await scenario();
+      const preview = await merge.pairPreview(old.id, newer.id);
+
+      const { keptTeamId } = await merge.merge(
+        old.id,
+        newer.id,
+        'Quizzly Bears',
+      );
+      em.clear();
+
+      const detail = await history.detail(keptTeamId);
+      expect(preview.combinedSessionsPlayed).toBe(
+        detail!.summary.sessionsPlayed,
+      );
+      expect(preview.newerTeamId).toBe(keptTeamId);
+      expect(preview.keptCode).toBe(
+        (await em.findOneOrFail(Team, keptTeamId)).code,
+      );
+    });
+
     it('refuses a pair preview the merge would refuse', async () => {
       const { old, rival } = await scenario();
       await expect(merge.pairPreview(old.id, rival.id)).rejects.toBeInstanceOf(
