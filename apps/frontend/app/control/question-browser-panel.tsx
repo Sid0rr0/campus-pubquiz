@@ -190,17 +190,15 @@ export function QuestionBrowserPanel({
                   >
                     {round.title}
                   </p>
-                </div>
-                {round.note && (
-                  <div className="flex flex-col pl-6">
-                    <p className="text-[10px] font-extrabold tracking-wide text-foreground/40 uppercase">
-                      Round note
-                    </p>
-                    <p className="text-xs whitespace-pre-line text-foreground/60">
+                  {round.note && (
+                    <p className="flex items-baseline gap-1 text-xs whitespace-pre-line text-foreground/60">
+                      <span className="text-[10px] font-extrabold tracking-wide text-foreground/40 uppercase">
+                        Round note
+                      </span>
                       {round.note}
                     </p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })}

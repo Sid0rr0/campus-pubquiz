@@ -91,7 +91,7 @@ describe('QuestionBrowserPanel notes', () => {
     expect(screen.queryByText(/^Notes$/)).not.toBeInTheDocument();
   });
 
-  it("shows a round's note under its heading, and none for a round without one", () => {
+  it("shows a round's note next to its title, and none for a round without one", () => {
     renderPanel(null);
 
     expect(
