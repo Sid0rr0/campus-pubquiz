@@ -1,6 +1,6 @@
 # 01: Decide how to treat shared/types modules that only other workspaces test
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 
