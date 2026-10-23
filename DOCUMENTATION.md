@@ -1832,10 +1832,18 @@ points, the table and the public page.
 
 ## Deploy and CI
 
-- **Backend** deploys to Render (`render.yaml`) on the Docker runtime
-  (`apps/backend/Dockerfile`), as a single instance — no horizontal scaling,
-  no Redis adapter (see `CLAUDE.md` → Known Tradeoffs). It must never go on
-  Vercel: serverless and Socket.IO are incompatible.
+- **Backend** deploys to Azure App Service (Web App `campus-pubquiz-backend`)
+  as a Docker image built from `apps/backend/Dockerfile`, as a single
+  instance — no horizontal scaling, no Redis adapter (see `CLAUDE.md` → Known
+  Tradeoffs). It must never go on Vercel: serverless and Socket.IO are
+  incompatible. Deploys are manual: pushing a `v*` tag runs
+  `.github/workflows/deploy.yml`, which builds the image, pushes it to GHCR
+  and points the Web App at it. `render.yaml` is the earlier Render config;
+  it still lists the env vars the backend needs.
+- **Node version** is pinned to an exact patch release (`node:22.23.4-alpine`
+  in the Dockerfile, `node-version: 22.23.4` in CI) so a security fix
+  shows up as a commit. Bump both together when Node ships a security
+  release, then cut a tag to redeploy.
 - **Frontend** deploys separately; its origin is what `FRONTEND_ORIGIN`
   allows through CORS (see `cors.config.spec.ts`).
 - **CI** (`.github/workflows/ci.yml`) runs `pnpm build && pnpm lint && pnpm test`
