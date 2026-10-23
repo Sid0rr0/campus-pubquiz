@@ -1,6 +1,7 @@
 export class SheetFetchError extends Error {
   constructor(message: string) {
     super(message);
+    // Stryker disable next-line StringLiteral: the error name is never shown or branched on, callers match with instanceof
     this.name = 'SheetFetchError';
   }
 }
@@ -181,6 +182,7 @@ async function followTrustedRedirect(
   const location = response.headers.get('location');
   let redirectUrl: URL;
   try {
+    // Stryker disable next-line StringLiteral: equivalent, any fallback resolves against the docs.google.com request URL, which the host check below refuses
     redirectUrl = new URL(location ?? '', requestUrl);
   } catch {
     throw new SheetFetchError(NOT_SHARED_MESSAGE);
@@ -219,6 +221,7 @@ export async function fetchSheetCsv(
     throw new SheetFetchError(NOT_SHARED_MESSAGE);
   }
 
+  // Stryker disable next-line StringLiteral: equivalent, neither '' nor any other fallback contains text/html
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('text/html')) {
     throw new SheetFetchError(NOT_SHARED_MESSAGE);

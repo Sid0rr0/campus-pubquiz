@@ -149,11 +149,66 @@ describe('parseSheetCsv', () => {
       'Round 1,free_text,Largest planet?,,Jupiter,2,,,',
       ',,,,,,,,',
       'Round 1,free_text,Name this flag.,,Czechia,2,,,',
+      ' , ,  ,,,,,,',
     ].join('\n');
 
     const rows = parseSheetCsv(csv);
 
     expect(rows.map((row) => row.rowNumber)).toEqual([2, 4]);
+  });
+
+  it('reads a header written with spaces or a run of separators as its underscored name', () => {
+    const csv = [
+      'round,type,question,answer,break after,Answer  -  Media   URL',
+      'Round 1,free_text,Largest planet?,Jupiter,1,https://example.com/a.jpg',
+    ].join('\n');
+
+    const [row] = parseSheetCsv(csv);
+
+    expect(row.breakAfter).toBe('1');
+    expect(row.answerMediaUrl).toBe('https://example.com/a.jpg');
+  });
+
+  it('accepts rows with fewer or more cells than the header', () => {
+    const csv = [
+      HEADER,
+      'Round 1,free_text,Largest planet?',
+      'Round 1,free_text,Name this flag.,,Czechia,2,,,1,extra,cells',
+    ].join('\n');
+
+    const rows = parseSheetCsv(csv);
+
+    expect(rows[0]).toMatchObject({ question: 'Largest planet?', answer: '' });
+    expect(rows[1]).toMatchObject({ answer: 'Czechia', breakAfter: '1' });
+  });
+
+  it('strips a BOM in front of a quoted first header cell', () => {
+    const csv = [
+      '﻿"round",type,question,answer',
+      'Round 1,free_text,Largest planet?,Jupiter',
+    ].join('\n');
+
+    const [row] = parseSheetCsv(csv);
+
+    expect(row.round).toBe('Round 1');
+  });
+
+  it('keeps sheet row numbering across a completely blank line', () => {
+    const csv = [
+      'round,type,question,answer',
+      'Round 1,free_text,Largest planet?,Jupiter',
+      '',
+      'Round 1,free_text,Name this flag.,Czechia',
+    ].join('\n');
+
+    const rows = parseSheetCsv(csv);
+
+    expect(rows.map((row) => row.rowNumber)).toEqual([2, 4]);
+  });
+
+  it('throws SheetFormatError on an empty CSV', () => {
+    expect(() => parseSheetCsv('')).toThrow(SheetFormatError);
+    expect(() => parseSheetCsv('')).toThrow('The CSV file is empty');
   });
 
   it('throws SheetFormatError when a required column is missing', () => {
@@ -166,6 +221,15 @@ describe('parseSheetCsv', () => {
     expect(() => parseSheetCsv(csv)).toThrow(/type/);
   });
 
+  it('names every missing required column and lists the expected headers', () => {
+    const csv = ['round,notes', 'Round 1,hi'].join('\n');
+
+    expect(() => parseSheetCsv(csv)).toThrow(
+      'Missing required column(s): type, question, answer. ' +
+        'Expected headers: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after, category, author, round_note, show_round_note.',
+    );
+  });
+
   it('throws SheetFormatError on malformed CSV instead of crashing, with a quoting hint', () => {
     const csv = [HEADER, '"unterminated quote,free_text,Q?,,A,1,,'].join('\n');
 
@@ -173,5 +237,12 @@ describe('parseSheetCsv', () => {
     expect(() => parseSheetCsv(csv)).toThrow(
       /escape internal quotes by doubling/,
     );
+    expect(() => parseSheetCsv(csv)).toThrow(
+      /wrap the whole field in double quotes/,
+    );
+    expect(() => parseSheetCsv(csv)).toThrow(
+      /^Could not parse the CSV file: .+\. If a field contains a comma, quote, or line break/,
+    );
+    expect(() => parseSheetCsv(csv)).toThrow(/""Abbey Road""\?"\)\.$/);
   });
 });

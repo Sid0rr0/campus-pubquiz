@@ -1,6 +1,6 @@
 # 09: Backend sheet import: URL fetcher, CSV parser, draft schema
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 
