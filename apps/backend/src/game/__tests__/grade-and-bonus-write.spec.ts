@@ -84,6 +84,37 @@ describe('GameGateway — grades and bonus awards wait their turn in the session
     expect((await game.snapshot()).ungradedQuestionIds).toEqual([]);
   });
 
+  it('refuses a grade for an answer whose question is not in the session, storing nothing', async () => {
+    const answerId = await submitAnswer();
+    const admin = await game.connectAdmin();
+    jest.spyOn(game.answerService, 'questionIdOf').mockResolvedValue(987654);
+    const gradeSpy = jest.spyOn(game.answerService, 'grade');
+
+    const result = await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId,
+      pointsAwarded: 1,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'This answer is not to a question in the session',
+    });
+    expect(gradeSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a grade with a generic message when the answer module fails with something that is not an Error', async () => {
+    const answerId = await submitAnswer();
+    const admin = await game.connectAdmin();
+    jest.spyOn(game.answerService, 'grade').mockRejectedValue('boom');
+
+    const result = await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId,
+      pointsAwarded: 1,
+    });
+
+    expect(result).toEqual({ success: false, error: 'Unable to grade answer' });
+  });
+
   it('reads the bonus limits and stores an award only after the write ahead of it has finished', async () => {
     const admin = await game.connectAdmin();
     const [{ teamId }] = game.teams;

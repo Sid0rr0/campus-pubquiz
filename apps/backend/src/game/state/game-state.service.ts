@@ -459,6 +459,7 @@ export class GameStateService implements OnModuleInit {
     } catch (error) {
       if (error instanceof SessionRefusal) throw error;
       throw new SessionRefusal(
+        // Stryker disable next-line StringLiteral: unreachable defensive fallback, every failure on this path is an Error; the text only fills a refusal that is never produced.
         error instanceof Error ? error.message : 'Unable to join',
       );
     }
@@ -576,6 +577,7 @@ export class GameStateService implements OnModuleInit {
       .write(joinCode, (session) => this.moveCommitter.commit(session, action))
       .catch((error: unknown) => {
         throw new SessionRefusal(
+          // Stryker disable next-line StringLiteral: unreachable defensive fallback, every failure on this path is an Error; the text only fills a refusal that is never produced.
           error instanceof Error ? error.message : 'Invalid game action',
         );
       });
@@ -653,6 +655,7 @@ export class GameStateService implements OnModuleInit {
       award = change.award;
       return change;
     });
+    // Stryker disable next-line StringLiteral: unreachable defensive branch (BonusChanges.edit returns an award whenever it returns); the text only reaches the server log.
     if (!award) throw new Error('A bonus edit stored no award view');
     return { outcome, award };
   }

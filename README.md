@@ -204,7 +204,8 @@ CI, and it never fails on a low score.
 ```bash
 pnpm mutate                                # every workspace that has it
 pnpm --filter @campus-pubquiz/types mutate # shared/types only
-pnpm --filter backend mutate               # backend only
+pnpm --filter backend mutate               # backend only (DB-free slice)
+pnpm --filter backend mutate:db            # backend game/state/ with the DB specs (needs Docker, slow)
 ```
 
 Runs are incremental: Stryker keeps its results in `<workspace>/reports/stryker-incremental.json`
@@ -223,9 +224,16 @@ are gitignored.
   `game/state/errors/` (trivial error classes); it runs
   only the specs that don't reach the test database (`jest.stryker.config.cjs`).
   Files only DB-backed specs reach (most of `game/state/*-changes.ts`) are
-  left out, since the real-store specs are their intended test level. A
-  survivor in the slice may still be caught by a DB-backed spec Stryker
-  didn't run.
+  left out here; `mutate:db` covers them. A survivor in the slice may still
+  be caught by a DB-backed spec Stryker didn't run.
+- `backend` `mutate:db`: all of `game/state/` except `errors/`, against every
+  spec, DB-backed ones included (`stryker.db.config.mjs`). It needs Docker:
+  the wrapper (`src/test-db/mutate-db.ts`) starts one throwaway Postgres
+  container for the run, gives each Stryker worker its own database, and
+  stops the container afterwards. Separate from `pnpm mutate`, with its own
+  `reports/stryker-db-incremental.json` and `reports/mutation-db/` report.
+  It's slow: run one file at a time with
+  `pnpm --filter backend mutate:db --mutate src/game/state/<file>.ts`.
 - `frontend`: not covered.
 
 ## Docs

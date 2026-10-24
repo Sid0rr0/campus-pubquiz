@@ -391,7 +391,10 @@ describe('GameGateway — the joker pick', () => {
 
       const ack = await pick(game, alpha, 999_999);
 
-      expect(ack.success).toBe(false);
+      expect(ack).toEqual({
+        success: false,
+        error: 'That round cannot be your joker: it has already started',
+      });
       expect(await storedJokers(game)).toEqual({});
     });
 

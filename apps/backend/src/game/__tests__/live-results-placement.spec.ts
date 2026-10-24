@@ -27,8 +27,12 @@ const ONE_BLOCK: QuizRoundSpec[] = [
 describe('Live session — placement and the live results read', () => {
   const harness = setupRealStoreGatewayTest();
 
+  let logged: jest.SpyInstance;
+
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    logged = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -103,6 +107,14 @@ describe('Live session — placement and the live results read', () => {
     const restored = await restarted.snapshot();
     expect(restored.progress).toEqual(before.progress);
     expect(restored.leaderboard).toEqual([]);
+    expect(logged).toHaveBeenCalledWith(
+      `Standings read failed for session ${oneBlock.joinCode}; keeping the earlier value until the next write`,
+      expect.stringContaining('standings unavailable'),
+    );
+    expect(logged).toHaveBeenCalledWith(
+      `Fun fact data read failed for session ${oneBlock.joinCode}; keeping the earlier value until the next write`,
+      expect.stringContaining('fun facts unavailable'),
+    );
 
     const adminAfter = await restarted.connectAdmin();
     await restarted.gateway.handleAwardBonus(asSocket(adminAfter), {

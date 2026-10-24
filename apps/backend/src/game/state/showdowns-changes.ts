@@ -57,6 +57,7 @@ export class ShowdownsChanges {
     if (session.connectedTeamSockets[teamId] !== socketId) {
       throw new SessionRefusal('You may only submit guesses for your own team');
     }
+    // Stryker disable next-line BlockStatement,ConditionalExpression,EqualityOperator: equivalent, ShowdownService.submitGuess refuses a team with no seat before storing anything, and refusingInvalidShowdown turns that into the same refusal with the same text; this check only fails sooner.
     if (!round?.participants.some((entry) => entry.teamId === teamId)) {
       throw new SessionRefusal('Your team is not part of this showdown round');
     }

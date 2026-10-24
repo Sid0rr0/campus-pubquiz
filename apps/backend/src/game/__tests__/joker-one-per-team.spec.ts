@@ -128,6 +128,35 @@ describe('GameGateway — every team keeps exactly one joker', () => {
       ]);
     });
 
+    it('is not drawn a joker while the pick is open; the close draws it then', async () => {
+      const game = await jokerNight({ jokerRandom: () => 0 });
+      await openPick(game);
+
+      const latecomer = await game.joinTeam('Charlie');
+
+      expect(await storedJokers(game)).toEqual({});
+      expect(syncsTo(game, latecomer)).toEqual([]);
+      await game.act('ADVANCE'); // closes the pick
+      expect((await adminJokers(game)).Charlie).toEqual([
+        1,
+        'Round 1',
+        'drawn',
+      ]);
+    });
+
+    it('is not drawn a joker once the quiz has ended', async () => {
+      const game = await jokerNight({ jokerRandom: () => 0 });
+      await openPick(game);
+      await game.act('ADVANCE'); // closes the pick -> round_intro
+      await game.act('END_QUIZ');
+      const before = await storedJokers(game);
+
+      const latecomer = await game.joinTeam('Charlie');
+
+      expect(await storedJokers(game)).toEqual(before);
+      expect(syncsTo(game, latecomer)).toEqual([]);
+    });
+
     it('is not drawn a joker in a session played without jokers', async () => {
       const game = await jokerNight({
         settings: { showRoundOverview: true, jokersEnabled: false },
@@ -237,6 +266,76 @@ describe('GameGateway — every team keeps exactly one joker', () => {
 
       expect((await adminJokers(game)).Alpha).toEqual([3, 'Round 2', 'chosen']);
       expect(syncsTo(game, alpha)).toHaveLength(1);
+    });
+
+    describe('when the joker round’s questions are split across rounds', () => {
+      const questionsOf = (round: number, count: number) =>
+        Array.from({ length: count }, (_, index) => ({
+          type: 'multiple_choice' as const,
+          prompt: `Q${round}.${index + 1}?`,
+          answer: 'right',
+          points: 1,
+          payload: { options: ['right', 'wrong'] },
+        }));
+      const SPLIT_ROUNDS: QuizRoundSpec[] = [3, 1, 1].map((count, index) => ({
+        title: `Round ${index + 1}`,
+        breakAfter: true,
+        questions: questionsOf(index + 1, count),
+      }));
+
+      /** Alpha holds round 1 (Q1.1-Q1.3); the edit hands each round the questions of `layout` (by prompt), and Alpha's joker lands on the round it reads. */
+      async function jokerAfterSplit(layout: string[][]) {
+        const game = await jokerNight({ rounds: SPLIT_ROUNDS });
+        await openPick(game);
+        const [alpha] = game.teams;
+        await game.gateway.handlePickJoker(asSocket(alpha.socket), {
+          roundId: game.rounds[0].id,
+        });
+        await game.act('ADVANCE');
+        game.clearEmits();
+
+        await game.saveQuizEdit((rounds) => {
+          const all = rounds.flatMap((round) => round.questions);
+          return rounds.map((round, index) => ({
+            ...round,
+            questions: layout[index].map(
+              (prompt) => all.find((question) => question.prompt === prompt)!,
+            ),
+          }));
+        });
+
+        return (await adminJokers(game)).Alpha;
+      }
+
+      it('follows the first of the rounds that keep the same number of them', async () => {
+        expect(
+          await jokerAfterSplit([
+            ['Q2.1?', 'Q3.1?', 'Q1.3?'],
+            ['Q1.1?'],
+            ['Q1.2?'],
+          ]),
+        ).toEqual([1, 'Round 1', 'chosen']);
+      });
+
+      it('follows the round keeping most, not a later one keeping fewer', async () => {
+        expect(
+          await jokerAfterSplit([
+            ['Q2.1?'],
+            ['Q1.1?', 'Q1.2?'],
+            ['Q1.3?', 'Q3.1?'],
+          ]),
+        ).toEqual([2, 'Round 2', 'chosen']);
+      });
+
+      it('follows a later round keeping more than an earlier one', async () => {
+        expect(
+          await jokerAfterSplit([
+            ['Q2.1?'],
+            ['Q1.1?'],
+            ['Q1.2?', 'Q1.3?', 'Q3.1?'],
+          ]),
+        ).toEqual([3, 'Round 3', 'chosen']);
+      });
     });
 
     it('leaves jokers alone when the edit does not touch the rounds', async () => {

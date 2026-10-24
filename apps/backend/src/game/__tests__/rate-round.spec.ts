@@ -52,7 +52,7 @@ function playersView(game: RealStoreGateway): PlayersStatePayload {
 
 function rate(
   game: RealStoreGateway,
-  team: JoinedTeam,
+  team: Pick<JoinedTeam, 'socket'>,
   payload: unknown,
 ): Promise<AckResult> {
   return game.gateway.handleRateRound(asSocket(team.socket), payload);
@@ -165,6 +165,25 @@ describe('GameGateway — rating the rounds in the break', () => {
       expect(second).toEqual({ success: true });
       const accepted = await rejoin(game, team, 'The Quizzards');
       expect(accepted.roundRatings).toEqual([{ roundId, stars: 5 }]);
+    });
+
+    it('refuses a socket with no team link, with a reason', async () => {
+      const { game } = await atBreakIntro();
+      const stranger = await game.connectPlayer();
+
+      const ack = await rate(
+        game,
+        { socket: stranger },
+        {
+          roundId: game.rounds[0].id,
+          stars: 3,
+        },
+      );
+
+      expect(ack).toEqual({
+        success: false,
+        error: 'Join a team before rating a round',
+      });
     });
 
     it('broadcasts nothing', async () => {

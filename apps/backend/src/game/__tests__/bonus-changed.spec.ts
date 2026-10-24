@@ -16,6 +16,8 @@ import {
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
 import { UnknownLiveSessionError } from '@/game/rest/live-session-rest.service';
+import { BonusAwardNotFoundRefusal } from '@/game/state/errors/bonus-award-not-found-refusal.error';
+import { InvalidBonusAwardRefusal } from '@/game/state/errors/invalid-bonus-award-refusal.error';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 
 describe('GameGateway — bonus changed and leaderboard toggle', () => {
@@ -262,6 +264,42 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
       game.inRequestContext(() => game.rest.removeBonus(game.joinCode, 987654)),
     ).rejects.toBeInstanceOf(BonusAwardNotFoundError);
     expect(game.roomEmits()).toEqual([]);
+  });
+
+  it('refuses a bonus edit or deletion of a missing award with a BonusAwardNotFoundRefusal carrying the service message', async () => {
+    const editing = game.inRequestContext(() =>
+      game.gameState.editBonus(game.joinCode, 987654, 3, undefined),
+    );
+    await expect(editing).rejects.toBeInstanceOf(BonusAwardNotFoundRefusal);
+    await expect(editing).rejects.not.toBeInstanceOf(InvalidBonusAwardRefusal);
+    const removing = game.inRequestContext(() =>
+      game.gameState.removeBonus(game.joinCode, 987654),
+    );
+    await expect(removing).rejects.toBeInstanceOf(BonusAwardNotFoundRefusal);
+    await expect(removing).rejects.toThrow(/987654|not found/i);
+  });
+
+  it('refuses an invalid bonus edit with an InvalidBonusAwardRefusal, not a not-found one', async () => {
+    jest
+      .spyOn(game.bonusService, 'update')
+      .mockRejectedValue(new InvalidBonusAwardError('Nope'));
+    const refused = game.inRequestContext(() =>
+      game.gameState.editBonus(game.joinCode, 1, 0, 'Best costume'),
+    );
+
+    await expect(refused).rejects.toBeInstanceOf(InvalidBonusAwardRefusal);
+    await expect(refused).rejects.not.toBeInstanceOf(BonusAwardNotFoundRefusal);
+  });
+
+  it('lets an unrelated error from the bonus service pass through an edit unchanged', async () => {
+    const failure = new Error('database is down');
+    jest.spyOn(game.bonusService, 'update').mockRejectedValue(failure);
+
+    await expect(
+      game.inRequestContext(() =>
+        game.gameState.editBonus(game.joinCode, 1, 3, undefined),
+      ),
+    ).rejects.toBe(failure);
   });
 
   it('lets a session refusal that is not about the bonus award pass through a REST bonus edit or deletion unchanged', async () => {

@@ -16,6 +16,7 @@ import type { LeagueService } from '@/league/league.service';
  * before any database write, so a refused event stores nothing.
  */
 export class LeagueChanges {
+  // Stryker disable next-line StringLiteral: the logger's context label only prefixes the server log line; no behaviour reads it.
   private readonly logger = new Logger('LeagueChanges');
 
   constructor(
@@ -34,6 +35,7 @@ export class LeagueChanges {
       return await this.table.topFor(gameSessionId);
     } catch (error) {
       this.logger.error(
+        // Stryker disable next-line StringLiteral: log copy; it only reaches the server log, and callers see the null return, not the text.
         `League top read failed for session ${gameSessionId}; the lobby shows no league`,
         error instanceof Error ? error.stack : String(error),
       );

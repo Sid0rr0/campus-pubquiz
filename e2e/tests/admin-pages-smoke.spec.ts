@@ -61,9 +61,9 @@ test('after a short played session, /sessions, /stats and /teams show its data',
   await page.goto('/teams');
   await expect(page.getByRole('heading', { name: 'Teams' })).toBeVisible();
   const teamARow = await findRowAcrossPages(page, phoneA.teamName);
-  await expect(teamARow.getByRole('cell').nth(3)).toHaveText('1');
-  await expect(teamARow.getByRole('cell').nth(4)).toHaveText('1.0');
+  await expect(teamARow.getByRole('cell').nth(2)).toHaveText('1');
+  await expect(teamARow.getByRole('cell').nth(3)).toHaveText('1.0');
   const teamBRow = await findRowAcrossPages(page, phoneB.teamName);
-  await expect(teamBRow.getByRole('cell').nth(3)).toHaveText('1');
-  await expect(teamBRow.getByRole('cell').nth(4)).toHaveText('2.0');
+  await expect(teamBRow.getByRole('cell').nth(2)).toHaveText('1');
+  await expect(teamBRow.getByRole('cell').nth(3)).toHaveText('2.0');
 });
