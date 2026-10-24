@@ -81,7 +81,7 @@ function readGroup(body: string): ReadGroup {
     rawMargin === undefined ? undefined : parseMarginCell(rawMargin);
   const rawScoring = keyPattern(SCORING_NOTES_KEY, `[^\\s,}"']+`)
     .exec(body)?.[1]
-    ?.toLowerCase();
+    .toLowerCase();
   const matchScoringMode = MATCH_SCORING_MODES.find(
     (mode) => mode === rawScoring,
   );

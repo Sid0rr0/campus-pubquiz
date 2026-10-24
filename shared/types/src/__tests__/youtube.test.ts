@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { extractYoutubeVideoId, formatTimecode } from '../youtube';
+import {
+  extractYoutubeVideoId,
+  formatTimecode,
+  parseTimecode,
+} from '../youtube';
+
+describe('parseTimecode', () => {
+  it.each([
+    ['55', 55],
+    ['1:28', 88],
+    ['1:02:03', 3723],
+    [' 1:28 ', 88],
+  ])('reads %j as %i seconds', (raw, expected) => {
+    expect(parseTimecode(raw)).toBe(expected);
+  });
+
+  it.each(['1:2:3:4', 'x12', '12x', '1::2', '', '1:-2'])(
+    'refuses %j',
+    (raw) => {
+      expect(parseTimecode(raw)).toBeUndefined();
+    },
+  );
+});
 
 describe('extractYoutubeVideoId', () => {
   it('extracts the id from a standard watch URL', () => {
