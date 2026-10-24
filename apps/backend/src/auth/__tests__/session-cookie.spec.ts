@@ -29,6 +29,19 @@ describe('extractSessionCookie', () => {
     );
   });
 
+  it('uses the campus_pubquiz_session cookie, and no other name', () => {
+    expect(SESSION_COOKIE_NAME).toBe('campus_pubquiz_session');
+    expect(extractSessionCookie('campus_pubquiz_session=abc')).toBe('abc');
+    expect(extractSessionCookie('other=abc')).toBeUndefined();
+  });
+
+  it('skips a pair without an equals sign even when its text looks like the session name', () => {
+    expect(
+      extractSessionCookie('campus_pubquiz_sessionX; foo; other=1'),
+    ).toBeUndefined();
+    expect(extractSessionCookie('foo; campus_pubquiz_session=abc')).toBe('abc');
+  });
+
   it('keeps equals signs inside the value', () => {
     expect(extractSessionCookie(`${SESSION_COOKIE_NAME}=a=b==`)).toBe('a=b==');
   });
