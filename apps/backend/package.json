@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --maxWorkers=2",
     "mutate": "stryker run --incremental",
+    "mutate:db": "ts-node --transpile-only src/test-db/mutate-db.ts",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"

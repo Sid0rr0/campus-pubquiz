@@ -85,4 +85,18 @@ function dbFreeSources() {
     .map((f) => path.relative(__dirname, f));
 }
 
-module.exports = { dbFreeSpecs, dbFreeSources };
+/** Absolute paths of every spec, DB-backed or not, for `mutate:db`. */
+function allSpecs() {
+  return listTs(SRC)
+    .filter((f) => f.endsWith('.spec.ts'))
+    .filter((f) => !OUTSIDE_WORKSPACE_SPECS.includes(path.relative(SRC, f)));
+}
+
+/** Backend-relative paths of the `game/state/` source files `mutate:db` mutates. */
+function gameStateSources() {
+  return listTs(path.join(SRC, 'game/state'))
+    .filter((f) => !NOT_MUTATED.some((re) => re.test(path.relative(SRC, f))))
+    .map((f) => path.relative(__dirname, f));
+}
+
+module.exports = { dbFreeSpecs, dbFreeSources, allSpecs, gameStateSources };
