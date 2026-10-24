@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
@@ -19,6 +20,10 @@ describe('GameGateway — showdown guesses and rounds are checked inside the ses
     game = await harness.createGateway({ teamNames: ['Team A', 'Team B'] });
     await tieOnFirstQuestion(game, game.teams);
     await game.act('END_QUIZ');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   async function createRound() {
@@ -77,6 +82,47 @@ describe('GameGateway — showdown guesses and rounds are checked inside the ses
     await game.act('ADVANCE');
     const final = await game.act('ADVANCE');
     expect(final.activeShowdown?.winnerTeamId).toBe(game.teams[1].teamId);
+  });
+
+  it('refuses a round whose answer is not numeric with the showdown service message, and creates none', async () => {
+    const admin = await game.connectAdmin();
+
+    const reply = await game.gateway.handleCreateShowdownRound(
+      asSocket(admin),
+      { question: 'How many?', answer: 'lots', points: SHOWDOWN_POINTS },
+    );
+
+    expect(reply).toEqual({
+      success: false,
+      error: 'A showdown answer must be numeric',
+    });
+    expect((await game.snapshot()).activeShowdown).toBeNull();
+  });
+
+  it('does not pass an unexpected showdown service failure off as a refusal', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    jest
+      .spyOn(game.showdownService, 'createRound')
+      .mockRejectedValueOnce(new Error('database unreachable'));
+
+    const reply = await createRound();
+
+    expect(reply).not.toEqual({
+      success: false,
+      error: 'database unreachable',
+    });
+    expect(reply).toMatchObject({ success: false });
+  });
+
+  it('refuses a second round while one is in progress with the showdown service message', async () => {
+    await createRound();
+
+    const reply = await createRound();
+
+    expect(reply).toEqual({
+      success: false,
+      error: 'A showdown round is already in progress for this session',
+    });
   });
 
   it('creates no round when a bonus held on its save breaks the tie first', async () => {

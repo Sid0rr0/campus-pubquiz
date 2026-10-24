@@ -169,13 +169,41 @@ describe('GameGateway — the quiz master changing a team’s joker', () => {
     expect(syncsTo(game, alpha)).toEqual([]);
   });
 
-  it('refuses a team that is not in the session', async () => {
+  it('refreshes the admin room, not the big screen, and refreshes the standings', async () => {
+    const game = await jokerNight();
+    await openPick(game);
+    const [alpha] = game.teams;
+    game.clearEmits();
+    const held = game.holdAt('standings');
+
+    const setting = setJoker(game, alpha.teamId, game.rounds[1].id);
+    await held.reached;
+    held.release();
+    await setting;
+
+    const adminUpdates = game.payloadsTo<{
+      teams: { teamName: string; joker: { roundId: number } | null }[];
+    }>(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.STATE_UPDATED);
+    expect(adminUpdates).toHaveLength(1);
+    expect(
+      adminUpdates[0].teams.find((team) => team.teamName === 'Alpha')?.joker
+        ?.roundId,
+    ).toBe(game.rounds[1].id);
+    expect(
+      game.payloadsTo(SOCKET_ROOMS.DISPLAY, SOCKET_EVENTS.STATE_UPDATED),
+    ).toEqual([]);
+  });
+
+  it('refuses a team that is not in the session, naming it', async () => {
     const game = await jokerNight();
     await openPick(game);
 
     const ack = await setJoker(game, 999_999, game.rounds[0].id);
 
-    expect(ack.success).toBe(false);
+    expect(ack).toEqual({
+      success: false,
+      error: 'Team 999999 is not in this session',
+    });
     expect(await storedJokers(game)).toEqual({});
   });
 
@@ -185,7 +213,11 @@ describe('GameGateway — the quiz master changing a team’s joker', () => {
 
     const ack = await setJoker(game, game.teams[0].teamId, 999_999);
 
-    expect(ack.success).toBe(false);
+    expect(ack).toEqual({
+      success: false,
+      error:
+        'That round cannot be the joker: it has already started, or the joker pick has not opened',
+    });
     expect(await storedJokers(game)).toEqual({});
   });
 

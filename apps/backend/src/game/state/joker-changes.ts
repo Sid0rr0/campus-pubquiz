@@ -241,6 +241,7 @@ export class JokerChanges {
     reloaded: SessionState,
   ): Promise<{ session: SessionState; jokerSyncs: JokerSync[] }> {
     const held = Object.entries(started.jokers);
+    // Stryker disable next-line ConditionalExpression: a pure shortcut; without it the loop below runs zero times and returns the same syncs and an empty jokers cache
     if (held.length === 0) return { session: reloaded, jokerSyncs: [] };
 
     const { gameSessionId } = reloaded.seededGame;

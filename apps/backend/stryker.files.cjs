@@ -63,11 +63,23 @@ function needsDatabase(file, seen = new Set()) {
     .some((helper) => needsDatabase(helper, seen));
 }
 
+/** Absolute paths of every spec Stryker's sandbox can run (not the ones reading other workspaces). */
+function allSpecs() {
+  return listTs(SRC)
+    .filter((f) => f.endsWith('.spec.ts'))
+    .filter((f) => !OUTSIDE_WORKSPACE_SPECS.includes(path.relative(SRC, f)));
+}
+
 /** Absolute paths of the specs that run without the testcontainer. */
 function dbFreeSpecs() {
-  return listTs(SRC)
-    .filter((f) => f.endsWith('.spec.ts') && !needsDatabase(f))
-    .filter((f) => !OUTSIDE_WORKSPACE_SPECS.includes(path.relative(SRC, f)));
+  return allSpecs().filter((f) => !needsDatabase(f));
+}
+
+/** The files under `dir` that are not specs, helpers, fixtures or other NOT_MUTATED paths. */
+function mutableIn(dir) {
+  return listTs(dir).filter(
+    (f) => !NOT_MUTATED.some((re) => re.test(path.relative(SRC, f))),
+  );
 }
 
 /** Source files that at least one DB-free spec imports directly (an `@/…` path or a relative one). */
@@ -78,11 +90,17 @@ function directlyImportedByDbFreeSpecs() {
 /** Backend-relative globs of the source files Stryker mutates. */
 function dbFreeSources() {
   const covered = directlyImportedByDbFreeSpecs();
-  return listTs(SRC)
-    .filter((f) => !NOT_MUTATED.some((re) => re.test(path.relative(SRC, f))))
+  return mutableIn(SRC)
     .filter((f) => !DB_OR_NEST_IMPORT.test(fs.readFileSync(f, 'utf8')))
     .filter((f) => covered.has(f))
     .map((f) => path.relative(__dirname, f));
 }
 
-module.exports = { dbFreeSpecs, dbFreeSources };
+/** Backend-relative paths of the `game/state/` source files `mutate:db` mutates. */
+function gameStateSources() {
+  return mutableIn(path.join(SRC, 'game/state')).map((f) =>
+    path.relative(__dirname, f),
+  );
+}
+
+module.exports = { dbFreeSpecs, dbFreeSources, allSpecs, gameStateSources };

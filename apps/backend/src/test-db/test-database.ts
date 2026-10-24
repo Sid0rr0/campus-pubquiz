@@ -24,7 +24,13 @@ export function listTruncatableTables(orm: MikroORM): string[] {
     .sort();
 }
 
-function workerDatabaseName(): string {
+/**
+ * Stryker runs Jest in band in each of its worker processes, so every one of
+ * them has `JEST_WORKER_ID` 1; its own worker id keeps their databases apart.
+ */
+export function workerDatabaseName(): string {
+  const strykerWorker = process.env.STRYKER_MUTATOR_WORKER;
+  if (strykerWorker) return `pubquiz_test_s${strykerWorker}`;
   return `pubquiz_test_w${process.env.JEST_WORKER_ID ?? '1'}`;
 }
 

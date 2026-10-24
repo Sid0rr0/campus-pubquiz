@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
@@ -47,6 +48,10 @@ describe('Live results — league tops refresh when a league table may have chan
       value: 'Paris',
     });
     game.clearEmits();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   async function createOtherSession(leagueIds: number[]): Promise<string> {
@@ -181,13 +186,16 @@ describe('Live results — league tops refresh when a league table may have chan
   });
 
   it('leaves the other league top as it was and still delivers the outcome when the league read fails', async () => {
-    rejectNthCall(
-      game.leagueTableService,
-      'topFor',
-      new Error('league read down'),
-    );
+    const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const failure = new Error('league read down');
+    rejectNthCall(game.leagueTableService, 'topFor', failure);
 
     await game.act('END_QUIZ');
+
+    expect(logged).toHaveBeenCalledWith(
+      `League top refresh failed for session ${otherCode}`,
+      failure.stack,
+    );
 
     expect(displayLeagueTops(game.joinCode)).toHaveLength(1);
     expect(displayLeagueTops(otherCode)).toEqual([]);
@@ -195,5 +203,28 @@ describe('Live results — league tops refresh when a league table may have chan
       name: 'Autumn',
       rows: [],
     });
+  });
+
+  it('skips a session that closes while the refresh is waiting on it, without logging a failure', async () => {
+    const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const held = game.holdAt('change', { joinCode: otherCode });
+    const inProgress = game.sessionWrite.write(otherCode, (session) =>
+      Promise.resolve({ session, outcome: null, touchedScores: false }),
+    );
+    await held.reached;
+    const waiting = Promise.all([
+      game.nextQueued({ joinCode: otherCode }),
+      game.nextQueued({ joinCode: otherCode }),
+    ]);
+    const closing = game.sessionWrite.remove(otherCode, () => undefined);
+    const refreshing = game.gameState.refreshLeagueTops(game.joinCode);
+    await waiting;
+    held.release();
+
+    await expect(refreshing).resolves.toEqual([]);
+    await inProgress;
+    await closing;
+    expect(game.sessionWrite.has(otherCode)).toBe(false);
+    expect(logged).not.toHaveBeenCalled();
   });
 });

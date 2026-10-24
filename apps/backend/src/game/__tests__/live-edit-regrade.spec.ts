@@ -331,6 +331,19 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     await game.saveAnswerKeyFix(questionId, { answer: '650' });
 
     expect(await storedPoints(game, questionId)).toEqual({ Near: 0, Far: 3 });
+    await game.act('ADVANCE'); // -> reveal_intro
+    const [revealed] = (await game.act('ADVANCE')).revealQuestions; // -> reveal
+    expect(revealed).toEqual(
+      expect.objectContaining({
+        id: questionId,
+        closestGuess: {
+          hasSubmissions: true,
+          minGuess: '480',
+          maxGuess: '650',
+          closestGuesses: [{ teamName: 'Far', value: '650' }],
+        },
+      }),
+    );
   });
 
   it('keeps a moderator override on an opened CSV-shaped match question when only a later round is saved', async () => {

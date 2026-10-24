@@ -5,15 +5,19 @@ import {
   sessionRoom,
   type LeaderboardEntry,
   type AdminStatePayload,
+  type SessionState,
 } from '@campus-pubquiz/types';
 import { Round } from '@/db/entities/round.entity';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   type JoinedTeam,
   setupRealStoreGatewayTest,
+  rejectNthCall,
   tieOnFirstQuestion,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
+import type { HeldWriter } from '@/game/state/session-write';
 
 describe('GameGateway — session write: bonus changes', () => {
   const harness = setupRealStoreGatewayTest();
@@ -842,6 +846,19 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     expect(leaderboard).not.toHaveBeenCalled();
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
   });
+
+  it('does not read standings when a socket that held no team drops', async () => {
+    const stranger = await game.connectPlayer();
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    const outcome = await game.gameState.teamDisconnected(
+      game.joinCode,
+      stranger.id,
+    );
+
+    expect(outcome).toBeNull();
+    expect(leaderboard).not.toHaveBeenCalled();
+  });
 });
 
 describe('GameGateway — session write: player counts and sound mute', () => {
@@ -1230,6 +1247,16 @@ describe('GameGateway — session write: lobby settings', () => {
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
   });
 
+  it('does not read standings when the stats page renames the session', async () => {
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    await game.inRequestContext(() =>
+      game.gameState.renameHeldSession(game.gameSessionId, 'Quiz night'),
+    );
+
+    expect(leaderboard).not.toHaveBeenCalled();
+  });
+
   it('does not read standings for a leagues change', async () => {
     const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
 
@@ -1287,5 +1314,202 @@ describe('GameGateway — session write: closing a session', () => {
     await closing;
     await behindCloseOutcome;
     expect(game.gameState.hasSession(game.joinCode)).toBe(false);
+  });
+
+  describe('a stats rename racing the close', () => {
+    it('is dropped when the session closes between the lookup and the write', async () => {
+      const held = game.holdAt('standings');
+      const inProgress = bonusChanged();
+      await held.reached;
+
+      const waiting = Promise.all([game.nextQueued(), game.nextQueued()]);
+      const closing = game.gameState.closeSession(game.joinCode);
+      const renaming = game.gameState.renameHeldSession(
+        game.gameSessionId,
+        'Too late',
+      );
+      await waiting;
+      held.release();
+
+      await expect(renaming).resolves.toBeUndefined();
+      await inProgress;
+      await closing;
+      expect(game.gameState.hasSession(game.joinCode)).toBe(false);
+    });
+
+    it('surfaces a failure of the write while the session is still held', async () => {
+      rejectNthCall(game.sessionWrite, 'write', new Error('disk on fire'));
+
+      await expect(
+        game.gameState.renameHeldSession(game.gameSessionId, 'Renamed'),
+      ).rejects.toThrow('disk on fire');
+      expect(game.gameState.hasSession(game.joinCode)).toBe(true);
+    });
+  });
+});
+
+describe('GameGateway — session write: what a write may return and a held writer may do', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+  });
+
+  function unchanged(outcome = 'done') {
+    return (session: SessionState) =>
+      Promise.resolve({ session, outcome, touchedScores: false });
+  }
+
+  it('throws when a write moved an auto-lock deadline but returned no session outcome to carry it', async () => {
+    await expect(
+      game.sessionWrite.write(game.joinCode, (session) =>
+        Promise.resolve({
+          session: { ...session, questionLockAt: 1_000 },
+          outcome: 'not an outcome',
+          touchedScores: false,
+        }),
+      ),
+    ).rejects.toThrow(
+      'A session write moved an auto-lock deadline but returned no SessionOutcome to carry it',
+    );
+  });
+
+  it('passes a result that carries no deadlines through when no deadline moved', async () => {
+    await expect(
+      game.sessionWrite.write(game.joinCode, unchanged('a join’s team')),
+    ).resolves.toBe('a join’s team');
+  });
+
+  it('does not reach the standings step for a write that did not touch scores', async () => {
+    const held = game.holdAt('standings');
+
+    await expect(
+      game.sessionWrite.write(game.joinCode, unchanged('no scores')),
+    ).resolves.toBe('no scores');
+
+    const scored = game.sessionWrite.write(game.joinCode, (session) =>
+      Promise.resolve({ session, outcome: 'scores', touchedScores: true }),
+    );
+    await held.reached;
+    held.release();
+    await expect(scored).resolves.toBe('scores');
+  });
+
+  it('reaches a multi-code hold one join code at a time in sorted order', async () => {
+    const heldFirst = game.holdAt('hold', { joinCode: 'AAAAAA' });
+    const heldLast = game.holdAt('hold', { joinCode: 'ZZZZZZ' });
+    let isLastReached = false;
+    void heldLast.reached.then(() => {
+      isLastReached = true;
+    });
+
+    const holding = game.sessionWrite.hold(['ZZZZZZ', 'AAAAAA'], () =>
+      Promise.resolve(),
+    );
+    await heldFirst.reached;
+    await game.letOthersRun();
+    expect(isLastReached).toBe(false);
+
+    heldFirst.release();
+    await heldLast.reached;
+    heldLast.release();
+    await holding;
+  });
+
+  it('lets the task write a join code in the hold, and returns the task’s result', async () => {
+    await expect(
+      game.sessionWrite.hold([game.joinCode], async (held) =>
+        held.write(game.joinCode, unchanged('inside')),
+      ),
+    ).resolves.toBe('inside');
+  });
+
+  it('refuses a write for a join code outside the hold', async () => {
+    await game.sessionWrite.hold([game.joinCode], async (held) => {
+      await expect(held.write('OUTSIDE', unchanged())).rejects.toThrow(
+        'Held writer refused: join code "OUTSIDE" is not part of the hold',
+      );
+    });
+  });
+
+  it('refuses every write once the hold is released, naming the join code', async () => {
+    let leaked: HeldWriter | undefined;
+    await game.sessionWrite.hold([game.joinCode], (held) => {
+      leaked = held;
+      return Promise.resolve();
+    });
+
+    await expect(leaked?.write(game.joinCode, unchanged())).rejects.toThrow(
+      `Held writer used after its hold was released (join code "${game.joinCode}")`,
+    );
+  });
+
+  it('refuses a write after the hold is released even when the task threw', async () => {
+    let leaked: HeldWriter | undefined;
+    await expect(
+      game.sessionWrite.hold([game.joinCode], (held) => {
+        leaked = held;
+        return Promise.reject(new Error('task failed'));
+      }),
+    ).rejects.toThrow('task failed');
+
+    await expect(leaked?.write(game.joinCode, unchanged())).rejects.toThrow(
+      /used after its hold was released/,
+    );
+  });
+});
+
+describe('GameStateService — join failures and the blank-screen report', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+
+  beforeEach(async () => {
+    game = await harness.createGateway();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  function join() {
+    return game.gameState.teamJoined(
+      game.joinCode,
+      { teamName: 'Latecomers' },
+      'socket-1',
+      () => false,
+    );
+  }
+
+  it('rethrows a refusal from the join as the same refusal', async () => {
+    const refusal = new SessionRefusal('Team name taken');
+    rejectNthCall(game.sessionWrite, 'write', refusal);
+
+    await expect(join()).rejects.toBe(refusal);
+  });
+
+  it('refuses a join that failed some other way with the failure’s message', async () => {
+    rejectNthCall(game.sessionWrite, 'write', new Error('database down'));
+
+    const failure = await join().catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(SessionRefusal);
+    expect(failure).toMatchObject({ message: 'database down' });
+  });
+
+  it('warns, naming the session and the screen, when the big screen has no content to show', () => {
+    const warned = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const session = game.sessionWrite.read(game.joinCode);
+    game.sessionWrite.place(game.joinCode, {
+      ...session,
+      progress: { ...session.progress, status: 'reveal', revealIndex: 99 },
+    });
+
+    const view = game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
+
+    expect(view.screen).toEqual({ kind: 'blank' });
+    expect(warned).toHaveBeenCalledWith(
+      `Session ${game.joinCode}: big screen sent blank, content for on-air screen "reveal" not found`,
+    );
   });
 });
