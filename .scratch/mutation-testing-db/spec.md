@@ -18,4 +18,4 @@ The backend's `pnpm mutate` only covers the DB-free slice (README "Running mutat
 ## Tickets
 
 1. Wire up `mutate:db` and pilot it on one file (`issues/01-wire-up-and-pilot.md`).
-2. Full baseline run, then survivor tickets grouped by area, written as in `.scratch/mutation-testing/spec.md`. Opened once 01 is done.
+2. Full baseline run (about 1.5 hours, see 01's comments), then survivor tickets grouped by area, written as in `.scratch/mutation-testing/spec.md`.
