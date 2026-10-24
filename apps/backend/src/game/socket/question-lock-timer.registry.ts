@@ -17,6 +17,7 @@ export function createRealTimerScheduler(): TimerScheduler {
   const timers = new Map<string, NodeJS.Timeout>();
   const clear = (key: string) => {
     clearTimeout(timers.get(key));
+    // Stryker disable next-line CallExpression: only frees map memory; arm() overwrites the entry and clearTimeout on a spent handle is a no-op.
     timers.delete(key);
   };
   return {
@@ -26,6 +27,7 @@ export function createRealTimerScheduler(): TimerScheduler {
         key,
         setTimeout(
           () => {
+            // Stryker disable next-line CallExpression: only frees map memory; a spent handle left in the map is never observable.
             timers.delete(key);
             void onExpire();
           },

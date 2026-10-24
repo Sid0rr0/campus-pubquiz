@@ -1,5 +1,8 @@
 import { ManualTimerScheduler } from '@/game/__tests__/manual-timer-scheduler';
-import { QuestionLockTimerRegistry } from '@/game/socket/question-lock-timer.registry';
+import {
+  createRealTimerScheduler,
+  QuestionLockTimerRegistry,
+} from '@/game/socket/question-lock-timer.registry';
 
 const SOON = 5_000;
 const LATER = 9_000;
@@ -55,6 +58,48 @@ describe('QuestionLockTimerRegistry on a manual scheduler', () => {
     await expect(scheduler.fire('AAAA')).rejects.toThrow('No timer is armed');
   });
 
+  describe('clearAll forgets sessions that no longer have a timer', () => {
+    it('skips a session whose timer already fired', async () => {
+      registry.rearm('AAAA', SOON, jest.fn());
+      await scheduler.fire('AAAA');
+      const clear = jest.spyOn(scheduler, 'clear');
+
+      registry.clearAll();
+
+      expect(clear).not.toHaveBeenCalled();
+    });
+
+    it('skips a session that was re-armed with null', () => {
+      registry.rearm('AAAA', SOON, jest.fn());
+      registry.rearm('AAAA', null, jest.fn());
+      const clear = jest.spyOn(scheduler, 'clear');
+
+      registry.clearAll();
+
+      expect(clear).not.toHaveBeenCalled();
+    });
+
+    it('skips sessions it already cleared on an earlier clearAll', () => {
+      registry.rearm('AAAA', SOON, jest.fn());
+      registry.clearAll();
+      const clear = jest.spyOn(scheduler, 'clear');
+
+      registry.clearAll();
+
+      expect(clear).not.toHaveBeenCalled();
+    });
+
+    it('clears each armed session exactly once', () => {
+      registry.rearm('AAAA', SOON, jest.fn());
+      registry.rearm('BBBB', LATER, jest.fn());
+      const clear = jest.spyOn(scheduler, 'clear');
+
+      registry.clearAll();
+
+      expect(clear.mock.calls).toEqual([['AAAA'], ['BBBB']]);
+    });
+  });
+
   it('reports the exact deadline it was armed with', () => {
     registry.rearm('AAAA', SOON, jest.fn());
 
@@ -92,5 +137,35 @@ describe('QuestionLockTimerRegistry on real timers', () => {
 
     expect(fired).toHaveBeenCalledTimes(1);
     expect(cancelled).not.toHaveBeenCalled();
+  });
+
+  it('the real scheduler replaces a key’s deadline when armed again, whatever the caller does', () => {
+    const scheduler = createRealTimerScheduler();
+    const first = jest.fn();
+    const second = jest.fn();
+
+    scheduler.arm('AAAA', Date.now() + 1_000, first);
+    scheduler.arm('AAAA', Date.now() + 2_000, second);
+    jest.advanceTimersByTime(2_000);
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels the earlier deadline when a session is re-armed, and can be armed again after firing', () => {
+    const registry = new QuestionLockTimerRegistry();
+    const first = jest.fn();
+    const second = jest.fn();
+    const third = jest.fn();
+
+    registry.rearm('AAAA', Date.now() + 1_000, first);
+    registry.rearm('AAAA', Date.now() + 2_000, second);
+    jest.advanceTimersByTime(2_000);
+    registry.rearm('AAAA', Date.now() + 1_000, third);
+    jest.advanceTimersByTime(1_000);
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(third).toHaveBeenCalledTimes(1);
   });
 });
