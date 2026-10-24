@@ -936,6 +936,67 @@ describe('describeFunFacts', () => {
       expect(questionIds.filter((id) => id >= 3)).toEqual([]);
       expect(kinds(session)).not.toContain('nobody_got_it');
     });
+
+    it('never feeds any fact from answers to questions or jokers of rounds not yet past', () => {
+      // Rounds 1-2 are past; round 3 (questions 5-6) is the block in play, round 4
+      // (7-8, a kahoot round whose questions are blocks of their own) is ahead.
+      const specs: RoundSpec[] = [
+        { title: 'One', questionCount: 2 },
+        { title: 'Two', questionCount: 2, isKahoot: true },
+        { title: 'Three', questionCount: 2 },
+        { title: 'Four', questionCount: 2, isKahoot: true },
+      ];
+      const pastAnswers = [
+        answer(1, 0, 'correct'),
+        answer(1, 1, 'incorrect'),
+        answer(2, 0, 'correct'),
+        answer(2, 1, 'correct'),
+        answer(3, 0, 'correct', { responseMs: 900 }),
+        answer(3, 1, 'correct', { responseMs: 800 }),
+        answer(4, 0, 'correct'),
+        answer(4, 1, 'incorrect'),
+      ];
+      // Everything a leak could surface: a faster correct answer, a question
+      // nobody got right, a tougher question, a joker paying out in a hidden round.
+      const hiddenAnswers = [
+        answer(5, 0, 'correct', { responseMs: 1 }),
+        answer(5, 1, 'correct', { responseMs: 1 }),
+        answer(6, 0, 'incorrect'),
+        answer(6, 1, 'incorrect'),
+        answer(7, 0, 'correct', { responseMs: 1 }),
+        answer(7, 1, 'incorrect'),
+        answer(8, 0, 'incorrect'),
+        answer(8, 1, 'incorrect'),
+      ];
+      const withJokers = (data: FunFactAnswer[]): SessionState => {
+        const session = sessionOf(specs, breakProgress(2, 1), {
+          answers: data,
+        });
+        return {
+          ...session,
+          seededGame: {
+            ...session.seededGame,
+            settings: {
+              ...session.seededGame.settings,
+              showRoundOverview: true,
+              jokersEnabled: true,
+            },
+          },
+          jokers: {
+            1: { roundId: 3, source: 'chosen' },
+            2: { roundId: 4, source: 'chosen' },
+          },
+        };
+      };
+
+      const baseline = describeFunFacts(withJokers(pastAnswers));
+      expect(baseline.map((fact) => fact.kind)).toContain(
+        'fastest_correct_answer',
+      );
+      expect(
+        describeFunFacts(withJokers([...pastAnswers, ...hiddenAnswers])),
+      ).toEqual(baseline);
+    });
   });
 
   describe('the first break', () => {
