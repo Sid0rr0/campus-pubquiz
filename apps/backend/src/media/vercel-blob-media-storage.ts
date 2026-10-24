@@ -12,6 +12,7 @@ export class VercelBlobMediaStorage implements MediaStorage {
   async put({ key, contentType, data }: MediaUpload): Promise<StoredMedia> {
     if (!this.token) {
       throw new MediaStorageNotConfiguredError(
+        // Stryker disable next-line StringLiteral: copy; operator-facing log text, callers match on the error class.
         'BLOB_READ_WRITE_TOKEN is not set',
       );
     }

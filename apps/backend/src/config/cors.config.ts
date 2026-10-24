@@ -30,5 +30,6 @@ export function corsOriginValidator(
     return;
   }
 
+  // Stryker disable next-line StringLiteral: copy; the message only reaches the server log, and callers branch on the error being set, not its text.
   callback(new Error(`Origin ${origin} not allowed by CORS`));
 }
