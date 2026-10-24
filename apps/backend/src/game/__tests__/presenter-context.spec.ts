@@ -558,6 +558,7 @@ describe('GameStateService — getPresenterContext', () => {
 
         expect(refused.outcome).toBe('refused');
         expect(refused.before.next).toMatchObject({
+          heading: 'Grading',
           body: 'Waiting for grading',
         });
         expect(
@@ -645,6 +646,11 @@ describe('GameStateService — getPresenterContext', () => {
         });
 
         expect(phase).toBe('done');
+        expect(
+          result.presses.some(
+            ({ before }) => before.next?.body === 'Next closest-guess step',
+          ),
+        ).toBe(true);
         expect(result.disagreements).toEqual([]);
       });
     });
@@ -721,7 +727,17 @@ describe('GameStateService — getPresenterContext', () => {
         const rest = await walk.walk();
 
         expect(waiting.outcome).toBe('refused');
-        expect(waiting.before.next?.body).toBe('Waiting for every guess');
+        expect(waiting.before.next).toMatchObject({
+          heading: 'Showdown',
+          body: 'Waiting for every guess',
+        });
+        expect(
+          rest.presses.some(
+            ({ before }) =>
+              before.next?.heading === 'Showdown' &&
+              /^Reveal step \d+$/.test(before.next.body ?? ''),
+          ),
+        ).toBe(true);
         expect(rest.presses.at(-1)?.outcome).toBe('unmoved');
         expect(
           summarise([...cleared, waiting, ...rest.presses]).disagreements,
