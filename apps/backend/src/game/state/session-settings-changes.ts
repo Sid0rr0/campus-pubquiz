@@ -113,6 +113,7 @@ export class SessionSettingsChanges {
     return {
       session: { ...session, seededGame: { ...session.seededGame, settings } },
       outcome: undefined,
+      // Stryker disable next-line BooleanLiteral: equivalent, the only caller (the league change module's settingsAndLeagues) reads just `.session` and returns its own touchedScores, so this flag is never consulted.
       touchedScores: false,
     };
   }

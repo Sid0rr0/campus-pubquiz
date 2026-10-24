@@ -842,6 +842,19 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     expect(leaderboard).not.toHaveBeenCalled();
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
   });
+
+  it('does not read standings when a socket that held no team drops', async () => {
+    const stranger = await game.connectPlayer();
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    const outcome = await game.gameState.teamDisconnected(
+      game.joinCode,
+      stranger.id,
+    );
+
+    expect(outcome).toBeNull();
+    expect(leaderboard).not.toHaveBeenCalled();
+  });
 });
 
 describe('GameGateway — session write: player counts and sound mute', () => {
@@ -1228,6 +1241,16 @@ describe('GameGateway — session write: lobby settings', () => {
 
     expect(leaderboard).not.toHaveBeenCalled();
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
+  });
+
+  it('does not read standings when the stats page renames the session', async () => {
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    await game.inRequestContext(() =>
+      game.gameState.renameHeldSession(game.gameSessionId, 'Quiz night'),
+    );
+
+    expect(leaderboard).not.toHaveBeenCalled();
   });
 
   it('does not read standings for a leagues change', async () => {

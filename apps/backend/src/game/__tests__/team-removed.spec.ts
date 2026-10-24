@@ -135,6 +135,19 @@ describe('GameGateway — team removed (kick / leave)', () => {
     expect(scorer.socket.disconnect).toHaveBeenCalledWith(true);
   });
 
+  it('does not tell a leaving team it was kicked, nor disconnect its socket', async () => {
+    await game.gateway.handleLeaveSession(asSocket(scorer.socket), {
+      teamId: scorer.teamId,
+    });
+
+    expect(
+      game
+        .roomEmits()
+        .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_KICKED),
+    ).toEqual([]);
+    expect(scorer.socket.disconnect).not.toHaveBeenCalled();
+  });
+
   it('kicks a team whose socket has already disconnected', async () => {
     await game.gateway.handleDisconnect(asSocket(scorer.socket));
     game.clearEmits();

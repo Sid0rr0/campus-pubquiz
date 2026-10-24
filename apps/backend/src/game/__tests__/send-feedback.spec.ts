@@ -41,7 +41,7 @@ async function advanceUntilStatus(
 
 function send(
   game: RealStoreGateway,
-  team: JoinedTeam,
+  team: Pick<JoinedTeam, 'socket'>,
   payload: unknown,
 ): Promise<AckResult> {
   return game.gateway.handleSendFeedback(asSocket(team.socket), payload);
@@ -80,6 +80,25 @@ describe('GameGateway — the comment and topic suggestions on the final form', 
     await advanceUntilStatus(game, 'ended');
     return { game, team: game.teams[0] };
   }
+
+  it('refuses a socket with no team link, with a reason', async () => {
+    const { game } = await atEnded();
+    const stranger = await game.connectPlayer();
+
+    const ack = await send(
+      game,
+      { socket: stranger },
+      {
+        comment: 'Hello',
+        topics: [],
+      },
+    );
+
+    expect(ack).toEqual({
+      success: false,
+      error: 'Join a team before sending feedback',
+    });
+  });
 
   it('acknowledges feedback at ended, and a reconnect carries the comment and topics', async () => {
     const { game, team } = await atEnded();

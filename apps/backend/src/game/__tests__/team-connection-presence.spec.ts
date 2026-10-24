@@ -86,6 +86,36 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     );
   });
 
+  it('closes no socket when a team joins a seat nobody held', async () => {
+    const newcomer = await game.connectPlayer();
+
+    const outcome = await game.inRequestContext(() =>
+      game.gameState.teamJoined(
+        game.joinCode,
+        { teamName: 'Newcomers', joinCode: game.joinCode },
+        newcomer.id,
+        () => true,
+      ),
+    );
+
+    expect(outcome.socketsToClose).toEqual([]);
+  });
+
+  it('closes the old socket, and only it, when a device takes over its own seat', async () => {
+    const second = await game.connectPlayer();
+
+    const outcome = await game.inRequestContext(() =>
+      game.gameState.teamJoined(
+        game.joinCode,
+        rejoinPayload({ previousSocketId: first.socket.id }),
+        second.id,
+        () => true,
+      ),
+    );
+
+    expect(outcome.socketsToClose).toEqual([first.socket.id]);
+  });
+
   it('still rejects a second device that names some other socket as its previous one', async () => {
     const second = await game.connectPlayer();
 

@@ -364,6 +364,46 @@ describe('GameGateway — SET_TEAM_PLAYER_COUNT', () => {
     expect(await storedCount(game, team.teamId)).toBe(4);
   });
 
+  it('corrects a kicked team that gave a count but left no answer behind', async () => {
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const [team] = game.teams;
+    const admin = await game.connectAdmin();
+    await teamSetCount(game, team, 3);
+    await game.gateway.handleKickTeam(asSocket(admin), {
+      teamId: team.teamId,
+    });
+    const hasTakenPart = jest.spyOn(game.standingsService, 'hasTakenPart');
+    hasTakenPart.mockResolvedValue(false);
+
+    const ack = await adminSetCount(game, admin, {
+      teamId: team.teamId,
+      playerCount: 4,
+    });
+
+    expect(ack).toEqual({ success: true });
+    expect(await storedCount(game, team.teamId)).toBe(4);
+    expect(hasTakenPart).not.toHaveBeenCalled();
+    hasTakenPart.mockRestore();
+  });
+
+  it('takes a team on the roster as on record without looking it up', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['The Quizzards', 'The Rivals'],
+    });
+    const [, rival] = game.teams;
+    const admin = await game.connectAdmin();
+    const hasTakenPart = jest.spyOn(game.standingsService, 'hasTakenPart');
+
+    const ack = await adminSetCount(game, admin, {
+      teamId: rival.teamId,
+      playerCount: 4,
+    });
+
+    expect(ack).toEqual({ success: true });
+    expect(hasTakenPart).not.toHaveBeenCalled();
+    hasTakenPart.mockRestore();
+  });
+
   it('refuses a team that was never on the roster, with a reason', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const admin = await game.connectAdmin();

@@ -64,8 +64,13 @@ describe('GameStateService — updateSessionSettings', () => {
   it('rejects updating settings once the quiz has started', async () => {
     await game.act('START_QUIZ');
 
-    await expect(update({ lockGraceSeconds: 15 })).rejects.toThrow(
-      SessionSettingsUpdateBlockedError,
+    const rejection = update({ lockGraceSeconds: 15 });
+
+    await expect(rejection).rejects.toThrow(SessionSettingsUpdateBlockedError);
+    await expect(rejection).rejects.toThrow(
+      new RegExp(
+        `Cannot update settings for session "${game.joinCode}": already started \\(status: "[a-z_]+"\\)`,
+      ),
     );
     expect(settings()).toEqual(DEFAULT_SESSION_SETTINGS);
   });
