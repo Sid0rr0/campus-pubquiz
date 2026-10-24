@@ -48,4 +48,38 @@ describe('detectImageType', () => {
     expect(detectImageType(Buffer.from([0xff, 0xd8]))).toBeNull();
     expect(detectImageType(Buffer.alloc(0))).toBeNull();
   });
+
+  it('rejects a valid JPEG header one byte short of the minimum, and accepts it at the minimum', () => {
+    const header = [0xff, 0xd8, 0xff, 0xe0];
+    const atMinimum = Buffer.concat([Buffer.from(header), Buffer.alloc(8)]);
+
+    expect(detectImageType(atMinimum.subarray(0, 11))).toBeNull();
+    expect(detectImageType(atMinimum)).toEqual({
+      contentType: 'image/jpeg',
+      extension: 'jpg',
+    });
+  });
+
+  it('returns null when only the first byte of the JPEG or PNG signature matches', () => {
+    expect(detectImageType(withHeader(0xff, 0x00, 0x00))).toBeNull();
+    expect(detectImageType(withHeader(0x89, 0x00, 0x00))).toBeNull();
+    expect(detectImageType(withHeader(0x00, 0xd8, 0xff))).toBeNull();
+  });
+
+  it('returns null for RIFF without a WEBP tag, and for a WEBP tag without RIFF', () => {
+    expect(detectImageType(withHeader('RIFF', 0, 0, 0, 0, 'AVI '))).toBeNull();
+    expect(detectImageType(withHeader('RIFX', 0, 0, 0, 0, 'WEBP'))).toBeNull();
+  });
+
+  it('recognises the avis brand as AVIF', () => {
+    expect(detectImageType(withHeader(0, 0, 0, 0x1c, 'ftypavis'))).toEqual({
+      contentType: 'image/avif',
+      extension: 'avif',
+    });
+  });
+
+  it('returns null for an ftyp box with a non-AVIF brand, and for an AVIF brand without ftyp', () => {
+    expect(detectImageType(withHeader(0, 0, 0, 0x1c, 'ftypmp42'))).toBeNull();
+    expect(detectImageType(withHeader(0, 0, 0, 0x1c, 'moovavif'))).toBeNull();
+  });
 });

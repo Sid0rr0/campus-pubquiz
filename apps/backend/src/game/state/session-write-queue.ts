@@ -16,9 +16,11 @@ export class SessionWriteQueue {
       () => undefined,
     );
     this.tails.set(joinCode, tail);
+    // Stryker disable BlockStatement,ConditionalExpression: the entry only frees map memory. A stale tail is an already-settled promise, so run() and idle() behave identically with or without the delete, and the map is private.
     void tail.then(() => {
       if (this.tails.get(joinCode) === tail) this.tails.delete(joinCode);
     });
+    // Stryker restore BlockStatement,ConditionalExpression
     return result;
   }
 
@@ -64,6 +66,7 @@ export class SessionWriteQueue {
       await tail;
       // The tail clears its own entry first; a different one is a newer write.
       const next = this.tails.get(joinCode);
+      // Stryker disable next-line ConditionalExpression: the tail's own cleanup (equivalent, see run) already cleared the entry, so `next` is undefined or newer and the guard never changes the outcome.
       tail = next === tail ? undefined : next;
     }
   }

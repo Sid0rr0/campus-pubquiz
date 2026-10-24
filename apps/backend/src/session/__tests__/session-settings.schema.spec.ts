@@ -98,11 +98,15 @@ describe('sessionSettingsPartialSchema', () => {
     ).toBe(true);
   });
 
-  it('rejects an empty enabledBonusCategories array', () => {
-    expect(
-      sessionSettingsPartialSchema.safeParse({ enabledBonusCategories: [] })
-        .success,
-    ).toBe(false);
+  it('rejects an empty enabledBonusCategories array, saying one category must stay enabled', () => {
+    const result = sessionSettingsPartialSchema.safeParse({
+      enabledBonusCategories: [],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+      'At least one bonus category must stay enabled',
+    ]);
   });
 
   it('rejects an unknown bonus category', () => {

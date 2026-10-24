@@ -158,17 +158,18 @@ function fastestCorrectAnswer(
   const kahootById = new Map(
     revealed.filter((q) => q.isKahoot).map((q) => [q.questionId, q]),
   );
-  const timed = answers.filter(
-    (a) =>
-      a.verdict === 'correct' &&
-      a.responseMs !== null &&
-      kahootById.has(a.questionId),
+  const timed = answers.flatMap((a) =>
+    a.verdict === 'correct' &&
+    a.responseMs !== null &&
+    kahootById.has(a.questionId)
+      ? [{ ...a, responseMs: a.responseMs }]
+      : [],
   );
   const fastest = pickLowest(
-    [...timed].sort((a, b) => compareTeamNames(a.teamName, b.teamName)),
-    (a) => a.responseMs ?? Infinity,
+    timed.sort((a, b) => compareTeamNames(a.teamName, b.teamName)),
+    (a) => a.responseMs,
   );
-  if (fastest === null || fastest.responseMs === null) return null;
+  if (fastest === null) return null;
   return {
     kind: 'fastest_correct_answer',
     teamName: fastest.teamName,
@@ -223,7 +224,6 @@ function cleanSweep(
       (id) => !noRateIds.has(id),
     ),
   );
-  if (blockIds.size === 0) return null;
   const teamNames = new Map<number, string>();
   const correctCounts = new Map<number, number>();
   for (const a of answers) {
@@ -264,9 +264,9 @@ interface JokerRound {
  */
 function jokerFacts(
   session: SessionState,
-  revealedAnswers: readonly FunFactAnswer[],
+  answers: readonly FunFactAnswer[],
   pastIds: ReadonlySet<number>,
-): FunFact[] {
+): (FunFact | null)[] {
   if (!session.seededGame.settings.jokersEnabled) return [];
   const rounds = session.seededGame.rounds.map((round, index) => ({
     roundId: round.id,
@@ -335,7 +335,7 @@ function jokerFacts(
     r.questionIds.every((id) => pastIds.has(id)),
   );
   const rawPoints = (teamId: number, questionIds: readonly number[]) =>
-    revealedAnswers
+    answers
       .filter((a) => a.teamId === teamId && questionIds.includes(a.questionId))
       .reduce((sum, a) => sum + a.pointsAwarded, 0);
   const revealedJokers = holders.filter(({ round }) =>
@@ -385,7 +385,7 @@ function jokerFacts(
         }
       : null,
   );
-  return facts.filter((fact): fact is FunFact => fact !== null);
+  return facts;
 }
 
 /**
@@ -405,9 +405,10 @@ export function describeFunFacts(session: SessionState): FunFact[] {
   const revealed = listQuestions(session).filter((q) =>
     pastIds.has(q.questionId),
   );
-  const revealedAnswers = answers.filter((a) => pastIds.has(a.questionId));
+  // Every fact reads answers only through the revealed questions or rounds,
+  // so the block in play's answers need no filter of their own.
   const teamCount = session.leaderboard.length;
-  const outcomes = outcomesOf(revealed, revealedAnswers, teamCount);
+  const outcomes = outcomesOf(revealed, answers, teamCount);
 
   const nobody = outcomes.find(({ correctCount }) => correctCount === 0);
   // A question nobody got right is the nobody-got-it fact's; never show it twice.
@@ -426,8 +427,8 @@ export function describeFunFacts(session: SessionState): FunFact[] {
   );
 
   const facts: (FunFact | null)[] = [
-    fastestCorrectAnswer(revealed, revealedAnswers),
-    teamCount > 0 && toughest
+    fastestCorrectAnswer(revealed, answers),
+    toughest
       ? {
           kind: 'toughest_question',
           correctRate: toughest.correctRate,
@@ -444,8 +445,8 @@ export function describeFunFacts(session: SessionState): FunFact[] {
     nobody
       ? { kind: 'nobody_got_it', question: toFunFactQuestion(nobody.question) }
       : null,
-    cleanSweep(session, revealed, revealedAnswers),
-    ...jokerFacts(session, revealedAnswers, pastIds),
+    cleanSweep(session, revealed, answers),
+    ...jokerFacts(session, answers, pastIds),
     bonusAwardsSoFar(session.funFactData),
   ];
   return facts.filter((fact): fact is FunFact => fact !== null);

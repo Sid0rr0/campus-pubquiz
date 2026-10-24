@@ -1,6 +1,6 @@
 # 01: Flaky team page throttle spec aborts `pnpm mutate`
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 
@@ -26,3 +26,16 @@ Done when:
 - a full `pnpm --filter backend mutate` gets past the initial test run.
 
 If the same pattern (many requests to a non-listening `getHttpServer()`) appears in other throttle specs, fix them the same way in the same commit.
+
+## Comments
+
+**Cause.** The throttler was not under-counting. The odd request never reached this app. supertest opens a wildcard `listen(0)` per request on a non-listening server, and under load the port it gets can already be answered on 127.0.0.1 by another process (the machine runs dev servers and more). That process replies to the request (a stray 404 or 401) or drops it (`socket hang up`).
+
+**Evidence.**
+
+- Serial loop: a temporary spec ran the "night limit" test 400 times in one Jest process (`--coverage`, about 20 s). The original pattern failed 3 of 400 (two `socket hang up`, one 404 instead of 429), about 0.75% per test.
+- In the 404 failure, a middleware on the app counted 30 requests, one fewer than the 31 sent. The 31st never entered the Nest app, and the whole run took 27 ms, so slowness and the 60 s throttler window are ruled out.
+- Calling `app.listen(0)` once per test was not enough. One run returned 401 with zero requests seen by the app, meaning the app's whole port was shadowed by a foreign listener. No Nest route returns 401, so the answer came from another process.
+- Calling `app.listen(0, '127.0.0.1')` in `beforeEach` fixed it: 3 runs of 400 tests each (1200 total) with no failure, all under the same `--coverage` load.
+
+**Fix.** `team-page.throttle.http.spec.ts` now listens once on `127.0.0.1` in `beforeEach`. The only other specs using `getHttpServer()` (`quiz-preview.http.spec.ts`, `media.http.spec.ts`) are not throttle specs and send only a few requests each, so they were left alone.

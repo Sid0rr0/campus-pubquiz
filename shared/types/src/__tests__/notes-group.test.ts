@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  parseMarginCell,
   questionNotesOf,
   parseNotesGroup,
   writeNotesGroup,
@@ -240,5 +241,63 @@ describe('questionNotesOf', () => {
     expect(questionNotesOf('  ')).toBeNull();
     expect(questionNotesOf(null)).toBeNull();
     expect(questionNotesOf(undefined)).toBeNull();
+  });
+});
+
+describe('the legacy "YouTube clip:" prefix', () => {
+  it.each(['YouTube clip:{start: 5}', 'YouTube clip:  {start: 5}'])(
+    'is removed with the group, whatever the spacing: %j',
+    (notes) => {
+      expect(parseNotesGroup(notes)).toStrictEqual({
+        freeNotes: '',
+        clip: { startSeconds: 5 },
+        invalidKeys: [],
+      });
+    },
+  );
+});
+
+describe('parseMarginCell', () => {
+  it.each([
+    ['2', { value: 2, unit: 'absolute' }],
+    ['2.25', { value: 2.25, unit: 'absolute' }],
+    ['5%', { value: 5, unit: 'percent' }],
+    [' 5% ', { value: 5, unit: 'percent' }],
+  ])('reads %j', (raw, expected) => {
+    expect(parseMarginCell(raw)).toStrictEqual(expected);
+  });
+
+  it.each(['5%x', '5x', 'x5', '5.', '.5', ''])('refuses %j', (raw) => {
+    expect(parseMarginCell(raw)).toBeUndefined();
+  });
+});
+
+describe('the notes group keys', () => {
+  it('are read whatever their case', () => {
+    expect(
+      parseNotesGroup('{START: "5", Margin: "5%", SCORING: "PARTIAL"}'),
+    ).toStrictEqual({
+      freeNotes: '',
+      clip: {
+        startSeconds: 5,
+        margin: { value: 5, unit: 'percent' },
+        matchScoringMode: 'partial',
+      },
+      invalidKeys: [],
+    });
+  });
+
+  it('report a timecode that does not read without keeping a field for it', () => {
+    expect(parseNotesGroup('{start: abc}')).toStrictEqual({
+      freeNotes: '',
+      clip: {},
+      invalidKeys: ['start'],
+    });
+  });
+
+  it('read a group that sets no scoring', () => {
+    expect(parseNotesGroup('{margin: 2}').clip).toStrictEqual({
+      margin: { value: 2, unit: 'absolute' },
+    });
   });
 });

@@ -1,6 +1,6 @@
 # 03: shared/types: remaining mutation survivors
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 

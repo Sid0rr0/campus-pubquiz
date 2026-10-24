@@ -25,6 +25,7 @@ export const MEDIA_STORAGE = Symbol('MEDIA_STORAGE');
 export class MediaStorageNotConfiguredError extends Error {
   constructor(message: string) {
     super(message);
+    // Stryker disable next-line StringLiteral: copy; the name is a debugging label, callers match on instanceof.
     this.name = 'MediaStorageNotConfiguredError';
   }
 }
