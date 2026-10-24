@@ -1,6 +1,6 @@
 # 04: Joker changes
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None
 
@@ -22,3 +22,7 @@ Look like real gaps:
 Look equivalent or low value: the message strings at `:73` and `:109` (assert them, or disable with a reason).
 
 Done when the one-file run (`pnpm --filter backend mutate:db --mutate <file>` for each file above, run one at a time) shows no surviving and no "no coverage" mutants, apart from ones disabled with a `// Stryker disable` reason. Work it as in `.scratch/mutation-testing/spec.md` "How to work an issue".
+
+## Comments
+
+Done: `joker-changes.ts` one-file `mutate:db` run is 100% (0 survived, 0 no coverage). Added exact refusal messages, admin/display broadcast and standings-refresh assertions for `setTeamJoker`, late-joiner status gates (joker_pick, ended), and tie/lower-later/higher-later cases for the round a joker follows after a live edit. One mutant disabled with a reason: the `held.length === 0` shortcut in `followRoundsAfterEdit` (equivalent).
