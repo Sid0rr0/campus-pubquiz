@@ -191,6 +191,15 @@ describe('describeFunFacts', () => {
       expect(kinds(session)).not.toContain('fastest_correct_answer');
     });
 
+    it('ignores a round that does not say whether it is kahoot', () => {
+      const session = sessionOf(kahootRounds, afterSecondKahoot, {
+        answers: [answer(1, 0, 'correct', { responseMs: 2000 })],
+      });
+      delete session.seededGame.rounds[0].kahootMode;
+
+      expect(kinds(session)).not.toContain('fastest_correct_answer');
+    });
+
     it('is skipped when no correct kahoot answer has a time', () => {
       const session = sessionOf(kahootRounds, afterSecondKahoot, {
         answers: [
@@ -325,6 +334,28 @@ describe('describeFunFacts', () => {
       expect(kinds(session)).toContain('nobody_got_it');
     });
 
+    it('is skipped when every revealed question was answered wrongly by everyone', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [0, 1, 2, 3].flatMap((team) => [
+          answer(1, team, 'incorrect'),
+          answer(2, team, 'incorrect'),
+        ]),
+      });
+
+      expect(kinds(session)).not.toContain('toughest_question');
+    });
+
+    it('is skipped for an empty roster', () => {
+      const session = {
+        ...sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+          answers: [answer(1, 0, 'correct'), answer(2, 1, 'incorrect')],
+        }),
+        leaderboard: [],
+      };
+
+      expect(kinds(session)).not.toContain('toughest_question');
+    });
+
     it('is skipped when every revealed question was answered correctly by everyone', () => {
       const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
         answers: [0, 1, 2, 3].flatMap((team) => [
@@ -357,6 +388,27 @@ describe('describeFunFacts', () => {
       );
       expect(split).toMatchObject({
         kind: 'room_split',
+        correctRate: 0.5,
+        question: { questionId: 2 },
+      });
+    });
+
+    it('prefers a rate of one half over a lower one, whichever question comes first', () => {
+      const answers = [
+        answer(1, 0, 'correct'),
+        answer(1, 1, 'incorrect'),
+        answer(1, 2, 'incorrect'),
+        answer(1, 3, 'incorrect'),
+        answer(2, 0, 'correct'),
+        answer(2, 1, 'correct'),
+        answer(2, 2, 'incorrect'),
+        answer(2, 3, 'incorrect'),
+      ];
+
+      const split = describeFunFacts(
+        sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, { answers }),
+      ).find((fact) => fact.kind === 'room_split');
+      expect(split).toMatchObject({
         correctRate: 0.5,
         question: { questionId: 2 },
       });
@@ -765,6 +817,73 @@ describe('describeFunFacts', () => {
         { 1: { roundId: 1, source: 'chosen' } },
       );
       expect(kinds(fine)).not.toContain('joker_backfired');
+    });
+
+    it('breaks a best-joker tie by name order, not by the leaderboard order', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+          answers: [answer(1, 0, 'correct'), answer(1, 1, 'correct')],
+        }),
+        jokers,
+      );
+      session.leaderboard = leaderboardOf(TEAM_NAMES).reverse();
+
+      expect(
+        describeFunFacts(session).find((fact) => fact.kind === 'best_joker'),
+      ).toMatchObject({ teamName: 'Alpha' });
+    });
+
+    it('leaves a joker on a round only partly revealed out of the best joker', () => {
+      const session = withJokers(
+        sessionOf(
+          [
+            { title: 'Warm-up', questionCount: 1 },
+            { title: 'Buzzer', questionCount: 2, isKahoot: true },
+            { title: 'Finale', questionCount: 1 },
+          ],
+          breakProgress(1, 1),
+          { answers: [answer(2, 0, 'correct')] },
+        ),
+        { 1: { roundId: 2, source: 'chosen' } },
+      );
+
+      expect(kinds(session)).not.toContain('best_joker');
+    });
+
+    it('does not call a joker on a round still hidden a backfire', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+          answers: [answer(1, 2, 'correct')],
+        }),
+        { 3: { roundId: 2, source: 'chosen' } },
+      );
+
+      expect(kinds(session)).not.toContain('joker_backfired');
+    });
+
+    it('needs the joker round to score below every other revealed round, not just one', () => {
+      const session = withJokers(
+        sessionOf(
+          [
+            { title: 'One', questionCount: 1 },
+            { title: 'Two', questionCount: 1 },
+            { title: 'Three', questionCount: 1 },
+            { title: 'Four', questionCount: 1 },
+          ],
+          breakProgress(3, 0),
+          {
+            // Bravo's joker round (1) scored 0: above round 3 never, equal to it.
+            answers: [
+              answer(1, 1, 'incorrect'),
+              answer(2, 1, 'correct'),
+              answer(3, 1, 'incorrect'),
+            ],
+          },
+        ),
+        { 2: { roundId: 1, source: 'chosen' } },
+      );
+
+      expect(kinds(session)).not.toContain('joker_backfired');
     });
 
     it('puts the joker facts after the existing facts and before the bonus awards', () => {
