@@ -47,4 +47,6 @@ Done when:
 
 **Extrapolation.** `joker-changes.ts` is 344 of the 3769 lines in `game/state/` (9%), so a full run should take about 75 minutes plus one initial run: roughly 1.5 hours.
 
+**Review fixes:** `mutate-db.ts` now runs `globalSetup` inside the `try`, so teardown also runs after a partial setup failure, and a teardown error is logged instead of replacing the original error. The SIGINT/SIGTERM handlers moved to module scope and forward the signal to the Stryker child (so `kill -INT <wrapper pid>` stops Stryker too), then teardown runs. `gameStateSources()` was confirmed to exclude specs, `__tests__/`, `*.typecheck.ts` and `errors/` through `NOT_MUTATED`; `allSpecs()`/`mutableIn()` now share the filter pipelines with the DB-free helpers in `stryker.files.cjs`. Re-checked: `mutate:db --mutate src/game/state/session-outcome.ts` passes and a failing run (`--mutate` with no value, exit 1) leaves only the Ryuk reaper next to the dev containers.
+
 **Checked:** no container left behind after a normal run or after SIGINT to the process group mid-run; the DB-free `reports/stryker-incremental.json` was not touched; `pnpm --filter backend test` (207 suites, 3303 tests), typecheck and lint pass.
