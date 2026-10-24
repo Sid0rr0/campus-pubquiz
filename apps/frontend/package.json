@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "mutate": "stryker run --incremental"
   },
   "dependencies": {
     "@campus-pubquiz/types": "workspace:*",
@@ -32,6 +33,9 @@
     "sonner": "^2.0.8"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/typescript-checker": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
     "@tailwindcss/postcss": "^4",
     "@tanstack/eslint-plugin-query": "^5.102.5",
     "@testing-library/jest-dom": "^6.9.1",
