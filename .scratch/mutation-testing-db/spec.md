@@ -15,7 +15,28 @@ The backend's `pnpm mutate` only covers the DB-free slice (README "Running mutat
 - **A flaky spec is a bug.** If one shows up under load (8 workers on one Postgres), it gets its own fix ticket, worked like follow-up ticket 01 (`.scratch/mutation-testing-followup/issues/01-flaky-team-page-throttle-spec.md`). It is not left out of the run.
 - Keep memory use low: concurrency stays capped at 8, and no other test or Stryker commands run at the same time.
 
+## Baseline (2026-10-24)
+
+`pnpm --filter backend mutate:db`, all of `game/state/` (20 files; `joker-changes.ts` reused from the pilot):
+
+| Mutants | Killed | Timeout | Survived | No coverage | Compile errors | Score (all / covered) | Run time |
+| ------- | ------ | ------- | -------- | ----------- | -------------- | --------------------- | -------- |
+| 1250    | 106    | 459     | 40       | 25          | 620            | 89.68% / 93.39%       | 68m18s (+1m25s initial run) |
+
+The weakest files are `league-changes.ts` (53.85% / 58.33%), `team-player-count-changes.ts` (72.73%), `live-results-read.ts` (75%), `bonus-awards-changes.ts` and `showdowns-changes.ts` (78%), and `joker-changes.ts` (81%). The rest are at 87% or higher. `write-gate.ts` has no testable mutants.
+
+**Timeouts dominate.** 459 of the 565 detected mutants (81%) were timeouts, not clean kills: a mutant that blanks an error or drops a guard leaves a gateway spec waiting for an event that never comes, and each one waits out the full timeout. They are the bulk of the 68 minutes, so lowering `timeoutMS` is a possible follow-up. Not done here: it risks calling slow-but-correct mutants timeouts under load.
+
+No spec failed in the initial run (1168 tests) and none looked flaky, so there is no flaky-spec ticket.
+
 ## Tickets
 
 1. Wire up `mutate:db` and pilot it on one file (`issues/01-wire-up-and-pilot.md`).
 2. Full baseline run (about 1.5 hours, see 01's comments), then survivor tickets grouped by area, written as in `.scratch/mutation-testing/spec.md`.
+3. Grading, answers and bonus awards (`issues/03-grading-answers-and-bonus-survivors.md`).
+4. Joker changes (`issues/04-joker-changes-survivors.md`).
+5. Team roster, player count, feedback and settings (`issues/05-team-changes-survivors.md`).
+6. Showdowns, league and live results (`issues/06-showdowns-league-and-live-results-survivors.md`).
+7. Screen preview, game-state service and session-write gaps (`issues/07-screen-preview-and-write-plumbing-gaps.md`).
+
+Files with no survivors and no uncovered mutants (`commit-a-move.service.ts`, `game-progress.repository.ts`, `session-outcome.ts`, `session-updates.util.ts`, `session-write-queue.ts`) need no ticket.

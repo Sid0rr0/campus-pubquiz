@@ -1,6 +1,6 @@
 # 02: Full `mutate:db` baseline and survivor tickets
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: 01
 
@@ -16,6 +16,10 @@ Run `pnpm --filter backend mutate:db` over all of `game/state/` and turn the res
 
 Done when:
 
-- the full run has finished and its baseline table is in `spec.md`;
-- the survivor tickets exist and are listed under the spec's "Tickets";
-- any flaky spec it exposed has its own ticket.
+- [x] the full run has finished and its baseline table is in `spec.md`;
+- [x] the survivor tickets exist and are listed under the spec's "Tickets";
+- [x] any flaky spec it exposed has its own ticket.
+
+## Comments
+
+Full run finished 2026-10-24: 1250 mutants, 68m18s plus a 1m25s initial run (1168 tests, all passed), score 89.68% / 93.39%. 459 of 565 detected mutants were timeouts, which dominate the run time (noted in `spec.md`). No flaky spec, so no bug ticket. Survivors (40) and no-coverage mutants (25) are grouped into tickets 03-07. `reports/stryker-db-incremental.json` is gitignored, so it stays local. No container left behind. Committed with this ticket; the hash is in git history.
