@@ -20,6 +20,7 @@ import { StandingsService } from '@/standings/standings.service';
  * change it (the league change module owns it).
  */
 export class LiveResultsRead {
+  // Stryker disable next-line StringLiteral: the logger's context label only prefixes the server log line; no behaviour reads it.
   private readonly logger = new Logger('LiveResultsRead');
 
   constructor(private readonly standingsService: StandingsService) {}

@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { DEFAULT_SESSION_SETTINGS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { League } from '@/db/entities/league.entity';
@@ -6,6 +7,8 @@ import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
+import { LeagueTableService } from '@/league/league-table.service';
 import { InvalidLeagueIdsError } from '@/league/league.service';
 
 describe('Display view — the lobby league top', () => {
@@ -14,6 +17,10 @@ describe('Display view — the lobby league top', () => {
 
   beforeEach(async () => {
     game = await harness.createGateway();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   async function createLeague(
@@ -100,6 +107,54 @@ describe('Display view — the lobby league top', () => {
         gameSession: game.gameSessionId,
       }),
     ).toBe(0);
+    const restarted = await game.restart();
+    expect(restarted.gameState.getSnapshot(game.joinCode).settings).toEqual(
+      DEFAULT_SESSION_SETTINGS,
+    );
+  });
+
+  it('stores the settings and the leagues of one change that carries both', async () => {
+    const league = await createLeague('Autumn');
+
+    await game.inRequestContext(() =>
+      game.gameState.updateSessionSettings(
+        game.joinCode,
+        { lockGraceSeconds: 15 },
+        [league.id],
+      ),
+    );
+
+    const restarted = await game.restart();
+    expect(restarted.gameState.getSnapshot(game.joinCode).settings).toEqual({
+      ...DEFAULT_SESSION_SETTINGS,
+      lockGraceSeconds: 15,
+    });
+    expect((await restarted.resync('display')).leagueTop).toMatchObject({
+      name: 'Autumn',
+    });
+  });
+
+  it('still ticks a league after the quiz has started, since a leagues-only change leaves the lobby-only settings alone', async () => {
+    const league = await createLeague('Autumn');
+    await game.act('START_QUIZ');
+
+    await game.inRequestContext(() =>
+      game.gameState.updateSessionSettings(game.joinCode, {}, [league.id]),
+    );
+
+    expect((await game.resync('display')).leagueTop).toMatchObject({
+      name: 'Autumn',
+    });
+  });
+
+  it('refuses an empty settings change after the quiz has started, as it does any settings change', async () => {
+    await game.act('START_QUIZ');
+
+    await expect(
+      game.inRequestContext(() =>
+        game.gameState.updateSessionSettings(game.joinCode, {}),
+      ),
+    ).rejects.toBeInstanceOf(SessionSettingsUpdateBlockedError);
   });
 
   it('refreshes every live session after an admin changed a league behind the cache', async () => {
@@ -130,6 +185,24 @@ describe('Display view — the lobby league top', () => {
     expect((await restarted.resync('display')).leagueTop).toMatchObject({
       name: 'Autumn',
     });
+  });
+
+  it('is null, and the failure logged, when the read fails as the session is restored', async () => {
+    await tickLeague('Autumn');
+    const logged = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    jest
+      .spyOn(LeagueTableService.prototype, 'topFor')
+      .mockRejectedValue(new Error('league table unavailable'));
+
+    const restarted = await game.restart();
+
+    expect((await restarted.resync('display')).leagueTop).toBeNull();
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining(`session ${game.gameSessionId}`),
+      expect.stringContaining('league table unavailable'),
+    );
   });
 
   it('is sent to the big screen only', async () => {
