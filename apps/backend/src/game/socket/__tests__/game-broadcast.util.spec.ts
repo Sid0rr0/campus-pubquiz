@@ -5,7 +5,11 @@ import {
   type PresenterContextPayload,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import {
+  broadcastAdminState,
+  broadcastDisplayState,
+  broadcastGameState,
+} from '@/game/socket/game-broadcast.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 
 function createMockServer() {
@@ -65,6 +69,28 @@ describe('broadcastGameState', () => {
     );
     expect(toCalls[0]).toEqual([sessionRoom(joinCode, SOCKET_ROOMS.ADMIN)]);
   });
+
+  it.each([
+    ['broadcastAdminState', broadcastAdminState, SOCKET_ROOMS.ADMIN],
+    ['broadcastDisplayState', broadcastDisplayState, SOCKET_ROOMS.DISPLAY],
+  ])(
+    '%s sends that room alone its own STATE_UPDATED view',
+    (_name, broadcast, room) => {
+      const server = createMockServer();
+      const gameState = createFakeGameState();
+
+      broadcast(
+        server as never,
+        joinCode,
+        gameState as unknown as GameStateService,
+      );
+
+      expect(server.to.mock.calls).toEqual([[sessionRoom(joinCode, room)]]);
+      expect(server.emit.mock.calls).toEqual([
+        [SOCKET_EVENTS.STATE_UPDATED, { ...snapshot, viewFor: room }],
+      ]);
+    },
+  );
 
   it('emits STATE_UPDATED last, so it always reflects the most recent snapshot read', () => {
     const server = createMockServer();
