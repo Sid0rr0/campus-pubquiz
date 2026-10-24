@@ -19,6 +19,7 @@ export interface SubmitAnswerPayload {
  * answer. A free_text answer is graded the same way (an exact, case-
  * insensitive match), so it's 0 too; audio/youtube fall to the admin.
  */
+// Stryker disable next-line StringLiteral: accepted, a sentinel constant (CODING_STANDARDS "Tests"); every user compares against the export
 export const IDK_ANSWER_VALUE = '__idk__';
 
 export interface AnswerReceivedPayload {

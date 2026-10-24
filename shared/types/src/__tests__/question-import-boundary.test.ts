@@ -536,6 +536,13 @@ describe('option and answer cells', () => {
     });
   });
 
+  it('writes a free answer with an empty options cell', () => {
+    expect(answerOnlyCsv.encode({ type: 'free_text', ...BASE })).toEqual({
+      options: '',
+      answer: 'A',
+    });
+  });
+
   it('writes a question without options as an empty options cell', () => {
     expect(choicesCsv.encode({ type: 'multiple_choice', ...BASE })).toEqual({
       options: '',

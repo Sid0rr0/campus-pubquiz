@@ -138,7 +138,9 @@ export class IllegalGameTransitionError extends Error {
     public readonly status: GameStatus,
     public readonly action: GameAction,
   ) {
+    // Stryker disable next-line StringLiteral: accepted, an error message is a constant (CODING_STANDARDS "Tests")
     super(`Cannot apply action "${action}" from state "${status}"`);
+    // Stryker disable next-line StringLiteral: accepted, an error class name is a constant (CODING_STANDARDS "Tests")
     this.name = 'IllegalGameTransitionError';
   }
 }
@@ -146,6 +148,7 @@ export class IllegalGameTransitionError extends Error {
 export class InvalidQuizConfigError extends Error {
   constructor(message: string) {
     super(message);
+    // Stryker disable next-line StringLiteral: accepted, an error class name is a constant (CODING_STANDARDS "Tests")
     this.name = 'InvalidQuizConfigError';
   }
 }
