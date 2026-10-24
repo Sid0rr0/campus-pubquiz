@@ -26,7 +26,11 @@ describe('team page throttling (HTTP)', () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication();
-    await app.init();
+    // Listen once, on loopback only. Left alone, supertest opens a wildcard
+    // `listen(0)` for every request, and on a busy machine the port it gets can
+    // already belong to another process on 127.0.0.1, which then answers (a
+    // stray 404/401, or a hang-up) instead of this app.
+    await app.listen(0, '127.0.0.1');
   });
 
   afterEach(async () => {
