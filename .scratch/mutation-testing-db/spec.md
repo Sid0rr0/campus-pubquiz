@@ -1,6 +1,6 @@
 # Mutation testing: the DB-backed backend
 
-Status: ready-for-agent
+Status: done
 
 The backend's `pnpm mutate` only covers the DB-free slice (README "Running mutation tests"). About 140 of the ~200 backend specs need Postgres, so Stryker never mutates `game/state/`, the server-owned game state. First audit ticket 12 turned down running the DB specs under Stryker for speed. This spec reverses that decision (2026-10-24): the game state is the riskiest code in the repo, and incremental runs make a long first run a one-time cost.
 
