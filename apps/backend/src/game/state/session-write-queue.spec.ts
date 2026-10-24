@@ -67,6 +67,20 @@ describe('SessionWriteQueue.hold', () => {
     await expect(Promise.all([first, second])).resolves.toEqual([1, 2]);
   });
 
+  it('takes the queues in sorted order, however the join codes arrive', async () => {
+    const queue = new SessionWriteQueue();
+    const claimed: string[] = [];
+    const run = queue.run.bind(queue);
+    jest.spyOn(queue, 'run').mockImplementation((joinCode, task) => {
+      claimed.push(joinCode);
+      return run(joinCode, task);
+    });
+
+    await queue.hold(['CCCC', 'AAAA', 'BBBB', 'AAAA'], () => Promise.resolve());
+
+    expect(claimed).toEqual(['AAAA', 'BBBB', 'CCCC']);
+  });
+
   it('does not hold up a write on a join code outside the set', async () => {
     const queue = new SessionWriteQueue();
     const work = gate();
