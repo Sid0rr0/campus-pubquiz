@@ -264,7 +264,7 @@ interface JokerRound {
  */
 function jokerFacts(
   session: SessionState,
-  revealedAnswers: readonly FunFactAnswer[],
+  answers: readonly FunFactAnswer[],
   pastIds: ReadonlySet<number>,
 ): (FunFact | null)[] {
   if (!session.seededGame.settings.jokersEnabled) return [];
@@ -335,7 +335,7 @@ function jokerFacts(
     r.questionIds.every((id) => pastIds.has(id)),
   );
   const rawPoints = (teamId: number, questionIds: readonly number[]) =>
-    revealedAnswers
+    answers
       .filter((a) => a.teamId === teamId && questionIds.includes(a.questionId))
       .reduce((sum, a) => sum + a.pointsAwarded, 0);
   const revealedJokers = holders.filter(({ round }) =>
