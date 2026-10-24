@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| mutation-testing-followup       | [Mutation testing: follow-up after the first audit](mutation-testing-followup/spec.md)                                                                                     | 3       |
 | mutation-testing                | [Mutation testing: first audit](mutation-testing/spec.md)                                                                                                                  | 12      |
 | team-merge                      | [Merge two teams that are the same real team](team-merge/spec.md)                                                                                                          | 3       |
 | jokers                          | [Jokers: each team doubles one round of its choice](jokers/spec.md)                                                                                                        | 12      |
