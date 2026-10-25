@@ -206,7 +206,7 @@ pnpm mutate                                # every workspace that has it
 pnpm --filter @campus-pubquiz/types mutate # shared/types only
 pnpm --filter backend mutate               # backend only (DB-free slice)
 pnpm --filter frontend mutate              # frontend only (non-component modules)
-pnpm --filter backend mutate:db            # backend game/state/ with the DB specs (needs Docker, slow)
+pnpm --filter backend mutate:db            # backend game/state/, services and logic modules with the DB specs (needs Docker, slow)
 ```
 
 Runs are incremental: Stryker keeps its results in `<workspace>/reports/stryker-incremental.json`
@@ -227,14 +227,25 @@ are gitignored.
   Files only DB-backed specs reach (most of `game/state/*-changes.ts`) are
   left out here; `mutate:db` covers them. A survivor in the slice may still
   be caught by a DB-backed spec Stryker didn't run.
-- `backend` `mutate:db`: all of `game/state/` except `errors/`, against every
-  spec, DB-backed ones included (`stryker.db.config.mjs`). It needs Docker:
+- `backend` `mutate:db`: the files `dbSources()` in `stryker.files.cjs` picks by
+  role, against every spec, DB-backed ones included (`stryker.db.config.mjs`).
+  In: `game/state/` (except `errors/`), every `*.service.ts` (except
+  `app.service.ts`), `game/game.gateway.ts`, the logic modules under
+  `game/socket/`, `game/live-edit/` and `game/rest/`, `ended-sessions-read/`,
+  `standings/cell-points.ts`, `auth/password-hash.ts` and
+  `feedback/feedback-off-reason.ts`. Out: controllers, modules, guards,
+  decorators, `db/`, `mikro-orm.config.ts`, the `*-http*.ts` error mappers,
+  Zod schema files, socket types and event declarations, and anything the
+  DB-free slice already mutates. A new service lands in the run without
+  editing a list. It needs Docker:
   the wrapper (`src/test-db/mutate-db.ts`) starts one throwaway Postgres
   container for the run, gives each Stryker worker its own database, and
   stops the container afterwards. Separate from `pnpm mutate`, with its own
   `reports/stryker-db-incremental.json` and `reports/mutation-db/` report.
-  It's slow: run one file at a time with
-  `pnpm --filter backend mutate:db --mutate src/game/state/<file>.ts`.
+  It's slow: run one area at a time with
+  `pnpm --filter backend mutate:db --mutate src/<area>/<file>.ts,src/<area>/<other>.ts`
+  (comma-separated: a repeated `--mutate` keeps only the last one);
+  incremental results carry over, so the areas add up to the full baseline.
 - `frontend`: the non-component `.ts` modules in `app/` (API parsers, storage
   helpers, hooks, draft state), against the whole Vitest suite. Specs, `.d.ts`
   files, `__tests__/` helpers and `.tsx` components are left out: in components
