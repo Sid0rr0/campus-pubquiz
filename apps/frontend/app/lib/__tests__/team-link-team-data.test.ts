@@ -34,6 +34,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   bonusAwards: [{ category: 'shot', points: 1 }],
   roundRatings: [{ roundId: 11, stars: 4 }],
   feedback: { comment: 'Loved it', topics: ['Geography'] },
+  sessionRatings: { pacing: null, feltDifficulty: null },
   playerCount: null,
   joker: null,
 };
@@ -267,6 +268,45 @@ describe('team link: the team data', () => {
       accepted(),
     );
     expect(rejoined.state.myRoundRatings).toEqual({ 11: 4 });
+  });
+
+  it('restores the pacing and felt-difficulty answers on join, and keeps an acknowledged one on its own scale', () => {
+    const joined = run(
+      linkedPhone(),
+      accepted({
+        ...ACCEPTED,
+        sessionRatings: { pacing: 'too_slow', feltDifficulty: null },
+      }),
+    );
+    expect(joined.state.mySessionRatings).toEqual({
+      pacing: 'too_slow',
+      feltDifficulty: null,
+    });
+
+    const saved = run(joined.state, {
+      type: 'sessionRatingSaved',
+      rating: { scale: 'feltDifficulty', value: 'too_hard' },
+    });
+    expect(saved.state.mySessionRatings).toEqual({
+      pacing: 'too_slow',
+      feltDifficulty: 'too_hard',
+    });
+  });
+
+  it('has no pacing or felt-difficulty answer before a join or after the identity changes', () => {
+    const { state } = run(
+      linkedPhone(),
+      {
+        type: 'sessionRatingSaved',
+        rating: { scale: 'pacing', value: 'too_fast' },
+      },
+      { type: 'identityChanged' },
+    );
+
+    expect(state.mySessionRatings).toEqual({
+      pacing: null,
+      feltDifficulty: null,
+    });
   });
 
   it('has no player count until the join carries one, then follows the server: join, sync and a saved send', () => {

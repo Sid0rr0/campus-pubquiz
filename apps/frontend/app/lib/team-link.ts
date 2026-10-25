@@ -12,12 +12,14 @@ import {
   type GameStatus,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
+  type RateSessionPayload,
   type RoundRatingView,
   type SubmitAnswerPayload,
   type TeamAnswerView,
   type TeamBonusAwardView,
   type TeamFeedbackView,
   type TeamJoker,
+  type TeamSessionRatingsView,
   type Verdict,
 } from '@campus-pubquiz/types';
 
@@ -52,6 +54,10 @@ export interface MyAnswerGrade {
 }
 
 const EMPTY_FEEDBACK: TeamFeedbackView = { comment: '', topics: [] };
+const NO_SESSION_RATINGS: TeamSessionRatingsView = {
+  pacing: null,
+  feltDifficulty: null,
+};
 
 function buildMyAnswers(answers: TeamAnswerView[]): Record<number, string> {
   return Object.fromEntries(
@@ -159,6 +165,8 @@ export interface TeamLinkState {
   /** What the join carried plus every rating the server acknowledged since. */
   myRoundRatings: Record<number, number>;
   myFeedback: TeamFeedbackView;
+  /** The team's pacing and felt-difficulty answers: what the join carried plus every answer the server acknowledged since. */
+  mySessionRatings: TeamSessionRatingsView;
   /** How many players the server holds for this team, or null until one is reported. */
   myPlayerCount: number | null;
   /** The team's own joker as the server last said it (the join, a sync, or an acknowledged pick), or null while it has none. */
@@ -196,6 +204,7 @@ export type TeamLinkInput =
   | { type: 'answerTimedOut'; attempt: number }
   | { type: 'ratingSaved'; roundId: number; stars: number }
   | { type: 'feedbackSaved'; feedback: TeamFeedbackView }
+  | { type: 'sessionRatingSaved'; rating: RateSessionPayload }
   // The server told the team's phones its count changed.
   | { type: 'playerCountSynced'; playerCount: number }
   // The server acknowledged a count this phone sent.
@@ -297,6 +306,7 @@ const EMPTY_TEAM_DATA = {
   myBonusAwards: [],
   myRoundRatings: {},
   myFeedback: EMPTY_FEEDBACK,
+  mySessionRatings: NO_SESSION_RATINGS,
   myPlayerCount: null,
   myJoker: null,
   pendingAnswer: null,
@@ -576,6 +586,7 @@ function acceptJoin(
     myBonusAwards: payload.bonusAwards ?? [],
     myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
     myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
+    mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
     myPlayerCount: payload.playerCount ?? null,
     myJoker: payload.joker ?? null,
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
@@ -778,6 +789,14 @@ export function teamLink(
       });
     case 'feedbackSaved':
       return unchanged({ ...state, myFeedback: input.feedback });
+    case 'sessionRatingSaved':
+      return unchanged({
+        ...state,
+        mySessionRatings: {
+          ...state.mySessionRatings,
+          [input.rating.scale]: input.rating.value,
+        },
+      });
     case 'playerCountSynced':
     case 'playerCountSaved':
       return unchanged({ ...state, myPlayerCount: input.playerCount });

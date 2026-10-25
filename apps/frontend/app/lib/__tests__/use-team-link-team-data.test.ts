@@ -58,6 +58,7 @@ const ACCEPTED = {
   bonusAwards: [],
   roundRatings: [],
   feedback: { comment: '', topics: [] },
+  sessionRatings: { pacing: null, feltDifficulty: null },
   playerCount: null,
 };
 
@@ -426,5 +427,52 @@ describe('useTeamLink: the team data and the pending answer', () => {
     await rated;
 
     expect(result.current.game?.myRoundRatings).toEqual({ 11: 4 });
+  });
+
+  it('sends a pacing answer and keeps it once the server acknowledges it', async () => {
+    const { result, socket } = renderPlayingTeam();
+
+    let rated!: Promise<AckResult>;
+    act(() => {
+      rated = joinedGame(result).rateSession({
+        scale: 'pacing',
+        value: 'too_fast',
+      });
+    });
+    expect(socket.lastEmitOf(SOCKET_EVENTS.RATE_SESSION).payload).toEqual({
+      scale: 'pacing',
+      value: 'too_fast',
+    });
+    await act(async () => socket.acknowledge(SOCKET_EVENTS.RATE_SESSION));
+
+    await expect(rated).resolves.toEqual({ success: true });
+    expect(result.current.game?.mySessionRatings).toEqual({
+      pacing: 'too_fast',
+      feltDifficulty: null,
+    });
+  });
+
+  it('keeps no answer and resolves the refusal when the server refuses one', async () => {
+    const { result, socket } = renderPlayingTeam();
+
+    let rated!: Promise<AckResult>;
+    act(() => {
+      rated = joinedGame(result).rateSession({
+        scale: 'feltDifficulty',
+        value: 'too_hard',
+      });
+    });
+    await act(async () =>
+      socket.reject(SOCKET_EVENTS.RATE_SESSION, 'Feedback is off'),
+    );
+
+    await expect(rated).resolves.toEqual({
+      success: false,
+      error: 'Feedback is off',
+    });
+    expect(result.current.game?.mySessionRatings).toEqual({
+      pacing: null,
+      feltDifficulty: null,
+    });
   });
 });

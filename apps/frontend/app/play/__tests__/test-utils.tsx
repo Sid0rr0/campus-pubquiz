@@ -61,6 +61,8 @@ export function teamLinkResult({
         myJoker: null,
         pickJoker: vi.fn().mockResolvedValue({ success: true }),
         sendFeedback: vi.fn().mockResolvedValue({ success: true }),
+        mySessionRatings: { pacing: null, feltDifficulty: null },
+        rateSession: vi.fn().mockResolvedValue({ success: true }),
         roundRatingsEpoch: 0,
         rateRound: vi.fn().mockResolvedValue({ success: true }),
         seenQuestions: {},

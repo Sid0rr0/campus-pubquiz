@@ -162,6 +162,8 @@ function PlayPageContent() {
     rateRound,
     myFeedback,
     sendFeedback,
+    mySessionRatings,
+    rateSession,
     myPlayerCount,
     setPlayerCount,
     myJoker,
@@ -341,6 +343,8 @@ function PlayPageContent() {
             savedRatings={myRoundRatings}
             ratingsEpoch={roundRatingsEpoch}
             onRate={rateRound}
+            savedSessionRatings={mySessionRatings}
+            onRateSession={rateSession}
             savedFeedback={myFeedback}
             onSendFeedback={sendFeedback}
           />
