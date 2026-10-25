@@ -6,8 +6,7 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| feedback-pacing-difficulty | [Pacing and felt difficulty, and a tidier session stats page](feedback-pacing-difficulty/spec.md) | 6 | — |
-| mutation-testing-services | [Mutation testing: the backend services](mutation-testing-services/spec.md) | 2 | feedback-pacing-difficulty |
+| mutation-testing-services | [Mutation testing: the backend services](mutation-testing-services/spec.md) | 2 | — |
 
 ## Won't do
 
