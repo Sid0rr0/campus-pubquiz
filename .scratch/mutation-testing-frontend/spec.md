@@ -26,8 +26,8 @@ A further 1255 mutants failed to compile, so the TypeScript checker dropped them
 
 ## Open follow-ups
 
-- Revisit whether `CODING_STANDARDS.md` should require direct specs for frontend `.ts` logic (the decision deferred above, now that the baseline and survivor tickets are in).
-- The "works with storage unavailable" tests in `app/display/__tests__/reconnect.test.tsx` and `app/play/__tests__/player-count.test.tsx` never block storage under happy-dom, because `vi.spyOn(Storage.prototype, ...)` does nothing there. Switch them to `vi.spyOn(window.localStorage, ...)`.
+- ~~Revisit whether `CODING_STANDARDS.md` should require direct specs for frontend `.ts` logic.~~ Decided 2026-10-25: no rule. The `shared/types` rule exists because `pnpm mutate` can't see tests in other workspaces, but the frontend's Stryker run includes every Vitest test, component render tests too, so a sharper component assertion counts. Tickets keep choosing case by case.
+- ~~The "works with storage unavailable" tests in `app/display/__tests__/reconnect.test.tsx` and `app/play/__tests__/player-count.test.tsx` never block storage under happy-dom.~~ Done 2026-10-25: they spy on `window.localStorage`, and each fails with its storage module's `try`/`catch` removed.
 
 ## Tickets
 

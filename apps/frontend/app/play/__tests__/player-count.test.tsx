@@ -214,12 +214,12 @@ describe('PlayPage — a team that joins after the lobby', () => {
 
   it('still works when localStorage is unavailable', async () => {
     const setItem = vi
-      .spyOn(Storage.prototype, 'setItem')
+      .spyOn(window.localStorage, 'setItem')
       .mockImplementation((key) => {
         if (key.includes('player-count')) throw new Error('blocked');
       });
     const getItem = vi
-      .spyOn(Storage.prototype, 'getItem')
+      .spyOn(window.localStorage, 'getItem')
       .mockImplementation((key) => {
         if (key.includes('player-count')) throw new Error('blocked');
         return key === 'campus-pubquiz-team-name' ? 'The Quizzards' : null;
