@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getFeedbackField } from '../feedback-rounds';
+import { getFeedbackField, isFinalFormOpen } from '../feedback-rounds';
 import type { GameProgress } from '../game-state';
 import { DEFAULT_SESSION_SETTINGS } from '../session-settings';
 import type { ActiveShowdownRoundState, SessionState } from '../session-state';
@@ -130,5 +130,44 @@ describe('getFeedbackField', () => {
         progress: { ...quiet.progress, status: 'ended' },
       }),
     ).toBeNull();
+  });
+});
+
+describe('isFinalFormOpen', () => {
+  it('is open once the quiz has ended', () => {
+    expect(isFinalFormOpen(at({ status: 'ended' }))).toBe(true);
+  });
+
+  it('is closed on the break card', () => {
+    expect(
+      isFinalFormOpen(
+        at({ status: 'break_intro', roundIndex: 1, questionIndex: 0 }),
+      ),
+    ).toBe(false);
+  });
+
+  it('is closed mid-quiz', () => {
+    expect(isFinalFormOpen(at({ status: 'question_open' }))).toBe(false);
+  });
+
+  it('is closed while a showdown is still being played', () => {
+    expect(
+      isFinalFormOpen(
+        at({ status: 'ended' }, { activeShowdownRound: showdown(false) }),
+      ),
+    ).toBe(false);
+  });
+
+  it('is closed at ended when the session does not collect feedback', () => {
+    const session = at({ status: 'ended' });
+    expect(
+      isFinalFormOpen({
+        ...session,
+        seededGame: {
+          ...session.seededGame,
+          settings: { ...DEFAULT_SESSION_SETTINGS, collectFeedback: false },
+        },
+      }),
+    ).toBe(false);
   });
 });

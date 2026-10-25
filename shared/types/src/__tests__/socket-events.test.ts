@@ -45,6 +45,7 @@ describe('SOCKET_EVENTS', () => {
       SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
       RATE_ROUND: 'game:rate_round',
       SEND_FEEDBACK: 'game:send_feedback',
+      RATE_SESSION: 'game:rate_session',
       SET_PLAYER_COUNT: 'game:set_player_count',
       SET_TEAM_PLAYER_COUNT: 'game:set_team_player_count',
       PICK_JOKER: 'game:pick_joker',

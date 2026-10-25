@@ -2,6 +2,7 @@ import type { TeamAnswerView } from './answers';
 import type { TeamBonusAwardView } from './bonus';
 import type { RoundRatingView, TeamFeedbackView } from './feedback';
 import type { TeamJoker } from './joker';
+import type { TeamSessionRatingsView } from './session-scales';
 
 export interface JoinPlayersPayload {
   teamName: string;
@@ -38,6 +39,8 @@ export interface JoinAcceptedPayload {
   roundRatings: RoundRatingView[];
   /** The team's own saved comment and topic suggestions this session (empty when it sent none), so a reconnecting phone shows its final form again. */
   feedback: TeamFeedbackView;
+  /** The team's own pacing and felt-difficulty answers this session (null on a scale it hasn't answered), so a reconnecting phone shows its choice. */
+  sessionRatings: TeamSessionRatingsView;
   /** The team's own player count this session (null until reported), so a reconnect, a second phone or a rejoin after a kick shows it. */
   playerCount: number | null;
   /** The team's own joker this session (null until it has one), so a reconnect, a second phone or a rejoin after a kick restores it. Never another team's. */
