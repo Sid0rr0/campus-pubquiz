@@ -67,4 +67,30 @@ describe('mergeSeenQuestions', () => {
 
     expect(seen[1]).toEqual(revealed);
   });
+
+  it('keeps the very same map when the view brings no questions, so state does not change', () => {
+    const current = { 1: hidden };
+
+    expect(mergeSeenQuestions(current, payload({}))).toBe(current);
+  });
+
+  it('takes questions from past rounds and copes with fields the view leaves out', () => {
+    const seen = mergeSeenQuestions({}, {
+      pastRevealedQuestions: [revealed],
+    } as unknown as PlayersStatePayload);
+
+    expect(seen).toEqual({ 1: revealed });
+  });
+
+  it('does not mutate the map it was given when it adds a question', () => {
+    const current = {};
+
+    const next = mergeSeenQuestions(
+      current,
+      payload({ blockQuestions: [hidden] }),
+    );
+
+    expect(next).not.toBe(current);
+    expect(current).toEqual({});
+  });
 });

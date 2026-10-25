@@ -1,0 +1,130 @@
+import {
+  BASE,
+  CSRF,
+  describeApiClient,
+  JSON_TYPE,
+} from '@/app/lib/__tests__/api-client-contract';
+import {
+  addLeagueSession,
+  createLeague,
+  deleteLeague,
+  fetchLeagues,
+  fetchLeagueTable,
+  fetchPublicLeagues,
+  LeaguesApiError,
+  moveLeague,
+  removeLeagueSession,
+  updateLeague,
+} from '@/app/lib/leagues-api';
+
+const signal = new AbortController().signal;
+const fields = { name: 'Autumn', startsOn: '2026-09-01', endsOn: '2026-12-01' };
+
+describeApiClient(
+  'leagues-api',
+  LeaguesApiError,
+  'LeaguesApiError',
+  [
+    {
+      name: 'fetchLeagues',
+      call: () => fetchLeagues(),
+      url: `${BASE}/leagues`,
+      init: { credentials: 'include' },
+      fallback: 'Could not load leagues',
+      okBody: { leagues: [] },
+    },
+    {
+      name: 'fetchLeagues (current only)',
+      call: () => fetchLeagues({ current: true }),
+      url: `${BASE}/leagues?current=true`,
+      init: { credentials: 'include' },
+      fallback: 'Could not load leagues',
+      okBody: { leagues: [] },
+    },
+    {
+      name: 'fetchPublicLeagues',
+      call: () => fetchPublicLeagues(signal),
+      url: `${BASE}/leagues/public`,
+      init: { signal },
+      fallback: 'Could not load leagues',
+      okBody: { leagues: [] },
+    },
+    {
+      name: 'fetchLeagueTable',
+      call: () => fetchLeagueTable(7, signal),
+      url: `${BASE}/leagues/7/table`,
+      init: { signal },
+      fallback: 'Could not load the table',
+      okBody: { rows: [] },
+    },
+    {
+      name: 'createLeague',
+      call: () => createLeague(fields),
+      url: `${BASE}/leagues`,
+      init: {
+        method: 'POST',
+        credentials: 'include',
+        headers: { ...JSON_TYPE, ...CSRF },
+        body: JSON.stringify(fields),
+      },
+      fallback: 'Could not create league',
+      okBody: { id: 1 },
+    },
+    {
+      name: 'updateLeague',
+      call: () => updateLeague(7, fields),
+      url: `${BASE}/leagues/7`,
+      init: {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { ...JSON_TYPE, ...CSRF },
+        body: JSON.stringify(fields),
+      },
+      fallback: 'Could not update league',
+      okBody: { id: 7 },
+    },
+    {
+      name: 'moveLeague',
+      call: () => moveLeague(7, 'down'),
+      url: `${BASE}/leagues/7/move`,
+      init: {
+        method: 'POST',
+        credentials: 'include',
+        headers: { ...JSON_TYPE, ...CSRF },
+        body: JSON.stringify({ direction: 'down' }),
+      },
+      fallback: 'Could not move league',
+      expected: undefined,
+    },
+    {
+      name: 'deleteLeague',
+      call: () => deleteLeague(7),
+      url: `${BASE}/leagues/7`,
+      init: { method: 'DELETE', credentials: 'include', headers: CSRF },
+      fallback: 'Could not delete league',
+      expected: undefined,
+    },
+    {
+      name: 'addLeagueSession',
+      call: () => addLeagueSession(7, 42),
+      url: `${BASE}/leagues/7/sessions`,
+      init: {
+        method: 'POST',
+        credentials: 'include',
+        headers: { ...JSON_TYPE, ...CSRF },
+        body: JSON.stringify({ gameSessionId: 42 }),
+      },
+      fallback: 'Could not add session',
+      expected: undefined,
+    },
+    {
+      name: 'removeLeagueSession',
+      call: () => removeLeagueSession(7, 42),
+      url: `${BASE}/leagues/7/sessions/42`,
+      init: { method: 'DELETE', credentials: 'include', headers: CSRF },
+      fallback: 'Could not remove session',
+      expected: undefined,
+    },
+  ],
+  { toleratesBadJson: true },
+);

@@ -3,9 +3,10 @@ import { defineConfig } from 'vitest/config';
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
 // Tests read the shared types' source, so a stale `dist/` can't fail them.
-const sharedTypesEntry = fileURLToPath(
-  new URL('../../shared/types/src/index.ts', import.meta.url),
-);
+// Stryker runs from a sandbox copy deeper in the tree, so it passes the real path in.
+const sharedTypesEntry =
+  process.env.SHARED_TYPES_ENTRY ??
+  fileURLToPath(new URL('../../shared/types/src/index.ts', import.meta.url));
 
 // Parallel agent runs load the machine enough that unbounded workers time
 // tests out at random; half the cores keeps most of the speed. CI keeps

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import {
   useAdminKeyboardShortcuts,
+  useAdminMediaPauseShortcut,
   type UseAdminKeyboardShortcutsOptions,
 } from '@/app/control/use-admin-keyboard-shortcuts';
 
@@ -31,6 +32,65 @@ function renderShortcuts(
   );
   return { sendAction, setDisplaySoundMuted, rerender };
 }
+
+function pressKey(key: string): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', {
+    key,
+    cancelable: true,
+    bubbles: true,
+  });
+  window.dispatchEvent(event);
+  return event;
+}
+
+describe('useAdminMediaPauseShortcut', () => {
+  it('sends TOGGLE_MEDIA_PAUSE on Space and claims it from the browser while Pause shows', () => {
+    const sendAction = vi.fn();
+    renderHook(() =>
+      useAdminMediaPauseShortcut({ canPauseMedia: true, sendAction }),
+    );
+
+    expect(pressKey(' ').defaultPrevented).toBe(true);
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_PAUSE');
+  });
+
+  it('leaves Space alone while there is nothing to pause', () => {
+    const sendAction = vi.fn();
+    renderHook(() =>
+      useAdminMediaPauseShortcut({ canPauseMedia: false, sendAction }),
+    );
+
+    expect(pressKey(' ').defaultPrevented).toBe(false);
+    expect(sendAction).not.toHaveBeenCalled();
+  });
+
+  it('follows canPauseMedia and sendAction across rerenders', () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = renderHook(
+      (props: { canPauseMedia: boolean; sendAction: () => void }) =>
+        useAdminMediaPauseShortcut(props),
+      { initialProps: { canPauseMedia: false, sendAction: first } },
+    );
+
+    pressKey(' ');
+    rerender({ canPauseMedia: true, sendAction: second });
+    pressKey(' ');
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores other keys', () => {
+    const sendAction = vi.fn();
+    renderHook(() =>
+      useAdminMediaPauseShortcut({ canPauseMedia: true, sendAction }),
+    );
+
+    expect(pressKey('x').defaultPrevented).toBe(false);
+    expect(sendAction).not.toHaveBeenCalled();
+  });
+});
 
 describe('useAdminKeyboardShortcuts', () => {
   it.each(['advance', 'reveal_next_rank', 'hide_leaderboard'] as const)(
@@ -280,6 +340,57 @@ describe('useAdminKeyboardShortcuts', () => {
       });
 
       await userEvent.keyboard(key);
+
+      expect(sendAction).not.toHaveBeenCalled();
+      expect(setDisplaySoundMuted).not.toHaveBeenCalled();
+      document.body.innerHTML = '';
+    },
+  );
+
+  it.each([
+    ['ArrowLeft', { previousState: 'available' }],
+    ['ArrowRight', { advanceStep: 'advance' }],
+    ['ArrowUp', { isLeaderboardVisible: false }],
+    ['ArrowDown', { isLeaderboardVisible: true }],
+    ['j', {}],
+    ['f', {}],
+    [' ', { canPauseMedia: true }],
+    ['m', {}],
+  ] as const)(
+    'claims %j from the browser when it acts on it',
+    (key, overrides) => {
+      renderShortcuts(overrides);
+
+      expect(pressKey(key).defaultPrevented).toBe(true);
+    },
+  );
+
+  it.each(['x', 'Enter', 'Tab'])(
+    'does nothing for the unbound key %j, even with the leaderboard up',
+    (key) => {
+      const { sendAction, setDisplaySoundMuted } = renderShortcuts({
+        isLeaderboardVisible: true,
+        advanceStep: 'advance',
+        previousState: 'available',
+        canPauseMedia: true,
+      });
+
+      expect(pressKey(key).defaultPrevented).toBe(false);
+      expect(sendAction).not.toHaveBeenCalled();
+      expect(setDisplaySoundMuted).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['TEXTAREA', 'SELECT'])(
+    'ignores shortcut keys while a %s is focused',
+    async (tag) => {
+      document.body.innerHTML = `<${tag.toLowerCase()} id="target"></${tag.toLowerCase()}>`;
+      document.getElementById('target')?.focus();
+      const { sendAction, setDisplaySoundMuted } = renderShortcuts({
+        canPauseMedia: true,
+      });
+
+      await userEvent.keyboard('fm');
 
       expect(sendAction).not.toHaveBeenCalled();
       expect(setDisplaySoundMuted).not.toHaveBeenCalled();

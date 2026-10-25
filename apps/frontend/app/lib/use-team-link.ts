@@ -210,6 +210,8 @@ export function useTeamLink(
   const latestAnswerRef = useRef<Promise<AckResult> | null>(null);
   const [seenQuestions, setSeenQuestions] = useState<SeenQuestions>({});
 
+  // A range, not next-line: Stryker only honours a comment that leads a node, and nothing leads the `[]` after this callback's closing brace. Equivalent — `dispatch` reads only refs and state setters, so a padded list never changes how it behaves.
+  // Stryker disable ArrayDeclaration: see above
   const dispatch = useCallback(function dispatch(input: TeamLinkInput) {
     const step = teamLink(linkRef.current, input);
     linkRef.current = step.state;
@@ -251,6 +253,7 @@ export function useTeamLink(
               connection?.emitWithAck(SOCKET_EVENTS.SUBMIT_ANSWER, payload) ??
               Promise.resolve(NOT_CONNECTED_RESULT);
             void sent.then((result) => {
+              // Stryker disable next-line CallExpression: equivalent — a waiter left in the map is only resolved a second time later, which a promise ignores
               answerWaitersRef.current.delete(attempt);
               resolve(result);
               dispatch(
@@ -263,6 +266,7 @@ export function useTeamLink(
           break;
         }
         case 'armConfirmTimer':
+          // Stryker disable next-line CallExpression: equivalent — the Team link always emits `clearConfirmTimer` just before `armConfirmTimer`
           clearConfirmTimer();
           confirmTimerRef.current = setTimeout(() => {
             confirmTimerRef.current = null;
@@ -306,13 +310,16 @@ export function useTeamLink(
         case 'goToJoinScreen':
           goToJoinScreenRef.current();
           break;
+        // Stryker disable next-line ConditionalExpression,BlockStatement,StringLiteral: equivalent — an exhaustiveness guard; `command` is `never` here, so no input reaches it
         default: {
           const unhandled: never = command;
+          // Stryker disable next-line CallExpression,StringLiteral: equivalent — the throw is unreachable (`command` is `never`), so neither it nor its message can be observed
           throw new Error(`Unhandled team link command: ${String(unhandled)}`);
         }
       }
     }
   }, []);
+  // Stryker restore ArrayDeclaration
 
   const bindSocket = useCallback(
     (socket: RoomSocket<'players'>) => {
@@ -356,6 +363,7 @@ export function useTeamLink(
       );
       socket.on(SOCKET_EVENTS.TEAM_KICKED, () => dispatch({ type: 'kicked' }));
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so an emptied list still binds each socket once
     [dispatch],
   );
 
@@ -375,10 +383,13 @@ export function useTeamLink(
     link.attempt,
   );
 
+  // A range, not next-line, for the same reason as `dispatch`. Equivalent — `emitWithAck`, `forceReconnect` and Next's `router` never change, so an emptied list sets the same refs once.
+  // Stryker disable ArrayDeclaration: see above
   useEffect(() => {
     connectionRef.current = { emitWithAck, forceReconnect };
     goToJoinScreenRef.current = () => router.push('/play');
   }, [emitWithAck, forceReconnect, router]);
+  // Stryker restore ArrayDeclaration
 
   useReconnectOnWake(forceReconnect);
 
@@ -391,6 +402,7 @@ export function useTeamLink(
         clearTimeout(joinRetryTimerRef.current);
       }
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — an unmount cleanup; a constant dependency never re-runs it, same as none
     [],
   );
 
@@ -408,20 +420,26 @@ export function useTeamLink(
     if (linkRef.current.activeJoinCode) dispatch({ type: 'identityChanged' });
   }, [identityKey, dispatch]);
 
+  // A range, not next-line, for the same reason as `dispatch`. Equivalent — `dispatch` never changes, so an emptied list still reads the stored identity once on mount.
+  // Stryker disable ArrayDeclaration: see above
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored identity can only
     // be read after mount.
     dispatch({ type: 'storageRead', stored: readStoredIdentity() });
   }, [dispatch]);
+  // Stryker restore ArrayDeclaration
 
   const connectionCountRef = useRef({ count: 0, last: socketConnection });
   useEffect(() => {
     if (!socketConnection) {
+      // Stryker disable next-line ConditionalExpression: equivalent — with no connection held, `disconnected` only restates null/false fields, and a new identity clears the rest
       if (linkRef.current.connection) dispatch({ type: 'disconnected' });
       return;
     }
     const counter = connectionCountRef.current;
+    // Stryker disable next-line ConditionalExpression: equivalent — this effect only runs when `socketConnection` changes, so the two always differ here
     if (counter.last !== socketConnection) {
+      // Stryker disable next-line AssignmentOperator: equivalent — connection ids are only compared for equality, so counting down tells connections apart just as well
       counter.count += 1;
       counter.last = socketConnection;
     }
@@ -444,6 +462,7 @@ export function useTeamLink(
       dispatch({ type: 'answerSubmitted', questionId, teamId, value });
       return latestAnswerRef.current ?? Promise.resolve(NOT_CONNECTED_RESULT);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `submitAnswer` is the same function either way
     [dispatch],
   );
 
@@ -454,6 +473,7 @@ export function useTeamLink(
       if (result.success) dispatch({ type: 'ratingSaved', roundId, stars });
       return result;
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `rateRound` is the same function either way
     [emitWithAck, dispatch],
   );
 
@@ -468,6 +488,7 @@ export function useTeamLink(
       }
       return result;
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `sendFeedback` is the same function either way
     [emitWithAck, dispatch],
   );
 
@@ -478,6 +499,7 @@ export function useTeamLink(
       if (result.success) dispatch({ type: 'playerCountSaved', playerCount });
       return result;
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `setPlayerCount` is the same function either way
     [emitWithAck, dispatch],
   );
 
@@ -490,6 +512,7 @@ export function useTeamLink(
       }
       return result;
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `pickJoker` is the same function either way
     [emitWithAck, dispatch],
   );
 
@@ -507,19 +530,23 @@ export function useTeamLink(
       if (!result.success) toast.error(result.error);
       return result;
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so `submitShowdownGuess` is the same function either way
     [emitWithAck],
   );
 
   const setNameInput = useCallback(
     (value: string) => dispatch({ type: 'nameTyped', value }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setNameInput` is the same function either way
     [dispatch],
   );
   const setCodeInput = useCallback(
     (value: string) => dispatch({ type: 'gameCodeTyped', value }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setCodeInput` is the same function either way
     [dispatch],
   );
   const setTeamCodeInput = useCallback(
     (value: string) => dispatch({ type: 'teamCodeTyped', value }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setTeamCodeInput` is the same function either way
     [dispatch],
   );
 
@@ -532,6 +559,7 @@ export function useTeamLink(
   // depends on this reference.
   const handleLogOut = useCallback(
     () => dispatch({ type: 'logoutRequested' }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `handleLogOut` is the same function either way
     [dispatch],
   );
 

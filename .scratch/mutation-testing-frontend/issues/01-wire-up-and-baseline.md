@@ -1,6 +1,6 @@
 # 01: Wire up the frontend `mutate` and run the baseline
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: `.scratch/mutation-testing-db` (spec order, not a technical dependency)
 
@@ -14,6 +14,12 @@ Then run the full baseline and write it to the spec as a table like the one in `
 
 Done when:
 
-- `pnpm --filter frontend mutate` and `pnpm mutate` run the frontend, and `pnpm --filter frontend test` is unchanged;
-- the README "Running mutation tests" section says what the frontend run covers, in the same commit;
-- the baseline table is in the spec and the survivor tickets exist.
+- [x] `pnpm --filter frontend mutate` and `pnpm mutate` run the frontend, and `pnpm --filter frontend test` is unchanged;
+- [x] the README "Running mutation tests" section says what the frontend run covers, in the same commit;
+- [x] the baseline table is in the spec and the survivor tickets exist.
+
+## Comments
+
+Done in the commit that adds this note (see git history). Baseline: 2292 testable mutants, 71.5% / 80.5%, ~12 min; survivor tickets 02–07 written.
+
+Two deviations: `app/**/__tests__/**` is excluded too (it held the `fake-socket.ts` test helper), and `vitest.config.ts` reads the `shared/types` path from `SHARED_TYPES_ENTRY` when set, because Stryker's sandbox copy is deeper in the tree and the relative alias broke. Vitest's own `maxWorkers` doesn't multiply: the Stryker runner pins each worker to one Vitest worker.

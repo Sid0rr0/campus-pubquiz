@@ -42,4 +42,13 @@ describe('apiErrorMessage', () => {
     // Assert
     expect(message).toBeNull();
   });
+
+  test('returns null when the error is undefined (a query that has not failed)', () => {
+    // Arrange
+    // Act
+    const message = apiErrorMessage(undefined, FakeApiError, 'fallback');
+
+    // Assert
+    expect(message).toBeNull();
+  });
 });

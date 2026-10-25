@@ -112,6 +112,44 @@ describe('selectLeaderboardRows', () => {
       expect(board(rows)).toEqual(['Tied A 2.–3. 20', 'Tied B 2.–3. 20']);
     });
 
+    it('reveals a tie at the top in one step', () => {
+      const rows = selectLeaderboardRows({
+        board: described([
+          ranked(1, 'Tied A', 30, 1, 3),
+          ranked(2, 'Tied B', 30, 1, 3),
+          ranked(3, 'Tied C', 30, 1, 3),
+        ]),
+        revealCount: 1,
+        phase: 'settled',
+      });
+
+      expect(board(rows)).toEqual([
+        'Tied A 1.–3. 30',
+        'Tied B 1.–3. 30',
+        'Tied C 1.–3. 30',
+      ]);
+    });
+
+    it('keeps every group when a tie sits below two clear places', () => {
+      const rows = selectLeaderboardRows({
+        board: described([
+          ranked(1, 'First', 30, 1),
+          ranked(2, 'Second', 20, 2),
+          ranked(3, 'Tied A', 10, 3, 4),
+          ranked(4, 'Tied B', 10, 3, 4),
+        ]),
+        revealCount: 3,
+        phase: 'settled',
+      });
+
+      expect(board(rows)).toEqual([
+        'First 1. 30',
+        'Second 2. 20',
+        'Tied A 3.–4. 10',
+        'Tied B 3.–4. 10',
+      ]);
+    });
+
     it('reaches rank 1 once revealCount covers a capped board that splits a tie', () => {
       const cappedAtTie = [
         ranked(1, 'Team 1', 70, 1),
@@ -148,6 +186,15 @@ describe('selectLeaderboardRows', () => {
         const rows = selectLeaderboardRows({ board: WITH_COUNT_UP, phase });
 
         expect(board(rows)).toEqual(expected);
+      },
+    );
+
+    it.each<LeaderboardRowsInput['phase']>(['old', 'counting'])(
+      'places each row by its old rank in the %s phase',
+      (phase) => {
+        const rows = selectLeaderboardRows({ board: WITH_COUNT_UP, phase });
+
+        expect(rows.map(({ rankIndex }) => rankIndex)).toEqual([0, 1]);
       },
     );
 
@@ -200,6 +247,20 @@ describe('selectLeaderboardRows', () => {
         expect(trends(rows)).toEqual(['Runner Up none', 'Challenger none']);
       },
     );
+
+    it('leaves the trend key off a row the description sent none for', () => {
+      const [row] = selectLeaderboardRows({
+        board: described([ranked(1, 'Solo', 5, 1)]),
+        phase: 'settled',
+      });
+
+      expect(row).toStrictEqual({
+        entry: ranked(1, 'Solo', 5, 1),
+        rankIndex: 0,
+        label: '1.',
+        isJokerStamped: false,
+      });
+    });
 
     it('shows no trend for a team the description sent none for', () => {
       const rows = selectLeaderboardRows({

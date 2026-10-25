@@ -69,6 +69,21 @@ describe('useReconnectOnWake', () => {
     expect(onWake).toHaveBeenCalledTimes(1);
   });
 
+  it('calls the latest onWake, not the one from the first render', () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = renderHook(
+      ({ onWake }: { onWake: () => void }) => useReconnectOnWake(onWake),
+      { initialProps: { onWake: first } },
+    );
+
+    rerender({ onWake: second });
+    window.dispatchEvent(new Event('online'));
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
   it('removes its listeners on unmount', () => {
     const onWake = vi.fn();
     const { unmount } = renderHook(() => useReconnectOnWake(onWake));

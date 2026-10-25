@@ -90,6 +90,7 @@ export function useMediaPause(
   // again or the reveal, and a standing mute must reach each new element.
   useEffect(() => {
     for (const element of [audioRef.current, videoRef.current]) {
+      // Stryker disable next-line ConditionalExpression: the guard only skips a write of the value already there; no observable difference
       if (element && element.muted !== isMuted) element.muted = isMuted;
     }
   });

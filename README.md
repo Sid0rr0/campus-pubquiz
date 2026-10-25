@@ -205,6 +205,7 @@ CI, and it never fails on a low score.
 pnpm mutate                                # every workspace that has it
 pnpm --filter @campus-pubquiz/types mutate # shared/types only
 pnpm --filter backend mutate               # backend only (DB-free slice)
+pnpm --filter frontend mutate              # frontend only (non-component modules)
 pnpm --filter backend mutate:db            # backend game/state/ with the DB specs (needs Docker, slow)
 ```
 
@@ -234,7 +235,12 @@ are gitignored.
   `reports/stryker-db-incremental.json` and `reports/mutation-db/` report.
   It's slow: run one file at a time with
   `pnpm --filter backend mutate:db --mutate src/game/state/<file>.ts`.
-- `frontend`: not covered.
+- `frontend`: the non-component `.ts` modules in `app/` (API parsers, storage
+  helpers, hooks, draft state), against the whole Vitest suite. Specs, `.d.ts`
+  files, `__tests__/` helpers and `.tsx` components are left out: in components
+  most survivors would be Tailwind classes and display copy no test should pin.
+  Stryker runs the suite from a sandbox copy, so `stryker.config.mjs` hands
+  `vitest.config.ts` the real path of `shared/types` via `SHARED_TYPES_ENTRY`.
 
 ## Docs
 
