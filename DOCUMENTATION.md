@@ -801,8 +801,8 @@ can't be rated right now" when the round isn't in the feedback field's list (a
 round outside the current block, a status that is neither a break nor `ended`, or a showdown still being played), or a
 validation error for stars outside 1–5 or between half stars. The team is the one whose socket sent
 it. One rating is kept per (session, round, team); rating again overwrites it
-(last write wins). It is a plain team-scoped write: it broadcasts nothing and
-doesn't go through the session write.
+(last write wins). Its check and its store run inside the session write; nothing
+is broadcast and no scores change.
 
 `SEND_FEEDBACK` — `{ comment, topics }` — saves the team's "Anything else?" comment
 and **topic suggestions** from the final form. `comment` is a string of at most
@@ -816,8 +816,8 @@ open (so before `ended`, in a break, and while a showdown is still being played 
 all refused). One row is kept per (session, team) in `session_feedback` (`comment`
 text, `topics` a JSON string array that is parsed with Zod on read, never cast), and
 sending again replaces the comment and topics; the row's pacing and felt-difficulty
-answers are kept. Like `RATE_ROUND` it is a plain team-scoped
-write: it broadcasts nothing and doesn't go through the session write. Stepping back
+answers are kept. Like `RATE_ROUND` its check and its store run inside the
+session write; nothing is broadcast and no scores change. Stepping back
 out of `ended` keeps the row.
 
 `RATE_SESSION` — `{ scale, value }`, `scale` `pacing` or `feltDifficulty` and `value`
@@ -835,8 +835,8 @@ merge carries them with the rest of the row. Each scale is written on its own
 (last write wins) without touching the comment, the topics or the other scale; a row
 first created by an answer starts with an empty comment and no topics, which the
 stats page's comment list already skips. Answering leaves the row's `updated_at`
-alone, since it dates the comment staff see. Like `SEND_FEEDBACK` it is a plain
-team-scoped write that broadcasts nothing, and stepping back out of `ended` keeps it.
+alone, since it dates the comment staff see. Like `SEND_FEEDBACK` its check and its
+store run inside the session write, nothing is broadcast and no scores change, and stepping back out of `ended` keeps it.
 
 `SET_PLAYER_COUNT` — `{ playerCount }` — saves the team's **player count**: how many
 players it brought to this session. `playerCount` must be a whole number from 1 to 20
