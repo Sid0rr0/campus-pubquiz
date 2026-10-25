@@ -89,6 +89,7 @@ export function useGameConnection<Role extends SocketRoomName>(
       setConnectionError(message);
       setConnectionIssue(issue);
     },
+    // Stryker disable next-line ArrayDeclaration: a constant dependency is as stable as none
     [],
   );
 
@@ -180,9 +181,11 @@ export function useGameConnection<Role extends SocketRoomName>(
         });
       });
     },
+    // Stryker disable next-line ArrayDeclaration: a constant dependency is as stable as none
     [],
   );
 
+  // Stryker disable ArrayDeclaration: reportConnection never changes, so its dependency entry is inert
   const forceReconnect = useCallback(() => {
     const socket = socketRef.current;
     if (!socket) return;
@@ -190,6 +193,7 @@ export function useGameConnection<Role extends SocketRoomName>(
     socket.disconnect();
     socket.connect();
   }, [reportConnection]);
+  // Stryker restore ArrayDeclaration
 
   return {
     snapshot,

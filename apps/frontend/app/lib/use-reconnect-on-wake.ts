@@ -17,6 +17,7 @@ export function useReconnectOnWake(onWake: () => void): void {
     onWakeRef.current = onWake;
   }, [onWake]);
 
+  // Stryker disable ArrayDeclaration: a constant dependency is as stable as none
   useEffect(() => {
     let hiddenAt: number | null = null;
 
@@ -44,4 +45,5 @@ export function useReconnectOnWake(onWake: () => void): void {
       window.removeEventListener('online', wake);
     };
   }, []);
+  // Stryker restore ArrayDeclaration
 }

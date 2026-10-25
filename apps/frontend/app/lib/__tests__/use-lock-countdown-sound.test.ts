@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { displaySounds } from '@/app/lib/display-sounds';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 
 // The specs assert on the hook's HTMLMediaElement play/pause calls (offset,
@@ -48,6 +49,59 @@ describe('useLockCountdownSound', () => {
 
     const audio = playSpy.mock.contexts.at(-1) as HTMLAudioElement;
     expect(audio.currentTime).toBeCloseTo(40, 0);
+  });
+
+  it('measures the time left against the current clock', () => {
+    vi.setSystemTime(10_000);
+    const { result } = renderHook(() =>
+      useLockCountdownSound({ lockAt: 40_000, enabled: true }),
+    );
+
+    act(() => result.current.unlock());
+
+    const audio = playSpy.mock.contexts.at(-1) as HTMLAudioElement;
+    expect(audio.currentTime).toBeCloseTo(30, 0);
+  });
+
+  it('plays the lock countdown track, both to prime and to count down', () => {
+    const { result } = renderHook(() =>
+      useLockCountdownSound({ lockAt: 30_000, enabled: true }),
+    );
+
+    act(() => result.current.unlock());
+
+    expect(playSpy.mock.contexts).toHaveLength(2);
+    for (const context of playSpy.mock.contexts) {
+      expect((context as HTMLAudioElement).getAttribute('src')).toBe(
+        '/sounds/lock-countdown.mp3',
+      );
+    }
+  });
+
+  it('unlocks the display sound registry from the same gesture', () => {
+    const unlockSpy = vi.spyOn(displaySounds, 'unlock');
+    const { result } = renderHook(() =>
+      useLockCountdownSound({ lockAt: null, enabled: false }),
+    );
+
+    act(() => result.current.unlock());
+
+    expect(unlockSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses one audio element for every play of the countdown', () => {
+    const { result, rerender } = renderHook(
+      ({ isMuted }: { isMuted: boolean }) =>
+        useLockCountdownSound({ lockAt: 30_000, enabled: true, isMuted }),
+      { initialProps: { isMuted: false } },
+    );
+    act(() => result.current.unlock());
+    const first = playSpy.mock.contexts.at(-1);
+
+    rerender({ isMuted: true });
+    rerender({ isMuted: false });
+
+    expect(playSpy.mock.contexts.at(-1)).toBe(first);
   });
 
   it('stops playback and resets position once the lock deadline clears', () => {

@@ -70,4 +70,95 @@ describe('useGameConnection', () => {
       'Disconnected: io server disconnect',
     );
   });
+
+  it('reports nothing when the client itself disconnects, but drops the live connection', () => {
+    const { result } = renderHook(() =>
+      useGameConnection('display', true, 'TESTCODE'),
+    );
+    const socket = latestSocket();
+    act(() => socket.serverConnects());
+    expect(result.current.socketConnection).not.toBeNull();
+
+    act(() => socket.serverDisconnects('io client disconnect'));
+
+    expect(result.current.connectionIssue).toBeNull();
+    expect(result.current.connectionError).toBeNull();
+    expect(result.current.socketConnection).toBeNull();
+  });
+
+  it('connects with credentials, sending the role and the join code', () => {
+    renderHook(() => useGameConnection('players', true, 'TESTCODE'));
+
+    expect(mockIo).toHaveBeenCalledWith(expect.any(String), {
+      query: { role: 'players', code: 'TESTCODE' },
+      withCredentials: true,
+    });
+  });
+
+  it('sends only the role when there is no join code', () => {
+    renderHook(() => useGameConnection('admin', true, undefined));
+
+    expect(mockIo.mock.calls[0]?.[1]).toEqual({
+      query: { role: 'admin' },
+      withCredentials: true,
+    });
+  });
+
+  it('keys the identity by every input to the connection', () => {
+    const { result, rerender } = renderHook(
+      ({ code, retryKey }: { code: string | undefined; retryKey: number }) =>
+        useGameConnection('display', true, code, undefined, retryKey),
+      { initialProps: { code: undefined as string | undefined, retryKey: 0 } },
+    );
+    expect(result.current.identityKey).toBe('true|display||0');
+
+    rerender({ code: 'ABC', retryKey: 2 });
+    expect(result.current.identityKey).toBe('true|display|ABC|2');
+  });
+
+  it('starts a fresh connect from a clean slate when the identity changes', () => {
+    const { result, rerender } = renderHook(
+      ({ retryKey }: { retryKey: number }) =>
+        useGameConnection('display', true, 'TESTCODE', undefined, retryKey),
+      { initialProps: { retryKey: 0 } },
+    );
+    const socket = latestSocket();
+    act(() => socket.serverConnects());
+    act(() => socket.trigger(SOCKET_EVENTS.STATE_SYNC, { joinCode: 'X' }));
+    act(() => socket.trigger('connect_error', transportError()));
+    expect(result.current.snapshot).not.toBeNull();
+    expect(result.current.connectionError).toBe(RECONNECTING_MESSAGE);
+    expect(result.current.socketConnection).not.toBeNull();
+
+    rerender({ retryKey: 1 });
+
+    expect(result.current.snapshot).toBeNull();
+    expect(result.current.connectionError).toBeNull();
+    expect(result.current.connectionIssue).toBeNull();
+    expect(result.current.socketConnection).toBeNull();
+    expect(socket.disconnect).toHaveBeenCalled();
+  });
+
+  it('binds each new socket with the latest bindSocket callback', () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = renderHook(
+      ({
+        bind,
+        retryKey,
+      }: {
+        bind: (socket: unknown) => void;
+        retryKey: number;
+      }) => useGameConnection('display', true, 'TESTCODE', bind, retryKey),
+      { initialProps: { bind: first, retryKey: 0 } },
+    );
+    expect(first).toHaveBeenCalledTimes(1);
+
+    rerender({ bind: second, retryKey: 0 });
+    expect(second).not.toHaveBeenCalled();
+
+    rerender({ bind: second, retryKey: 1 });
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).toHaveBeenCalledTimes(1);
+  });
 });
