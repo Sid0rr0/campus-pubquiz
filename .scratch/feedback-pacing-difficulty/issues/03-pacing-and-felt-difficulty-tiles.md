@@ -6,8 +6,8 @@ Parent spec: `.scratch/feedback-pacing-difficulty/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Backend (real Postgres): counts per scale on the session detail, no team data
-- [ ] Frontend: both tiles with their value, detail, "Mixed", "—" and "Feedback was off" states
-- [ ] `DOCUMENTATION.md` (Session Stats) updated
+- [x] Backend (real Postgres): counts per scale on the session detail, no team data
+- [x] Frontend: both tiles with their value, detail, "Mixed", "—" and "Feedback was off" states
+- [x] `DOCUMENTATION.md` (Session Stats) updated

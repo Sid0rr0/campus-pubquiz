@@ -1,6 +1,10 @@
-import type {
-  SessionDetailFeedback,
-  SessionDetailStats,
+import {
+  SESSION_SCALE_VALUES,
+  SESSION_SCALE_VALUE_LABELS,
+  type SessionScale,
+  type SessionScaleValue,
+  type SessionDetailFeedback,
+  type SessionDetailStats,
 } from '@campus-pubquiz/types';
 import { formatPercent } from '@/app/stats/[id]/format-percent';
 
@@ -46,9 +50,36 @@ function ratingTile(rating: SessionDetailFeedback['rating']): StatTileProps {
   };
 }
 
+/** A scale's tile: the most common answer ("Mixed" when the top two tie), with every count in scale order below; "—" when nobody answered. */
+function scaleTile<S extends SessionScale>(
+  scale: S,
+  label: string,
+  counts: Record<SessionScaleValue<S>, number>,
+): StatTileProps {
+  const values = SESSION_SCALE_VALUES[scale] as readonly SessionScaleValue<S>[];
+  const labels = SESSION_SCALE_VALUE_LABELS[scale] as Record<
+    SessionScaleValue<S>,
+    string
+  >;
+  const ranked = [...values].sort((a, b) => counts[b] - counts[a]);
+  if (counts[ranked[0]] === 0) return { label, value: '—' };
+  return {
+    label,
+    value:
+      counts[ranked[0]] === counts[ranked[1]] ? 'Mixed' : labels[ranked[0]],
+    detail: values
+      .map((value) => `${counts[value]} ${labels[value].toLowerCase()}`)
+      .join(' · '),
+  };
+}
+
 /** The tiles drawn from what teams said; each reads "Feedback was off" when the session didn't collect it. */
 function FeedbackTiles({ feedback }: { feedback: SessionDetailFeedback }) {
-  const tiles = [ratingTile(feedback.rating)];
+  const tiles = [
+    ratingTile(feedback.rating),
+    scaleTile('pacing', 'Pacing', feedback.pacing),
+    scaleTile('feltDifficulty', 'Felt difficulty', feedback.feltDifficulty),
+  ];
   return tiles.map((tile) =>
     feedback.collected ? (
       <StatTile key={tile.label} {...tile} />

@@ -1797,12 +1797,13 @@ session (`avg(stars)`, `count(*)` per round), so the response never carries a
 team id or name for any rating — ratings are anonymous on this page and in the API.
 
 The session detail also carries a `feedback` section, shown on the page as
-the **Rating** tile, **Comments** and **Topic suggestions**:
-`{ collected, comments: [{ text, submittedAt }], topics: [{ topic, count }], rating: { average, count } | null }`.
+the **Rating**, **Pacing** and **Felt difficulty** tiles, **Comments** and
+**Topic suggestions**:
+`{ collected, comments: [{ text, submittedAt }], topics: [{ topic, count }], rating: { average, count } | null, pacing: { too_slow, just_right, too_fast }, feltDifficulty: { too_easy, just_right, too_hard } }`.
 
 - `collected` is the session's `collectFeedback` setting (a session stored without
   it reads as `true`). When it is `false` the lists are empty, `rating` is `null`,
-  the Rating tile reads "Feedback was off" and the page shows
+  the counts are zero, the three tiles read "Feedback was off" and the page shows
   "Feedback was off for this session" instead of the two sections.
 - `rating` is the session rating (see `GLOSSARY.md`): the mean of every round
   rating of the session, each counting once, so a round many teams rated weighs
@@ -1810,6 +1811,12 @@ the **Rating** tile, **Comments** and **Topic suggestions**:
   `count(*)` above (the averages weighted by their counts), the same figure as
   the Feedback trends page's per-session `rating`. The tile shows "★ 4.2" with
   "37 ratings" below, or "—" when nobody rated (`rating: null`).
+- `pacing` and `feltDifficulty` count how many teams gave each answer,
+  read from the `pacing` / `felt_difficulty` columns of `session_feedback` and
+  aggregated without a team id; teams that gave none are not counted. Each tile
+  shows the most common answer ("Mixed" when the top two tie) with all three
+  counts in scale order below ("2 too slow · 9 just right · 1 too fast"), or "—"
+  when nobody answered. The measured **Difficulty** tile is separate and stays.
 - `comments` are the teams' "Anything else" texts, newest first, with empty and
   whitespace-only ones skipped.
 - `topics` group suggestions that match after trimming, collapsing inner

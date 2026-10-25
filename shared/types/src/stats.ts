@@ -97,6 +97,10 @@ export interface SessionDetailFeedback {
   topics: SessionDetailFeedbackTopic[];
   /** The Session rating: every round rating of the session, each counting once. Null when nobody rated or feedback was off. */
   rating: SessionDetailRoundRating | null;
+  /** How many teams gave each Pacing answer (anonymous counts, zeros when nobody answered or feedback was off). */
+  pacing: SessionScaleCounts<'pacing'>;
+  /** How many teams gave each Felt difficulty answer (anonymous counts, zeros when nobody answered or feedback was off). */
+  feltDifficulty: SessionScaleCounts<'feltDifficulty'>;
 }
 
 export interface SessionDetailRoundRow {

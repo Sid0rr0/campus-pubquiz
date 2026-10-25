@@ -1,6 +1,8 @@
 import {
   BONUS_CATEGORIES,
   type BonusCategory,
+  type FeltDifficulty,
+  type Pacing,
   type QuestionType,
   type QuizDifficultyLabel,
   type Verdict,
@@ -42,6 +44,10 @@ export interface SessionDetailFeedbackInputRow {
   comment: string;
   topics: string[];
   submittedAt: string | Date;
+  /** The team's Pacing answer; absent or null when it gave none. */
+  pacing?: Pacing | null;
+  /** The team's Felt difficulty answer; absent or null when it gave none. */
+  feltDifficulty?: FeltDifficulty | null;
 }
 
 export interface SessionDetailQuestionInputRow {

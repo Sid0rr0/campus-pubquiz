@@ -60,7 +60,14 @@ describe('computeSessionFeedback', () => {
         ],
         roundRatings: [{ roundId: 1, average: 4, count: 2 }],
       }),
-    ).toEqual({ collected: false, comments: [], topics: [], rating: null });
+    ).toEqual({
+      collected: false,
+      comments: [],
+      topics: [],
+      rating: null,
+      pacing: { too_slow: 0, just_right: 0, too_fast: 0 },
+      feltDifficulty: { too_easy: 0, just_right: 0, too_hard: 0 },
+    });
   });
 
   it('rates the session at the mean of every rating, each counting once', () => {
@@ -117,5 +124,36 @@ describe('computeSessionFeedback', () => {
     });
 
     expect(feedback.topics).toEqual([{ topic: 'Music', count: 2 }]);
+  });
+
+  it('counts each pacing and felt-difficulty answer, skipping teams that gave none', () => {
+    const at = '2026-10-01T19:00:00Z';
+    const feedback = computeSessionFeedback({
+      isCollected: true,
+      roundRatings: [],
+      rows: [
+        { comment: '', topics: [], submittedAt: at, pacing: 'too_fast' },
+        {
+          comment: '',
+          topics: [],
+          submittedAt: at,
+          pacing: 'too_fast',
+          feltDifficulty: 'too_hard',
+        },
+        { comment: 'x', topics: [], submittedAt: at, pacing: 'just_right' },
+        { comment: '', topics: [], submittedAt: at, feltDifficulty: null },
+      ],
+    });
+
+    expect(feedback.pacing).toEqual({
+      too_slow: 0,
+      just_right: 1,
+      too_fast: 2,
+    });
+    expect(feedback.feltDifficulty).toEqual({
+      too_easy: 0,
+      just_right: 0,
+      too_hard: 1,
+    });
   });
 });

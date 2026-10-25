@@ -1424,7 +1424,53 @@ describe('StatsService (Postgres integration)', () => {
         comments: [],
         topics: [],
         rating: null,
+        pacing: { too_slow: 0, just_right: 0, too_fast: 0 },
+        feltDifficulty: { too_easy: 0, just_right: 0, too_hard: 0 },
       });
+    });
+
+    it('counts the pacing and felt-difficulty answers of this session, with no team data', async () => {
+      const session = await endedSession('FB9');
+      const other = await endedSession('FB10');
+      const alpha = await joinTeam(session, 'SecretSquad');
+      const beta = await joinTeam(session, 'Beta');
+      const gamma = await joinTeam(session, 'Gamma');
+      const stranger = await joinTeam(other, 'Stranger');
+      const answer = (
+        s: GameSession,
+        team: Team,
+        pacing: 'too_slow' | 'too_fast' | null,
+        feltDifficulty: 'too_hard' | null,
+      ) =>
+        em.create(SessionFeedback, {
+          gameSession: s,
+          team,
+          comment: '',
+          topics: [],
+          pacing,
+          feltDifficulty,
+          createdAt: new Date('2026-10-01T20:00:00Z'),
+          updatedAt: new Date('2026-10-01T20:00:00Z'),
+        });
+      answer(session, alpha, 'too_fast', 'too_hard');
+      answer(session, beta, 'too_fast', null);
+      answer(session, gamma, null, null);
+      answer(other, stranger, 'too_slow', 'too_hard');
+      await em.flush();
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback.pacing).toEqual({
+        too_slow: 0,
+        just_right: 0,
+        too_fast: 2,
+      });
+      expect(result.feedback.feltDifficulty).toEqual({
+        too_easy: 0,
+        just_right: 0,
+        too_hard: 1,
+      });
+      expect(JSON.stringify(result.feedback)).not.toContain('SecretSquad');
     });
 
     it('ignores feedback from another session', async () => {

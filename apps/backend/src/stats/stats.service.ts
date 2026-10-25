@@ -9,6 +9,8 @@ import {
   type BonusCategory,
   type FeedbackTrends,
   type FeedbackTrendsRound,
+  type FeltDifficulty,
+  type Pacing,
   type PlayedSessionsListedPayload,
   type SessionDetailFeedbackTopic,
   type SessionDetailStats,
@@ -76,6 +78,8 @@ interface SessionFeedbackRow {
   comment: string;
   topics: unknown;
   submittedAt: string | Date;
+  pacing: Pacing | null;
+  feltDifficulty: FeltDifficulty | null;
 }
 
 const storedTopicsSchema = z.array(z.string());
@@ -328,6 +332,8 @@ export class StatsService {
         'comment',
         'topics',
         'updated_at as submittedAt',
+        'pacing',
+        'felt_difficulty as feltDifficulty',
       )) as SessionFeedbackRow[];
 
     const { questions, answers } =
@@ -364,6 +370,8 @@ export class StatsService {
         comment: f.comment,
         topics: storedTopicsSchema.parse(f.topics),
         submittedAt: f.submittedAt,
+        pacing: f.pacing,
+        feltDifficulty: f.feltDifficulty,
       })),
       questions,
       answers,

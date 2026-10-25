@@ -1,3 +1,8 @@
+import {
+  SESSION_SCALE_VALUES,
+  type SessionScale,
+  type SessionScaleCounts,
+} from '@campus-pubquiz/types';
 import type {
   SessionDetailFeedback,
   SessionDetailFeedbackTopic,
@@ -60,6 +65,21 @@ function sessionRating(
   return { average: stars / count, count };
 }
 
+/** How many teams gave each answer on one scale, every answer present in scale order; teams that gave none are not counted. */
+function scaleCounts<S extends SessionScale>(
+  scale: S,
+  rows: readonly SessionDetailFeedbackInputRow[],
+): SessionScaleCounts<S> {
+  const values: readonly string[] = SESSION_SCALE_VALUES[scale];
+  const counts: Record<string, number> = {};
+  for (const value of values) counts[value] = 0;
+  for (const row of rows) {
+    const value: string | null | undefined = row[scale];
+    if (value) counts[value] += 1;
+  }
+  return counts as SessionScaleCounts<S>;
+}
+
 export interface SessionFeedbackInput {
   /** The session's "Collect feedback" setting. */
   isCollected: boolean;
@@ -76,7 +96,14 @@ export function computeSessionFeedback({
   roundRatings,
 }: SessionFeedbackInput): SessionDetailFeedback {
   if (!isCollected) {
-    return { collected: false, comments: [], topics: [], rating: null };
+    return {
+      collected: false,
+      comments: [],
+      topics: [],
+      rating: null,
+      pacing: scaleCounts('pacing', []),
+      feltDifficulty: scaleCounts('feltDifficulty', []),
+    };
   }
 
   const comments = rows
@@ -92,5 +119,7 @@ export function computeSessionFeedback({
     comments,
     topics: groupTopics(rows.map((row) => row.topics)),
     rating: sessionRating(roundRatings),
+    pacing: scaleCounts('pacing', rows),
+    feltDifficulty: scaleCounts('feltDifficulty', rows),
   };
 }
