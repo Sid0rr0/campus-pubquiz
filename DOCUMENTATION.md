@@ -1897,9 +1897,14 @@ same guards as the other stats endpoints, open to admin and moderator).
   picker switches between a date range and a league; picking a league disables the
   date inputs, and "Date range" switches back.
 - The response is `{ sessions, topics, bestRounds, worstRounds }`, where each session is
-  `{ id, name, date, rating: { average, count } | null }`. `sessions` runs oldest to newest. `rating` is the
+  `{ id, name, date, rating: { average, count } | null, pacing, feltDifficulty }`. `sessions` runs oldest to newest. `rating` is the
   average of every round rating the session got and how many ratings that was;
-  `null` when nobody rated (the page shows "—", never zero).
+  `null` when nobody rated (the page shows "—", never zero). `pacing` and
+  `feltDifficulty` are how many teams gave each answer on the final form's two
+  scales (`SessionScaleCounts`, all zero when nobody answered), counted in SQL so
+  no team reaches the response. The sessions table shows each as "2 · 7 · 1" in
+  scale order (too slow, just right, too fast / too easy, just right, too hard),
+  or "—" when nobody answered. The date range and league filters apply unchanged.
 - `topics` are the topic suggestions of every session in the range, grouped by the
   same function as a single session's (`groupTopics`: trim, collapse inner whitespace,
   ignore case, most common spelling wins, the first submitted on a tie), sorted by

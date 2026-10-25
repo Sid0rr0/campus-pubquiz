@@ -1,7 +1,24 @@
-import type { FeedbackTrends } from '@campus-pubquiz/types';
+import {
+  SESSION_SCALE_VALUES,
+  type FeedbackTrends,
+  type SessionScale,
+  type SessionScaleCounts,
+} from '@campus-pubquiz/types';
 
 interface RatingsOverTimeTableProps {
   sessions: FeedbackTrends['sessions'];
+}
+
+/** Counts in scale order ("2 · 7 · 1"), or a dash when nobody answered. */
+function scaleCountsText<S extends SessionScale>(
+  scale: S,
+  counts: SessionScaleCounts<S>,
+): string {
+  const values = SESSION_SCALE_VALUES[
+    scale
+  ] as readonly (keyof typeof counts)[];
+  const ordered = values.map((value) => counts[value]);
+  return ordered.every((n) => n === 0) ? '—' : ordered.join(' · ');
 }
 
 /** Each ended session's average round rating, oldest to newest. A session nobody rated shows a dash, never zero. */
@@ -23,13 +40,19 @@ export function RatingsOverTimeTable({ sessions }: RatingsOverTimeTableProps) {
             <th className="px-4 py-2 font-display text-sm text-foreground/70">
               Ratings
             </th>
+            <th className="px-4 py-2 font-display text-sm text-foreground/70">
+              Pacing
+            </th>
+            <th className="px-4 py-2 font-display text-sm text-foreground/70">
+              Felt difficulty
+            </th>
           </tr>
         </thead>
         <tbody>
           {sessions.length === 0 ? (
             <tr>
               <td
-                colSpan={4}
+                colSpan={6}
                 className="px-4 py-3 text-center text-foreground/50"
               >
                 No finished sessions with feedback in this range.
@@ -51,6 +74,12 @@ export function RatingsOverTimeTable({ sessions }: RatingsOverTimeTableProps) {
                     : '—'}
                 </td>
                 <td className="px-4 py-2">{session.rating?.count ?? '—'}</td>
+                <td className="px-4 py-2">
+                  {scaleCountsText('pacing', session.pacing)}
+                </td>
+                <td className="px-4 py-2">
+                  {scaleCountsText('feltDifficulty', session.feltDifficulty)}
+                </td>
               </tr>
             ))
           )}

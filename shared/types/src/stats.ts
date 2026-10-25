@@ -1,5 +1,6 @@
 import type { Verdict } from './answer-kind';
 import type { BonusCategory } from './bonus';
+import type { SessionScaleCounts } from './session-scales';
 
 /** One row per **ended** game session, for the admin/moderator stats history view. */
 export interface PlayedSessionStats {
@@ -168,6 +169,10 @@ export interface FeedbackTrendsSession {
   date: string; // game_sessions.created_at, ISO
   /** Average of every round rating the session got — null when nobody rated. */
   rating: SessionDetailRoundRating | null;
+  /** How many teams gave each pacing answer; all zero when nobody answered. */
+  pacing: SessionScaleCounts<'pacing'>;
+  /** How many teams gave each felt-difficulty answer; all zero when nobody answered. */
+  feltDifficulty: SessionScaleCounts<'feltDifficulty'>;
 }
 
 /** A round needs at least this many ratings to appear in the best/worst lists. */
