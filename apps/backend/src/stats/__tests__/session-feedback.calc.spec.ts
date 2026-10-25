@@ -47,24 +47,57 @@ describe('groupTopics', () => {
 });
 
 describe('computeSessionFeedback', () => {
-  it('reports feedback as not collected, with nothing listed', () => {
+  it('reports feedback as not collected, with nothing listed and no rating', () => {
     expect(
-      computeSessionFeedback(false, [
-        { comment: 'hi', topics: ['a'], submittedAt: '2026-10-01T19:00:00Z' },
-      ]),
-    ).toEqual({ collected: false, comments: [], topics: [] });
+      computeSessionFeedback({
+        isCollected: false,
+        rows: [
+          {
+            comment: 'hi',
+            topics: ['a'],
+            submittedAt: '2026-10-01T19:00:00Z',
+          },
+        ],
+        roundRatings: [{ roundId: 1, average: 4, count: 2 }],
+      }),
+    ).toEqual({ collected: false, comments: [], topics: [], rating: null });
+  });
+
+  it('rates the session at the mean of every rating, each counting once', () => {
+    const feedback = computeSessionFeedback({
+      isCollected: true,
+      rows: [],
+      roundRatings: [
+        { roundId: 1, average: 5, count: 3 },
+        { roundId: 2, average: 2, count: 1 },
+      ],
+    });
+
+    // 17 stars over 4 ratings; the mean of the round averages would be 3.5.
+    expect(feedback.rating).toEqual({ average: 4.25, count: 4 });
+  });
+
+  it('has no session rating when nobody rated', () => {
+    expect(
+      computeSessionFeedback({ isCollected: true, rows: [], roundRatings: [] })
+        .rating,
+    ).toBeNull();
   });
 
   it('lists comments newest first, skipping blank ones, with ISO timestamps', () => {
-    const feedback = computeSessionFeedback(true, [
-      { comment: 'first', topics: [], submittedAt: '2026-10-01T19:00:00Z' },
-      { comment: '   ', topics: [], submittedAt: '2026-10-01T19:30:00Z' },
-      {
-        comment: 'second',
-        topics: [],
-        submittedAt: new Date('2026-10-01T20:00:00Z'),
-      },
-    ]);
+    const feedback = computeSessionFeedback({
+      isCollected: true,
+      roundRatings: [],
+      rows: [
+        { comment: 'first', topics: [], submittedAt: '2026-10-01T19:00:00Z' },
+        { comment: '   ', topics: [], submittedAt: '2026-10-01T19:30:00Z' },
+        {
+          comment: 'second',
+          topics: [],
+          submittedAt: new Date('2026-10-01T20:00:00Z'),
+        },
+      ],
+    });
 
     expect(feedback.collected).toBe(true);
     expect(feedback.comments).toEqual([
@@ -74,10 +107,14 @@ describe('computeSessionFeedback', () => {
   });
 
   it('groups the topics of every row', () => {
-    const feedback = computeSessionFeedback(true, [
-      { comment: '', topics: ['Music'], submittedAt: '2026-10-01T19:00:00Z' },
-      { comment: '', topics: ['music'], submittedAt: '2026-10-01T19:01:00Z' },
-    ]);
+    const feedback = computeSessionFeedback({
+      isCollected: true,
+      roundRatings: [],
+      rows: [
+        { comment: '', topics: ['Music'], submittedAt: '2026-10-01T19:00:00Z' },
+        { comment: '', topics: ['music'], submittedAt: '2026-10-01T19:01:00Z' },
+      ],
+    });
 
     expect(feedback.topics).toEqual([{ topic: 'Music', count: 2 }]);
   });

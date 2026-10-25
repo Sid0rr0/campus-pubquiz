@@ -1687,6 +1687,10 @@ for the rest of the flow.
 a questions table, highlight tiles and the Scoresheet. All of it is computed per request from
 the stored rows, never cached.
 
+There is no fastest-answer or fastest-team highlight (the tiles were dropped):
+response times show only as each standing row's average response and each
+question row's `fastestResponseMs`.
+
 Each question row carries `answer`, the correct answer worded by `formatAnswer`,
 since a round can repeat one prompt over different media. The questions table
 shows it as the **Answer** column and the **Hardest question** tile as an
@@ -1751,12 +1755,19 @@ session (`avg(stars)`, `count(*)` per round), so the response never carries a
 team id or name for any rating — ratings are anonymous on this page and in the API.
 
 The session detail also carries a `feedback` section, shown on the page as
-**Comments** and **Topic suggestions**:
-`{ collected, comments: [{ text, submittedAt }], topics: [{ topic, count }] }`.
+the **Rating** tile, **Comments** and **Topic suggestions**:
+`{ collected, comments: [{ text, submittedAt }], topics: [{ topic, count }], rating: { average, count } | null }`.
 
 - `collected` is the session's `collectFeedback` setting (a session stored without
-  it reads as `true`). When it is `false` the lists are empty and the page shows
+  it reads as `true`). When it is `false` the lists are empty, `rating` is `null`,
+  the Rating tile reads "Feedback was off" and the page shows
   "Feedback was off for this session" instead of the two sections.
+- `rating` is the session rating (see `GLOSSARY.md`): the mean of every round
+  rating of the session, each counting once, so a round many teams rated weighs
+  more than one rated once. It is worked out from the per-round `avg(stars)` and
+  `count(*)` above (the averages weighted by their counts), the same figure as
+  the Feedback trends page's per-session `rating`. The tile shows "★ 4.2" with
+  "37 ratings" below, or "—" when nobody rated (`rating: null`).
 - `comments` are the teams' "Anything else" texts, newest first, with empty and
   whitespace-only ones skipped.
 - `topics` group suggestions that match after trimming, collapsing inner

@@ -1,8 +1,12 @@
 import type {
   SessionDetailFeedback,
   SessionDetailFeedbackTopic,
+  SessionDetailRoundRating,
 } from '@campus-pubquiz/types';
-import type { SessionDetailFeedbackInputRow } from '@/stats/session-detail.calc';
+import type {
+  SessionDetailFeedbackInputRow,
+  SessionDetailRoundRatingInputRow,
+} from '@/stats/session-detail.calc';
 
 /** Same topic regardless of capitals and spaces: trimmed, inner whitespace collapsed, lower-cased. */
 function topicKey(topic: string): string {
@@ -46,12 +50,34 @@ export function groupTopics(
     .sort((a, b) => b.count - a.count || a.topic.localeCompare(b.topic));
 }
 
-/** The anonymous feedback section: newest comments first, empty ones skipped, topics grouped. */
-export function computeSessionFeedback(
-  isCollected: boolean,
-  rows: readonly SessionDetailFeedbackInputRow[],
-): SessionDetailFeedback {
-  if (!isCollected) return { collected: false, comments: [], topics: [] };
+/** The Session rating: the per-round averages weighted by their counts, so each rating counts once. */
+function sessionRating(
+  roundRatings: readonly SessionDetailRoundRatingInputRow[],
+): SessionDetailRoundRating | null {
+  const count = roundRatings.reduce((sum, r) => sum + r.count, 0);
+  if (count === 0) return null;
+  const stars = roundRatings.reduce((sum, r) => sum + r.average * r.count, 0);
+  return { average: stars / count, count };
+}
+
+export interface SessionFeedbackInput {
+  /** The session's "Collect feedback" setting. */
+  isCollected: boolean;
+  /** Each team's comment and topics, oldest first. */
+  rows: readonly SessionDetailFeedbackInputRow[];
+  /** One row per rated round. */
+  roundRatings: readonly SessionDetailRoundRatingInputRow[];
+}
+
+/** The anonymous feedback section: newest comments first, empty ones skipped, topics grouped, the Session rating. */
+export function computeSessionFeedback({
+  isCollected,
+  rows,
+  roundRatings,
+}: SessionFeedbackInput): SessionDetailFeedback {
+  if (!isCollected) {
+    return { collected: false, comments: [], topics: [], rating: null };
+  }
 
   const comments = rows
     .filter((row) => row.comment.trim() !== '')
@@ -65,5 +91,6 @@ export function computeSessionFeedback(
     collected: true,
     comments,
     topics: groupTopics(rows.map((row) => row.topics)),
+    rating: sessionRating(roundRatings),
   };
 }

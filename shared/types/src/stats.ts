@@ -94,6 +94,8 @@ export interface SessionDetailFeedback {
   comments: SessionDetailFeedbackComment[];
   /** Sorted by count, then alphabetically. */
   topics: SessionDetailFeedbackTopic[];
+  /** The Session rating: every round rating of the session, each counting once. Null when nobody rated or feedback was off. */
+  rating: SessionDetailRoundRating | null;
 }
 
 export interface SessionDetailRoundRow {
@@ -129,17 +131,6 @@ export interface SessionDetailQuestionRow {
   fastestResponseMs: number | null;
 }
 
-export interface SessionDetailFastestAnswer {
-  teamName: string;
-  questionId: number;
-  responseMs: number;
-}
-
-export interface SessionDetailFastestTeam {
-  teamName: string;
-  avgResponseMs: number;
-}
-
 export interface SessionDetailBonusSummary {
   total: number;
   byCategory: Record<BonusCategory, number>;
@@ -152,8 +143,6 @@ export interface SessionDetailHighlights {
   hardestRoundId: number | null;
   allCorrectQuestionIds: number[];
   noneCorrectQuestionIds: number[];
-  fastestAnswer: SessionDetailFastestAnswer | null;
-  fastestTeam: SessionDetailFastestTeam | null;
   bonus: SessionDetailBonusSummary;
   // Winning team's total minus the runner-up's — null with fewer than 2 teams.
   winningMargin: number | null;

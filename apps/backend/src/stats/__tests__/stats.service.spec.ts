@@ -780,6 +780,36 @@ describe('StatsService (Postgres integration)', () => {
         'count',
       ]);
     });
+
+    it('rates the session at the mean of every rating, not of the round averages', async () => {
+      const { quiz, questions } = await createQuiz('Quiz', [[1], [1]]);
+      const session = await createSession(quiz, 'RATED5', 'ended');
+      const alpha = await joinTeam(session, 'SecretSquad');
+      const beta = await joinTeam(session, 'Beta');
+      const gamma = await joinTeam(session, 'Gamma');
+      await rate(session, questions[0][0].round, alpha, 5);
+      await rate(session, questions[0][0].round, beta, 5);
+      await rate(session, questions[0][0].round, gamma, 5);
+      await rate(session, questions[1][0].round, alpha, 2);
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      // 17 stars over 4 ratings, where the two round averages would give 3.5.
+      expect(result.feedback.rating).toEqual({ average: 4.25, count: 4 });
+      expect(JSON.stringify(result.feedback.rating)).not.toContain(
+        'SecretSquad',
+      );
+    });
+
+    it('has no session rating when nobody rated', async () => {
+      const { quiz } = await createQuiz('Quiz', [[1]]);
+      const session = await createSession(quiz, 'RATED6', 'ended');
+      await joinTeam(session, 'Alpha');
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback.rating).toBeNull();
+    });
   });
 
   describe('getFeedbackTrends sessions', () => {
@@ -1319,6 +1349,7 @@ describe('StatsService (Postgres integration)', () => {
         collected: false,
         comments: [],
         topics: [],
+        rating: null,
       });
     });
 

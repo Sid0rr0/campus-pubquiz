@@ -183,8 +183,6 @@ describe('StatsController', () => {
           hardestRoundId: null,
           allCorrectQuestionIds: [],
           noneCorrectQuestionIds: [],
-          fastestAnswer: null,
-          fastestTeam: null,
           bonus: {
             total: 0,
             byCategory: { shot: 0, selfie: 0, custom: 0 },
