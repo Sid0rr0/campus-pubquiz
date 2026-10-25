@@ -69,6 +69,11 @@ const SENDERS: Record<keyof typeof D, EventSender> = {
       gateway.handleSendFeedback(asSocket(socket), payload),
     payload: () => ({ comment: 'Great night', topics: ['Geography'] }),
   },
+  rateSession: {
+    send: (gateway, socket, payload) =>
+      gateway.handleRateSession(asSocket(socket), payload),
+    payload: () => ({ scale: 'pacing', value: 'just_right' }),
+  },
   pickJoker: {
     send: (gateway, socket, payload) =>
       gateway.handlePickJoker(asSocket(socket), payload),

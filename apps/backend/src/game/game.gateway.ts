@@ -154,6 +154,20 @@ export class GameGateway
     );
   }
 
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.rateSession.event)
+  async handleRateSession(
+    @ConnectedSocket() client: GameSocket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.rateSession,
+      rawPayload,
+      client,
+      ({ joinCode, payload, client }) =>
+        this.gameState.sessionRated(joinCode, payload, client.id),
+    );
+  }
+
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setPlayerCount.event)
   async handleSetPlayerCount(
     @ConnectedSocket() client: GameSocket,

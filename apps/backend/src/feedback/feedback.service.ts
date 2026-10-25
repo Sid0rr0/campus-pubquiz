@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { z } from 'zod';
-import type { RoundRatingView, TeamFeedbackView } from '@campus-pubquiz/types';
+import type {
+  RateSessionPayload,
+  RoundRatingView,
+  TeamFeedbackView,
+  TeamSessionRatingsView,
+} from '@campus-pubquiz/types';
 import { RoundRating } from '@/db/entities/round-rating.entity';
 import { SessionFeedback } from '@/db/entities/session-feedback.entity';
 import { RoundRatingRepository } from '@/db/repositories/round-rating.repository';
@@ -45,7 +50,47 @@ export class FeedbackService {
     );
   }
 
-  /** Saves the team's comment and topics, replacing whatever it sent before (the whole row). */
+  /**
+   * Saves the team's answer on one scale (last write wins), leaving the other
+   * scale, the comment and the topics alone. The row's updatedAt is left too:
+   * it dates the comment, which staff read as "submitted at".
+   */
+  async rateSession(
+    gameSessionId: number,
+    teamId: number,
+    { scale, value }: RateSessionPayload,
+  ): Promise<void> {
+    const now = new Date();
+    await this.sessionFeedback.upsert(
+      {
+        gameSession: gameSessionId,
+        team: teamId,
+        comment: '',
+        topics: [],
+        [scale]: value,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        onConflictFields: ['gameSession', 'team'],
+        onConflictMergeFields: [scale],
+      },
+    );
+  }
+
+  /** The team's own pacing and felt-difficulty answers this session, null where it gave none. */
+  async getSessionRatingsForTeam(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<TeamSessionRatingsView> {
+    const row = await this.sessionFeedback.findForTeam(gameSessionId, teamId);
+    return {
+      pacing: row?.pacing ?? null,
+      feltDifficulty: row?.feltDifficulty ?? null,
+    };
+  }
+
+  /** Saves the team's comment and topics, replacing whatever it sent before; its pacing and felt-difficulty answers are kept. */
   async sendFeedback(
     gameSessionId: number,
     teamId: number,
