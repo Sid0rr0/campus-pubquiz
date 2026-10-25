@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| mutation-testing-frontend       | [Mutation testing: the frontend](mutation-testing-frontend/spec.md)                                                                                                        | 7       |
 | mutation-testing-db             | [Mutation testing: the DB-backed backend](mutation-testing-db/spec.md)                                                                                                     | 7       |
 | mutation-testing-followup       | [Mutation testing: follow-up after the first audit](mutation-testing-followup/spec.md)                                                                                     | 3       |
 | mutation-testing                | [Mutation testing: first audit](mutation-testing/spec.md)                                                                                                                  | 12      |
