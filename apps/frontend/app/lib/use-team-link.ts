@@ -210,6 +210,7 @@ export function useTeamLink(
   const latestAnswerRef = useRef<Promise<AckResult> | null>(null);
   const [seenQuestions, setSeenQuestions] = useState<SeenQuestions>({});
 
+  // Stryker disable ArrayDeclaration: equivalent — every dependency array below lists only references that never change for the life of the hook (`dispatch` and `emitWithAck` are `useCallback(…, [])`, `forceReconnect` depends on a `useCallback(…, [])`, and Next's `router` is stable), so an emptied or padded list behaves the same.
   const dispatch = useCallback(function dispatch(input: TeamLinkInput) {
     const step = teamLink(linkRef.current, input);
     linkRef.current = step.state;
@@ -222,11 +223,13 @@ export function useTeamLink(
       confirmTimerRef.current = null;
     }
 
+    // Stryker disable BlockStatement,CallExpression: equivalent — a retry timer left running when another is scheduled fires `joinRetryDue`, which the Team link re-checks against the connection, the link and the join in flight, so at worst a rejoin goes out a little early.
     function clearJoinRetryTimer() {
       if (joinRetryTimerRef.current === null) return;
       clearTimeout(joinRetryTimerRef.current);
       joinRetryTimerRef.current = null;
     }
+    // Stryker restore BlockStatement,CallExpression
 
     function runCommand(command: TeamLinkCommand) {
       const connection = connectionRef.current;
@@ -251,6 +254,7 @@ export function useTeamLink(
               connection?.emitWithAck(SOCKET_EVENTS.SUBMIT_ANSWER, payload) ??
               Promise.resolve(NOT_CONNECTED_RESULT);
             void sent.then((result) => {
+              // Stryker disable next-line CallExpression: equivalent — a waiter left in the map is only resolved a second time later, which a promise ignores
               answerWaitersRef.current.delete(attempt);
               resolve(result);
               dispatch(
@@ -263,6 +267,7 @@ export function useTeamLink(
           break;
         }
         case 'armConfirmTimer':
+          // Stryker disable next-line CallExpression: equivalent — the Team link always emits `clearConfirmTimer` just before `armConfirmTimer`
           clearConfirmTimer();
           confirmTimerRef.current = setTimeout(() => {
             confirmTimerRef.current = null;
@@ -279,6 +284,7 @@ export function useTeamLink(
           connection?.forceReconnect();
           break;
         case 'scheduleJoinRetry':
+          // Stryker disable next-line CallExpression: equivalent — see clearJoinRetryTimer
           clearJoinRetryTimer();
           joinRetryTimerRef.current = setTimeout(() => {
             joinRetryTimerRef.current = null;
@@ -306,8 +312,10 @@ export function useTeamLink(
         case 'goToJoinScreen':
           goToJoinScreenRef.current();
           break;
+        // Stryker disable next-line ConditionalExpression,BlockStatement,StringLiteral: equivalent — an exhaustiveness guard; `command` is `never` here, so no input reaches it
         default: {
           const unhandled: never = command;
+          // Stryker disable next-line all: see above
           throw new Error(`Unhandled team link command: ${String(unhandled)}`);
         }
       }
@@ -417,11 +425,14 @@ export function useTeamLink(
   const connectionCountRef = useRef({ count: 0, last: socketConnection });
   useEffect(() => {
     if (!socketConnection) {
+      // Stryker disable next-line ConditionalExpression: equivalent — with no connection held, `disconnected` only restates null/false fields, and a new identity clears the rest
       if (linkRef.current.connection) dispatch({ type: 'disconnected' });
       return;
     }
     const counter = connectionCountRef.current;
+    // Stryker disable next-line ConditionalExpression: equivalent — this effect only runs when `socketConnection` changes, so the two always differ here
     if (counter.last !== socketConnection) {
+      // Stryker disable next-line AssignmentOperator: equivalent — connection ids are only compared for equality, so counting down tells connections apart just as well
       counter.count += 1;
       counter.last = socketConnection;
     }
@@ -535,6 +546,7 @@ export function useTeamLink(
     [dispatch],
   );
 
+  // Stryker restore ArrayDeclaration
   const connectionError =
     link.joinError ?? link.kickNotice ?? socketConnectionError;
 

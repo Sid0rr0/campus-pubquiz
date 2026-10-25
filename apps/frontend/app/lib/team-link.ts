@@ -695,6 +695,7 @@ function syncJoker(
   const isChange =
     joker !== null &&
     (joker.roundId !== state.myJoker?.roundId ||
+      // Stryker disable next-line OptionalChaining: equivalent — roundId is always a number, so with no held joker the first comparison is already true and this one is never reached
       joker.source !== state.myJoker?.source);
   if (!isChange || joker.source === 'chosen') return unchanged(next);
   const message =
