@@ -33,12 +33,14 @@ Recorded as equivalent with `// Stryker disable` comments:
 
 - `team-link.ts` `syncJoker`: `state.myJoker?.source` optional chain — `roundId` is always a number, so with no held joker the first comparison is already true and the second is never reached.
 - `use-team-link.ts`:
-  - every hook dependency array (`ArrayDeclaration`): they list only stable references (`dispatch` and `emitWithAck` are `useCallback(…, [])`, `forceReconnect` depends on one, Next's `router` is stable);
-  - `clearJoinRetryTimer` and its call: a leftover retry timer fires `joinRetryDue`, which the Team link re-checks, so at worst a rejoin goes out early;
+  - the hook dependency arrays (`ArrayDeclaration`) that survive: they list only stable references (`dispatch` and `emitWithAck` are `useCallback(…, [])`, `forceReconnect` depends on one, Next's `router` is stable). Each is disabled on its own line with its own reason. Three (`dispatch`, the refs effect, the storage-read effect) are narrow ranges instead, because Stryker ignores a `next-line` comment that sits above a `}, [...]);` line;
+  - the `default:` guard's `throw` (`CallExpression`, `StringLiteral`): unreachable;
   - `answerWaitersRef.current.delete(attempt)`: a leftover waiter is only resolved a second time, which a promise ignores;
   - the `clearConfirmTimer()` inside `armConfirmTimer`: the Team link always emits `clearConfirmTimer` just before it;
-  - the `default:` guard of `runCommand`: `command` is `never` there;
+  - the `default:` guard of `runCommand` (its `ConditionalExpression`, `BlockStatement`, `StringLiteral`): `command` is `never` there;
   - `if (linkRef.current.connection)` before `disconnected`: with no connection held, `disconnected` only restates null/false fields;
   - the connection counter (`counter.last !== socketConnection` and `count += 1`): the effect only runs when `socketConnection` changes, and ids are only compared for equality.
+
+Re-examined in review: `clearJoinRetryTimer` was first recorded as equivalent ("a leftover retry timer fires `joinRetryDue`, which the Team link re-checks"). It is observable: a refusal on a newer connection schedules a second retry while the first is pending, and without the clear the first timer is left running (it outlives unmount). The new spec "replaces a pending retry when a newer connection is refused too, leaving no stale timer" counts fake timers and kills the mutants, so the disable is gone.
 
 Found on the way: `vi.spyOn(Storage.prototype, 'getItem')` does nothing under happy-dom (`window.localStorage.getItem` does not read the prototype), so the "works with storage unavailable" tests in `app/display/__tests__/reconnect.test.tsx` and `app/play/__tests__/player-count.test.tsx` never actually block storage. `vi.spyOn(window.localStorage, 'getItem')` does. Not changed here.

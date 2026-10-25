@@ -27,6 +27,7 @@ Equivalent mutants, marked in source with `// Stryker disable next-line <mutator
 - `use-quiz-draft.ts`:
   - the `?? 'Could not save the quiz.'` second fallback is reached only for a null error, which a rejected save never carries;
   - the `-1` placeholder query key is never read, because the query is disabled for a new quiz;
-  - dropping `setMergedDraft` in the hydration branch only makes the next render run the backfill once, which changes nothing on freshly hydrated rounds;
   - `run + 1` to `run - 1` on the saved-flash counter: it only has to change to restart the timer;
   - `if (!savedFlash) return` to `if (false)`: with the flash already off, the timer only sets it off again.
+
+Re-examined in review: dropping `setMergedDraft` in the hydration branch was first recorded as equivalent. It is observable as a render: the next render runs the backfill, whose `withSyncedQuestionIds` returns a fresh `rounds` array. The spec "copies the loaded rounds into the editor once, without the refetch backfill copying them again" counts the distinct `rounds` arrays a render sees, and kills it, so the disable is gone.

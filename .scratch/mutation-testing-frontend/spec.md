@@ -24,6 +24,11 @@ Run 2026-10-24 (clean, no incremental file), 75 source files, `pnpm --filter fro
 
 A further 1255 mutants failed to compile, so the TypeScript checker dropped them. `[id]` paths match: the quiz editor and `stats/[id]` files are in the run. `app/**/__tests__/**` is excluded too (the `fake-socket.ts` helper), beyond the ticket's `*.test.ts` and `*.d.ts`. Work each survivor ticket as in `.scratch/mutation-testing/spec.md` "How to work an issue".
 
+## Open follow-ups
+
+- Revisit whether `CODING_STANDARDS.md` should require direct specs for frontend `.ts` logic (the decision deferred above, now that the baseline and survivor tickets are in).
+- The "works with storage unavailable" tests in `app/display/__tests__/reconnect.test.tsx` and `app/play/__tests__/player-count.test.tsx` never block storage under happy-dom, because `vi.spyOn(Storage.prototype, ...)` does nothing there. Switch them to `vi.spyOn(window.localStorage, ...)`.
+
 ## Tickets
 
 1. Wire up `mutate` and run the baseline (`issues/01-wire-up-and-baseline.md`).

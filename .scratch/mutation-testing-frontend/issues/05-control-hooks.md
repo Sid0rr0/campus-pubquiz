@@ -22,8 +22,8 @@ All three files now score 100% (no survivors, no uncovered mutants).
 
 Equivalent, disabled in source with a reason:
 
-- `use-admin-keyboard-shortcuts.ts` `matchesKey`: the `length === 1` condition and the named-key branch are unreachable, since every shortcut routed through it is a single character.
-- `use-admin-game.ts`: all `useCallback` dependency arrays (ArrayDeclaration); every listed reference is stable for the life of the hook.
+- `use-admin-keyboard-shortcuts.ts` `matchesKey`: dead code. The `length === 1` condition and the named-key branch cannot be reached, since every shortcut routed through it (`j`, `f`, space, `m`) is a single character; the named keys (arrows) are matched directly elsewhere. Re-examined in review: no test can reach it without changing `ADMIN_SHORTCUTS`, so the disables stay and behaviour is unchanged. Removing the branch is a separate decision.
+- `use-admin-game.ts`: the `useCallback` dependency arrays (ArrayDeclaration); every listed reference is stable for the life of the hook. Each is disabled on its own line with its own reason; the two `[]` arrays after a callback's closing brace (`bindSocket`, `focusAnswersQuestionId`) use narrow ranges, because Stryker ignores a `next-line` comment above a `}, []);` line.
 
 Done when:
 

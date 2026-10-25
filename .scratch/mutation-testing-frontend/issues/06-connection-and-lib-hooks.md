@@ -20,7 +20,7 @@ Equivalent mutants, marked `// Stryker disable` in the source:
 
 - `use-game-connection.ts`: the dependency arrays of `reportConnection`, `emitWithAck` and `forceReconnect` (`[]` to a constant, `[reportConnection]` to `[]`). `reportConnection` never changes identity, so the callbacks are as stable either way.
 - `use-lock-countdown-sound.ts`: `unlock`'s `[]` dependency array, same reason.
-- `use-reconnect-on-wake.ts`: the subscribe effect's `[]` dependency array (a constant array still runs it once).
+- `use-reconnect-on-wake.ts`: the subscribe effect's `[]` dependency array (a constant array still runs it once). A narrow range, since Stryker ignores a `next-line` comment above a `}, []);` line; the same goes for `forceReconnect`'s array in `use-game-connection.ts`.
 
 Done when:
 
