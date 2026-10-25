@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   QUESTION_KINDS,
   checkQuestion,
@@ -24,6 +24,8 @@ import {
   moveQuestionToRound,
   moveRound,
   moveTargetRounds,
+  patchQuestion,
+  type EditorRound,
   questionFromPreview,
   questionToPreview,
   roundFromPreview,
@@ -1419,5 +1421,403 @@ describe('grading settings round-trip through the editor, per question type', ()
     };
 
     expect(questionToPreview(question).margin?.value).toBeNaN();
+  });
+});
+
+describe('blank editor building blocks', () => {
+  it('makes an option that is blank and not marked correct', () => {
+    expect(makeOption()).toStrictEqual({ text: '', isCorrect: false });
+    expect(makeOption('Paris')).toStrictEqual({
+      text: 'Paris',
+      isCorrect: false,
+    });
+  });
+
+  it('makes a blank match pair', () => {
+    expect(makeMatchPair()).toStrictEqual({ left: '', right: '' });
+    expect(makeMatchPair('a', 'b')).toStrictEqual({ left: 'a', right: 'b' });
+  });
+});
+
+describe('patchQuestion', () => {
+  const number = {
+    ...makeQuestion('q1'),
+    type: 'number' as const,
+    correctText: 'about 200',
+  };
+
+  it('clears a non-numeric answer when the patch moves the type to Number', () => {
+    const patched = patchQuestion(
+      { ...number, type: 'free_text' },
+      { type: 'number' },
+    );
+
+    expect(patched.type).toBe('number');
+    expect(patched.correctText).toBe('');
+  });
+
+  it('leaves the answer alone when the patch repeats the current type', () => {
+    expect(patchQuestion(number, { type: 'number' }).correctText).toBe(
+      'about 200',
+    );
+  });
+
+  it('leaves the answer alone when the patch carries no type', () => {
+    const patched = patchQuestion(number, { prompt: 'New prompt' });
+
+    expect(patched.prompt).toBe('New prompt');
+    expect(patched.correctText).toBe('about 200');
+  });
+
+  it('lets the rest of the patch land on top of the retyped question', () => {
+    const patched = patchQuestion(
+      { ...number, type: 'free_text' },
+      { type: 'number', correctText: '7' },
+    );
+
+    expect(patched.correctText).toBe('7');
+  });
+});
+
+describe('a loaded question that has no stored answer shape of another kind', () => {
+  const free: ImportQuestionPreview = {
+    type: 'free_text',
+    prompt: 'Q?',
+    answer: 'A',
+    points: 1,
+  };
+
+  it('starts with the persisted id only when the preview carries one', () => {
+    expect(questionFromPreview('q1', free)).not.toHaveProperty('dbId');
+    expect(questionFromPreview('q1', { ...free, questionId: 9 }).dbId).toBe(9);
+  });
+
+  it('keeps two blank options, sort items and match pairs ready to switch type', () => {
+    const question = questionFromPreview('q1', free);
+
+    expect(question.options).toStrictEqual([
+      { text: '', isCorrect: false },
+      { text: '', isCorrect: false },
+    ]);
+    expect(question.sortItems).toStrictEqual(['', '']);
+    expect(question.matchPairs).toStrictEqual([
+      { left: '', right: '' },
+      { left: '', right: '' },
+    ]);
+  });
+
+  it('keeps the blank sort items when a sort question stores no answer', () => {
+    const question = questionFromPreview('q1', {
+      ...free,
+      type: 'sort',
+      answer: '',
+    });
+
+    expect(question.sortItems).toStrictEqual(['', '']);
+  });
+
+  it('keeps the blank pairs when a match question stores no options', () => {
+    const question = questionFromPreview('q1', {
+      ...free,
+      type: 'match',
+      answer: '',
+    });
+
+    expect(question.matchPairs).toStrictEqual([
+      { left: '', right: '' },
+      { left: '', right: '' },
+    ]);
+  });
+
+  it('leaves a match pair’s right side blank when the answer has fewer items than options', () => {
+    const question = questionFromPreview('q1', {
+      ...free,
+      type: 'match',
+      answer: 'shield',
+      options: ['arthur', 'captain america'],
+      matchTargets: ['shield'],
+    });
+
+    expect(question.matchPairs).toStrictEqual([
+      { left: 'arthur', right: 'shield' },
+      { left: 'captain america', right: '' },
+    ]);
+  });
+
+  it('loads a multiple choice question with no stored options as no options', () => {
+    const question = questionFromPreview('q1', {
+      ...free,
+      type: 'multiple_choice',
+    });
+
+    expect(question.options).toStrictEqual([]);
+  });
+});
+
+describe('saving answers', () => {
+  it('trims a typed answer', () => {
+    const question = {
+      ...makeQuestion('q1'),
+      type: 'free_text' as const,
+      correctText: '  Jupiter ',
+    };
+
+    expect(questionToPreview(question).answer).toBe('Jupiter');
+  });
+
+  it('saves a blank answer when no multiple choice option is marked correct', () => {
+    const question = {
+      ...makeQuestion('q1'),
+      options: [makeOption('Paris'), makeOption('Rome')],
+    };
+
+    expect(questionToPreview(question).answer).toBe('');
+  });
+
+  it('trims match pairs and drops any pair missing a side', () => {
+    const question = {
+      ...makeQuestion('q1'),
+      type: 'match' as const,
+      matchPairs: [
+        makeMatchPair(' arthur ', ' excalibur '),
+        makeMatchPair('thor', ''),
+        makeMatchPair('', 'hammer'),
+        makeMatchPair('  ', '  '),
+      ],
+    };
+
+    const saved = questionToPreview(question);
+
+    expect(saved.options).toStrictEqual(['arthur']);
+    expect(saved.answer).toBe('excalibur');
+    expect(saved.matchTargets).toStrictEqual(['excalibur']);
+  });
+
+  it('gives a new sort question a shuffled display order', () => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const question = {
+      ...makeQuestion('q1'),
+      type: 'sort' as const,
+      sortItems: ['a', 'b', 'c', 'd'],
+    };
+
+    const saved = questionToPreview(question);
+    random.mockRestore();
+
+    expect(saved.answer).toBe('a|b|c|d');
+    expect(saved.options).toStrictEqual(['a', 'd', 'b', 'c']);
+  });
+
+  it('reshuffles when the saved display order has more items than the question', () => {
+    const question = {
+      ...makeQuestion('q1'),
+      type: 'sort' as const,
+      sortItems: ['a', 'b'],
+      savedDisplayOrder: ['a', 'b', 'c'],
+    };
+
+    expect([...(questionToPreview(question).options ?? [])].sort()).toEqual([
+      'a',
+      'b',
+    ]);
+  });
+});
+
+describe('questionToPreview optional fields', () => {
+  const free = {
+    ...makeQuestion('q1'),
+    type: 'free_text' as const,
+    correctText: 'A',
+  };
+
+  it('trims notes and both media links', () => {
+    const saved = questionToPreview({
+      ...free,
+      notes: ' hint ',
+      mediaUrl: ' https://example.com/a.jpg ',
+      answerMediaUrl: ' https://example.com/b.jpg ',
+    });
+
+    expect(saved).toMatchObject({
+      notes: 'hint',
+      mediaUrl: 'https://example.com/a.jpg',
+      answerMediaUrl: 'https://example.com/b.jpg',
+    });
+  });
+
+  it('drops notes and media links that are only whitespace', () => {
+    const saved = questionToPreview({
+      ...free,
+      notes: '  ',
+      mediaUrl: '  ',
+      answerMediaUrl: '  ',
+    });
+
+    expect(saved).not.toHaveProperty('notes');
+    expect(saved).not.toHaveProperty('mediaUrl');
+    expect(saved).not.toHaveProperty('answerMediaUrl');
+  });
+
+  it('carries the persisted id only when the draft has one', () => {
+    expect(questionToPreview(free)).not.toHaveProperty('questionId');
+    expect(questionToPreview({ ...free, dbId: 5 }).questionId).toBe(5);
+  });
+});
+
+describe('round settings in the editor draft', () => {
+  const bare: ImportRoundPreview = {
+    title: 'R',
+    breakAfter: false,
+    questions: [],
+  };
+
+  it('defaults the round settings a preview leaves out', () => {
+    expect(roundFromPreview('r1', bare, () => 'q')).toStrictEqual({
+      id: 'r1',
+      title: 'R',
+      breakAfter: false,
+      kahootMode: false,
+      category: '',
+      author: '',
+      note: '',
+      showNoteOnScreen: false,
+      questions: [],
+    });
+  });
+
+  it('carries the round settings a preview has', () => {
+    const round = roundFromPreview(
+      'r1',
+      {
+        ...bare,
+        category: 'History',
+        author: 'Sam',
+        note: 'Say hi',
+        showNoteOnScreen: true,
+      },
+      () => 'q',
+    );
+
+    expect(round).toMatchObject({
+      category: 'History',
+      author: 'Sam',
+      note: 'Say hi',
+      showNoteOnScreen: true,
+    });
+  });
+
+  it('matches an existing round by title ignoring surrounding whitespace on the imported title', () => {
+    const current = [makeRound('r1', 'History')];
+
+    const merged = mergeRoundsFromPreview(
+      current,
+      [{ ...bare, title: '  history  ' }],
+      () => 'x',
+    );
+
+    expect(merged).toHaveLength(1);
+  });
+
+  it('strips only a trailing .csv from the file name', () => {
+    expect(csvImportTitle('', 'my.csv.notes.csv')).toBe('my.csv.notes');
+  });
+
+  it('saves the round settings trimmed, and leaves out blank ones', () => {
+    const settled: EditorRound = {
+      ...makeRound('r1', 'R'),
+      category: ' History ',
+      author: ' Sam ',
+      note: ' Say hi ',
+      showNoteOnScreen: true,
+    };
+    const blank: EditorRound = {
+      ...makeRound('r2', 'S'),
+      category: '  ',
+      author: '  ',
+      note: '  ',
+      showNoteOnScreen: true,
+    };
+
+    const [first, second] = toSaveRequest('T', [settled, blank]).rounds;
+
+    expect(first).toStrictEqual({
+      title: 'R',
+      breakAfter: false,
+      kahootMode: false,
+      category: 'History',
+      author: 'Sam',
+      note: 'Say hi',
+      showNoteOnScreen: true,
+      questions: [],
+    });
+    expect(second).toStrictEqual({
+      title: 'S',
+      breakAfter: true,
+      kahootMode: false,
+      questions: [],
+    });
+  });
+
+  it('leaves the on-screen flag out of a saved note that is not shown', () => {
+    const round: EditorRound = { ...makeRound('r1', 'R'), note: 'Say hi' };
+
+    expect(toSaveRequest('T', [round]).rounds[0]).not.toHaveProperty(
+      'showNoteOnScreen',
+    );
+  });
+});
+
+describe('draft edits that the earlier specs left open', () => {
+  it('has no structure note for a free round even when questions are pinned', () => {
+    expect(
+      structureNoteFor({
+        isReached: false,
+        structureEditing: 'free',
+        pinnedQuestionCount: 3,
+        canTakeMovedQuestion: true,
+        lockReason: null,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('moves the question asked for, not the first one in its round', () => {
+    const q1 = makeQuestion('q1');
+    const q2 = makeQuestion('q2');
+    const rounds = [
+      { ...makeRound('r1', 'One'), questions: [q1, q2] },
+      makeRound('r2', 'Two'),
+    ];
+
+    const moved = moveQuestionToRound(rounds, 'q2', 'r2');
+
+    expect(moved[0].questions).toEqual([q1]);
+    expect(moved[1].questions).toEqual([q2]);
+  });
+
+  it('keeps a new question without a dbId when the reload has no id for it', () => {
+    const question = { ...makeQuestion('q1'), type: 'free_text' as const };
+    const rounds = [{ ...makeRound('r1', 'History'), questions: [question] }];
+    const fresh: ImportRoundPreview[] = [
+      {
+        title: 'History',
+        breakAfter: true,
+        questions: [{ type: 'free_text', prompt: '', answer: 'A', points: 1 }],
+      },
+    ];
+
+    expect(withSyncedQuestionIds(rounds, fresh)[0].questions[0]).toStrictEqual(
+      question,
+    );
+  });
+
+  it('keeps a question the reload has no counterpart for', () => {
+    const question = { ...makeQuestion('q1'), type: 'free_text' as const };
+    const rounds = [{ ...makeRound('r1', 'History'), questions: [question] }];
+
+    const synced = withSyncedQuestionIds(rounds, [
+      { title: 'History', breakAfter: true, questions: [] },
+    ]);
+
+    expect(synced[0].questions[0]).toStrictEqual(question);
   });
 });

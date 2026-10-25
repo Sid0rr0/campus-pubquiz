@@ -49,6 +49,7 @@ function saveErrorMessage(error: unknown): string {
   }
   return (
     apiErrorMessage(error, QuizDraftApiError, 'Could not save the quiz.') ??
+    // Stryker disable next-line StringLiteral: only reached for a null error, which a rejected save never carries
     'Could not save the quiz.'
   );
 }
@@ -88,6 +89,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
   const numericQuizId = quizId === 'new' ? null : Number(quizId);
 
   const draftQuery = useQuery({
+    // Stryker disable next-line UnaryOperator: a new quiz leaves the query disabled, so its placeholder key is never read
     queryKey: queryKeys.quizzes.draft(numericQuizId ?? -1),
     queryFn: () => fetchQuizDraft(numericQuizId as number),
     enabled: numericQuizId !== null,
@@ -136,6 +138,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
   const [mergedDraft, setMergedDraft] = useState(draftQuery.data);
   if (draftQuery.data && hydratedQuizId !== numericQuizId) {
     setHydratedQuizId(numericQuizId);
+    // Stryker disable next-line CallExpression: without it the next render runs the backfill branch once, which changes nothing on freshly hydrated rounds
     setMergedDraft(draftQuery.data);
     const hydratedRounds = draftQuery.data.rounds.map((round) =>
       roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
@@ -161,6 +164,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
   // Hides the flash after a moment; re-saving restarts the timer and
   // unmounting cancels it.
   useEffect(() => {
+    // Stryker disable next-line ConditionalExpression: with the flash already off, the timer it starts only sets it off again
     if (!savedFlash) return;
     const timer = setTimeout(() => setSavedFlash(false), SAVED_FLASH_MS);
     return () => clearTimeout(timer);
@@ -183,6 +187,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
         router.replace(`/quizzes/${result.quizId}`);
       }
       setSavedFlash(true);
+      // Stryker disable next-line ArithmeticOperator: the counter only has to change to restart the flash timer, either direction does
       setSavedFlashRun((run) => run + 1);
       toast.success('Quiz saved');
       void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });

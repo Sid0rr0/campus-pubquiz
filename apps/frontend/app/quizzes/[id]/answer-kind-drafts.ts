@@ -20,6 +20,7 @@ interface AnswerKindDraft {
 /** Fisher-Yates on a fresh copy — never mutates `items`. Gives sort/match a display order distinct from the correct order/pairing declared in the editor. */
 function shuffled<T>(items: T[]): T[] {
   const copy = [...items];
+  // Stryker disable next-line EqualityOperator: at i = 0 the only j is 0, a swap of index 0 with itself
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
