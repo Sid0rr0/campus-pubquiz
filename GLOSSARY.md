@@ -240,12 +240,24 @@ The full-width bar fixed to the top of a phone while its connection is down. Aft
 ## Feedback
 
 **Feedback**:
-What a team tells the quiz master about a session from its phone: round ratings, an "anything else" comment and topic suggestions. Always optional, and given by the team, not by individual players. Staff never see which team gave it.
+What a team tells the quiz master about a session from its phone: round ratings, pacing, felt difficulty, an "anything else" comment and topic suggestions. Always optional, and given by the team, not by individual players. Staff never see which team gave it.
 _Avoid_: survey, review
 
 **Round rating**:
 A team's score for one round, from 1 to 5 stars in half-star steps (1, 1½ … 5). Asked in the break for the rounds of the block that just locked, and again on the final feedback form, where an earlier rating can be changed. A kahoot round has no break of its own, so it is rated only on the final form.
 _Avoid_: round score (that's points)
+
+**Pacing**:
+A team's view of how fast the whole session moved: too slow, just right or too fast. Asked once, on the final feedback form, and the same every session so nights can be compared.
+_Avoid_: speed rating, feedback question (a question is something the quiz asks)
+
+**Felt difficulty**:
+A team's view of how hard the whole session's questions were: too easy, just right or too hard. Asked once, on the final feedback form, and the same every session so nights can be compared. Not the session's difficulty, which is measured from the scores.
+_Avoid_: difficulty (that's measured from scores), difficulty rating
+
+**Session rating**:
+The average of every round rating a session got, each rating counting once (not the average of the rounds' averages), shown with how many ratings it is made of.
+_Avoid_: overall rating, night rating
 
 **Topic suggestion**:
 One topic a team would like as a round in a future session, entered as its own short line so suggestions from different teams can be counted together.
