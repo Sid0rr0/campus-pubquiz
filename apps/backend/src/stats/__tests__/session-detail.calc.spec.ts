@@ -803,6 +803,54 @@ describe('computeSessionDetail', () => {
     expect(result.questions[0].fastestResponseMs).toBeNull();
   });
 
+  it('averages the recorded response times per round, null when a round has none', () => {
+    const answer = (
+      questionId: number,
+      teamId: number,
+      responseMs: number | null,
+    ) => ({
+      questionId,
+      teamId,
+      teamName: `Team ${teamId}`,
+      pointsAwarded: 0,
+      gradedAt: null,
+      verdict: null,
+      responseMs,
+      answer: 'a',
+    });
+    const question = (questionId: number, roundId: number) => ({
+      questionId,
+      roundId,
+      orderIndex: 0,
+      prompt: 'Q',
+      answer: 'A',
+      type: 'free_text' as const,
+      points: 1,
+    });
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'Team 1' },
+          { teamId: 2, teamName: 'Team 2' },
+          { teamId: 3, teamName: 'Team 3' },
+        ],
+        rounds: [
+          { roundId: 100, title: 'One', category: null, orderIndex: 0 },
+          { roundId: 200, title: 'Two', category: null, orderIndex: 1 },
+        ],
+        questions: [question(10, 100), question(20, 200)],
+        answers: [
+          answer(10, 1, 2000),
+          answer(10, 2, 4000),
+          answer(10, 3, null),
+          answer(20, 1, null),
+        ],
+      }),
+    );
+
+    expect(result.rounds.map((r) => r.avgResponseMs)).toEqual([3000, null]);
+  });
+
   it('sums bonus points by category', () => {
     const result = computeSessionDetail(
       buildInput({

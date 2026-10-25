@@ -74,6 +74,7 @@ const DETAIL: SessionDetailStats = {
       rating: { average: 4, count: 2 },
       correctRate: 0.5,
       pointsPercent: 40,
+      avgResponseMs: null,
     },
   ],
   feedback: {

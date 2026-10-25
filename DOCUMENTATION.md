@@ -1691,6 +1691,12 @@ There is no fastest-answer or fastest-team highlight (the tiles were dropped):
 response times show only as each standing row's average response and each
 question row's `fastestResponseMs`.
 
+Each round row carries `avgResponseMs`, the mean `responseMs` over the round's
+answers that have one (null when none does); the rounds table shows it as the
+**Avg. response** column, "Not recorded" when null. In normal blocks the time
+runs to a team's last edit, not their first answer, so it reads as how long the
+round took to settle rather than how fast teams answered.
+
 Each question row carries `answer`, the correct answer worded by `formatAnswer`,
 since a round can repeat one prompt over different media. The questions table
 shows it as the **Answer** column and the **Hardest question** tile as an

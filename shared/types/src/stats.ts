@@ -109,6 +109,8 @@ export interface SessionDetailRoundRow {
   correctRate: number | null;
   // Points actually earned ÷ points achievable (teamCount * round's max points).
   pointsPercent: number;
+  /** Mean `responseMs` over the round's answers that have one; null when none does. */
+  avgResponseMs: number | null;
 }
 
 export interface SessionDetailQuestionRow {

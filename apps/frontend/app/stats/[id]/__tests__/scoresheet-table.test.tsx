@@ -39,6 +39,7 @@ function round(roundId: number, title: string): SessionDetailRoundRow {
     rating: null,
     correctRate: null,
     pointsPercent: 0,
+    avgResponseMs: null,
   };
 }
 

@@ -230,6 +230,9 @@ export function computeSessionDetail(
     );
     const achievablePoints = teamCount * roundMaxPoints;
     const rating = ratingByRoundId.get(round.roundId);
+    const timedResponses = roundAnswers
+      .map((a) => a.responseMs)
+      .filter((ms): ms is number => ms !== null);
     // Only the questions that have a correct rate count towards the round's.
     const ratedResults = roundQuestions.flatMap((q) => {
       const r = questionResultById.get(q.questionId);
@@ -253,6 +256,11 @@ export function computeSessionDetail(
               achievablePoints) *
             100
           : 0,
+      avgResponseMs:
+        timedResponses.length > 0
+          ? timedResponses.reduce((sum, ms) => sum + ms, 0) /
+            timedResponses.length
+          : null,
     };
   });
 

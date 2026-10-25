@@ -13,9 +13,37 @@ function round(
     rating: null,
     correctRate: 0.5,
     pointsPercent: 40,
+    avgResponseMs: null,
     ...overrides,
   };
 }
+
+describe('RoundsTable average response column', () => {
+  it('shows the mean response time in seconds', () => {
+    render(
+      <RoundsTable
+        rounds={[round({ avgResponseMs: 12340 })]}
+        hardestRoundId={null}
+      />,
+    );
+
+    expect(
+      screen.getByRole('columnheader', { name: 'Avg. response' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('12.3s')).toBeInTheDocument();
+  });
+
+  it('says Not recorded when no time was recorded', () => {
+    render(
+      <RoundsTable
+        rounds={[round({ avgResponseMs: null })]}
+        hardestRoundId={null}
+      />,
+    );
+
+    expect(screen.getByText('Not recorded')).toBeInTheDocument();
+  });
+});
 
 describe('RoundsTable correct rate column', () => {
   it('shows the rate as a percentage', () => {

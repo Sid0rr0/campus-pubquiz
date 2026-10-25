@@ -6,8 +6,8 @@ Parent spec: `.scratch/feedback-pacing-difficulty/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Backend: the mean per round, and null when no answer has a recorded time
-- [ ] Frontend: the column, with "Not recorded"
-- [ ] `DOCUMENTATION.md`: the column, with the caveat that in normal blocks the time runs to a team's last edit
+- [x] Backend: the mean per round, and null when no answer has a recorded time
+- [x] Frontend: the column, with "Not recorded"
+- [x] `DOCUMENTATION.md`: the column, with the caveat that in normal blocks the time runs to a team's last edit
