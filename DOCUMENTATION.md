@@ -1849,7 +1849,12 @@ the brief is data only.
   (none for `closest_guess`).
 - **Session level:** player totals ("7 (2 of 3 teams reported)") and a score
   spread line (top, median and bottom share of max points, across every team
-  that took part). **Standings** list one line per team with placing ("1st",
+  that took part). With feedback on, three more lines follow: the Session
+  rating ("Session rating: 4.3 stars (3 ratings)", or "no ratings"), then
+  Pacing and Felt difficulty as counts in scale order ("Pacing: too slow 0,
+  just right 2, too fast 1", or "no answers"). With `collectFeedback` off the
+  three lines are left out and the Feedback section's "Feedback was off."
+  covers them. There is no per-round response time. **Standings** list one line per team with placing ("1st",
   "Joint 2nd", or "left" for a departed team), points (bonus awards counted,
   not itemised), share of max points and player count, in the Session result's
   order and ties. **Highlights** name the hardest and easiest question by round

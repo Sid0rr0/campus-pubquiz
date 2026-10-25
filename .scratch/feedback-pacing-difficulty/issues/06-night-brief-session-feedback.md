@@ -6,7 +6,9 @@ Parent spec: `.scratch/feedback-pacing-difficulty/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Calc tests: the lines with answers, with none, and with feedback off
-- [ ] `DOCUMENTATION.md` (Night brief) updated
+- [x] Calc tests: the lines with answers, with none, and with feedback off
+- [x] `DOCUMENTATION.md` (Night brief) updated
+
+Note: the scale counts are computed in the brief calc from the feedback input rows (new optional `pacing` / `feltDifficulty` on `SessionDetailFeedbackInputRow`, selected by `StatsService`), not read from the detail, so it does not depend on ticket 03's detail shape.

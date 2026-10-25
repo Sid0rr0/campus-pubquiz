@@ -5,7 +5,10 @@ import {
   QUESTION_KINDS,
   questionNotesOf,
   questionOutcome,
+  SESSION_SCALE_VALUE_LABELS,
+  SESSION_SCALE_VALUES,
   type MediaKind,
+  type SessionScale,
 } from '@campus-pubquiz/types';
 import type {
   SessionDetailRoundRow,
@@ -103,6 +106,31 @@ function wordingOf(question: SessionBriefQuestionInputRow) {
   return { type: question.type, options: question.options };
 }
 
+/** One scale's answer counts in scale order ("too slow 0, just right 2, too fast 1"), or "no answers". */
+function scaleLine(
+  scale: SessionScale,
+  label: string,
+  counts: Record<string, number>,
+): string {
+  const values: readonly string[] = SESSION_SCALE_VALUES[scale];
+  if (values.every((value) => !counts[value])) return `${label}: no answers`;
+  const labels: Record<string, string> = SESSION_SCALE_VALUE_LABELS[scale];
+  return `${label}: ${values.map((value) => `${labels[value].toLowerCase()} ${counts[value] ?? 0}`).join(', ')}`;
+}
+
+/** The Session rating and the two scale lines; nothing when feedback was off (the Feedback section says so). */
+function sessionFeedbackLines(detail: SessionDetailStats): string[] {
+  const { feedback } = detail;
+  if (!feedback.collected) return [];
+  return [
+    feedback.rating
+      ? `Session rating: ${feedback.rating.average.toFixed(1)} stars (${plural(feedback.rating.count, 'rating')})`
+      : 'Session rating: no ratings',
+    scaleLine('pacing', 'Pacing', feedback.pacing),
+    scaleLine('feltDifficulty', 'Felt difficulty', feedback.feltDifficulty),
+  ];
+}
+
 function sessionSection(
   input: SessionBriefInput,
   detail: SessionDetailStats,
@@ -123,6 +151,7 @@ function sessionSection(
           `Score spread: top ${percent(shares[shares.length - 1])}, median ${percent(median(shares))}, bottom ${percent(shares[0])}`,
         ]
       : []),
+    ...sessionFeedbackLines(detail),
   ];
 }
 
