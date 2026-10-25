@@ -44,7 +44,7 @@ test('teams rate the rounds and suggest topics on their phones, and the quiz mas
   // 3. The quiz ends: the big screen thanks the room and asks again; the phones offer the final form with the break ratings kept.
   await endQuiz(control);
   await display.expectText('Quiz complete!');
-  await display.expectText('Rate the rounds and help us make the quiz better');
+  await display.expectText('Tell us how it went on your phone ★');
   await snap(display, 'ended');
   await phoneA.expectText('Quiz complete!');
   await expectRoundRating(phoneA, roundOneTitle, 4);
