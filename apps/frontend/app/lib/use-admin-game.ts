@@ -89,6 +89,7 @@ export function useAdminGame(
   // trigger the connect Effect.
   const focusedAnswersQuestionIdRef = useRef<number | null>(null);
 
+  // Stryker disable ArrayDeclaration: equivalent — every dependency array below lists only references that never change for the life of the hook (`emitWithAck` is `useCallback(…, [])` in useGameConnection, `emitAction` depends only on it, and the setters and ref are stable), so an emptied or padded list behaves the same.
   const bindSocket = useCallback((socket: RoomSocket<'admin'>) => {
     focusedAnswersQuestionIdRef.current = null;
     socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload) => {
@@ -222,6 +223,7 @@ export function useAdminGame(
   const focusAnswersQuestionId = useCallback((questionId: number | null) => {
     focusedAnswersQuestionIdRef.current = questionId;
   }, []);
+  // Stryker restore ArrayDeclaration
 
   return {
     snapshot,

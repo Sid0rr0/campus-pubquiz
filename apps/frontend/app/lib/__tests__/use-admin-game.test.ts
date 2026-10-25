@@ -272,6 +272,28 @@ describe('useAdminGame', () => {
       expect(result.current.liveAnswers).toEqual(focused);
     });
 
+    it('accepts a broadcast for any question while none is focused', () => {
+      const { result, socket } = renderConnectedAdmin();
+      const payload = { questionId: 5, answers: [] };
+
+      act(() => socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, payload));
+
+      expect(result.current.liveAnswers).toEqual(payload);
+    });
+
+    it('accepts broadcasts for any question again once the focus is cleared', () => {
+      const { result, socket } = renderConnectedAdmin();
+      const payload = { questionId: 2, answers: [] };
+
+      act(() => {
+        result.current.focusAnswersQuestionId(1);
+        result.current.focusAnswersQuestionId(null);
+        socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, payload);
+      });
+
+      expect(result.current.liveAnswers).toEqual(payload);
+    });
+
     it('folds a REST-fetched payload in through setLiveAnswers', () => {
       const { result } = renderConnectedAdmin();
       const payload = { questionId: 1, answers: [] };
@@ -318,6 +340,26 @@ describe('useAdminGame', () => {
       expect(result.current.presenterContext).toBeNull();
       expect(socket.disconnect).toHaveBeenCalled();
       expect(mockIo).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps live answers and presenter context when the hook is switched off', () => {
+      const { result, rerender } = renderHook(
+        ({ enabled }) => useAdminGame(enabled, 'AAAAAA'),
+        { initialProps: { enabled: true } },
+      );
+      const socket = latestSocket();
+      const answers = { questionId: 1, answers: [] };
+      const context = { notes: 'x' };
+      act(() => {
+        socket.serverConnects();
+        socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, answers);
+        socket.trigger(SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED, context);
+      });
+
+      rerender({ enabled: false });
+
+      expect(result.current.liveAnswers).toEqual(answers);
+      expect(result.current.presenterContext).toEqual(context);
     });
 
     it('exposes no players-only members and no bonus-award-error value', () => {

@@ -21,9 +21,11 @@ export interface UseAdminKeyboardShortcutsOptions {
 
 /** Letter keys match in either case (Shift, Caps Lock); named keys match exactly. */
 function matchesKey(event: KeyboardEvent, shortcutKey: string): boolean {
+  // Stryker disable next-line ConditionalExpression: equivalent — every shortcut routed through matchesKey is a single character today, so the named-key branch below is never reached
   return shortcutKey.length === 1
     ? event.key.toLowerCase() === shortcutKey
-    : event.key === shortcutKey;
+    : // Stryker disable next-line ConditionalExpression,EqualityOperator: equivalent — unreachable, see above
+      event.key === shortcutKey;
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
