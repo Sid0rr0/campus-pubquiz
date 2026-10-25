@@ -38,6 +38,7 @@ export function stepIndexAt(
   steps: readonly QuizPreviewStep[],
   at: string | null,
 ): number {
+  // Stryker disable next-line ConditionalExpression: no step's position equals null, so findIndex gives -1 and the max below gives 0 anyway
   if (at === null) return 0;
   return Math.max(
     0,

@@ -66,6 +66,35 @@ describe('buildOpenedQuestions', () => {
     expect(entries[1]).toMatchObject({ myAnswer: null, correctAnswer: null });
   });
 
+  it('orders by round then position, whatever order the ids come in', () => {
+    const question = (
+      id: number,
+      roundNumber: number,
+      questionNumberInRound: number,
+    ) => ({
+      id,
+      type: 'free_text' as const,
+      prompt: `Q${id}`,
+      points: 1,
+      roundNumber,
+      questionNumberInRound,
+      roundTitle: `Round ${roundNumber}`,
+    });
+
+    // Numeric keys iterate in ascending id order: ids 1..4 sit at (2,1) (1,3) (1,2) (3,1).
+    const entries = buildOpenedQuestions(
+      {
+        1: question(1, 2, 1),
+        2: question(2, 1, 3),
+        3: question(3, 1, 2),
+        4: question(4, 3, 1),
+      },
+      {},
+    );
+
+    expect(entries.map((entry) => entry.id)).toEqual([3, 2, 1, 4]);
+  });
+
   it('carries the correct answer for questions that have been revealed', () => {
     const revealed = {
       id: 1,

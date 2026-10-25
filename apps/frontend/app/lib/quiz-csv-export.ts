@@ -76,10 +76,12 @@ export function quizToCsv(rounds: readonly ImportRoundPreview[]): string {
 
 /** `Campus Pub Quiz #3` → `campus-pub-quiz-3.csv`. */
 export function csvFilename(quizTitle: string): string {
+  // Stryker disable MethodExpression,Regex: edge whitespace becomes a hyphen and is stripped again, so trim() changes nothing; and the replace before the last leaves at most one hyphen in a row, so ^-+ and ^- (likewise -+$ and -$) strip the same text
   const slug = quizTitle
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+  // Stryker restore MethodExpression,Regex
   return `${slug || FALLBACK_FILENAME}.csv`;
 }

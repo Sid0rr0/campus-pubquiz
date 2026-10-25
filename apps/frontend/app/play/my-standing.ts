@@ -24,6 +24,7 @@ export function findMyStanding(
   revealCount: number,
   teamId: number | null,
 ): MyStanding | null {
+  // Stryker disable next-line ConditionalExpression: a null id matches no entry (ids are numbers), so the find below returns null anyway; the line only narrows the type
   if (teamId === null) return null;
   const row = selectLeaderboardRows({
     board,
