@@ -4,6 +4,7 @@ import {
   PACING_VALUES,
   SESSION_SCALE_VALUES,
   rateSessionPayloadSchema,
+  sessionScaleEntries,
 } from '../index';
 
 describe('the session scales', () => {
@@ -57,5 +58,35 @@ describe('rateSessionPayloadSchema', () => {
     ['a value in another case', { scale: 'pacing', value: 'Too slow' }],
   ])('refuses %s', (_name, payload) => {
     expect(rateSessionPayloadSchema.safeParse(payload).success).toBe(false);
+  });
+});
+
+describe('sessionScaleEntries', () => {
+  it('pairs each count with its value and label in scale order', () => {
+    expect(
+      sessionScaleEntries('pacing', {
+        too_fast: 1,
+        too_slow: 3,
+        just_right: 2,
+      }),
+    ).toEqual([
+      { value: 'too_slow', label: 'Too slow', count: 3 },
+      { value: 'just_right', label: 'Just right', count: 2 },
+      { value: 'too_fast', label: 'Too fast', count: 1 },
+    ]);
+  });
+
+  it('follows the felt difficulty scale for that scale', () => {
+    expect(
+      sessionScaleEntries('feltDifficulty', {
+        too_hard: 0,
+        too_easy: 4,
+        just_right: 0,
+      }).map((entry) => [entry.label, entry.count]),
+    ).toEqual([
+      ['Too easy', 4],
+      ['Just right', 0],
+      ['Too hard', 0],
+    ]);
   });
 });

@@ -1,5 +1,5 @@
 import {
-  SESSION_SCALE_VALUES,
+  sessionScaleEntries,
   type FeedbackTrends,
   type SessionScale,
   type SessionScaleCounts,
@@ -14,10 +14,9 @@ function scaleCountsText<S extends SessionScale>(
   scale: S,
   counts: SessionScaleCounts<S>,
 ): string {
-  const values = SESSION_SCALE_VALUES[
-    scale
-  ] as readonly (keyof typeof counts)[];
-  const ordered = values.map((value) => counts[value]);
+  const ordered = sessionScaleEntries(scale, counts).map(
+    (entry) => entry.count,
+  );
   return ordered.every((n) => n === 0) ? '—' : ordered.join(' · ');
 }
 

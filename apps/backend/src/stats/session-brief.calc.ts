@@ -5,10 +5,10 @@ import {
   QUESTION_KINDS,
   questionNotesOf,
   questionOutcome,
-  SESSION_SCALE_VALUE_LABELS,
-  SESSION_SCALE_VALUES,
+  sessionScaleEntries,
   type MediaKind,
   type SessionScale,
+  type SessionScaleCounts,
 } from '@campus-pubquiz/types';
 import type {
   SessionDetailRoundRow,
@@ -107,15 +107,16 @@ function wordingOf(question: SessionBriefQuestionInputRow) {
 }
 
 /** One scale's answer counts in scale order ("too slow 0, just right 2, too fast 1"), or "no answers". */
-function scaleLine(
-  scale: SessionScale,
+function scaleLine<S extends SessionScale>(
+  scale: S,
   label: string,
-  counts: Record<string, number>,
+  counts: SessionScaleCounts<S>,
 ): string {
-  const values: readonly string[] = SESSION_SCALE_VALUES[scale];
-  if (values.every((value) => !counts[value])) return `${label}: no answers`;
-  const labels: Record<string, string> = SESSION_SCALE_VALUE_LABELS[scale];
-  return `${label}: ${values.map((value) => `${labels[value].toLowerCase()} ${counts[value] ?? 0}`).join(', ')}`;
+  const entries = sessionScaleEntries(scale, counts);
+  if (entries.every((entry) => entry.count === 0)) {
+    return `${label}: no answers`;
+  }
+  return `${label}: ${entries.map((entry) => `${entry.label.toLowerCase()} ${entry.count}`).join(', ')}`;
 }
 
 /** The Session rating and the two scale lines; nothing when feedback was off (the Feedback section says so). */

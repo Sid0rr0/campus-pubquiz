@@ -72,3 +72,27 @@ export const rateSessionPayloadSchema = z.discriminatedUnion('scale', [
     value: z.enum(FELT_DIFFICULTY_VALUES),
   }),
 ]);
+
+/** One answer of a scale with its button label and how many teams gave it. */
+export interface SessionScaleEntry<S extends SessionScale> {
+  value: SessionScaleValue<S>;
+  label: string;
+  count: number;
+}
+
+/** A scale's counts in scale order, each paired with its label ("Too slow"); lower-case the label for a count line. */
+export function sessionScaleEntries<S extends SessionScale>(
+  scale: S,
+  counts: SessionScaleCounts<S>,
+): SessionScaleEntry<S>[] {
+  const values: readonly SessionScaleValue<S>[] = SESSION_SCALE_VALUES[scale];
+  const labels: Record<
+    SessionScaleValue<S>,
+    string
+  > = SESSION_SCALE_VALUE_LABELS[scale];
+  return values.map((value) => ({
+    value,
+    label: labels[value],
+    count: counts[value],
+  }));
+}
