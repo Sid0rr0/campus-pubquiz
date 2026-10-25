@@ -16,6 +16,7 @@ import {
   leaveSessionPayloadSchema,
   pickJokerPayloadSchema,
   rateRoundPayloadSchema,
+  rateSessionPayloadSchema,
   sendFeedbackPayloadSchema,
   setPlayerCountPayloadSchema,
   setTeamPlayerCountPayloadSchema,
@@ -99,6 +100,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.PLAYERS,
     rejection: 'Only player clients may send feedback',
     logFields: [],
+  }),
+  rateSession: declareSocketEvent({
+    event: SOCKET_EVENTS.RATE_SESSION,
+    schema: rateSessionPayloadSchema,
+    allowedRoom: SOCKET_ROOMS.PLAYERS,
+    rejection: 'Only player clients may send feedback',
+    logFields: ['scale', 'value'],
   }),
   setPlayerCount: declareSocketEvent({
     event: SOCKET_EVENTS.SET_PLAYER_COUNT,

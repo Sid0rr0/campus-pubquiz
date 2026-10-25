@@ -127,7 +127,7 @@ behaviour of each status.
 | `break_round_intro` | Round title card: "ROUND N", title — no answers implied                                                                                                                                                                                                                                                                       | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | `PREVIOUS` across the start of a round during break review                                                                                           | Back into `break` on the same question                                                                                 |
 | `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                                                                                                                                                                                                                                                                        | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                                        | `reveal` on that round's first question                                                                                |
 | `reveal`            | One question with its correct answer (and `answer_media_url`)                                                                                                                                                                                                                                                                 | Block browser with the team's answer ("Your answer", coloured by its Verdict: green correct, cyan partial, magenta incorrect or no answer), the correct answer and points                                                                                            | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                                           | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
-| `ended`             | Final screen (a podium of the top three in three colours at the top, "Quiz complete!", the other teams with their places in a scrolling row like the lobby roster, and a thank-you — with an invitation to rate the rounds when feedback is collected), or an active showdown; confetti and a fanfare when the quiz ends live | "Quiz complete!", the team's final placing ("You finished 4th of 12", "Joint 2nd" for a tie; confetti for ranks 1–3), then the final feedback form (every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                                        | —                                                                                                                      |
+| `ended`             | Final screen (a podium of the top three in three colours at the top, "Quiz complete!", the other teams with their places in a scrolling row like the lobby roster, and a thank-you — with "Tell us how it went on your phone ★" when feedback is collected), or an active showdown; confetti and a fanfare when the quiz ends live | "Quiz complete!", the team's final placing ("You finished 4th of 12", "Joint 2nd" for a tie; confetti for ranks 1–3), then the final feedback form (pacing and felt difficulty, then every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                                        | —                                                                                                                      |
 
 `joker_pick` belongs to no status group (it is pre-quiz like `round_overview`).
 `PREVIOUS` from it goes back to `round_overview`; stepping back onto it from the
@@ -369,12 +369,27 @@ without the field reads as on, so sessions created before it have feedback on). 
 The rule lives in one place (`getFeedbackField`, `shared/types/src/feedback-rounds.ts`, on the
 shared `describeFeedback`) and is used both to build the field and to accept a
 rating, so the two can't disagree; the phone draws from it and never decides for
-itself.
+itself. Everything the final form sends (the comment and topics, pacing and felt
+difficulty) is accepted under `isFinalFormOpen` in the same file: the field's kind is
+`final_form`.
+
+The final form opens with two fixed questions, the same every session so nights can be
+compared (see `GLOSSARY.md`: **Pacing**, **Felt difficulty**): "How was the pace?"
+(Too slow · Just right · Too fast) and "How hard were the questions?" (Too easy ·
+Just right · Too hard), each a row of three buttons with the chosen one highlighted,
+above the round stars. Nothing is preselected; a tap saves at once (`RATE_SESSION`)
+and the row shows "Saved ✓" or "Not saved — tap to retry". An answer can be changed
+but not cleared. The break card doesn't ask them. The scale values, in scale order,
+are `PACING_VALUES` and `FELT_DIFFICULTY_VALUES` (both under `SESSION_SCALE_VALUES`,
+keyed `pacing` / `feltDifficulty`), with the phone's wording in
+`SESSION_SCALE_QUESTIONS` and `SESSION_SCALE_VALUE_LABELS`
+(`shared/types/src/session-scales.ts`).
 
 The display view's `screen` carries the same setting for the big screen: the
 `break_intro` and `ended` screens have an `isFeedbackPromptShown` flag (true when
-`collectFeedback` is on). `/display` draws "Rate the rounds on your phone ★" and
-the invitation to rate the rounds in the final thank-you from it, and nothing otherwise.
+`collectFeedback` is on). `/display` draws "Rate the rounds on your phone ★" on the
+break card and "Tell us how it went on your phone ★" in the final thank-you from it,
+and nothing otherwise.
 The `ended` screen is not on air while a showdown is being played, so the thank-you
 never shows then.
 
@@ -771,7 +786,7 @@ payload), plus the connection's `exception` message.
 Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `SET_TEAM_JOKER`, `AWARD_BONUS`,
 `SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE`, `SET_DISPLAY_SOUND_MUTED`
 (`{ isDisplaySoundMuted: boolean }`) and `CREATE_SHOWDOWN_ROUND` (admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
-`SEND_FEEDBACK`, `SET_PLAYER_COUNT`, `PICK_JOKER` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
+`SEND_FEEDBACK`, `RATE_SESSION`, `SET_PLAYER_COUNT`, `PICK_JOKER` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
 acknowledged with `AckResult`. Room
 membership is checked server-side on every handler; violations raise
 `WsException`. Quiz listing/creation and session lifecycle (list, start,
@@ -786,8 +801,8 @@ can't be rated right now" when the round isn't in the feedback field's list (a
 round outside the current block, a status that is neither a break nor `ended`, or a showdown still being played), or a
 validation error for stars outside 1–5 or between half stars. The team is the one whose socket sent
 it. One rating is kept per (session, round, team); rating again overwrites it
-(last write wins). It is a plain team-scoped write: it broadcasts nothing and
-doesn't go through the session write.
+(last write wins). Its check and its store run inside the session write; nothing
+is broadcast and no scores change.
 
 `SEND_FEEDBACK` — `{ comment, topics }` — saves the team's "Anything else?" comment
 and **topic suggestions** from the final form. `comment` is a string of at most
@@ -800,9 +815,28 @@ ack is the result: `{ success: true }` once saved, or an error with a reason —
 open (so before `ended`, in a break, and while a showdown is still being played are
 all refused). One row is kept per (session, team) in `session_feedback` (`comment`
 text, `topics` a JSON string array that is parsed with Zod on read, never cast), and
-sending again replaces the whole row. Like `RATE_ROUND` it is a plain team-scoped
-write: it broadcasts nothing and doesn't go through the session write. Stepping back
+sending again replaces the comment and topics; the row's pacing and felt-difficulty
+answers are kept. Like `RATE_ROUND` its check and its store run inside the
+session write; nothing is broadcast and no scores change. Stepping back
 out of `ended` keeps the row.
+
+`RATE_SESSION` — `{ scale, value }`, `scale` `pacing` or `feltDifficulty` and `value`
+one of that scale's three values (`too_slow` / `just_right` / `too_fast`, or
+`too_easy` / `just_right` / `too_hard`), Zod-validated by `rateSessionPayloadSchema`
+in shared types, so a value from the other scale or `null` is refused — saves the
+team's **pacing** or **felt difficulty** answer from the final form. It follows the
+final form's accept rule, with `SEND_FEEDBACK`'s reasons: "Feedback is off for this
+session" when `collectFeedback` is off, "Feedback can't be sent right now" unless the
+final form is open (before `ended`, in a break, a showdown still being played).
+Answers are anonymous like round ratings. **Storage:** they live on the team's
+`session_feedback` row as two nullable columns, `pacing` and `felt_difficulty` (text
+checked against the scale's values), rather than a table of their own, so a team
+merge carries them with the rest of the row. Each scale is written on its own
+(last write wins) without touching the comment, the topics or the other scale; a row
+first created by an answer starts with an empty comment and no topics, which the
+stats page's comment list already skips. Answering leaves the row's `updated_at`
+alone, since it dates the comment staff see. Like `SEND_FEEDBACK` its check and its
+store run inside the session write, nothing is broadcast and no scores change, and stepping back out of `ended` keeps it.
 
 `SET_PLAYER_COUNT` — `{ playerCount }` — saves the team's **player count**: how many
 players it brought to this session. `playerCount` must be a whole number from 1 to 20
@@ -903,7 +937,9 @@ of `{ roundId, stars }`, never another team's): the phone draws its stars from
 this, so a rating whose save never reached the server shows as empty again. The
 same goes for its comment and topics (`feedback`, `{ comment, topics }`, an empty
 comment and no topics when it sent none), which the final form is filled in from;
-a phone that reconnects marks them "Sent ✓". The team's **player count** rides along
+a phone that reconnects marks them "Sent ✓". Its pacing and felt-difficulty answers
+ride along as `sessionRatings` (`{ pacing, feltDifficulty }`, each null until
+answered), so a reconnecting phone highlights its choice. The team's **player count** rides along
 too (`playerCount`, `number | null`, null until it reported one), so a reconnect, a
 second phone or a rejoin after a kick (with the team code) shows it again.
 
@@ -1687,6 +1723,16 @@ for the rest of the flow.
 a questions table, highlight tiles and the Scoresheet. All of it is computed per request from
 the stored rows, never cached.
 
+There is no fastest-answer or fastest-team highlight (the tiles were dropped):
+response times show only as each standing row's average response and each
+question row's `fastestResponseMs`.
+
+Each round row carries `avgResponseMs`, the mean `responseMs` over the round's
+answers that have one (null when none does); the rounds table shows it as the
+**Avg. response** column, "Not recorded" when null. In normal blocks the time
+runs to a team's last edit, not their first answer, so it reads as how long the
+round took to settle rather than how fast teams answered.
+
 Each question row carries `answer`, the correct answer worded by `formatAnswer`,
 since a round can repeat one prompt over different media. The questions table
 shows it as the **Answer** column and the **Hardest question** tile as an
@@ -1751,12 +1797,26 @@ session (`avg(stars)`, `count(*)` per round), so the response never carries a
 team id or name for any rating — ratings are anonymous on this page and in the API.
 
 The session detail also carries a `feedback` section, shown on the page as
-**Comments** and **Topic suggestions**:
-`{ collected, comments: [{ text, submittedAt }], topics: [{ topic, count }] }`.
+the **Rating**, **Pacing** and **Felt difficulty** tiles, **Comments** and
+**Topic suggestions**:
+`{ collected, comments: [{ text, submittedAt }], topics: [{ topic, count }], rating: { average, count } | null, pacing: { too_slow, just_right, too_fast }, feltDifficulty: { too_easy, just_right, too_hard } }`.
 
 - `collected` is the session's `collectFeedback` setting (a session stored without
-  it reads as `true`). When it is `false` the lists are empty and the page shows
+  it reads as `true`). When it is `false` the lists are empty, `rating` is `null`,
+  the counts are zero, the three tiles read "Feedback was off" and the page shows
   "Feedback was off for this session" instead of the two sections.
+- `rating` is the session rating (see `GLOSSARY.md`): the mean of every round
+  rating of the session, each counting once, so a round many teams rated weighs
+  more than one rated once. It is worked out from the per-round `avg(stars)` and
+  `count(*)` above (the averages weighted by their counts), the same figure as
+  the Feedback trends page's per-session `rating`. The tile shows "★ 4.2" with
+  "37 ratings" below, or "—" when nobody rated (`rating: null`).
+- `pacing` and `feltDifficulty` count how many teams gave each answer,
+  read from the `pacing` / `felt_difficulty` columns of `session_feedback` and
+  aggregated without a team id; teams that gave none are not counted. Each tile
+  shows the most common answer ("Mixed" when the top two tie) with all three
+  counts in scale order below ("2 too slow · 9 just right · 1 too fast"), or "—"
+  when nobody answered. The measured **Difficulty** tile is separate and stays.
 - `comments` are the teams' "Anything else" texts, newest first, with empty and
   whitespace-only ones skipped.
 - `topics` group suggestions that match after trimming, collapsing inner
@@ -1789,7 +1849,12 @@ the brief is data only.
   (none for `closest_guess`).
 - **Session level:** player totals ("7 (2 of 3 teams reported)") and a score
   spread line (top, median and bottom share of max points, across every team
-  that took part). **Standings** list one line per team with placing ("1st",
+  that took part). With feedback on, three more lines follow: the Session
+  rating ("Session rating: 4.3 stars (3 ratings)", or "no ratings"), then
+  Pacing and Felt difficulty as counts in scale order ("Pacing: too slow 0,
+  just right 2, too fast 1", or "no answers"). With `collectFeedback` off the
+  three lines are left out and the Feedback section's "Feedback was off."
+  covers them. There is no per-round response time. **Standings** list one line per team with placing ("1st",
   "Joint 2nd", or "left" for a departed team), points (bonus awards counted,
   not itemised), share of max points and player count, in the Session result's
   order and ties. **Highlights** name the hardest and easiest question by round
@@ -1844,9 +1909,14 @@ same guards as the other stats endpoints, open to admin and moderator).
   picker switches between a date range and a league; picking a league disables the
   date inputs, and "Date range" switches back.
 - The response is `{ sessions, topics, bestRounds, worstRounds }`, where each session is
-  `{ id, name, date, rating: { average, count } | null }`. `sessions` runs oldest to newest. `rating` is the
+  `{ id, name, date, rating: { average, count } | null, pacing, feltDifficulty }`. `sessions` runs oldest to newest. `rating` is the
   average of every round rating the session got and how many ratings that was;
-  `null` when nobody rated (the page shows "—", never zero).
+  `null` when nobody rated (the page shows "—", never zero). `pacing` and
+  `feltDifficulty` are how many teams gave each answer on the final form's two
+  scales (`SessionScaleCounts`, all zero when nobody answered), counted in SQL so
+  no team reaches the response. The sessions table shows each as "2 · 7 · 1" in
+  scale order (too slow, just right, too fast / too easy, just right, too hard),
+  or "—" when nobody answered. The date range and league filters apply unchanged.
 - `topics` are the topic suggestions of every session in the range, grouped by the
   same function as a single session's (`groupTopics`: trim, collapse inner whitespace,
   ignore case, most common spelling wins, the first submitted on a tie), sorted by

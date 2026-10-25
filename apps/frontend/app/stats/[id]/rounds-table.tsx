@@ -1,5 +1,6 @@
 import type { SessionDetailStats } from '@campus-pubquiz/types';
 import { formatPercent } from '@/app/stats/[id]/format-percent';
+import { formatResponseMs } from '@/app/stats/[id]/format-response-ms';
 
 type RoundRating = SessionDetailStats['rounds'][number]['rating'];
 
@@ -33,6 +34,9 @@ export function RoundsTable({ rounds, hardestRoundId }: RoundsTableProps) {
               Points earned
             </th>
             <th className="px-4 py-2 font-display text-sm text-foreground/70">
+              Avg. response
+            </th>
+            <th className="px-4 py-2 font-display text-sm text-foreground/70">
               Rating
             </th>
           </tr>
@@ -41,7 +45,7 @@ export function RoundsTable({ rounds, hardestRoundId }: RoundsTableProps) {
           {rounds.length === 0 ? (
             <tr>
               <td
-                colSpan={5}
+                colSpan={6}
                 className="px-4 py-3 text-center text-foreground/50"
               >
                 No rounds in this quiz.
@@ -69,6 +73,9 @@ export function RoundsTable({ rounds, hardestRoundId }: RoundsTableProps) {
                   {formatPercent(round.correctRate)}
                 </td>
                 <td className="px-4 py-2">{round.pointsPercent.toFixed(0)}%</td>
+                <td className="px-4 py-2">
+                  {formatResponseMs(round.avgResponseMs)}
+                </td>
                 <td className="px-4 py-2">{formatRating(round.rating)}</td>
               </tr>
             ))

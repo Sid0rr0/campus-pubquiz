@@ -1,5 +1,6 @@
 import type { Verdict } from './answer-kind';
 import type { BonusCategory } from './bonus';
+import type { SessionScaleCounts } from './session-scales';
 
 /** One row per **ended** game session, for the admin/moderator stats history view. */
 export interface PlayedSessionStats {
@@ -94,6 +95,12 @@ export interface SessionDetailFeedback {
   comments: SessionDetailFeedbackComment[];
   /** Sorted by count, then alphabetically. */
   topics: SessionDetailFeedbackTopic[];
+  /** The Session rating: every round rating of the session, each counting once. Null when nobody rated or feedback was off. */
+  rating: SessionDetailRoundRating | null;
+  /** How many teams gave each Pacing answer (anonymous counts, zeros when nobody answered or feedback was off). */
+  pacing: SessionScaleCounts<'pacing'>;
+  /** How many teams gave each Felt difficulty answer (anonymous counts, zeros when nobody answered or feedback was off). */
+  feltDifficulty: SessionScaleCounts<'feltDifficulty'>;
 }
 
 export interface SessionDetailRoundRow {
@@ -107,6 +114,8 @@ export interface SessionDetailRoundRow {
   correctRate: number | null;
   // Points actually earned ÷ points achievable (teamCount * round's max points).
   pointsPercent: number;
+  /** Mean `responseMs` over the round's answers that have one; null when none does. */
+  avgResponseMs: number | null;
 }
 
 export interface SessionDetailQuestionRow {
@@ -129,17 +138,6 @@ export interface SessionDetailQuestionRow {
   fastestResponseMs: number | null;
 }
 
-export interface SessionDetailFastestAnswer {
-  teamName: string;
-  questionId: number;
-  responseMs: number;
-}
-
-export interface SessionDetailFastestTeam {
-  teamName: string;
-  avgResponseMs: number;
-}
-
 export interface SessionDetailBonusSummary {
   total: number;
   byCategory: Record<BonusCategory, number>;
@@ -152,8 +150,6 @@ export interface SessionDetailHighlights {
   hardestRoundId: number | null;
   allCorrectQuestionIds: number[];
   noneCorrectQuestionIds: number[];
-  fastestAnswer: SessionDetailFastestAnswer | null;
-  fastestTeam: SessionDetailFastestTeam | null;
   bonus: SessionDetailBonusSummary;
   // Winning team's total minus the runner-up's — null with fewer than 2 teams.
   winningMargin: number | null;
@@ -177,6 +173,10 @@ export interface FeedbackTrendsSession {
   date: string; // game_sessions.created_at, ISO
   /** Average of every round rating the session got — null when nobody rated. */
   rating: SessionDetailRoundRating | null;
+  /** How many teams gave each pacing answer; all zero when nobody answered. */
+  pacing: SessionScaleCounts<'pacing'>;
+  /** How many teams gave each felt-difficulty answer; all zero when nobody answered. */
+  feltDifficulty: SessionScaleCounts<'feltDifficulty'>;
 }
 
 /** A round needs at least this many ratings to appear in the best/worst lists. */

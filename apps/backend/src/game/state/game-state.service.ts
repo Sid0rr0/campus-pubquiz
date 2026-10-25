@@ -24,6 +24,7 @@ import {
   type PresenterContextPayload,
   projectScreen,
   type RateRoundPayload,
+  type RateSessionPayload,
   type SendFeedbackPayload,
   type SessionSettings,
   type SessionState,
@@ -428,6 +429,17 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
       this.feedbackChanges.feedbackSent(session, payload, socketId),
+    );
+  }
+
+  /** A team answers pacing or felt difficulty on the final form. Like `feedbackSent`, and leaves the comment and topics alone. */
+  sessionRated(
+    joinCode: string,
+    payload: RateSessionPayload,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.feedbackChanges.sessionRated(session, payload, socketId),
     );
   }
 

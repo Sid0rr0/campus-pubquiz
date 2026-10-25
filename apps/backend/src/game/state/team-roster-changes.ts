@@ -132,7 +132,7 @@ export class TeamRosterChanges {
     };
   }
 
-  /** The JOIN_ACCEPTED reply for a joined team: its saved answers, bonus awards, round ratings, feedback and player count. Built after the join's write. */
+  /** The JOIN_ACCEPTED reply for a joined team: its saved answers, bonus awards, round ratings, feedback, pacing and felt-difficulty answers and player count. Built after the join's write. */
   async joinReply(
     gameSessionId: number,
     team: TeamIdentity,
@@ -155,6 +155,10 @@ export class TeamRosterChanges {
           team.id,
         ),
         feedback: await this.feedbackService.getFeedbackForTeam(
+          gameSessionId,
+          team.id,
+        ),
+        sessionRatings: await this.feedbackService.getSessionRatingsForTeam(
           gameSessionId,
           team.id,
         ),

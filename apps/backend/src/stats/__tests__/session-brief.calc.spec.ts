@@ -809,6 +809,60 @@ describe('computeSessionBrief layout', () => {
     ]);
   });
 
+  describe('session rating, pacing and felt difficulty lines', () => {
+    const at = '2026-03-05T21:00:00.000Z';
+    const row = (
+      pacing: 'too_slow' | 'just_right' | 'too_fast' | null,
+      feltDifficulty: 'too_easy' | 'just_right' | 'too_hard' | null,
+    ) => ({ comment: '', topics: [], submittedAt: at, pacing, feltDifficulty });
+
+    it('writes the session rating and both count lines in scale order', () => {
+      const lines = linesOf(
+        buildInput({
+          roundRatings: [
+            { roundId: 100, average: 4, count: 2 },
+            { roundId: 101, average: 5, count: 1 },
+          ],
+          feedback: [
+            row('too_fast', 'too_hard'),
+            row('just_right', null),
+            row('just_right', 'too_hard'),
+            row(null, null),
+          ],
+        }),
+      );
+
+      expect(lines).toContain('Session rating: 4.3 stars (3 ratings)');
+      expect(lines).toContain('Pacing: too slow 0, just right 2, too fast 1');
+      expect(lines).toContain(
+        'Felt difficulty: too easy 0, just right 0, too hard 2',
+      );
+    });
+
+    it('says no ratings and no answers when nobody gave any', () => {
+      const lines = linesOf(buildInput({ feedback: [row(null, null)] }));
+
+      expect(lines).toContain('Session rating: no ratings');
+      expect(lines).toContain('Pacing: no answers');
+      expect(lines).toContain('Felt difficulty: no answers');
+    });
+
+    it('leaves the lines out when feedback was off', () => {
+      const brief = computeSessionBrief(
+        buildInput({
+          isFeedbackCollected: false,
+          roundRatings: [{ roundId: 100, average: 4, count: 2 }],
+          feedback: [row('too_fast', 'too_hard')],
+        }),
+      );
+
+      expect(brief).not.toContain('Session rating');
+      expect(brief).not.toContain('Pacing');
+      expect(brief).not.toContain('Felt difficulty');
+      expect(brief).toContain('Feedback was off.');
+    });
+  });
+
   it('words placings with the right suffix, joint places, departed teams and player counts', () => {
     const ranks = [1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101, 111, 112, 113];
     const leaderboard = [

@@ -2,7 +2,9 @@ import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from '@mikro-orm/postgresql';
 import {
   DEFAULT_SESSION_SETTINGS,
+  type FeltDifficulty,
   type GameStatus,
+  type Pacing,
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
@@ -25,6 +27,9 @@ import { PlayerCountService } from '@/player-count/player-count.service';
 import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { StatsService } from '@/stats/stats.service';
 import { useTestDatabase } from '@/test-db/test-database';
+
+const NO_PACING = { too_slow: 0, just_right: 0, too_fast: 0 };
+const NO_FELT_DIFFICULTY = { too_easy: 0, just_right: 0, too_hard: 0 };
 
 describe('StatsService (Postgres integration)', () => {
   const db = useTestDatabase();
@@ -780,6 +785,36 @@ describe('StatsService (Postgres integration)', () => {
         'count',
       ]);
     });
+
+    it('rates the session at the mean of every rating, not of the round averages', async () => {
+      const { quiz, questions } = await createQuiz('Quiz', [[1], [1]]);
+      const session = await createSession(quiz, 'RATED5', 'ended');
+      const alpha = await joinTeam(session, 'SecretSquad');
+      const beta = await joinTeam(session, 'Beta');
+      const gamma = await joinTeam(session, 'Gamma');
+      await rate(session, questions[0][0].round, alpha, 5);
+      await rate(session, questions[0][0].round, beta, 5);
+      await rate(session, questions[0][0].round, gamma, 5);
+      await rate(session, questions[1][0].round, alpha, 2);
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      // 17 stars over 4 ratings, where the two round averages would give 3.5.
+      expect(result.feedback.rating).toEqual({ average: 4.25, count: 4 });
+      expect(JSON.stringify(result.feedback.rating)).not.toContain(
+        'SecretSquad',
+      );
+    });
+
+    it('has no session rating when nobody rated', async () => {
+      const { quiz } = await createQuiz('Quiz', [[1]]);
+      const session = await createSession(quiz, 'RATED6', 'ended');
+      await joinTeam(session, 'Alpha');
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback.rating).toBeNull();
+    });
   });
 
   describe('getFeedbackTrends sessions', () => {
@@ -838,14 +873,83 @@ describe('StatsService (Postgres integration)', () => {
           name: 'Quiz TR2',
           date: '2026-09-01T19:00:00.000Z',
           rating: { average: 3, count: 1 },
+          pacing: NO_PACING,
+          feltDifficulty: NO_FELT_DIFFICULTY,
         },
         {
           id: newer.session.id,
           name: 'Autumn quiz',
           date: '2026-10-10T19:00:00.000Z',
           rating: { average: 4.5, count: 2 },
+          pacing: NO_PACING,
+          feltDifficulty: NO_FELT_DIFFICULTY,
         },
       ]);
+    });
+
+    it('counts each session’s pacing and felt difficulty answers in scale order, leaving blanks and feedback-off sessions out', async () => {
+      const a = await playedSession('TP1', '2026-10-01T19:00:00Z');
+      const b = await playedSession('TP2', '2026-10-02T19:00:00Z');
+      const off = await playedSession('TP3', '2026-10-03T19:00:00Z', {
+        feedbackOff: true,
+      });
+      const answers: [
+        GameSession,
+        string,
+        Pacing | null,
+        FeltDifficulty | null,
+      ][] = [
+        [a.session, 'P1', 'too_fast', 'too_hard'],
+        [a.session, 'P2', 'too_fast', null],
+        [a.session, 'P3', 'just_right', 'too_hard'],
+        [a.session, 'P4', null, null],
+        [b.session, 'P5', 'too_slow', 'too_easy'],
+        [off.session, 'P6', 'too_slow', 'too_easy'],
+      ];
+      for (const [session, name, pacing, feltDifficulty] of answers) {
+        const team = await joinTeam(session, name);
+        em.create(SessionFeedback, {
+          gameSession: session,
+          team,
+          comment: '',
+          topics: [],
+          pacing,
+          feltDifficulty,
+        });
+      }
+      await em.flush();
+
+      const result = await statsService.getFeedbackTrends({});
+      const league = em.create(League, {
+        name: 'Pace',
+        startsOn: '2026-09-01',
+        endsOn: '2026-12-01',
+      });
+      await em.flush();
+      em.create(LeagueSession, { league, gameSession: b.session });
+      await em.flush();
+      const inLeague = await statsService.getFeedbackTrends({
+        leagueId: league.id,
+      });
+      const inRange = await statsService.getFeedbackTrends({
+        from: '2026-10-02',
+        to: '2026-10-02',
+      });
+
+      expect(result.sessions.map((s) => [s.pacing, s.feltDifficulty])).toEqual([
+        [
+          { too_slow: 0, just_right: 1, too_fast: 2 },
+          { too_easy: 0, just_right: 0, too_hard: 2 },
+        ],
+        [
+          { too_slow: 1, just_right: 0, too_fast: 0 },
+          { too_easy: 1, just_right: 0, too_hard: 0 },
+        ],
+      ]);
+      expect(inLeague.sessions.map((s) => s.id)).toEqual([b.session.id]);
+      expect(inLeague.sessions[0].pacing.too_slow).toBe(1);
+      expect(inRange.sessions.map((s) => s.id)).toEqual([b.session.id]);
+      expect(inRange.sessions[0].feltDifficulty.too_easy).toBe(1);
     });
 
     it('averages across all of a session’s rounds, not per round', async () => {
@@ -1319,7 +1423,54 @@ describe('StatsService (Postgres integration)', () => {
         collected: false,
         comments: [],
         topics: [],
+        rating: null,
+        pacing: { too_slow: 0, just_right: 0, too_fast: 0 },
+        feltDifficulty: { too_easy: 0, just_right: 0, too_hard: 0 },
       });
+    });
+
+    it('counts the pacing and felt-difficulty answers of this session, with no team data', async () => {
+      const session = await endedSession('FB9');
+      const other = await endedSession('FB10');
+      const alpha = await joinTeam(session, 'SecretSquad');
+      const beta = await joinTeam(session, 'Beta');
+      const gamma = await joinTeam(session, 'Gamma');
+      const stranger = await joinTeam(other, 'Stranger');
+      const answer = (
+        s: GameSession,
+        team: Team,
+        pacing: 'too_slow' | 'too_fast' | null,
+        feltDifficulty: 'too_hard' | null,
+      ) =>
+        em.create(SessionFeedback, {
+          gameSession: s,
+          team,
+          comment: '',
+          topics: [],
+          pacing,
+          feltDifficulty,
+          createdAt: new Date('2026-10-01T20:00:00Z'),
+          updatedAt: new Date('2026-10-01T20:00:00Z'),
+        });
+      answer(session, alpha, 'too_fast', 'too_hard');
+      answer(session, beta, 'too_fast', null);
+      answer(session, gamma, null, null);
+      answer(other, stranger, 'too_slow', 'too_hard');
+      await em.flush();
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback.pacing).toEqual({
+        too_slow: 0,
+        just_right: 0,
+        too_fast: 2,
+      });
+      expect(result.feedback.feltDifficulty).toEqual({
+        too_easy: 0,
+        just_right: 0,
+        too_hard: 1,
+      });
+      expect(JSON.stringify(result.feedback)).not.toContain('SecretSquad');
     });
 
     it('ignores feedback from another session', async () => {

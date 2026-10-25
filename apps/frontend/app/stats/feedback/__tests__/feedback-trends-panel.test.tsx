@@ -28,12 +28,16 @@ const TRENDS: FeedbackTrends = {
       name: 'Autumn quiz',
       date: '2026-09-01T19:00:00.000Z',
       rating: { average: 4.25, count: 8 },
+      pacing: { too_slow: 2, just_right: 7, too_fast: 1 },
+      feltDifficulty: { too_easy: 0, just_right: 5, too_hard: 3 },
     },
     {
       id: 2,
       name: 'Winter quiz',
       date: '2026-12-01T19:00:00.000Z',
       rating: null,
+      pacing: { too_slow: 0, just_right: 0, too_fast: 0 },
+      feltDifficulty: { too_easy: 0, just_right: 0, too_hard: 0 },
     },
   ],
   topics: [{ topic: 'Geography', count: 4 }],
@@ -74,6 +78,21 @@ describe('FeedbackTrendsPanel', () => {
     expect(cells[3]).toHaveTextContent('8');
   });
 
+  it('shows pacing and felt difficulty counts in scale order', async () => {
+    renderWithQuery(<FeedbackTrendsPanel />);
+
+    expect(
+      await screen.findByRole('columnheader', { name: 'Pacing' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Felt difficulty' }),
+    ).toBeInTheDocument();
+    const row = screen.getByText('Autumn quiz').closest('tr')!;
+    const cells = within(row).getAllByRole('cell');
+    expect(cells[4]).toHaveTextContent('2 · 7 · 1');
+    expect(cells[5]).toHaveTextContent('0 · 5 · 3');
+  });
+
   it('shows a dash, not zero, for a session nobody rated', async () => {
     renderWithQuery(<FeedbackTrendsPanel />);
 
@@ -81,6 +100,8 @@ describe('FeedbackTrendsPanel', () => {
     const cells = within(row).getAllByRole('cell');
     expect(cells[2]).toHaveTextContent('—');
     expect(cells[3]).toHaveTextContent('—');
+    expect(cells[4]).toHaveTextContent('—');
+    expect(cells[5]).toHaveTextContent('—');
   });
 
   it('writes out an empty state when no session is in range', async () => {

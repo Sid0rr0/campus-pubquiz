@@ -6,8 +6,8 @@ Parent spec: `.scratch/feedback-pacing-difficulty/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Backend (real Postgres): counts per session, both filters respected, feedback-off sessions still left out, no team data
-- [ ] Frontend: the two columns and "—"
-- [ ] `DOCUMENTATION.md` (Feedback trends) updated
+- [x] Backend (real Postgres): counts per session, both filters respected, feedback-off sessions still left out, no team data
+- [x] Frontend: the two columns and "—"
+- [x] `DOCUMENTATION.md` (Feedback trends) updated

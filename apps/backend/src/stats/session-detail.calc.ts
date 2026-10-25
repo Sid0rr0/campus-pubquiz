@@ -1,13 +1,12 @@
 import {
   BONUS_CATEGORIES,
-  compareTeamNames,
   type BonusCategory,
+  type FeltDifficulty,
+  type Pacing,
   type QuestionType,
   type QuizDifficultyLabel,
   type Verdict,
   type SessionDetailBonusSummary,
-  type SessionDetailFastestAnswer,
-  type SessionDetailFastestTeam,
   type SessionDetailQuestionRow,
   type SessionDetailRoundRow,
   type SessionDetailStandingRow,
@@ -45,6 +44,10 @@ export interface SessionDetailFeedbackInputRow {
   comment: string;
   topics: string[];
   submittedAt: string | Date;
+  /** The team's Pacing answer; absent or null when it gave none. */
+  pacing?: Pacing | null;
+  /** The team's Felt difficulty answer; absent or null when it gave none. */
+  feltDifficulty?: FeltDifficulty | null;
 }
 
 export interface SessionDetailQuestionInputRow {
@@ -134,47 +137,6 @@ function pickExtreme<T>(
         ? row
         : best;
   });
-}
-
-function pickFastestAnswer(
-  answers: readonly SessionDetailAnswerInputRow[],
-): SessionDetailFastestAnswer | null {
-  const timed = answers.filter(
-    (a): a is SessionDetailAnswerInputRow & { responseMs: number } =>
-      a.responseMs !== null,
-  );
-  if (timed.length === 0) return null;
-  const fastest = timed.reduce((current, row) =>
-    row.responseMs < current.responseMs ||
-    (row.responseMs === current.responseMs &&
-      compareTeamNames(row.teamName, current.teamName) < 0)
-      ? row
-      : current,
-  );
-  return {
-    teamName: fastest.teamName,
-    questionId: fastest.questionId,
-    responseMs: fastest.responseMs,
-  };
-}
-
-function pickFastestTeam(
-  standings: readonly SessionDetailStandingRow[],
-): SessionDetailFastestTeam | null {
-  const timed = standings.filter(
-    (s): s is SessionDetailStandingRow & { avgResponseMs: number } =>
-      s.avgResponseMs !== null,
-  );
-  if (timed.length === 0) return null;
-  const fastest = timed.reduce((current, row) =>
-    row.avgResponseMs < current.avgResponseMs ||
-    (row.avgResponseMs === current.avgResponseMs &&
-      // Stryker disable next-line EqualityOperator: under `<= 0` an equal name swaps in a row with the same teamName and avgResponseMs, and only those two are returned.
-      compareTeamNames(row.teamName, current.teamName) < 0)
-      ? row
-      : current,
-  );
-  return { teamName: fastest.teamName, avgResponseMs: fastest.avgResponseMs };
 }
 
 function computeBonusSummary(
@@ -274,6 +236,9 @@ export function computeSessionDetail(
     );
     const achievablePoints = teamCount * roundMaxPoints;
     const rating = ratingByRoundId.get(round.roundId);
+    const timedResponses = roundAnswers
+      .map((a) => a.responseMs)
+      .filter((ms): ms is number => ms !== null);
     // Only the questions that have a correct rate count towards the round's.
     const ratedResults = roundQuestions.flatMap((q) => {
       const r = questionResultById.get(q.questionId);
@@ -297,6 +262,11 @@ export function computeSessionDetail(
               achievablePoints) *
             100
           : 0,
+      avgResponseMs:
+        timedResponses.length > 0
+          ? timedResponses.reduce((sum, ms) => sum + ms, 0) /
+            timedResponses.length
+          : null,
     };
   });
 
@@ -371,7 +341,11 @@ export function computeSessionDetail(
     },
     standings,
     rounds: roundRows,
-    feedback: computeSessionFeedback(isFeedbackCollected, feedback),
+    feedback: computeSessionFeedback({
+      isCollected: isFeedbackCollected,
+      rows: feedback,
+      roundRatings,
+    }),
     questions: questionRows,
     highlights: {
       hardestQuestionId:
@@ -389,8 +363,6 @@ export function computeSessionDetail(
       noneCorrectQuestionIds: ratedQuestions
         .filter((row) => row.correctCount === 0)
         .map((row) => row.questionId),
-      fastestAnswer: pickFastestAnswer(answers),
-      fastestTeam: pickFastestTeam(standings),
       bonus: computeBonusSummary(bonusAwards),
       winningMargin:
         sessionStandings.leaderboard.length >= 2

@@ -74,6 +74,7 @@ const DETAIL: SessionDetailStats = {
       rating: { average: 4, count: 2 },
       correctRate: 0.5,
       pointsPercent: 40,
+      avgResponseMs: null,
     },
   ],
   feedback: {
@@ -89,6 +90,9 @@ const DETAIL: SessionDetailStats = {
       { topic: 'Geography', count: 4 },
       { topic: 'Film', count: 1 },
     ],
+    rating: { average: 25 / 6, count: 37 },
+    pacing: { too_slow: 2, just_right: 9, too_fast: 1 },
+    feltDifficulty: { too_easy: 3, just_right: 3, too_hard: 1 },
   },
   questions: [
     {
@@ -126,8 +130,6 @@ const DETAIL: SessionDetailStats = {
     hardestRoundId: 100,
     allCorrectQuestionIds: [10],
     noneCorrectQuestionIds: [11],
-    fastestAnswer: { teamName: 'Team A', questionId: 10, responseMs: 1200 },
-    fastestTeam: { teamName: 'Team A', avgResponseMs: 2500 },
     bonus: {
       total: 2,
       byCategory: { shot: 2, selfie: 0, custom: 0 },
@@ -146,6 +148,20 @@ const DETAIL: SessionDetailStats = {
     },
   ],
 };
+
+const NO_FEEDBACK_COLLECTED: SessionDetailStats['feedback'] = {
+  collected: false,
+  comments: [],
+  topics: [],
+  rating: null,
+  pacing: { too_slow: 0, just_right: 0, too_fast: 0 },
+  feltDifficulty: { too_easy: 0, just_right: 0, too_hard: 0 },
+};
+
+/** A highlight tile, by its label (the rounds table has a "Rating" column too). */
+async function findTile(label: string): Promise<HTMLElement> {
+  return (await screen.findByText(label, { selector: 'p' })).parentElement!;
+}
 
 describe('SessionDetailPanel', () => {
   beforeEach(() => {
@@ -217,6 +233,110 @@ describe('SessionDetailPanel', () => {
     expect(within(average).getByText('—')).toBeInTheDocument();
   });
 
+  it('shows the session rating with how many ratings it is made of', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    const tile = await findTile('Rating');
+    expect(within(tile).getByText('★ 4.2')).toBeInTheDocument();
+    expect(within(tile).getByText('37 ratings')).toBeInTheDocument();
+  });
+
+  it('counts a single rating in the singular', async () => {
+    mockFetchSessionDetail.mockResolvedValue({
+      ...DETAIL,
+      feedback: { ...DETAIL.feedback, rating: { average: 5, count: 1 } },
+    });
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    const tile = await findTile('Rating');
+    expect(within(tile).getByText('★ 5.0')).toBeInTheDocument();
+    expect(within(tile).getByText('1 rating')).toBeInTheDocument();
+  });
+
+  it('shows a dash for the rating when nobody rated', async () => {
+    mockFetchSessionDetail.mockResolvedValue({
+      ...DETAIL,
+      feedback: { ...DETAIL.feedback, rating: null },
+    });
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    const tile = await findTile('Rating');
+    expect(tile).toHaveTextContent(/^Rating—$/);
+  });
+
+  it('says feedback was off on the rating tile when it was off', async () => {
+    mockFetchSessionDetail.mockResolvedValue({
+      ...DETAIL,
+      feedback: NO_FEEDBACK_COLLECTED,
+    });
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    const tile = await findTile('Rating');
+    expect(tile).toHaveTextContent(/^RatingFeedback was off$/);
+  });
+
+  it('shows the most common pacing answer with all three counts in scale order', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    const tile = await findTile('Pacing');
+    expect(within(tile).getByText('Just right')).toBeInTheDocument();
+    expect(
+      within(tile).getByText('2 too slow · 9 just right · 1 too fast'),
+    ).toBeInTheDocument();
+  });
+
+  it('reads Mixed when the top two felt-difficulty answers tie', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    const tile = await findTile('Felt difficulty');
+    expect(within(tile).getByText('Mixed')).toBeInTheDocument();
+    expect(
+      within(tile).getByText('3 too easy · 3 just right · 1 too hard'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a dash on the scale tiles when nobody answered', async () => {
+    mockFetchSessionDetail.mockResolvedValue({
+      ...DETAIL,
+      feedback: { ...NO_FEEDBACK_COLLECTED, collected: true },
+    });
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    expect(await findTile('Pacing')).toHaveTextContent(/^Pacing—$/);
+    expect(await findTile('Felt difficulty')).toHaveTextContent(
+      /^Felt difficulty—$/,
+    );
+  });
+
+  it('says feedback was off on the scale tiles when it was off', async () => {
+    mockFetchSessionDetail.mockResolvedValue({
+      ...DETAIL,
+      feedback: NO_FEEDBACK_COLLECTED,
+    });
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    expect(await findTile('Pacing')).toHaveTextContent(
+      /^PacingFeedback was off$/,
+    );
+    expect(await findTile('Felt difficulty')).toHaveTextContent(
+      /^Felt difficultyFeedback was off$/,
+    );
+  });
+
+  it('keeps the measured Difficulty tile', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    expect(await findTile('Difficulty')).toBeInTheDocument();
+  });
+
+  it('has no fastest answer or fastest team tile', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    await findTile('Rating');
+    expect(screen.queryByText('Fastest answer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fastest team')).not.toBeInTheDocument();
+  });
+
   it("shows 'Not recorded' for a team with no timed answers", async () => {
     renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
 
@@ -261,7 +381,7 @@ describe('SessionDetailPanel', () => {
   it('says there are no comments or topics when teams sent none', async () => {
     mockFetchSessionDetail.mockResolvedValue({
       ...DETAIL,
-      feedback: { collected: true, comments: [], topics: [] },
+      feedback: { ...NO_FEEDBACK_COLLECTED, collected: true },
     });
     renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
 
@@ -349,7 +469,7 @@ describe('SessionDetailPanel', () => {
   it('replaces the feedback sections with a note when feedback was off', async () => {
     mockFetchSessionDetail.mockResolvedValue({
       ...DETAIL,
-      feedback: { collected: false, comments: [], topics: [] },
+      feedback: NO_FEEDBACK_COLLECTED,
     });
     renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
 

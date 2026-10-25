@@ -9,6 +9,8 @@ import {
   type BonusCategory,
   type FeedbackTrends,
   type FeedbackTrendsRound,
+  type FeltDifficulty,
+  type Pacing,
   type PlayedSessionsListedPayload,
   type SessionDetailFeedbackTopic,
   type SessionDetailStats,
@@ -55,6 +57,15 @@ interface FeedbackTrendsRow {
   count: string | number;
 }
 
+/** Column aliases of the per-session pacing and felt-difficulty counts ("just_right" is on both scales, so each gets a prefix). */
+type ScaleCountColumn =
+  | 'too_slow'
+  | 'pacing_just_right'
+  | 'too_fast'
+  | 'too_easy'
+  | 'difficulty_just_right'
+  | 'too_hard';
+
 interface RankedRoundRow {
   game_session_id: number;
   display_name: string;
@@ -67,6 +78,8 @@ interface SessionFeedbackRow {
   comment: string;
   topics: unknown;
   submittedAt: string | Date;
+  pacing: Pacing | null;
+  feltDifficulty: FeltDifficulty | null;
 }
 
 const storedTopicsSchema = z.array(z.string());
@@ -319,6 +332,8 @@ export class StatsService {
         'comment',
         'topics',
         'updated_at as submittedAt',
+        'pacing',
+        'felt_difficulty as feltDifficulty',
       )) as SessionFeedbackRow[];
 
     const { questions, answers } =
@@ -355,6 +370,8 @@ export class StatsService {
         comment: f.comment,
         topics: storedTopicsSchema.parse(f.topics),
         submittedAt: f.submittedAt,
+        pacing: f.pacing,
+        feltDifficulty: f.feltDifficulty,
       })),
       questions,
       answers,
@@ -393,19 +410,70 @@ export class StatsService {
       .select(knex.raw('avg(rr.stars) as average'))
       .select(knex.raw('count(rr.id) as count'))) as FeedbackTrendsRow[];
 
+    const scaleCounts = await this.scaleCountsBySession(sessionsInRange());
+
     return {
       sessions: rows.map((row) => {
         const { average, count } = this.ratingOf(row);
+        const counts = scaleCounts.get(row.game_session_id);
         return {
           id: row.game_session_id,
           name: row.display_name,
           date: new Date(row.played_at).toISOString(),
           rating: count === 0 ? null : { average, count },
+          pacing: {
+            too_slow: counts?.too_slow ?? 0,
+            just_right: counts?.pacing_just_right ?? 0,
+            too_fast: counts?.too_fast ?? 0,
+          },
+          feltDifficulty: {
+            too_easy: counts?.too_easy ?? 0,
+            just_right: counts?.difficulty_just_right ?? 0,
+            too_hard: counts?.too_hard ?? 0,
+          },
         };
       }),
       topics: await this.topicsAcross(sessionsInRange()),
       ...(await this.rankRounds(query)),
     };
+  }
+
+  /** Pacing and felt-difficulty answer counts per session, aggregated in SQL so no row carries a team. Sessions with no feedback rows are absent. */
+  private async scaleCountsBySession(
+    sessions: Knex.QueryBuilder,
+  ): Promise<Map<number, Record<ScaleCountColumn, number>>> {
+    const knex = this.gameSessions.getKnex();
+    const rows = (await knex('session_feedback as sf')
+      .whereIn('sf.game_session_id', sessions.clearSelect().select('gs.id'))
+      .groupBy('sf.game_session_id')
+      .select('sf.game_session_id')
+      .select(
+        knex.raw(`count(*) filter (where sf.pacing = 'too_slow') as too_slow`),
+        knex.raw(
+          `count(*) filter (where sf.pacing = 'just_right') as pacing_just_right`,
+        ),
+        knex.raw(`count(*) filter (where sf.pacing = 'too_fast') as too_fast`),
+        knex.raw(
+          `count(*) filter (where sf.felt_difficulty = 'too_easy') as too_easy`,
+        ),
+        knex.raw(
+          `count(*) filter (where sf.felt_difficulty = 'just_right') as difficulty_just_right`,
+        ),
+        knex.raw(
+          `count(*) filter (where sf.felt_difficulty = 'too_hard') as too_hard`,
+        ),
+      )) as ({ game_session_id: number } & Record<
+      ScaleCountColumn,
+      string | number
+    >)[];
+    return new Map(
+      rows.map(({ game_session_id, ...counts }) => [
+        game_session_id,
+        Object.fromEntries(
+          Object.entries(counts).map(([key, n]) => [key, Number(n)]),
+        ) as Record<ScaleCountColumn, number>,
+      ]),
+    );
   }
 
   /** A grouped rating row's average and count, as numbers (Postgres returns aggregates as strings). */

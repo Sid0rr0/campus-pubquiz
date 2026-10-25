@@ -11,8 +11,7 @@ const TEAM_TEXT_CLASSES = [
 ];
 
 const THANK_YOU = "Thank you for playing today's pub quiz!";
-const FEEDBACK_INVITE =
-  'Rate the rounds and help us make the quiz better - on your phones or talk to us.';
+const FEEDBACK_INVITE = 'Tell us how it went on your phone ★';
 const SEE_YOU = 'See you next week!';
 
 interface EndedScreenProps {

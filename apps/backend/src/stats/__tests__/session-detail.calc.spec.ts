@@ -769,7 +769,7 @@ describe('computeSessionDetail', () => {
     expect(result.highlights.noneCorrectQuestionIds).toEqual([11]);
   });
 
-  it('reports null fastest-answer/fastest-team highlights when no responseMs is recorded', () => {
+  it('reports no response times when no responseMs is recorded', () => {
     const result = computeSessionDetail(
       buildInput({
         teams: [{ teamId: 1, teamName: 'Team A' }],
@@ -799,100 +799,56 @@ describe('computeSessionDetail', () => {
       }),
     );
 
-    expect(result.highlights.fastestAnswer).toBeNull();
-    expect(result.highlights.fastestTeam).toBeNull();
     expect(result.standings[0].avgResponseMs).toBeNull();
     expect(result.questions[0].fastestResponseMs).toBeNull();
   });
 
-  it('picks the fastest answer and fastest team from recorded response times', () => {
-    const result = computeSessionDetail(
-      buildInput({
-        teams: [
-          { teamId: 1, teamName: 'Team A' },
-          { teamId: 2, teamName: 'Team B' },
-        ],
-        questions: [
-          {
-            questionId: 10,
-            roundId: 100,
-            orderIndex: 0,
-            prompt: 'Q',
-            answer: 'A',
-            type: 'free_text',
-            points: 1,
-          },
-        ],
-        answers: [
-          {
-            questionId: 10,
-            teamId: 1,
-            teamName: 'Team A',
-            pointsAwarded: 1,
-            gradedAt: '2026-01-01T00:00:01.000Z',
-            verdict: 'correct',
-            responseMs: 5000,
-            answer: 'a',
-          },
-          {
-            questionId: 10,
-            teamId: 2,
-            teamName: 'Team B',
-            pointsAwarded: 0,
-            gradedAt: '2026-01-01T00:00:01.000Z',
-            verdict: 'incorrect',
-            responseMs: 1200,
-            answer: 'a',
-          },
-        ],
-      }),
-    );
-
-    expect(result.highlights.fastestAnswer).toEqual({
-      teamName: 'Team B',
-      questionId: 10,
-      responseMs: 1200,
-    });
-    expect(result.highlights.fastestTeam).toEqual({
-      teamName: 'Team B',
-      avgResponseMs: 1200,
-    });
-  });
-
-  it('breaks fastest answer and fastest team ties in the leaderboard name order (capitals before lowercase)', () => {
-    const answerBy = (teamId: number, teamName: string) => ({
-      questionId: 10,
+  it('averages the recorded response times per round, null when a round has none', () => {
+    const answer = (
+      questionId: number,
+      teamId: number,
+      responseMs: number | null,
+    ) => ({
+      questionId,
       teamId,
-      teamName,
-      pointsAwarded: 1,
-      gradedAt: '2026-01-01T00:00:01.000Z',
-      verdict: 'correct' as const,
-      responseMs: 2000,
+      teamName: `Team ${teamId}`,
+      pointsAwarded: 0,
+      gradedAt: null,
+      verdict: null,
+      responseMs,
       answer: 'a',
     });
+    const question = (questionId: number, roundId: number) => ({
+      questionId,
+      roundId,
+      orderIndex: 0,
+      prompt: 'Q',
+      answer: 'A',
+      type: 'free_text' as const,
+      points: 1,
+    });
     const result = computeSessionDetail(
       buildInput({
         teams: [
-          { teamId: 1, teamName: 'apple' },
-          { teamId: 2, teamName: 'Zed' },
+          { teamId: 1, teamName: 'Team 1' },
+          { teamId: 2, teamName: 'Team 2' },
+          { teamId: 3, teamName: 'Team 3' },
         ],
-        questions: [
-          {
-            questionId: 10,
-            roundId: 100,
-            orderIndex: 0,
-            prompt: 'Q',
-            answer: 'A',
-            type: 'free_text',
-            points: 1,
-          },
+        rounds: [
+          { roundId: 100, title: 'One', category: null, orderIndex: 0 },
+          { roundId: 200, title: 'Two', category: null, orderIndex: 1 },
         ],
-        answers: [answerBy(1, 'apple'), answerBy(2, 'Zed')],
+        questions: [question(10, 100), question(20, 200)],
+        answers: [
+          answer(10, 1, 2000),
+          answer(10, 2, 4000),
+          answer(10, 3, null),
+          answer(20, 1, null),
+        ],
       }),
     );
 
-    expect(result.highlights.fastestAnswer?.teamName).toBe('Zed');
-    expect(result.highlights.fastestTeam?.teamName).toBe('Zed');
+    expect(result.rounds.map((r) => r.avgResponseMs)).toEqual([3000, null]);
   });
 
   it('sums bonus points by category', () => {
@@ -987,8 +943,6 @@ describe('computeSessionDetail', () => {
     expect(result.highlights.allCorrectQuestionIds).toEqual([]);
     expect(result.highlights.noneCorrectQuestionIds).toEqual([]);
     expect(result.highlights.winningMargin).toBeNull();
-    expect(result.highlights.fastestAnswer).toBeNull();
-    expect(result.highlights.fastestTeam).toBeNull();
   });
 
   it('computes winningMargin as the gap between 1st and 2nd place, null with fewer than 2 teams', () => {
@@ -1219,100 +1173,6 @@ describe('computeSessionDetail', () => {
       responseMs,
       answer: 'a',
     });
-    const standingsInOrder = (names: [number, string][]): SessionStandings => {
-      const entries = names.map(([teamId, teamName]) => ({
-        teamId,
-        teamName,
-        totalPoints: 0,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      }));
-      const leaderboard = entries.map((e) => ({ ...e, rank: 1, rankTo: 2 }));
-      return {
-        leaderboard,
-        departed: [],
-        participantCount: entries.length,
-        winner: leaderboard[0],
-      };
-    };
-
-    it('names the fastest answer whatever order the answers and teams come in', () => {
-      // Equal times: the name that sorts first wins (capitals before lowercase).
-      const tied = [answer(10, 1, 'apple', 2000), answer(10, 2, 'Zed', 2000)];
-      for (const answers of [tied, [...tied].reverse()]) {
-        for (const order of [
-          [
-            [1, 'apple'],
-            [2, 'Zed'],
-          ],
-          [
-            [2, 'Zed'],
-            [1, 'apple'],
-          ],
-        ] as [number, string][][]) {
-          const { highlights } = computeSessionDetail(
-            buildInput({
-              standings: standingsInOrder(order),
-              questions: [question(10, 100, 0)],
-              answers,
-            }),
-          );
-          expect(highlights.fastestAnswer?.teamName).toBe('Zed');
-          expect(highlights.fastestTeam?.teamName).toBe('Zed');
-        }
-      }
-    });
-
-    it('prefers the quicker time over the name that sorts first', () => {
-      const answers = [
-        answer(10, 1, 'apple', 1000),
-        answer(10, 2, 'Zed', 3000),
-      ];
-      for (const list of [answers, [...answers].reverse()]) {
-        for (const order of [
-          [
-            [1, 'apple'],
-            [2, 'Zed'],
-          ],
-          [
-            [2, 'Zed'],
-            [1, 'apple'],
-          ],
-        ] as [number, string][][]) {
-          const { highlights } = computeSessionDetail(
-            buildInput({
-              standings: standingsInOrder(order),
-              questions: [question(10, 100, 0)],
-              answers: list,
-            }),
-          );
-          expect(highlights.fastestAnswer).toEqual({
-            teamName: 'apple',
-            questionId: 10,
-            responseMs: 1000,
-          });
-          expect(highlights.fastestTeam).toEqual({
-            teamName: 'apple',
-            avgResponseMs: 1000,
-          });
-        }
-      }
-    });
-
-    it('keeps the first of two equally fast answers from the same team', () => {
-      const { highlights } = computeSessionDetail(
-        buildInput({
-          teams: [{ teamId: 1, teamName: 'apple' }],
-          questions: [question(10, 100, 0), question(11, 100, 1)],
-          answers: [answer(10, 1, 'apple', 2000), answer(11, 1, 'apple', 2000)],
-        }),
-      );
-
-      expect(highlights.fastestAnswer?.questionId).toBe(10);
-    });
-
     it('averages a team response times and takes the minimum per question', () => {
       const result = computeSessionDetail(
         buildInput({

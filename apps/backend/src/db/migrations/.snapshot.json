@@ -2171,6 +2171,46 @@
           "comment": null,
           "enumItems": [],
           "mappedType": "json"
+        },
+        "pacing": {
+          "name": "pacing",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [
+            "too_slow",
+            "just_right",
+            "too_fast"
+          ],
+          "mappedType": "enum"
+        },
+        "felt_difficulty": {
+          "name": "felt_difficulty",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [
+            "too_easy",
+            "just_right",
+            "too_hard"
+          ],
+          "mappedType": "enum"
         }
       },
       "name": "session_feedback",

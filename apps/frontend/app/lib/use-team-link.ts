@@ -16,6 +16,7 @@ import {
   type LeaveSessionPayload,
   type PickJokerPayload,
   type RateRoundPayload,
+  type RateSessionPayload,
   type SendFeedbackPayload,
   type SetPlayerCountPayload,
   type StateViewByRoom,
@@ -23,6 +24,7 @@ import {
   type TeamBonusAwardView,
   type TeamFeedbackView,
   type TeamJoker,
+  type TeamSessionRatingsView,
 } from '@campus-pubquiz/types';
 import {
   NOT_CONNECTED_MESSAGE,
@@ -127,6 +129,10 @@ export interface TeamLinkGame {
   rateRound: (roundId: number, stars: number) => Promise<AckResult>;
   /** Resolves to the server's verdict on the comment and topics; the final form shows it, so nothing is toasted here. */
   sendFeedback: (feedback: SendFeedbackPayload) => Promise<AckResult>;
+  /** The team's pacing and felt-difficulty answers, kept the same way as the ratings. */
+  mySessionRatings: TeamSessionRatingsView;
+  /** Resolves to the server's verdict on one pacing or felt-difficulty answer; the final form shows it, so nothing is toasted here. */
+  rateSession: (rating: RateSessionPayload) => Promise<AckResult>;
   /** The team's player count as the server last confirmed it, or null until one is reported. */
   myPlayerCount: number | null;
   /** Resolves to the server's verdict on the count; the card shows it, so nothing is toasted here. */
@@ -492,6 +498,16 @@ export function useTeamLink(
     [emitWithAck, dispatch],
   );
 
+  const rateSession = useCallback(
+    async (rating: RateSessionPayload) => {
+      const result = await emitWithAck(SOCKET_EVENTS.RATE_SESSION, rating);
+      if (result.success) dispatch({ type: 'sessionRatingSaved', rating });
+      return result;
+    },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `rateSession` is the same function either way
+    [emitWithAck, dispatch],
+  );
+
   const setPlayerCount = useCallback(
     async (playerCount: number) => {
       const payload: SetPlayerCountPayload = { playerCount };
@@ -602,12 +618,14 @@ export function useTeamLink(
           myBonusAwards: link.myBonusAwards,
           myRoundRatings: link.myRoundRatings,
           myFeedback: link.myFeedback,
+          mySessionRatings: link.mySessionRatings,
           myPlayerCount: link.myPlayerCount,
           roundRatingsEpoch: link.roundRatingsEpoch,
           seenQuestions,
           submitAnswer,
           rateRound,
           sendFeedback,
+          rateSession,
           setPlayerCount,
           myJoker: link.myJoker,
           pickJoker,

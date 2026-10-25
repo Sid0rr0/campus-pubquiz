@@ -88,6 +88,10 @@ export const sendFeedbackPayloadSchema = z.object({
   topics: topicsSchema,
 });
 
+// The scale values live in shared types with their own spec, so the phone's
+// buttons and this check can't disagree.
+export { rateSessionPayloadSchema } from '@campus-pubquiz/types';
+
 export const setPlayerCountPayloadSchema = z.object({
   playerCount: z.number().refine(isValidPlayerCount, {
     message: `Must be a whole number from ${MIN_PLAYER_COUNT} to ${MAX_PLAYER_COUNT}`,

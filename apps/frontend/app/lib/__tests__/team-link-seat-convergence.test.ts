@@ -38,6 +38,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   bonusAwards: [],
   roundRatings: [],
   feedback: { comment: '', topics: [] },
+  sessionRatings: { pacing: null, feltDifficulty: null },
   playerCount: null,
   joker: null,
 };

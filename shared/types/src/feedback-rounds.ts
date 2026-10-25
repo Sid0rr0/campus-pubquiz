@@ -28,3 +28,11 @@ export function getFeedbackField(session: SessionState): FeedbackField {
     allRounds: () => seededGame.rounds.map(({ id, title }) => ({ id, title })),
   });
 }
+
+/**
+ * Whether the final form is open: what the comment, topics, pacing and felt
+ * difficulty are all accepted under, read from the same field the phone shows.
+ */
+export function isFinalFormOpen(session: SessionState): boolean {
+  return getFeedbackField(session)?.kind === 'final_form';
+}

@@ -22,6 +22,7 @@ import type {
   TeamBonusAwardsSyncedPayload,
 } from './bonus';
 import type { RateRoundPayload, SendFeedbackPayload } from './feedback';
+import type { RateSessionPayload } from './session-scales';
 import type {
   PickJokerPayload,
   SetTeamJokerPayload,
@@ -82,6 +83,7 @@ export interface ClientToServerProtocol {
   };
   [SOCKET_EVENTS.RATE_ROUND]: { payload: RateRoundPayload; ack: void };
   [SOCKET_EVENTS.SEND_FEEDBACK]: { payload: SendFeedbackPayload; ack: void };
+  [SOCKET_EVENTS.RATE_SESSION]: { payload: RateSessionPayload; ack: void };
   [SOCKET_EVENTS.SET_PLAYER_COUNT]: {
     payload: SetPlayerCountPayload;
     ack: void;
