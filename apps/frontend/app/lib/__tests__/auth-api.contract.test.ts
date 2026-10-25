@@ -1,4 +1,5 @@
 import {
+  BASE,
   CSRF,
   describeApiClient,
   JSON_TYPE,
@@ -15,7 +16,6 @@ import {
   register,
 } from '@/app/lib/auth-api';
 
-const BASE = 'http://localhost:3000';
 const credentials = { username: 'alice', password: 'hunter2' };
 
 describeApiClient(

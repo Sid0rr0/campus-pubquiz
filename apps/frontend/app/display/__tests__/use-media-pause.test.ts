@@ -26,11 +26,21 @@ function fakeMedia() {
   };
 }
 
+/** A fake media element where the hook expects an `<audio>`. */
+function asAudio(media: ReturnType<typeof fakeMedia>): HTMLAudioElement {
+  return media as unknown as HTMLAudioElement;
+}
+
+/** A fake media element where the hook expects a `<video>`. */
+function asVideo(media: ReturnType<typeof fakeMedia>): HTMLVideoElement {
+  return media as unknown as HTMLVideoElement;
+}
+
 describe('useMediaPause', () => {
   it('leaves media unmuted when no mute flag is given', () => {
     const { result, rerender } = renderHook(() => useMediaPause(false));
     const audio = fakeMedia();
-    result.current.audioRef.current = audio as unknown as HTMLAudioElement;
+    result.current.audioRef.current = asAudio(audio);
     rerender();
     expect(audio.muted).toBe(false);
   });
@@ -40,7 +50,7 @@ describe('useMediaPause', () => {
       useMediaPause(false, 0, 0, true),
     );
     const audio = fakeMedia();
-    result.current.audioRef.current = audio as unknown as HTMLAudioElement;
+    result.current.audioRef.current = asAudio(audio);
     rerender();
     expect(audio.muted).toBe(true);
   });
@@ -51,7 +61,7 @@ describe('useMediaPause', () => {
       { initialProps: { paused: true } },
     );
     const audio = fakeMedia();
-    result.current.audioRef.current = audio as unknown as HTMLAudioElement;
+    result.current.audioRef.current = asAudio(audio);
     expect(() => rerender({ paused: false })).not.toThrow();
     expect(audio.play).toHaveBeenCalledTimes(1);
   });
@@ -62,7 +72,7 @@ describe('useMediaPause', () => {
       { initialProps: { token: 0 } },
     );
     const video = fakeMedia();
-    result.current.videoRef.current = video as unknown as HTMLVideoElement;
+    result.current.videoRef.current = asVideo(video);
     expect(() => rerender({ token: 1 })).not.toThrow();
     expect(video.currentTime).toBe(12);
     expect(video.play).toHaveBeenCalledTimes(1);
@@ -108,7 +118,7 @@ describe('useMediaPause', () => {
     it('does not pause a video when the game is not paused', () => {
       const { result } = renderHook(() => useMediaPause(false));
       const video = fakeMedia();
-      result.current.videoRef.current = video as unknown as HTMLVideoElement;
+      result.current.videoRef.current = asVideo(video);
       result.current.onVideoReady();
       expect(video.pause).not.toHaveBeenCalled();
     });
@@ -119,7 +129,7 @@ describe('useMediaPause', () => {
         { initialProps: { paused: false } },
       );
       const video = fakeMedia();
-      result.current.videoRef.current = video as unknown as HTMLVideoElement;
+      result.current.videoRef.current = asVideo(video);
       rerender({ paused: true });
       video.pause.mockClear();
       result.current.onVideoReady();

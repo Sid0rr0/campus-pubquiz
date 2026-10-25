@@ -1,10 +1,9 @@
 import {
+  BASE,
   CSRF,
   describeApiClient,
 } from '@/app/lib/__tests__/api-client-contract';
 import { deleteQuiz, fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
-
-const BASE = 'http://localhost:3000';
 
 describeApiClient(
   'quiz-api',

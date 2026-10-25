@@ -100,5 +100,7 @@ export function describeApiClient(
   });
 }
 
+/** The backend origin the clients build their URLs from in tests. */
+export const BASE = 'http://localhost:3000';
 export const CSRF = { 'X-Requested-With': 'XMLHttpRequest' };
 export const JSON_TYPE = { 'Content-Type': 'application/json' };

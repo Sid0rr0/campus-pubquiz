@@ -76,7 +76,8 @@ export function quizToCsv(rounds: readonly ImportRoundPreview[]): string {
 
 /** `Campus Pub Quiz #3` → `campus-pub-quiz-3.csv`. */
 export function csvFilename(quizTitle: string): string {
-  // Stryker disable MethodExpression,Regex: edge whitespace becomes a hyphen and is stripped again, so trim() changes nothing; and the replace before the last leaves at most one hyphen in a row, so ^-+ and ^- (likewise -+$ and -$) strip the same text
+  // A range over this one statement, not next-line: Stryker ignores a comment inside a method chain, and a next-line before `const slug` only reaches the mutants on its first line, not the regexes below. Equivalent — edge whitespace becomes a hyphen and is stripped again, so trim() changes nothing; and the replace before the last leaves at most one hyphen in a row, so ^-+ and ^- (likewise -+$ and -$) strip the same text.
+  // Stryker disable MethodExpression,Regex: see above
   const slug = quizTitle
     .trim()
     .toLowerCase()

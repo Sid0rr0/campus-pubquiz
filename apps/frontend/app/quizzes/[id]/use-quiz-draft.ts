@@ -138,7 +138,6 @@ export function useQuizDraft(quizId: string): QuizDraft {
   const [mergedDraft, setMergedDraft] = useState(draftQuery.data);
   if (draftQuery.data && hydratedQuizId !== numericQuizId) {
     setHydratedQuizId(numericQuizId);
-    // Stryker disable next-line CallExpression: without it the next render runs the backfill branch once, which changes nothing on freshly hydrated rounds
     setMergedDraft(draftQuery.data);
     const hydratedRounds = draftQuery.data.rounds.map((round) =>
       roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),

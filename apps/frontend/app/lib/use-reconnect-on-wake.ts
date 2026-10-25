@@ -17,7 +17,8 @@ export function useReconnectOnWake(onWake: () => void): void {
     onWakeRef.current = onWake;
   }, [onWake]);
 
-  // Stryker disable ArrayDeclaration: a constant dependency is as stable as none
+  // A range, not next-line: Stryker only honours a comment that leads a node, and nothing leads the `[]` after this effect's closing brace. Equivalent — an effect with a constant dependency runs once on mount, same as `[]`.
+  // Stryker disable ArrayDeclaration: see above
   useEffect(() => {
     let hiddenAt: number | null = null;
 

@@ -1,10 +1,11 @@
-import { describeApiClient } from '@/app/lib/__tests__/api-client-contract';
+import {
+  BASE,
+  describeApiClient,
+} from '@/app/lib/__tests__/api-client-contract';
 import {
   fetchQuizPreview,
   QuizPreviewApiError,
 } from '@/app/lib/quiz-preview-api';
-
-const BASE = 'http://localhost:3000';
 
 describeApiClient(
   'quiz-preview-api',

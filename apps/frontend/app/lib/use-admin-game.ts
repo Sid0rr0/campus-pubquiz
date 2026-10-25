@@ -89,7 +89,8 @@ export function useAdminGame(
   // trigger the connect Effect.
   const focusedAnswersQuestionIdRef = useRef<number | null>(null);
 
-  // Stryker disable ArrayDeclaration: equivalent — every dependency array below lists only references that never change for the life of the hook (`emitWithAck` is `useCallback(…, [])` in useGameConnection, `emitAction` depends only on it, and the setters and ref are stable), so an emptied or padded list behaves the same.
+  // A range, not next-line: Stryker only honours a comment that leads a node, and nothing leads the `[]` after this callback's closing brace. Equivalent — the callback reads only a ref and state setters, so a padded list never changes how it behaves.
+  // Stryker disable ArrayDeclaration: see above
   const bindSocket = useCallback((socket: RoomSocket<'admin'>) => {
     focusedAnswersQuestionIdRef.current = null;
     socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload) => {
@@ -108,6 +109,7 @@ export function useAdminGame(
       setPresenterContext(payload),
     );
   }, []);
+  // Stryker restore ArrayDeclaration
 
   const { identityKey, emitWithAck, snapshot, connectionError, reconnectedAt } =
     useGameConnection('admin', enabled, joinCode, bindSocket);
@@ -132,6 +134,7 @@ export function useAdminGame(
       if (!result.success) toast.error(result.error);
       return result;
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes (`useCallback(…, [])` in useGameConnection), so `emitAction` is the same function either way
     [emitWithAck],
   );
 
@@ -140,6 +143,7 @@ export function useAdminGame(
       const payload: AdminActionPayload = { action };
       return emitAction(SOCKET_EVENTS.ADMIN_ACTION, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `sendAction` is the same function either way
     [emitAction],
   );
 
@@ -148,6 +152,7 @@ export function useAdminGame(
       const payload: GradeAnswerPayload = { answerId, pointsAwarded };
       return emitAction(SOCKET_EVENTS.GRADE_ANSWER, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `gradeAnswer` is the same function either way
     [emitAction],
   );
 
@@ -156,6 +161,7 @@ export function useAdminGame(
       const payload: KickTeamPayload = { teamId };
       return emitAction(SOCKET_EVENTS.KICK_TEAM, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `kickTeam` is the same function either way
     [emitAction],
   );
 
@@ -164,6 +170,7 @@ export function useAdminGame(
       const payload: SetTeamPlayerCountPayload = { teamId, playerCount };
       return emitAction(SOCKET_EVENTS.SET_TEAM_PLAYER_COUNT, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `setTeamPlayerCount` is the same function either way
     [emitAction],
   );
 
@@ -172,6 +179,7 @@ export function useAdminGame(
       const payload: SetTeamJokerPayload = { teamId, roundId };
       return emitAction(SOCKET_EVENTS.SET_TEAM_JOKER, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `setTeamJoker` is the same function either way
     [emitAction],
   );
 
@@ -185,6 +193,7 @@ export function useAdminGame(
       const payload: AwardBonusPayload = { teamId, category, points, reason };
       return emitAction(SOCKET_EVENTS.AWARD_BONUS, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `awardBonus` is the same function either way
     [emitAction],
   );
 
@@ -193,6 +202,7 @@ export function useAdminGame(
       const payload: SetBreakEndTimePayload = { breakEndsAt };
       return emitAction(SOCKET_EVENTS.SET_BREAK_END_TIME, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `setBreakEndTime` is the same function either way
     [emitAction],
   );
 
@@ -201,6 +211,7 @@ export function useAdminGame(
       const payload: SetDisplayTextScalePayload = { displayTextScale };
       return emitAction(SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `setDisplayTextScale` is the same function either way
     [emitAction],
   );
 
@@ -209,6 +220,7 @@ export function useAdminGame(
       const payload: SetDisplaySoundMutedPayload = { isDisplaySoundMuted };
       return emitAction(SOCKET_EVENTS.SET_DISPLAY_SOUND_MUTED, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `setDisplaySoundMuted` is the same function either way
     [emitAction],
   );
 
@@ -217,9 +229,12 @@ export function useAdminGame(
       const payload: CreateShowdownRoundPayload = { question, answer, points };
       return emitAction(SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND, payload);
     },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `createShowdownRound` is the same function either way
     [emitAction],
   );
 
+  // A range, not next-line, for the same reason as `bindSocket`. Equivalent — the callback only writes a ref, so a padded list never changes how it behaves.
+  // Stryker disable ArrayDeclaration: see above
   const focusAnswersQuestionId = useCallback((questionId: number | null) => {
     focusedAnswersQuestionIdRef.current = questionId;
   }, []);

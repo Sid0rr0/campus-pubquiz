@@ -1,4 +1,5 @@
 import {
+  BASE,
   CSRF,
   describeApiClient,
   JSON_TYPE,
@@ -16,7 +17,6 @@ import {
   updateLeague,
 } from '@/app/lib/leagues-api';
 
-const BASE = 'http://localhost:3000';
 const signal = new AbortController().signal;
 const fields = { name: 'Autumn', startsOn: '2026-09-01', endsOn: '2026-12-01' };
 

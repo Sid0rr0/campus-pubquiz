@@ -1,4 +1,5 @@
 import {
+  BASE,
   CSRF,
   describeApiClient,
   JSON_TYPE,
@@ -15,7 +16,6 @@ import {
   TeamsApiError,
 } from '@/app/lib/teams-api';
 
-const BASE = 'http://localhost:3000';
 const get = { credentials: 'include' } as const;
 const teamCodePost = {
   method: 'POST',

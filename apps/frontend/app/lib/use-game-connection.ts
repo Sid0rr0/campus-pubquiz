@@ -185,7 +185,8 @@ export function useGameConnection<Role extends SocketRoomName>(
     [],
   );
 
-  // Stryker disable ArrayDeclaration: reportConnection never changes, so its dependency entry is inert
+  // A range, not next-line: Stryker only honours a comment that leads a node, and nothing leads the array after this callback's closing brace. Equivalent — `reportConnection` never changes, so its dependency entry is inert.
+  // Stryker disable ArrayDeclaration: see above
   const forceReconnect = useCallback(() => {
     const socket = socketRef.current;
     if (!socket) return;

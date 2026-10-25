@@ -1,4 +1,5 @@
 import {
+  BASE,
   CSRF,
   describeApiClient,
   JSON_TYPE,
@@ -11,8 +12,6 @@ import {
   SessionApiError,
   updateSessionSettings,
 } from '@/app/lib/sessions-api';
-
-const BASE = 'http://localhost:3000';
 
 describeApiClient(
   'sessions-api',

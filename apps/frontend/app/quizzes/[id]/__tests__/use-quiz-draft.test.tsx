@@ -108,6 +108,28 @@ describe('loading a quiz', () => {
     expect(result.current.isDirty).toBe(false);
   });
 
+  it('copies the loaded rounds into the editor once, without the refetch backfill copying them again', async () => {
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'T',
+      rounds: [emptyRound],
+    });
+    const roundsSeen = new Set<unknown>();
+
+    const { result } = renderHook(
+      () => {
+        const draft = useQuizDraft('5');
+        roundsSeen.add(draft.rounds);
+        return draft;
+      },
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.phase).toBe('editor'));
+
+    // The empty list before the load, then the hydrated rounds.
+    expect(roundsSeen.size).toBe(2);
+  });
+
   it('is not loading for a new quiz, which starts on the empty state', () => {
     const { result } = renderDraft('new');
 

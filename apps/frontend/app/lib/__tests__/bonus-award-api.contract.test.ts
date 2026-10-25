@@ -1,4 +1,5 @@
 import {
+  BASE,
   CSRF,
   describeApiClient,
   JSON_TYPE,
@@ -9,8 +10,6 @@ import {
   fetchBonusAwards,
   updateBonusAward,
 } from '@/app/lib/bonus-award-api';
-
-const BASE = 'http://localhost:3000';
 
 describeApiClient(
   'bonus-award-api',

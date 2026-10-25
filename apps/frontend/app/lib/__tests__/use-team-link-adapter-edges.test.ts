@@ -258,6 +258,23 @@ describe('useTeamLink: adapter edges', () => {
       expect(vi.getTimerCount()).toBe(0);
     });
 
+    it('replaces a pending retry when a newer connection is refused too, leaving no stale timer', async () => {
+      vi.useFakeTimers();
+      const { socket, unmount } = refusedRejoin();
+      const refusal = `"The Quizzards" ${SEAT_TAKEN_REFUSAL_MARKER}`;
+      await act(async () => socket.reject(SOCKET_EVENTS.JOIN_PLAYERS, refusal));
+      act(() => socket.serverDisconnects('transport close'));
+      act(() => socket.serverConnects());
+      await act(async () => socket.reject(SOCKET_EVENTS.JOIN_PLAYERS, refusal));
+
+      expect(socket.emitsOf(SOCKET_EVENTS.JOIN_PLAYERS)).toHaveLength(2);
+      expect(vi.getTimerCount()).toBe(1);
+
+      unmount();
+
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
     it('fires once after the retry delay', async () => {
       vi.useFakeTimers();
       const { socket } = refusedRejoin();

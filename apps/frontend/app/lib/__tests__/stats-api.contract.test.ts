@@ -1,4 +1,5 @@
 import {
+  BASE,
   CSRF,
   describeApiClient,
   JSON_TYPE,
@@ -13,7 +14,6 @@ import {
   StatsApiError,
 } from '@/app/lib/stats-api';
 
-const BASE = 'http://localhost:3000';
 const get = { credentials: 'include' } as const;
 
 describeApiClient(

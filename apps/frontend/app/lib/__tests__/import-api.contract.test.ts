@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import {
+  BASE,
   CSRF,
   describeApiClient,
   JSON_TYPE,
@@ -9,8 +10,6 @@ import {
   previewImport,
   previewImportFromUrl,
 } from '@/app/lib/import-api';
-
-const BASE = 'http://localhost:3000';
 
 describeApiClient(
   'import-api',

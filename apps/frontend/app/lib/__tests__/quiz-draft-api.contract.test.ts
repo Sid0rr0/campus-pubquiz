@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import {
+  BASE,
   CSRF,
   describeApiClient,
   JSON_TYPE,
@@ -11,7 +12,6 @@ import {
   updateQuiz,
 } from '@/app/lib/quiz-draft-api';
 
-const BASE = 'http://localhost:3000';
 const request = { title: 'Friday', rounds: [] };
 
 describeApiClient(
