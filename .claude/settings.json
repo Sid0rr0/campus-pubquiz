@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "graphify hook-guard search",
+            "command": "GRAPHIFY_HOOK_NUDGE_CAP=1 graphify hook-guard search",
             "timeout": 10
           }
         ]
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "graphify hook-guard read",
+            "command": "GRAPHIFY_HOOK_NUDGE_CAP=1 graphify hook-guard read",
             "timeout": 10
           }
         ]
