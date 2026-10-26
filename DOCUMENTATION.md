@@ -969,7 +969,10 @@ table (`GameSessionTeam`).
 - **Existing name + saved token** → reconnects silently (adding the team to a
   _new_ session's roster still requires that session's join code).
 - **Existing name, no token** (e.g. a teammate's phone) → requires the team's
-  recovery `code`, since a bare name match isn't proof of identity.
+  recovery `code`, since a bare name match isn't proof of identity. Names match
+  ignoring letter case ("the quizzards" is "The Quizzards"; an exact match wins
+  if two stored names differ only in case), and the refusal tells a team that
+  forgot its code to ask the moderator for it.
 - **Waking a phone** — mobile OSes freeze a backgrounded socket, so `/play`
   opens a fresh connection (`forceReconnect`) when the page turns visible after
   being hidden for at least `HIDDEN_RECONNECT_THRESHOLD_MS` (5 s), when it is

@@ -31,7 +31,7 @@ class TeamNameTakenError extends Error {
 export class TeamCodeRequiredError extends Error {
   constructor(teamName: string) {
     super(
-      `Team name "${teamName}" is already registered — enter its team code to play as this team, or choose a different name`,
+      `Team name "${teamName}" is already registered — enter its team code to play as this team, or choose a different name. If you forgot the code, ask the moderator for the team code`,
     );
     this.name = 'TeamCodeRequiredError';
   }
@@ -114,7 +114,14 @@ export class TeamService {
 
     await this.assertJoinCodeMatches(gameSessionId, options.joinCode);
 
-    const existingByName = await this.teams.findOne({ name: trimmedName });
+    // Exact name first; otherwise case-insensitive, so "the quizzards" returning
+    // to "The Quizzards" asks for the code instead of splitting the team. % and
+    // _ are escaped so they match literally.
+    const existingByName =
+      (await this.teams.findOne({ name: trimmedName })) ??
+      (await this.teams.findOne({
+        name: { $ilike: trimmedName.replace(/[\\%_]/g, '\\$&') },
+      }));
 
     if (existingByName) {
       const normalizedCode = options.teamCode?.trim().toUpperCase();

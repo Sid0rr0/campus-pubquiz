@@ -148,6 +148,64 @@ describe('TeamService (Postgres integration)', () => {
     expect(rows).toHaveLength(1);
   });
 
+  it('treats a name that differs only in letter case as the existing team', async () => {
+    await teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' });
+
+    await expect(
+      teamService.join(sessionId, 'the quizzards', { joinCode: 'ABCDEF' }),
+    ).rejects.toThrow(TeamCodeRequiredError);
+
+    expect(await em.find(Team, {})).toHaveLength(1);
+  });
+
+  it('lets a team rejoin with its code under a differently cased name, keeping the stored name', async () => {
+    const created = await teamService.join(sessionId, 'The Quizzards', {
+      joinCode: 'ABCDEF',
+    });
+    const session2Id = await createSecondSession('GHIJKL');
+
+    const rejoined = await teamService.join(session2Id, 'THE QUIZZARDS', {
+      joinCode: 'GHIJKL',
+      teamCode: created.code,
+    });
+
+    expect(rejoined.id).toBe(created.id);
+    expect(rejoined.name).toBe('The Quizzards');
+  });
+
+  it('tells a team that forgot its code to get it from the moderator', async () => {
+    await teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' });
+
+    await expect(
+      teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' }),
+    ).rejects.toThrow(/ask the moderator for the team code/i);
+  });
+
+  it('prefers the exact name when two existing teams differ only in letter case', async () => {
+    const exact = em.create(Team, {
+      name: 'Aces',
+      token: 'token-1',
+      code: 'AAA-111',
+    });
+    em.create(Team, { name: 'aces', token: 'token-2', code: 'BBB-222' });
+    await em.flush();
+
+    const joined = await teamService.join(sessionId, 'Aces', {
+      joinCode: 'ABCDEF',
+      teamCode: 'AAA-111',
+    });
+
+    expect(joined.id).toBe(exact.id);
+  });
+
+  it('does not treat % or _ in a team name as a wildcard', async () => {
+    await teamService.join(sessionId, 'Team A', { joinCode: 'ABCDEF' });
+
+    await expect(
+      teamService.join(sessionId, 'Team _', { joinCode: 'ABCDEF' }),
+    ).resolves.toMatchObject({ name: 'Team _' });
+  });
+
   it('lets a second device join the same team in the same session given the correct team code', async () => {
     const created = await teamService.join(sessionId, 'The Quizzards', {
       joinCode: 'ABCDEF',
