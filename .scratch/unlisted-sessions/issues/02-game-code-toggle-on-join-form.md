@@ -7,7 +7,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The "Game code" field is hidden until the team taps "Have a game code?" (join form test)
 - [ ] A typed code is what Join sends, and picking from the dropdown afterwards replaces it (join form test)

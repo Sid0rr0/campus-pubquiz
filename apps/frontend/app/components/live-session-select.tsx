@@ -18,9 +18,8 @@ interface LiveSessionSelectProps {
 /**
  * Lets a joining team pick a running game from the unauthenticated
  * `/sessions/public` list (same endpoint `/display` uses) instead of typing
- * its join code by hand. Both callers (`/play` and the home page) hide the
- * manual Game code field, so this is the only way to choose a session —
- * it stays on screen (disabled, with a "no games yet" placeholder) rather
+ * its join code by hand (the join form's "Have a game code?" field covers
+ * unlisted sessions). It stays on screen (disabled, with a "no games yet" placeholder) rather
  * than disappearing when the list is empty, since a team can land here
  * before the admin has started a session.
  */

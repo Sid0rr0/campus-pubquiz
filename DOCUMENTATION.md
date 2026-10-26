@@ -1708,8 +1708,11 @@ on an older schema version keep working without a data migration.
   admin account is bootstrapped at startup from
   `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` env vars, since
   self-registration alone can't produce the first approver.
-- **Teams**: join with a team name + the session's join code (typed or via the
-  QR code on the display), or reconnect via a saved token/recovery code — see
+- **Teams**: join with a team name + the session's join code (picked from the
+  "Pick the quiz" list, scanned from the QR code on the display, or typed into
+  the "Game code" field behind the join form's "Have a game code?" toggle,
+  closed by default; a `?code=` missing from the list opens it prefilled; the
+  field and the list share one code, so Join sends whichever was used last), or reconnect via a saved token/recovery code — see
   [Teams](#teams-join-reconnect-and-kick). Names are unique per team, not per
   session. The team code also opens the public team page with no login — see
   [Team page](#team-page).

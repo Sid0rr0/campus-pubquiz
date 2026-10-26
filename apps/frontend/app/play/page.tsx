@@ -115,7 +115,6 @@ function PlayPageContent() {
           connectionError={connectionError}
           onSubmit={handleJoin}
           alwaysShowTeamCode
-          hideGameCodeInput
         />
         {hasStoredIdentity && (
           <Button
