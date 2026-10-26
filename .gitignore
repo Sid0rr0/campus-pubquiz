@@ -58,3 +58,7 @@ scripts/.simulated-teams.json
 # Mutation testing (Stryker)
 .stryker-tmp/
 reports/
+
+# graphify
+graphify-out/
+apps/graphify-out/
