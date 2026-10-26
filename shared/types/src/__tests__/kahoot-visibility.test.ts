@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameProgress } from '../game-state';
 import {
+  isCurrentKahootQuestionRevealed,
   isCurrentRoundKahoot,
   isQuestionHiddenBehindKahootLeaderboard,
 } from '../kahoot-visibility';
@@ -57,6 +58,53 @@ describe('isQuestionHiddenBehindKahootLeaderboard', () => {
     expect(
       isQuestionHiddenBehindKahootLeaderboard(
         at({ ...behindBoard, status: 'reveal' }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('isCurrentKahootQuestionRevealed', () => {
+  const onQuestion = (
+    progress: Partial<GameProgress>,
+    revealedKahootQuestionIds: number[],
+  ) => sessionWith(ROUNDS, progress, { revealedKahootQuestionIds });
+
+  it('is true on a kahoot question whose reveal already aired, even back on its locking countdown', () => {
+    expect(
+      isCurrentKahootQuestionRevealed(
+        onQuestion({ status: 'locking', roundIndex: 1, questionIndex: 0 }, [2]),
+      ),
+    ).toBe(true);
+  });
+
+  it('is false on a kahoot question whose reveal has not aired, though another one has', () => {
+    expect(
+      isCurrentKahootQuestionRevealed(
+        onQuestion({ status: 'locking', roundIndex: 1, questionIndex: 1 }, [2]),
+      ),
+    ).toBe(false);
+  });
+
+  it('is false when no kahoot question was revealed', () => {
+    expect(
+      isCurrentKahootQuestionRevealed(
+        onQuestion({ status: 'locking', roundIndex: 1, questionIndex: 0 }, []),
+      ),
+    ).toBe(false);
+  });
+
+  it('is false outside a kahoot round, whatever the list holds', () => {
+    expect(
+      isCurrentKahootQuestionRevealed(
+        onQuestion({ status: 'locking', roundIndex: 0, questionIndex: 0 }, [1]),
+      ),
+    ).toBe(false);
+  });
+
+  it('is false when progress names a question past the round', () => {
+    expect(
+      isCurrentKahootQuestionRevealed(
+        onQuestion({ status: 'locking', roundIndex: 1, questionIndex: 5 }, [2]),
       ),
     ).toBe(false);
   });

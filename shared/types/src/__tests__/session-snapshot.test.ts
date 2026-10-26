@@ -358,6 +358,30 @@ describe('whether the block can be answered', () => {
   });
 });
 
+describe('a kahoot question whose reveal already aired', () => {
+  const backOnLocking = (questionIndex: number) => ({
+    ...sessionOver(
+      rounds,
+      progressAt('locking', {
+        roundIndex: 1,
+        questionIndex,
+        furthestOpenIndex: 0,
+      }),
+    ),
+    revealedKahootQuestionIds: [3],
+  });
+
+  it('is no longer answerable once Previous reopens its locking countdown', () => {
+    expect(isBlockAnswerable(backOnLocking(0))).toBe(false);
+    expect(findQuestionOpenForAnswering(backOnLocking(0), 3)).toBeUndefined();
+  });
+
+  it('leaves the next kahoot question answerable', () => {
+    expect(isBlockAnswerable(backOnLocking(1))).toBe(true);
+    expect(findQuestionOpenForAnswering(backOnLocking(1), 4)?.id).toBe(4);
+  });
+});
+
 describe('finding the question open for answering', () => {
   const open = (overrides = {}) =>
     sessionOver(
