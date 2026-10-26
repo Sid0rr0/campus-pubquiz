@@ -130,16 +130,16 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Creating a quiz',
     paragraphs: [
-      '"New Quiz" on the Sessions page opens the editor. Fill rounds in by hand or import a CSV; everything stays editable until you press Save quiz.',
-      'To add to a saved quiz, tick "Add to quiz instead of replacing" when importing. If a live-session save is refused, reload and save again.',
+      '"New Quiz" on the Sessions page opens the editor. Fill rounds in by hand or import a CSV; all stays editable until Save quiz.',
+      'To add to a saved quiz, tick "Add to quiz instead of replacing" when importing. If a live save is refused, reload and save again.',
     ],
     bullets: [
       'Round note: up to 500 characters, for Remote and Control. "Show on screen" adds the big screen; phones never see it.',
-      'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL). Video files have no controls: run them from Control.',
-      'Number question: the margin row has a number field and a % / absolute switch, starting at 10%. CSV notes cell: {margin: "5%"}; for match, {scoring: "all_or_nothing"}.',
+      'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL). Run video files from Control.',
+      'Number question: the margin row has a number field and a % / absolute switch, starting at 10%. CSV notes: {margin: "5%"}; {scoring: …} sets sort: exact, per_item or one_off; match: per_item or one_off.',
       'Video question: tick "Hide video (sound only)" to cover the video until the reveal. In a CSV, write hideVideo: true inside the {…} group in the notes cell.',
       'Clip and Reveal start and end take seconds, M:SS or H:MM:SS. In a CSV: {start: "1:22", end: "2:20", revealStart: "2:30", revealEnd: "2:45"}.',
-      `CSV: one row per question; a round ends a block once any row has break_after = 1. By hand, fill category, author, round_note, show_round_note (1 shows it on screen) and notes. The type column takes ${CSV_TYPE_IDENTIFIERS}. The template shows every column.`,
+      `CSV: one row per question; a round ends a block once any row has break_after = 1. By hand, fill category, author, round_note, show_round_note (1 shows it on screen) and notes. The type column takes ${CSV_TYPE_IDENTIFIERS}. The template shows all columns.`,
     ],
     link: {
       href: '/sample-quiz-import.csv',

@@ -100,7 +100,9 @@ describe('GuideContent', () => {
     expect(text).toContain('margin row');
     expect(text).toContain('% / absolute');
     expect(text).toContain('margin: "5%"');
-    expect(text).toContain('scoring: "all_or_nothing"');
+    expect(text).toContain('sort: exact, per_item or one_off');
+    expect(text).toContain('match: per_item or one_off');
+    expect(text).not.toContain('all_or_nothing');
   });
 
   it('describes the Hide video checkbox and the hideVideo CSV key', () => {
