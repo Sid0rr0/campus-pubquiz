@@ -269,8 +269,10 @@ describe('session lifecycle payloads', () => {
       quizTitle: 'Campus Pub Quiz Night',
       status: 'question_open',
       teamCount: 3,
+      listed: false,
     };
 
+    expect(summary.listed).toBe(false);
     expect(summary.joinCode).toBe('ABC234');
     expect(summary.teamCount).toBe(3);
   });

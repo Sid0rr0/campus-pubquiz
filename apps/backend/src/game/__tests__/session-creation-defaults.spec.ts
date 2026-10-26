@@ -1,3 +1,4 @@
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   freezeClockAt,
@@ -52,6 +53,24 @@ describe('GameGateway — a freshly created session', () => {
     expect(
       (await game.resync('admin', created.joinCode)).breakEndsAt,
     ).toBeNull();
+  });
+
+  it('is listed by default, and unlisted when created with listed: false', async () => {
+    const byDefault = await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
+    );
+    const unlisted = await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId, {
+        ...DEFAULT_SESSION_SETTINGS,
+        listed: false,
+      }),
+    );
+
+    const publicCodes = game.gameState
+      .listPublicSessions()
+      .map((session) => session.joinCode);
+    expect(publicCodes).toContain(byDefault.joinCode);
+    expect(publicCodes).not.toContain(unlisted.joinCode);
   });
 
   it('carries nothing over from the session that came before it', async () => {

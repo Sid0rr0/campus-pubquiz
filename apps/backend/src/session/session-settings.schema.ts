@@ -41,6 +41,7 @@ export const sessionSettingsPartialSchema = z
     kahootQuestionTimerSeconds: z.number().int().positive().nullable(),
     collectFeedback: z.boolean(),
     funFactsEnabled: z.boolean(),
+    listed: z.boolean(),
   })
   .partial()
   // Only catches a patch naming both; a patch naming one is checked against the

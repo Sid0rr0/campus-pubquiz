@@ -131,6 +131,8 @@ export class SeedService {
         funFactsEnabled: gameSessionRow.settings.funFactsEnabled ?? true,
         // ...and before the "Jokers" setting, jokers are off.
         jokersEnabled: gameSessionRow.settings.jokersEnabled ?? false,
+        // ...and before "Show in the game list", the session is listed.
+        listed: gameSessionRow.settings.listed ?? true,
       },
     };
   }

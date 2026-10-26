@@ -309,6 +309,25 @@ describe('SessionSettingsForm', () => {
     });
   });
 
+  it('toggles listed off, and it starts on', async () => {
+    const onChange = vi.fn();
+    render(
+      <SessionSettingsForm
+        value={DEFAULT_SESSION_SETTINGS}
+        onChange={onChange}
+      />,
+    );
+    const toggle = screen.getByLabelText(/show in the game list/i);
+    expect(toggle).toBeChecked();
+
+    await userEvent.click(toggle);
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      listed: false,
+    });
+  });
+
   it('adds a new blank rule line', async () => {
     const onChange = vi.fn();
     render(

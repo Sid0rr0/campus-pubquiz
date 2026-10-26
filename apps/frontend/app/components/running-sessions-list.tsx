@@ -34,7 +34,14 @@ export function RunningSessionsList({
             className="flex items-center justify-between gap-3 rounded-xl border border-foreground/15 bg-white px-4 py-3"
           >
             <div className="flex flex-col">
-              <span className="font-extrabold">{session.name}</span>
+              <span className="font-extrabold">
+                {session.name}
+                {!session.listed && (
+                  <span className="ml-2 rounded-full border border-foreground/30 px-2 py-0.5 text-xs font-bold">
+                    Unlisted
+                  </span>
+                )}
+              </span>
               <span className="flex items-center gap-1 text-xs text-foreground/55">
                 {session.status} · {session.teamCount} teams ·{' '}
                 {session.joinCode}

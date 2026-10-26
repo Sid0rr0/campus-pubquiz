@@ -2,6 +2,7 @@ import {
   DEFAULT_SESSION_SETTINGS,
   type SessionSettings,
 } from '@campus-pubquiz/types';
+import { GameSession } from '@/db/entities/game-session.entity';
 import { SessionSettingsUpdateBlockedError } from '@/game/state/game-state.service';
 import {
   setupRealStoreGatewayTest,
@@ -73,6 +74,33 @@ describe('GameStateService — updateSessionSettings', () => {
       ),
     );
     expect(settings()).toEqual(DEFAULT_SESSION_SETTINGS);
+  });
+
+  it('changes listed in the lobby, and refuses it once the quiz has started', async () => {
+    await update({ listed: false });
+    expect(settings().listed).toBe(false);
+
+    await game.act('START_QUIZ');
+    await expect(update({ listed: true })).rejects.toThrow(
+      SessionSettingsUpdateBlockedError,
+    );
+    expect(settings().listed).toBe(false);
+  });
+
+  it('reads a stored session without the listed field as listed', async () => {
+    const row = await game.orm.em
+      .fork()
+      .findOneOrFail(GameSession, { joinCode: game.joinCode });
+    const { listed: _listed, ...withoutListed } = row.settings;
+    void _listed;
+    row.settings = withoutListed as SessionSettings;
+    await game.orm.em.fork().persistAndFlush(row);
+
+    const restarted = await game.restart();
+
+    expect(restarted.gameState.getSnapshot(game.joinCode).settings.listed).toBe(
+      true,
+    );
   });
 
   it('merges and persists kahootQuestionTimerSeconds', async () => {

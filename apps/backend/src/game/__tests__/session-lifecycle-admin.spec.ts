@@ -1,3 +1,4 @@
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
@@ -56,8 +57,28 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
           status: 'lobby',
           teamCount: 0,
           startedAt: await rowCreatedAt(game.joinCode),
+          listed: true,
         },
       ]);
+    });
+
+    it('leaves an unlisted session out of the public listing but keeps it for staff', async () => {
+      const created = await game.inRequestContext(() =>
+        game.gameState.createSession(other.quizId, {
+          ...DEFAULT_SESSION_SETTINGS,
+          listed: false,
+        }),
+      );
+
+      const joinCodes = (sessions: { joinCode: string }[]) =>
+        sessions.map((session) => session.joinCode);
+      expect(created.listed).toBe(false);
+      expect(joinCodes(game.gameState.listPublicSessions())).toEqual([
+        game.joinCode,
+      ]);
+      expect(joinCodes(game.gameState.listSessions())).toEqual(
+        expect.arrayContaining([game.joinCode, created.joinCode]),
+      );
     });
 
     it('includes every concurrently-running session after creating another one', async () => {
@@ -227,6 +248,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
         status: 'lobby',
         teamCount: 0,
         startedAt: await rowCreatedAt(created.joinCode),
+        listed: true,
       });
     });
 

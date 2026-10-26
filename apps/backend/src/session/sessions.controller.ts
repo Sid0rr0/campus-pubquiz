@@ -96,7 +96,7 @@ export class SessionsController {
    */
   @Get('public')
   listPublic(): ActiveSessionSummary[] {
-    return this.gameState.listSessions();
+    return this.gameState.listPublicSessions();
   }
 
   @Get()

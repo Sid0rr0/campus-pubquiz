@@ -35,6 +35,7 @@ type LiveSessionRestParse = Parameters<
 function makeController() {
   const gameState = {
     listSessions: jest.fn(),
+    listPublicSessions: jest.fn(),
     createSession: jest.fn(),
   };
   // The real REST entry parses the request body once the session is known to
@@ -78,6 +79,7 @@ function summary(
     status: 'lobby',
     teamCount: 0,
     startedAt: '2026-09-16T12:00:00.000Z',
+    listed: true,
     ...overrides,
   };
 }
@@ -121,13 +123,15 @@ describe('SessionsController', () => {
   });
 
   describe('listPublic and list', () => {
-    it('pass the game state summaries straight through', () => {
+    it('list the public listing for listPublic and the full one for list', () => {
       const { controller, gameState } = makeController();
-      const summaries = [summary(), summary({ joinCode: 'MNOPQR' })];
-      gameState.listSessions.mockReturnValue(summaries);
+      const all = [summary(), summary({ joinCode: 'MNOPQR', listed: false })];
+      const publicOnly = [all[0]];
+      gameState.listSessions.mockReturnValue(all);
+      gameState.listPublicSessions.mockReturnValue(publicOnly);
 
-      expect(controller.listPublic()).toEqual(summaries);
-      expect(controller.list()).toEqual(summaries);
+      expect(controller.listPublic()).toEqual(publicOnly);
+      expect(controller.list()).toEqual(all);
     });
   });
 

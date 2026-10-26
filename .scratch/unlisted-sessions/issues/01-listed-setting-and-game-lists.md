@@ -8,7 +8,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A new session is listed by default, and one created with `listed: false` is not (session creation defaults spec)
 - [ ] `listed` can change in the lobby and is refused after Start like the other settings; a stored session without the field reads as listed (update session settings spec)

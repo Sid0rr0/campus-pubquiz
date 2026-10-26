@@ -122,6 +122,27 @@ describe('SessionPickerPanel', () => {
     expect(screen.getByText(/lobby · 3 teams · abcdef/i)).toBeInTheDocument();
   });
 
+  it('badges an unlisted session as Unlisted and leaves a listed one plain', async () => {
+    const base = {
+      quizId: 1,
+      quizTitle: 'Quiz',
+      status: 'lobby',
+      teamCount: 0,
+      startedAt: '2026-09-16T12:00:00.000Z',
+    };
+    mockFetchSessions.mockResolvedValue([
+      { ...base, joinCode: 'AAAAAA', name: 'Open night', listed: true },
+      { ...base, joinCode: 'BBBBBB', name: 'Closed night', listed: false },
+    ]);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText('Open night');
+    expect(screen.getAllByText('Unlisted')).toHaveLength(1);
+    expect(screen.getByText('Closed night')).toContainElement(
+      screen.getByText('Unlisted'),
+    );
+  });
+
   it('shows when each running session was started', async () => {
     mockFetchSessions.mockResolvedValue([
       {

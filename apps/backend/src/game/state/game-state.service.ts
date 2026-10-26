@@ -91,6 +91,7 @@ function summarizeSession(session: SessionState): ActiveSessionSummary {
     status: session.progress.status,
     teamCount: session.teams.length,
     startedAt: seededGame.startedAt.toISOString(),
+    listed: seededGame.settings.listed,
   };
 }
 
@@ -240,9 +241,14 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrite.read(joinCode).seededGame.quizId;
   }
 
-  /** Every currently-held session's summary, for the admin and public session pickers (`GET /sessions`). */
+  /** Every currently-held session's summary, listed or not, for the staff session list (`GET /sessions`). */
   listSessions(): ActiveSessionSummary[] {
     return this.sessionWrite.list().map(summarizeSession);
+  }
+
+  /** Only the listed sessions, for the unauthenticated game lists (`GET /sessions/public`). */
+  listPublicSessions(): ActiveSessionSummary[] {
+    return this.listSessions().filter((summary) => summary.listed);
   }
 
   /**

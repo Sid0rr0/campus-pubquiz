@@ -236,6 +236,17 @@ export function SessionSettingsForm({
         Fun facts on the break screen
       </label>
 
+      <label className="flex items-center gap-2 text-sm font-extrabold">
+        <input
+          type="checkbox"
+          checked={value.listed}
+          onChange={(event) =>
+            onChange({ ...value, listed: event.target.checked })
+          }
+        />
+        Show in the game list
+      </label>
+
       <div className="flex flex-wrap gap-4">
         <label className="flex flex-col gap-1 text-sm font-extrabold">
           Max players per team

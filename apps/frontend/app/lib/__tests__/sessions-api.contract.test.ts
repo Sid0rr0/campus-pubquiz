@@ -24,7 +24,18 @@ describeApiClient(
       url: `${BASE}/sessions`,
       init: { credentials: 'include' },
       fallback: 'Session request failed',
-      okBody: [],
+      okBody: [
+        {
+          joinCode: 'ABCD',
+          quizId: 1,
+          quizTitle: 'Quiz',
+          name: 'Quiz',
+          status: 'lobby',
+          teamCount: 0,
+          startedAt: '2026-09-16T12:00:00.000Z',
+          listed: false,
+        },
+      ],
     },
     {
       name: 'fetchPublicSessions',
