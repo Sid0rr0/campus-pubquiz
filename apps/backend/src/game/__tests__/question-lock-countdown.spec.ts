@@ -105,9 +105,10 @@ describe('GameGateway — question lock countdown', () => {
     await actAll(TO_LOCKING);
     await game.act('END_QUIZ');
 
-    const created = await game.inRequestContext(() =>
-      game.gameState.createSessionSnapshot(game.quizId),
-    );
+    const created = await game.inRequestContext(async () => {
+      const { joinCode } = await game.gameState.createSession(game.quizId);
+      return game.gameState.getSnapshot(joinCode);
+    });
 
     expect(created.questionLockAt).toBeNull();
   });

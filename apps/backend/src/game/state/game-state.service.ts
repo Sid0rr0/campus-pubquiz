@@ -331,22 +331,6 @@ export class GameStateService implements OnModuleInit {
     return summarizeSession(this.sessionWrite.read(joinCode));
   }
 
-  /** Like `createSession`, for a caller that wants the new session's full state snapshot rather than its picker summary. */
-  async createSessionSnapshot(
-    quizId: number,
-    settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
-    name?: string,
-    leagueIds: number[] = [],
-  ): Promise<StateSnapshotPayload> {
-    const joinCode = await this.placeNewSession(
-      quizId,
-      settings,
-      name,
-      leagueIds,
-    );
-    return this.getSnapshot(joinCode);
-  }
-
   private async placeNewSession(
     quizId: number,
     settings: SessionSettings,
