@@ -318,6 +318,10 @@ What one press of an admin action does right now. Advance and Previous: reveal t
 The join code and QR code shown over the big screen once the quiz has started, so late teams can join without the quiz moving. Like the leaderboard it is not a status: the quiz carries on underneath, timers included, and phones are untouched. Only one of the two is up at a time, and it can't be up in the lobby or once the quiz has ended.
 _Avoid_: QR screen, lobby overlay
 
+**Unlisted session**:
+A live session left out of the game lists teams and the big screen pick from; sessions are listed by default. Teams still join it with its join code or QR code, and once it ends it counts like any other session.
+_Avoid_: private session, hidden session
+
 **Settle step**:
 Bringing a session's timers, deadlines and reveal step into line with the point in the quiz it is moving to. Every way a session reaches a new point (starting, restoring after a restart, Advance, Previous) goes through it.
 
