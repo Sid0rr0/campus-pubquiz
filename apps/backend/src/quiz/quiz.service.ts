@@ -131,6 +131,17 @@ export class QuizService {
     return (await this.quizzes.count({ id: quizId })) > 0;
   }
 
+  /** Ids of the quiz's questions that have at least one stored answer, from any session (running or ended). */
+  async answeredQuestionIds(quizId: number): Promise<Set<number>> {
+    const rows = (await this.quizzes
+      .getKnex()('answers as a')
+      .join('questions as q', 'q.id', 'a.question_id')
+      .join('rounds as r', 'r.id', 'q.round_id')
+      .where('r.quiz_id', quizId)
+      .distinct('a.question_id')) as { question_id: number }[];
+    return new Set(rows.map((row) => row.question_id));
+  }
+
   /** Full editable quiz for the quiz editor page, or null if the id doesn't exist. */
   async findDraftById(quizId: number): Promise<QuizDraft | null> {
     const quiz = await this.quizzes.findByIdWithRoundsAndQuestions(quizId);

@@ -1410,6 +1410,14 @@ or counted. It is a read of the quiz.
   at each screen and takes the `DisplayScreen` from the display projection, so
   the preview can't draw anything `/display` wouldn't.
 
+**Played quizzes.** A save (editor or CSV re-import) that would delete a
+question with stored answers from any session, running or ended, is refused with
+the same `409`, because deleting a question deletes its answers and so rewrites
+past scores, league tables and team pages. Rewording an answered question is
+allowed. A re-import matches rows to stored questions by position, so inserting
+a row shifts later questions onto other stored ones and their answers follow
+the position, not the prompt; start a new quiz for a restructured night.
+
 **Editing a live quiz**: a quiz can be edited at any time, including while a
 session on it is running (any status other than `lobby`/`ended`). Five rules
 apply while live, enforced by `findLiveEditViolations`

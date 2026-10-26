@@ -129,6 +129,43 @@ function findRoundQuestionViolations(
 }
 
 /**
+ * Issues for answered questions a save would drop. Deleting a question deletes
+ * its stored answers with it (the database cascades), which rewrites the
+ * scores of every session already played on the quiz, whether or not one is
+ * running now. `answeredIds` are the stored questions with answers.
+ */
+export function findDroppedAnsweredQuestions(
+  current: readonly ImportRoundPreview[],
+  incoming: readonly ImportRoundPreview[],
+  answeredIds: ReadonlySet<number>,
+): QuizDraftIssue[] {
+  const keptIds = new Set(
+    incoming.flatMap((round) =>
+      round.questions.flatMap(({ questionId }) =>
+        questionId === undefined ? [] : [questionId],
+      ),
+    ),
+  );
+  return current.flatMap((round, roundIndex) =>
+    round.questions.flatMap(({ questionId }, questionIndex) =>
+      questionId !== undefined &&
+      answeredIds.has(questionId) &&
+      !keptIds.has(questionId)
+        ? [
+            {
+              roundIndex,
+              questionIndex,
+              field: 'questionId',
+              message:
+                'Cannot delete a question teams have already answered in a played session — it would delete those answers and change past scores. Start a new quiz instead.',
+            },
+          ]
+        : [],
+    ),
+  );
+}
+
+/**
  * Diffs a quiz draft about to be saved against its currently-persisted
  * rounds while a session is live on this quiz. Game progress is positional,
  * so nothing at or before the frontier may shift: the current round and every

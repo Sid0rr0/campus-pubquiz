@@ -22,6 +22,7 @@ import { BlockGradingService } from '@/game/state/block-grading.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
 import { SessionWrite, type HeldWriter } from '@/game/state/session-write';
 import {
+  findDroppedAnsweredQuestions,
   findLiveEditViolations,
   findRegradeQuestionIds,
   QuizLiveEditBlockedError,
@@ -150,6 +151,20 @@ export class LiveEditService {
       result = await this.sessionWrite.hold(
         this.unfinishedJoinCodes(quizId),
         async (held) => {
+          const currentDraft = await this.quizService.findDraftById(quizId);
+          if (!currentDraft) throw new QuizNotFoundError(quizId);
+          const rounds = strategy
+            ? strategy.identifyQuestions(currentDraft.rounds, requestedRounds)
+            : requestedRounds;
+          const droppedAnswered = findDroppedAnsweredQuestions(
+            currentDraft.rounds,
+            rounds,
+            await this.quizService.answeredQuestionIds(quizId),
+          );
+          if (droppedAnswered.length > 0) {
+            throw new QuizLiveEditBlockedError(droppedAnswered);
+          }
+
           const liveSessions = this.listLiveSessions(quizId);
           if (liveSessions.length === 0) {
             const saved = await persist(requestedRounds);
@@ -157,11 +172,6 @@ export class LiveEditService {
             return saved;
           }
 
-          const currentDraft = await this.quizService.findDraftById(quizId);
-          if (!currentDraft) throw new QuizNotFoundError(quizId);
-          const rounds = strategy
-            ? strategy.identifyQuestions(currentDraft.rounds, requestedRounds)
-            : requestedRounds;
           const frontier = mergeLiveEditFrontiers(
             liveSessions.map((session) => getSessionLiveEditFrontier(session)),
           );
