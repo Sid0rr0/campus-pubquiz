@@ -112,8 +112,9 @@ const sortFormat: AnswerFormat<string[]> = {
   format: (stored) => splitPipeList(stored).join(' → '),
   // Stray whitespace and empty items don't cost a team the question.
   score: (question, value) => {
+    const keyItems = splitPipeList(question.answer);
+    const keyLength = keyItems.length;
     const inPlace = sortSlotMatches(value, question.answer);
-    const keyLength = splitPipeList(question.answer).length;
     const wrongSlots = inPlace.flatMap((isRight, index) =>
       isRight ? [] : [index],
     );
@@ -124,6 +125,7 @@ const sortFormat: AnswerFormat<string[]> = {
       const points = nearestHalfPoint(
         (question.points * inPlace.filter(Boolean).length) / keyLength,
       );
+      if (points >= question.points) return correct(question);
       return { points, verdict: points > 0 ? 'partial' : 'incorrect' };
     }
     if (
@@ -131,7 +133,6 @@ const sortFormat: AnswerFormat<string[]> = {
       inPlace.length === keyLength
     ) {
       const [first, second] = wrongSlots;
-      const keyItems = splitPipeList(question.answer);
       const submitted = splitPipeList(value);
       return wrongSlots.length === 2 &&
         submitted[first] === keyItems[second] &&

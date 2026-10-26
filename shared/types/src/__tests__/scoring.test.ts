@@ -104,6 +104,20 @@ describe('scoreSubmission — sort scoring modes', () => {
     ).toEqual({ points: 0, verdict: 'incorrect' });
   });
 
+  it('is correct when per_item rounding reaches full points', () => {
+    expect(
+      scoreSubmission(
+        {
+          type: 'sort',
+          answer: 'a|b|c|d|e|f|g|h|i|j',
+          points: 1,
+          scoringMode: 'per_item',
+        },
+        'a|b|c|d|e|f|g|h|i|x',
+      ),
+    ).toEqual({ points: 1, verdict: 'correct' }); // 0.9 rounds to 1
+  });
+
   it('scales partial points by kahoot speed', () => {
     expect(
       scoreSubmission(sort('per_item'), 'a|b|d|c', {

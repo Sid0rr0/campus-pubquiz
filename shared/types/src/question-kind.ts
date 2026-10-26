@@ -18,6 +18,11 @@ import {
   type QuestionPayload,
 } from './question-payload-schema';
 import {
+  MATCH_SCORING_MODES,
+  SCORING_MODES,
+  type ScoringMode,
+} from './scoring-mode';
+import {
   answerOnlyCsv,
   choicesCsv,
   matchCsv,
@@ -64,6 +69,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   revealKind: 'answer' | 'closest_guess';
   /** Which per-type grading settings the question carries beyond its answer and points (see answer-key.ts). */
   gradingSettings: readonly GradingSettingName[];
+  /** The scoring modes the type accepts, its default first; empty for a type without a scoring mode. */
+  scoringModes: readonly ScoringMode[];
   /** Whether a correct rate means anything: false for a one-winner type, whose rate says nothing about how hard it was. Its own field, never derived from `gradingMode`. */
   hasCorrectRate: boolean;
   /**
@@ -92,6 +99,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'match-or-human',
     kahootAllowed: false,
     gradingSettings: [],
+    scoringModes: [],
   },
   multiple_choice: {
     type: 'multiple_choice',
@@ -108,6 +116,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'auto',
     kahootAllowed: true,
     gradingSettings: [],
+    scoringModes: [],
   },
   sort: {
     type: 'sort',
@@ -124,6 +133,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'auto',
     kahootAllowed: true,
     gradingSettings: ['scoringMode'],
+    scoringModes: SCORING_MODES,
   },
   match: {
     type: 'match',
@@ -140,6 +150,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'auto',
     kahootAllowed: true,
     gradingSettings: ['scoringMode'],
+    scoringModes: MATCH_SCORING_MODES,
   },
   closest_guess: {
     type: 'closest_guess',
@@ -156,6 +167,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'batch',
     kahootAllowed: false,
     gradingSettings: [],
+    scoringModes: [],
   },
   number: {
     type: 'number',
@@ -172,6 +184,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'auto',
     kahootAllowed: true,
     gradingSettings: ['margin'],
+    scoringModes: [],
   },
 };
 

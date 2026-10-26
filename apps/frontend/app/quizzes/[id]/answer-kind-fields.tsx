@@ -9,6 +9,7 @@ import {
 import {
   DEFAULT_MARGIN,
   gradingSettingsOf,
+  isScoringModeOf,
   scoringModesOf,
   hasMarginType,
   type AnswerKind,
@@ -259,10 +260,9 @@ function ScoringModeSelect({
   onChange,
 }: AnswerFieldsProps) {
   const modes = scoringModesOf(question.type);
-  const shown =
-    question.scoringMode && modes.includes(question.scoringMode)
-      ? question.scoringMode
-      : gradingSettingsOf({ type: question.type }).scoringMode;
+  const shown = isScoringModeOf(question.type, question.scoringMode)
+    ? question.scoringMode
+    : gradingSettingsOf({ type: question.type }).scoringMode;
   return (
     <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
       Scoring

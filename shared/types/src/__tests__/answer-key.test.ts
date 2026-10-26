@@ -3,7 +3,13 @@ import { DEFAULT_MARGIN, type Margin } from '../margin';
 import { QUESTION_KINDS } from '../question-kind';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
 import type { ScoringMode } from '../scoring-mode';
-import { answerKeyOf, gradingSettingsOf, isSameAnswerKey } from '../answer-key';
+import {
+  answerKeyOf,
+  gradingSettingsOf,
+  isSameAnswerKey,
+  isScoringModeOf,
+  scoringModesOf,
+} from '../answer-key';
 
 const STORED_MARGIN: Margin = { value: 5, unit: 'absolute' };
 const STORED_MODE: ScoringMode = 'one_off';
@@ -59,6 +65,29 @@ describe.each(QUESTION_TYPES)(
     });
   },
 );
+
+describe('the scoring modes a type accepts', () => {
+  it.each([
+    ['sort', ['exact', 'per_item', 'one_off']],
+    ['match', ['per_item', 'one_off']],
+    ['number', []],
+    ['free_text', []],
+  ] as const)('%s accepts %j', (type, modes) => {
+    expect(scoringModesOf(type)).toEqual(modes);
+  });
+
+  it('tells an accepted mode from an unset or foreign one', () => {
+    expect(isScoringModeOf('sort', 'exact')).toBe(true);
+    expect(isScoringModeOf('match', 'exact')).toBe(false);
+    expect(isScoringModeOf('sort', undefined)).toBe(false);
+    expect(isScoringModeOf('number', 'per_item')).toBe(false);
+  });
+
+  it('defaults a sort question to exact and a match question to per_item', () => {
+    expect(gradingSettingsOf({ type: 'sort' }).scoringMode).toBe('exact');
+    expect(gradingSettingsOf({ type: 'match' }).scoringMode).toBe('per_item');
+  });
+});
 
 describe('the answer key of a question', () => {
   it('holds the answer, the points and the resolved settings', () => {

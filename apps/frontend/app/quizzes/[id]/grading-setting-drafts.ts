@@ -1,8 +1,8 @@
 import {
   QUESTION_KINDS,
   gradingSettingsOf,
+  isScoringModeOf,
   parseFiniteNumber,
-  scoringModesOf,
   type GradingSettingName,
   type ImportQuestionPreview,
 } from '@campus-pubquiz/types';
@@ -20,11 +20,9 @@ const scoringModeDraft: GradingSettingDraft = {
   load: (question) => ({ scoringMode: question.scoringMode }),
   // A mode the type doesn't accept (left from another type) is saved as unset.
   save: (question) => ({
-    scoringMode:
-      question.scoringMode &&
-      scoringModesOf(question.type).includes(question.scoringMode)
-        ? question.scoringMode
-        : undefined,
+    scoringMode: isScoringModeOf(question.type, question.scoringMode)
+      ? question.scoringMode
+      : undefined,
   }),
 };
 

@@ -1,11 +1,7 @@
 import { DEFAULT_MARGIN, type Margin } from './margin';
 import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionType } from './question-types';
-import {
-  EXACT_SCORING,
-  PER_ITEM_SCORING,
-  type ScoringMode,
-} from './scoring-mode';
+import { PER_ITEM_SCORING, type ScoringMode } from './scoring-mode';
 
 /**
  * The Answer key module: what an answer is graded against. A question's
@@ -42,8 +38,18 @@ const DEFAULT_SETTINGS: GradingSettingValues = {
   margin: DEFAULT_MARGIN,
 };
 
-/** The scoring mode an unset one resolves to, by type; match's is the general default above. */
-const SORT_DEFAULT_SCORING_MODE: ScoringMode = EXACT_SCORING;
+/** The modes a question type accepts (its default first); none for a type without a scoring mode. */
+export function scoringModesOf(type: QuestionType): readonly ScoringMode[] {
+  return QUESTION_KINDS[type].scoringModes;
+}
+
+/** Whether `mode` is set and one the type accepts (a mode left over from another type is not). */
+export function isScoringModeOf(
+  type: QuestionType,
+  mode: ScoringMode | null | undefined,
+): mode is ScoringMode {
+  return !!mode && scoringModesOf(type).includes(mode);
+}
 
 /**
  * An Answer key with every setting present: the key's own, and for a setting
@@ -66,8 +72,8 @@ function resolveSetting<Name extends GradingSettingName>(
   stored: GradingSettingValues[Name] | null | undefined,
 ): GradingSettingValues[Name] {
   const fallback =
-    name === 'scoringMode' && type === 'sort'
-      ? SORT_DEFAULT_SCORING_MODE
+    name === 'scoringMode'
+      ? (scoringModesOf(type)[0] ?? DEFAULT_SETTINGS.scoringMode)
       : DEFAULT_SETTINGS[name];
   const value = stored ?? (fallback as GradingSettingValues[Name]);
   return typeof value === 'object' ? ({ ...value } as typeof value) : value;

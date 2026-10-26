@@ -1,5 +1,3 @@
-import type { QuestionType } from './question-types';
-
 /**
  * How Scoring's scoreSubmission scores a part-right answer (the **Scoring
  * mode** of GLOSSARY.md):
@@ -23,14 +21,5 @@ export const SCORING_MODES = [
 
 export type ScoringMode = (typeof SCORING_MODES)[number];
 
-/** Sort accepts all three; `exact` is its default. */
-export const SORT_SCORING_MODES = SCORING_MODES;
-
-/** Match accepts `per_item` (its default) and `one_off`. */
+/** Match accepts `per_item` (its default) and `one_off`; sort accepts all three. */
 export const MATCH_SCORING_MODES = [PER_ITEM_SCORING, ONE_OFF_SCORING] as const;
-
-/** The modes a question type accepts; none for a type without a scoring mode. */
-export function scoringModesOf(type: QuestionType): readonly ScoringMode[] {
-  if (type === 'sort') return SORT_SCORING_MODES;
-  return type === 'match' ? MATCH_SCORING_MODES : [];
-}
