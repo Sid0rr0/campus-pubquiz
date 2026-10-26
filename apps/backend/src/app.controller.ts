@@ -1,12 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
-import { AppService } from '@/app.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
-
+  // Render's health check (render.yaml) only needs a 200 here.
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  health(): string {
+    return 'OK';
   }
 }
