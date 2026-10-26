@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -93,6 +94,11 @@ export class StatsController {
   @Roles('admin')
   @HttpCode(204)
   async deleteSession(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    if (this.gameState.isHeld(id)) {
+      throw new ConflictException(
+        'Close this session on the control page before deleting it',
+      );
+    }
     await this.statsService.deleteSession(id);
   }
 

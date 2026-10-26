@@ -1726,6 +1726,9 @@ for the rest of the flow.
 a questions table, highlight tiles and the Scoresheet. All of it is computed per request from
 the stored rows, never cached.
 
+An admin can delete an ended session from `/stats` (`DELETE /stats/sessions/:id`);
+it is refused with 409 while the session is still open on `/control`, so close it first.
+
 There is no fastest-answer or fastest-team highlight (the tiles were dropped):
 response times show only as each standing row's average response and each
 question row's `fastestResponseMs`.

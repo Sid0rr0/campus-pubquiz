@@ -225,6 +225,13 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrite.has(joinCode);
   }
 
+  /** Whether the session with this database id is still held in memory (not yet closed). */
+  isHeld(gameSessionId: number): boolean {
+    return this.sessionWrite
+      .list()
+      .some(({ seededGame }) => seededGame.gameSessionId === gameSessionId);
+  }
+
   getGameSessionId(joinCode: string): number {
     return this.sessionWrite.read(joinCode).seededGame.gameSessionId;
   }

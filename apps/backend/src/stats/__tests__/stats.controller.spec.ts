@@ -1,4 +1,8 @@
-import { BadRequestException, ParseIntPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { StatsController } from '@/stats/stats.controller';
@@ -18,7 +22,7 @@ function makeController() {
     deleteSession: jest.fn(),
     renameSession: jest.fn(),
   };
-  const gameState = { renameHeldSession: jest.fn() };
+  const gameState = { renameHeldSession: jest.fn(), isHeld: jest.fn() };
   const controller = new StatsController(
     statsService as unknown as StatsService,
     gameState as unknown as GameStateService,
@@ -265,6 +269,18 @@ describe('StatsController', () => {
       await controller.deleteSession(1);
 
       expect(statsService.deleteSession).toHaveBeenCalledWith(1);
+    });
+
+    it('refuses with 409 while the session is still held in memory, deleting nothing', async () => {
+      const { controller, statsService, gameState } = makeController();
+      gameState.isHeld.mockReturnValue(true);
+
+      await expect(controller.deleteSession(1)).rejects.toThrow(
+        ConflictException,
+      );
+
+      expect(gameState.isHeld).toHaveBeenCalledWith(1);
+      expect(statsService.deleteSession).not.toHaveBeenCalled();
     });
   });
 
