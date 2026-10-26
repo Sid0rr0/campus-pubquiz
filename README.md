@@ -241,11 +241,14 @@ are gitignored.
   the wrapper (`src/test-db/mutate-db.ts`) starts one throwaway Postgres
   container for the run, gives each Stryker worker its own database, and
   stops the container afterwards. Separate from `pnpm mutate`, with its own
-  `reports/stryker-db-incremental.json` and `reports/mutation-db/` report.
+  `reports/stryker-db-incremental-v2.json` and `reports/mutation-db/` report.
   It's slow: run one area at a time with
   `pnpm --filter backend mutate:db --mutate src/<area>/<file>.ts,src/<area>/<other>.ts`
   (comma-separated: a repeated `--mutate` keeps only the last one);
   incremental results carry over, so the areas add up to the full baseline.
+  Its timeout is 3x the covered tests' time plus 30 s (the default hid
+  survivors as timeouts); a file with many timeouts left is worth a one-file
+  run with `--timeoutMS 120000 --timeoutFactor 5`.
 - `frontend`: the non-component `.ts` modules in `app/` (API parsers, storage
   helpers, hooks, draft state), against the whole Vitest suite. Specs, `.d.ts`
   files, `__tests__/` helpers and `.tsx` components are left out: in components
