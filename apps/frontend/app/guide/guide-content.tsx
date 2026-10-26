@@ -30,8 +30,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Before the night',
     paragraphs: [
       'Build the quiz, then check it with Quiz preview (Preview in the editor, quiz list, waiting session), not a throwaway session.',
-      'Put /display on the big screen and /control on your laptop; teams join on their phones with the join code.',
-      'A block is a run of rounds graded and revealed together. It ends at a round marked to break after it, and the last round always ends one.',
+      'Put /display on the big screen and /control on your laptop; teams join on their phones.',
+      'A block is a run of rounds graded and revealed together, ending at a round marked to break after it (the last round always does).',
     ],
   },
   {
@@ -40,6 +40,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'In the lobby, Session Settings sets the quiz, rules text and bonus categories. Then press Start Quiz.',
       'Tick the leagues this session counts towards when you start it, or in Session Settings until it ends.',
       'Advance shows the rules, the round overview, then the first round title card. While the rules show, Previous returns to the lobby.',
+    ],
+  },
+  {
+    title: 'Unlisted sessions',
+    paragraphs: [
+      'The "Show in the game list" switch in Session Settings (lobby only) keeps a session out of the game list; your session list marks it "Unlisted".',
+      'Open display on Control shows the big screen. Teams join by scanning its QR code, or "Have a game code?" and typing the code.',
     ],
   },
   {
@@ -62,7 +69,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Media and sound',
     paragraphs: [
-      'On a video or audio question (or its revealed answer), Pause and "Play again" sit below the Leaderboard row on Control. Moving on restarts it.',
+      'On a video or audio question (or its revealed answer), Pause and "Play again" sit below the Leaderboard row on Control.',
       'The Display sound toggle mutes the big screen, clips included; phones stay silent.',
     ],
   },
@@ -79,7 +86,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'When a block ends, answers close and the big screen shows a break card with a timer. Break End Time sets or extends it.',
       'Fun facts rotate on the card; switch them off in Session Settings (lobby only).',
-      "Previous steps back through the block's questions with answers hidden: the break review.",
+      "Previous steps back through the block's questions, answers hidden: the break review.",
     ],
   },
   {
@@ -93,14 +100,14 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'Show or hide the leaderboard any time. While it shows, Advance reveals one rank at a time, from last place up.',
       'Join overlay on Control covers the big screen with the QR code and join code for late teams.',
-      'When teams tie for first place after a reveal, the Showdown panel offers a tiebreak between them.',
+      'When teams tie for first after a reveal, the Showdown panel offers a tiebreak.',
     ],
   },
   {
     title: 'Teams',
     paragraphs: [
       'The Teams panel shows who is connected and has answered; kick a team here to remove it.',
-      'Phones and the big screen pick up where the quiz is on reconnecting. A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
+      'A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
       'Each team shows its player count, flagged as over the player cap above the "max players per team" setting; nothing is deducted automatically, so give a negative bonus as a penalty.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
       "Bonus points: open the team's actions menu, choose Award bonus, pick a category, set the points (negative is a penalty) and press Award.",
@@ -116,7 +123,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      'Remote (Sessions page) is a phone-friendly page with Previous, Advance and leaderboard controls, a next-up preview and your notes for the question on the big screen. Control shows them too. Space pauses media.',
+      'Remote (Sessions page) is a phone-friendly page with Previous, Advance and leaderboard controls, a next-up preview and your notes. Space pauses media.',
       'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,
@@ -130,16 +137,16 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Creating a quiz',
     paragraphs: [
-      '"New Quiz" on the Sessions page opens the editor. Fill rounds in by hand or import a CSV; all stays editable until Save quiz.',
+      '"New Quiz" on the Sessions page opens the editor. Fill rounds in by hand or import a CSV.',
       'To add to a saved quiz, tick "Add to quiz instead of replacing" when importing. If a live save is refused, reload and save again.',
     ],
     bullets: [
       'Round note: up to 500 characters, for Remote and Control. "Show on screen" adds the big screen; phones never see it.',
       'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL). Run video files from Control.',
-      'Number question: the margin row has a number field and a % / absolute switch, starting at 10%. CSV notes: {margin: "5%"}; {scoring: …} sets sort: exact, per_item or one_off; match: per_item or one_off.',
+      'Number question: the margin row has a number field and a % / absolute switch. CSV notes: {margin: "5%"}; {scoring: …} sets sort: exact, per_item or one_off; match: per_item or one_off.',
       'Video question: tick "Hide video (sound only)" to cover the video until the reveal. In a CSV, write hideVideo: true inside the {…} group in the notes cell.',
       'Clip and Reveal start and end take seconds, M:SS or H:MM:SS. In a CSV: {start: "1:22", end: "2:20", revealStart: "2:30", revealEnd: "2:45"}.',
-      `CSV: one row per question; a round ends a block once any row has break_after = 1. By hand, fill category, author, round_note, show_round_note (1 shows it on screen) and notes. The type column takes ${CSV_TYPE_IDENTIFIERS}. The template shows all columns.`,
+      `CSV: one row per question; a round ends a block once any row has break_after = 1. By hand, fill category, author, round_note, show_round_note (1 shows it on screen) and notes. The type column takes ${CSV_TYPE_IDENTIFIERS}.`,
     ],
     link: {
       href: '/sample-quiz-import.csv',

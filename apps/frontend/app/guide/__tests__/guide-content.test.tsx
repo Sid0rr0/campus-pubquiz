@@ -85,6 +85,16 @@ describe('GuideContent', () => {
     expect(text).toContain('even on 0 points');
   });
 
+  it('explains unlisted sessions: the switch, the badge, the display link and both ways to join', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('"Show in the game list" switch');
+    expect(text).toContain('Unlisted');
+    expect(text).toContain('Open display');
+    expect(text).toContain('scanning its QR code');
+    expect(text).toContain('"Have a game code?"');
+  });
+
   it('describes every question type from the registry', () => {
     const text = renderGuideText();
 
