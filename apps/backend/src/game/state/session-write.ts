@@ -186,16 +186,13 @@ export class SessionWrite {
   /**
    * Deletes the session on its queue, so a write still in progress can't put
    * it back and one queued behind it finds no session. `check` runs against
-   * the session as the previous write left it and may throw to refuse.
+   * the session as the previous write left it and may throw to refuse; what it returns is the removal's result.
    */
-  remove(
-    joinCode: string,
-    check: (session: SessionState) => void,
-  ): Promise<void> {
+  remove<T>(joinCode: string, check: (session: SessionState) => T): Promise<T> {
     return this.runQueued(joinCode, () => {
-      check(this.read(joinCode));
+      const checked = check(this.read(joinCode));
       this.sessions.delete(joinCode);
-      return Promise.resolve();
+      return Promise.resolve(checked);
     });
   }
 

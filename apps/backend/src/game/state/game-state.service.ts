@@ -287,16 +287,18 @@ export class GameStateService implements OnModuleInit {
    * with the unknown-session error.
    */
   async closeSession(joinCode: string): Promise<void> {
-    let gameSessionId = 0;
-    await this.sessionWrite.remove(joinCode, (session) => {
-      if (session.progress.status !== 'ended') {
-        throw new SessionCloseBlockedError(
-          joinCode,
-          `still in progress (status: "${session.progress.status}")`,
-        );
-      }
-      gameSessionId = session.seededGame.gameSessionId;
-    });
+    const gameSessionId = await this.sessionWrite.remove(
+      joinCode,
+      (session) => {
+        if (session.progress.status !== 'ended') {
+          throw new SessionCloseBlockedError(
+            joinCode,
+            `still in progress (status: "${session.progress.status}")`,
+          );
+        }
+        return session.seededGame.gameSessionId;
+      },
+    );
     await this.seedService.markClosed(gameSessionId);
   }
 

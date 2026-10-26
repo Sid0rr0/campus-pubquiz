@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSameMultiset, splitPipeList } from '../sort-match';
+import { isSameMultiset, isSameOrder, splitPipeList } from '../sort-match';
 
 describe('splitPipeList', () => {
   it('splits, trims, and drops empty segments', () => {
@@ -12,6 +12,20 @@ describe('splitPipeList', () => {
 
   it('returns an empty array for a blank string', () => {
     expect(splitPipeList('   ')).toEqual([]);
+  });
+});
+
+describe('isSameOrder', () => {
+  it('is true for the same items in the same order', () => {
+    expect(isSameOrder(['Alice', 'Bob'], ['Alice', 'Bob'])).toBe(true);
+  });
+
+  it('is false for the same items in a different order', () => {
+    expect(isSameOrder(['Alice', 'Bob'], ['Bob', 'Alice'])).toBe(false);
+  });
+
+  it('is false when lengths differ, even if one is a prefix of the other', () => {
+    expect(isSameOrder(['Alice'], ['Alice', 'Bob'])).toBe(false);
   });
 });
 
