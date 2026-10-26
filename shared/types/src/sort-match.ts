@@ -13,6 +13,14 @@ export function splitPipeList(raw: string): string[] {
     .filter((item) => item !== '');
 }
 
+/** One flag per submitted sort item: true when it sits in the key's slot. Split and trimmed as sort scoring does. */
+export function sortSlotMatches(submitted: string, key: string): boolean[] {
+  const keyItems = splitPipeList(key);
+  return splitPipeList(submitted).map(
+    (item, index) => item === keyItems[index],
+  );
+}
+
 /** True if `a` and `b` hold the same items in the same order. */
 export function isSameOrder(
   a: readonly string[],

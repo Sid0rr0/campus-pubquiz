@@ -347,6 +347,59 @@ describe('PlayPage — break and reveal', () => {
     );
   });
 
+  describe('sort marks', () => {
+    const REVEALED = {
+      rounds: [
+        { questions: [{ ...CIRCUITS, answer: 'Imola|Silverstone|Spa' }] },
+      ],
+      progress: { status: 'reveal' as const, revealIndex: 0 },
+    };
+
+    it('marks each item of the revealed order with a tick or a cross', () => {
+      renderPhone(REVEALED, { myAnswers: { 1: 'Imola|Spa|Silverstone' } });
+
+      expect(screen.getByText('Imola').closest('li')).toHaveTextContent('✓');
+      expect(screen.getByText('Spa').closest('li')).toHaveTextContent('✗');
+      expect(screen.getByText('Silverstone').closest('li')).toHaveTextContent(
+        '✗',
+      );
+    });
+
+    it('still marks the items when the moderator overrode the points', () => {
+      renderPhone(REVEALED, {
+        myAnswers: { 1: 'Imola|Spa|Silverstone' },
+        myAnswerGrades: {
+          1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'correct' },
+        },
+        seenQuestions: seenQuestionsOf(REVEALED),
+      });
+
+      expect(screen.getByText('Spa').closest('li')).toHaveTextContent('✗');
+      expect(screen.getByText('3 / 3 points')).toBeInTheDocument();
+    });
+
+    it("shows no marks for no answer or for I don't know", () => {
+      const { unmount } = renderPhone(REVEALED, { myAnswers: {} });
+      expect(screen.queryByText('✓')).not.toBeInTheDocument();
+      expect(screen.queryByText('✗')).not.toBeInTheDocument();
+      unmount();
+
+      renderPhone(REVEALED, { myAnswers: { 1: '__idk__' } });
+      expect(screen.queryByText('✓')).not.toBeInTheDocument();
+      expect(document.body).not.toHaveTextContent('✗');
+    });
+
+    it('shows no marks before the reveal', () => {
+      renderPhone(
+        { ...REVEALED, progress: { status: 'break' as const } },
+        { myAnswers: { 1: 'Imola|Spa|Silverstone' } },
+      );
+
+      expect(document.body).not.toHaveTextContent('✓');
+      expect(document.body).not.toHaveTextContent('✗');
+    });
+  });
+
   it("shows the team's own pairing for a match question during reveal, not the correct pairing", () => {
     renderPhone(
       {

@@ -9,7 +9,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Shared-types tests for the comparison: right order, one swap, shifted by one, stray whitespace and empty items
 - [ ] A Vitest render test of the question browser: a revealed sort question marks the right items ✓ and ✗
