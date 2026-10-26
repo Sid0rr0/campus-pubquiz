@@ -66,6 +66,7 @@ import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   type DeadlineChange,
   deadlinesOf,
+  NOTHING_TO_PUSH_OUTCOME,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import { LeagueChanges } from '@/game/state/league-changes';
@@ -614,6 +615,28 @@ export class GameStateService implements OnModuleInit {
           error instanceof Error ? error.message : 'Invalid game action',
         );
       });
+  }
+
+  /**
+   * A phase timer's expiry standing in for an ADVANCE press, for the deadline
+   * `dueAt` it was armed to. The check runs inside the session write, after any
+   * press queued ahead of it, so an expiry whose deadline that press already
+   * moved or cleared pushes nothing instead of advancing the quiz a second step.
+   */
+  advanceOnExpiry(
+    joinCode: string,
+    deadline: keyof DeadlineChange,
+    dueAt: number,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      session[deadline] === dueAt
+        ? this.moveCommitter.commit(session, 'ADVANCE')
+        : Promise.resolve({
+            session,
+            outcome: NOTHING_TO_PUSH_OUTCOME,
+            touchedScores: false,
+          }),
+    );
   }
 
   /** A team's answer from `socketId`: refused when the question is closed or the seat isn't the socket's; see the answers change module. */

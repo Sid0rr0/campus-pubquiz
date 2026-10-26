@@ -281,7 +281,10 @@ phase timer deadline (the question lock, the kahoot question timer or the joker
 pick deadline) reports the new deadlines with its outcome, and the delivery step
 re-arms that session's timers from them before anything is emitted, so the timers
 follow the session's deadlines after every change. A refused event reports nothing and
-leaves the timers as they were.
+leaves the timers as they were. A timer's expiry presses `ADVANCE` only if the session still
+holds the deadline that timer was armed to when its turn in the session's write queue comes:
+an expiry that lands behind a press which already moved or cleared that deadline is dropped,
+so a countdown running out as the quiz master presses Advance never steps past their press.
 
 The **Display screen** (`DisplayScreen`, `shared/types/src/display-screen.ts`) is what
 `/display` switches on; the page looks nothing up and works nothing out. Each kind carries

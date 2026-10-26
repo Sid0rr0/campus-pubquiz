@@ -12,15 +12,9 @@ import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
 import { findTeamIdBySocketId } from '@/game/state/session-updates.util';
 import {
-  BROADCAST_STATE_OUTCOME,
+  NOTHING_TO_PUSH_OUTCOME,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-
-/** The outcome of an event that is only acknowledged to its sender: no emits, no broadcast. */
-const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
-  ...BROADCAST_STATE_OUTCOME,
-  shouldBroadcastState: false,
-};
 
 interface FeedbackRules {
   noTeamReason: string;

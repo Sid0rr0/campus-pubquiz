@@ -117,6 +117,12 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   socketsToClose: [],
 };
 
+/** The outcome of a write that is only acknowledged, or dropped: no emits, no broadcast. */
+export const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
+  ...BROADCAST_STATE_OUTCOME,
+  shouldBroadcastState: false,
+};
+
 /**
  * Whether a transition is the one moment a team's cached grades go stale:
  * entering reveal_intro, or kahoot's collapsed lock-to-reveal, which skips
