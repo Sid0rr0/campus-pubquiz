@@ -32,6 +32,30 @@ export class SeedService {
     private readonly gameSessions: GameSessionRepository,
   ) {}
 
+  /** Every session an admin has not closed, oldest first; the demo game on an empty database. */
+  async seedOpenGames(): Promise<SeededGame[]> {
+    const open = await this.gameSessions.find(
+      { closedAt: null },
+      { orderBy: { createdAt: 'asc' } },
+    );
+    if (open.length === 0) {
+      return (await this.gameSessions.count()) === 0 ? [await this.seed()] : [];
+    }
+    const games: SeededGame[] = [];
+    for (const row of open) {
+      games.push(await this.loadGame(row.quiz.id, row.id, row.joinCode));
+    }
+    return games;
+  }
+
+  /** Marks a session closed so it is not reloaded on the next boot. */
+  async markClosed(gameSessionId: number): Promise<void> {
+    await this.gameSessions.nativeUpdate(
+      { id: gameSessionId },
+      { closedAt: new Date() },
+    );
+  }
+
   async seed(): Promise<SeededGame> {
     const [existingSession] = await this.gameSessions.find(
       {},

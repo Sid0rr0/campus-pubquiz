@@ -285,5 +285,19 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
         /Unknown game session/,
       );
     });
+
+    it('brings every open session back after a restart, and not a closed one', async () => {
+      const older = await createOtherSession();
+      const newer = await createOtherSession();
+      await game.act('START_QUIZ');
+      await game.act('END_QUIZ');
+      await game.gameState.closeSession(game.joinCode);
+
+      const restarted = await game.restart();
+
+      expect(restarted.gameState.hasSession(older.joinCode)).toBe(true);
+      expect(restarted.gameState.hasSession(newer.joinCode)).toBe(true);
+      expect(restarted.gameState.hasSession(game.joinCode)).toBe(false);
+    });
   });
 });

@@ -1650,8 +1650,9 @@ Entities live in `apps/backend/src/db/entities/`, one repository per entity in
 Migrations live in `apps/backend/src/db/migrations/` and run via
 `pnpm db:migrate` / `pnpm db:migrate:prod`.
 
-On boot the backend seeds the hardcoded demo quiz idempotently, loads
-persisted sessions, and rehydrates each one's progress — a redeploy mid-quiz
+On boot the backend seeds the hardcoded demo quiz on an empty database, loads
+every persisted session an admin has not closed (`game_sessions.closed_at` is
+null; closing a session sets it), and rehydrates each one's progress — a redeploy mid-quiz
 means roughly ten seconds of frozen sockets, then every client resyncs from
 its automatic reconnect. Answers, teams, and grades survive because they were
 never only in memory.

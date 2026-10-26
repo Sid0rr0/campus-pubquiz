@@ -203,17 +203,20 @@ export class GameStateService implements OnModuleInit {
   // the injected repositories to use — @CreateRequestContext() forks one.
   @CreateRequestContext()
   async onModuleInit(): Promise<void> {
-    const seededGame = await this.seedService.seed();
-    const saved = await this.progressRepository.load(seededGame.gameSessionId);
-    const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
-    this.sessionWrite.place(
-      seededGame.joinCode,
-      await this.moveCommitter.place(
-        freshSessionState(seededGame),
-        progress,
-        saved ?? undefined,
-      ),
-    );
+    for (const seededGame of await this.seedService.seedOpenGames()) {
+      const saved = await this.progressRepository.load(
+        seededGame.gameSessionId,
+      );
+      const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
+      this.sessionWrite.place(
+        seededGame.joinCode,
+        await this.moveCommitter.place(
+          freshSessionState(seededGame),
+          progress,
+          saved ?? undefined,
+        ),
+      );
+    }
     this.sessionWrite.markInitialized();
   }
 
@@ -276,15 +279,18 @@ export class GameStateService implements OnModuleInit {
    * still-connected display/players. A write queued behind the close fails
    * with the unknown-session error.
    */
-  closeSession(joinCode: string): Promise<void> {
-    return this.sessionWrite.remove(joinCode, (session) => {
+  async closeSession(joinCode: string): Promise<void> {
+    let gameSessionId = 0;
+    await this.sessionWrite.remove(joinCode, (session) => {
       if (session.progress.status !== 'ended') {
         throw new SessionCloseBlockedError(
           joinCode,
           `still in progress (status: "${session.progress.status}")`,
         );
       }
+      gameSessionId = session.seededGame.gameSessionId;
     });
+    await this.seedService.markClosed(gameSessionId);
   }
 
   /**

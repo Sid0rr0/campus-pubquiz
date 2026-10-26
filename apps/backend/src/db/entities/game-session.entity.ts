@@ -26,7 +26,8 @@ export class GameSession extends BaseEntity {
     | 'livePhaseKey'
     | 'phaseStartedAt'
     | 'phaseElapsedByKey'
-    | 'openedQuestionIds';
+    | 'openedQuestionIds'
+    | 'closedAt';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
   quiz!: Quiz;
@@ -80,4 +81,8 @@ export class GameSession extends BaseEntity {
   /** Ids of every question that has opened in this session — see SessionState.openedQuestionIds. Null for a session saved before this was tracked. */
   @Property({ type: 'json', nullable: true })
   openedQuestionIds: number[] | null = null;
+
+  /** When an admin closed this session (see GameStateService.closeSession); null while open. Closed sessions are not reloaded on boot. */
+  @Property({ type: 'timestamptz', nullable: true })
+  closedAt: Date | null = null;
 }
