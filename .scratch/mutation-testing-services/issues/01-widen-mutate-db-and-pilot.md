@@ -15,13 +15,13 @@ Parent spec: `.scratch/mutation-testing-services/spec.md`
 
 Done when:
 
-- [ ] `mutate:db` mutates `game/state/` plus the role-picked files, and `pnpm --filter backend mutate` is unchanged;
-- [ ] the pilot's numbers and the run-time estimate are in the comments;
-- [ ] README, `CLAUDE.md` and the implement-spec skill describe the new set.
+- [x] `mutate:db` mutates `game/state/` plus the role-picked files, and `pnpm --filter backend mutate` is unchanged;
+- [x] the pilot's numbers and the run-time estimate are in the comments;
+- [ ] README, `CLAUDE.md` and the implement-spec skill describe the new set (README and `CLAUDE.md` done; the skill is left open: the user edits `.claude/skills/implement-spec/SKILL.md` by hand).
 
 ## Comments
 
-**Set.** `dbSources()` in `apps/backend/stryker.files.cjs` (renamed from `gameStateSources()`; `stryker.db.config.mjs` is its one caller) returns 54 files: 17 in `game/state/` (the other 3 of its 20 are in the DB-free slice) and 37 picked by role. The spec's 38 included `log-buffer.service.ts`, which isn't on this branch's base (it sits in the main checkout's `logs/`), so the rule will pick it up once it lands. Controllers, modules, guards, decorators, `db/`, the `*-http*.ts` mappers, schema files, socket types and event declarations are out. `pnpm --filter backend mutate` is unchanged.
+**Set.** `dbSources()` in `apps/backend/stryker.files.cjs` (renamed from `gameStateSources()`; `stryker.db.config.mjs` is its one caller) returns 54 files: 18 in `game/state/` (3 of those are `*.service.ts`, which the role rule picks too) and 36 more picked by role. The spec's "38" was a miscount (its own list sums to 37); that list included `log-buffer.service.ts`, which isn't on this branch's base (it sits in the main checkout's `logs/`), so the rule will pick it up once it lands. Controllers, modules, guards, decorators, `db/`, the `*-http*.ts` mappers, schema files, socket types and event declarations are out. `pnpm --filter backend mutate` is unchanged.
 
 **Pilot** (`standings/standings.service.ts` + `cell-points.ts`, 481 lines, 8 workers): 184 mutants, 48 of them compile errors (excluded from the score), 4 killed, 131 timeouts, 0 survivors, 1 no-coverage. Score 99.26% (covered 100%). Run time 30m48s, of which the initial run of 1526 tests took 1m46s. That is about 3.8 s per source line, or about 12.6 s per tested mutant. Most detections are timeouts rather than kills, so the score likely overstates test strength; worth a look in ticket 02 (a mutant that hangs a DB-backed spec counts as detected).
 

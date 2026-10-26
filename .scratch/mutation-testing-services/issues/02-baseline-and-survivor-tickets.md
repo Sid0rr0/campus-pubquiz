@@ -15,9 +15,9 @@ Parent spec: `.scratch/mutation-testing-services/spec.md`
 
 Done when:
 
-- [ ] every area has run and the baseline table is in `spec.md`;
-- [ ] the survivor tickets exist and are listed under "Tickets";
-- [ ] any flaky spec it exposed has its own ticket.
+- [x] every area has run and the baseline table is in `spec.md`;
+- [x] the survivor tickets exist and are listed under "Tickets";
+- [x] any flaky spec it exposed has its own ticket (none did).
 
 ## Comments
 
