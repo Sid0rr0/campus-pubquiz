@@ -31,6 +31,14 @@ export interface SubmittedAnswer {
   verdict: Verdict | null;
 }
 
+/** A hand grade the Grading policy turns down; its message is for the quiz master. */
+export class AnswerGradeRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AnswerGradeRefusedError';
+  }
+}
+
 /** A question as grading sees it: the scoring inputs plus the id its answers hang off. SeededQuestion satisfies it. */
 export type GradableQuestion = ScoredQuestion & { id: number };
 
@@ -212,7 +220,7 @@ export class AnswerService {
     // Whether this answer may be hand-graded yet is the Grading policy's
     // call (a batch answer only once its batch has run).
     if (!canGradeByHand(question, answer)) {
-      throw new Error(
+      throw new AnswerGradeRefusedError(
         `${question.type} answers can only be graded by hand once the block locks`,
       );
     }

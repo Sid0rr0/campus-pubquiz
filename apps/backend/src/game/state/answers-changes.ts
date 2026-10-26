@@ -5,7 +5,11 @@ import {
   type SessionState,
   type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
-import { AnswerService } from '@/answer/answer.service';
+import { NotFoundError } from '@mikro-orm/core';
+import {
+  AnswerGradeRefusedError,
+  AnswerService,
+} from '@/answer/answer.service';
 import type { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
@@ -104,7 +108,9 @@ export class AnswersChanges {
         .flatMap((round) => round.questions)
         .find(({ id }) => id === questionId);
       if (question === undefined) {
-        throw new Error('This answer is not to a question in the session');
+        throw new SessionRefusal(
+          'This answer is not to a question in the session',
+        );
       }
       await this.answerService.grade(
         gameSessionId,
@@ -113,9 +119,15 @@ export class AnswersChanges {
         pointsAwarded,
       );
     } catch (error) {
-      throw new SessionRefusal(
-        error instanceof Error ? error.message : 'Unable to grade answer',
-      );
+      // Only the answer module's own refusals reach the quiz master; anything
+      // else (a lost database connection) is logged and answered generically.
+      if (
+        error instanceof AnswerGradeRefusedError ||
+        error instanceof NotFoundError
+      ) {
+        throw new SessionRefusal(error.message);
+      }
+      throw error;
     }
     return await this.refreshAnswers(session, questionId);
   }

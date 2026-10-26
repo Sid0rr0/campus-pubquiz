@@ -1,4 +1,5 @@
 import { asSocket } from '@/game/__tests__/test-utils';
+import { GENERIC_ERROR_MESSAGE } from '@/game/socket/acknowledge.util';
 import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
@@ -102,17 +103,19 @@ describe('GameGateway — grades and bonus awards wait their turn in the session
     expect(gradeSpy).not.toHaveBeenCalled();
   });
 
-  it('refuses a grade with a generic message when the answer module fails with something that is not an Error', async () => {
+  it('answers a failure that is not a refusal (e.g. a lost database connection) with the generic message, not the driver text', async () => {
     const answerId = await submitAnswer();
     const admin = await game.connectAdmin();
-    jest.spyOn(game.answerService, 'grade').mockRejectedValue('boom');
+    jest
+      .spyOn(game.answerService, 'grade')
+      .mockRejectedValue(new Error('Connection terminated unexpectedly'));
 
     const result = await game.gateway.handleGradeAnswer(asSocket(admin), {
       answerId,
       pointsAwarded: 1,
     });
 
-    expect(result).toEqual({ success: false, error: 'Unable to grade answer' });
+    expect(result).toEqual({ success: false, error: GENERIC_ERROR_MESSAGE });
   });
 
   it('reads the bonus limits and stores an award only after the write ahead of it has finished', async () => {
