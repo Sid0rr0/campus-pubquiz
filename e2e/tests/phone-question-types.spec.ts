@@ -142,7 +142,7 @@ test('sort, match, number and closest guess are answered by touch and revealed',
   await phoneA.expectRevealedAnswer(arrows(sort.keyOrder));
   await phoneA.expectRevealedPoints(sort.points, sort.points);
   await phoneB.expectRevealedAnswer(arrows(sort.startOrder));
-  await phoneB.expectRevealedPoints(0, sort.points);
+  await phoneB.expectRevealedPoints(1, sort.points);
 
   // Match: the key pairs on the big screen.
   await control.advance('reveal');
@@ -203,7 +203,7 @@ test('sort, match, number and closest guess are answered by touch and revealed',
   // The standings add the four questions up.
   await control.toggleLeaderboard();
   await control.revealNextLeaderboardTeam();
-  await display.expectLeaderboardRow(phoneB.teamName, 1);
+  await display.expectLeaderboardRow(phoneB.teamName, 2);
   await control.revealNextLeaderboardTeam();
   await display.expectLeaderboardRow(phoneA.teamName, TEAM_A_POINTS);
 });

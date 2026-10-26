@@ -64,4 +64,6 @@ export interface ActiveSessionSummary {
   teamCount: number;
   /** ISO timestamp the session was created (POST /sessions), for the "Started" display. */
   startedAt: string;
+  /** Whether the session is in the public game lists; staff see it either way. */
+  listed: boolean;
 }

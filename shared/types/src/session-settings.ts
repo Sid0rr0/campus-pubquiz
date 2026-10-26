@@ -33,6 +33,8 @@ export interface SessionSettings {
   collectFeedback: boolean;
   /** Whether the break screen on /display rotates fun facts. Off means the server sends the display an empty `funFacts`. */
   funFactsEnabled: boolean;
+  /** Whether the session appears in the public game lists (/display picker, /play dropdown). Off makes it an unlisted session: joining by code is unchanged. */
+  listed: boolean;
 }
 
 /** What a refused jokers-without-overview settings change says. */
@@ -79,6 +81,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   kahootQuestionTimerSeconds: null,
   collectFeedback: true,
   funFactsEnabled: true,
+  listed: true,
   rules: Object.freeze([
     'No cheating.',
     'Please write your answers in English.',

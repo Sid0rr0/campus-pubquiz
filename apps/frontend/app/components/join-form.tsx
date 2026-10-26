@@ -2,6 +2,9 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { EnterIcon } from '@radix-ui/react-icons';
+import { useQuery } from '@tanstack/react-query';
+import { fetchPublicSessions } from '@/app/lib/sessions-api';
+import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
 import { LiveSessionSelect } from '@/app/components/live-session-select';
 
@@ -16,8 +19,6 @@ interface JoinFormProps {
   onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   /** /play shows the team code field from the start — it's the reconnect/direct-visit fallback, where "played before?" is the common case rather than the exception the home page's collapsed toggle assumes. */
   alwaysShowTeamCode?: boolean;
-  /** /play hides the manual game code field — a team landing there already has a code (QR scan) or picks a running game from the select above it, so the raw input is just clutter. */
-  hideGameCodeInput?: boolean;
 }
 
 /**
@@ -37,9 +38,25 @@ export function JoinForm({
   connectionError,
   onSubmit,
   alwaysShowTeamCode = false,
-  hideGameCodeInput = false,
 }: JoinFormProps) {
   const [teamCodeRevealed, setTeamCodeRevealed] = useState(false);
+  const [gameCodeRevealed, setGameCodeRevealed] = useState(false);
+  // Same query (and cache) as the select below.
+  const sessionsQuery = useQuery({
+    queryKey: queryKeys.sessions.public(),
+    queryFn: fetchPublicSessions,
+  });
+  // A code that isn't in the game list (an unlisted session, from the QR
+  // code) opens the field so the team sees which game they're joining.
+  // Latched: once open it stays open while the team edits the code.
+  if (
+    !gameCodeRevealed &&
+    codeInput &&
+    sessionsQuery.isSuccess &&
+    !sessionsQuery.data.some((session) => session.joinCode === codeInput)
+  ) {
+    setGameCodeRevealed(true);
+  }
   // A stored team code (returning team) or a connection error asking for one
   // (name collision) both mean the field should just be there already —
   // only a fresh join with nothing to say yet starts it collapsed.
@@ -78,7 +95,7 @@ export function JoinForm({
           value={codeInput}
           onSelectSession={onCodeInputChange}
         />
-        {!hideGameCodeInput && (
+        {gameCodeRevealed ? (
           <>
             <label
               htmlFor="join-game-code"
@@ -97,6 +114,14 @@ export function JoinForm({
               className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
             />
           </>
+        ) : (
+          <Button
+            type="button"
+            onClick={() => setGameCodeRevealed(true)}
+            className="mt-2 self-start text-[13px] font-extrabold text-foreground/55 underline"
+          >
+            Have a game code?
+          </Button>
         )}
         {showTeamCode ? (
           <>

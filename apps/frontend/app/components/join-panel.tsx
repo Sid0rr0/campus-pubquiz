@@ -62,7 +62,6 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
               onTeamCodeInputChange={setTeamCodeInput}
               connectionError={connectionError}
               onSubmit={onSubmit}
-              hideGameCodeInput
             />
           </>
         )}

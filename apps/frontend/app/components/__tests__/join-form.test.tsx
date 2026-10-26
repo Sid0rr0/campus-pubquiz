@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JoinForm } from '@/app/components/join-form';
@@ -18,12 +18,14 @@ vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
 function ControlledJoinForm({
   connectionError = null,
   onSubmit = vi.fn(),
+  initialCode = '',
 }: {
   connectionError?: string | null;
   onSubmit?: () => void;
+  initialCode?: string;
 }) {
   const [nameInput, setNameInput] = useState('');
-  const [codeInput, setCodeInput] = useState('');
+  const [codeInput, setCodeInput] = useState(initialCode);
   const [teamCodeInput, setTeamCodeInput] = useState('');
   return (
     <JoinForm
@@ -48,15 +50,52 @@ describe('JoinForm', () => {
     mockFetchPublicSessions.mockResolvedValue([]);
   });
 
-  it('shows team name and game code fields', () => {
+  it('hides the game code field until "Have a game code?" is clicked', async () => {
     renderWithQuery(<ControlledJoinForm />);
 
     expect(
       screen.getByRole('textbox', { name: /team name/i }),
     ).toBeInTheDocument();
     expect(
+      screen.queryByRole('textbox', { name: /game code/i }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: /have a game code/i }),
+    );
+    expect(
       screen.getByRole('textbox', { name: /game code/i }),
     ).toBeInTheDocument();
+  });
+
+  it('opens the game code field with a prefilled code missing from the game list', async () => {
+    renderWithQuery(<ControlledJoinForm initialCode="HIDD-EN-CODE" />);
+
+    expect(
+      await screen.findByRole('textbox', { name: /game code/i }),
+    ).toHaveValue('HIDD-EN-CODE');
+  });
+
+  it('leaves the game code field closed for a prefilled code in the game list', async () => {
+    mockFetchPublicSessions.mockResolvedValue([
+      {
+        joinCode: 'ABCDEF',
+        quizId: 1,
+        quizTitle: 'Campus Pub Quiz Night',
+        name: 'Campus Pub Quiz Night',
+        status: 'lobby',
+        teamCount: 3,
+      },
+    ]);
+    renderWithQuery(<ControlledJoinForm initialCode="ABCDEF" />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('combobox', { name: /pick the quiz/i }),
+      ).toHaveTextContent(/campus pub quiz night/i),
+    );
+    expect(
+      screen.queryByRole('textbox', { name: /game code/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('hides the team code field until "Played before?" is clicked', async () => {
@@ -105,6 +144,35 @@ describe('JoinForm', () => {
       await screen.findByRole('option', { name: /campus pub quiz night/i }),
     );
 
+    await user.click(screen.getByRole('button', { name: /have a game code/i }));
+    expect(screen.getByRole('textbox', { name: /game code/i })).toHaveValue(
+      'ABCDEF',
+    );
+  });
+
+  it('lets a typed code be replaced by a dropdown pick', async () => {
+    mockFetchPublicSessions.mockResolvedValue([
+      {
+        joinCode: 'ABCDEF',
+        quizId: 1,
+        quizTitle: 'Campus Pub Quiz Night',
+        name: 'Campus Pub Quiz Night',
+        status: 'lobby',
+        teamCount: 3,
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithQuery(<ControlledJoinForm />);
+
+    await user.click(screen.getByRole('button', { name: /have a game code/i }));
+    await user.type(screen.getByRole('textbox', { name: /game code/i }), 'XYZ');
+    await user.click(
+      await screen.findByRole('combobox', { name: /pick the quiz/i }),
+    );
+    await user.click(
+      await screen.findByRole('option', { name: /campus pub quiz night/i }),
+    );
+
     expect(screen.getByRole('textbox', { name: /game code/i })).toHaveValue(
       'ABCDEF',
     );
@@ -117,6 +185,9 @@ describe('JoinForm', () => {
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
       'The Quizzards',
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /have a game code/i }),
     );
     await userEvent.type(
       screen.getByRole('textbox', { name: /game code/i }),

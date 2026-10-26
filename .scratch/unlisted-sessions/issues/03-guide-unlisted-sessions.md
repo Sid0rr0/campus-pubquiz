@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Listed setting, from switch to game lists), 02 ("Have a game code?" on the join form)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `/guide` describes the switch, the badge, opening the big screen and the two ways teams join, in the words the UI uses
 - [ ] The guide's tests (including its word cap) pass

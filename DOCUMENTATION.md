@@ -589,6 +589,15 @@ facts off: the server then sends `funFacts: []` on the break screen too. The
 `/control` lobby settings panel shows it as the "Fun facts on the break screen"
 switch. There is no per-fact choice.
 
+**Unlisted sessions.** The **`listed`** session setting (a boolean, default
+`true`, validated by the partial-settings Zod schema, editable in the lobby only
+like every other setting; a stored settings JSON without the field reads as
+listed) keeps a session out of the game lists: `GET /sessions/public`, which
+feeds the `/display` picker and the `/play` dropdown, leaves it out. Staff
+still see it in the `/sessions` list, marked "Unlisted". Joining and
+reconnecting by join code are unchanged. The start-session dialog and the
+`/control` lobby settings panel show it as the "Show in the game list" switch.
+
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like
 every other setting; a stored settings JSON without the field reads as off) turns
@@ -1708,8 +1717,11 @@ on an older schema version keep working without a data migration.
   admin account is bootstrapped at startup from
   `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` env vars, since
   self-registration alone can't produce the first approver.
-- **Teams**: join with a team name + the session's join code (typed or via the
-  QR code on the display), or reconnect via a saved token/recovery code — see
+- **Teams**: join with a team name + the session's join code (picked from the
+  "Pick the quiz" list, scanned from the QR code on the display, or typed into
+  the "Game code" field behind the join form's "Have a game code?" toggle,
+  closed by default; a `?code=` missing from the list opens it prefilled; the
+  field and the list share one code, so Join sends whichever was used last), or reconnect via a saved token/recovery code — see
   [Teams](#teams-join-reconnect-and-kick). Names are unique per team, not per
   session. The team code also opens the public team page with no login — see
   [Team page](#team-page).
@@ -1734,8 +1746,10 @@ admin/moderator landing page for managing them:
 - `DELETE /sessions/:joinCode` — close a session; blocked mid-game (409) via
   a dedicated guard.
 - `GET /sessions/public` — **unauthenticated**, so `/display` (venue TV, no
-  login) can list/pick a running session without credentials. Exposes only
-  join code, title, status, and team count.
+  login) can list/pick a running session without credentials. Lists only
+  **listed** sessions (the server filters; `GET /sessions` for staff lists
+  every session, each summary carrying `listed`). Exposes only join code,
+  title, status, and team count.
 
 Picking or starting a session in `/sessions` routes the admin to
 `/control?code=<joinCode>`, which binds that admin tab to one specific session
