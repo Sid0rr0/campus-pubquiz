@@ -1,6 +1,6 @@
 # 02: Baseline the remaining areas and write survivor tickets
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: 01
 
@@ -20,3 +20,7 @@ Done when:
 - [ ] any flaky spec it exposed has its own ticket.
 
 ## Comments
+
+Done 2026-10-26. All 12 areas ran (36 files, 2402 mutants); the baseline table and the timeout notes are in the spec. Run in two passes: the default timeout (2h45m, 93 survivors) and then, because that pass hid survivors, `timeoutFactor: 3` / `timeoutMS: 30000` (3h22m, 198 survivors). The second pass is the baseline and `stryker.db.config.mjs` now carries those settings and a fresh incremental file (`reports/stryker-db-incremental-v2.json`; the pilot and the first-pass results live in the old file). The ticket-01 pilot's incremental file wasn't in this worktree, so `standings/` was run again. Every initial run passed and no spec looked flaky, so no bug ticket. Survivor tickets are 03-10; ticket 11 re-baselines `game/state/`, whose earlier baseline used the default timeout.
+
+The 12 areas, each run as `pnpm --filter backend mutate:db --reporters clear-text,json --mutate a,b,…`.
