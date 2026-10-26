@@ -286,6 +286,38 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
       );
     });
 
+    describe('an ended session nobody closed, after a restart', () => {
+      async function endGameSession(daysAgo: number): Promise<void> {
+        await game.act('START_QUIZ');
+        await game.act('END_QUIZ');
+        await game.orm.em
+          .getConnection()
+          .execute(
+            `update game_sessions set updated_at = now() - make_interval(days => ?) where id = ?`,
+            [daysAgo, game.gameSessionId],
+          );
+      }
+
+      it('is closed at boot once it has been untouched for more than a day', async () => {
+        const running = await createOtherSession();
+        await endGameSession(2);
+
+        const restarted = await game.restart();
+
+        expect(restarted.gameState.hasSession(game.joinCode)).toBe(false);
+        expect(restarted.gameState.hasSession(running.joinCode)).toBe(true);
+      });
+
+      it('is still reloaded when it ended recently, so staff can review it', async () => {
+        await createOtherSession();
+        await endGameSession(0);
+
+        const restarted = await game.restart();
+
+        expect(restarted.gameState.hasSession(game.joinCode)).toBe(true);
+      });
+    });
+
     it('brings every open session back after a restart, and not a closed one', async () => {
       const older = await createOtherSession();
       const newer = await createOtherSession();

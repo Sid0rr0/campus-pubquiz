@@ -1662,7 +1662,8 @@ Migrations live in `apps/backend/src/db/migrations/` and run via
 
 On boot the backend seeds the hardcoded demo quiz on an empty database, loads
 every persisted session an admin has not closed (`game_sessions.closed_at` is
-null; closing a session sets it), and rehydrates each one's progress — a redeploy mid-quiz
+null; closing a session sets it; an ended session untouched for more than a
+day is closed at boot, so forgotten nights don't pile up in the join list), and rehydrates each one's progress — a redeploy mid-quiz
 means roughly ten seconds of frozen sockets, then every client resyncs from
 its automatic reconnect. Answers, teams, and grades survive because they were
 never only in memory.

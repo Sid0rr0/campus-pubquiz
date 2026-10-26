@@ -21,6 +21,8 @@ import { generateJoinCode } from '@/db/join-code.util';
 import { HARDCODED_QUIZ } from '@/game/fixtures/hardcoded-quiz.fixture';
 import type { CreatedGameSession } from '@/db/seed.types';
 
+const STALE_ENDED_SESSION_MS = 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class SeedService {
   constructor(
@@ -32,8 +34,17 @@ export class SeedService {
     private readonly gameSessions: GameSessionRepository,
   ) {}
 
-  /** Every session an admin has not closed, oldest first; the demo game on an empty database. */
+  /** Every session still open, oldest first, after closing ended ones nobody has touched for a day; the demo game on an empty database. */
   async seedOpenGames(): Promise<SeededGame[]> {
+    // shortcut: an ended session untouched for a day counts as abandoned; raise it if staff review nights later than that.
+    await this.gameSessions.nativeUpdate(
+      {
+        closedAt: null,
+        status: 'ended',
+        updatedAt: { $lt: new Date(Date.now() - STALE_ENDED_SESSION_MS) },
+      },
+      { closedAt: new Date() },
+    );
     const open = await this.gameSessions.find(
       { closedAt: null },
       { orderBy: { createdAt: 'asc' } },
