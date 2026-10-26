@@ -64,8 +64,12 @@ The quiz master marking a team's answer. It can happen as soon as an answer arri
 _Avoid_: scoring, marking
 
 **Answer key**:
-What an answer is graded against: the correct answer, the points, and the question type's grading settings (a match question's scoring mode, a Number question's margin), with any setting left unset filled in with its default. A key fix is a change to an opened question's answer key.
+What an answer is graded against: the correct answer, the points, and the question type's grading settings (a sort or match question's scoring mode, a Number question's margin), with any setting left unset filled in with its default. A key fix is a change to an opened question's answer key.
 _Avoid_: grading fields, key fields
+
+**Scoring mode**:
+A grading setting on sort and match questions that says how a part-right answer turns into points. There are three modes: **exact**, where only a fully right answer scores (sort only, and sort's default); **per item**, where each item in its right place or paired right earns its share of the points (match's default); and **one off**, which gives half points to an answer one mistake away from right (two sort items swapped, or one match pair wrong).
+_Avoid_: sort scoring, match scoring, all or nothing, partial (as a mode name), grading mode (that is the Grading policy's split by how a type is graded)
 
 **Question record codec**:
 The one place a question is converted between its stored row (columns plus a parsed payload), its preview (the shape the quiz editor and import work with), the seeded question a session holds, and the CSV sheet row. One field table decides when each shape carries a field: options, match targets, media, clip bounds, and grading settings (the ones the question type registry lists for the type). Any other field is dropped. The editor asks the same table for the media and clip rule. Unset stays unset; the Answer key owns defaults.
