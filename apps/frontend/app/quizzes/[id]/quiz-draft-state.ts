@@ -5,7 +5,7 @@ import {
   clipFieldsFor,
   parseFiniteNumber,
   parseTimecode,
-  PARTIAL_MATCH_SCORING,
+  PER_ITEM_SCORING,
   hasNumericAnswerKey,
   type ClipFields,
   type MarginUnit,
@@ -56,8 +56,8 @@ export interface EditorQuestion {
   options: EditorOption[];
   sortItems: string[];
   matchPairs: EditorMatchPair[];
-  /** Match only — see MatchScoringMode. Defaults to 'partial'. */
-  matchScoringMode: MatchScoringMode;
+  /** Match only — see MatchScoringMode. Defaults to 'per_item'. */
+  scoringMode: MatchScoringMode;
   /** Number only: the margin value as typed, so a half-typed "0." or an emptied field survives; parsed at save. */
   marginValue: string;
   /** Number only — see Margin. */
@@ -198,13 +198,10 @@ function clipFieldsFrom(
 
 /** The grading draft fields of a question that has no stored setting: the one place the editor's defaults are written. */
 const GRADING_DRAFT_DEFAULTS = {
-  matchScoringMode: PARTIAL_MATCH_SCORING,
+  scoringMode: PER_ITEM_SCORING,
   marginValue: String(DEFAULT_MARGIN.value),
   marginUnit: DEFAULT_MARGIN.unit,
-} satisfies Pick<
-  EditorQuestion,
-  'matchScoringMode' | 'marginValue' | 'marginUnit'
->;
+} satisfies Pick<EditorQuestion, 'scoringMode' | 'marginValue' | 'marginUnit'>;
 
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
 export function questionFromPreview(

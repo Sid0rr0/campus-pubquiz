@@ -34,7 +34,7 @@ import {
 export type GradingMode = 'auto' | 'batch' | 'match-or-human';
 
 /** A grading setting a question type may carry: a match question's scoring mode, a Number question's margin (see margin.ts). */
-export type GradingSettingName = 'matchScoringMode' | 'margin';
+export type GradingSettingName = 'scoringMode' | 'margin';
 
 /** Which answer input a type renders on the phone, and which editor section holds its answer. */
 export type AnswerInputKind = 'text' | 'number' | 'choice' | 'sort' | 'match';
@@ -139,7 +139,7 @@ export const QUESTION_KINDS: {
     csv: matchCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
-    gradingSettings: ['matchScoringMode'],
+    gradingSettings: ['scoringMode'],
   },
   closest_guess: {
     type: 'closest_guess',

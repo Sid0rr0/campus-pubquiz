@@ -14,7 +14,7 @@ import {
   clipNotesFieldsFor,
   gradingSettingsFor,
 } from './question-record-codec';
-import { MATCH_SCORING_MODES } from './match-scoring-mode';
+import { MATCH_SCORING_MODES } from './scoring-mode';
 import {
   MARGIN_NOTES_KEY,
   SCORING_NOTES_KEY,
@@ -83,7 +83,7 @@ const SHEET_COLUMN_BY_QUESTION_FIELD: Record<string, string> = {
   answerMediaUrl: 'answer_media_url',
   matchTargets: 'match_right',
   margin: 'notes',
-  matchScoringMode: 'notes',
+  scoringMode: 'notes',
 };
 
 /**

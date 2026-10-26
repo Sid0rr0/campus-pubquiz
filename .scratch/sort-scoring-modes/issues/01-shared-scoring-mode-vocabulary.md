@@ -9,7 +9,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] No `matchScoringMode`, `partial` (as a mode) or `all_or_nothing` remains outside the alias read and the migration
 - [ ] Match scoring results are unchanged: the existing scoring, auto-grading and live-edit regrade tests pass after the rename alone

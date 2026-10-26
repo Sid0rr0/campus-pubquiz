@@ -62,7 +62,7 @@ const PLACED_ISSUE_FIELDS = new Set([
   'answer',
   'options',
   'matchTargets',
-  'matchScoringMode',
+  'scoringMode',
   'margin',
   'mediaUrl',
   'answerMediaUrl',

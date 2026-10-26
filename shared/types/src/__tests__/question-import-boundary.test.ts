@@ -300,7 +300,7 @@ describe('sheet columns', () => {
     [{ path: ['matchTargets'], code: 'too_small' }, 'match_right'],
     [{ path: ['matchTargets'], code: 'custom' }, 'options'],
     [{ path: ['margin', 'value'], code: 'custom' }, 'notes'],
-    [{ path: ['matchScoringMode'], code: 'invalid_value' }, 'notes'],
+    [{ path: ['scoringMode'], code: 'invalid_value' }, 'notes'],
     [{ path: ['answer'], code: 'custom' }, 'answer'],
     [{ path: ['points'], code: 'invalid_type' }, 'points'],
     [{ path: [], code: 'custom' }, 'row'],
@@ -481,7 +481,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
         path: ['notes'],
         code: 'custom',
         message:
-          'Scoring "scoring" is not a match scoring mode — use partial or all_or_nothing',
+          'Scoring "scoring" is not a match scoring mode — use per_item or one_off',
       },
     ]);
   });

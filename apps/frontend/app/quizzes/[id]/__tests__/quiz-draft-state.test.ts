@@ -49,7 +49,7 @@ describe('makeQuestion / makeRound', () => {
       options: [makeOption(), makeOption()],
       sortItems: ['', ''],
       matchPairs: [makeMatchPair(), makeMatchPair()],
-      matchScoringMode: 'partial',
+      scoringMode: 'per_item',
       marginValue: '10',
       marginUnit: 'percent',
       correctText: '',
@@ -468,7 +468,7 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     ]);
   });
 
-  it('defaults matchScoringMode to partial when a saved match question has none', () => {
+  it('defaults scoringMode to per_item when a saved match question has none', () => {
     const preview: ImportQuestionPreview = {
       type: 'match',
       prompt: 'Match the hero to their weapon.',
@@ -480,7 +480,7 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
 
     const question = questionFromPreview('q1', preview);
 
-    expect(question.matchScoringMode).toBe('partial');
+    expect(question.scoringMode).toBe('per_item');
   });
 
   it('starts a new Number question at a 10% margin', () => {
@@ -555,7 +555,7 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     expect(questionToPreview(question)).not.toHaveProperty('margin');
   });
 
-  it('round-trips an explicit matchScoringMode through questionFromPreview/questionToPreview', () => {
+  it('round-trips an explicit scoringMode through questionFromPreview/questionToPreview', () => {
     const preview: ImportQuestionPreview = {
       type: 'match',
       prompt: 'Match the hero to their weapon.',
@@ -563,14 +563,14 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
       points: 4,
       options: ['arthur', 'captain america'],
       matchTargets: ['shield', 'excalibur'],
-      matchScoringMode: 'all_or_nothing',
+      scoringMode: 'one_off',
     };
 
     const question = questionFromPreview('q1', preview);
-    expect(question.matchScoringMode).toBe('all_or_nothing');
+    expect(question.scoringMode).toBe('one_off');
 
     const saved = questionToPreview(question);
-    expect(saved.matchScoringMode).toBe('all_or_nothing');
+    expect(saved.scoringMode).toBe('one_off');
   });
 
   it('keeps a saved match question’s target order when its right-hand items are unchanged, even if re-paired', () => {
@@ -714,7 +714,7 @@ describe('questionToPreview after a type change', () => {
 
       expect(preview).not.toHaveProperty('options');
       expect(preview).not.toHaveProperty('matchTargets');
-      expect(preview).not.toHaveProperty('matchScoringMode');
+      expect(preview).not.toHaveProperty('scoringMode');
       expect(preview.answer).toBe('42');
     },
   );
@@ -1425,8 +1425,8 @@ describe('titleAfterImport', () => {
 });
 
 describe('grading settings round-trip through the editor, per question type', () => {
-  const stored: Pick<ImportQuestionPreview, 'matchScoringMode' | 'margin'> = {
-    matchScoringMode: 'all_or_nothing',
+  const stored: Pick<ImportQuestionPreview, 'scoringMode' | 'margin'> = {
+    scoringMode: 'one_off',
     margin: { value: 2.5, unit: 'absolute' },
   };
 
@@ -1453,12 +1453,10 @@ describe('grading settings round-trip through the editor, per question type', ()
         questionFromPreview('q1', previewOf(type)),
       );
 
-      expect('matchScoringMode' in saved).toBe(
-        listed.includes('matchScoringMode'),
-      );
+      expect('scoringMode' in saved).toBe(listed.includes('scoringMode'));
       expect('margin' in saved).toBe(listed.includes('margin'));
-      if (listed.includes('matchScoringMode')) {
-        expect(saved.matchScoringMode).toBe('all_or_nothing');
+      if (listed.includes('scoringMode')) {
+        expect(saved.scoringMode).toBe('one_off');
       }
       if (listed.includes('margin')) {
         expect(saved.margin).toEqual({ value: 2.5, unit: 'absolute' });

@@ -372,7 +372,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
         ...round,
         questions: round.questions.map((question) =>
           roundIndex === 0
-            ? { ...question, matchScoringMode: 'partial' as const }
+            ? { ...question, scoringMode: 'per_item' as const }
             : { ...question, prompt: 'Which planet is largest?' },
         ),
       })),

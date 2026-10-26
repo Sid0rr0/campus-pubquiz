@@ -64,11 +64,11 @@ describe('Number questions', () => {
 
 describe('scoreSubmission — match', () => {
   const answer = 'a|b|c|d';
-  const partial = (mode?: 'partial' | 'all_or_nothing'): ScoredQuestion => ({
+  const partial = (mode?: 'per_item' | 'one_off'): ScoredQuestion => ({
     type: 'match',
     answer,
     points: 8,
-    matchScoringMode: mode,
+    scoringMode: mode,
   });
 
   it.each([
@@ -77,10 +77,10 @@ describe('scoreSubmission — match', () => {
     ['a|b|x|x', 4, 'partial'],
     ['x|x|x|x', 0, 'incorrect'],
   ] as const)(
-    'partial mode (default): %s -> %i, %s',
+    'per_item mode (default): %s -> %i, %s',
     (value, points, verdict) => {
       expect(scoreSubmission(partial(), value)).toEqual({ points, verdict });
-      expect(scoreSubmission(partial('partial'), value)).toEqual({
+      expect(scoreSubmission(partial('per_item'), value)).toEqual({
         points,
         verdict,
       });
@@ -92,8 +92,8 @@ describe('scoreSubmission — match', () => {
     ['a|b|c|x', 4, 'partial'],
     ['a|b|x|x', 0, 'incorrect'],
     ['x|x|x|x', 0, 'incorrect'],
-  ] as const)('all_or_nothing: %s -> %i, %s', (value, points, verdict) => {
-    expect(scoreSubmission(partial('all_or_nothing'), value)).toEqual({
+  ] as const)('one_off: %s -> %i, %s', (value, points, verdict) => {
+    expect(scoreSubmission(partial('one_off'), value)).toEqual({
       points,
       verdict,
     });
@@ -103,7 +103,7 @@ describe('scoreSubmission — match', () => {
     [1, 0.5],
     [3, 1.5],
   ])(
-    'awards exactly half of a %i-point question for one wrong pair in all_or_nothing',
+    'awards exactly half of a %i-point question for one wrong pair in one_off',
     (points, awarded) => {
       expect(
         scoreSubmission(
@@ -111,7 +111,7 @@ describe('scoreSubmission — match', () => {
             type: 'match',
             answer: 'a|b',
             points,
-            matchScoringMode: 'all_or_nothing',
+            scoringMode: 'one_off',
           },
           'a|x',
         ),
@@ -199,7 +199,7 @@ describe('scoreSubmission — kahoot speed', () => {
       type: 'match',
       answer: 'a|b',
       points: 1,
-      matchScoringMode: 'all_or_nothing',
+      scoringMode: 'one_off',
     };
     for (const responseMs of [0, 3_333, 7_777, 10_000]) {
       const result = scoreSubmission(question, 'a|x', speed(responseMs));

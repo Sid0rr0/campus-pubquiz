@@ -198,11 +198,11 @@ describe('grading settings in the notes cell', () => {
   it('round-trips a match scoring mode and writes it as a notes group', () => {
     const question = {
       ...QUESTION_BY_TYPE.match,
-      matchScoringMode: 'all_or_nothing' as const,
+      scoringMode: 'one_off' as const,
     };
     const row = encodeSheetRow(ROUND, question, true);
 
-    expect(row.notes).toBe('{scoring: "all_or_nothing"}');
+    expect(row.notes).toBe('{scoring: "one_off"}');
     expect(roundTrip(question).checked).toEqual({
       success: true,
       data: question,

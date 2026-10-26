@@ -65,7 +65,7 @@ type FieldTableRow = { field: TableField } & FieldRule;
 
 /** Every grading setting name, checked against the registry's type so a new one cannot be missed. */
 const GRADING_SETTING_FIELDS = {
-  matchScoringMode: true,
+  scoringMode: true,
   margin: true,
 } satisfies Record<GradingSettingName, true>;
 
@@ -186,8 +186,8 @@ export function clipNotesFieldsFor(question: MediaLinks & ClipFields) {
 /** The grading settings of a candidate that its type carries; one without a value is left out. */
 export function gradingSettingsFor(
   type: QuestionType,
-  candidate: Pick<QuestionPayload, 'margin' | 'matchScoringMode'>,
-): Pick<QuestionPayload, 'margin' | 'matchScoringMode'> {
+  candidate: Pick<QuestionPayload, 'margin' | 'scoringMode'>,
+): Pick<QuestionPayload, 'margin' | 'scoringMode'> {
   return pickCarried(
     candidate,
     (row) => row.when === 'grading-setting' && carries(row, type, {}),

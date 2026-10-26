@@ -1082,12 +1082,12 @@ grading behavior. Media is not a type: any question can carry a
   order so it's directly comparable to a submission, which is built the same
   positional way. Auto-graded at submit time by counting correct pairs
   position-by-position. How that count becomes points depends on the
-  question's `matchScoringMode` (set in the manual editor, or from CSV as
-  `scoring: "all_or_nothing"` / `scoring: "partial"` in the notes `{…}`
-  group — see the notes group under Media; unset behaves as `partial`): `partial`
+  question's `scoringMode` (set in the manual editor, or from CSV as
+  `scoring: "one_off"` / `scoring: "per_item"` in the notes `{…}`
+  group — see the notes group under Media; unset behaves as `per_item`): `per_item`
   splits the question's points evenly across pairs and rounds to the nearest
   half point (4 points, 3 pairs, 2 correct → 2.5; 1 point, 2 pairs, 1 correct
-  → 0.5); `all_or_nothing` gives full points when every
+  → 0.5); `one_off` gives full points when every
   pair is correct, exactly half the question's points when exactly one is wrong, and zero
   otherwise.
 - **`closest_guess`** — a numeric-guess question (CSV `answer` must parse as
@@ -1121,7 +1121,7 @@ grading behavior. Media is not a type: any question can carry a
   `answer` cell holds the key and must parse as a finite number (same rule and
   message as `closest_guess`); players type on the decimal number keypad. The
   question's `margin` is `{ value, unit }` with `unit` `percent` or `absolute`
-  (stored in the payload next to `matchScoringMode`, set in the manual editor
+  (stored in the payload next to `scoringMode`, set in the manual editor
   or from CSV as `margin: "5%"` / `margin: "2"` in the notes `{…}` group; a
   question with no stored margin gets the default `{ value: 10, unit: 'percent' }`). The value must
   not be negative and a percentage must be at most 100. It is **auto-graded at
@@ -1223,7 +1223,8 @@ canonical group appended to the free notes, leaving empty keys out. Stored
 an older save left there (the payload fields stay the truth), and saving
 again cleans the row. The same group carries a question's **grading settings**: `margin: "5%"`
 (percent) or `margin: "2"` (absolute) for a Number question, and
-`scoring: "partial"` or `scoring: "all_or_nothing"` for a match question
+`scoring: "per_item"` or `scoring: "one_off"` for a match question (the old
+names `partial` and `all_or_nothing` are still read as those)
 (`parseMarginCell` and the scoring modes in `notes-group.ts`). A key the type
 doesn't carry is ignored, a value that doesn't read (`margin: "five"`,
 `scoring: "half"`) is reported as invalid on the `notes` column, and a
@@ -1515,10 +1516,10 @@ position on restore.
 
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
 If an opened question's Answer key (its `answer`, `points` and the
-`matchScoringMode` or `margin` its type carries) changed, its existing answers are
+`scoringMode` or `margin` its type carries) changed, its existing answers are
 re-graded (`BlockGradingService.regradeForKeyFix`): auto-graded types
 (`multiple_choice`/`sort`/`match`/`number`) re-score every answer — overwriting any
-manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
+manual override, e.g. adjusted `per_item` credit on a sort or match question — and re-apply kahoot
 speed scaling (kept to the nearest half point, so a half-credit match never
 rounds back up to full points) from the response time stored on each answer at submit (so it
 survives a backend restart, and a correction made before the question locks is
@@ -1533,7 +1534,7 @@ display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
 reshuffle what players see. The keys are compared with defaults filled in
 (`answerKeyOf` / `isSameAnswerKey`), so a setting left unset and one saved as
 its default are the same: a `match` question with no stored scoring
-mode (a CSV row with no `scoring` key) saved as `partial` is not a key fix and keeps its overrides. A setting
+mode (a CSV row with no `scoring` key) saved as `per_item` is not a key fix and keeps its overrides. A setting
 the type doesn't carry never counts, and a margin compares by value and unit
 whatever the order of its fields.
 

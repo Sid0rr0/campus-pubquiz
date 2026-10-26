@@ -6,17 +6,17 @@ import type { MatchScoringMode } from '../question-views';
 import { answerKeyOf, gradingSettingsOf, isSameAnswerKey } from '../answer-key';
 
 const STORED_MARGIN: Margin = { value: 5, unit: 'absolute' };
-const STORED_MODE: MatchScoringMode = 'all_or_nothing';
+const STORED_MODE: MatchScoringMode = 'one_off';
 
 /** What each setting resolves to for a type that carries it, with none stored. */
 const DEFAULTS = {
-  matchScoringMode: 'partial',
+  scoringMode: 'per_item',
   margin: DEFAULT_MARGIN,
 };
 
 /** What each setting resolves to for a type that carries it, once stored. */
 const STORED = {
-  matchScoringMode: STORED_MODE,
+  scoringMode: STORED_MODE,
   margin: STORED_MARGIN,
 };
 
@@ -89,7 +89,7 @@ describe('whether two answer keys are the same', () => {
       expect(isSameAnswerKey(key(type), key(type, { points: 3 }))).toBe(false);
     });
 
-    it.each(['matchScoringMode', 'margin'] as const)(
+    it.each(['scoringMode', 'margin'] as const)(
       'treats a differing %s as a difference only if the type carries it',
       (name) => {
         const isCarried = carried(type).includes(name);

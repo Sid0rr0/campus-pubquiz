@@ -14,11 +14,11 @@ interface GradingSettingDraft {
   save(question: EditorQuestion): Partial<ImportQuestionPreview>;
 }
 
-const matchScoringModeDraft: GradingSettingDraft = {
+const scoringModeDraft: GradingSettingDraft = {
   load: (question) => ({
-    matchScoringMode: gradingSettingsOf(question).matchScoringMode,
+    scoringMode: gradingSettingsOf(question).scoringMode,
   }),
-  save: (question) => ({ matchScoringMode: question.matchScoringMode }),
+  save: (question) => ({ scoringMode: question.scoringMode }),
 };
 
 const marginDraft: GradingSettingDraft = {
@@ -39,7 +39,7 @@ const marginDraft: GradingSettingDraft = {
 
 /** One entry per grading setting; a setting without one is a compile error. */
 const GRADING_SETTING_DRAFTS = {
-  matchScoringMode: matchScoringModeDraft,
+  scoringMode: scoringModeDraft,
   margin: marginDraft,
 } satisfies { readonly [Name in GradingSettingName]: GradingSettingDraft };
 

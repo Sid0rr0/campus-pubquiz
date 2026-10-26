@@ -1,7 +1,4 @@
-import {
-  MATCH_SCORING_MODES,
-  type MatchScoringMode,
-} from './match-scoring-mode';
+import { MATCH_SCORING_MODES, type MatchScoringMode } from './scoring-mode';
 import type { Margin } from './margin';
 import { formatTimecode, parseTimecode } from './youtube';
 
@@ -13,8 +10,14 @@ export interface NotesGroupFields {
   revealEndSeconds?: number;
   isVideoHidden?: true;
   margin?: Margin;
-  matchScoringMode?: MatchScoringMode;
+  scoringMode?: MatchScoringMode;
 }
+
+// The pre-rename match names, still read from old sheets.
+const LEGACY_SCORING_NAMES = new Map<string, MatchScoringMode>([
+  ['partial', 'per_item'],
+  ['all_or_nothing', 'one_off'],
+]);
 
 export interface ParsedNotesGroup {
   /** The notes with the clip group (and a legacy `YouTube clip:` prefix) removed. */
@@ -82,14 +85,14 @@ function readGroup(body: string): ReadGroup {
   const rawScoring = keyPattern(SCORING_NOTES_KEY, `[^\\s,}"']+`)
     .exec(body)?.[1]
     .toLowerCase();
-  const matchScoringMode = MATCH_SCORING_MODES.find(
-    (mode) => mode === rawScoring,
-  );
+  const scoringMode =
+    MATCH_SCORING_MODES.find((mode) => mode === rawScoring) ??
+    LEGACY_SCORING_NAMES.get(rawScoring ?? '');
   const invalidSettingKeys = [
     ...(rawMargin !== undefined && margin === undefined
       ? [MARGIN_NOTES_KEY]
       : []),
-    ...(rawScoring !== undefined && matchScoringMode === undefined
+    ...(rawScoring !== undefined && scoringMode === undefined
       ? [SCORING_NOTES_KEY]
       : []),
   ];
@@ -102,7 +105,7 @@ function readGroup(body: string): ReadGroup {
       ),
       ...(isHidden ? { isVideoHidden: true as const } : {}),
       ...(margin ? { margin } : {}),
-      ...(matchScoringMode ? { matchScoringMode } : {}),
+      ...(scoringMode ? { scoringMode } : {}),
     },
     invalidKeys: [
       ...readings.flatMap(({ key, seconds }) =>
@@ -151,8 +154,8 @@ export function writeNotesGroup(
     ...(clip.margin
       ? [`${MARGIN_NOTES_KEY}: "${formatMarginCell(clip.margin)}"`]
       : []),
-    ...(clip.matchScoringMode
-      ? [`${SCORING_NOTES_KEY}: "${clip.matchScoringMode}"`]
+    ...(clip.scoringMode
+      ? [`${SCORING_NOTES_KEY}: "${clip.scoringMode}"`]
       : []),
   ];
   if (entries.length === 0) return freeNotes;

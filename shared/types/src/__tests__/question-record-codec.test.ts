@@ -216,7 +216,7 @@ describe('gradingSettingsFor', () => {
   it('keeps only the grading settings of the type, even from a whole preview', () => {
     const wholePreview = {
       margin: { value: 5, unit: 'percent' as const },
-      matchScoringMode: 'all_or_nothing' as const,
+      scoringMode: 'one_off' as const,
       mediaUrl: IMAGE,
       options: ['a', 'b'],
     };
@@ -225,7 +225,7 @@ describe('gradingSettingsFor', () => {
       margin: { value: 5, unit: 'percent' },
     });
     expect(gradingSettingsFor('match', wholePreview)).toStrictEqual({
-      matchScoringMode: 'all_or_nothing',
+      scoringMode: 'one_off',
     });
     expect(gradingSettingsFor('free_text', wholePreview)).toStrictEqual({});
   });

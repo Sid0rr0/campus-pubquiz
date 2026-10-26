@@ -18,7 +18,7 @@ const VALID_STORED: Record<QuestionType, unknown> = {
   match: {
     options: ['x', 'y'],
     matchTargets: ['1', '2'],
-    matchScoringMode: 'all_or_nothing',
+    scoringMode: 'one_off',
   },
   closest_guess: {},
   number: { margin: { value: 5, unit: 'absolute' } },

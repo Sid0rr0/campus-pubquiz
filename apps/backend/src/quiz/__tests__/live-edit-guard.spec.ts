@@ -1240,7 +1240,7 @@ describe('findRegradeQuestionIds', () => {
 
   describe('match scoring mode', () => {
     const matchRound = (
-      matchScoringMode?: 'partial' | 'all_or_nothing',
+      scoringMode?: 'per_item' | 'one_off',
     ): ImportRoundPreview[] => [
       {
         title: 'Round 1',
@@ -1254,31 +1254,31 @@ describe('findRegradeQuestionIds', () => {
             points: 2,
             options: ['France', 'Italy'],
             matchTargets: ['Rome', 'Paris'],
-            ...(matchScoringMode === undefined ? {} : { matchScoringMode }),
+            ...(scoringMode === undefined ? {} : { scoringMode }),
           },
         ],
       },
     ];
 
-    it('returns an opened question whose matchScoringMode changed', () => {
+    it('returns an opened question whose scoringMode changed', () => {
       expect(
         findRegradeQuestionIds(
-          matchRound('partial'),
-          matchRound('all_or_nothing'),
+          matchRound('per_item'),
+          matchRound('one_off'),
           [1],
         ),
       ).toEqual([1]);
     });
 
-    it('ignores a CSV-imported question with no stored mode saved as partial', () => {
+    it('ignores a CSV-imported question with no stored mode saved as per_item', () => {
       expect(
-        findRegradeQuestionIds(matchRound(), matchRound('partial'), [1]),
+        findRegradeQuestionIds(matchRound(), matchRound('per_item'), [1]),
       ).toEqual([]);
     });
 
     it('returns a CSV-imported question switched to all or nothing', () => {
       expect(
-        findRegradeQuestionIds(matchRound(), matchRound('all_or_nothing'), [1]),
+        findRegradeQuestionIds(matchRound(), matchRound('one_off'), [1]),
       ).toEqual([1]);
     });
   });
