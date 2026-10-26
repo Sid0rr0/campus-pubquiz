@@ -36,7 +36,7 @@ export class SeedService {
 
   /** Every session still open, oldest first, after closing ended ones nobody has touched for a day; the demo game on an empty database. */
   async seedOpenGames(): Promise<SeededGame[]> {
-    // shortcut: an ended session untouched for a day counts as abandoned; raise it if staff review nights later than that.
+    // shortcut: an ended session untouched for a day counts as abandoned, raise it if staff review nights later than that.
     await this.gameSessions.nativeUpdate(
       {
         closedAt: null,

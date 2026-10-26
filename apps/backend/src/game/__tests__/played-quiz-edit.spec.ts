@@ -44,9 +44,13 @@ describe('Editing a quiz whose ended session has stored answers', () => {
       }));
 
   it('refuses a save that deletes a question with stored answers, which would delete those answers with it', async () => {
-    await expect(game.saveQuizEdit(withoutQuestion(0))).rejects.toBeInstanceOf(
-      QuizLiveEditBlockedError,
-    );
+    const error: unknown = await game
+      .saveQuizEdit(withoutQuestion(0))
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(QuizLiveEditBlockedError);
+    // The editor's toast shows this message, so it carries the reason itself.
+    expect((error as Error).message).toMatch(/already answered/);
   });
 
   it('still lets a question nobody answered be deleted', async () => {

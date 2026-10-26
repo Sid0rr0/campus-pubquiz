@@ -11,10 +11,11 @@ import {
 
 /** Thrown by `QuizController.update` when a save would violate `findLiveEditViolations` — mapped to 409 Conflict, distinct from `QuizDraftInvalidError`'s 422 for malformed payloads. */
 export class QuizLiveEditBlockedError extends Error {
-  constructor(public readonly issues: QuizDraftIssue[]) {
-    super(
-      `Cannot save — ${issues.length} change(s) conflict with a session played on this quiz`,
-    );
+  constructor(
+    public readonly issues: QuizDraftIssue[],
+    message = `Cannot save — ${issues.length} change(s) conflict with a session played on this quiz`,
+  ) {
+    super(message);
     this.name = 'QuizLiveEditBlockedError';
   }
 }
@@ -128,6 +129,9 @@ function findRoundQuestionViolations(
   return issues;
 }
 
+const DROPPED_ANSWERED_MESSAGE =
+  'Cannot delete a question teams have already answered in a played session — it would delete those answers and change past scores. Start a new quiz instead.';
+
 /**
  * Issues for answered questions a save would drop. Deleting a question deletes
  * its stored answers with it (the database cascades), which rewrites the
@@ -156,8 +160,7 @@ export function findDroppedAnsweredQuestions(
               roundIndex,
               questionIndex,
               field: 'questionId',
-              message:
-                'Cannot delete a question teams have already answered in a played session — it would delete those answers and change past scores. Start a new quiz instead.',
+              message: DROPPED_ANSWERED_MESSAGE,
             },
           ]
         : [],

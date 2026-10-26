@@ -162,7 +162,10 @@ export class LiveEditService {
             await this.quizService.answeredQuestionIds(quizId),
           );
           if (droppedAnswered.length > 0) {
-            throw new QuizLiveEditBlockedError(droppedAnswered);
+            throw new QuizLiveEditBlockedError(
+              droppedAnswered,
+              droppedAnswered[0].message,
+            );
           }
 
           const liveSessions = this.listLiveSessions(quizId);
