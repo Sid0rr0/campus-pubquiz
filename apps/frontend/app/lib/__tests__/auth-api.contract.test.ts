@@ -34,6 +34,7 @@ describeApiClient(
         body: JSON.stringify(credentials),
       },
       fallback: 'Registration failed',
+      beforeSession: true,
       okBody: { status: 'pending' },
     },
     {
@@ -47,6 +48,7 @@ describeApiClient(
         body: JSON.stringify(credentials),
       },
       fallback: 'Login failed',
+      beforeSession: true,
       okBody: { user: { id: 1 } },
     },
     {

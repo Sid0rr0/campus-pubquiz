@@ -9,6 +9,11 @@ export interface ApiCase {
   init?: RequestInit;
   /** The message thrown when the reply carries none. */
   fallback: string;
+  /**
+   * Sent before a session exists (login, register), so no SessionGuard checks
+   * it and it needs no CSRF header despite `credentials: 'include'`.
+   */
+  beforeSession?: true;
   okBody?: unknown;
   okText?: string;
   /** What the call resolves to; defaults to `okBody`. Pass `undefined` for a void call. */
@@ -21,6 +26,13 @@ interface ContractOptions {
 }
 
 const originalFetch = global.fetch;
+
+function isSessionWrite(c: ApiCase): boolean {
+  const method = c.init?.method ?? 'GET';
+  return (
+    method !== 'GET' && c.init?.credentials === 'include' && !c.beforeSession
+  );
+}
 
 function stub(reply: Record<string, unknown>): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn().mockResolvedValue(reply);
@@ -56,6 +68,15 @@ export function describeApiClient(
         const args = c.init === undefined ? [c.url] : [c.url, c.init];
         expect(fetchMock).toHaveBeenCalledWith(...args);
       });
+
+      if (isSessionWrite(c)) {
+        // The backend's SessionGuard rejects a cookie-authenticated write
+        // without it. Only `beforeSession` exempts a write; leaving the header
+        // out of `init` fails here.
+        it('sends the CSRF header on its cookie-authenticated write', () => {
+          expect(c.init?.headers).toMatchObject(CSRF);
+        });
+      }
 
       it('throws the typed error with the fallback message and the status', async () => {
         stub({ ok: false, status: 418, json: () => Promise.resolve({}) });
