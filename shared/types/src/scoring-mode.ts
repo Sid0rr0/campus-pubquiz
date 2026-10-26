@@ -21,5 +21,12 @@ export const SCORING_MODES = [
 
 export type ScoringMode = (typeof SCORING_MODES)[number];
 
-/** Match accepts `per_item` (its default) and `one_off`; sort accepts all three. */
+/** Match accepts `per_item` (its default) and `one_off`; sort accepts all three (see SORT_SCORING_MODES). */
 export const MATCH_SCORING_MODES = [PER_ITEM_SCORING, ONE_OFF_SCORING] as const;
+
+/** Sort accepts all three; `one_off` is its default, so it comes first. */
+export const SORT_SCORING_MODES = [
+  ONE_OFF_SCORING,
+  EXACT_SCORING,
+  PER_ITEM_SCORING,
+] as const;

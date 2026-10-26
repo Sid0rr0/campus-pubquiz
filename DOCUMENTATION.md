@@ -1074,7 +1074,7 @@ grading behavior. Media is not a type: any question can carry a
   order for a sort or match question. Auto-graded at submit time by the
   question's `scoringMode` (set in the manual editor, or from CSV as
   `scoring: "exact"` / `"per_item"` / `"one_off"` in the notes `{…}` group;
-  unset behaves as `exact`): `exact` gives full points only for the exact
+  unset behaves as `one_off`): `exact` gives full points only for the exact
   order; `per_item` gives the points × items in their correct slot ÷ item
   count, rounded to the nearest half point (verdict `partial`, or `incorrect`
   at 0); `one_off` gives half the points when exactly two items are swapped
@@ -1542,7 +1542,7 @@ the submit-time grade against the key as it stood before the edit). The editor k
 display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
 reshuffle what players see. The keys are compared with defaults filled in
 (`answerKeyOf` / `isSameAnswerKey`), so a setting left unset and one saved as
-its type's default are the same (`exact` for sort, `per_item` for match): a `match` question with no stored scoring
+its type's default are the same (`one_off` for sort, `per_item` for match): a `match` question with no stored scoring
 mode (a CSV row with no `scoring` key) saved as `per_item` is not a key fix and keeps its overrides. A setting
 the type doesn't carry never counts, and a margin compares by value and unit
 whatever the order of its fields.

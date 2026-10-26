@@ -324,6 +324,9 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     const [questionId] = game.rounds[0].questionIds;
     await game.openFirstQuestion(admin);
     await submit(game, team, questionId, 'a|b|d|c');
+    expect(await storedPoints(game, questionId)).toEqual({ Shuffler: 4 });
+
+    await game.saveAnswerKeyFix(questionId, { scoringMode: 'exact' });
     expect(await storedPoints(game, questionId)).toEqual({ Shuffler: 0 });
 
     await game.saveAnswerKeyFix(questionId, { scoringMode: 'per_item' });
@@ -331,9 +334,6 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
 
     await game.saveAnswerKeyFix(questionId, { scoringMode: 'one_off' });
     expect(await storedPoints(game, questionId)).toEqual({ Shuffler: 4 });
-
-    await game.saveAnswerKeyFix(questionId, { scoringMode: 'exact' });
-    expect(await storedPoints(game, questionId)).toEqual({ Shuffler: 0 });
   });
 
   it('skips a closest_guess question that has not been graded yet', async () => {

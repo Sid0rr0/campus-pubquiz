@@ -68,7 +68,7 @@ What an answer is graded against: the correct answer, the points, and the questi
 _Avoid_: grading fields, key fields
 
 **Scoring mode**:
-A grading setting on sort and match questions that says how a part-right answer turns into points. There are three modes: **exact**, where only a fully right answer scores (sort only, and sort's default); **per item**, where each item in its right place or paired right earns its share of the points (match's default); and **one off**, which gives half points to an answer one mistake away from right (two sort items swapped, or one match pair wrong).
+A grading setting on sort and match questions that says how a part-right answer turns into points. There are three modes: **exact**, where only a fully right answer scores (sort only); **per item**, where each item in its right place or paired right earns its share of the points (match's default); and **one off**, which gives half points to an answer one mistake away from right (two sort items swapped, or one match pair wrong); sort's default.
 _Avoid_: sort scoring, match scoring, all or nothing, partial (as a mode name), grading mode (that is the Grading policy's split by how a type is graded)
 
 **Question record codec**:

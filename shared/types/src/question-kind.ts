@@ -19,7 +19,7 @@ import {
 } from './question-payload-schema';
 import {
   MATCH_SCORING_MODES,
-  SCORING_MODES,
+  SORT_SCORING_MODES,
   type ScoringMode,
 } from './scoring-mode';
 import {
@@ -133,7 +133,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'auto',
     kahootAllowed: true,
     gradingSettings: ['scoringMode'],
-    scoringModes: SCORING_MODES,
+    scoringModes: SORT_SCORING_MODES,
   },
   match: {
     type: 'match',

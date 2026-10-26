@@ -12,11 +12,11 @@ import {
 } from '../answer-key';
 
 const STORED_MARGIN: Margin = { value: 5, unit: 'absolute' };
-const STORED_MODE: ScoringMode = 'one_off';
+const STORED_MODE: ScoringMode = 'exact';
 
 /** What each setting resolves to for a type that carries it, with none stored. */
 const defaultsOf = (type: QuestionType) => ({
-  scoringMode: type === 'sort' ? 'exact' : 'per_item',
+  scoringMode: type === 'sort' ? 'one_off' : 'per_item',
   margin: DEFAULT_MARGIN,
 });
 
@@ -68,7 +68,7 @@ describe.each(QUESTION_TYPES)(
 
 describe('the scoring modes a type accepts', () => {
   it.each([
-    ['sort', ['exact', 'per_item', 'one_off']],
+    ['sort', ['one_off', 'exact', 'per_item']],
     ['match', ['per_item', 'one_off']],
     ['number', []],
     ['free_text', []],
@@ -83,8 +83,8 @@ describe('the scoring modes a type accepts', () => {
     expect(isScoringModeOf('number', 'per_item')).toBe(false);
   });
 
-  it('defaults a sort question to exact and a match question to per_item', () => {
-    expect(gradingSettingsOf({ type: 'sort' }).scoringMode).toBe('exact');
+  it('defaults a sort question to one_off and a match question to per_item', () => {
+    expect(gradingSettingsOf({ type: 'sort' }).scoringMode).toBe('one_off');
     expect(gradingSettingsOf({ type: 'match' }).scoringMode).toBe('per_item');
   });
 });

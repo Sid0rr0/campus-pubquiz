@@ -168,7 +168,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       state.session.id,
       gradable(sortQuestion),
       team.id,
-      'Earth|Venus|Mercury',
+      'Venus|Earth|Mercury',
     );
 
     const [answer] = await state.answerService.listForQuestion(
