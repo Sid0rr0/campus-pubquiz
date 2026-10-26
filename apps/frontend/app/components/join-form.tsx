@@ -57,7 +57,6 @@ export function JoinForm({
   ) {
     setGameCodeRevealed(true);
   }
-  const showGameCode = gameCodeRevealed;
   // A stored team code (returning team) or a connection error asking for one
   // (name collision) both mean the field should just be there already —
   // only a fresh join with nothing to say yet starts it collapsed.
@@ -96,7 +95,7 @@ export function JoinForm({
           value={codeInput}
           onSelectSession={onCodeInputChange}
         />
-        {showGameCode ? (
+        {gameCodeRevealed ? (
           <>
             <label
               htmlFor="join-game-code"
