@@ -2141,7 +2141,8 @@ points, the table and the public page.
   shows up as a commit. Bump both together when Node ships a security
   release, then cut a tag to redeploy.
 - **Frontend** deploys separately; its origin is what `FRONTEND_ORIGIN`
-  allows through CORS (see `cors.config.spec.ts`).
+  allows through CORS (see `cors.config.spec.ts`). In production it is the only
+  origin allowed; localhost and venue-LAN origins are accepted in dev only.
 - **CI** (`.github/workflows/ci.yml`) runs `pnpm build && pnpm lint && pnpm test`
   on every push to `main` and every PR. Build must come first:
   `@campus-pubquiz/types` resolves via its `dist/`, so frontend/backend type

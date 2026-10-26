@@ -14,9 +14,11 @@ function validate(origin: string | undefined): Promise<boolean> {
 
 describe('corsOriginValidator', () => {
   const originalFrontendOrigin = process.env.FRONTEND_ORIGIN;
+  const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
     process.env.FRONTEND_ORIGIN = originalFrontendOrigin;
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
   it('allows requests with no origin (e.g. curl, server-to-server)', async () => {
@@ -54,5 +56,27 @@ describe('corsOriginValidator', () => {
     await expect(
       validate('https://campus-pubquiz-frontend.vercel.app'),
     ).resolves.toBe(true);
+  });
+
+  describe('in production', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'production';
+      process.env.FRONTEND_ORIGIN =
+        'https://campus-pubquiz-frontend.vercel.app';
+    });
+
+    it('allows only FRONTEND_ORIGIN', async () => {
+      await expect(
+        validate('https://campus-pubquiz-frontend.vercel.app'),
+      ).resolves.toBe(true);
+    });
+
+    it('rejects the localhost dev origin', async () => {
+      await expect(validate('http://localhost:8888')).rejects.toThrow();
+    });
+
+    it('rejects a LAN origin, which carries the admin cookie from any page on the venue Wi-Fi', async () => {
+      await expect(validate('http://192.168.0.165:8888')).rejects.toThrow();
+    });
   });
 });

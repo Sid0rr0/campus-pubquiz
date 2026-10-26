@@ -17,14 +17,19 @@ export function corsOriginValidator(
   callback: CorsOriginCallback,
 ): void {
   const envOrigin = process.env.FRONTEND_ORIGIN;
-  const allowedOrigins = envOrigin
-    ? [envOrigin, ...LOCAL_ORIGINS]
-    : LOCAL_ORIGINS;
+  // In production the session cookie is SameSite=None, so a LAN or localhost
+  // page would carry the admin's cookie; only the deployed frontend is trusted.
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowedOrigins = isProduction
+    ? [envOrigin]
+    : envOrigin
+      ? [envOrigin, ...LOCAL_ORIGINS]
+      : LOCAL_ORIGINS;
 
   if (
     !origin ||
     allowedOrigins.includes(origin) ||
-    LAN_ORIGIN_PATTERN.test(origin)
+    (!isProduction && LAN_ORIGIN_PATTERN.test(origin))
   ) {
     callback(null, true);
     return;
