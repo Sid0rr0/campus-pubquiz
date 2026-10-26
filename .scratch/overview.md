@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| mutation-testing-services | [Mutation testing: the backend services](mutation-testing-services/spec.md) | 2 | — |
 
 ## Won't do
 

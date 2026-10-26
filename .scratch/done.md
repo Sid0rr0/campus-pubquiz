@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| mutation-testing-services       | [Mutation testing: the backend services](mutation-testing-services/spec.md)                                                                                                | 11      |
 | feedback-pacing-difficulty      | [Pacing and felt difficulty, and a tidier session stats page](feedback-pacing-difficulty/spec.md)                                                                          | 6       |
 | mutation-testing-frontend       | [Mutation testing: the frontend](mutation-testing-frontend/spec.md)                                                                                                        | 7       |
 | mutation-testing-db             | [Mutation testing: the DB-backed backend](mutation-testing-db/spec.md)                                                                                                     | 7       |

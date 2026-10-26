@@ -96,11 +96,47 @@ function dbFreeSources() {
     .map((f) => path.relative(__dirname, f));
 }
 
-/** Backend-relative paths of the `game/state/` source files `mutate:db` mutates. */
-function gameStateSources() {
-  return mutableIn(path.join(SRC, 'game/state')).map((f) =>
-    path.relative(__dirname, f),
-  );
+/** Directories whose logic modules (not their plumbing) `mutate:db` mutates. */
+const LOGIC_DIRS = [
+  'game/socket/',
+  'game/live-edit/',
+  'game/rest/',
+  'ended-sessions-read/',
+];
+
+/** Individual files `mutate:db` mutates that no directory or suffix rule picks. */
+const LOGIC_FILES = [
+  'game/game.gateway.ts',
+  'standings/cell-points.ts',
+  'auth/password-hash.ts',
+  'feedback/feedback-off-reason.ts',
+];
+
+/** Plumbing kept out of the logic directories: Nest wiring, types, wire declarations, validation schemas, HTTP error mappers. */
+const NOT_LOGIC =
+  /(\.controller|\.guard|\.decorator|\.module|\.types|\.schemas?|\.typecheck|-declarations|-http(-errors)?)\.ts$/;
+
+/** Whether `mutate:db` mutates the file (a path relative to src/) because of its role, not its directory alone. */
+function isDbMutateTarget(rel) {
+  if (rel === 'app.service.ts' || rel.startsWith('db/')) return false;
+  if (rel.endsWith('.service.ts')) return true;
+  if (LOGIC_FILES.includes(rel)) return true;
+  return LOGIC_DIRS.some((dir) => rel.startsWith(dir)) && !NOT_LOGIC.test(rel);
 }
 
-module.exports = { dbFreeSpecs, dbFreeSources, allSpecs, gameStateSources };
+/**
+ * Backend-relative paths of the source files `mutate:db` mutates: `game/state/`
+ * plus the services and other logic modules picked by role, minus the files
+ * the DB-free slice already mutates.
+ */
+function dbSources() {
+  const dbFree = new Set(dbFreeSources());
+  const picked = [
+    ...mutableIn(path.join(SRC, 'game/state')),
+    ...mutableIn(SRC).filter((f) => isDbMutateTarget(path.relative(SRC, f))),
+  ].map((f) => path.relative(__dirname, f));
+  // game/state/*.service.ts is picked by both rules, so dedupe.
+  return [...new Set(picked)].filter((f) => !dbFree.has(f)).sort();
+}
+
+module.exports = { dbFreeSpecs, dbFreeSources, allSpecs, dbSources };
