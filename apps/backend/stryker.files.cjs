@@ -112,12 +112,12 @@ const LOGIC_FILES = [
   'feedback/feedback-off-reason.ts',
 ];
 
-/** Plumbing kept out of the logic directories: types, wire declarations, validation schemas, HTTP error mappers. */
+/** Plumbing kept out of the logic directories: Nest wiring, types, wire declarations, validation schemas, HTTP error mappers. */
 const NOT_LOGIC =
-  /(\.types|\.schemas?|\.typecheck|-declarations|-http(-errors)?)\.ts$|(^|\/)(socket-event-declarations|game-socket\.types)\.ts$/;
+  /(\.controller|\.guard|\.decorator|\.module|\.types|\.schemas?|\.typecheck|-declarations|-http(-errors)?)\.ts$/;
 
-/** Whether `mutate:db` picks the file (a path relative to src/) by role. */
-function isServiceLogic(rel) {
+/** Whether `mutate:db` mutates the file (a path relative to src/) because of its role, not its directory alone. */
+function isDbMutateTarget(rel) {
   if (rel === 'app.service.ts' || rel.startsWith('db/')) return false;
   if (rel.endsWith('.service.ts')) return true;
   if (LOGIC_FILES.includes(rel)) return true;
@@ -133,8 +133,9 @@ function dbSources() {
   const dbFree = new Set(dbFreeSources());
   const picked = [
     ...mutableIn(path.join(SRC, 'game/state')),
-    ...mutableIn(SRC).filter((f) => isServiceLogic(path.relative(SRC, f))),
+    ...mutableIn(SRC).filter((f) => isDbMutateTarget(path.relative(SRC, f))),
   ].map((f) => path.relative(__dirname, f));
+  // game/state/*.service.ts is picked by both rules, so dedupe.
   return [...new Set(picked)].filter((f) => !dbFree.has(f)).sort();
 }
 
