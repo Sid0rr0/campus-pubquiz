@@ -249,6 +249,26 @@ describe('ShowdownService (Postgres integration)', () => {
     expect(second.id).not.toBe(first.id);
   });
 
+  it('treats a blank guess as never winning, not as 0', async () => {
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+    const round = await state.showdownService.createRound(
+      state.session.id,
+      [
+        { teamId: teamA.id, teamName: 'Team A' },
+        { teamId: teamB.id, teamName: 'Team B' },
+      ],
+      'How many?',
+      '1',
+      5,
+    );
+    await state.showdownService.submitGuess(round.id, teamA.id, '');
+    await state.showdownService.submitGuess(round.id, teamB.id, '5000');
+
+    const resolution = await state.showdownService.resolve(round.id);
+    expect(resolution).toEqual({ winnerTeamId: teamB.id, isTie: false });
+  });
+
   it('treats an unparseable guess as never winning', async () => {
     const teamA = await insertTeam('Team A', 'token-a');
     const teamB = await insertTeam('Team B', 'token-b');

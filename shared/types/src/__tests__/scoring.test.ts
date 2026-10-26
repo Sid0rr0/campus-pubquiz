@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { IDK_ANSWER_VALUE } from '../answers';
 import {
   BATCH_GRADED_TYPES,
+  findClosestGuesses,
   KAHOOT_ALLOWED_TYPES,
   gradeClosestGuessBatch,
   halfPoints,
@@ -206,6 +207,16 @@ describe('scoreSubmission — kahoot speed', () => {
       expect(result.points).toBeLessThan(1);
       expect(result.verdict).toBe('partial');
     }
+  });
+});
+
+describe('findClosestGuesses', () => {
+  it('never counts a blank guess as 0', () => {
+    expect(findClosestGuesses('3', ['', '   ', '10'])).toEqual([
+      false,
+      false,
+      true,
+    ]);
   });
 });
 

@@ -5,7 +5,10 @@ import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
 import { ShowdownRoundRepository } from '@/db/repositories/showdown-round.repository';
 import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-team.repository';
-import type { ActiveShowdownRoundState } from '@campus-pubquiz/types';
+import {
+  findClosestGuesses,
+  type ActiveShowdownRoundState,
+} from '@campus-pubquiz/types';
 
 export class InvalidShowdownError extends Error {
   constructor(message: string) {
@@ -159,26 +162,17 @@ export class ShowdownService {
       { showdownRound: roundId },
       { populate: ['team'] },
     );
-    const target = Number(round.answer);
-    const distances = rows.map((row) => {
-      const parsed = row.guess !== null ? Number(row.guess) : NaN;
-      return {
-        row,
-        distance: Number.isFinite(parsed)
-          ? Math.abs(parsed - target)
-          : Infinity,
-      };
-    });
-    const minDistance = Math.min(...distances.map((d) => d.distance));
-    const closest = distances.filter(
-      (d) => Number.isFinite(d.distance) && d.distance === minDistance,
+    const isClosest = findClosestGuesses(
+      round.answer,
+      rows.map((row) => row.guess ?? ''),
     );
+    const closest = rows.filter((_, index) => isClosest[index]);
 
     let winnerTeamId: number | null = null;
     const isTie = closest.length !== 1;
     if (!isTie) {
-      round.winnerTeam = closest[0].row.team;
-      winnerTeamId = closest[0].row.team.id;
+      round.winnerTeam = closest[0].team;
+      winnerTeamId = closest[0].team.id;
     }
     round.isTie = isTie;
     round.resolvedAt = new Date();

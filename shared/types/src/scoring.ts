@@ -7,6 +7,7 @@ import {
   type Verdict,
 } from './answer-kind';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
+import { parseFiniteNumber } from './margin';
 import { halfPoints, nearestHalfPoint } from './score-math';
 
 export { halfPoints, nearestHalfPoint };
@@ -127,8 +128,8 @@ export function verdictForManualGrade(
 
 /**
  * Which of `values` are the closest guesses to the numeric `answer`: every
- * guess tied for the smallest distance. Non-numeric guesses are infinitely
- * far and never closest. Results line up with `values`.
+ * guess tied for the smallest distance. Non-numeric and blank guesses are
+ * infinitely far and never closest. Results line up with `values`.
  */
 export function findClosestGuesses(
   answer: string,
@@ -136,8 +137,8 @@ export function findClosestGuesses(
 ): boolean[] {
   const target = Number(answer);
   const distances = values.map((value) => {
-    const guess = Number(value);
-    return Number.isFinite(guess) ? Math.abs(guess - target) : Infinity;
+    const guess = parseFiniteNumber(value);
+    return guess === null ? Infinity : Math.abs(guess - target);
   });
   const closest = Math.min(...distances);
   return distances.map(
