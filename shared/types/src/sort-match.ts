@@ -13,6 +13,14 @@ export function splitPipeList(raw: string): string[] {
     .filter((item) => item !== '');
 }
 
+/** True if `a` and `b` hold the same items in the same order. */
+export function isSameOrder(
+  a: readonly string[],
+  b: readonly string[],
+): boolean {
+  return a.length === b.length && a.every((item, index) => item === b[index]);
+}
+
 /** True if `a` and `b` contain exactly the same items, ignoring order. */
 export function isSameMultiset(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;

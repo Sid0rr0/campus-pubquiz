@@ -1066,7 +1066,9 @@ grading behavior. Media is not a type: any question can carry a
   order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
   submitted value is the reordered pipe-list. The CSV `answer` cell must
   contain the same items as `options`, just reordered — validated as a
-  multiset match at import time. Auto-graded at submit time by exact match.
+  multiset match at import time, and refused when `options` is already in the
+  answer's order (phones would show the answer). The editor never saves such an
+  order for a sort or match question. Auto-graded at submit time by exact match.
 - **`match`** — players pair each left-hand item with a right-hand item
   (`MatchAnswer`, `apps/frontend/app/play/match-answer.tsx`); `QuestionView`
   carries the two lists separately as `options` (left) and `matchTargets`

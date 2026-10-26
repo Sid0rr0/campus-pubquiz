@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { MARGIN_UNITS, parseFiniteNumber } from './margin';
 import { MATCH_SCORING_MODES } from './match-scoring-mode';
 import type { MergedOptional } from './merged-shape';
-import { isSameMultiset, splitPipeList } from './sort-match';
+import { isSameMultiset, isSameOrder, splitPipeList } from './sort-match';
 
 /**
  * Draft-path validation: one Zod schema per question type over the
@@ -117,6 +117,15 @@ export const sortPreviewSchema = z
     {
       path: ['answer'],
       error: 'Answer must list every option exactly once, in the correct order',
+    },
+  )
+  .refine(
+    (question) =>
+      !isSameOrder(question.options, splitPipeList(question.answer)),
+    {
+      path: ['options'],
+      error:
+        'Options are already in the correct order — list them shuffled so phones do not see the answer',
     },
   );
 

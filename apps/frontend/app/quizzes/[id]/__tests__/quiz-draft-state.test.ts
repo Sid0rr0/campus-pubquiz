@@ -395,6 +395,58 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     expect(saved.answer).toBe('Venus|Mercury|Earth');
   });
 
+  it('reshuffles a saved sort question when its display order has become the correct order', () => {
+    const loaded = questionFromPreview('q1', {
+      type: 'sort',
+      prompt: 'Order these planets from the sun outward.',
+      answer: 'Mercury|Venus|Earth',
+      points: 3,
+      options: ['Venus', 'Earth', 'Mercury'],
+    });
+
+    const saved = questionToPreview({
+      ...loaded,
+      sortItems: ['Venus', 'Earth', 'Mercury'],
+    });
+
+    expect(saved.options).not.toEqual(['Venus', 'Earth', 'Mercury']);
+    expect([...(saved.options ?? [])].sort()).toEqual([
+      'Earth',
+      'Mercury',
+      'Venus',
+    ]);
+  });
+
+  it('never shows phones a sort question already in the correct order', () => {
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const question = {
+        ...makeQuestion('q1'),
+        type: 'sort' as const,
+        sortItems: ['a', 'b'],
+      };
+
+      expect(questionToPreview(question).options).toEqual(['b', 'a']);
+    }
+  });
+
+  it('never shows phones a match question with its right items already in pairing order', () => {
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const question = {
+        ...makeQuestion('q1'),
+        type: 'match' as const,
+        matchPairs: [
+          { left: 'arthur', right: 'excalibur' },
+          { left: 'robin hood', right: 'bow' },
+        ],
+      };
+
+      expect(questionToPreview(question).matchTargets).toEqual([
+        'bow',
+        'excalibur',
+      ]);
+    }
+  });
+
   it('reshuffles a saved sort question once its item set changes', () => {
     const loaded = questionFromPreview('q1', {
       type: 'sort',

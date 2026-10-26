@@ -174,6 +174,16 @@ describe('question schemas: sort', () => {
     expect(issuesOf(sort)).toEqual([]);
   });
 
+  it('refuses options already in the correct order, which phones would show as the answer', () => {
+    expect(issuesOf({ ...sort, answer: 'A|B|C' })).toEqual([
+      {
+        path: ['options'],
+        message:
+          'Options are already in the correct order — list them shuffled so phones do not see the answer',
+      },
+    ]);
+  });
+
   it('needs two items', () => {
     expect(issuesOf({ ...sort, options: ['A'], answer: 'A' })).toContainEqual({
       path: ['options'],

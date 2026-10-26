@@ -1,5 +1,6 @@
 import {
   ANSWER_FORMATS,
+  isSameOrder,
   resolveAnswerKind,
   type AnswerKind,
   type ImportQuestionPreview,
@@ -17,15 +18,15 @@ interface AnswerKindDraft {
   save(question: EditorQuestion): SavedAnswer;
 }
 
-/** Fisher-Yates on a fresh copy — never mutates `items`. Gives sort/match a display order distinct from the correct order/pairing declared in the editor. */
-function shuffled<T>(items: T[]): T[] {
+/** Fisher-Yates on a fresh copy — never mutates `items`. Gives sort/match a display order distinct from the correct order/pairing declared in the editor: a shuffle that lands on `items` is rotated by one. */
+function shuffled<T extends string>(items: T[]): T[] {
   const copy = [...items];
   // Stryker disable next-line EqualityOperator: at i = 0 the only j is 0, a swap of index 0 with itself
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
-  return copy;
+  return isSameOrder(copy, items) ? [...copy.slice(1), copy[0]] : copy;
 }
 
 function hasSameItems(a: readonly string[], b: readonly string[]): boolean {
@@ -34,12 +35,14 @@ function hasSameItems(a: readonly string[], b: readonly string[]): boolean {
   return [...a].sort().every((item, index) => item === sortedB[index]);
 }
 
-/** Keeps the last-saved display order while it still holds exactly `items`; otherwise picks a fresh shuffle. */
+/** Keeps the last-saved display order while it still holds exactly `items` and isn't `items` themselves (phones would see the answer); otherwise picks a fresh shuffle. */
 function displayOrderFor(
   items: string[],
   savedDisplayOrder: string[] | undefined,
 ): string[] {
-  return savedDisplayOrder && hasSameItems(items, savedDisplayOrder)
+  return savedDisplayOrder &&
+    hasSameItems(items, savedDisplayOrder) &&
+    !isSameOrder(items, savedDisplayOrder)
     ? [...savedDisplayOrder]
     : shuffled(items);
 }
