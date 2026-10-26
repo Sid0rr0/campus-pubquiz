@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| unlisted-sessions | [Unlisted sessions](unlisted-sessions/spec.md) | 3 |
 | sort-scoring-modes              | [Scoring modes for sort questions, one shared vocabulary with match](sort-scoring-modes/spec.md)                                                                          | 4       |
 | mutation-testing-services       | [Mutation testing: the backend services](mutation-testing-services/spec.md)                                                                                                | 11      |
 | feedback-pacing-difficulty      | [Pacing and felt difficulty, and a tidier session stats page](feedback-pacing-difficulty/spec.md)                                                                          | 6       |
