@@ -1068,7 +1068,7 @@ describe('QuizLiveEditBlockedError', () => {
 
     expect(error.name).toBe('QuizLiveEditBlockedError');
     expect(error.message).toBe(
-      'Cannot save — 2 change(s) conflict with the live session on this quiz',
+      'Cannot save — 2 change(s) conflict with a session played on this quiz',
     );
     expect(error.issues).toBe(issues);
   });

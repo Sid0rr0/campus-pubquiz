@@ -13,7 +13,7 @@ import {
 export class QuizLiveEditBlockedError extends Error {
   constructor(public readonly issues: QuizDraftIssue[]) {
     super(
-      `Cannot save — ${issues.length} change(s) conflict with the live session on this quiz`,
+      `Cannot save — ${issues.length} change(s) conflict with a session played on this quiz`,
     );
     this.name = 'QuizLiveEditBlockedError';
   }
