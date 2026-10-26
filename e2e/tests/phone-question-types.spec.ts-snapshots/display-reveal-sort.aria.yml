@@ -11,6 +11,6 @@
     - listitem: 2 Venus
     - listitem: 3 Earth
     - listitem: 4 Mars
-  - paragraph: 1 of 2 teams
+  - paragraph: 1 of 2 teams +1 close
 - region "Notifications alt+T"
 - alert
