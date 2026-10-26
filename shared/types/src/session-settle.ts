@@ -75,6 +75,7 @@ export function settleSession({
     ...session,
     progress,
     openedQuestionIds: withOpenedAt(session, progress),
+    revealedKahootQuestionIds: withRevealedKahootAt(session, progress),
     livePhaseKey,
     phaseStartedAt,
     phaseElapsedByKey,
@@ -196,4 +197,21 @@ function withOpenedAt(session: SessionState, progress: GameProgress): number[] {
       ...getBlockInPlayIds(rounds, progress),
     ]),
   ];
+}
+
+/** The session's revealed kahoot questions plus the one `progress` is revealing now. Only ever grows. */
+function withRevealedKahootAt(
+  session: SessionState,
+  progress: GameProgress,
+): number[] {
+  const round = session.seededGame.rounds[progress.roundIndex];
+  const questionId = round?.questions[progress.questionIndex]?.id;
+  if (
+    progress.status !== 'reveal' ||
+    !round?.kahootMode ||
+    questionId === undefined
+  ) {
+    return session.revealedKahootQuestionIds;
+  }
+  return [...new Set([...session.revealedKahootQuestionIds, questionId])];
 }

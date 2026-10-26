@@ -38,6 +38,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: null,
+      revealedKahootQuestionIds: [],
     });
   });
 
@@ -56,6 +57,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: null,
+      revealedKahootQuestionIds: [],
     });
 
     const reloaded = await repository.load(sessionId);
@@ -86,6 +88,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: null,
+      revealedKahootQuestionIds: [],
     });
 
     const reloaded = await repository.load(sessionId);
@@ -138,10 +141,12 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: [4, 5, 9],
+      revealedKahootQuestionIds: [7, 8],
     });
 
     const reloaded = await repository.load(sessionId);
     expect(reloaded?.openedQuestionIds).toEqual([4, 5, 9]);
+    expect(reloaded?.revealedKahootQuestionIds).toEqual([7, 8]);
   });
 
   it('returns null for a session that does not exist', async () => {
@@ -165,6 +170,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: startedAt,
       phaseElapsedByKey: { 'q:0:0': 12_345 },
       openedQuestionIds: null,
+      revealedKahootQuestionIds: [],
     });
 
     const reloaded = await repository.load(sessionId);
@@ -189,6 +195,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: Date.now(),
       phaseElapsedByKey: {},
       openedQuestionIds: null,
+      revealedKahootQuestionIds: [],
     });
 
     // A later save with no live frontier (e.g. the quiz moved to an untimed
@@ -208,6 +215,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: null,
+      revealedKahootQuestionIds: [],
     });
 
     const reloaded = await repository.load(sessionId);

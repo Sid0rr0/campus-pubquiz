@@ -1532,6 +1532,13 @@ added to whenever a press settles, so they survive a backend restart. A
 session saved before this existed has none stored and derives them from its
 position on restore.
 
+A kahoot question whose reveal has aired stays closed to answers for the rest
+of the session: Previous can step back onto its `locking` countdown, but the
+answer is already on the big screen, so submitting is refused with "Answers are
+locked for this question" and the phone shows no answer input. Each session
+stores these ids (`game_sessions.revealed_kahoot_question_ids`, default `[]`),
+added to whenever a press settles into `reveal`, so they survive a restart.
+
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
 If an opened question's Answer key (its `answer`, `points` and the
 `scoringMode` or `margin` its type carries) changed, its existing answers are

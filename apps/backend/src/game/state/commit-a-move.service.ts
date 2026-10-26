@@ -27,9 +27,10 @@ import type { ClosedJokerPick, JokerChanges } from '@/game/state/joker-changes';
 import type { LiveResultsRead } from '@/game/state/live-results-read';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
-/** What a restart restores besides the progress: the phase timer and the opened questions (null for a session saved before they were tracked). */
+/** What a restart restores besides the progress: the phase timer, the opened questions (null for a session saved before they were tracked) and the revealed kahoot questions. */
 export type SavedPlacement = SavedPhaseTimer & {
   openedQuestionIds: number[] | null;
+  revealedKahootQuestionIds: number[];
 };
 
 /** A press carried out: the session as it now stands, and what must be pushed because of it. */
@@ -128,6 +129,7 @@ export class MoveCommitter {
       session: {
         ...refreshed,
         openedQuestionIds: saved?.openedQuestionIds ?? [],
+        revealedKahootQuestionIds: saved?.revealedKahootQuestionIds ?? [],
       },
       progress,
       step: { kind: 'place' },
@@ -221,5 +223,6 @@ function toPersistedProgress(session: SessionState): PersistedGameProgress {
     phaseStartedAt: session.phaseStartedAt,
     phaseElapsedByKey: session.phaseElapsedByKey,
     openedQuestionIds: session.openedQuestionIds,
+    revealedKahootQuestionIds: session.revealedKahootQuestionIds,
   };
 }

@@ -534,6 +534,22 @@
           "enumItems": [],
           "mappedType": "json"
         },
+        "revealed_kahoot_question_ids": {
+          "name": "revealed_kahoot_question_ids",
+          "type": "jsonb",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'[]'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "json"
+        },
         "closed_at": {
           "name": "closed_at",
           "type": "timestamptz",

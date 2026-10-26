@@ -25,3 +25,21 @@ export function isQuestionHiddenBehindKahootLeaderboard(
     isLeaderboardVisible
   );
 }
+
+/**
+ * Whether the question the session stands on is a kahootMode question whose
+ * reveal already aired. Its answer was on the big screen, so Previous
+ * stepping back onto its locking countdown must not take answers again.
+ */
+export function isCurrentKahootQuestionRevealed(
+  session: SessionState,
+): boolean {
+  const { roundIndex, questionIndex } = session.progress;
+  const round = session.seededGame.rounds[roundIndex];
+  const questionId = round?.questions[questionIndex]?.id;
+  return (
+    isCurrentRoundKahoot(session) &&
+    questionId !== undefined &&
+    session.revealedKahootQuestionIds.includes(questionId)
+  );
+}

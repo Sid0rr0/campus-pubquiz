@@ -12,6 +12,7 @@ export interface PersistedGameProgress {
   phaseElapsedByKey: Record<string, number>;
   /** Null for a session saved before opened questions were tracked. */
   openedQuestionIds: number[] | null;
+  revealedKahootQuestionIds: number[];
 }
 
 @Injectable()
@@ -39,6 +40,7 @@ export class GameProgressRepository {
       data.phaseStartedAt !== null ? new Date(data.phaseStartedAt) : null;
     session.phaseElapsedByKey = data.phaseElapsedByKey;
     session.openedQuestionIds = data.openedQuestionIds;
+    session.revealedKahootQuestionIds = data.revealedKahootQuestionIds;
     await this.gameSessions.getEntityManager().flush();
   }
 
@@ -72,6 +74,7 @@ export class GameProgressRepository {
           : null,
       phaseElapsedByKey: session.phaseElapsedByKey,
       openedQuestionIds: session.openedQuestionIds,
+      revealedKahootQuestionIds: session.revealedKahootQuestionIds,
     };
   }
 }
