@@ -102,7 +102,7 @@ const BASE: Record<QuestionType, ImportQuestionPreview> = {
     points: 3,
     options: ['x', 'y'],
     matchTargets: ['1', '2'],
-    matchScoringMode: 'all_or_nothing',
+    scoringMode: 'one_off',
   },
   closest_guess: {
     type: 'closest_guess',
@@ -256,7 +256,7 @@ describe('question record codec round trip', () => {
       const stray: QuestionPayload = {
         options: ['a', 'b'],
         matchTargets: ['1', '2'],
-        matchScoringMode: 'all_or_nothing',
+        scoringMode: 'one_off',
         margin: { value: 1, unit: 'percent' },
       };
       const stored = previewToStoredFields({
@@ -273,7 +273,9 @@ describe('question record codec round trip', () => {
       for (const output of [stored.payload, fromRow, seeded]) {
         expect('options' in output).toBe(allowsOptions);
         expect('matchTargets' in output).toBe(type === 'match');
-        expect('matchScoringMode' in output).toBe(type === 'match');
+        expect('scoringMode' in output).toBe(
+          type === 'match' || type === 'sort',
+        );
         expect('margin' in output).toBe(type === 'number');
       }
     },

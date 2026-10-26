@@ -168,7 +168,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       state.session.id,
       gradable(sortQuestion),
       team.id,
-      'Earth|Venus|Mercury',
+      'Venus|Earth|Mercury',
     );
 
     const [answer] = await state.answerService.listForQuestion(
@@ -272,7 +272,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.gradedAt).not.toBeNull();
   });
 
-  it('all_or_nothing match scoring: awards full points when every pair is correct', async () => {
+  it('one_off match scoring: awards full points when every pair is correct', async () => {
     const matchQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
@@ -283,7 +283,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       payload: {
         options: ['arthur', 'captain america', 'spiderman', 'thor'],
         matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
-        matchScoringMode: 'all_or_nothing',
+        scoringMode: 'one_off',
       },
     });
     await state.em.flush();
@@ -303,7 +303,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.pointsAwarded).toBe(4);
   });
 
-  it('all_or_nothing match scoring: awards exactly half points when exactly one pair is wrong', async () => {
+  it('one_off match scoring: awards exactly half points when exactly one pair is wrong', async () => {
     const matchQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
@@ -314,7 +314,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       payload: {
         options: ['arthur', 'captain america', 'spiderman', 'thor'],
         matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
-        matchScoringMode: 'all_or_nothing',
+        scoringMode: 'one_off',
       },
     });
     await state.em.flush();
@@ -335,7 +335,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.pointsAwarded).toBe(2.5);
   });
 
-  it('all_or_nothing match scoring: awards zero points when two or more pairs are wrong', async () => {
+  it('one_off match scoring: awards zero points when two or more pairs are wrong', async () => {
     const matchQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
@@ -346,7 +346,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       payload: {
         options: ['arthur', 'captain america', 'spiderman', 'thor'],
         matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
-        matchScoringMode: 'all_or_nothing',
+        scoringMode: 'one_off',
       },
     });
     await state.em.flush();

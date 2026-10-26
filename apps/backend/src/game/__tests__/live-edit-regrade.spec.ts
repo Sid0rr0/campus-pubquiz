@@ -301,6 +301,41 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     expect(await storedPoints(game, questionId)).toEqual({ Near: 3, Far: 3 });
   });
 
+  it('re-scores a sort question when its scoring mode changes', async () => {
+    const { game, admin } = await start({
+      teamNames: ['Shuffler'],
+      rounds: [
+        {
+          title: 'Order',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'sort',
+              prompt: 'Order them',
+              answer: 'a|b|c|d',
+              points: 8,
+              payload: { options: ['d', 'c', 'b', 'a'] },
+            },
+          ],
+        },
+      ],
+    });
+    const [team] = game.teams;
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(admin);
+    await submit(game, team, questionId, 'a|b|d|c');
+    expect(await storedPoints(game, questionId)).toEqual({ Shuffler: 4 });
+
+    await game.saveAnswerKeyFix(questionId, { scoringMode: 'exact' });
+    expect(await storedPoints(game, questionId)).toEqual({ Shuffler: 0 });
+
+    await game.saveAnswerKeyFix(questionId, { scoringMode: 'per_item' });
+    expect(await storedPoints(game, questionId)).toEqual({ Shuffler: 4 });
+
+    await game.saveAnswerKeyFix(questionId, { scoringMode: 'one_off' });
+    expect(await storedPoints(game, questionId)).toEqual({ Shuffler: 4 });
+  });
+
   it('skips a closest_guess question that has not been graded yet', async () => {
     const { game, admin } = await start({
       teamNames: ['Guesser'],
@@ -372,7 +407,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
         ...round,
         questions: round.questions.map((question) =>
           roundIndex === 0
-            ? { ...question, matchScoringMode: 'partial' as const }
+            ? { ...question, scoringMode: 'per_item' as const }
             : { ...question, prompt: 'Which planet is largest?' },
         ),
       })),

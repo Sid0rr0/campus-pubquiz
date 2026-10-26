@@ -1,7 +1,4 @@
-import {
-  MATCH_SCORING_MODES,
-  type MatchScoringMode,
-} from './match-scoring-mode';
+import { SCORING_MODES, type ScoringMode } from './scoring-mode';
 import type { Margin } from './margin';
 import { formatTimecode, parseTimecode } from './youtube';
 
@@ -13,8 +10,14 @@ export interface NotesGroupFields {
   revealEndSeconds?: number;
   isVideoHidden?: true;
   margin?: Margin;
-  matchScoringMode?: MatchScoringMode;
+  scoringMode?: ScoringMode;
 }
+
+// The pre-rename match names, still read from old sheets.
+const LEGACY_SCORING_NAMES = new Map<string, ScoringMode>([
+  ['partial', 'per_item'],
+  ['all_or_nothing', 'one_off'],
+]);
 
 export interface ParsedNotesGroup {
   /** The notes with the clip group (and a legacy `YouTube clip:` prefix) removed. */
@@ -34,7 +37,7 @@ const TIMECODE_KEYS = [
   ['revealEnd', 'revealEndSeconds'],
 ] as const;
 
-/** The notes-group keys for the grading settings; `scoring` is the match scoring mode. */
+/** The notes-group keys for the grading settings; `scoring` is the scoring mode of a sort or match question. */
 export const MARGIN_NOTES_KEY = 'margin';
 export const SCORING_NOTES_KEY = 'scoring';
 
@@ -82,14 +85,14 @@ function readGroup(body: string): ReadGroup {
   const rawScoring = keyPattern(SCORING_NOTES_KEY, `[^\\s,}"']+`)
     .exec(body)?.[1]
     .toLowerCase();
-  const matchScoringMode = MATCH_SCORING_MODES.find(
-    (mode) => mode === rawScoring,
-  );
+  const scoringMode =
+    SCORING_MODES.find((mode) => mode === rawScoring) ??
+    LEGACY_SCORING_NAMES.get(rawScoring ?? '');
   const invalidSettingKeys = [
     ...(rawMargin !== undefined && margin === undefined
       ? [MARGIN_NOTES_KEY]
       : []),
-    ...(rawScoring !== undefined && matchScoringMode === undefined
+    ...(rawScoring !== undefined && scoringMode === undefined
       ? [SCORING_NOTES_KEY]
       : []),
   ];
@@ -102,7 +105,7 @@ function readGroup(body: string): ReadGroup {
       ),
       ...(isHidden ? { isVideoHidden: true as const } : {}),
       ...(margin ? { margin } : {}),
-      ...(matchScoringMode ? { matchScoringMode } : {}),
+      ...(scoringMode ? { scoringMode } : {}),
     },
     invalidKeys: [
       ...readings.flatMap(({ key, seconds }) =>
@@ -117,7 +120,7 @@ function readGroup(body: string): ReadGroup {
  * The one reader of the CSV notes group syntax: finds the first `{…}` group
  * anywhere in the notes that sets at least one recognised key (`start`, `end`,
  * `revealStart`, `revealEnd` as timecodes, quoted or not; `hideVideo: true`;
- * `margin` as "5%" or "2"; `scoring` as a match scoring mode),
+ * `margin` as "5%" or "2"; `scoring` as a scoring mode),
  * and returns those fields with the group removed from the notes. Not strict
  * JSON, since authors write unquoted keys. Notes with no recognised group come
  * back unchanged as free notes.
@@ -151,8 +154,8 @@ export function writeNotesGroup(
     ...(clip.margin
       ? [`${MARGIN_NOTES_KEY}: "${formatMarginCell(clip.margin)}"`]
       : []),
-    ...(clip.matchScoringMode
-      ? [`${SCORING_NOTES_KEY}: "${clip.matchScoringMode}"`]
+    ...(clip.scoringMode
+      ? [`${SCORING_NOTES_KEY}: "${clip.scoringMode}"`]
       : []),
   ];
   if (entries.length === 0) return freeNotes;

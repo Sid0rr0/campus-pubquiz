@@ -1,10 +1,7 @@
 import { DEFAULT_MARGIN, type Margin } from './margin';
 import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionType } from './question-types';
-import {
-  PARTIAL_MATCH_SCORING,
-  type MatchScoringMode,
-} from './match-scoring-mode';
+import { PER_ITEM_SCORING, type ScoringMode } from './scoring-mode';
 
 /**
  * The Answer key module: what an answer is graded against. A question's
@@ -16,7 +13,7 @@ import {
 
 /** The value of every grading setting, for the types that carry it. */
 interface GradingSettingValues {
-  matchScoringMode: MatchScoringMode;
+  scoringMode: ScoringMode;
   margin: Margin;
 }
 
@@ -37,9 +34,22 @@ export type GradingSettingsSource = OptionalGradingSettings & {
 export type AnswerKey = GradingSettings & { answer: string; points: number };
 
 const DEFAULT_SETTINGS: GradingSettingValues = {
-  matchScoringMode: PARTIAL_MATCH_SCORING,
+  scoringMode: PER_ITEM_SCORING,
   margin: DEFAULT_MARGIN,
 };
+
+/** The modes a question type accepts (its default first); none for a type without a scoring mode. */
+export function scoringModesOf(type: QuestionType): readonly ScoringMode[] {
+  return QUESTION_KINDS[type].scoringModes;
+}
+
+/** Whether `mode` is set and one the type accepts (a mode left over from another type is not). */
+export function isScoringModeOf(
+  type: QuestionType,
+  mode: ScoringMode | null | undefined,
+): mode is ScoringMode {
+  return !!mode && scoringModesOf(type).includes(mode);
+}
 
 /**
  * An Answer key with every setting present: the key's own, and for a setting
@@ -57,10 +67,15 @@ export function resolvedAnswerKeyOf(
 
 /** Copies a margin so a key never shares an object with its question. */
 function resolveSetting<Name extends GradingSettingName>(
+  type: QuestionType,
   name: Name,
   stored: GradingSettingValues[Name] | null | undefined,
 ): GradingSettingValues[Name] {
-  const value = stored ?? DEFAULT_SETTINGS[name];
+  const fallback =
+    name === 'scoringMode'
+      ? (scoringModesOf(type)[0] ?? DEFAULT_SETTINGS.scoringMode)
+      : DEFAULT_SETTINGS[name];
+  const value = stored ?? (fallback as GradingSettingValues[Name]);
   return typeof value === 'object' ? ({ ...value } as typeof value) : value;
 }
 
@@ -71,7 +86,7 @@ export function gradingSettingsOf(
   return Object.fromEntries(
     QUESTION_KINDS[question.type].gradingSettings.map((name) => [
       name,
-      resolveSetting(name, question[name]),
+      resolveSetting(question.type, name, question[name]),
     ]),
   );
 }

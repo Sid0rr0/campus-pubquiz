@@ -175,18 +175,25 @@ describe('grading settings in the notes group', () => {
   });
 
   it('reads a scoring mode in any case and keeps the other notes', () => {
-    expect(parseNotesGroup('Pairs {scoring: All_Or_Nothing} only')).toEqual({
+    expect(parseNotesGroup('Pairs {scoring: One_Off} only')).toEqual({
       freeNotes: 'Pairs\nonly',
-      clip: { matchScoringMode: 'all_or_nothing' },
+      clip: { scoringMode: 'one_off' },
       invalidKeys: [],
     });
   });
 
+  it.each([
+    ['partial', 'per_item'],
+    ['all_or_nothing', 'one_off'],
+  ])('reads the old scoring name %s as %s', (old, current) => {
+    expect(parseNotesGroup(`{scoring: "${old}"}`).clip).toEqual({
+      scoringMode: current,
+    });
+  });
+
   it('does not read margin or scoring inside another key', () => {
-    expect(
-      parseNotesGroup('{matchScoringMode: partial, bigmargin: 5}'),
-    ).toEqual({
-      freeNotes: '{matchScoringMode: partial, bigmargin: 5}',
+    expect(parseNotesGroup('{rescoring: per_item, bigmargin: 5}')).toEqual({
+      freeNotes: '{rescoring: per_item, bigmargin: 5}',
       clip: {},
       invalidKeys: [],
     });
@@ -206,12 +213,12 @@ describe('grading settings in the notes group', () => {
       startSeconds: 55,
       isVideoHidden: true as const,
       margin: { value: 5, unit: 'percent' as const },
-      matchScoringMode: 'partial' as const,
+      scoringMode: 'per_item' as const,
     };
     const written = writeNotesGroup('Hint', clip);
 
     expect(written).toBe(
-      'Hint\n{start: "55", hideVideo: true, margin: "5%", scoring: "partial"}',
+      'Hint\n{start: "55", hideVideo: true, margin: "5%", scoring: "per_item"}',
     );
     expect(parseNotesGroup(written)).toEqual({
       freeNotes: 'Hint',
@@ -275,13 +282,13 @@ describe('parseMarginCell', () => {
 describe('the notes group keys', () => {
   it('are read whatever their case', () => {
     expect(
-      parseNotesGroup('{START: "5", Margin: "5%", SCORING: "PARTIAL"}'),
+      parseNotesGroup('{START: "5", Margin: "5%", SCORING: "PER_ITEM"}'),
     ).toStrictEqual({
       freeNotes: '',
       clip: {
         startSeconds: 5,
         margin: { value: 5, unit: 'percent' },
-        matchScoringMode: 'partial',
+        scoringMode: 'per_item',
       },
       invalidKeys: [],
     });

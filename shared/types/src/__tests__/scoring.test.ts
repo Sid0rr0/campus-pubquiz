@@ -23,7 +23,7 @@ describe('scoreSubmission — exact-match types', () => {
     ['multiple_choice', 'Paris', 'Paris', 10, 'correct'],
     ['multiple_choice', 'paris', 'Paris', 0, 'incorrect'],
     ['sort', 'a|b|c', 'a|b|c', 10, 'correct'],
-    ['sort', 'a|c|b', 'a|b|c', 0, 'incorrect'],
+    ['sort', 'c|a|b', 'a|b|c', 0, 'incorrect'],
     ['sort', ' a | b |c ', 'a|b|c', 10, 'correct'],
     ['sort', 'a||b|c|', 'a|b|c', 10, 'correct'],
     ['sort', 'a|b', 'a|b|c', 0, 'incorrect'],
@@ -51,6 +51,84 @@ describe('scoreSubmission — exact-match types', () => {
   );
 });
 
+describe('scoreSubmission — sort scoring modes', () => {
+  const sort = (scoringMode?: 'exact' | 'per_item' | 'one_off') =>
+    ({
+      type: 'sort',
+      answer: 'a|b|c|d',
+      points: 8,
+      scoringMode,
+    }) satisfies ScoredQuestion;
+
+  // right, part-right (2 of 4 in place), two swapped, shifted by one
+  it.each([
+    ['exact', 'a|b|c|d', 8, 'correct'],
+    ['exact', 'a|b|d|c', 0, 'incorrect'],
+    ['exact', 'a|c|b|d', 0, 'incorrect'],
+    ['exact', 'b|c|d|a', 0, 'incorrect'],
+    [undefined, 'a|b|d|c', 4, 'partial'],
+    [undefined, 'b|c|d|a', 0, 'incorrect'],
+    ['per_item', 'a|b|c|d', 8, 'correct'],
+    ['per_item', 'a|b|d|c', 4, 'partial'],
+    ['per_item', 'a|c|b|d', 4, 'partial'],
+    ['per_item', 'b|c|d|a', 0, 'incorrect'],
+    ['one_off', 'a|b|c|d', 8, 'correct'],
+    ['one_off', 'a|b|d|c', 4, 'partial'],
+    ['one_off', 'd|b|c|a', 4, 'partial'],
+    ['one_off', 'b|c|d|a', 0, 'incorrect'],
+    ['one_off', 'b|a|d|c', 0, 'incorrect'],
+    ['one_off', 'a|b|c', 0, 'incorrect'],
+  ] as const)('%s: %s -> %i, %s', (mode, value, points, verdict) => {
+    expect(scoreSubmission(sort(mode), value)).toEqual({ points, verdict });
+  });
+
+  it('rounds per_item points to the nearest half point', () => {
+    expect(
+      scoreSubmission(
+        { type: 'sort', answer: 'a|b|c', points: 4, scoringMode: 'per_item' },
+        'a|b|x',
+      ),
+    ).toEqual({ points: 2.5, verdict: 'partial' }); // 4 * 2/3 = 2.67
+  });
+
+  it('is incorrect when per_item rounding gives zero points', () => {
+    expect(
+      scoreSubmission(
+        {
+          type: 'sort',
+          answer: 'a|b|c|d|e|f|g|h',
+          points: 1,
+          scoringMode: 'per_item',
+        },
+        'a|x|x|x|x|x|x|x',
+      ),
+    ).toEqual({ points: 0, verdict: 'incorrect' });
+  });
+
+  it('is correct when per_item rounding reaches full points', () => {
+    expect(
+      scoreSubmission(
+        {
+          type: 'sort',
+          answer: 'a|b|c|d|e|f|g|h|i|j',
+          points: 1,
+          scoringMode: 'per_item',
+        },
+        'a|b|c|d|e|f|g|h|i|x',
+      ),
+    ).toEqual({ points: 1, verdict: 'correct' }); // 0.9 rounds to 1
+  });
+
+  it('scales partial points by kahoot speed', () => {
+    expect(
+      scoreSubmission(sort('per_item'), 'a|b|d|c', {
+        responseMs: 10_000,
+        timerMs: 10_000,
+      }),
+    ).toEqual({ points: 2, verdict: 'partial' });
+  });
+});
+
 describe('Number questions', () => {
   it('scales a correct answer by the kahoot speed multiplier', () => {
     expect(
@@ -64,11 +142,11 @@ describe('Number questions', () => {
 
 describe('scoreSubmission — match', () => {
   const answer = 'a|b|c|d';
-  const partial = (mode?: 'partial' | 'all_or_nothing'): ScoredQuestion => ({
+  const partial = (mode?: 'per_item' | 'one_off'): ScoredQuestion => ({
     type: 'match',
     answer,
     points: 8,
-    matchScoringMode: mode,
+    scoringMode: mode,
   });
 
   it.each([
@@ -77,10 +155,10 @@ describe('scoreSubmission — match', () => {
     ['a|b|x|x', 4, 'partial'],
     ['x|x|x|x', 0, 'incorrect'],
   ] as const)(
-    'partial mode (default): %s -> %i, %s',
+    'per_item mode (default): %s -> %i, %s',
     (value, points, verdict) => {
       expect(scoreSubmission(partial(), value)).toEqual({ points, verdict });
-      expect(scoreSubmission(partial('partial'), value)).toEqual({
+      expect(scoreSubmission(partial('per_item'), value)).toEqual({
         points,
         verdict,
       });
@@ -92,8 +170,8 @@ describe('scoreSubmission — match', () => {
     ['a|b|c|x', 4, 'partial'],
     ['a|b|x|x', 0, 'incorrect'],
     ['x|x|x|x', 0, 'incorrect'],
-  ] as const)('all_or_nothing: %s -> %i, %s', (value, points, verdict) => {
-    expect(scoreSubmission(partial('all_or_nothing'), value)).toEqual({
+  ] as const)('one_off: %s -> %i, %s', (value, points, verdict) => {
+    expect(scoreSubmission(partial('one_off'), value)).toEqual({
       points,
       verdict,
     });
@@ -103,7 +181,7 @@ describe('scoreSubmission — match', () => {
     [1, 0.5],
     [3, 1.5],
   ])(
-    'awards exactly half of a %i-point question for one wrong pair in all_or_nothing',
+    'awards exactly half of a %i-point question for one wrong pair in one_off',
     (points, awarded) => {
       expect(
         scoreSubmission(
@@ -111,7 +189,7 @@ describe('scoreSubmission — match', () => {
             type: 'match',
             answer: 'a|b',
             points,
-            matchScoringMode: 'all_or_nothing',
+            scoringMode: 'one_off',
           },
           'a|x',
         ),
@@ -199,7 +277,7 @@ describe('scoreSubmission — kahoot speed', () => {
       type: 'match',
       answer: 'a|b',
       points: 1,
-      matchScoringMode: 'all_or_nothing',
+      scoringMode: 'one_off',
     };
     for (const responseMs of [0, 3_333, 7_777, 10_000]) {
       const result = scoreSubmission(question, 'a|x', speed(responseMs));

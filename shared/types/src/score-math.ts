@@ -1,4 +1,4 @@
-/** Exactly half of `points`, unrounded — the Half grade and match all_or_nothing's one-wrong-pair credit. */
+/** Exactly half of `points`, unrounded — the Half grade and match one_off's one-wrong-pair credit. */
 export function halfPoints(points: number): number {
   return points / 2;
 }

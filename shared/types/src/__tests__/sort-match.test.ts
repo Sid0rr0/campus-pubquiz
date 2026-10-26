@@ -1,5 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { isSameMultiset, isSameOrder, splitPipeList } from '../sort-match';
+import {
+  isSameMultiset,
+  isSameOrder,
+  sortSlotMatches,
+  splitPipeList,
+} from '../sort-match';
+
+describe('sortSlotMatches', () => {
+  it('flags every item when the order is right', () => {
+    expect(sortSlotMatches('a|b|c', 'a|b|c')).toEqual([true, true, true]);
+  });
+
+  it('flags the two swapped items', () => {
+    expect(sortSlotMatches('b|a|c', 'a|b|c')).toEqual([false, false, true]);
+  });
+
+  it('flags nothing when every item is shifted by one', () => {
+    expect(sortSlotMatches('c|a|b', 'a|b|c')).toEqual([false, false, false]);
+  });
+
+  it('ignores stray whitespace and empty items', () => {
+    expect(sortSlotMatches(' a | |b|c ', 'a|b|c')).toEqual([true, true, true]);
+  });
+
+  it('returns nothing for a blank submission', () => {
+    expect(sortSlotMatches('  ', 'a|b')).toEqual([]);
+  });
+});
 
 describe('splitPipeList', () => {
   it('splits, trims, and drops empty segments', () => {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MARGIN_UNITS, parseFiniteNumber } from './margin';
-import { MATCH_SCORING_MODES } from './match-scoring-mode';
+import { MATCH_SCORING_MODES, SCORING_MODES } from './scoring-mode';
 import type { MergedOptional } from './merged-shape';
 import { isSameMultiset, isSameOrder, splitPipeList } from './sort-match';
 
@@ -109,6 +109,7 @@ export const sortPreviewSchema = z
     type: z.literal('sort'),
     ...baseQuestionFields,
     options: z.array(z.string().min(1)).min(2, 'Provide at least two items'),
+    scoringMode: z.enum(SCORING_MODES).optional(),
     mediaUrl: httpUrl.optional(),
   })
   .refine(
@@ -139,7 +140,7 @@ export const matchPreviewSchema = z
     matchTargets: z
       .array(z.string().min(1))
       .min(2, 'Provide at least two right items'),
-    matchScoringMode: z.enum(MATCH_SCORING_MODES).optional(),
+    scoringMode: z.enum(MATCH_SCORING_MODES).optional(),
     mediaUrl: httpUrl.optional(),
   })
   .refine(

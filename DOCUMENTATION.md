@@ -126,7 +126,7 @@ behaviour of each status.
 | `break`             | One locked question under break review (prompt + media, no answer)                                                                                                                                                                                                                                                            | Block browser, read-only                                                                                                                                                                                                                                             | `PREVIOUS` from `break_intro` (lands on the block's last question) or from a later question                                                          | The next question in the block; from the block's last question, `reveal_intro` (same ungraded check)                   |
 | `break_round_intro` | Round title card: "ROUND N", title — no answers implied                                                                                                                                                                                                                                                                       | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | `PREVIOUS` across the start of a round during break review                                                                                           | Back into `break` on the same question                                                                                 |
 | `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                                                                                                                                                                                                                                                                        | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                                        | `reveal` on that round's first question                                                                                |
-| `reveal`            | One question with its correct answer (and `answer_media_url`)                                                                                                                                                                                                                                                                 | Block browser with the team's answer ("Your answer", coloured by its Verdict: green correct, cyan partial, magenta incorrect or no answer), the correct answer and points                                                                                            | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                                           | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
+| `reveal`            | One question with its correct answer (and `answer_media_url`)                                                                                                                                                                                                                                                                 | Block browser with the team's answer ("Your answer", coloured by its Verdict: green correct, cyan partial, magenta incorrect or no answer), the correct answer and points; a sort answer is listed item by item, each marked ✓ or ✗ for sitting in its correct slot (not for no answer or "I don't know", and still shown when the moderator overrode the points)                                                                                            | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                                           | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
 | `ended`             | Final screen (a podium of the top three in three colours at the top, "Quiz complete!", the other teams with their places in a scrolling row like the lobby roster, and a thank-you — with "Tell us how it went on your phone ★" when feedback is collected), or an active showdown; confetti and a fanfare when the quiz ends live | "Quiz complete!", the team's final placing ("You finished 4th of 12", "Joint 2nd" for a tie; confetti for ranks 1–3), then the final feedback form (pacing and felt difficulty, then every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                                        | —                                                                                                                      |
 
 `joker_pick` belongs to no status group (it is pre-quiz like `round_overview`).
@@ -1071,7 +1071,14 @@ grading behavior. Media is not a type: any question can carry a
   contain the same items as `options`, just reordered — validated as a
   multiset match at import time, and refused when `options` is already in the
   answer's order (phones would show the answer). The editor never saves such an
-  order for a sort or match question. Auto-graded at submit time by exact match.
+  order for a sort or match question. Auto-graded at submit time by the
+  question's `scoringMode` (set in the manual editor, or from CSV as
+  `scoring: "exact"` / `"per_item"` / `"one_off"` in the notes `{…}` group;
+  unset behaves as `one_off`): `exact` gives full points only for the exact
+  order; `per_item` gives the points × items in their correct slot ÷ item
+  count, rounded to the nearest half point (verdict `partial`, or `incorrect`
+  at 0); `one_off` gives half the points when exactly two items are swapped
+  and nothing otherwise. Kahoot speed scales the points as usual.
 - **`match`** — players pair each left-hand item with a right-hand item
   (`MatchAnswer`, `apps/frontend/app/play/match-answer.tsx`); `QuestionView`
   carries the two lists separately as `options` (left) and `matchTargets`
@@ -1082,12 +1089,12 @@ grading behavior. Media is not a type: any question can carry a
   order so it's directly comparable to a submission, which is built the same
   positional way. Auto-graded at submit time by counting correct pairs
   position-by-position. How that count becomes points depends on the
-  question's `matchScoringMode` (set in the manual editor, or from CSV as
-  `scoring: "all_or_nothing"` / `scoring: "partial"` in the notes `{…}`
-  group — see the notes group under Media; unset behaves as `partial`): `partial`
+  question's `scoringMode` (set in the manual editor, or from CSV as
+  `scoring: "one_off"` / `scoring: "per_item"` in the notes `{…}`
+  group — see the notes group under Media; unset behaves as `per_item`): `per_item`
   splits the question's points evenly across pairs and rounds to the nearest
   half point (4 points, 3 pairs, 2 correct → 2.5; 1 point, 2 pairs, 1 correct
-  → 0.5); `all_or_nothing` gives full points when every
+  → 0.5); `one_off` gives full points when every
   pair is correct, exactly half the question's points when exactly one is wrong, and zero
   otherwise.
 - **`closest_guess`** — a numeric-guess question (CSV `answer` must parse as
@@ -1121,7 +1128,7 @@ grading behavior. Media is not a type: any question can carry a
   `answer` cell holds the key and must parse as a finite number (same rule and
   message as `closest_guess`); players type on the decimal number keypad. The
   question's `margin` is `{ value, unit }` with `unit` `percent` or `absolute`
-  (stored in the payload next to `matchScoringMode`, set in the manual editor
+  (stored in the payload next to `scoringMode`, set in the manual editor
   or from CSV as `margin: "5%"` / `margin: "2"` in the notes `{…}` group; a
   question with no stored margin gets the default `{ value: 10, unit: 'percent' }`). The value must
   not be negative and a percentage must be at most 100. It is **auto-graded at
@@ -1223,7 +1230,10 @@ canonical group appended to the free notes, leaving empty keys out. Stored
 an older save left there (the payload fields stay the truth), and saving
 again cleans the row. The same group carries a question's **grading settings**: `margin: "5%"`
 (percent) or `margin: "2"` (absolute) for a Number question, and
-`scoring: "partial"` or `scoring: "all_or_nothing"` for a match question
+`scoring: "exact"`, `"per_item"` or `"one_off"` for a sort question and
+`"per_item"` or `"one_off"` for a match question (the old names `partial` and
+`all_or_nothing` are still read as `per_item` and `one_off`; a mode the type
+doesn't accept, like `exact` on match, is refused at import and save)
 (`parseMarginCell` and the scoring modes in `notes-group.ts`). A key the type
 doesn't carry is ignored, a value that doesn't read (`margin: "five"`,
 `scoring: "half"`) is reported as invalid on the `notes` column, and a
@@ -1515,10 +1525,10 @@ position on restore.
 
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
 If an opened question's Answer key (its `answer`, `points` and the
-`matchScoringMode` or `margin` its type carries) changed, its existing answers are
+`scoringMode` or `margin` its type carries) changed, its existing answers are
 re-graded (`BlockGradingService.regradeForKeyFix`): auto-graded types
 (`multiple_choice`/`sort`/`match`/`number`) re-score every answer — overwriting any
-manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
+manual override, e.g. adjusted `per_item` credit on a sort or match question — and re-apply kahoot
 speed scaling (kept to the nearest half point, so a half-credit match never
 rounds back up to full points) from the response time stored on each answer at submit (so it
 survives a backend restart, and a correction made before the question locks is
@@ -1532,8 +1542,8 @@ the submit-time grade against the key as it stood before the edit). The editor k
 display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
 reshuffle what players see. The keys are compared with defaults filled in
 (`answerKeyOf` / `isSameAnswerKey`), so a setting left unset and one saved as
-its default are the same: a `match` question with no stored scoring
-mode (a CSV row with no `scoring` key) saved as `partial` is not a key fix and keeps its overrides. A setting
+its type's default are the same (`one_off` for sort, `per_item` for match): a `match` question with no stored scoring
+mode (a CSV row with no `scoring` key) saved as `per_item` is not a key fix and keeps its overrides. A setting
 the type doesn't carry never counts, and a margin compares by value and unit
 whatever the order of its fields.
 
@@ -1544,7 +1554,7 @@ reads, so an exported file re-imports as-is. `break_after`, `category`,
 `author`, `round_note`, and `show_round_note` all land on each round's last
 row (`show_round_note` is blank when the setting is off); `match` answers are rebuilt as
 `left+right` pairs. Rounds with no questions are omitted, and `kahootMode`
-has no column, so it isn't exported. A `match` question's scoring mode and a
+has no column, so it isn't exported. A `sort` or `match` question's scoring mode and a
 `number` question's margin are exported in the notes cell.
 
 **CSV import mechanics**: the browser reads the uploaded file's text directly

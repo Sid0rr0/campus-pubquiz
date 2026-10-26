@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   ANSWER_FORMATS,
   formatNumberReveal,
+  sortSlotMatches,
   type AnswerKind,
   type QuestionView,
 } from '@campus-pubquiz/types';
@@ -154,10 +155,12 @@ function SortList({
   correctOrder: readonly string[];
   hasEntrance?: boolean;
 }) {
+  // The same comparison per_item scoring uses, so marks and points can't disagree.
+  const inPlace = sortSlotMatches(items.join('|'), correctOrder.join('|'));
   return (
     <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
       {items.map((item, index) => {
-        const isCorrect = item === correctOrder[index];
+        const isCorrect = inPlace[index];
         return (
           <EntranceItem
             key={index}

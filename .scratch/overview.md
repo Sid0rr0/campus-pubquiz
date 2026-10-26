@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| sort-scoring-modes | [Scoring modes for sort questions, one shared vocabulary with match](sort-scoring-modes/spec.md) | 4 | — |
 
 ## Won't do
 

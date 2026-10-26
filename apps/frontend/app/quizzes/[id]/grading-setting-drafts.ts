@@ -1,6 +1,7 @@
 import {
   QUESTION_KINDS,
   gradingSettingsOf,
+  isScoringModeOf,
   parseFiniteNumber,
   type GradingSettingName,
   type ImportQuestionPreview,
@@ -14,11 +15,15 @@ interface GradingSettingDraft {
   save(question: EditorQuestion): Partial<ImportQuestionPreview>;
 }
 
-const matchScoringModeDraft: GradingSettingDraft = {
-  load: (question) => ({
-    matchScoringMode: gradingSettingsOf(question).matchScoringMode,
+const scoringModeDraft: GradingSettingDraft = {
+  // Unset stays unset: the picker shows the type's default, the Answer key resolves it.
+  load: (question) => ({ scoringMode: question.scoringMode }),
+  // A mode the type doesn't accept (left from another type) is saved as unset.
+  save: (question) => ({
+    scoringMode: isScoringModeOf(question.type, question.scoringMode)
+      ? question.scoringMode
+      : undefined,
   }),
-  save: (question) => ({ matchScoringMode: question.matchScoringMode }),
 };
 
 const marginDraft: GradingSettingDraft = {
@@ -39,7 +44,7 @@ const marginDraft: GradingSettingDraft = {
 
 /** One entry per grading setting; a setting without one is a compile error. */
 const GRADING_SETTING_DRAFTS = {
-  matchScoringMode: matchScoringModeDraft,
+  scoringMode: scoringModeDraft,
   margin: marginDraft,
 } satisfies { readonly [Name in GradingSettingName]: GradingSettingDraft };
 

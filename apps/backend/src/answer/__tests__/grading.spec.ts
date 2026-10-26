@@ -869,7 +869,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       expect(answer.pointsAwarded).toBe(3);
     });
 
-    it('re-scores a match answer under all_or_nothing scoring when the answer key is corrected', async () => {
+    it('re-scores a match answer under one_off scoring when the answer key is corrected', async () => {
       const matchQuestion = state.em.create(Question, {
         round: state.round,
         orderIndex: 1,
@@ -880,7 +880,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         payload: {
           options: ['arthur', 'captain america', 'spiderman', 'thor'],
           matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
-          matchScoringMode: 'all_or_nothing',
+          scoringMode: 'one_off',
         },
       });
       await state.em.flush();
@@ -899,7 +899,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         type: 'match',
         answer: 'excalibur|shield|web|web',
         points: 4,
-        matchScoringMode: 'all_or_nothing',
+        scoringMode: 'one_off',
       });
 
       const [answer] = await state.answerService.listForQuestion(
@@ -1260,7 +1260,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       expect(await pointsByTeam(question.id)).toEqual({ [team.id]: 1 });
     });
 
-    it('scales an all_or_nothing match answer from its pre-speed-scaling half credit, not full points', async () => {
+    it('scales a one_off match answer from its pre-speed-scaling half credit, not full points', async () => {
       const question = await createQuestion({
         type: 'match',
         answer: 'excalibur|shield|web|hammer',
@@ -1268,7 +1268,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         payload: {
           options: ['arthur', 'captain america', 'spiderman', 'thor'],
           matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
-          matchScoringMode: 'all_or_nothing',
+          scoringMode: 'one_off',
         },
       });
       const team = await insertTeam('The Quizzards', 'token-1');
@@ -1288,7 +1288,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
           type: 'match',
           answer: question.answer,
           points: question.points,
-          matchScoringMode: 'all_or_nothing',
+          scoringMode: 'one_off',
         },
         TIMER_SECONDS,
       );

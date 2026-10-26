@@ -2,21 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_MARGIN, type Margin } from '../margin';
 import { QUESTION_KINDS } from '../question-kind';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
-import type { MatchScoringMode } from '../question-views';
-import { answerKeyOf, gradingSettingsOf, isSameAnswerKey } from '../answer-key';
+import type { ScoringMode } from '../scoring-mode';
+import {
+  answerKeyOf,
+  gradingSettingsOf,
+  isSameAnswerKey,
+  isScoringModeOf,
+  scoringModesOf,
+} from '../answer-key';
 
 const STORED_MARGIN: Margin = { value: 5, unit: 'absolute' };
-const STORED_MODE: MatchScoringMode = 'all_or_nothing';
+const STORED_MODE: ScoringMode = 'exact';
 
 /** What each setting resolves to for a type that carries it, with none stored. */
-const DEFAULTS = {
-  matchScoringMode: 'partial',
+const defaultsOf = (type: QuestionType) => ({
+  scoringMode: type === 'sort' ? 'one_off' : 'per_item',
   margin: DEFAULT_MARGIN,
-};
+});
 
 /** What each setting resolves to for a type that carries it, once stored. */
 const STORED = {
-  matchScoringMode: STORED_MODE,
+  scoringMode: STORED_MODE,
   margin: STORED_MARGIN,
 };
 
@@ -42,7 +48,7 @@ describe.each(QUESTION_TYPES)(
   (type) => {
     it('are the type defaults when none are stored', () => {
       expect(gradingSettingsOf({ type })).toEqual(
-        pick(DEFAULTS, carried(type)),
+        pick(defaultsOf(type), carried(type)),
       );
     });
 
@@ -60,6 +66,29 @@ describe.each(QUESTION_TYPES)(
   },
 );
 
+describe('the scoring modes a type accepts', () => {
+  it.each([
+    ['sort', ['one_off', 'exact', 'per_item']],
+    ['match', ['per_item', 'one_off']],
+    ['number', []],
+    ['free_text', []],
+  ] as const)('%s accepts %j', (type, modes) => {
+    expect(scoringModesOf(type)).toEqual(modes);
+  });
+
+  it('tells an accepted mode from an unset or foreign one', () => {
+    expect(isScoringModeOf('sort', 'exact')).toBe(true);
+    expect(isScoringModeOf('match', 'exact')).toBe(false);
+    expect(isScoringModeOf('sort', undefined)).toBe(false);
+    expect(isScoringModeOf('number', 'per_item')).toBe(false);
+  });
+
+  it('defaults a sort question to one_off and a match question to per_item', () => {
+    expect(gradingSettingsOf({ type: 'sort' }).scoringMode).toBe('one_off');
+    expect(gradingSettingsOf({ type: 'match' }).scoringMode).toBe('per_item');
+  });
+});
+
 describe('the answer key of a question', () => {
   it('holds the answer, the points and the resolved settings', () => {
     expect(key('number')).toEqual({
@@ -75,7 +104,10 @@ describe('whether two answer keys are the same', () => {
   describe.each(QUESTION_TYPES)('for a %s question', (type) => {
     it('is the same when a setting is unset in one and the default in the other', () => {
       expect(
-        isSameAnswerKey(key(type), key(type, pick(DEFAULTS, carried(type)))),
+        isSameAnswerKey(
+          key(type),
+          key(type, pick(defaultsOf(type), carried(type))),
+        ),
       ).toBe(true);
     });
 
@@ -89,7 +121,7 @@ describe('whether two answer keys are the same', () => {
       expect(isSameAnswerKey(key(type), key(type, { points: 3 }))).toBe(false);
     });
 
-    it.each(['matchScoringMode', 'margin'] as const)(
+    it.each(['scoringMode', 'margin'] as const)(
       'treats a differing %s as a difference only if the type carries it',
       (name) => {
         const isCarried = carried(type).includes(name);

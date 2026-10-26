@@ -174,7 +174,7 @@ describe('validateQuizDraft - per-question-type field validation', () => {
     );
   });
 
-  it('accepts a match question with an explicit matchScoringMode', () => {
+  it('accepts a match question with an explicit scoringMode', () => {
     const issues = validateQuizDraft(
       makeRequest({
         rounds: [
@@ -185,7 +185,7 @@ describe('validateQuizDraft - per-question-type field validation', () => {
                 answer: 'excalibur|shield',
                 options: ['arthur', 'captain america'],
                 matchTargets: ['shield', 'excalibur'],
-                matchScoringMode: 'all_or_nothing',
+                scoringMode: 'one_off',
               }),
             ],
           }),
@@ -196,7 +196,7 @@ describe('validateQuizDraft - per-question-type field validation', () => {
     expect(issues).toEqual([]);
   });
 
-  it('reports a match question with an invalid matchScoringMode', () => {
+  it('reports a match question with an invalid scoringMode', () => {
     const issues = validateQuizDraft(
       makeRequest({
         rounds: [
@@ -208,7 +208,7 @@ describe('validateQuizDraft - per-question-type field validation', () => {
                 options: ['arthur', 'captain america'],
                 matchTargets: ['shield', 'excalibur'],
                 // @ts-expect-error deliberately invalid for this test
-                matchScoringMode: 'half_credit',
+                scoringMode: 'half_credit',
               }),
             ],
           }),
@@ -220,7 +220,7 @@ describe('validateQuizDraft - per-question-type field validation', () => {
       expect.objectContaining({
         roundIndex: 0,
         questionIndex: 0,
-        field: 'matchScoringMode',
+        field: 'scoringMode',
       }),
     );
   });

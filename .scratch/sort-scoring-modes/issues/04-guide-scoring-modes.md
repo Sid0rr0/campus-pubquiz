@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Rename the scoring mode to one shared setting and vocabulary), 03 (Sort scoring modes exact / per_item / one_off)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The guide's CSV notes hint names the new scoring-mode values for sort and match
 - [ ] No old mode names remain in the guide
