@@ -985,6 +985,11 @@ table (`GameSessionTeam`).
   ignoring letter case ("the quizzards" is "The Quizzards"; an exact match wins
   if two stored names differ only in case), and the refusal tells a team that
   forgot its code to ask the moderator for it.
+- **Refused joins** — a socket whose `JOIN_PLAYERS` is refused 5 times (a wrong
+  game code or team code, a taken name) is disconnected by the server, so a script
+  can't hold up a room's answers or guess team codes. A seat-taken refusal isn't
+  counted: it only comes once the join proved which team it is, and the phone
+  retries it on its own while its old socket dies.
 - **Waking a phone** — mobile OSes freeze a backgrounded socket, so `/play`
   opens a fresh connection (`forceReconnect`) when the page turns visible after
   being hidden for at least `HIDDEN_RECONNECT_THRESHOLD_MS` (5 s), when it is
