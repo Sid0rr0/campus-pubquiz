@@ -297,6 +297,7 @@ describe('SessionSettings defaults', () => {
       kahootQuestionTimerSeconds: null,
       collectFeedback: true,
       funFactsEnabled: true,
+      listed: true,
       rules: [
         'No cheating.',
         'Please write your answers in English.',
