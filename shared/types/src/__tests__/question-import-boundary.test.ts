@@ -470,7 +470,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
     ).toMatchObject({ category: '' });
   });
 
-  it('reports an unknown match scoring mode naming the modes it accepts', () => {
+  it('reports an unknown scoring mode naming the modes it accepts', () => {
     const { clipIssues } = decodeSheetRow(
       { ...ROW, notes: '{scoring: "half"}' },
       'match',
@@ -481,7 +481,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
         path: ['notes'],
         code: 'custom',
         message:
-          'Scoring "scoring" is not a match scoring mode — use per_item or one_off',
+          'Scoring "scoring" is not a scoring mode — use exact, per_item, one_off',
       },
     ]);
   });

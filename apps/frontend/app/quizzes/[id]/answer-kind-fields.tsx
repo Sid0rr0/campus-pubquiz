@@ -8,8 +8,8 @@ import {
 } from '@radix-ui/react-icons';
 import {
   DEFAULT_MARGIN,
-  ONE_OFF_SCORING,
-  PER_ITEM_SCORING,
+  gradingSettingsOf,
+  scoringModesOf,
   hasMarginType,
   type AnswerKind,
   formatMarginHint,
@@ -17,7 +17,7 @@ import {
   resolveAnswerKind,
   type Margin,
   type MarginUnit,
-  type MatchScoringMode,
+  type ScoringMode,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -245,6 +245,46 @@ function NumberFields(props: AnswerFieldsProps) {
   );
 }
 
+const SCORING_MODE_LABELS: Record<ScoringMode, string> = {
+  exact: 'Exact order only',
+  per_item: 'Points per item in place',
+  one_off: 'Half points for one mistake',
+};
+
+/** Lists only the modes the question's type accepts; unset shows the type's default. */
+function ScoringModeSelect({
+  question,
+  issues,
+  isOpened,
+  onChange,
+}: AnswerFieldsProps) {
+  const modes = scoringModesOf(question.type);
+  const shown =
+    question.scoringMode && modes.includes(question.scoringMode)
+      ? question.scoringMode
+      : gradingSettingsOf({ type: question.type }).scoringMode;
+  return (
+    <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
+      Scoring
+      <select
+        value={shown}
+        onChange={(event) =>
+          onChange({ scoringMode: event.target.value as ScoringMode })
+        }
+        disabled={isOpened}
+        className="w-full rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
+      >
+        {modes.map((mode) => (
+          <option key={mode} value={mode}>
+            {SCORING_MODE_LABELS[mode]}
+          </option>
+        ))}
+      </select>
+      <FieldErrors issues={fieldIssues(issues, 'scoringMode')} />
+    </label>
+  );
+}
+
 function SortFields({
   question,
   issues,
@@ -336,6 +376,12 @@ function SortFields({
         <PlusIcon aria-hidden="true" />
         Add item
       </Button>
+      <ScoringModeSelect
+        question={question}
+        issues={issues}
+        isOpened={isOpened}
+        onChange={onChange}
+      />
     </div>
   );
 }
@@ -416,23 +462,12 @@ function MatchFields({
         <PlusIcon aria-hidden="true" />
         Add pair
       </Button>
-      <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
-        Scoring
-        <select
-          value={question.scoringMode}
-          onChange={(event) =>
-            onChange({
-              scoringMode: event.target.value as MatchScoringMode,
-            })
-          }
-          disabled={isOpened}
-          className="w-full rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-        >
-          <option value={PER_ITEM_SCORING}>Points per item in place</option>
-          <option value={ONE_OFF_SCORING}>Half points for one mistake</option>
-        </select>
-        <FieldErrors issues={fieldIssues(issues, 'scoringMode')} />
-      </label>
+      <ScoringModeSelect
+        question={question}
+        issues={issues}
+        isOpened={isOpened}
+        onChange={onChange}
+      />
       <FieldErrors issues={fieldIssues(issues, 'options')} />
       <FieldErrors issues={fieldIssues(issues, 'matchTargets')} />
       <FieldErrors issues={fieldIssues(issues, 'answer')} />

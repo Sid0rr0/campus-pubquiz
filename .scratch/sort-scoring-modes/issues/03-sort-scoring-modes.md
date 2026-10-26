@@ -16,7 +16,7 @@
 
 **Blocked by:** 01 (Rename the scoring mode to one shared setting and vocabulary), 02 (✓/✗ marks on phones for revealed sort answers)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `scoreSubmission` tests for sort: each mode on a right, part-right, two-swapped and shifted-by-one order, plus rounding, verdicts, kahoot speed and unset as `exact`
 - [ ] Import boundary and CSV round-trip tests: every sort mode accepted, `exact` on match and junk on sort rejected, and the round trip is lossless

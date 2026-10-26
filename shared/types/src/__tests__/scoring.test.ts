@@ -51,6 +51,69 @@ describe('scoreSubmission — exact-match types', () => {
   );
 });
 
+describe('scoreSubmission — sort scoring modes', () => {
+  const sort = (scoringMode?: 'exact' | 'per_item' | 'one_off') =>
+    ({
+      type: 'sort',
+      answer: 'a|b|c|d',
+      points: 8,
+      scoringMode,
+    }) satisfies ScoredQuestion;
+
+  // right, part-right (2 of 4 in place), two swapped, shifted by one
+  it.each([
+    ['exact', 'a|b|c|d', 8, 'correct'],
+    ['exact', 'a|b|d|c', 0, 'incorrect'],
+    ['exact', 'a|c|b|d', 0, 'incorrect'],
+    ['exact', 'b|c|d|a', 0, 'incorrect'],
+    [undefined, 'a|b|d|c', 0, 'incorrect'],
+    ['per_item', 'a|b|c|d', 8, 'correct'],
+    ['per_item', 'a|b|d|c', 4, 'partial'],
+    ['per_item', 'a|c|b|d', 4, 'partial'],
+    ['per_item', 'b|c|d|a', 0, 'incorrect'],
+    ['one_off', 'a|b|c|d', 8, 'correct'],
+    ['one_off', 'a|b|d|c', 4, 'partial'],
+    ['one_off', 'd|b|c|a', 4, 'partial'],
+    ['one_off', 'b|c|d|a', 0, 'incorrect'],
+    ['one_off', 'b|a|d|c', 0, 'incorrect'],
+    ['one_off', 'a|b|c', 0, 'incorrect'],
+  ] as const)('%s: %s -> %i, %s', (mode, value, points, verdict) => {
+    expect(scoreSubmission(sort(mode), value)).toEqual({ points, verdict });
+  });
+
+  it('rounds per_item points to the nearest half point', () => {
+    expect(
+      scoreSubmission(
+        { type: 'sort', answer: 'a|b|c', points: 4, scoringMode: 'per_item' },
+        'a|b|x',
+      ),
+    ).toEqual({ points: 2.5, verdict: 'partial' }); // 4 * 2/3 = 2.67
+  });
+
+  it('is incorrect when per_item rounding gives zero points', () => {
+    expect(
+      scoreSubmission(
+        {
+          type: 'sort',
+          answer: 'a|b|c|d|e|f|g|h',
+          points: 1,
+          scoringMode: 'per_item',
+        },
+        'a|x|x|x|x|x|x|x',
+      ),
+    ).toEqual({ points: 0, verdict: 'incorrect' });
+  });
+
+  it('scales partial points by kahoot speed', () => {
+    expect(
+      scoreSubmission(sort('per_item'), 'a|b|d|c', {
+        responseMs: 10_000,
+        timerMs: 10_000,
+      }),
+    ).toEqual({ points: 2, verdict: 'partial' });
+  });
+});
+
 describe('Number questions', () => {
   it('scales a correct answer by the kahoot speed multiplier', () => {
     expect(

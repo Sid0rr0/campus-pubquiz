@@ -2,6 +2,7 @@ import {
   QUESTION_KINDS,
   gradingSettingsOf,
   parseFiniteNumber,
+  scoringModesOf,
   type GradingSettingName,
   type ImportQuestionPreview,
 } from '@campus-pubquiz/types';
@@ -15,10 +16,16 @@ interface GradingSettingDraft {
 }
 
 const scoringModeDraft: GradingSettingDraft = {
-  load: (question) => ({
-    scoringMode: gradingSettingsOf(question).scoringMode,
+  // Unset stays unset: the picker shows the type's default, the Answer key resolves it.
+  load: (question) => ({ scoringMode: question.scoringMode }),
+  // A mode the type doesn't accept (left from another type) is saved as unset.
+  save: (question) => ({
+    scoringMode:
+      question.scoringMode &&
+      scoringModesOf(question.type).includes(question.scoringMode)
+        ? question.scoringMode
+        : undefined,
   }),
-  save: (question) => ({ scoringMode: question.scoringMode }),
 };
 
 const marginDraft: GradingSettingDraft = {

@@ -5,7 +5,6 @@ import {
   clipFieldsFor,
   parseFiniteNumber,
   parseTimecode,
-  PER_ITEM_SCORING,
   hasNumericAnswerKey,
   type ClipFields,
   type MarginUnit,
@@ -14,7 +13,7 @@ import {
   type ImportRoundPreview,
   type LiveEditFrontier,
   type RoundEditingDescription,
-  type MatchScoringMode,
+  type ScoringMode,
   type QuestionType,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
@@ -56,8 +55,8 @@ export interface EditorQuestion {
   options: EditorOption[];
   sortItems: string[];
   matchPairs: EditorMatchPair[];
-  /** Match only — see MatchScoringMode. Defaults to 'per_item'. */
-  scoringMode: MatchScoringMode;
+  /** Sort and match — see ScoringMode. Unset resolves to the type's default. */
+  scoringMode: ScoringMode | undefined;
   /** Number only: the margin value as typed, so a half-typed "0." or an emptied field survives; parsed at save. */
   marginValue: string;
   /** Number only — see Margin. */
@@ -198,7 +197,7 @@ function clipFieldsFrom(
 
 /** The grading draft fields of a question that has no stored setting: the one place the editor's defaults are written. */
 const GRADING_DRAFT_DEFAULTS = {
-  scoringMode: PER_ITEM_SCORING,
+  scoringMode: undefined,
   marginValue: String(DEFAULT_MARGIN.value),
   marginUnit: DEFAULT_MARGIN.unit,
 } satisfies Pick<EditorQuestion, 'scoringMode' | 'marginValue' | 'marginUnit'>;

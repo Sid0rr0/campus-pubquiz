@@ -209,6 +209,61 @@ describe('grading settings in the notes cell', () => {
     });
   });
 
+  it.each(['exact', 'per_item', 'one_off'] as const)(
+    'round-trips the sort scoring mode %s losslessly',
+    (scoringMode) => {
+      const question = { ...QUESTION_BY_TYPE.sort, scoringMode };
+
+      expect(encodeSheetRow(ROUND, question, true).notes).toBe(
+        `{scoring: "${scoringMode}"}`,
+      );
+      expect(roundTrip(question).checked).toEqual({
+        success: true,
+        data: question,
+      });
+    },
+  );
+
+  it('refuses exact on a match row and a junk value on a sort row', () => {
+    const exactOnMatch = decodeSheetRow(
+      {
+        rowNumber: 2,
+        ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.match, true),
+        notes: '{scoring: "exact"}',
+      },
+      'match',
+    );
+    const checked = checkQuestion(exactOnMatch.question);
+
+    expect(checked.success).toBe(false);
+    if (!checked.success) {
+      expect(sheetFieldForIssue(checked.issues[0])).toBe('notes');
+    }
+
+    const junkOnSort = decodeSheetRow(
+      {
+        rowNumber: 2,
+        ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.sort, true),
+        notes: '{scoring: "half"}',
+      },
+      'sort',
+    );
+    expect(junkOnSort.clipIssues).toHaveLength(1);
+  });
+
+  it('reads the old match names as the new ones on import', () => {
+    const { question } = decodeSheetRow(
+      {
+        rowNumber: 2,
+        ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.match, true),
+        notes: '{scoring: "all_or_nothing"}',
+      },
+      'match',
+    );
+
+    expect(question).toMatchObject({ scoringMode: 'one_off' });
+  });
+
   it.each([
     [{ value: 5, unit: 'percent' as const }, '{margin: "5%"}'],
     [{ value: 2.5, unit: 'absolute' as const }, '{margin: "2.5"}'],

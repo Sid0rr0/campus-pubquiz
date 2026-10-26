@@ -1,7 +1,11 @@
 import { DEFAULT_MARGIN, type Margin } from './margin';
 import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionType } from './question-types';
-import { PER_ITEM_SCORING, type MatchScoringMode } from './scoring-mode';
+import {
+  EXACT_SCORING,
+  PER_ITEM_SCORING,
+  type ScoringMode,
+} from './scoring-mode';
 
 /**
  * The Answer key module: what an answer is graded against. A question's
@@ -13,7 +17,7 @@ import { PER_ITEM_SCORING, type MatchScoringMode } from './scoring-mode';
 
 /** The value of every grading setting, for the types that carry it. */
 interface GradingSettingValues {
-  scoringMode: MatchScoringMode;
+  scoringMode: ScoringMode;
   margin: Margin;
 }
 
@@ -38,6 +42,9 @@ const DEFAULT_SETTINGS: GradingSettingValues = {
   margin: DEFAULT_MARGIN,
 };
 
+/** The scoring mode an unset one resolves to, by type; match's is the general default above. */
+const SORT_DEFAULT_SCORING_MODE: ScoringMode = EXACT_SCORING;
+
 /**
  * An Answer key with every setting present: the key's own, and for a setting
  * its type doesn't carry, the default. What Scoring hands an answer format,
@@ -54,10 +61,15 @@ export function resolvedAnswerKeyOf(
 
 /** Copies a margin so a key never shares an object with its question. */
 function resolveSetting<Name extends GradingSettingName>(
+  type: QuestionType,
   name: Name,
   stored: GradingSettingValues[Name] | null | undefined,
 ): GradingSettingValues[Name] {
-  const value = stored ?? DEFAULT_SETTINGS[name];
+  const fallback =
+    name === 'scoringMode' && type === 'sort'
+      ? SORT_DEFAULT_SCORING_MODE
+      : DEFAULT_SETTINGS[name];
+  const value = stored ?? (fallback as GradingSettingValues[Name]);
   return typeof value === 'object' ? ({ ...value } as typeof value) : value;
 }
 
@@ -68,7 +80,7 @@ export function gradingSettingsOf(
   return Object.fromEntries(
     QUESTION_KINDS[question.type].gradingSettings.map((name) => [
       name,
-      resolveSetting(name, question[name]),
+      resolveSetting(question.type, name, question[name]),
     ]),
   );
 }

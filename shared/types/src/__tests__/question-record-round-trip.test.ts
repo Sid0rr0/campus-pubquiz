@@ -273,7 +273,9 @@ describe('question record codec round trip', () => {
       for (const output of [stored.payload, fromRow, seeded]) {
         expect('options' in output).toBe(allowsOptions);
         expect('matchTargets' in output).toBe(type === 'match');
-        expect('scoringMode' in output).toBe(type === 'match');
+        expect('scoringMode' in output).toBe(
+          type === 'match' || type === 'sort',
+        );
         expect('margin' in output).toBe(type === 'number');
       }
     },

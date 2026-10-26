@@ -1,5 +1,5 @@
 import type { Margin } from './margin';
-import type { MatchScoringMode } from './scoring-mode';
+import type { ScoringMode } from './scoring-mode';
 import type { QuestionType } from './question-types';
 
 export interface QuestionView {
@@ -16,7 +16,7 @@ export interface QuestionView {
   /** Match only: the right-hand items, in the order shown to players. */
   matchTargets?: string[];
   /** Match only: unset is resolved by the Answer key (answer-key.ts); readers go through it. */
-  scoringMode?: MatchScoringMode;
+  scoringMode?: ScoringMode;
   /**
    * Present if and only if the question's type has a margin (it is graded
    * within this margin), already resolved: the projection takes it from the

@@ -49,7 +49,7 @@ describe('makeQuestion / makeRound', () => {
       options: [makeOption(), makeOption()],
       sortItems: ['', ''],
       matchPairs: [makeMatchPair(), makeMatchPair()],
-      scoringMode: 'per_item',
+      scoringMode: undefined,
       marginValue: '10',
       marginUnit: 'percent',
       correctText: '',
@@ -468,7 +468,7 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     ]);
   });
 
-  it('defaults scoringMode to per_item when a saved match question has none', () => {
+  it('leaves scoringMode unset when a saved match question has none', () => {
     const preview: ImportQuestionPreview = {
       type: 'match',
       prompt: 'Match the hero to their weapon.',
@@ -480,7 +480,30 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
 
     const question = questionFromPreview('q1', preview);
 
-    expect(question.scoringMode).toBe('per_item');
+    expect(question.scoringMode).toBeUndefined();
+    expect(questionToPreview(question).scoringMode).toBeUndefined();
+  });
+
+  it('round-trips a sort scoringMode and drops one the type does not accept', () => {
+    const sort: ImportQuestionPreview = {
+      type: 'sort',
+      prompt: 'Order them.',
+      answer: 'a|b|c',
+      points: 3,
+      options: ['c', 'a', 'b'],
+      scoringMode: 'per_item',
+    };
+    const loaded = questionFromPreview('q1', sort);
+
+    expect(loaded.scoringMode).toBe('per_item');
+    expect(questionToPreview(loaded).scoringMode).toBe('per_item');
+
+    const asMatch = {
+      ...loaded,
+      type: 'match' as const,
+      scoringMode: 'exact' as const,
+    };
+    expect(questionToPreview(asMatch).scoringMode).toBeUndefined();
   });
 
   it('starts a new Number question at a 10% margin', () => {

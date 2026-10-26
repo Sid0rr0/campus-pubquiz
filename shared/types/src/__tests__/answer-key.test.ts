@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_MARGIN, type Margin } from '../margin';
 import { QUESTION_KINDS } from '../question-kind';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
-import type { MatchScoringMode } from '../question-views';
+import type { ScoringMode } from '../scoring-mode';
 import { answerKeyOf, gradingSettingsOf, isSameAnswerKey } from '../answer-key';
 
 const STORED_MARGIN: Margin = { value: 5, unit: 'absolute' };
-const STORED_MODE: MatchScoringMode = 'one_off';
+const STORED_MODE: ScoringMode = 'one_off';
 
 /** What each setting resolves to for a type that carries it, with none stored. */
-const DEFAULTS = {
-  scoringMode: 'per_item',
+const defaultsOf = (type: QuestionType) => ({
+  scoringMode: type === 'sort' ? 'exact' : 'per_item',
   margin: DEFAULT_MARGIN,
-};
+});
 
 /** What each setting resolves to for a type that carries it, once stored. */
 const STORED = {
@@ -42,7 +42,7 @@ describe.each(QUESTION_TYPES)(
   (type) => {
     it('are the type defaults when none are stored', () => {
       expect(gradingSettingsOf({ type })).toEqual(
-        pick(DEFAULTS, carried(type)),
+        pick(defaultsOf(type), carried(type)),
       );
     });
 
@@ -75,7 +75,10 @@ describe('whether two answer keys are the same', () => {
   describe.each(QUESTION_TYPES)('for a %s question', (type) => {
     it('is the same when a setting is unset in one and the default in the other', () => {
       expect(
-        isSameAnswerKey(key(type), key(type, pick(DEFAULTS, carried(type)))),
+        isSameAnswerKey(
+          key(type),
+          key(type, pick(defaultsOf(type), carried(type))),
+        ),
       ).toBe(true);
     });
 

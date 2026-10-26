@@ -11,6 +11,7 @@ import {
   type GameStatus,
   type ImportRoundPreview,
   type Margin,
+  type ScoringMode,
   type QuizDraftSaveResult,
   type QuestionType,
   type SessionSettings,
@@ -243,7 +244,12 @@ export interface RealStoreGateway extends PlayableQuiz {
   /** Saves a corrected answer key (and/or points) for one question of the seeded quiz through the Live edit module. */
   saveAnswerKeyFix: (
     questionId: number,
-    fix: { answer?: string; points?: number; margin?: Margin },
+    fix: {
+      answer?: string;
+      points?: number;
+      margin?: Margin;
+      scoringMode?: ScoringMode;
+    },
   ) => Promise<QuizDraftSaveResult>;
   progressRepository: GameProgressRepository;
   /** Every room emit since the last clearEmits(), in emit order. */

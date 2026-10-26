@@ -1071,7 +1071,14 @@ grading behavior. Media is not a type: any question can carry a
   contain the same items as `options`, just reordered — validated as a
   multiset match at import time, and refused when `options` is already in the
   answer's order (phones would show the answer). The editor never saves such an
-  order for a sort or match question. Auto-graded at submit time by exact match.
+  order for a sort or match question. Auto-graded at submit time by the
+  question's `scoringMode` (set in the manual editor, or from CSV as
+  `scoring: "exact"` / `"per_item"` / `"one_off"` in the notes `{…}` group;
+  unset behaves as `exact`): `exact` gives full points only for the exact
+  order; `per_item` gives the points × items in their correct slot ÷ item
+  count, rounded to the nearest half point (verdict `partial`, or `incorrect`
+  at 0); `one_off` gives half the points when exactly two items are swapped
+  and nothing otherwise. Kahoot speed scales the points as usual.
 - **`match`** — players pair each left-hand item with a right-hand item
   (`MatchAnswer`, `apps/frontend/app/play/match-answer.tsx`); `QuestionView`
   carries the two lists separately as `options` (left) and `matchTargets`
@@ -1223,8 +1230,10 @@ canonical group appended to the free notes, leaving empty keys out. Stored
 an older save left there (the payload fields stay the truth), and saving
 again cleans the row. The same group carries a question's **grading settings**: `margin: "5%"`
 (percent) or `margin: "2"` (absolute) for a Number question, and
-`scoring: "per_item"` or `scoring: "one_off"` for a match question (the old
-names `partial` and `all_or_nothing` are still read as those)
+`scoring: "exact"`, `"per_item"` or `"one_off"` for a sort question and
+`"per_item"` or `"one_off"` for a match question (the old names `partial` and
+`all_or_nothing` are still read as `per_item` and `one_off`; a mode the type
+doesn't accept, like `exact` on match, is refused at import and save)
 (`parseMarginCell` and the scoring modes in `notes-group.ts`). A key the type
 doesn't carry is ignored, a value that doesn't read (`margin: "five"`,
 `scoring: "half"`) is reported as invalid on the `notes` column, and a
@@ -1533,7 +1542,7 @@ the submit-time grade against the key as it stood before the edit). The editor k
 display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
 reshuffle what players see. The keys are compared with defaults filled in
 (`answerKeyOf` / `isSameAnswerKey`), so a setting left unset and one saved as
-its default are the same: a `match` question with no stored scoring
+its type's default are the same (`exact` for sort, `per_item` for match): a `match` question with no stored scoring
 mode (a CSV row with no `scoring` key) saved as `per_item` is not a key fix and keeps its overrides. A setting
 the type doesn't carry never counts, and a margin compares by value and unit
 whatever the order of its fields.
@@ -1545,7 +1554,7 @@ reads, so an exported file re-imports as-is. `break_after`, `category`,
 `author`, `round_note`, and `show_round_note` all land on each round's last
 row (`show_round_note` is blank when the setting is off); `match` answers are rebuilt as
 `left+right` pairs. Rounds with no questions are omitted, and `kahootMode`
-has no column, so it isn't exported. A `match` question's scoring mode and a
+has no column, so it isn't exported. A `sort` or `match` question's scoring mode and a
 `number` question's margin are exported in the notes cell.
 
 **CSV import mechanics**: the browser reads the uploaded file's text directly

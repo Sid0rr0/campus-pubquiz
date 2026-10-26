@@ -3,9 +3,9 @@ import { QUESTION_KINDS, type AnswerInputKind } from './question-kind';
 import type { QuestionType } from './question-types';
 import type { ResolvedAnswerKey } from './answer-key';
 import { isWithinMargin, parseFiniteNumber } from './margin';
-import { ONE_OFF_SCORING } from './scoring-mode';
+import { ONE_OFF_SCORING, PER_ITEM_SCORING } from './scoring-mode';
 import { halfPoints, nearestHalfPoint } from './score-math';
-import { splitPipeList } from './sort-match';
+import { sortSlotMatches, splitPipeList } from './sort-match';
 
 /**
  * How a question is answered: typed text, a number, picking a choice, putting
@@ -111,10 +111,36 @@ const sortFormat: AnswerFormat<string[]> = {
   ...pipeListCodec,
   format: (stored) => splitPipeList(stored).join(' → '),
   // Stray whitespace and empty items don't cost a team the question.
-  score: (question, value) =>
-    splitPipeList(value).join('|') === splitPipeList(question.answer).join('|')
-      ? correct(question)
-      : INCORRECT,
+  score: (question, value) => {
+    const inPlace = sortSlotMatches(value, question.answer);
+    const keyLength = splitPipeList(question.answer).length;
+    const wrongSlots = inPlace.flatMap((isRight, index) =>
+      isRight ? [] : [index],
+    );
+    if (inPlace.length === keyLength && wrongSlots.length === 0) {
+      return correct(question);
+    }
+    if (question.scoringMode === PER_ITEM_SCORING) {
+      const points = nearestHalfPoint(
+        (question.points * inPlace.filter(Boolean).length) / keyLength,
+      );
+      return { points, verdict: points > 0 ? 'partial' : 'incorrect' };
+    }
+    if (
+      question.scoringMode === ONE_OFF_SCORING &&
+      inPlace.length === keyLength
+    ) {
+      const [first, second] = wrongSlots;
+      const keyItems = splitPipeList(question.answer);
+      const submitted = splitPipeList(value);
+      return wrongSlots.length === 2 &&
+        submitted[first] === keyItems[second] &&
+        submitted[second] === keyItems[first]
+        ? { points: halfPoints(question.points), verdict: 'partial' }
+        : INCORRECT;
+    }
+    return INCORRECT;
+  },
 };
 
 /**
