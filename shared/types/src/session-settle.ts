@@ -200,17 +200,35 @@ function withOpenedAt(session: SessionState, progress: GameProgress): number[] {
   ];
 }
 
-/** The session's revealed kahoot questions plus the one `progress` is revealing now. Only ever grows. */
+/**
+ * The session's revealed kahoot questions plus those `progress` has moved past
+ * (earlier rounds, and earlier questions of its own kahoot round, each of which
+ * was revealed to get past) and the one it is revealing now. Only ever grows.
+ * Deriving the past ones also covers a session saved before they were stored.
+ */
 function withRevealedKahootAt(
   session: SessionState,
   progress: GameProgress,
 ): number[] {
-  const questionId = currentKahootQuestionId(
-    session.seededGame.rounds,
-    progress,
+  const { rounds } = session.seededGame;
+  const passed = rounds.flatMap((round, roundIndex) =>
+    round.kahootMode && roundIndex <= progress.roundIndex
+      ? round.questions
+          .slice(
+            0,
+            roundIndex < progress.roundIndex
+              ? undefined
+              : progress.questionIndex,
+          )
+          .map((question) => question.id)
+      : [],
   );
-  if (progress.status !== 'reveal' || questionId === undefined) {
-    return session.revealedKahootQuestionIds;
-  }
-  return [...new Set([...session.revealedKahootQuestionIds, questionId])];
+  const questionId = currentKahootQuestionId(rounds, progress);
+  const revealing =
+    progress.status === 'reveal' && questionId !== undefined
+      ? [questionId]
+      : [];
+  return [
+    ...new Set([...session.revealedKahootQuestionIds, ...passed, ...revealing]),
+  ];
 }

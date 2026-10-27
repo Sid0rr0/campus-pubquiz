@@ -327,6 +327,26 @@ describe('settling the revealed kahoot questions', () => {
     }
   });
 
+  it('derives the ones it has moved past, as a session saved before they were stored is restored', () => {
+    const placed = (progress: GameProgress, over = rounds) =>
+      settleSession({
+        session: sessionOver(over, progressAt('lobby')),
+        progress,
+        step: { kind: 'place' },
+        now: NOW,
+      }).revealedKahootQuestionIds;
+
+    expect(
+      placed(progressAt('question_open', { roundIndex: 1, questionIndex: 1 })),
+    ).toEqual([3]);
+    expect(
+      placed(progressAt('question_open', { roundIndex: 2 }), [
+        ...rounds,
+        roundOf(2, [5]),
+      ]),
+    ).toEqual([3, 4]);
+  });
+
   it('records nothing for the reveal of a round that is not kahoot', () => {
     expect(
       move(lobbySession, progressAt('reveal', { roundIndex: 0 }))

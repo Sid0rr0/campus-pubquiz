@@ -18,6 +18,9 @@ _Avoid_: current block, active block
 **Kahoot round**:
 A round where every question is its own block, so each one is locked, scored and revealed before the next.
 
+**Revealed kahoot question**:
+A kahoot question whose reveal has aired. It stays closed to answers for the rest of the session, even when Previous steps back onto its locking countdown, because its answer was on the big screen.
+
 **Locked**:
 A question that no longer accepts answers. A block's questions lock together when its break starts; locked is a property of questions, not a status of the game.
 
