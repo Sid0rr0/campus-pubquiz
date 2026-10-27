@@ -53,6 +53,7 @@ import {
   type RandomSource,
 } from '@/game/state/joker-changes';
 import { JokerService } from '@/joker/joker.service';
+import { TimerExpiryChanges } from '@/game/state/timer-expiry-changes';
 import { TeamRosterChanges } from '@/game/state/team-roster-changes';
 import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
 import { TeamPlayerCountChanges } from '@/game/state/team-player-count-changes';
@@ -66,7 +67,6 @@ import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   type DeadlineChange,
   deadlinesOf,
-  NOTHING_TO_PUSH_OUTCOME,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import { LeagueChanges } from '@/game/state/league-changes';
@@ -111,6 +111,7 @@ export class GameStateService implements OnModuleInit {
   private readonly showdownsChanges: ShowdownsChanges;
   private readonly leagueChanges: LeagueChanges;
   private readonly jokerChanges: JokerChanges;
+  private readonly timerExpiryChanges: TimerExpiryChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -165,6 +166,7 @@ export class GameStateService implements OnModuleInit {
       (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
       this.jokerChanges,
     );
+    this.timerExpiryChanges = new TimerExpiryChanges(this.moveCommitter);
   }
 
   /**
@@ -613,13 +615,7 @@ export class GameStateService implements OnModuleInit {
     dueAt: number,
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      session[deadline] === dueAt
-        ? this.moveCommitter.commit(session, 'ADVANCE')
-        : Promise.resolve({
-            session,
-            outcome: NOTHING_TO_PUSH_OUTCOME,
-            touchedScores: false,
-          }),
+      this.timerExpiryChanges.advanceOnExpiry(session, deadline, dueAt),
     );
   }
 
