@@ -25,7 +25,6 @@ import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import {
   briefMediaKind,
   computeSessionBrief,
-  type SessionBriefInput,
   type SessionBriefQuestionInputRow,
   type SessionBriefRoundInputRow,
 } from '@/stats/session-brief.calc';
