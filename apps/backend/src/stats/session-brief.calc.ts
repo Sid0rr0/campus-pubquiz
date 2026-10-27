@@ -17,6 +17,7 @@ import type {
 import {
   computeSessionDetail,
   type SessionDetailInput,
+  playedQuestionIds,
   SessionDetailQuestionInputRow,
   SessionDetailRoundInputRow,
 } from '@/stats/session-detail.calc';
@@ -50,12 +51,6 @@ export interface SessionBriefInput extends Omit<
 > {
   rounds: SessionBriefRoundInputRow[];
   questions: SessionBriefQuestionInputRow[];
-  /**
-   * Ids of every question the session opened, as its row stored them. A
-   * question with no answers outside this list reads "not played". Null for a
-   * session saved before opened questions were tracked.
-   */
-  openedQuestionIds: readonly number[] | null;
   /** IANA zone the date is written in (the viewer's, as the stats page shows it); UTC when absent. */
   timeZone?: string;
 }
@@ -300,32 +295,6 @@ function wrongAnswerLines(
   }
 }
 
-/**
- * The questions the session put in front of teams. Uses the stored list when
- * the session row kept one; a session saved before that was tracked (null)
- * falls back to every question up to the last one with an answer, in play order.
- */
-function openedQuestionIdsOf(
-  input: SessionBriefInput,
-  sortedRounds: readonly SessionBriefRoundInputRow[],
-): ReadonlySet<number> {
-  if (input.openedQuestionIds !== null) {
-    return new Set(input.openedQuestionIds);
-  }
-  const inPlayOrder = sortedRounds.flatMap((round) =>
-    input.questions
-      .filter((q) => q.roundId === round.roundId)
-      .sort((a, b) => a.orderIndex - b.orderIndex),
-  );
-  const answeredIds = new Set(input.answers.map((a) => a.questionId));
-  const lastAnswered = inPlayOrder.findLastIndex((q) =>
-    answeredIds.has(q.questionId),
-  );
-  return new Set(
-    inPlayOrder.slice(0, lastAnswered + 1).map((q) => q.questionId),
-  );
-}
-
 function questionSection(
   question: SessionBriefQuestionInputRow,
   questionNumber: number,
@@ -375,7 +344,7 @@ export function computeSessionBrief(input: SessionBriefInput): string {
   const detail = computeSessionDetail(input);
   const teamCount = detail.teamCount;
   const rounds = [...input.rounds].sort((a, b) => a.orderIndex - b.orderIndex);
-  const openedIds = openedQuestionIdsOf(input, rounds);
+  const openedIds = playedQuestionIds(input);
 
   const roundSections = rounds.flatMap((round, roundIndex) => {
     const questions = input.questions

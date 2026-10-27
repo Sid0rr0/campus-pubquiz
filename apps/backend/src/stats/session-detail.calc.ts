@@ -95,7 +95,43 @@ export interface SessionDetailInput {
   feedback: SessionDetailFeedbackInputRow[];
   questions: SessionDetailQuestionInputRow[];
   answers: SessionDetailAnswerInputRow[];
+  /**
+   * Ids of every question the session opened, as its row stored them. Null for
+   * a session saved before opened questions were tracked.
+   */
+  openedQuestionIds: readonly number[] | null;
   bonusAwards: SessionDetailBonusInputRow[];
+}
+
+/**
+ * The one rule for which questions a session played: the ones it opened or
+ * that have a stored answer. A session saved before opened questions were
+ * tracked (null) falls back to every question up to the last answered one, in
+ * play order.
+ */
+export function playedQuestionIds(
+  input: Pick<
+    SessionDetailInput,
+    'rounds' | 'questions' | 'answers' | 'openedQuestionIds'
+  >,
+): ReadonlySet<number> {
+  const answeredIds = new Set(input.answers.map((a) => a.questionId));
+  if (input.openedQuestionIds !== null) {
+    return new Set([...input.openedQuestionIds, ...answeredIds]);
+  }
+  const inPlayOrder = [...input.rounds]
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .flatMap((round) =>
+      input.questions
+        .filter((q) => q.roundId === round.roundId)
+        .sort((a, b) => a.orderIndex - b.orderIndex),
+    );
+  const lastAnswered = inPlayOrder.findLastIndex((q) =>
+    answeredIds.has(q.questionId),
+  );
+  return new Set(
+    inPlayOrder.slice(0, lastAnswered + 1).map((q) => q.questionId),
+  );
 }
 
 // Named thresholds for the quiz-wide difficulty label (Definitions in the

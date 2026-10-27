@@ -79,6 +79,7 @@ function buildInput({
     feedback: [],
     questions: [],
     answers,
+    openedQuestionIds: null,
     bonusAwards,
     ...overrides,
   };
