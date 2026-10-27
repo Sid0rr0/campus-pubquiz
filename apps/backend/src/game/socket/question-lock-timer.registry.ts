@@ -47,11 +47,11 @@ export class QuestionLockTimerRegistry {
     private readonly scheduler: TimerScheduler = createRealTimerScheduler(),
   ) {}
 
-  /** (Re)arms this session's timer to fire `onExpire` at `lockAt` (epoch-ms), clearing any existing one first; `lockAt === null` just clears. */
+  /** (Re)arms this session's timer to fire `onExpire` with `lockAt` (epoch-ms) when it expires, clearing any existing one first; `lockAt === null` just clears. */
   rearm(
     joinCode: string,
     lockAt: number | null,
-    onExpire: ExpiryCallback,
+    onExpire: (dueAt: number) => void | Promise<void>,
   ): void {
     this.scheduler.clear(joinCode);
     this.armedKeys.delete(joinCode);
@@ -60,7 +60,7 @@ export class QuestionLockTimerRegistry {
     this.armedKeys.add(joinCode);
     this.scheduler.arm(joinCode, lockAt, () => {
       this.armedKeys.delete(joinCode);
-      return onExpire();
+      return onExpire(lockAt);
     });
   }
 

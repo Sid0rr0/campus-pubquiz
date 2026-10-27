@@ -69,20 +69,16 @@ export class PhaseTimers {
 
   /** (Re)arms this session's three timers to `deadlines`, clearing any stale ones first; a null deadline clears that timer. */
   arm(joinCode: string, deadlines: DeadlineChange): void {
-    this.lockTimers.rearm(joinCode, deadlines.questionLockAt, () =>
-      this.handleQuestionLockExpired(joinCode, deadlines.questionLockAt),
+    this.lockTimers.rearm(joinCode, deadlines.questionLockAt, (dueAt) =>
+      this.handleQuestionLockExpired(joinCode, dueAt),
     );
     this.kahootQuestionTimers.rearm(
       joinCode,
       deadlines.kahootQuestionEndsAt,
-      () =>
-        this.handleKahootQuestionExpired(
-          joinCode,
-          deadlines.kahootQuestionEndsAt,
-        ),
+      (dueAt) => this.handleKahootQuestionExpired(joinCode, dueAt),
     );
-    this.jokerPickTimers.rearm(joinCode, deadlines.jokerPickEndsAt, () =>
-      this.handleJokerPickExpired(joinCode, deadlines.jokerPickEndsAt),
+    this.jokerPickTimers.rearm(joinCode, deadlines.jokerPickEndsAt, (dueAt) =>
+      this.handleJokerPickExpired(joinCode, dueAt),
     );
   }
 
@@ -102,7 +98,7 @@ export class PhaseTimers {
   @CreateRequestContext()
   private async handleQuestionLockExpired(
     joinCode: string,
-    dueAt: number | null,
+    dueAt: number,
   ): Promise<void> {
     await this.advanceFromTimer(joinCode, 'Auto-lock', 'questionLockAt', dueAt);
   }
@@ -110,7 +106,7 @@ export class PhaseTimers {
   @CreateRequestContext()
   private async handleKahootQuestionExpired(
     joinCode: string,
-    dueAt: number | null,
+    dueAt: number,
   ): Promise<void> {
     await this.advanceFromTimer(
       joinCode,
@@ -123,7 +119,7 @@ export class PhaseTimers {
   @CreateRequestContext()
   private async handleJokerPickExpired(
     joinCode: string,
-    dueAt: number | null,
+    dueAt: number,
   ): Promise<void> {
     await this.advanceFromTimer(
       joinCode,
@@ -145,10 +141,8 @@ export class PhaseTimers {
     joinCode: string,
     label: string,
     deadline: keyof DeadlineChange,
-    dueAt: number | null,
+    dueAt: number,
   ): Promise<void> {
-    // rearm only fires a timer armed to a non-null deadline.
-    if (dueAt === null) return;
     try {
       await this.deliver(
         joinCode,

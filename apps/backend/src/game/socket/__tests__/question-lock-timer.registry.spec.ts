@@ -29,6 +29,15 @@ describe('QuestionLockTimerRegistry on a manual scheduler', () => {
     expect(second).toHaveBeenCalledTimes(1);
   });
 
+  it('hands the expiry the deadline it was armed to', async () => {
+    const onExpire = jest.fn();
+    registry.rearm('AAAA', SOON, onExpire);
+
+    await scheduler.fire('AAAA');
+
+    expect(onExpire).toHaveBeenCalledWith(SOON);
+  });
+
   it('leaves nothing armed after arming with null', () => {
     registry.rearm('AAAA', SOON, jest.fn());
 
