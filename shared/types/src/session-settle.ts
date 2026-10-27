@@ -1,5 +1,6 @@
 import { getBlockInPlayIds, getPastBlockIds } from './block-in-play';
 import { getTimedPhaseKey } from './game-state-timed-phase';
+import { currentKahootQuestionId } from './kahoot-visibility';
 import type { GameAction, GameContext, GameProgress } from './game-state-types';
 import { computeLeaderboardRevealCount } from './leaderboard-reveal';
 import { JOKER_PICK_SECONDS } from './joker';
@@ -204,13 +205,11 @@ function withRevealedKahootAt(
   session: SessionState,
   progress: GameProgress,
 ): number[] {
-  const round = session.seededGame.rounds[progress.roundIndex];
-  const questionId = round?.questions[progress.questionIndex]?.id;
-  if (
-    progress.status !== 'reveal' ||
-    !round?.kahootMode ||
-    questionId === undefined
-  ) {
+  const questionId = currentKahootQuestionId(
+    session.seededGame.rounds,
+    progress,
+  );
+  if (progress.status !== 'reveal' || questionId === undefined) {
     return session.revealedKahootQuestionIds;
   }
   return [...new Set([...session.revealedKahootQuestionIds, questionId])];

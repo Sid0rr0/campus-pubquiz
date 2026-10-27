@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameProgress } from '../game-state';
 import {
+  currentKahootQuestionId,
   isCurrentKahootQuestionRevealed,
   isCurrentRoundKahoot,
   isQuestionHiddenBehindKahootLeaderboard,
@@ -107,5 +108,24 @@ describe('isCurrentKahootQuestionRevealed', () => {
         onQuestion({ status: 'locking', roundIndex: 1, questionIndex: 5 }, [2]),
       ),
     ).toBe(false);
+  });
+});
+
+describe('currentKahootQuestionId', () => {
+  const idAt = (progress: Partial<GameProgress>) =>
+    currentKahootQuestionId(ROUNDS, { ...at(progress).progress });
+
+  it('is the id of the question progress stands on in a kahoot round', () => {
+    expect(idAt({ roundIndex: 1, questionIndex: 0 })).toBe(2);
+    expect(idAt({ roundIndex: 1, questionIndex: 1 })).toBe(3);
+  });
+
+  it('is undefined in a round that is not kahoot', () => {
+    expect(idAt({ roundIndex: 0, questionIndex: 0 })).toBeUndefined();
+  });
+
+  it('is undefined for a position past the round or the quiz', () => {
+    expect(idAt({ roundIndex: 1, questionIndex: 5 })).toBeUndefined();
+    expect(idAt({ roundIndex: 2, questionIndex: 0 })).toBeUndefined();
   });
 });
