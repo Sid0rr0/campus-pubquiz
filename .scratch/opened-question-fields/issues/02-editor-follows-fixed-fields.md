@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Move the opened question's fixed fields into the live-edit frontier)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Editor controls' disabled state on an opened question comes from the frontier's fixed list, mapped per control to the saved field it writes
 - [ ] The Scoring select is enabled on an opened sort or match question, and changing it updates the draft's scoring mode

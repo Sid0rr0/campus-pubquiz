@@ -70,6 +70,13 @@ export function mergeLiveEditFrontiers(
   };
 }
 
+/** Saved question fields an opened question keeps fixed: teams already answered against them, so changing one would make existing submissions meaningless (e.g. an MC option typo fix would zero every team that picked it, since grading is exact-match). */
+export const OPENED_QUESTION_FIXED_FIELDS = [
+  'type',
+  'options',
+  'matchTargets',
+] as const;
+
 /**
  * How far a round's questions can be restructured:
  * - `frozen`: no question can be added, removed, reordered or moved in or out

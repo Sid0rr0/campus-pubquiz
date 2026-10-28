@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The live-edit frontier module exports the opened question's fixed fields (type, choices, match targets)
 - [ ] The live-edit guard holds no copy of its own and reads the exported list

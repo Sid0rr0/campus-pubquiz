@@ -26,6 +26,7 @@ export * from './auth';
 export * from './team';
 export * from './quiz-draft';
 export {
+  OPENED_QUESTION_FIXED_FIELDS,
   describeLiveEditRounds,
   getSessionLiveEditFrontier,
   mergeLiveEditFrontiers,
