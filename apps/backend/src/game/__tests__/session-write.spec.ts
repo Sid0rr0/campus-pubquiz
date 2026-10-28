@@ -18,6 +18,7 @@ import {
 } from '@/game/__tests__/real-store-test-utils';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { HeldWriter } from '@/game/state/session-write';
+import { NOTHING_TO_PUSH_OUTCOME } from '@/game/state/session-outcome';
 
 describe('GameGateway — session write: bonus changes', () => {
   const harness = setupRealStoreGatewayTest();
@@ -1373,6 +1374,22 @@ describe('GameGateway — session write: what a write may return and a held writ
     ).rejects.toThrow(
       'A session write moved an auto-lock deadline but returned no SessionOutcome to carry it',
     );
+  });
+
+  it('reports all three current deadlines when a write moves only the joker pick deadline', async () => {
+    const outcome = await game.sessionWrite.write(game.joinCode, (session) =>
+      Promise.resolve({
+        session: { ...session, jokerPickEndsAt: 5_000 },
+        outcome: NOTHING_TO_PUSH_OUTCOME,
+        touchedScores: false,
+      }),
+    );
+
+    expect(outcome.deadlineChange).toEqual({
+      questionLockAt: null,
+      kahootQuestionEndsAt: null,
+      jokerPickEndsAt: 5_000,
+    });
   });
 
   it('passes a result that carries no deadlines through when no deadline moved', async () => {

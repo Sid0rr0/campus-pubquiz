@@ -45,13 +45,26 @@ export interface DeadlineChange {
   jokerPickEndsAt: number | null;
 }
 
+/**
+ * The phase deadline table: every phase timer deadline once, with the label its
+ * expiry logs under. `satisfies` makes a missing or extra row a type error.
+ */
+export const PHASE_DEADLINES = {
+  questionLockAt: { label: 'Auto-lock' },
+  kahootQuestionEndsAt: { label: 'Kahoot auto-lock' },
+  jokerPickEndsAt: { label: 'Joker pick close' },
+} satisfies Record<keyof DeadlineChange, { label: string }>;
+
+/** Every phase deadline key, in table order. */
+export const PHASE_DEADLINE_KEYS = Object.keys(
+  PHASE_DEADLINES,
+) as (keyof DeadlineChange)[];
+
 /** The phase timer deadlines of a session, the one place the set is built. */
 export function deadlinesOf(session: DeadlineChange): DeadlineChange {
-  return {
-    questionLockAt: session.questionLockAt,
-    kahootQuestionEndsAt: session.kahootQuestionEndsAt,
-    jokerPickEndsAt: session.jokerPickEndsAt,
-  };
+  return Object.fromEntries(
+    PHASE_DEADLINE_KEYS.map((key) => [key, session[key]]),
+  ) as unknown as DeadlineChange;
 }
 
 /**

@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| phase-deadline-table | [One table of phase deadlines](phase-deadline-table/spec.md) | 2 |
 | stats-played-questions | [Unplayed questions stay out of an ended session's stats](stats-played-questions/spec.md) | 2 |
 | unlisted-sessions | [Unlisted sessions](unlisted-sessions/spec.md) | 3 |
 | sort-scoring-modes              | [Scoring modes for sort questions, one shared vocabulary with match](sort-scoring-modes/spec.md)                                                                          | 4       |

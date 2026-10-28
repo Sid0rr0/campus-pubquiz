@@ -1,6 +1,6 @@
 # Spec: One table of phase deadlines
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 
