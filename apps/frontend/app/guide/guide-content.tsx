@@ -25,12 +25,14 @@ const QUESTION_TYPE_BULLETS = QUESTION_TYPES.map(
 
 const CSV_TYPE_IDENTIFIERS = QUESTION_TYPES.join(', ');
 
-/** e.g. "sort: one_off, exact or per_item; match: per_item or one_off" */
-export const SCORING_NOTE = Object.entries(SCORING_MODES_BY_TYPE)
-  .map(
-    ([type, modes]) =>
-      `${type}: ${modes.slice(0, -1).join(', ')} or ${modes.at(-1)}`,
-  )
+/** e.g. "Sort / order: one_off, exact or per_item; Match pairs: per_item or one_off" */
+export const SCORING_NOTE = QUESTION_TYPES.filter(
+  (type) => type in SCORING_MODES_BY_TYPE,
+)
+  .map((type) => {
+    const modes = QUESTION_KINDS[type].scoringModes;
+    return `${QUESTION_KINDS[type].label}: ${modes.slice(0, -1).join(', ')} or ${modes.at(-1)}`;
+  })
   .join('; ');
 
 const SHORTCUT_BULLETS = Object.values(ADMIN_SHORTCUTS).map(
@@ -155,7 +157,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     bullets: [
       'Round note: up to 500 characters, for Remote and Control. "Show on screen" adds the big screen; phones never see it.',
       'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL). Run video files from Control.',
-      `Number question: the margin row has a number field and a % / absolute switch. CSV notes: {margin: "5%"}; {scoring: …} sets ${SCORING_NOTE}.`,
+      `Number: the margin row has a number field and % / absolute switch. CSV: {margin: "5%"}; {scoring: …} sets ${SCORING_NOTE}.`,
       'Video question: tick "Hide video (sound only)" to cover the video until the reveal. In a CSV, write hideVideo: true inside the {…} group in the notes cell.',
       'Clip and Reveal start and end take seconds, M:SS or H:MM:SS. In a CSV: {start: "1:22", end: "2:20", revealStart: "2:30", revealEnd: "2:45"}.',
       `CSV: one row per question; a round ends a block once any row has break_after = 1. By hand, fill category, author, round_note, show_round_note (1 shows it on screen) and notes. The type column takes ${CSV_TYPE_IDENTIFIERS}.`,

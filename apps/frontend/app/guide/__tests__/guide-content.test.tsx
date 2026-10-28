@@ -111,10 +111,14 @@ describe('GuideContent', () => {
     expect(text).toContain('margin row');
     expect(text).toContain('% / absolute');
     expect(text).toContain('margin: "5%"');
-    for (const [type, modes] of Object.entries(SCORING_MODES_BY_TYPE)) {
+    for (const type of QUESTION_TYPES.filter(
+      (t) => t in SCORING_MODES_BY_TYPE,
+    )) {
+      const modes =
+        SCORING_MODES_BY_TYPE[type as keyof typeof SCORING_MODES_BY_TYPE];
       const last = modes[modes.length - 1];
       expect(text).toContain(
-        `${type}: ${modes.slice(0, -1).join(', ')} or ${last}`,
+        `${QUESTION_KINDS[type].label}: ${modes.slice(0, -1).join(', ')} or ${last}`,
       );
     }
     expect(text).not.toContain('all_or_nothing');
