@@ -165,6 +165,21 @@ describe('TeamMergePanel', () => {
     });
   });
 
+  it('shows no error when the refetch after a merge finds the deleted team gone', async () => {
+    const user = await openPicker();
+    await user.click(screen.getByRole('button', { name: /Quizzly Bearz/ }));
+    await waitFor(() => screen.getByRole('button', { name: 'Merge teams' }));
+    mockMerge.mockImplementation(() => {
+      mockPair.mockRejectedValue(new TeamsApiError('Team 8 not found', 404));
+      return Promise.resolve({ keptTeamId: 8 });
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Merge teams' }));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/teams/8'));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('shows a refusal from the server inline and stays put', async () => {
     mockMerge.mockRejectedValue(
       new TeamsApiError('Quizzly Bears is in a session that hasn’t ended', 409),

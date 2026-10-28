@@ -169,7 +169,11 @@ function MergeConfirm({
   const mergeMutation = useMutation({
     mutationFn: (name: string) => mergeTeams(teamId, { otherTeamId, name }),
     onSuccess: async ({ keptTeamId }) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.teams.all });
+      // Skip the merge queries: they describe the pair, and one of its teams is now gone (404).
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.teams.all,
+        predicate: ({ queryKey }) => queryKey[1] !== 'merge',
+      });
       router.push(`/teams/${keptTeamId}`);
     },
   });
