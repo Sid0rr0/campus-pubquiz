@@ -8,6 +8,7 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | ---- | ----- | ------- | ---------- |
 | team-seat-check | [One team-seat check for every team event](team-seat-check/spec.md) | 2 | none |
 | opened-question-fields | [The quiz editor and the live-edit guard share one opened-question rule](opened-question-fields/spec.md) | 2 | — |
+| control-on-air-panel | [Control: question detail column and on-air cards](control-on-air-panel/spec.md) | 5 | — |
 
 ## Won't do
 

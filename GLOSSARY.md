@@ -120,7 +120,7 @@ Stepping back through a block's locked questions during its break, with answers 
 A screen showing a round's name before its content: the round intro before its questions, the break round intro when break review steps across it, and the reveal intro before its answers are revealed.
 
 **Round note**:
-What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro, the break round intro or the reveal intro is on air, and on the admin console with the round; on the big screen too when the round is set to show it, though never on the reveal intro; never on phones. The Quiz preview's host-only panel shows it on the round intro (when the round doesn't show it on screen) and on the reveal intro. Not the same as **Question notes**, which are host-only and never on screen.
+What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro, the break round intro or the reveal intro is on air, and on the admin console with the round's title card; on the big screen too when the round is set to show it, though never on the reveal intro; never on phones. The Quiz preview's host-only panel shows it on the round intro (when the round doesn't show it on screen) and on the reveal intro. Not the same as **Question notes**, which are host-only and never on screen.
 _Avoid_: title card note, intro text, round description
 
 **Question notes**:
