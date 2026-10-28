@@ -68,3 +68,5 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ `mutate:db`'s set was widened by role to the services, gateway, socket layer and read models, and `gameStateSources()` was renamed.
 - **implement-spec step 4 (2026-10-26 retro)**: an implementer reports any `.claude/skills/` edit its ticket needs; the orchestrator makes it in the main checkout once the ticket lands and commits the `skill-changes.md` entry then.
   _Why:_ in mutation-testing-services the ticket 01 implementer's edit to the gitignored skill file was refused from its worktree, but its log entry landed anyway, so the log claimed an edit that wasn't made until the orchestrator fixed both at the end.
+- **implement-spec step 11 (2026-10-28)**: the first bullet fetches and rebases the integration branch onto `origin/main` before any check runs; small conflicts are resolved inline, logic conflicts abort and go to the user; the push uses `--force-with-lease`.
+  _Why:_ PRs opened on a stale base quoted check results that didn't reflect the merged result.
