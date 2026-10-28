@@ -17,7 +17,16 @@ export interface QuizSummaryRound {
   title: string;
   /** Host-only round note; absent when the round has none. */
   note?: string;
+  /** Stored break-after flag; the last round ends a block regardless — see breakNumber. */
   breakAfter: boolean;
+  /** Title card category; absent when the round has none. */
+  category?: string;
+  /** Title card author; absent when the round has none. */
+  author?: string;
+  /** 1-based break number; present only on block-ending rounds (always the last round). */
+  breakNumber?: number;
+  /** True on the quiz's final break; present only with breakNumber. */
+  isFinalBreak?: boolean;
   /** See RoundConfig.kahootMode — optional so existing QuizSummaryRound literals don't all need updating; undefined behaves as false. */
   kahootMode?: boolean;
   questions: QuizSummaryQuestion[];

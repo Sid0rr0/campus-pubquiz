@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
+  getBreakNumber,
+  getQuizStructureSummary,
   questionNotesOf,
   previewToStoredFields,
   rowToPreview,
@@ -103,28 +105,48 @@ export class QuizService {
   async list(): Promise<QuizSummary[]> {
     const quizzes = await this.quizzes.findAllWithRoundsAndQuestions();
 
-    return quizzes.map((quiz) => ({
-      id: quiz.id,
-      title: quiz.title,
-      updatedAt: quiz.updatedAt.toISOString(),
-      rounds: quiz.rounds.getItems().map((round) => ({
-        title: round.title,
-        ...(round.note ? { note: round.note } : {}),
-        breakAfter: round.breakAfter,
-        kahootMode: round.kahootMode,
-        questions: round.questions.getItems().map((question) => {
-          const notes = questionNotesOf(question.notes);
+    return quizzes.map((quiz) => {
+      const rounds = quiz.rounds.getItems();
+      const structure = getQuizStructureSummary({
+        rounds: rounds.map((round) => ({
+          questionCount: round.questions.length,
+          breakAfter: round.breakAfter,
+        })),
+      });
+      return {
+        id: quiz.id,
+        title: quiz.title,
+        updatedAt: quiz.updatedAt.toISOString(),
+        rounds: rounds.map((round, index) => {
+          const breakNumber = getBreakNumber(index, structure);
           return {
-            id: question.id,
-            type: question.type,
-            prompt: question.prompt,
-            answer: question.answer,
-            ...(notes !== null ? { notes } : {}),
-            ...toSummaryPayload(question),
+            title: round.title,
+            ...(round.note ? { note: round.note } : {}),
+            ...(round.category ? { category: round.category } : {}),
+            ...(round.author ? { author: round.author } : {}),
+            breakAfter: round.breakAfter,
+            ...(breakNumber > 0
+              ? {
+                  breakNumber,
+                  isFinalBreak: breakNumber === structure.blockCount,
+                }
+              : {}),
+            kahootMode: round.kahootMode,
+            questions: round.questions.getItems().map((question) => {
+              const notes = questionNotesOf(question.notes);
+              return {
+                id: question.id,
+                type: question.type,
+                prompt: question.prompt,
+                answer: question.answer,
+                ...(notes !== null ? { notes } : {}),
+                ...toSummaryPayload(question),
+              };
+            }),
           };
         }),
-      })),
-    }));
+      };
+    });
   }
 
   async exists(quizId: number): Promise<boolean> {
