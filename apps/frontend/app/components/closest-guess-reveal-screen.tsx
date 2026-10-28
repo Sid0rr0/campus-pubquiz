@@ -110,7 +110,7 @@ export function ClosestGuessRevealScreen({
         </>
       )}
       {closestGuesses !== undefined && closestGuesses.length > 0 && (
-        <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
+        <ul className="flex w-full max-w-[calc(56rem*var(--display-text-scale,1))] flex-col gap-3 text-left">
           {closestGuesses.map((guess, index) => (
             <EntranceItem
               key={index}

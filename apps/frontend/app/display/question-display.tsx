@@ -464,7 +464,7 @@ export function QuestionDisplay({
             className={
               isFullscreen
                 ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
-                : 'flex w-full min-h-0 flex-1 items-center justify-center'
+                : 'flex w-full min-h-0 items-center justify-center'
             }
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
@@ -487,7 +487,7 @@ export function QuestionDisplay({
         />
       )}
       {isRevealing && !showSideBySideReveal && answerMediaUrl && (
-        <div className="flex w-full min-h-0 flex-1 items-center justify-center">
+        <div className="flex w-full min-h-0 items-center justify-center">
           <AnswerMedia
             url={answerMediaUrl}
             mediaTestIdPrefix={mediaTestIdPrefix}

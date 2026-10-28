@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ArrowRightIcon, Cross2Icon } from '@radix-ui/react-icons';
 import {
   ANSWER_FORMATS,
   formatNumberReveal,
@@ -67,21 +68,28 @@ function MatchRevealRow({
       hasEntrance={hasEntrance}
       kind="settle"
       index={index}
-      className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold text-foreground ${
+      className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-6 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold text-foreground ${
         isCorrect ? 'border-green' : 'border-magenta'
       }`}
     >
-      <span className="flex items-baseline gap-3">
-        <span className={`font-display ${accentClass}`}>{leftLabel}</span>
-        <span>{left}</span>
-      </span>
-      <span aria-hidden="true" className={accentClass}>
-        {isCorrect ? '→' : '✗'}
-      </span>
-      <span className="flex items-baseline gap-3">
-        <span className={`font-display ${accentClass}`}>{rightLabel}</span>
-        <span>{right}</span>
-      </span>
+      <MatchLabeledText
+        label={leftLabel}
+        labelClass={accentClass}
+        text={left}
+      />
+      {isCorrect ? (
+        <ArrowRightIcon
+          aria-hidden
+          className={`size-[1.25em] ${accentClass}`}
+        />
+      ) : (
+        <Cross2Icon aria-hidden className={`size-[1.25em] ${accentClass}`} />
+      )}
+      <MatchLabeledText
+        label={rightLabel}
+        labelClass={accentClass}
+        text={right}
+      />
     </EntranceItem>
   );
 }
@@ -115,7 +123,7 @@ function ChoiceList({
   hasEntrance?: boolean;
 }) {
   return (
-    <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">
+    <ul className="grid w-full max-w-[calc(72rem*var(--display-text-scale,1))] grid-cols-2 gap-4">
       {options.map((option, index) => {
         const isCorrect =
           correctAnswer !== undefined && option === correctAnswer;
@@ -158,7 +166,7 @@ function SortList({
   // The same comparison per_item scoring uses, so marks and points can't disagree.
   const inPlace = sortSlotMatches(items.join('|'), correctOrder.join('|'));
   return (
-    <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
+    <ol className="flex w-full max-w-[calc(56rem*var(--display-text-scale,1))] flex-col gap-3 text-left">
       {items.map((item, index) => {
         const isCorrect = inPlace[index];
         return (
@@ -199,7 +207,7 @@ function ChoiceQuestionBody({ question: { options } }: QuestionBodyProps) {
 function SortQuestionBody({ question: { options } }: QuestionBodyProps) {
   if (!options) return null;
   return (
-    <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
+    <ol className="flex w-full max-w-[calc(56rem*var(--display-text-scale,1))] flex-col gap-3 text-left">
       {options.map((item, index) => (
         <li key={index} className={ITEM_CLASS}>
           <span className="font-display text-cyan">{index + 1}</span>
@@ -210,27 +218,58 @@ function SortQuestionBody({ question: { options } }: QuestionBodyProps) {
   );
 }
 
+/** A label pinned to the first line of its text, at a fixed width so the text in every row starts on one line. */
+function MatchLabeledText({
+  label,
+  labelClass,
+  text,
+}: {
+  label: string;
+  labelClass: string;
+  text: string;
+}) {
+  return (
+    <span className="flex min-w-0 items-baseline gap-1">
+      <span className={`w-[1.25em] shrink-0 font-display ${labelClass}`}>
+        {label}
+      </span>
+      <span className="min-w-0">{text}</span>
+    </span>
+  );
+}
+
 function MatchQuestionBody({
   question: { options, matchTargets },
 }: QuestionBodyProps) {
   if (!options || !matchTargets) return null;
+  const rowCount = Math.max(options.length, matchTargets.length);
+  const cellClass =
+    'flex items-center rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-display-xl font-bold text-foreground';
+  // Both lists sit on the parent's rows (subgrid), so a wrapped item on either side keeps its row level with the other side.
   return (
-    <div className="grid w-full max-w-3xl grid-cols-2 gap-4 text-left">
-      <ul className="flex flex-col gap-3">
+    <div
+      className="grid w-full max-w-[calc(72rem*var(--display-text-scale,1))] grid-cols-2 gap-x-4 gap-y-3 text-left"
+      style={{ gridTemplateRows: `repeat(${rowCount}, auto)` }}
+    >
+      <ul className="row-span-full grid grid-rows-subgrid">
         {options.map((item, index) => (
-          <li key={index} className={`${ITEM_CLASS} text-foreground`}>
-            <span className="font-display text-cyan">{index + 1}</span>
-            <span>{item}</span>
+          <li key={index} className={cellClass}>
+            <MatchLabeledText
+              label={String(index + 1)}
+              labelClass="text-cyan"
+              text={item}
+            />
           </li>
         ))}
       </ul>
-      <ul className="flex flex-col gap-3">
+      <ul className="row-span-full grid grid-rows-subgrid">
         {matchTargets.map((item, index) => (
-          <li key={index} className={`${ITEM_CLASS} text-foreground`}>
-            <span className="font-display text-cyan">
-              {getLowerOptionLetter(index)}
-            </span>
-            <span>{item}</span>
+          <li key={index} className={cellClass}>
+            <MatchLabeledText
+              label={getLowerOptionLetter(index)}
+              labelClass="text-cyan"
+              text={item}
+            />
           </li>
         ))}
       </ul>
@@ -300,7 +339,7 @@ function matchRevealBody({
   }
   return {
     body: (
-      <ul className="flex w-full max-w-6xl flex-col gap-3 text-left">
+      <ul className="flex w-full max-w-[calc(72rem*var(--display-text-scale,1))] flex-col gap-3 text-left">
         {options.map((left, index) => {
           const right = shownRights[index];
           const rightLetterIndex = matchTargets?.indexOf(right) ?? index;
