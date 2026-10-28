@@ -8,7 +8,11 @@ import {
   type WriteGate,
 } from '@/game/state/write-gate';
 import { LiveResultsRead } from '@/game/state/live-results-read';
-import { deadlinesOf, type SessionOutcome } from '@/game/state/session-outcome';
+import {
+  deadlinesOf,
+  PHASE_DEADLINE_KEYS,
+  type SessionOutcome,
+} from '@/game/state/session-outcome';
 
 /**
  * What a change returns: the new session and the outcome the write resolves
@@ -42,13 +46,7 @@ function haveDeadlinesMoved(
   before: SessionState,
   after: SessionState,
 ): boolean {
-  const { questionLockAt, kahootQuestionEndsAt, jokerPickEndsAt } =
-    deadlinesOf(before);
-  return (
-    questionLockAt !== after.questionLockAt ||
-    kahootQuestionEndsAt !== after.kahootQuestionEndsAt ||
-    jokerPickEndsAt !== after.jokerPickEndsAt
-  );
+  return PHASE_DEADLINE_KEYS.some((key) => before[key] !== after[key]);
 }
 
 /**
