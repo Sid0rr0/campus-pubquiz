@@ -8,9 +8,9 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The existing session-settle cases for both lists (grows only, derived for a session saved before they were stored) pass unchanged
-- [ ] One new case: a list's stored ids are kept when the new position implies none of them (Previous stepping back)
-- [ ] Settle produces both lists only through the shared step
-- [ ] `pnpm typecheck` and `pnpm --filter @campus-pubquiz/types test session-settle` pass
+- [x] The existing session-settle cases for both lists (grows only, derived for a session saved before they were stored) pass unchanged
+- [x] One new case: a list's stored ids are kept when the new position implies none of them (Previous stepping back)
+- [x] Settle produces both lists only through the shared step
+- [x] `pnpm typecheck` and `pnpm --filter @campus-pubquiz/types test session-settle` pass

@@ -75,8 +75,14 @@ export function settleSession({
   return {
     ...session,
     progress,
-    openedQuestionIds: withOpenedAt(session, progress),
-    revealedKahootQuestionIds: withRevealedKahootAt(session, progress),
+    openedQuestionIds: growIds(
+      session.openedQuestionIds,
+      openedImpliedAt(session, progress),
+    ),
+    revealedKahootQuestionIds: growIds(
+      session.revealedKahootQuestionIds,
+      revealedKahootImpliedAt(session, progress),
+    ),
     livePhaseKey,
     phaseStartedAt,
     phaseElapsedByKey,
@@ -185,28 +191,34 @@ function computeBreakEndsAt(
 }
 
 /**
- * The session's opened questions plus everything `progress` has opened: every
- * past block's questions and the block in play for `progress`. Only ever
- * grows, so Previous stepping back leaves earlier ones opened.
+ * The one step that grows every remembered id list: the stored ids plus those
+ * the new position implies, de-duplicated in first-seen order. Only ever grows,
+ * so Previous stepping back keeps earlier ids. A new list supplies only its
+ * "implied" rule. Deriving the implied ids also covers a session saved before
+ * the list was stored.
  */
-function withOpenedAt(session: SessionState, progress: GameProgress): number[] {
+function growIds(stored: number[], implied: number[]): number[] {
+  return [...new Set([...stored, ...implied])];
+}
+
+/** Every past block's questions and the block in play for `progress`. */
+function openedImpliedAt(
+  session: SessionState,
+  progress: GameProgress,
+): number[] {
   const { rounds } = session.seededGame;
   return [
-    ...new Set([
-      ...session.openedQuestionIds,
-      ...getPastBlockIds(rounds, progress),
-      ...getBlockInPlayIds(rounds, progress),
-    ]),
+    ...getPastBlockIds(rounds, progress),
+    ...getBlockInPlayIds(rounds, progress),
   ];
 }
 
 /**
- * The session's revealed kahoot questions plus those `progress` has moved past
- * (earlier rounds, and earlier questions of its own kahoot round, each of which
- * was revealed to get past) and the one it is revealing now. Only ever grows.
- * Deriving the past ones also covers a session saved before they were stored.
+ * The kahoot questions `progress` has moved past (earlier rounds, and earlier
+ * questions of its own kahoot round, each of which was revealed to get past)
+ * and the one it is revealing now.
  */
-function withRevealedKahootAt(
+function revealedKahootImpliedAt(
   session: SessionState,
   progress: GameProgress,
 ): number[] {
@@ -228,7 +240,5 @@ function withRevealedKahootAt(
     progress.status === 'reveal' && questionId !== undefined
       ? [questionId]
       : [];
-  return [
-    ...new Set([...session.revealedKahootQuestionIds, ...passed, ...revealing]),
-  ];
+  return [...passed, ...revealing];
 }
