@@ -18,7 +18,6 @@ import {
   freshSessionState,
   type GameAction,
   type JoinPlayersPayload,
-  LOBBY_PROGRESS,
   type PickJokerPayload,
   type SetTeamJokerPayload,
   type PresenterContextPayload,
@@ -211,14 +210,9 @@ export class GameStateService implements OnModuleInit {
       const saved = await this.progressRepository.load(
         seededGame.gameSessionId,
       );
-      const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
       this.sessionWrite.place(
         seededGame.joinCode,
-        await this.moveCommitter.place(
-          freshSessionState(seededGame),
-          progress,
-          saved ?? undefined,
-        ),
+        await this.moveCommitter.place(freshSessionState(seededGame), saved),
       );
     }
     this.sessionWrite.markInitialized();
@@ -364,9 +358,7 @@ export class GameStateService implements OnModuleInit {
     // no progress to persist here.
     this.sessionWrite.place(
       seededGame.joinCode,
-      await this.moveCommitter.place(freshSessionState(seededGame), {
-        ...LOBBY_PROGRESS,
-      }),
+      await this.moveCommitter.place(freshSessionState(seededGame), null),
     );
     if (leagueIds.length > 0) {
       await this.sessionWrite.write(seededGame.joinCode, (session) =>

@@ -10,10 +10,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The saved placement type is gone, and no caller of `place` splits the loaded data
-- [ ] The existing real-store `restart()` specs (opened questions, ungraded restore, phase timer lifecycle, kahoot) pass unchanged
-- [ ] A repository case: a row whose opened-questions column is `null` loads as an empty list
-- [ ] A restart case, if none exists yet: a kahoot question revealed before the restart still refuses an answer after it
-- [ ] `pnpm typecheck` and the backend specs pass
+- [x] The saved placement type is gone, and no caller of `place` splits the loaded data
+- [x] The existing real-store `restart()` specs (opened questions, ungraded restore, phase timer lifecycle, kahoot) pass unchanged
+- [x] A repository case: a row whose opened-questions column is `null` loads as an empty list
+- [x] A restart case, if none exists yet: a kahoot question revealed before the restart still refuses an answer after it
+- [x] `pnpm typecheck` and the backend specs pass

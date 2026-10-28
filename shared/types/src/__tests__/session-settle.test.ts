@@ -276,6 +276,19 @@ describe('settling the opened questions', () => {
     expect(settled.openedQuestionIds).toEqual([1, 2, 3, 4]);
   });
 
+  it('keeps stored ids when the new position implies none of them', () => {
+    const session = {
+      ...sessionOver(rounds, progressAt('lobby')),
+      openedQuestionIds: [99],
+      revealedKahootQuestionIds: [98],
+    };
+
+    const settled = move(session, progressAt('rules'));
+
+    expect(settled.openedQuestionIds).toEqual([99]);
+    expect(settled.revealedKahootQuestionIds).toEqual([98]);
+  });
+
   it('opens nothing before the first block starts', () => {
     expect(
       move(sessionOver(rounds, progressAt('lobby')), progressAt('rules'))

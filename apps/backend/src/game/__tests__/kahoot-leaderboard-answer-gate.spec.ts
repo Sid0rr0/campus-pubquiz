@@ -50,6 +50,37 @@ describe('GameGateway — kahoot question hidden behind the leaderboard', () => 
     expect(await storedAnswers()).toEqual([]);
   });
 
+  it('still refuses an answer to a revealed kahoot question after a step back onto it and a restart', async () => {
+    await game.act('TOGGLE_LEADERBOARD');
+    await game.act('PREVIOUS'); // -> reveal q0 (its reveal aired earlier)
+    const back = await game.act('PREVIOUS'); // -> locking q0
+    expect(back.progress).toMatchObject({
+      status: 'locking',
+      questionIndex: 0,
+    });
+    // At locking q0 the position alone does not mark q0 revealed, so only the
+    // persisted revealedKahootQuestionIds can keep the gate shut.
+    const restarted = await game.restart();
+    const [{ socket, teamId, teamToken }] = game.teams;
+    // A restart drops sockets and connected teams: the phone rejoins by token.
+    await restarted.gateway.handleJoinPlayers(asSocket(socket), {
+      teamName: 'The Quizzards',
+      teamToken,
+      joinCode: game.joinCode,
+    });
+
+    const result = await restarted.gateway.handleSubmitAnswer(
+      asSocket(socket),
+      {
+        questionId: game.questionIds.multipleChoice,
+        teamId,
+        value: 'Paris',
+      },
+    );
+
+    expect(result).toMatchObject({ success: false });
+  });
+
   it('accepts SUBMIT_ANSWER for that question once TOGGLE_LEADERBOARD reveals it', async () => {
     await game.act('TOGGLE_LEADERBOARD');
 

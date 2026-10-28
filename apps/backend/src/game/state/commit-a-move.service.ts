@@ -1,12 +1,11 @@
 import {
   type ActiveShowdownRoundState,
   type GameAction,
-  type GameProgress,
   type LeagueTop,
+  LOBBY_PROGRESS,
   type MoveStep,
   planMove,
   type ProgressMoveStep,
-  type SavedPhaseTimer,
   type SessionState,
   settleMove,
   settleSession,
@@ -26,12 +25,6 @@ import {
 import type { ClosedJokerPick, JokerChanges } from '@/game/state/joker-changes';
 import type { LiveResultsRead } from '@/game/state/live-results-read';
 import type { ShowdownService } from '@/showdown/showdown.service';
-
-/** What a restart restores besides the progress: the phase timer, the opened questions (null for a session saved before they were tracked) and the revealed kahoot questions. */
-export type SavedPlacement = SavedPhaseTimer & {
-  openedQuestionIds: number[] | null;
-  revealedKahootQuestionIds: number[];
-};
 
 /** A press carried out: the session as it now stands, and what must be pushed because of it. */
 export interface CommittedMove {
@@ -112,9 +105,9 @@ export class MoveCommitter {
    */
   async place(
     session: SessionState,
-    progress: GameProgress,
-    saved?: SavedPlacement,
+    saved: PersistedGameProgress | null,
   ): Promise<SessionState> {
+    const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
     // The ungraded cache and the closest_guess summaries live in memory
     // only; they must be rebuilt so /control, showdown eligibility and a
     // closest_guess reveal walk are right straight away.
@@ -134,7 +127,7 @@ export class MoveCommitter {
       progress,
       step: { kind: 'place' },
       now: Date.now(),
-      savedPhaseTimer: saved,
+      savedPhaseTimer: saved ?? undefined,
     });
     const withResults = await this.liveResultsRead.read(placed);
     // The league top is not a live result (see LiveResultsRead): placement

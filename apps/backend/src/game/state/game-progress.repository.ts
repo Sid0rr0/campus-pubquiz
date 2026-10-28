@@ -1,19 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import type { GameProgress } from '@campus-pubquiz/types';
+import type { GameProgress, SavedPhaseTimer } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 
 /** Everything needed to resume a session exactly where it left off — GameProgress plus the phase timer's live frontier. See SessionState. */
-export interface PersistedGameProgress {
+export type PersistedGameProgress = SavedPhaseTimer & {
   progress: GameProgress;
-  livePhaseKey: string | null;
-  phaseStartedAt: number | null;
-  phaseElapsedByKey: Record<string, number>;
-  /** Null for a session saved before opened questions were tracked. */
-  openedQuestionIds: number[] | null;
+  /** Load turns a session saved before opened questions were tracked into an empty list; settle derives them from the position. */
+  openedQuestionIds: number[];
   revealedKahootQuestionIds: number[];
-}
+};
 
 @Injectable()
 export class GameProgressRepository {
@@ -73,7 +70,7 @@ export class GameProgressRepository {
           ? session.phaseStartedAt.getTime()
           : null,
       phaseElapsedByKey: session.phaseElapsedByKey,
-      openedQuestionIds: session.openedQuestionIds,
+      openedQuestionIds: session.openedQuestionIds ?? [],
       revealedKahootQuestionIds: session.revealedKahootQuestionIds,
     };
   }

@@ -7,14 +7,15 @@
   - paragraph: 1 shot
   - paragraph: bonus awards so far
   - paragraph: Rate the rounds on your phone ★
-  - paragraph: BONUS POINTS AVAILABLE
-  - paragraph: Bonus points can be earned until the end of break 2.
-  - list:
-    - listitem:
-      - paragraph: Shot +1 pt each
-      - paragraph: Order shots, at minimum more than half your player count. Must be checked by a moderator to get the points. (1 point, doable twice per quiz)
-    - listitem:
-      - paragraph: Selfie +1 pt each
-      - paragraph: Snap a group photo or selfie with your whole team, post it as an Instagram story, and tag @esn.ctu and @isc_hub.cz. Must be checked by a moderator to get the points. (1 point)
+  - complementary:
+    - paragraph: BONUS POINTS AVAILABLE
+    - paragraph: Bonus points can be earned until the end of break 2.
+    - list:
+      - listitem:
+        - paragraph: Shot +1 pt each
+        - paragraph: Order shots, at minimum more than half your player count. Must be checked by a moderator to get the points. (1 point, doable twice per quiz)
+      - listitem:
+        - paragraph: Selfie +1 pt each
+        - paragraph: Snap a group photo or selfie with your whole team, post it as an Instagram story, and tag @esn.ctu and @isc_hub.cz. Must be checked by a moderator to get the points. (1 point)
 - region "Notifications alt+T"
 - alert
