@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   QUESTION_KINDS,
   QUESTION_TYPES,
+  SCORING_MODES_BY_TYPE,
   type GameStatus,
 } from '@campus-pubquiz/types';
 import { ADMIN_SHORTCUTS } from '@/app/control/admin-keyboard-shortcuts';
@@ -110,8 +111,12 @@ describe('GuideContent', () => {
     expect(text).toContain('margin row');
     expect(text).toContain('% / absolute');
     expect(text).toContain('margin: "5%"');
-    expect(text).toContain('sort: exact, per_item or one_off');
-    expect(text).toContain('match: per_item or one_off');
+    for (const [type, modes] of Object.entries(SCORING_MODES_BY_TYPE)) {
+      const last = modes[modes.length - 1];
+      expect(text).toContain(
+        `${type}: ${modes.slice(0, -1).join(', ')} or ${last}`,
+      );
+    }
     expect(text).not.toContain('all_or_nothing');
   });
 
