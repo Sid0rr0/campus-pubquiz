@@ -1,4 +1,5 @@
 import {
+  OPENED_QUESTION_FIXED_FIELDS,
   answerKeyOf,
   describeLiveEditRounds,
   isSameAnswerKey,
@@ -20,13 +21,6 @@ export class QuizLiveEditBlockedError extends Error {
   }
 }
 
-/** What teams already answered against — changing any of these on an opened question would make existing submissions meaningless (e.g. an MC option typo fix would zero every team that picked it, since grading is exact-match). */
-const OPENED_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
-  'type',
-  'options',
-  'matchTargets',
-];
-
 /** The last round always breaks (QuizService forces it at save), so its stored value never reflects the draft's. */
 function effectiveBreakAfter(
   round: ImportRoundPreview,
@@ -39,7 +33,7 @@ function effectiveBreakAfter(
 function diffQuestionFields(
   current: ImportQuestionPreview,
   incoming: ImportQuestionPreview,
-  fields: (keyof ImportQuestionPreview)[],
+  fields: readonly (keyof ImportQuestionPreview)[],
 ): string[] {
   return fields.filter(
     (field) =>
@@ -115,7 +109,7 @@ function findRoundQuestionViolations(
     for (const field of diffQuestionFields(
       currentQuestion,
       incomingQuestion,
-      OPENED_QUESTION_FIELDS,
+      OPENED_QUESTION_FIXED_FIELDS,
     )) {
       issues.push({
         roundIndex,
@@ -183,7 +177,7 @@ export function findDroppedAnsweredQuestions(
  * made after a session reached an edited round is refused here too.
  * A question in the frontier's `openedQuestionIds` (opened) can still have
  * its prompt/answer/points/notes/media fixed, but not its type or choices
- * (see OPENED_QUESTION_FIELDS); an upcoming question can be edited freely.
+ * (see OPENED_QUESTION_FIXED_FIELDS); an upcoming question can be edited freely.
  * Returns the existing `QuizDraftIssue[]` shape so the editor's existing
  * issue-rendering UI needs no changes; empty when the incoming draft is safe
  * to save as-is.
