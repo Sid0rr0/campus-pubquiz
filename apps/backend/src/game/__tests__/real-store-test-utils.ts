@@ -603,9 +603,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         GameModule,
         createTestDatabaseModule(db.orm),
         phaseTimerSchedulersModule({
-          lock: lockScheduler,
-          kahoot: kahootScheduler,
-          jokerPick: jokerPickScheduler,
+          questionLockAt: lockScheduler,
+          kahootQuestionEndsAt: kahootScheduler,
+          jokerPickEndsAt: jokerPickScheduler,
         }),
         jokerRandomModule(jokerRandom ?? Math.random),
         writeGateModule(gate),
