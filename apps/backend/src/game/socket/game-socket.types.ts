@@ -1,7 +1,9 @@
-import type { BroadcastOperator, Server, Socket } from 'socket.io';
-
-/** Socket.IO's default for inter-server events, which the gateway doesn't use. */
-type DefaultEventsMap = Record<string, (...args: any[]) => void>;
+import type {
+  BroadcastOperator,
+  DefaultEventsMap,
+  Server,
+  Socket,
+} from 'socket.io';
 import {
   SOCKET_EVENTS,
   sessionRoom,
