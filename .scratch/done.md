@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| scoring-mode-registry | [The question type registry owns each type's scoring modes](scoring-mode-registry/spec.md) | 3 |
 | phase-deadline-table | [One table of phase deadlines](phase-deadline-table/spec.md) | 2 |
 | stats-played-questions | [Unplayed questions stay out of an ended session's stats](stats-played-questions/spec.md) | 2 |
 | unlisted-sessions | [Unlisted sessions](unlisted-sessions/spec.md) | 3 |
