@@ -69,16 +69,16 @@ export class PhaseTimers {
 
   /** (Re)arms this session's three timers to `deadlines`, clearing any stale ones first; a null deadline clears that timer. */
   arm(joinCode: string, deadlines: DeadlineChange): void {
-    this.lockTimers.rearm(joinCode, deadlines.questionLockAt, () =>
-      this.handleQuestionLockExpired(joinCode),
+    this.lockTimers.rearm(joinCode, deadlines.questionLockAt, (dueAt) =>
+      this.handleQuestionLockExpired(joinCode, dueAt),
     );
     this.kahootQuestionTimers.rearm(
       joinCode,
       deadlines.kahootQuestionEndsAt,
-      () => this.handleKahootQuestionExpired(joinCode),
+      (dueAt) => this.handleKahootQuestionExpired(joinCode, dueAt),
     );
-    this.jokerPickTimers.rearm(joinCode, deadlines.jokerPickEndsAt, () =>
-      this.handleJokerPickExpired(joinCode),
+    this.jokerPickTimers.rearm(joinCode, deadlines.jokerPickEndsAt, (dueAt) =>
+      this.handleJokerPickExpired(joinCode, dueAt),
     );
   }
 
@@ -96,34 +96,57 @@ export class PhaseTimers {
   }
 
   @CreateRequestContext()
-  private async handleQuestionLockExpired(joinCode: string): Promise<void> {
-    await this.advanceFromTimer(joinCode, 'Auto-lock');
+  private async handleQuestionLockExpired(
+    joinCode: string,
+    dueAt: number,
+  ): Promise<void> {
+    await this.advanceFromTimer(joinCode, 'Auto-lock', 'questionLockAt', dueAt);
   }
 
   @CreateRequestContext()
-  private async handleKahootQuestionExpired(joinCode: string): Promise<void> {
-    await this.advanceFromTimer(joinCode, 'Kahoot auto-lock');
+  private async handleKahootQuestionExpired(
+    joinCode: string,
+    dueAt: number,
+  ): Promise<void> {
+    await this.advanceFromTimer(
+      joinCode,
+      'Kahoot auto-lock',
+      'kahootQuestionEndsAt',
+      dueAt,
+    );
   }
 
   @CreateRequestContext()
-  private async handleJokerPickExpired(joinCode: string): Promise<void> {
-    await this.advanceFromTimer(joinCode, 'Joker pick close');
+  private async handleJokerPickExpired(
+    joinCode: string,
+    dueAt: number,
+  ): Promise<void> {
+    await this.advanceFromTimer(
+      joinCode,
+      'Joker pick close',
+      'jokerPickEndsAt',
+      dueAt,
+    );
   }
 
   /**
    * All three timers share the admin's ADVANCE path: the Live session's press,
-   * delivered like any event, whose outcome arms the next deadline. A failure
-   * is logged (there's no client to tell) and leaves the timers as the failed
-   * write left them.
+   * delivered like any event, whose outcome arms the next deadline. The press
+   * is only made if the session still holds the deadline this timer was armed
+   * to when its turn in the write queue comes, so a press made meanwhile is
+   * never stepped past. A failure is logged (there's no client to tell) and
+   * leaves the timers as the failed write left them.
    */
   private async advanceFromTimer(
     joinCode: string,
     label: string,
+    deadline: keyof DeadlineChange,
+    dueAt: number,
   ): Promise<void> {
     try {
       await this.deliver(
         joinCode,
-        await this.gameState.applyAdminAction(joinCode, 'ADVANCE'),
+        await this.gameState.advanceOnExpiry(joinCode, deadline, dueAt),
       );
     } catch (error) {
       this.logger.error(

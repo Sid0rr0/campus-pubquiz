@@ -281,7 +281,10 @@ phase timer deadline (the question lock, the kahoot question timer or the joker
 pick deadline) reports the new deadlines with its outcome, and the delivery step
 re-arms that session's timers from them before anything is emitted, so the timers
 follow the session's deadlines after every change. A refused event reports nothing and
-leaves the timers as they were.
+leaves the timers as they were. A timer's expiry presses `ADVANCE` only if the session still
+holds the deadline that timer was armed to when its turn in the session's write queue comes:
+an expiry that lands behind a press which already moved or cleared that deadline is dropped,
+so a countdown running out as the quiz master presses Advance never steps past their press.
 
 The **Display screen** (`DisplayScreen`, `shared/types/src/display-screen.ts`) is what
 `/display` switches on; the page looks nothing up and works nothing out. Each kind carries
@@ -982,6 +985,11 @@ table (`GameSessionTeam`).
   ignoring letter case ("the quizzards" is "The Quizzards"; an exact match wins
   if two stored names differ only in case), and the refusal tells a team that
   forgot its code to ask the moderator for it.
+- **Refused joins** — a socket whose `JOIN_PLAYERS` is refused 5 times (a wrong
+  game code or team code, a taken name) is disconnected by the server, so a script
+  can't hold up a room's answers or guess team codes. A seat-taken refusal isn't
+  counted: it only comes once the join proved which team it is, and the phone
+  retries it on its own while its old socket dies.
 - **Waking a phone** — mobile OSes freeze a backgrounded socket, so `/play`
   opens a fresh connection (`forceReconnect`) when the page turns visible after
   being hidden for at least `HIDDEN_RECONNECT_THRESHOLD_MS` (5 s), when it is
@@ -1532,6 +1540,15 @@ added to whenever a press settles, so they survive a backend restart. A
 session saved before this existed has none stored and derives them from its
 position on restore.
 
+A kahoot question whose reveal has aired stays closed to answers for the rest
+of the session: Previous can step back onto its `locking` countdown, but the
+answer is already on the big screen, so submitting is refused with "Answers are
+locked for this question" and the phone shows no answer input. Each session
+stores these ids (`game_sessions.revealed_kahoot_question_ids`, default `[]`),
+added to whenever a press settles into `reveal`, so they survive a restart. A
+session saved before this existed has none stored; on restore every kahoot
+question it has moved past counts as revealed, derived from its position.
+
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
 If an opened question's Answer key (its `answer`, `points` and the
 `scoringMode` or `margin` its type carries) changed, its existing answers are
@@ -1828,7 +1845,13 @@ hardest, easiest, all-correct or none-correct question. The question's correct
 count (fully correct answers) and a round's correct rate count only `correct`
 verdicts; a round's correct rate leaves its `closest_guess` questions out, and a
 round made up only of them has `correctRate: null` ("—") and can't be the
-hardest round. The standings table (placing, left, totals, correct count) and the
+hardest round. A question the session never played (not opened and with no
+stored answer; a session saved before opened questions were tracked counts every
+question up to the last answered one as played) also has `correctRate: null`,
+is never a highlight or in the all-correct or none-correct lists, and is left
+out of its round's correct rate and points %; a round with nothing played has
+`correctRate: null`. Max points, team shares and the difficulty label still use
+the whole quiz. The standings table (placing, left, totals, correct count) and the
 questions table's counts and rate come from the Session result module; the trophy
 row is the single session winner, never every team tied for first.
 

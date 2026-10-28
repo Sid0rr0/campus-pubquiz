@@ -479,5 +479,25 @@ describe('GameGateway — state transitions', () => {
           ?.totalPoints,
       ).toBe(scoredOnce);
     });
+
+    it('refuses answers to a kahoot question once it was revealed, even after PREVIOUS reopens locking', async () => {
+      const [{ socket: team, teamId }] = kahoot.teams;
+      const questionId = kahoot.rounds[0].questionIds[0];
+      await actAll(KAHOOT_TO_FIRST_QUESTION, kahoot);
+      await kahoot.act('ADVANCE'); // -> locking q0
+      await kahoot.act('ADVANCE'); // -> reveal q0, the answer is on the big screen
+      await kahoot.act('PREVIOUS'); // -> back to locking q0
+
+      await expect(
+        kahoot.gateway.handleSubmitAnswer(asSocket(team), {
+          questionId,
+          teamId,
+          value: 'Paris',
+        }),
+      ).resolves.toEqual({
+        success: false,
+        error: 'Answers are locked for this question',
+      });
+    });
   });
 });

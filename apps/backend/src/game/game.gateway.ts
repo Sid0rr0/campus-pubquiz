@@ -11,7 +11,7 @@ import {
 } from '@nestjs/websockets';
 import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
 import type { z } from 'zod';
-import type { AckResult } from '@campus-pubquiz/types';
+import { isSeatTakenRefusal, type AckResult } from '@campus-pubquiz/types';
 import { SessionService } from '@/auth/session.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
@@ -29,6 +29,14 @@ import {
   SOCKET_EVENT_DECLARATIONS,
   type SocketEventDeclaration,
 } from '@/game/socket/socket-event-declarations';
+
+/**
+ * How many joins one socket may have refused before it is cut off. Each try
+ * runs database queries on the session's write queue, and a wrong team code
+ * is a guess at someone else's team: a script looping over joins would stall
+ * the room's answers and could walk the code space.
+ */
+const MAX_REFUSED_JOINS = 5;
 
 @WebSocketGateway({
   cors: { origin: corsOriginValidator, credentials: true },
@@ -97,7 +105,7 @@ export class GameGateway
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
-    return this.dispatch(
+    const ack = await this.dispatch(
       SOCKET_EVENT_DECLARATIONS.joinPlayers,
       rawPayload,
       client,
@@ -110,6 +118,8 @@ export class GameGateway
             this.server.sockets.sockets.get(socketId)?.connected ?? false,
         ),
     );
+    this.cutOffAfterRefusedJoins(client, ack);
+    return ack;
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.submitAnswer.event)
@@ -361,6 +371,24 @@ export class GameGateway
       ({ joinCode, payload, client }) =>
         this.gameState.submitShowdownGuess(joinCode, payload, client.id),
     );
+  }
+
+  /**
+   * Counts a refused join against its socket and disconnects it at the limit.
+   * A seat-taken refusal isn't counted: it only comes after the join proved
+   * which team it is, and the phone retries it on its own while its old
+   * socket dies.
+   */
+  private cutOffAfterRefusedJoins(client: GameSocket, ack: AckResult): void {
+    if (ack.success || isSeatTakenRefusal(ack.error)) return;
+    const data = client.data as { refusedJoins?: number };
+    data.refusedJoins = (data.refusedJoins ?? 0) + 1;
+    if (data.refusedJoins >= MAX_REFUSED_JOINS) {
+      this.logger.warn(
+        `Disconnecting ${client.id}: ${data.refusedJoins} refused joins`,
+      );
+      client.disconnect();
+    }
   }
 
   private dispatch<S extends z.ZodType>(

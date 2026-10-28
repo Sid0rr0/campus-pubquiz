@@ -283,3 +283,74 @@ describe('settling the opened questions', () => {
     ).toEqual([]);
   });
 });
+
+describe('settling the revealed kahoot questions', () => {
+  const lobbySession = sessionOver(rounds, progressAt('lobby'));
+
+  it('records the kahoot question that has just been revealed', () => {
+    const settled = move(
+      lobbySession,
+      progressAt('reveal', { roundIndex: 1, questionIndex: 0 }),
+    );
+
+    expect(settled.revealedKahootQuestionIds).toEqual([3]);
+  });
+
+  it('never drops one on stepping back, and adds the next once, as it is revealed', () => {
+    const session = { ...lobbySession, revealedKahootQuestionIds: [3] };
+
+    const steppedBack = move(
+      session,
+      progressAt('locking', { roundIndex: 1, questionIndex: 0 }),
+      'PREVIOUS',
+    );
+    const nextRevealed = move(
+      steppedBack,
+      progressAt('reveal', { roundIndex: 1, questionIndex: 1 }),
+    );
+    const revealedAgain = move(
+      nextRevealed,
+      progressAt('reveal', { roundIndex: 1, questionIndex: 1 }),
+    );
+
+    expect(steppedBack.revealedKahootQuestionIds).toEqual([3]);
+    expect(nextRevealed.revealedKahootQuestionIds).toEqual([3, 4]);
+    expect(revealedAgain.revealedKahootQuestionIds).toEqual([3, 4]);
+  });
+
+  it('records nothing for a kahoot question that is only open or locking', () => {
+    for (const status of ['question_open', 'locking'] as const) {
+      expect(
+        move(lobbySession, progressAt(status, { roundIndex: 1 }))
+          .revealedKahootQuestionIds,
+      ).toEqual([]);
+    }
+  });
+
+  it('derives the ones it has moved past, as a session saved before they were stored is restored', () => {
+    const placed = (progress: GameProgress, over = rounds) =>
+      settleSession({
+        session: sessionOver(over, progressAt('lobby')),
+        progress,
+        step: { kind: 'place' },
+        now: NOW,
+      }).revealedKahootQuestionIds;
+
+    expect(
+      placed(progressAt('question_open', { roundIndex: 1, questionIndex: 1 })),
+    ).toEqual([3]);
+    expect(
+      placed(progressAt('question_open', { roundIndex: 2 }), [
+        ...rounds,
+        roundOf(2, [5]),
+      ]),
+    ).toEqual([3, 4]);
+  });
+
+  it('records nothing for the reveal of a round that is not kahoot', () => {
+    expect(
+      move(lobbySession, progressAt('reveal', { roundIndex: 0 }))
+        .revealedKahootQuestionIds,
+    ).toEqual([]);
+  });
+});

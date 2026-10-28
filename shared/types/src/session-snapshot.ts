@@ -19,7 +19,10 @@ import {
 } from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
 import { getTimedPhaseKey } from './game-state-timed-phase';
-import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import {
+  isCurrentKahootQuestionRevealed,
+  isQuestionHiddenBehindKahootLeaderboard,
+} from './kahoot-visibility';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import { questionOutcome } from './question-outcome';
 import type { SeededQuestion } from './question-views';
@@ -267,13 +270,14 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
  * Whether the session's current block can be answered right now: its
  * questions are open (or locking), or a round intro sits over questions
  * already open — and never for a kahoot question still hidden behind the
- * leaderboard. The one rule behind both the players view and the
- * answer-submission gate.
+ * leaderboard, and never for a kahoot question whose reveal already aired.
+ * The one rule behind both the players view and the answer-submission gate.
  */
 export function isBlockAnswerable(session: SessionState): boolean {
   return (
     isAnsweringStatus(session.progress.status) &&
     !isQuestionHiddenBehindKahootLeaderboard(session) &&
+    !isCurrentKahootQuestionRevealed(session) &&
     getBlockInPlayIds(session.seededGame.rounds, session.progress).length > 0
   );
 }
@@ -287,12 +291,7 @@ export function findQuestionOpenForAnswering(
   session: SessionState,
   questionId: number,
 ): SeededQuestion | undefined {
-  if (
-    !isAnsweringStatus(session.progress.status) ||
-    isQuestionHiddenBehindKahootLeaderboard(session)
-  ) {
-    return undefined;
-  }
+  if (!isBlockAnswerable(session)) return undefined;
   const { rounds } = session.seededGame;
   const position = getBlockInPlay(rounds, session.progress).find(
     (inPlay) => inPlay.questionId === questionId,

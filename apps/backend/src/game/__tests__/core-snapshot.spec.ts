@@ -95,9 +95,10 @@ describe('GameStateService — core snapshot', () => {
   it('clears the connected teams when a new quiz session is selected', async () => {
     await game.joinTeam('The Quizzards');
 
-    const snapshot = await game.inRequestContext(() =>
-      game.gameState.createSessionSnapshot(game.quizId),
-    );
+    const snapshot = await game.inRequestContext(async () => {
+      const { joinCode } = await game.gameState.createSession(game.quizId);
+      return game.gameState.getSnapshot(joinCode);
+    });
 
     expect(snapshot.teams).toEqual([]);
   });

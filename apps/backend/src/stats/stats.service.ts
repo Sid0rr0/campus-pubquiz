@@ -25,7 +25,6 @@ import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import {
   briefMediaKind,
   computeSessionBrief,
-  type SessionBriefInput,
   type SessionBriefQuestionInputRow,
   type SessionBriefRoundInputRow,
 } from '@/stats/session-brief.calc';
@@ -250,12 +249,6 @@ export class StatsService {
       }),
     );
 
-    // Every question the session opened; null for a session saved before that was tracked.
-    const { openedQuestionIds } = (await knex('game_sessions')
-      .where('id', gameSessionId)
-      .select('opened_question_ids as openedQuestionIds')
-      .first()) as Pick<SessionBriefInput, 'openedQuestionIds'>;
-
     return computeSessionBrief({
       ...rows,
       rounds: rows.rounds.map((round) => {
@@ -276,7 +269,6 @@ export class StatsService {
           media: extras?.media ?? {},
         };
       }),
-      openedQuestionIds,
       timeZone,
     });
   }
@@ -293,10 +285,14 @@ export class StatsService {
         `Ended session ${gameSessionId} does not exist`,
       );
     }
-    const { settings } = (await knex('game_sessions')
+    // opened_question_ids is null for a session saved before that was tracked.
+    const { settings, openedQuestionIds } = (await knex('game_sessions')
       .where('id', gameSessionId)
-      .select('settings')
-      .first()) as { settings: Partial<SessionSettings> };
+      .select('settings', 'opened_question_ids as openedQuestionIds')
+      .first()) as {
+      settings: Partial<SessionSettings>;
+      openedQuestionIds: number[] | null;
+    };
 
     const standings = await this.standings.forSession(gameSessionId);
     const playerCounts =
@@ -375,6 +371,7 @@ export class StatsService {
       })),
       questions,
       answers,
+      openedQuestionIds,
       bonusAwards: bonusAwards.map((b) => ({
         teamId: b.teamId,
         category: b.category,

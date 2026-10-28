@@ -53,6 +53,7 @@ import {
   type RandomSource,
 } from '@/game/state/joker-changes';
 import { JokerService } from '@/joker/joker.service';
+import { TimerExpiryChanges } from '@/game/state/timer-expiry-changes';
 import { TeamRosterChanges } from '@/game/state/team-roster-changes';
 import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
 import { TeamPlayerCountChanges } from '@/game/state/team-player-count-changes';
@@ -110,6 +111,7 @@ export class GameStateService implements OnModuleInit {
   private readonly showdownsChanges: ShowdownsChanges;
   private readonly leagueChanges: LeagueChanges;
   private readonly jokerChanges: JokerChanges;
+  private readonly timerExpiryChanges: TimerExpiryChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -164,6 +166,7 @@ export class GameStateService implements OnModuleInit {
       (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
       this.jokerChanges,
     );
+    this.timerExpiryChanges = new TimerExpiryChanges(this.moveCommitter);
   }
 
   /**
@@ -328,22 +331,6 @@ export class GameStateService implements OnModuleInit {
       leagueIds,
     );
     return summarizeSession(this.sessionWrite.read(joinCode));
-  }
-
-  /** Like `createSession`, for a caller that wants the new session's full state snapshot rather than its picker summary. */
-  async createSessionSnapshot(
-    quizId: number,
-    settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
-    name?: string,
-    leagueIds: number[] = [],
-  ): Promise<StateSnapshotPayload> {
-    const joinCode = await this.placeNewSession(
-      quizId,
-      settings,
-      name,
-      leagueIds,
-    );
-    return this.getSnapshot(joinCode);
   }
 
   private async placeNewSession(
@@ -614,6 +601,22 @@ export class GameStateService implements OnModuleInit {
           error instanceof Error ? error.message : 'Invalid game action',
         );
       });
+  }
+
+  /**
+   * A phase timer's expiry standing in for an ADVANCE press, for the deadline
+   * `dueAt` it was armed to. The check runs inside the session write, after any
+   * press queued ahead of it, so an expiry whose deadline that press already
+   * moved or cleared pushes nothing instead of advancing the quiz a second step.
+   */
+  advanceOnExpiry(
+    joinCode: string,
+    deadline: keyof DeadlineChange,
+    dueAt: number,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.timerExpiryChanges.advanceOnExpiry(session, deadline, dueAt),
+    );
   }
 
   /** A team's answer from `socketId`: refused when the question is closed or the seat isn't the socket's; see the answers change module. */

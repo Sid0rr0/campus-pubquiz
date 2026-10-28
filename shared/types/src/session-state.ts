@@ -116,6 +116,13 @@ export interface SessionState {
    * Live editing protects these questions — see live-edit-guard.
    */
   openedQuestionIds: number[];
+  /**
+   * Ids of the kahootMode questions whose reveal has aired, for good: their
+   * answers were on the big screen, so Previous reopening their locking
+   * countdown never takes answers again. Added to in settleSession, persisted
+   * with the progress.
+   */
+  revealedKahootQuestionIds: number[];
   leaderboard: LeaderboardEntry[];
   /**
    * How many teams (counting up from last place) are currently revealed on
@@ -220,6 +227,7 @@ export function freshSessionState(
     phaseStartedAt: null,
     phaseElapsedByKey: {},
     openedQuestionIds: [],
+    revealedKahootQuestionIds: [],
     leaderboard: [],
     leaderboardRevealCount: 0,
     priorStandings: null,

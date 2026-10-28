@@ -551,6 +551,24 @@ describe('StatsService (Postgres integration)', () => {
       expect(result.questions).toHaveLength(2);
     });
 
+    it('gives a question the session row does not list as opened a null correct rate', async () => {
+      const { quiz, questions } = await createQuiz('Quiz Early', [[5, 5]]);
+      const [q1, q2] = questions[0];
+      const session = await createSession(quiz, 'EARLY1', 'ended');
+      session.openedQuestionIds = [q1.id];
+      const teamA = await joinTeam(session, 'Team A');
+      await grade(session, q1, teamA, 5);
+      await em.flush();
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      const rateOf = (id: number) =>
+        result.questions.find((q) => q.questionId === id)?.correctRate;
+      expect(rateOf(q1.id)).toBe(1);
+      expect(rateOf(q2.id)).toBeNull();
+      expect(result.maxPoints).toBe(10);
+    });
+
     it('resolves name to the custom name when one was set, else the quiz title', async () => {
       const { quiz: namedQuiz } = await createQuiz('Quiz M', [[1]]);
       const named = await createSession(

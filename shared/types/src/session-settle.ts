@@ -1,5 +1,6 @@
 import { getBlockInPlayIds, getPastBlockIds } from './block-in-play';
 import { getTimedPhaseKey } from './game-state-timed-phase';
+import { currentKahootQuestionId } from './kahoot-visibility';
 import type { GameAction, GameContext, GameProgress } from './game-state-types';
 import { computeLeaderboardRevealCount } from './leaderboard-reveal';
 import { JOKER_PICK_SECONDS } from './joker';
@@ -75,6 +76,7 @@ export function settleSession({
     ...session,
     progress,
     openedQuestionIds: withOpenedAt(session, progress),
+    revealedKahootQuestionIds: withRevealedKahootAt(session, progress),
     livePhaseKey,
     phaseStartedAt,
     phaseElapsedByKey,
@@ -195,5 +197,38 @@ function withOpenedAt(session: SessionState, progress: GameProgress): number[] {
       ...getPastBlockIds(rounds, progress),
       ...getBlockInPlayIds(rounds, progress),
     ]),
+  ];
+}
+
+/**
+ * The session's revealed kahoot questions plus those `progress` has moved past
+ * (earlier rounds, and earlier questions of its own kahoot round, each of which
+ * was revealed to get past) and the one it is revealing now. Only ever grows.
+ * Deriving the past ones also covers a session saved before they were stored.
+ */
+function withRevealedKahootAt(
+  session: SessionState,
+  progress: GameProgress,
+): number[] {
+  const { rounds } = session.seededGame;
+  const passed = rounds.flatMap((round, roundIndex) =>
+    round.kahootMode && roundIndex <= progress.roundIndex
+      ? round.questions
+          .slice(
+            0,
+            roundIndex < progress.roundIndex
+              ? undefined
+              : progress.questionIndex,
+          )
+          .map((question) => question.id)
+      : [],
+  );
+  const questionId = currentKahootQuestionId(rounds, progress);
+  const revealing =
+    progress.status === 'reveal' && questionId !== undefined
+      ? [questionId]
+      : [];
+  return [
+    ...new Set([...session.revealedKahootQuestionIds, ...passed, ...revealing]),
   ];
 }

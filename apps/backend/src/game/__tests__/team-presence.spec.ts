@@ -121,9 +121,10 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
   it('does not carry a stale team connection over into a newly created session', async () => {
     await game.joinTeam('The Quizzards');
 
-    const created = await game.inRequestContext(() =>
-      game.gameState.createSessionSnapshot(game.quizId),
-    );
+    const created = await game.inRequestContext(async () => {
+      const { joinCode } = await game.gameState.createSession(game.quizId);
+      return game.gameState.getSnapshot(joinCode);
+    });
 
     expect(created.joinCode).not.toBe(game.joinCode);
     expect(created.teams).toEqual([]);

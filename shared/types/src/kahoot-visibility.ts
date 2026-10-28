@@ -1,5 +1,6 @@
 import { isAnsweringStatus } from './game-state-groups';
-import type { SessionState } from './session-state';
+import type { GameProgress } from './game-state-types';
+import type { SeededRound, SessionState } from './session-state';
 
 /** Whether the round at `progress.roundIndex` has kahootMode set. */
 export function isCurrentRoundKahoot(session: SessionState): boolean {
@@ -23,5 +24,34 @@ export function isQuestionHiddenBehindKahootLeaderboard(
     isAnsweringStatus(status) &&
     isCurrentRoundKahoot(session) &&
     isLeaderboardVisible
+  );
+}
+
+/** The id of the question `progress` stands on when its round is kahootMode; undefined for any other round, or a position past the round. */
+export function currentKahootQuestionId(
+  rounds: readonly SeededRound[],
+  progress: GameProgress,
+): number | undefined {
+  const round = rounds[progress.roundIndex];
+  return round?.kahootMode
+    ? round.questions[progress.questionIndex]?.id
+    : undefined;
+}
+
+/**
+ * Whether the question the session stands on is a kahootMode question whose
+ * reveal already aired. Its answer was on the big screen, so Previous
+ * stepping back onto its locking countdown must not take answers again.
+ */
+export function isCurrentKahootQuestionRevealed(
+  session: SessionState,
+): boolean {
+  const questionId = currentKahootQuestionId(
+    session.seededGame.rounds,
+    session.progress,
+  );
+  return (
+    questionId !== undefined &&
+    session.revealedKahootQuestionIds.includes(questionId)
   );
 }

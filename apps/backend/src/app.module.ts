@@ -3,7 +3,6 @@ import { APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { AppController } from '@/app.controller';
-import { AppService } from '@/app.service';
 import { AuthController } from '@/auth/auth.controller';
 import { AuthModule } from '@/auth/auth.module';
 import { UsersController } from '@/auth/users.controller';
@@ -63,7 +62,6 @@ import { StatsService } from '@/stats/stats.service';
     // Must be registered before any other exception filters so Sentry sees
     // unhandled errors before a custom filter can swallow them.
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
-    AppService,
     ImportService,
     { provide: MEDIA_STORAGE, useFactory: () => createMediaStorage() },
     MediaService,

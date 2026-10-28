@@ -110,6 +110,24 @@ describe('GameGateway — question lock auto-advance timer', () => {
     expect(game.timers().lock.isArmed()).toBe(false);
   });
 
+  it("drops an auto-lock that expires while the admin's own press is mid-write, instead of stepping on past it", async () => {
+    await enterLockingCountdown();
+    const held = game.holdAt('change');
+    const pressing = game.act('ADVANCE'); // the admin locks the block: locking -> break_intro
+    await held.reached;
+
+    const waiting = game.nextQueued();
+    const firing = game.timers().lock.fireNow(); // the countdown runs out meanwhile
+    await waiting;
+    held.release();
+    await pressing;
+    await firing;
+
+    expect(game.gameState.getSnapshot(game.joinCode).progress.status).toBe(
+      'break_intro',
+    );
+  });
+
   it('cancels the pending auto-lock when the admin steps back from locking to the question', async () => {
     await enterLockingCountdown();
 
