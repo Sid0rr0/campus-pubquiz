@@ -394,7 +394,8 @@ function PreviewStepper({
             }}
             data-testid="preview-frame"
           >
-            <DisplayScreenView screen={step.screen} quiz={quiz} />
+            {/* Keyed per step like /display's screenKey, so a reveal's entrances start fresh instead of carrying the last step's state. */}
+            <DisplayScreenView key={index} screen={step.screen} quiz={quiz} />
           </div>
         </div>
         {!isFullscreen && (
