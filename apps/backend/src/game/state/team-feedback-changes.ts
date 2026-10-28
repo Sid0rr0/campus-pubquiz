@@ -10,7 +10,7 @@ import { FEEDBACK_OFF_REASON } from '@/feedback/feedback-off-reason';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
-import { findTeamIdBySocketId } from '@/game/state/session-updates.util';
+import { requireSeat } from '@/game/state/session-updates.util';
 import {
   NOTHING_TO_PUSH_OUTCOME,
   type SessionOutcome,
@@ -91,8 +91,7 @@ export class TeamFeedbackChanges {
     socketId: string,
     rules: FeedbackRules,
   ): Promise<SessionChange<SessionOutcome>> {
-    const teamId = findTeamIdBySocketId(session, socketId);
-    if (teamId === null) throw new SessionRefusal(rules.noTeamReason);
+    const teamId = requireSeat(session, socketId, rules.noTeamReason);
     if (!session.seededGame.settings.collectFeedback) {
       throw new SessionRefusal(FEEDBACK_OFF_REASON);
     }

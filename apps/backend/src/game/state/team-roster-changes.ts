@@ -20,7 +20,8 @@ import {
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import {
-  findTeamIdBySocketId,
+  requireSeat,
+  seatOfSocket,
   withPlayerCount,
   withTeamConnected,
   withTeams,
@@ -176,7 +177,7 @@ export class TeamRosterChanges {
     session: SessionState,
     socketId: string,
   ): Promise<SessionChange<SessionOutcome | null>> {
-    const teamId = findTeamIdBySocketId(session, socketId);
+    const teamId = seatOfSocket(session, socketId);
     return Promise.resolve(
       teamId === null
         ? { session, outcome: null, touchedScores: false }
@@ -197,9 +198,12 @@ export class TeamRosterChanges {
     session: SessionState,
     input: { teamId: number; socketId: string },
   ): Promise<SessionChange<SessionOutcome>> {
-    if (session.connectedTeamSockets[input.teamId] !== input.socketId) {
-      throw new SessionRefusal('Can only leave the session as your own team');
-    }
+    requireSeat(
+      session,
+      input.socketId,
+      'Can only leave the session as your own team',
+      input.teamId,
+    );
     return await this.teamRemoved(session, input.teamId, 'left');
   }
 

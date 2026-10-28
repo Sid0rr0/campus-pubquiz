@@ -16,7 +16,9 @@ describe('GameGateway — submit answer', () => {
   let team: { socket: MockSocket; teamId: number };
 
   beforeEach(async () => {
-    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    game = await harness.createGateway({
+      teamNames: ['The Quizzards', 'Rivals'],
+    });
     admin = await game.connectAdmin();
     [team] = game.teams;
   });
@@ -119,6 +121,20 @@ describe('GameGateway — submit answer', () => {
     const attacker = await game.connectPlayer();
 
     await expect(submit(attacker, team.teamId, 'Hijacked')).resolves.toEqual({
+      success: false,
+      error: 'You may only submit answers for your own team',
+    });
+
+    expect(await storedAnswers()).toEqual([]);
+  });
+
+  it('rejects SUBMIT_ANSWER naming another team than the one the socket holds the seat for', async () => {
+    await game.openFirstQuestion(admin);
+    const [, rival] = game.teams;
+
+    await expect(
+      submit(rival.socket, team.teamId, 'Hijacked'),
+    ).resolves.toEqual({
       success: false,
       error: 'You may only submit answers for your own team',
     });
