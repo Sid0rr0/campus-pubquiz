@@ -481,7 +481,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
         path: ['notes'],
         code: 'custom',
         message:
-          'Scoring "scoring" is not a scoring mode — use exact, per_item, one_off',
+          'Scoring "scoring" is not a scoring mode — use per_item, one_off',
       },
     ]);
   });

@@ -4,6 +4,7 @@ import { QUESTION_KINDS, checkQuestion } from '../question-kind';
 import { decodeSheetRow } from '../question-row-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
 import { resolveAnswerKind } from '../answer-kind';
+import { SCORING_MODES, SCORING_MODES_BY_TYPE } from '../scoring-mode';
 import {
   BATCH_GRADED_TYPES,
   KAHOOT_ALLOWED_TYPES,
@@ -384,6 +385,69 @@ describe('import and draft validation parity', () => {
     expect(verdictOf(fromDraft)).toBe(testCase.verdict);
     expect(fromImport).toEqual(fromDraft);
   });
+
+  const MODE_QUESTIONS = {
+    sort: q({ type: 'sort', options: ['a', 'b', 'c'], answer: 'c|a|b' }),
+    match: q({
+      type: 'match',
+      options: ['a', 'b'],
+      matchTargets: ['x', 'y'],
+      answer: 'y|x',
+    }),
+  } as const;
+
+  it.each(
+    (['sort', 'match'] as const).flatMap((type) =>
+      SCORING_MODES.map((scoringMode) => ({
+        type,
+        scoringMode,
+        listed: (
+          QUESTION_KINDS[type].scoringModes as readonly string[]
+        ).includes(scoringMode),
+      })),
+    ),
+  )(
+    '$type with mode $scoringMode: both paths agree (accepted: $listed)',
+    ({ type, scoringMode, listed }) => {
+      const base = MODE_QUESTIONS[type];
+      const expected = listed ? 'valid' : 'invalid';
+      const { question: fromSheet } = decodeSheetRow(
+        { ...toSheetRow(base), notes: `{scoring: "${scoringMode}"}` },
+        type,
+      );
+      const imported = checkQuestion(fromSheet);
+      expect(imported.success ? 'valid' : 'invalid').toBe(expected);
+      expect(verdictOf(draftMessages({ ...base, scoringMode }))).toBe(expected);
+    },
+  );
+
+  it('lists the table modes for each type and refuses nothing else', () => {
+    expect(QUESTION_KINDS.sort.scoringModes).toEqual(
+      SCORING_MODES_BY_TYPE.sort,
+    );
+    expect(QUESTION_KINDS.match.scoringModes).toEqual(
+      SCORING_MODES_BY_TYPE.match,
+    );
+  });
+
+  it.each([
+    ['sort', 'one_off, exact, per_item'],
+    ['match', 'per_item, one_off'],
+  ] as const)(
+    'a bad scoring on a %s row names its modes only',
+    (type, modes) => {
+      const { clipIssues } = decodeSheetRow(
+        {
+          ...toSheetRow(MODE_QUESTIONS[type]),
+          notes: '{scoring: "bogus"}',
+        },
+        type,
+      );
+      expect(clipIssues.map((i) => i.message)).toEqual([
+        `Scoring "scoring" is not a scoring mode — use ${modes}`,
+      ]);
+    },
+  );
 
   it('reports an unknown type as an issue on type instead of throwing', () => {
     const checked = checkQuestion({ type: 'picture' });

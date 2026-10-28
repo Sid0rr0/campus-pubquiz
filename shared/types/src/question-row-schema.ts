@@ -14,7 +14,6 @@ import {
   clipNotesFieldsFor,
   gradingSettingsFor,
 } from './question-record-codec';
-import { SCORING_MODES } from './scoring-mode';
 import {
   MARGIN_NOTES_KEY,
   SCORING_NOTES_KEY,
@@ -131,7 +130,7 @@ export function decodeSheetRow(
     clipIssues: invalidKeys.map((key) => ({
       path: ['notes'],
       code: 'custom',
-      message: invalidKeyMessage(key),
+      message: invalidKeyMessage(key, type),
     })),
     meta: {
       round: row.round.trim(),
@@ -155,12 +154,12 @@ export function decodeSheetRow(
   };
 }
 
-function invalidKeyMessage(key: string): string {
+function invalidKeyMessage(key: string, type: QuestionType): string {
   if (key === MARGIN_NOTES_KEY) {
     return `Margin "${key}" is not a number — write 5% for a percentage or 2 for a plain distance`;
   }
   if (key === SCORING_NOTES_KEY) {
-    return `Scoring "${key}" is not a scoring mode — use ${SCORING_MODES.join(', ')}`;
+    return `Scoring "${key}" is not a scoring mode — use ${QUESTION_KINDS[type].scoringModes.join(', ')}`;
   }
   return `Clip time "${key}" is not a timecode — use seconds, M:SS or H:MM:SS`;
 }
