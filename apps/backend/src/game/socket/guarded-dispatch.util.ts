@@ -27,7 +27,7 @@ export interface DispatchDeps {
 }
 
 function resolveJoinCode(client: GameSocket): string {
-  const joinCode = (client.data as { joinCode?: string }).joinCode;
+  const joinCode = client.data.joinCode;
   if (!joinCode) {
     throw new WsException('Connection not associated with a game session');
   }

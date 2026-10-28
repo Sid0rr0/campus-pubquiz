@@ -74,10 +74,10 @@ export async function acceptConnection(
       client.disconnect();
       return;
     }
-    (client.data as { user?: AuthUser }).user = user;
+    client.data.user = user;
   }
 
-  (client.data as { joinCode?: string }).joinCode = joinCode;
+  client.data.joinCode = joinCode;
   await client.join(sessionRoom(joinCode, role as SocketRoomName));
   deps.logger.log(
     `Client ${client.id} connected as ${role} (session ${joinCode})`,
@@ -116,7 +116,7 @@ export async function disconnectClient(
   },
   client: GameSocket,
 ): Promise<void> {
-  const joinCode = (client.data as { joinCode?: string }).joinCode;
+  const joinCode = client.data.joinCode;
   // The session may have been closed (evicted from memory) while this
   // socket was still connected to it — e.g. the admin who just closed it
   // from within the console disconnecting moments later. Closing already

@@ -381,7 +381,7 @@ export class GameGateway
    */
   private cutOffAfterRefusedJoins(client: GameSocket, ack: AckResult): void {
     if (ack.success || isSeatTakenRefusal(ack.error)) return;
-    const data = client.data as { refusedJoins?: number };
+    const data = client.data;
     data.refusedJoins = (data.refusedJoins ?? 0) + 1;
     if (data.refusedJoins >= MAX_REFUSED_JOINS) {
       this.logger.warn(

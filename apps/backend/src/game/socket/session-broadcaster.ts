@@ -22,7 +22,6 @@ import {
 } from '@/game/socket/phase-timers';
 import { BROADCAST_STATE_OUTCOME } from '@/game/state/session-outcome';
 import {
-  type AuthUser,
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
@@ -165,7 +164,7 @@ export class SessionBroadcaster
    */
   disconnectUser(userId: number): void {
     for (const socket of this.requireServer().sockets.sockets.values()) {
-      const user = (socket.data as { user?: AuthUser }).user;
+      const user = socket.data.user;
       if (user?.id === userId) socket.disconnect(true);
     }
   }
