@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Add the phase deadline table and drive the deadline change from it)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The phase timers hold one timer registry per table key, not three named fields
 - [ ] `arm`, `restoreAll` and `clearAll` loop over the table

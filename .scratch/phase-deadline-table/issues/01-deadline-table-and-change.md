@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] One phase deadline table sits next to the deadline change shape, checked with `satisfies` against a record over exactly its keys (a missing or extra row is a type error)
 - [ ] Building the deadline change comes from the table rather than listing fields
