@@ -8,7 +8,7 @@ interface RoundTitleCardProps {
   note?: string | null;
 }
 
-/** A round's name on the big screen before its content: shared by round_title, break_round_title and reveal_intro. */
+/** A round's name on the big screen before its content: shared by round_title, break_round_title and reveal_intro. Drawn on a full-bleed ink stage, the night's between-rounds peak. */
 export function RoundTitleCard({
   label,
   roundTitle,
@@ -16,26 +16,26 @@ export function RoundTitleCard({
   note,
 }: RoundTitleCardProps) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
-      <EntranceLine line="kicker">
-        <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
-          {label}
-        </p>
-      </EntranceLine>
-      <EntranceLine line="title" className="flex flex-col items-center gap-4">
-        <h1 className="text-balance font-display text-display-6xl text-magenta">
+    <div className="flex flex-1 flex-col items-center justify-center gap-10 bg-foreground px-24 text-center text-background">
+      <EntranceLine line="title" className="flex flex-col items-center gap-6">
+        <h1 className="max-w-[18ch] text-balance font-display text-display-8xl leading-[1.05]">
           {roundTitle}
         </h1>
         {author && (
-          <p className="text-display-lg font-bold text-foreground/60">
+          <p className="text-display-2xl font-bold text-background/70">
             by {author}
           </p>
         )}
         {note && (
-          <p className="max-w-5xl whitespace-pre-line text-display-xl font-bold text-foreground/80">
+          <p className="max-w-5xl whitespace-pre-line text-display-2xl font-bold text-background/85">
             {note}
           </p>
         )}
+      </EntranceLine>
+      <EntranceLine line="kicker">
+        <p className="rounded-xl bg-magenta px-6 py-2 text-display-xl font-extrabold tracking-wide text-white">
+          {label}
+        </p>
       </EntranceLine>
     </div>
   );

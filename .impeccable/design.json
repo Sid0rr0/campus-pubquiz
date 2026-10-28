@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-27T23:21:55.036469+00:00",
+  "title": "Design System: Campus Pub Quiz",
+  "extensions": {
+    "colorMeta": {
+      "accent-1": {
+        "role": "primary",
+        "displayName": "Accent 1 (ESN magenta)",
+        "canonical": "oklch(60% 0.24 355)",
+        "tonalRamp": [
+          "oklch(15% 0.096 355)",
+          "oklch(25% 0.144 355)",
+          "oklch(35% 0.204 355)",
+          "oklch(45% 0.24 355)",
+          "oklch(55% 0.24 355)",
+          "oklch(65% 0.216 355)",
+          "oklch(80% 0.144 355)",
+          "oklch(95% 0.048 355)"
+        ]
+      },
+      "accent-1-ledge": {
+        "role": "primary",
+        "displayName": "Accent 1 Ledge",
+        "canonical": "oklch(50% 0.2 355)",
+        "tonalRamp": [
+          "oklch(15% 0.08 355)",
+          "oklch(25% 0.12 355)",
+          "oklch(35% 0.17 355)",
+          "oklch(45% 0.2 355)",
+          "oklch(55% 0.2 355)",
+          "oklch(65% 0.18 355)",
+          "oklch(80% 0.12 355)",
+          "oklch(95% 0.04 355)"
+        ]
+      },
+      "accent-2": {
+        "role": "secondary",
+        "displayName": "Accent 2 (cyan)",
+        "canonical": "oklch(70% 0.15 235)",
+        "tonalRamp": [
+          "oklch(15% 0.06 235)",
+          "oklch(25% 0.09 235)",
+          "oklch(35% 0.128 235)",
+          "oklch(45% 0.15 235)",
+          "oklch(55% 0.15 235)",
+          "oklch(65% 0.135 235)",
+          "oklch(80% 0.09 235)",
+          "oklch(95% 0.03 235)"
+        ]
+      },
+      "accent-3": {
+        "role": "tertiary",
+        "displayName": "Accent 3 (green)",
+        "canonical": "oklch(74% 0.17 135)",
+        "tonalRamp": [
+          "oklch(15% 0.068 135)",
+          "oklch(25% 0.102 135)",
+          "oklch(35% 0.145 135)",
+          "oklch(45% 0.17 135)",
+          "oklch(55% 0.17 135)",
+          "oklch(65% 0.153 135)",
+          "oklch(80% 0.102 135)",
+          "oklch(95% 0.034 135)"
+        ]
+      },
+      "accent-3-ledge": {
+        "role": "tertiary",
+        "displayName": "Accent 3 Ledge",
+        "canonical": "oklch(60% 0.14 135)",
+        "tonalRamp": [
+          "oklch(15% 0.056 135)",
+          "oklch(25% 0.084 135)",
+          "oklch(35% 0.119 135)",
+          "oklch(45% 0.14 135)",
+          "oklch(55% 0.14 135)",
+          "oklch(65% 0.126 135)",
+          "oklch(80% 0.084 135)",
+          "oklch(95% 0.028 135)"
+        ]
+      },
+      "accent-4": {
+        "role": "tertiary",
+        "displayName": "Accent 4 (orange)",
+        "canonical": "oklch(70% 0.17 50)",
+        "tonalRamp": [
+          "oklch(15% 0.068 50)",
+          "oklch(25% 0.102 50)",
+          "oklch(35% 0.145 50)",
+          "oklch(45% 0.17 50)",
+          "oklch(55% 0.17 50)",
+          "oklch(65% 0.153 50)",
+          "oklch(80% 0.102 50)",
+          "oklch(95% 0.034 50)"
+        ]
+      },
+      "accent-5": {
+        "role": "tertiary",
+        "displayName": "Accent 5 (yellow)",
+        "canonical": "oklch(85% 0.17 85)",
+        "tonalRamp": [
+          "oklch(15% 0.068 85)",
+          "oklch(25% 0.102 85)",
+          "oklch(35% 0.145 85)",
+          "oklch(45% 0.17 85)",
+          "oklch(55% 0.17 85)",
+          "oklch(65% 0.153 85)",
+          "oklch(80% 0.102 85)",
+          "oklch(95% 0.034 85)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(36% 0.17 275)",
+        "tonalRamp": [
+          "oklch(15% 0.068 275)",
+          "oklch(25% 0.102 275)",
+          "oklch(35% 0.145 275)",
+          "oklch(45% 0.17 275)",
+          "oklch(55% 0.17 275)",
+          "oklch(65% 0.153 275)",
+          "oklch(80% 0.102 275)",
+          "oklch(95% 0.034 275)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface (cream)",
+        "canonical": "oklch(98% 0.01 85)",
+        "tonalRamp": [
+          "oklch(15% 0.004 85)",
+          "oklch(25% 0.006 85)",
+          "oklch(35% 0.009 85)",
+          "oklch(45% 0.01 85)",
+          "oklch(55% 0.01 85)",
+          "oklch(65% 0.009 85)",
+          "oklch(80% 0.006 85)",
+          "oklch(95% 0.002 85)"
+        ]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Surface Raised",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": [
+          "oklch(15% 0.0 0)",
+          "oklch(25% 0.0 0)",
+          "oklch(35% 0.0 0)",
+          "oklch(45% 0 0)",
+          "oklch(55% 0 0)",
+          "oklch(65% 0.0 0)",
+          "oklch(80% 0.0 0)",
+          "oklch(95% 0.0 0)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing hero title only; regular weight."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page/section titles; big-screen titles via text-display-2xl."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, primary button labels, input text."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default staff-screen control and description text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Metadata, badges, header nav, codes (uppercase, widest tracking)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "button-ledge",
+        "value": "0 3px 0 #b8006d",
+        "purpose": "Hard coloured offset under the primary button."
+      },
+      {
+        "name": "button-ledge-green",
+        "value": "0 3px 0 #5c9132",
+        "purpose": "Same ledge under the green confirm button."
+      },
+      {
+        "name": "card-lift",
+        "value": "0 10px 24px rgba(46,49,146,0.08)",
+        "purpose": "Soft ink-tinted lift under landing feature cards."
+      },
+      {
+        "name": "card-lift-lg",
+        "value": "0 16px 36px rgba(46,49,146,0.1)",
+        "purpose": "Larger landing card lift."
+      },
+      {
+        "name": "popover",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "Dropdowns and menus (Tailwind shadow-lg)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "marquee",
+        "value": "marquee var(--marquee-duration, 30s) linear infinite",
+        "purpose": "Overflowing lobby team roster on /display."
+      },
+      {
+        "name": "fun-fact-in",
+        "value": "fun-fact-in 0.8s ease-out",
+        "purpose": "Break fun fact entrance; fun-fact-fade (opacity only) under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action; accent 1 on a solid ledge.",
+      "html": "<button class=\"ds-btn-primary\">Join the quiz</button>",
+      "css": ".ds-btn-primary{background:#ec008c;color:#fff;font-family:var(--font-technika,sans-serif);font-size:1.125rem;font-weight:800;min-height:56px;padding:0 24px;border:none;border-radius:16px;box-shadow:0 3px 0 #b8006d;cursor:pointer;transition:transform .1s,box-shadow .1s}.ds-btn-primary:active{transform:translateY(3px);box-shadow:0 0 0 #b8006d}.ds-btn-primary:focus-visible{outline:3px solid #2e3192;outline-offset:2px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action in accent 2.",
+      "html": "<button class=\"ds-btn-outline\">Preview</button>",
+      "css": ".ds-btn-outline{background:transparent;color:#00aeef;border:2px solid #00aeef;border-radius:8px;min-height:40px;padding:0 16px;font-weight:800;cursor:pointer}.ds-btn-outline:hover{background:rgba(0,174,239,.08)}.ds-btn-outline:focus-visible{outline:3px solid #2e3192;outline-offset:2px}"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Square bordered icon action.",
+      "html": "<button class=\"ds-btn-icon\" aria-label=\"Next\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\"><path d=\"M6.1 3.1a.5.5 0 0 1 .7 0l4 4a.5.5 0 0 1 0 .8l-4 4a.5.5 0 1 1-.7-.8L9.7 7.5 6.1 3.9a.5.5 0 0 1 0-.8Z\" fill=\"currentColor\"/></svg></button>",
+      "css": ".ds-btn-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:transparent;color:#2e3192;border:2px solid rgba(46,49,146,.2);border-radius:8px;cursor:pointer}.ds-btn-icon:hover{border-color:rgba(46,49,146,.4)}.ds-btn-icon:focus-visible{outline:3px solid #2e3192;outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Tall phone-friendly input; codes uppercase with wide tracking.",
+      "html": "<input class=\"ds-input\" placeholder=\"Team name\" />",
+      "css": ".ds-input{min-height:56px;padding:0 16px;background:#fff;color:#2e3192;border:2px solid rgba(46,49,146,.35);border-radius:16px;font-size:1.125rem;font-weight:700}.ds-input::placeholder{color:rgba(46,49,146,.4)}.ds-input:focus-visible{outline:none;border-color:#2e3192}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White container on cream with a faint ink border.",
+      "html": "<div class=\"ds-card\"><span class=\"ds-card-num\">1</span><h3>Enter the code</h3><p>The quiz master shares a game code on the big screen.</p></div>",
+      "css": ".ds-card{background:#fff;color:#2e3192;border:1px solid rgba(46,49,146,.15);border-radius:16px;padding:24px;box-shadow:0 10px 24px rgba(46,49,146,.08);max-width:280px}.ds-card h3{font-size:1.125rem;font-weight:800;margin:16px 0 4px}.ds-card p{font-size:.875rem;font-weight:700;color:rgba(46,49,146,.6);margin:0}.ds-card-num{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:9999px;background:#ec008c;color:#fff;font-weight:800}"
+    },
+    {
+      "name": "Site Header",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "64px bar: accent-1 wordmark left, extra-bold tracked nav right.",
+      "html": "<header class=\"ds-header\"><a class=\"ds-wordmark\" href=\"#\">Campus Pub Quiz</a><nav class=\"ds-nav\"><a href=\"#\">League</a></nav></header>",
+      "css": ".ds-header{display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 16px;background:#fbf8f1}.ds-wordmark{color:#ec008c;font-weight:800;font-size:1.25rem;text-decoration:none}.ds-nav a{color:#2e3192;font-size:.875rem;font-weight:800;letter-spacing:.025em}.ds-nav a:hover{color:#ec008c}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Ink pill in the big-screen header showing round/question.",
+      "html": "<span class=\"ds-badge\">Round 2 \u00b7 Q5</span>",
+      "css": ".ds-badge{display:inline-block;background:#2e3192;color:#fbf8f1;border-radius:8px;padding:4px 12px;font-size:.875rem;font-weight:800}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Student Union Scoreboard",
+    "overview": "Loud, friendly and as bright as a poster, built to be read across a pub. Ink-blue type and six saturated brand colours sit on a warm cream background. Almost everything is set extra-bold, and the big screen's type grows with a size control so the back row can read it. Surfaces are mostly flat white cards on cream, and the main action stands out with a chunky raised button.\n\nThe system covers three settings at once: a projector (`/display`), a laptop control room (`/control`) and phones in a dim, noisy room (`/play`). It is dense enough for the quiz master's grading screens and loud enough for the room, and the same colour family runs through all of them.\n\nThis record describes the current system, not a final one. The owner is open to new or different styles, and theming for other organisers is planned. Treat the rules below as the current baseline. A deliberate new direction through `/impeccable` can replace them; drifting away from them one screen at a time should not.",
+    "keyCharacteristics": [
+      "Ink-blue (not black) text on warm cream, with white cards on top.",
+      "One colour leads (accent 1); the other four accents encode meaning or step order.",
+      "Extra-bold type everywhere; the display headline is the only regular-weight element.",
+      "Soft, generous corners (8\u201316px), with circles and pills for numbers and tags.",
+      "Flat by default; the primary action sits on a solid colour ledge.",
+      "Big-screen type scales from one variable, `--display-text-scale`."
+    ],
+    "rules": [
+      {
+        "name": "The Ink, Not Black Rule",
+        "body": "Text, borders and dark fills are ink at some opacity. There is no grey scale; use a lighter shade of ink instead.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Loud Voice Rule",
+        "body": "Accent 1 is the action and brand colour. The other accents mean something (step order, correct, highlight) and are never used as a second \"primary\".",
+        "section": "colors"
+      },
+      {
+        "name": "The Back-Row Rule",
+        "body": "Every size on `/display` comes from the `text-display-*` scale so the text-size control reaches it. A fixed `text-*` size on the big screen is a bug.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ledge, Not Glow Rule",
+        "body": "Buttons are raised with a hard, coloured offset, never a blurred drop shadow. Blurred shadows belong only to cards and floating menus.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** colour text and borders with ink at some opacity: 55\u201370% for muted text, 10\u201335% for borders.",
+      "**Do** raise the primary action on a solid accent ledge (`0 3px 0` with a darker shade of the same accent).",
+      "**Do** size every `/display` element from the `text-display-*` scale.",
+      "**Do** keep accent 2\u20135 tied to meaning: step order, correct, highlight.",
+      "**Do** give `/play` controls a height of at least 48px and full width on phones.",
+      "**Do** honour `prefers-reduced-motion`, fading opacity only, as the break fun-fact entrance does."
+    ],
+    "donts": [
+      "**Don't** introduce greys or pure black for text; use ink.",
+      "**Don't** add one-off button variants to `Button`; keep single-use styles as classes at the call site, as `button.tsx` does today.",
+      "**Don't** use a blurred drop shadow to raise a button.",
+      "**Don't** hard-wire ESN-specific colour names into new tokens; use role names so a theme can swap them."
+    ]
+  }
+}
