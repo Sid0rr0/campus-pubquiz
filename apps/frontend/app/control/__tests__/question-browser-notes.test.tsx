@@ -1,9 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type {
-  AnswersUpdatedPayload,
-  QuizSummaryRound,
-} from '@campus-pubquiz/types';
+import type { QuizSummaryRound } from '@campus-pubquiz/types';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
 
 const ROUNDS: QuizSummaryRound[] = [
@@ -29,74 +26,37 @@ const ROUNDS: QuizSummaryRound[] = [
   },
 ];
 
-function renderPanel(
-  selectedQuestionId: number | null,
-  liveAnswers: AnswersUpdatedPayload | null = null,
-) {
+function renderPanel() {
   render(
     <QuestionBrowserPanel
       rounds={ROUNDS}
       currentRoundIndex={0}
       activeBlockStartIndex={0}
-      selectedQuestionId={selectedQuestionId}
+      selectedQuestionId={null}
       indicators={{
         titleCardRoundIndex: null,
         breakRoundIndex: null,
         onDisplayQuestionId: null,
       }}
       onSelectQuestion={() => {}}
-      liveAnswers={liveAnswers}
-      teams={[]}
-      onGrade={() => {}}
-      fallbackQuestions={[]}
       ungradedQuestionIds={[]}
     />,
   );
 }
 
 describe('QuestionBrowserPanel notes', () => {
-  it('shows the notes of the selected question', () => {
-    renderPanel(1);
-
-    expect(screen.getByText('Accept "Abba".')).toBeInTheDocument();
-  });
-
-  it('shows the notes under the correct answer, above the answers list', () => {
-    renderPanel(1, {
-      questionId: 1,
-      question: {
-        type: 'free_text',
-        prompt: 'Band?',
-        points: 1,
-        correctAnswer: 'ABBA',
-        roundTitle: 'Music',
-        roundNumber: 1,
-        questionNumberInRound: 1,
-        totalQuestionsInRound: 2,
-      },
-      answers: [],
-    });
-
-    const notes = screen.getByText('Accept "Abba".');
-    const correct = screen.getByText(/Correct answer/);
-    expect(
-      correct.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it('shows no notes block for a selected question without notes', () => {
-    renderPanel(2);
-
-    expect(screen.queryByText('Accept "Abba".')).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Notes$/)).not.toBeInTheDocument();
-  });
-
   it("shows a round's note next to its title, and none for a round without one", () => {
-    renderPanel(null);
+    renderPanel();
 
     expect(
       screen.getByText(/Play the jingle first\./, { selector: 'p' }),
     ).toBeInTheDocument();
     expect(screen.getAllByText(/Round note/i)).toHaveLength(1);
+  });
+
+  it('leaves the question notes to the detail column', () => {
+    renderPanel();
+
+    expect(screen.queryByText('Accept "Abba".')).not.toBeInTheDocument();
   });
 });

@@ -77,7 +77,7 @@ describe('AnswersPanel', () => {
     expect(screen.getByText('1 correct')).toBeInTheDocument();
   });
 
-  it('shows the round, question position and correct answer', () => {
+  it('draws no question header: the question detail column owns it', () => {
     render(
       <AnswersPanel
         liveAnswers={liveAnswers()}
@@ -86,14 +86,12 @@ describe('AnswersPanel', () => {
       />,
     );
 
-    expect(screen.getByText(/round 2 \(geography\)/i)).toHaveTextContent(
-      'Q3 of 4',
-    );
-    expect(screen.getByText('Capital of France?')).toBeInTheDocument();
-    expect(screen.getByText(/correct answer: paris/i)).toBeInTheDocument();
+    expect(screen.queryByText(/round 2/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Capital of France?')).not.toBeInTheDocument();
+    expect(screen.queryByText(/correct answer/i)).not.toBeInTheDocument();
   });
 
-  it('formats sort/match answers and the correct answer as an arrow chain instead of raw pipes', () => {
+  it('formats sort/match team answers as an arrow chain instead of raw pipes', () => {
     render(
       <AnswersPanel
         liveAnswers={liveAnswers({
@@ -125,13 +123,10 @@ describe('AnswersPanel', () => {
       />,
     );
 
-    expect(
-      screen.getByText('Correct answer: Mercury → Venus → Earth'),
-    ).toBeInTheDocument();
     expect(screen.getByText('Earth → Venus → Mercury')).toBeInTheDocument();
   });
 
-  it('pairs each left item with its right-hand value for match questions, for both the correct answer and team answers', () => {
+  it('pairs each left item with its right-hand value for match team answers', () => {
     render(
       <AnswersPanel
         liveAnswers={liveAnswers({
@@ -164,11 +159,6 @@ describe('AnswersPanel', () => {
       />,
     );
 
-    expect(
-      screen.getByText(
-        'Correct answer: arthur → excalibur, captain america → shield',
-      ),
-    ).toBeInTheDocument();
     expect(
       screen.getByText('arthur → shield, captain america → excalibur'),
     ).toBeInTheDocument();
@@ -983,78 +973,5 @@ describe('AnswersPanel', () => {
         'Beer Necessities',
       ]);
     });
-  });
-
-  it('omits the previous/next controls when no nav is given', () => {
-    render(
-      <AnswersPanel
-        liveAnswers={liveAnswers()}
-        teams={TEAMS}
-        onGrade={vi.fn()}
-      />,
-    );
-
-    expect(
-      screen.queryByRole('button', { name: /previous question/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /next question/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('shows nav controls and the grading position when nav is given', async () => {
-    const user = userEvent.setup();
-    const onPrevious = vi.fn();
-    const onNext = vi.fn();
-    render(
-      <AnswersPanel
-        liveAnswers={liveAnswers()}
-        teams={TEAMS}
-        onGrade={vi.fn()}
-        nav={{ index: 1, total: 3, onPrevious, onNext }}
-      />,
-    );
-
-    expect(screen.getByText(/grading 2 of 3/i)).toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole('button', { name: /previous question/i }),
-    );
-    expect(onPrevious).toHaveBeenCalled();
-
-    await user.click(screen.getByRole('button', { name: /next question/i }));
-    expect(onNext).toHaveBeenCalled();
-  });
-
-  it('disables previous at the first question and next at the last question of the block', () => {
-    const { rerender } = render(
-      <AnswersPanel
-        liveAnswers={liveAnswers()}
-        teams={TEAMS}
-        onGrade={vi.fn()}
-        nav={{ index: 0, total: 3, onPrevious: vi.fn(), onNext: vi.fn() }}
-      />,
-    );
-    expect(
-      screen.getByRole('button', { name: /previous question/i }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: /next question/i }),
-    ).toBeEnabled();
-
-    rerender(
-      <AnswersPanel
-        liveAnswers={liveAnswers()}
-        teams={TEAMS}
-        onGrade={vi.fn()}
-        nav={{ index: 2, total: 3, onPrevious: vi.fn(), onNext: vi.fn() }}
-      />,
-    );
-    expect(
-      screen.getByRole('button', { name: /previous question/i }),
-    ).toBeEnabled();
-    expect(
-      screen.getByRole('button', { name: /next question/i }),
-    ).toBeDisabled();
   });
 });

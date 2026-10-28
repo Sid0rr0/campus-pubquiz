@@ -18,7 +18,9 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { useToastOnError } from '@/app/lib/use-toast-on-error';
 import { TeamsTable } from '@/app/control/teams-table';
 import { DesktopSidebar } from '@/app/control/desktop-sidebar';
+import { AnswersPanel } from '@/app/control/answers-panel';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
+import { QuestionDetail } from '@/app/control/question-detail';
 import { MobileAdminBar } from '@/app/control/mobile-admin-bar';
 import { SessionSettingsPanel } from '@/app/control/session-settings-panel';
 import type { ControlPanel } from '@/app/control/control-panel';
@@ -293,14 +295,25 @@ function AdminPageContent() {
                   selectedQuestionId={effectiveQuestionId}
                   indicators={indicators}
                   onSelectQuestion={setSelectedQuestionId}
-                  liveAnswers={liveAnswers}
-                  teams={teams}
-                  onGrade={gradeAnswer}
-                  fallbackQuestions={fallbackQuestions}
                   ungradedQuestionIds={ungradedQuestionIds}
                 />
               </div>
+              <div className="md:min-w-0 md:flex-1">
+                <QuestionDetail
+                  questionId={effectiveQuestionId}
+                  rounds={activeQuizRounds}
+                  liveAnswers={liveAnswers}
+                  fallbackQuestions={fallbackQuestions}
+                />
+              </div>
             </div>
+            {liveAnswers && liveAnswers.questionId === effectiveQuestionId && (
+              <AnswersPanel
+                liveAnswers={liveAnswers}
+                teams={teams}
+                onGrade={gradeAnswer}
+              />
+            )}
             <section className="flex flex-col gap-3">
               <h2 className="font-display text-xl">Teams</h2>
               <TeamsTable

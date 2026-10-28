@@ -1,6 +1,5 @@
 'use client';
 
-import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import { motion } from 'motion/react';
 import {
   formatAnswer,
@@ -13,7 +12,6 @@ import {
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 import { Button } from '@/app/components/button';
 import { CustomGradeControl } from '@/app/control/custom-grade-control';
-import { NotesLine } from '@/app/control/notes-line';
 
 interface GradeOption {
   display: string;
@@ -147,28 +145,16 @@ function AnswerRow({
   );
 }
 
-interface AnswersPanelNav {
-  index: number;
-  total: number;
-  onPrevious: () => void;
-  onNext: () => void;
-}
-
 interface AnswersPanelProps {
   liveAnswers: AnswersUpdatedPayload;
   teams: TeamView[];
   onGrade: (answerId: number, points: number) => void;
-  nav?: AnswersPanelNav;
-  /** The question's notes, shown as one line under the correct answer. */
-  notes?: string;
 }
 
 export function AnswersPanel({
   liveAnswers,
   teams,
   onGrade,
-  nav,
-  notes,
 }: AnswersPanelProps) {
   const { question, answers } = liveAnswers;
   const answersByTeamId = new Map(
@@ -184,54 +170,12 @@ export function AnswersPanel({
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-extrabold tracking-wide text-foreground/55">
-            Round {question.roundNumber} ({question.roundTitle}) — Q
-            {question.questionNumberInRound} of {question.totalQuestionsInRound}
-            {nav && ` — Grading ${nav.index + 1} of ${nav.total}`}
-          </p>
-          {nav && (
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline-muted"
-                aria-label="Previous question"
-                disabled={nav.index === 0}
-                onClick={nav.onPrevious}
-                className="flex h-10 min-w-11 items-center justify-center"
-              >
-                <ChevronLeftIcon aria-hidden="true" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline-muted"
-                aria-label="Next question"
-                disabled={nav.index >= nav.total - 1}
-                onClick={nav.onNext}
-                className="flex h-10 min-w-11 items-center justify-center"
-              >
-                <ChevronRightIcon aria-hidden="true" />
-              </Button>
-            </div>
-          )}
-        </div>
-        <h2 className="font-display text-xl">{question.prompt}</h2>
-        <p className="flex gap-5 text-sm font-bold">
-          <span className="text-green">
-            Correct answer:{' '}
-            {formatAnswer(question.correctAnswer, {
-              type: question.type,
-              options: question.options,
-            })}
-          </span>
-          <span className="text-cyan">
-            {answeredCount}/{teams.length} answered
-          </span>
-          <span className="text-cyan">{correctCount} correct</span>
-        </p>
-        {notes && <NotesLine notes={notes} />}
-      </div>
+      <p className="flex gap-5 text-sm font-bold">
+        <span className="text-cyan">
+          {answeredCount}/{teams.length} answered
+        </span>
+        <span className="text-cyan">{correctCount} correct</span>
+      </p>
       <ul className="flex flex-col gap-2">
         {sortedTeams.map((team) => (
           <AnswerRow

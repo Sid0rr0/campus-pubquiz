@@ -1,14 +1,6 @@
 'use client';
 
-import type {
-  AdminIndicators,
-  AnswersUpdatedPayload,
-  QuestionView,
-  QuizSummaryRound,
-  TeamView,
-} from '@campus-pubquiz/types';
-import { AnswersPanel } from '@/app/control/answers-panel';
-import { NotesLine } from '@/app/control/notes-line';
+import type { AdminIndicators, QuizSummaryRound } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
 interface QuestionBrowserPanelProps {
@@ -21,15 +13,6 @@ interface QuestionBrowserPanelProps {
   /** What the admin view marks as on air: the question, title card and break indicator. */
   indicators: AdminIndicators;
   onSelectQuestion: (questionId: number) => void;
-  liveAnswers: AnswersUpdatedPayload | null;
-  teams: TeamView[];
-  onGrade: (answerId: number, points: number) => void;
-  /**
-   * Questions from the live snapshot (current + just-locked block) — a
-   * prompt source for the loading gap before the round list or the
-   * ANSWERS_UPDATED roundtrip has arrived.
-   */
-  fallbackQuestions: QuestionView[];
   /** IDs of current-block questions still missing a grade — drives the "not yet graded" dot. */
   ungradedQuestionIds: number[];
 }
@@ -76,25 +59,11 @@ export function QuestionBrowserPanel({
   selectedQuestionId,
   indicators,
   onSelectQuestion,
-  liveAnswers,
-  teams,
-  onGrade,
-  fallbackQuestions,
   ungradedQuestionIds,
 }: QuestionBrowserPanelProps) {
-  if (rounds.length === 0 && selectedQuestionId === null) {
+  if (rounds.length === 0) {
     return null;
   }
-
-  const selectedQuestion = rounds
-    .flatMap((round) => round.questions)
-    .find((question) => question.id === selectedQuestionId);
-  const selectedPrompt =
-    selectedQuestion?.prompt ??
-    fallbackQuestions.find((question) => question.id === selectedQuestionId)
-      ?.prompt;
-  const selectedNotes = selectedQuestion?.notes;
-  const hasLiveAnswers = liveAnswers?.questionId === selectedQuestionId;
 
   return (
     <section className="flex flex-col gap-2.5">
@@ -203,20 +172,6 @@ export function QuestionBrowserPanel({
             );
           })}
         </div>
-      )}
-      {selectedQuestionId !== null && hasLiveAnswers && liveAnswers && (
-        <AnswersPanel
-          liveAnswers={liveAnswers}
-          teams={teams}
-          onGrade={onGrade}
-          notes={selectedNotes}
-        />
-      )}
-      {selectedQuestionId !== null && !hasLiveAnswers && selectedPrompt && (
-        <>
-          <p className="text-sm font-bold">{selectedPrompt}</p>
-          {selectedNotes && <NotesLine notes={selectedNotes} />}
-        </>
       )}
     </section>
   );
