@@ -17,7 +17,10 @@ import {
 import { Button } from '@/app/components/button';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import { MediaUrlField } from '@/app/quizzes/[id]/media-url-field';
-import { AnswerSection } from '@/app/quizzes/[id]/answer-kind-fields';
+import {
+  AnswerSection,
+  isFixedOnOpened,
+} from '@/app/quizzes/[id]/answer-kind-fields';
 import { type EditorQuestion } from '@/app/quizzes/[id]/quiz-draft-state';
 
 /** DOM id for the question's card, so the outline can scroll it into view — see quiz-outline.tsx's jump-to-question button. */
@@ -200,8 +203,8 @@ export function QuizQuestionEditor({
 
       {isOpened && (
         <p className="text-xs font-extrabold text-magenta">
-          Opened — its type and choices are fixed; changing the answer or points
-          re-scores auto-graded answers
+          Opened — its type and choices are fixed; changing the answer, points
+          or scoring re-scores auto-graded answers
         </p>
       )}
 
@@ -212,7 +215,7 @@ export function QuizQuestionEditor({
               key={option.value}
               type="button"
               onClick={() => onChange({ type: option.value })}
-              disabled={isOpened}
+              disabled={isFixedOnOpened(isOpened, 'type')}
               className={typeButtonClass(question.type === option.value)}
             >
               {option.label}

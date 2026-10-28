@@ -1171,7 +1171,8 @@ grading behavior. Media is not a type: any question can carry a
   (10%) the Answer key fills in when it is read; export writes the key only
   for a question that has one.
   Changing the margin of an opened question is a grading-input change like a
-  key fix and re-scores its answers, discarding manual overrides.
+  key fix and re-scores its answers, discarding manual overrides. So does
+  changing the scoring mode of an opened sort or match question.
   Allowed in kahoot rounds, where a correct answer is
   scaled by the speed multiplier. While the question is open, the phone (under
   the prompt) and the big screen show the margin as a sentence ("Answers within 5% of the real number count

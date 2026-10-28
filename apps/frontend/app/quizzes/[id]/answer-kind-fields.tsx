@@ -9,6 +9,7 @@ import {
 import {
   DEFAULT_MARGIN,
   gradingSettingsOf,
+  OPENED_QUESTION_FIXED_FIELDS,
   isScoringModeOf,
   scoringModesOf,
   SCORING_MODE_LABELS,
@@ -37,6 +38,17 @@ interface AnswerFieldsProps {
   /** The question is opened in a live session: its choices are fixed. */
   isOpened: boolean;
   onChange: (patch: Partial<EditorQuestion>) => void;
+}
+
+/** A control is disabled when the saved field it writes is on the opened-question fixed list; a control writing several fields passes them all. */
+export function isFixedOnOpened(
+  isOpened: boolean,
+  ...written: (typeof OPENED_QUESTION_FIXED_FIELDS)[number][]
+): boolean {
+  return (
+    isOpened &&
+    written.some((field) => OPENED_QUESTION_FIXED_FIELDS.includes(field))
+  );
 }
 
 const TEXT_INPUT_CLASS =
@@ -119,7 +131,7 @@ function ChoiceList({
               onChange={(event) =>
                 updateOption(optionIndex, event.target.value)
               }
-              disabled={isOpened}
+              disabled={isFixedOnOpened(isOpened, 'options')}
               placeholder="Option text"
               aria-invalid={isDuplicate}
               className={`min-w-0 flex-1 rounded-lg border-2 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50 ${
@@ -133,7 +145,10 @@ function ChoiceList({
                   options: question.options.filter((_, i) => i !== optionIndex),
                 })
               }
-              disabled={isOpened || question.options.length <= 2}
+              disabled={
+                isFixedOnOpened(isOpened, 'options') ||
+                question.options.length <= 2
+              }
               variant="icon-danger"
               size="icon-sm"
               aria-label={`Remove option ${optionIndex + 1}`}
@@ -155,7 +170,7 @@ function ChoiceList({
         onClick={() =>
           onChange({ options: [...question.options, makeOption()] })
         }
-        disabled={isOpened}
+        disabled={isFixedOnOpened(isOpened, 'options')}
         variant="outline-dashed"
         size="xs"
         className="self-start"
@@ -248,12 +263,7 @@ function NumberFields(props: AnswerFieldsProps) {
 }
 
 /** Lists only the modes the question's type accepts; unset shows the type's default. */
-function ScoringModeSelect({
-  question,
-  issues,
-  isOpened,
-  onChange,
-}: AnswerFieldsProps) {
+function ScoringModeSelect({ question, issues, onChange }: AnswerFieldsProps) {
   const modes = scoringModesOf(question.type);
   const shown = isScoringModeOf(question.type, question.scoringMode)
     ? question.scoringMode
@@ -266,7 +276,6 @@ function ScoringModeSelect({
         onChange={(event) =>
           onChange({ scoringMode: event.target.value as ScoringMode })
         }
-        disabled={isOpened}
         className="w-full rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
       >
         {modes.map((mode) => (
@@ -318,14 +327,14 @@ function SortFields({
           <input
             value={item}
             onChange={(event) => updateSortItem(itemIndex, event.target.value)}
-            disabled={isOpened}
+            disabled={isFixedOnOpened(isOpened, 'options')}
             placeholder="Item text"
             className={TEXT_INPUT_CLASS}
           />
           <Button
             type="button"
             onClick={() => moveSortItem(itemIndex, -1)}
-            disabled={itemIndex === 0}
+            disabled={isFixedOnOpened(isOpened, 'options') || itemIndex === 0}
             variant="icon"
             size="icon-sm"
             aria-label={`Move item ${itemIndex + 1} up`}
@@ -335,7 +344,10 @@ function SortFields({
           <Button
             type="button"
             onClick={() => moveSortItem(itemIndex, 1)}
-            disabled={itemIndex === question.sortItems.length - 1}
+            disabled={
+              isFixedOnOpened(isOpened, 'options') ||
+              itemIndex === question.sortItems.length - 1
+            }
             variant="icon"
             size="icon-sm"
             aria-label={`Move item ${itemIndex + 1} down`}
@@ -349,7 +361,10 @@ function SortFields({
                 sortItems: question.sortItems.filter((_, i) => i !== itemIndex),
               })
             }
-            disabled={isOpened || question.sortItems.length <= 2}
+            disabled={
+              isFixedOnOpened(isOpened, 'options') ||
+              question.sortItems.length <= 2
+            }
             variant="icon-danger"
             size="icon-sm"
             aria-label={`Remove item ${itemIndex + 1}`}
@@ -363,7 +378,7 @@ function SortFields({
       <Button
         type="button"
         onClick={() => onChange({ sortItems: [...question.sortItems, ''] })}
-        disabled={isOpened}
+        disabled={isFixedOnOpened(isOpened, 'options')}
         variant="outline-dashed"
         size="xs"
         className="self-start"
@@ -411,7 +426,7 @@ function MatchFields({
             onChange={(event) =>
               updateMatchPair(pairIndex, 'left', event.target.value)
             }
-            disabled={isOpened}
+            disabled={isFixedOnOpened(isOpened, 'options')}
             placeholder="Left item"
             className={TEXT_INPUT_CLASS}
           />
@@ -423,6 +438,7 @@ function MatchFields({
             onChange={(event) =>
               updateMatchPair(pairIndex, 'right', event.target.value)
             }
+            disabled={isFixedOnOpened(isOpened, 'matchTargets')}
             placeholder="Right item"
             className={TEXT_INPUT_CLASS}
           />
@@ -435,7 +451,10 @@ function MatchFields({
                 ),
               })
             }
-            disabled={isOpened || question.matchPairs.length <= 2}
+            disabled={
+              isFixedOnOpened(isOpened, 'options', 'matchTargets') ||
+              question.matchPairs.length <= 2
+            }
             variant="icon-danger"
             size="icon-sm"
             aria-label={`Remove pair ${pairIndex + 1}`}
@@ -449,7 +468,7 @@ function MatchFields({
         onClick={() =>
           onChange({ matchPairs: [...question.matchPairs, makeMatchPair()] })
         }
-        disabled={isOpened}
+        disabled={isFixedOnOpened(isOpened, 'options', 'matchTargets')}
         variant="outline-dashed"
         size="xs"
         className="self-start"
