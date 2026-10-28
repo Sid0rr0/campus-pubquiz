@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The session detail input carries the session's opened question ids (nullable), and the Night brief input gets them through it, not as its own field
 - [ ] The shared session-rows loader reads the opened question ids, and the Night brief no longer queries them separately

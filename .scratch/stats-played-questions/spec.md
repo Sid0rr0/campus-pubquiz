@@ -1,6 +1,6 @@
 # Spec: Unplayed questions stay out of an ended session's stats
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

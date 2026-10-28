@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Move the played-question rule into the session detail)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] An unplayed question's correct rate is null; its answered and correct counts are unchanged
 - [ ] An unplayed question is never the hardest or easiest question and is in neither the all-correct nor the none-correct list
