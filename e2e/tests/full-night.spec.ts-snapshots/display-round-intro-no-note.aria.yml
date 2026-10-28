@@ -2,8 +2,8 @@
   - button "Enable sound"
   - link "Campus Pub Quiz":
     - /url: /
-  - paragraph: ROUND 2 — Music
   - heading "Name that tune" [level=1]
   - paragraph: by Sam Spinner
+  - paragraph: ROUND 2 — Music
 - region "Notifications alt+T"
 - alert

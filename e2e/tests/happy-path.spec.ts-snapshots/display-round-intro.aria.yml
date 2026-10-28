@@ -2,7 +2,7 @@
   - button "Enable sound"
   - link "Campus Pub Quiz":
     - /url: /
-  - paragraph: ROUND 1
   - heading "Warm-up" [level=1]
+  - paragraph: ROUND 1
 - region "Notifications alt+T"
 - alert

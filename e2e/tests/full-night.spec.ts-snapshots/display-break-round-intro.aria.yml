@@ -2,7 +2,7 @@
   - button "Enable sound"
   - link "Campus Pub Quiz":
     - /url: /
-  - paragraph: ROUND 2
   - heading "Name that tune" [level=1]
+  - paragraph: ROUND 2
 - region "Notifications alt+T"
 - alert
