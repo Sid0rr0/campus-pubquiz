@@ -387,6 +387,24 @@ describe('computeSessionBrief unplayed questions', () => {
 
     expect(brief).not.toContain('not played');
   });
+
+  it('for a session ended early, never names a "(not played)" question in Highlights and shows the detail round rate', () => {
+    const input = buildInput({
+      answers: [answer(10, 1, 'correct', 2), answer(10, 2, 'incorrect', 0)],
+      openedQuestionIds: [10],
+    });
+    const brief = computeSessionBrief(input);
+
+    const highlights = brief.split('## Highlights')[1].split('\n## ')[0];
+    expect(highlights).toContain('"Capital of France?"');
+    expect(highlights).not.toContain('Guess the height');
+    expect(highlights).not.toContain('Name a primary colour');
+    expect(brief).toContain('- (not played)');
+    const geography = computeSessionDetail(input).rounds[0];
+    // 1 of the 3 participating teams got the only played, rated question.
+    expect(geography.correctRate).toBeCloseTo(1 / 3);
+    expect(brief).toContain('33%');
+  });
 });
 
 describe('computeSessionBrief', () => {

@@ -1845,7 +1845,13 @@ hardest, easiest, all-correct or none-correct question. The question's correct
 count (fully correct answers) and a round's correct rate count only `correct`
 verdicts; a round's correct rate leaves its `closest_guess` questions out, and a
 round made up only of them has `correctRate: null` ("—") and can't be the
-hardest round. The standings table (placing, left, totals, correct count) and the
+hardest round. A question the session never played (not opened and with no
+stored answer; a session saved before opened questions were tracked counts every
+question up to the last answered one as played) also has `correctRate: null`,
+is never a highlight or in the all-correct or none-correct lists, and is left
+out of its round's correct rate and points %; a round with nothing played has
+`correctRate: null`. Max points, team shares and the difficulty label still use
+the whole quiz. The standings table (placing, left, totals, correct count) and the
 questions table's counts and rate come from the Session result module; the trophy
 row is the single session winner, never every team tied for first.
 

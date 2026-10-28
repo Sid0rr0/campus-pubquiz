@@ -222,6 +222,8 @@ export function computeSessionDetail(
     answers,
   });
   const { participantCount: teamCount, maxPoints } = result;
+  // Unplayed questions stay out of the round and question rates and highlights.
+  const played = playedQuestionIds(input);
   const questionResultById = new Map(
     result.questions.map((q) => [q.questionId, q]),
   );
@@ -264,7 +266,9 @@ export function computeSessionDetail(
 
   const ratingByRoundId = new Map(roundRatings.map((r) => [r.roundId, r]));
   const roundRows: SessionDetailRoundRow[] = sortedRounds.map((round) => {
-    const roundQuestions = questions.filter((q) => q.roundId === round.roundId);
+    const roundQuestions = questions.filter(
+      (q) => q.roundId === round.roundId && played.has(q.questionId),
+    );
     const roundQuestionIds = new Set(roundQuestions.map((q) => q.questionId));
     const roundMaxPoints = roundQuestions.reduce((sum, q) => sum + q.points, 0);
     const roundAnswers = answers.filter((a) =>
@@ -335,7 +339,9 @@ export function computeSessionDetail(
         points: question.points,
         answeredCount: questionResult?.answeredCount ?? 0,
         correctCount: questionResult?.correctCount ?? 0,
-        correctRate: questionResult?.correctRate ?? null,
+        correctRate: played.has(question.questionId)
+          ? (questionResult?.correctRate ?? null)
+          : null,
         fastestResponseMs:
           timedResponses.length > 0 ? Math.min(...timedResponses) : null,
       };

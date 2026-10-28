@@ -79,7 +79,8 @@ function buildInput({
     feedback: [],
     questions: [],
     answers,
-    openedQuestionIds: null,
+    // Every question opened unless a case says otherwise.
+    openedQuestionIds: (overrides.questions ?? []).map((q) => q.questionId),
     bonusAwards,
     ...overrides,
   };
@@ -1301,6 +1302,140 @@ describe('computeSessionDetail', () => {
 
       expect(result.difficulty.averagePercent).toBe(0);
       expect(result.rounds[0].pointsPercent).toBe(0);
+    });
+  });
+
+  describe('with questions the session never played', () => {
+    const question = (
+      questionId: number,
+      roundId: number,
+      orderIndex: number,
+    ) => ({
+      questionId,
+      roundId,
+      orderIndex,
+      prompt: `Q${questionId}`,
+      answer: 'A',
+      type: 'free_text' as const,
+      points: 2,
+    });
+    const answerRow = (
+      questionId: number,
+      teamId: number,
+      correct: boolean,
+    ) => ({
+      questionId,
+      teamId,
+      teamName: `Team ${teamId}`,
+      pointsAwarded: correct ? 2 : 0,
+      gradedAt: '2026-01-01T00:00:01.000Z',
+      verdict: correct ? ('correct' as const) : ('incorrect' as const),
+      responseMs: null,
+      answer: 'x',
+    });
+    const rounds = [
+      { roundId: 100, title: 'R1', category: null, orderIndex: 0 },
+      { roundId: 200, title: 'R2', category: null, orderIndex: 1 },
+    ];
+    // Round 100: Q10, Q11. Round 200: Q20, Q21.
+    const questions = [
+      question(10, 100, 0),
+      question(11, 100, 1),
+      question(20, 200, 0),
+      question(21, 200, 1),
+    ];
+    const teams = [
+      { teamId: 1, teamName: 'Team 1' },
+      { teamId: 2, teamName: 'Team 2' },
+    ];
+    const detail = (overrides: BuildInputOverrides) =>
+      computeSessionDetail(
+        buildInput({ teams, rounds, questions, ...overrides }),
+      );
+
+    it('gives an unplayed question no rate and keeps it out of highlights and lists', () => {
+      const result = detail({
+        openedQuestionIds: [10, 11],
+        answers: [
+          answerRow(10, 1, true),
+          answerRow(10, 2, true),
+          answerRow(11, 1, true),
+          answerRow(11, 2, false),
+        ],
+      });
+
+      const byId = (id: number) =>
+        result.questions.find((q) => q.questionId === id)!;
+      expect(byId(20).correctRate).toBeNull();
+      expect(byId(20)).toMatchObject({ answeredCount: 0, correctCount: 0 });
+      expect(result.highlights.hardestQuestionId).toBe(11);
+      expect(result.highlights.easiestQuestionId).toBe(10);
+      expect(result.highlights.allCorrectQuestionIds).toEqual([10]);
+      expect(result.highlights.noneCorrectQuestionIds).toEqual([]);
+    });
+
+    it('rates a round on its played questions only, and not at all when none were played', () => {
+      const result = detail({
+        openedQuestionIds: [10],
+        answers: [answerRow(10, 1, true), answerRow(10, 2, false)],
+      });
+
+      // Q10 is 50%; Q11 is unplayed, so round 100 is 50% of 2 questions' worth
+      // of only Q10: 2 of (2 teams x 2 points).
+      expect(result.rounds[0].correctRate).toBe(0.5);
+      expect(result.rounds[0].pointsPercent).toBe(50);
+      expect(result.rounds[1].correctRate).toBeNull();
+      expect(result.rounds[1].pointsPercent).toBe(0);
+      expect(result.highlights.hardestRoundId).toBe(100);
+    });
+
+    it('counts an opened question nobody answered as 0% and lets it be the hardest', () => {
+      const result = detail({
+        openedQuestionIds: [10, 11],
+        answers: [answerRow(10, 1, true), answerRow(10, 2, true)],
+      });
+
+      expect(
+        result.questions.find((q) => q.questionId === 11)!.correctRate,
+      ).toBe(0);
+      expect(result.highlights.hardestQuestionId).toBe(11);
+    });
+
+    it('counts a question with stored answers as played though the opened list misses it', () => {
+      const result = detail({
+        openedQuestionIds: [],
+        answers: [answerRow(20, 1, true), answerRow(20, 2, true)],
+      });
+
+      expect(
+        result.questions.find((q) => q.questionId === 20)!.correctRate,
+      ).toBe(1);
+      expect(
+        result.questions.find((q) => q.questionId === 10)!.correctRate,
+      ).toBeNull();
+    });
+
+    it('falls back to every question up to the last answered one for a null opened list', () => {
+      const result = detail({
+        openedQuestionIds: null,
+        answers: [answerRow(20, 1, true), answerRow(20, 2, false)],
+      });
+
+      expect(result.questions.map((q) => q.correctRate)).toEqual([
+        0,
+        0,
+        0.5,
+        null,
+      ]);
+    });
+
+    it('leaves max points and difficulty on the whole quiz', () => {
+      const answers = [answerRow(10, 1, true), answerRow(10, 2, true)];
+      const some = detail({ openedQuestionIds: [10], answers });
+      const all = detail({ openedQuestionIds: [10, 11, 20, 21], answers });
+
+      expect(some.maxPoints).toBe(8);
+      expect(some.difficulty).toEqual(all.difficulty);
     });
   });
 });
