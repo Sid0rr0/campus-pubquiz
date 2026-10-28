@@ -66,7 +66,32 @@ const QUIZ = {
   ],
 };
 
-function renderStatus(status: string, roundIndex = 0) {
+const LIVE_ANSWERS = {
+  questionId: 1,
+  question: {
+    type: 'free_text',
+    prompt: 'Band?',
+    points: 1,
+    correctAnswer: 'ABBA',
+    roundTitle: 'Music',
+    roundNumber: 1,
+    questionNumberInRound: 1,
+    totalQuestionsInRound: 1,
+  },
+  answers: [
+    {
+      answerId: 'answer-1',
+      teamId: 1,
+      teamName: 'The Quizzards',
+      value: 'ABBA',
+      pointsAwarded: 0,
+      gradedAt: null,
+      gradingState: 'ungraded',
+    },
+  ],
+};
+
+function mockStatus(status: string, roundIndex: number, liveAnswers = null) {
   mockUseAdminGame.mockReturnValue({
     session: {
       joinCode: 'TESTCODE',
@@ -76,9 +101,24 @@ function renderStatus(status: string, roundIndex = 0) {
         { questions: [{ prompt: 'Sport?', points: 1 }] },
       ],
     },
-    liveAnswers: null,
+    liveAnswers,
   });
-  renderWithQuery(<AdminPage />);
+}
+
+function renderStatus(
+  status: string,
+  roundIndex = 0,
+  liveAnswers: unknown = null,
+) {
+  mockStatus(status, roundIndex, liveAnswers as null);
+  const result = renderWithQuery(<AdminPage />);
+  return {
+    // Brings the big screen to another status, as Advance/Previous would.
+    moveTo(next: string, nextRound: number) {
+      mockStatus(next, nextRound, liveAnswers as null);
+      result.rerender(<AdminPage />);
+    },
+  };
 }
 
 describe('AdminPage — on-air title and break cards', () => {
@@ -145,5 +185,76 @@ describe('AdminPage — on-air title and break cards', () => {
     expect(
       screen.getByRole('region', { name: 'Break card' }),
     ).toHaveTextContent('Break 1 (final)');
+  });
+
+  it('highlights the selected T marker and keeps the on-air ring on the on-air one', async () => {
+    renderStatus('round_intro');
+    const music = await screen.findByRole('button', {
+      name: /show title card of music/i,
+    });
+    const sport = screen.getByRole('button', {
+      name: /show title card of sport/i,
+    });
+    expect(music).toHaveAccessibleName(/live on display/);
+    expect(music).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(sport);
+
+    expect(sport).toHaveAttribute('aria-pressed', 'true');
+    expect(music).toHaveAttribute('aria-pressed', 'false');
+    expect(music).toHaveAccessibleName(/live on display/);
+    expect(sport).not.toHaveAccessibleName(/live on display/);
+  });
+
+  it('shows no grading list while a browsed card is shown', async () => {
+    renderStatus('round_intro', 0, LIVE_ANSWERS);
+    await screen.findByRole('region', { name: 'Title card' });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /show title card of sport/i }),
+    );
+
+    expect(screen.queryByText('The Quizzards')).not.toBeInTheDocument();
+  });
+
+  it('follows the big screen again once Advance reaches the browsed title card', async () => {
+    const game = renderStatus('round_intro');
+    await userEvent.click(
+      await screen.findByRole('button', { name: /show title card of sport/i }),
+    );
+    expect(
+      screen.getByRole('region', { name: 'Title card' }),
+    ).not.toHaveTextContent('Round intro');
+
+    game.moveTo('round_intro', 1);
+    expect(
+      screen.getByRole('region', { name: 'Title card' }),
+    ).toHaveTextContent('Round intro');
+
+    // Previous: the pick was dropped, so the card follows the screen back.
+    game.moveTo('round_intro', 0);
+    expect(
+      screen.getByRole('region', { name: 'Title card' }),
+    ).toHaveTextContent('Round 1: Music');
+  });
+
+  it('follows the big screen again once Advance reaches the browsed break', async () => {
+    const game = renderStatus('round_intro');
+    await userEvent.click(
+      await screen.findByRole('button', { name: /show break after sport/i }),
+    );
+    expect(
+      screen.getByRole('region', { name: 'Break card' }),
+    ).toBeInTheDocument();
+
+    game.moveTo('break_intro', 1);
+    expect(
+      screen.getByRole('region', { name: 'Break card' }),
+    ).toBeInTheDocument();
+
+    game.moveTo('round_intro', 0);
+    expect(
+      screen.getByRole('region', { name: 'Title card' }),
+    ).toHaveTextContent('Round 1: Music');
   });
 });

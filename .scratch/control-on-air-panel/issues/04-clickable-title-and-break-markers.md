@@ -4,7 +4,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] T and B markers are buttons with accessible labels; clicking shows that card
 - [ ] Browsed title card shows no kind label; on-air one does
