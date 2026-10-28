@@ -3,7 +3,7 @@ import { QUESTION_KINDS, type AnswerInputKind } from './question-kind';
 import type { QuestionType } from './question-types';
 import type { ResolvedAnswerKey } from './answer-key';
 import { isWithinMargin, parseFiniteNumber } from './margin';
-import { SCORING_MODES_BY_TYPE } from './scoring-mode';
+import { SCORING_MODES_BY_TYPE, type ScoringMode } from './scoring-mode';
 import { halfPoints, nearestHalfPoint } from './score-math';
 import { sortSlotMatches, splitPipeList } from './sort-match';
 
@@ -118,6 +118,14 @@ interface SortMiss {
 type SortMode = (typeof SCORING_MODES_BY_TYPE.sort)[number];
 type MatchMode = (typeof SCORING_MODES_BY_TYPE.match)[number];
 
+/** `mode` if the type accepts it, else the type's default (first) mode, so a stray mode can't miss its scorer. */
+function modeOf<Modes extends readonly ScoringMode[]>(
+  modes: Modes,
+  mode: ScoringMode,
+): Modes[number] {
+  return modes.find((accepted) => accepted === mode) ?? modes[0];
+}
+
 /** One scorer per sort mode; a mode without one (or an extra) is a compile error. */
 const SORT_SCORERS: Record<
   SortMode,
@@ -156,7 +164,8 @@ const sortFormat: AnswerFormat<string[]> = {
     if (inPlace.length === keyItems.length && wrongSlots.length === 0) {
       return correct(question);
     }
-    return SORT_SCORERS[question.scoringMode as SortMode](question, {
+    const mode = modeOf(SCORING_MODES_BY_TYPE.sort, question.scoringMode);
+    return SORT_SCORERS[mode](question, {
       keyItems,
       inPlace,
       wrongSlots,
@@ -211,7 +220,8 @@ const matchFormat: AnswerFormat<string[]> = {
     ).length;
     const wrongPairCount = answerPairs.length - correctPairCount;
     if (wrongPairCount === 0) return correct(question);
-    return MATCH_SCORERS[question.scoringMode as MatchMode](question, {
+    const mode = modeOf(SCORING_MODES_BY_TYPE.match, question.scoringMode);
+    return MATCH_SCORERS[mode](question, {
       pairCount: answerPairs.length,
       correctPairCount,
       wrongPairCount,

@@ -159,7 +159,10 @@ function invalidKeyMessage(key: string, type: QuestionType): string {
     return `Margin "${key}" is not a number — write 5% for a percentage or 2 for a plain distance`;
   }
   if (key === SCORING_NOTES_KEY) {
-    return `Scoring "${key}" is not a scoring mode — use ${QUESTION_KINDS[type].scoringModes.join(', ')}`;
+    const modes = QUESTION_KINDS[type].scoringModes;
+    return modes.length === 0
+      ? `Scoring "${key}" is not used by this question type — remove it`
+      : `Scoring "${key}" is not a scoring mode — use ${modes.join(', ')}`;
   }
   return `Clip time "${key}" is not a timecode — use seconds, M:SS or H:MM:SS`;
 }
