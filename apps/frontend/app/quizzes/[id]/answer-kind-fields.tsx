@@ -11,6 +11,7 @@ import {
   gradingSettingsOf,
   isScoringModeOf,
   scoringModesOf,
+  SCORING_MODE_LABELS,
   hasMarginType,
   type AnswerKind,
   formatMarginHint,
@@ -245,12 +246,6 @@ function NumberFields(props: AnswerFieldsProps) {
     </>
   );
 }
-
-const SCORING_MODE_LABELS: Record<ScoringMode, string> = {
-  exact: 'Exact order only',
-  per_item: 'Points per item in place',
-  one_off: 'Half points for one mistake',
-};
 
 /** Lists only the modes the question's type accepts; unset shows the type's default. */
 function ScoringModeSelect({

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MARGIN_UNITS } from './margin';
-import { MATCH_SCORING_MODES, SCORING_MODES } from './scoring-mode';
+import { SCORING_MODES_BY_TYPE } from './scoring-mode';
 import type { MergedOptional } from './merged-shape';
 
 /**
@@ -37,14 +37,14 @@ export const multipleChoicePayloadSchema = z.object({
 export const sortPayloadSchema = z.object({
   ...media,
   options: stringList,
-  scoringMode: z.enum(SCORING_MODES).optional(),
+  scoringMode: z.enum(SCORING_MODES_BY_TYPE.sort).optional(),
 });
 
 export const matchPayloadSchema = z.object({
   ...media,
   options: stringList,
   matchTargets: stringList,
-  scoringMode: z.enum(MATCH_SCORING_MODES).optional(),
+  scoringMode: z.enum(SCORING_MODES_BY_TYPE.match).optional(),
 });
 
 export const closestGuessPayloadSchema = z.object(media);

@@ -4,6 +4,7 @@ import { QUESTION_KINDS, checkQuestion } from '../question-kind';
 import { decodeSheetRow } from '../question-row-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
 import { resolveAnswerKind } from '../answer-kind';
+import { SCORING_MODES } from '../scoring-mode';
 import {
   BATCH_GRADED_TYPES,
   KAHOOT_ALLOWED_TYPES,
@@ -384,6 +385,86 @@ describe('import and draft validation parity', () => {
     expect(verdictOf(fromDraft)).toBe(testCase.verdict);
     expect(fromImport).toEqual(fromDraft);
   });
+
+  // A valid question per type that lists modes; a new such type needs one here.
+  const MODE_QUESTIONS: Partial<Record<QuestionType, ImportQuestionPreview>> = {
+    sort: q({ type: 'sort', options: ['a', 'b', 'c'], answer: 'c|a|b' }),
+    match: q({
+      type: 'match',
+      options: ['a', 'b'],
+      matchTargets: ['x', 'y'],
+      answer: 'y|x',
+    }),
+  };
+  const typesWithScoringModes = QUESTION_TYPES.filter(
+    (type) => QUESTION_KINDS[type].scoringModes.length > 0,
+  );
+  const modeQuestion = (type: QuestionType): ImportQuestionPreview => {
+    const base = MODE_QUESTIONS[type];
+    if (!base) throw new Error(`Add a MODE_QUESTIONS fixture for ${type}`);
+    return base;
+  };
+
+  it('has a mode fixture for every type that lists modes', () => {
+    for (const type of typesWithScoringModes) modeQuestion(type);
+  });
+
+  it.each(
+    typesWithScoringModes.flatMap((type) =>
+      SCORING_MODES.map((scoringMode) => ({
+        type,
+        scoringMode,
+        listed: (
+          QUESTION_KINDS[type].scoringModes as readonly string[]
+        ).includes(scoringMode),
+      })),
+    ),
+  )(
+    '$type with mode $scoringMode: both paths agree (accepted: $listed)',
+    ({ type, scoringMode, listed }) => {
+      const base = modeQuestion(type);
+      const expected = listed ? 'valid' : 'invalid';
+      const { question: fromSheet } = decodeSheetRow(
+        { ...toSheetRow(base), notes: `{scoring: "${scoringMode}"}` },
+        type,
+      );
+      const imported = checkQuestion(fromSheet);
+      expect(imported.success ? 'valid' : 'invalid').toBe(expected);
+      expect(verdictOf(draftMessages({ ...base, scoringMode }))).toBe(expected);
+    },
+  );
+
+  it('a bad scoring on a type with no scoring modes says the type takes none', () => {
+    const { clipIssues } = decodeSheetRow(
+      {
+        ...toSheetRow(q({ type: 'number', answer: '5' })),
+        notes: '{scoring: "bogus"}',
+      },
+      'number',
+    );
+    expect(clipIssues.map((i) => i.message)).toEqual([
+      'Scoring "scoring" is not used by this question type — remove it',
+    ]);
+  });
+
+  it.each([
+    ['sort', 'one_off, exact, per_item'],
+    ['match', 'per_item, one_off'],
+  ] as const)(
+    'a bad scoring on a %s row names its modes only',
+    (type, modes) => {
+      const { clipIssues } = decodeSheetRow(
+        {
+          ...toSheetRow(modeQuestion(type)),
+          notes: '{scoring: "bogus"}',
+        },
+        type,
+      );
+      expect(clipIssues.map((i) => i.message)).toEqual([
+        `Scoring "scoring" is not a scoring mode — use ${modes}`,
+      ]);
+    },
+  );
 
   it('reports an unknown type as an issue on type instead of throwing', () => {
     const checked = checkQuestion({ type: 'picture' });

@@ -9,7 +9,7 @@
 
 **Blocked by:** 01 (Each type's scoring modes come from one table)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The editor has no scoring-mode label map of its own; its Scoring select shows the same options and labels as before
 - [ ] The guide-content test checks that the scoring line names each mode-carrying type's modes, read from the shared table rather than hard-coded

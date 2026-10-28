@@ -10,7 +10,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The question-kind parity test has a case per type and mode: every mode the table lists for a type is accepted by both the import path and the draft-save path, and every known mode it doesn't list is refused by both
 - [ ] A match row with `{scoring: "bogus"}` reports an issue naming `per_item` and `one_off` only; a sort row names all three

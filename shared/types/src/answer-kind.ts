@@ -3,7 +3,7 @@ import { QUESTION_KINDS, type AnswerInputKind } from './question-kind';
 import type { QuestionType } from './question-types';
 import type { ResolvedAnswerKey } from './answer-key';
 import { isWithinMargin, parseFiniteNumber } from './margin';
-import { ONE_OFF_SCORING, PER_ITEM_SCORING } from './scoring-mode';
+import { SCORING_MODES_BY_TYPE, type ScoringMode } from './scoring-mode';
 import { halfPoints, nearestHalfPoint } from './score-math';
 import { sortSlotMatches, splitPipeList } from './sort-match';
 
@@ -107,41 +107,93 @@ const choiceFormat: AnswerFormat<string> = {
     value === question.answer ? correct(question) : INCORRECT,
 };
 
+/** What a sort scorer sees of an answer that is not fully right. */
+interface SortMiss {
+  keyItems: string[];
+  inPlace: boolean[];
+  wrongSlots: number[];
+  value: string;
+}
+
+type SortMode = (typeof SCORING_MODES_BY_TYPE.sort)[number];
+type MatchMode = (typeof SCORING_MODES_BY_TYPE.match)[number];
+
+/** `mode` if the type accepts it, else the type's default (first) mode, so a stray mode can't miss its scorer. */
+function modeOf<Modes extends readonly ScoringMode[]>(
+  modes: Modes,
+  mode: ScoringMode,
+): Modes[number] {
+  return modes.find((accepted) => accepted === mode) ?? modes[0];
+}
+
+/** One scorer per sort mode; a mode without one (or an extra) is a compile error. */
+const SORT_SCORERS: Record<
+  SortMode,
+  (question: ResolvedAnswerKey, miss: SortMiss) => ScoreResult
+> = {
+  exact: () => INCORRECT,
+  per_item: (question, { keyItems, inPlace }) => {
+    const points = nearestHalfPoint(
+      (question.points * inPlace.filter(Boolean).length) / keyItems.length,
+    );
+    if (points >= question.points) return correct(question);
+    return { points, verdict: points > 0 ? 'partial' : 'incorrect' };
+  },
+  one_off: (question, { keyItems, inPlace, wrongSlots, value }) => {
+    if (inPlace.length !== keyItems.length) return INCORRECT;
+    const [first, second] = wrongSlots;
+    const submitted = splitPipeList(value);
+    return wrongSlots.length === 2 &&
+      submitted[first] === keyItems[second] &&
+      submitted[second] === keyItems[first]
+      ? { points: halfPoints(question.points), verdict: 'partial' }
+      : INCORRECT;
+  },
+};
+
 const sortFormat: AnswerFormat<string[]> = {
   ...pipeListCodec,
   format: (stored) => splitPipeList(stored).join(' → '),
   // Stray whitespace and empty items don't cost a team the question.
   score: (question, value) => {
     const keyItems = splitPipeList(question.answer);
-    const keyLength = keyItems.length;
     const inPlace = sortSlotMatches(value, question.answer);
     const wrongSlots = inPlace.flatMap((isRight, index) =>
       isRight ? [] : [index],
     );
-    if (inPlace.length === keyLength && wrongSlots.length === 0) {
+    if (inPlace.length === keyItems.length && wrongSlots.length === 0) {
       return correct(question);
     }
-    if (question.scoringMode === PER_ITEM_SCORING) {
-      const points = nearestHalfPoint(
-        (question.points * inPlace.filter(Boolean).length) / keyLength,
-      );
-      if (points >= question.points) return correct(question);
-      return { points, verdict: points > 0 ? 'partial' : 'incorrect' };
-    }
-    if (
-      question.scoringMode === ONE_OFF_SCORING &&
-      inPlace.length === keyLength
-    ) {
-      const [first, second] = wrongSlots;
-      const submitted = splitPipeList(value);
-      return wrongSlots.length === 2 &&
-        submitted[first] === keyItems[second] &&
-        submitted[second] === keyItems[first]
-        ? { points: halfPoints(question.points), verdict: 'partial' }
-        : INCORRECT;
-    }
-    return INCORRECT;
+    const mode = modeOf(SCORING_MODES_BY_TYPE.sort, question.scoringMode);
+    return SORT_SCORERS[mode](question, {
+      keyItems,
+      inPlace,
+      wrongSlots,
+      value,
+    });
   },
+};
+
+/** What a match scorer sees of an answer that is not fully right. */
+interface MatchMiss {
+  pairCount: number;
+  correctPairCount: number;
+  wrongPairCount: number;
+}
+
+/** One scorer per match mode; a mode without one (or an extra) is a compile error. */
+const MATCH_SCORERS: Record<
+  MatchMode,
+  (question: ResolvedAnswerKey, miss: MatchMiss) => ScoreResult
+> = {
+  per_item: (question, { pairCount, correctPairCount }) => ({
+    points: nearestHalfPoint((question.points * correctPairCount) / pairCount),
+    verdict: correctPairCount === 0 ? 'incorrect' : 'partial',
+  }),
+  one_off: (question, { wrongPairCount }) =>
+    wrongPairCount === 1
+      ? { points: halfPoints(question.points), verdict: 'partial' }
+      : INCORRECT,
 };
 
 /**
@@ -168,17 +220,12 @@ const matchFormat: AnswerFormat<string[]> = {
     ).length;
     const wrongPairCount = answerPairs.length - correctPairCount;
     if (wrongPairCount === 0) return correct(question);
-    if (question.scoringMode === ONE_OFF_SCORING) {
-      return wrongPairCount === 1
-        ? { points: halfPoints(question.points), verdict: 'partial' }
-        : INCORRECT;
-    }
-    return {
-      points: nearestHalfPoint(
-        (question.points * correctPairCount) / answerPairs.length,
-      ),
-      verdict: correctPairCount === 0 ? 'incorrect' : 'partial',
-    };
+    const mode = modeOf(SCORING_MODES_BY_TYPE.match, question.scoringMode);
+    return MATCH_SCORERS[mode](question, {
+      pairCount: answerPairs.length,
+      correctPairCount,
+      wrongPairCount,
+    });
   },
 };
 

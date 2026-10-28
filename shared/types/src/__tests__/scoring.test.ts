@@ -165,6 +165,12 @@ describe('scoreSubmission — match', () => {
     },
   );
 
+  it('scores a mode the type does not accept (exact) as its default, per_item', () => {
+    expect(
+      scoreSubmission({ ...partial(), scoringMode: 'exact' }, 'a|b|c|x'),
+    ).toEqual({ points: 6, verdict: 'partial' });
+  });
+
   it.each([
     ['a|b|c|d', 8, 'correct'],
     ['a|b|c|x', 4, 'partial'],

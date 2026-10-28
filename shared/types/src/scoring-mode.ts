@@ -21,12 +21,18 @@ export const SCORING_MODES = [
 
 export type ScoringMode = (typeof SCORING_MODES)[number];
 
-/** Match accepts `per_item` (its default) and `one_off`; sort accepts all three (see SORT_SCORING_MODES). */
-export const MATCH_SCORING_MODES = [PER_ITEM_SCORING, ONE_OFF_SCORING] as const;
+/** What the quiz editor calls each mode; Record makes a missing label a compile error. */
+export const SCORING_MODE_LABELS: Record<ScoringMode, string> = {
+  exact: 'Exact order only',
+  per_item: 'Points per item in place',
+  one_off: 'Half points for one mistake',
+};
 
-/** Sort accepts all three; `one_off` is its default, so it comes first. */
-export const SORT_SCORING_MODES = [
-  ONE_OFF_SCORING,
-  EXACT_SCORING,
-  PER_ITEM_SCORING,
-] as const;
+/**
+ * The modes each type accepts, default first. A type with no modes is absent.
+ * Lives here, not in the registry, because the registry imports the schemas.
+ */
+export const SCORING_MODES_BY_TYPE = {
+  sort: [ONE_OFF_SCORING, EXACT_SCORING, PER_ITEM_SCORING],
+  match: [PER_ITEM_SCORING, ONE_OFF_SCORING],
+} as const;

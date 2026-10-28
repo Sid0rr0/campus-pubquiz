@@ -17,11 +17,7 @@ import {
   sortPayloadSchema,
   type QuestionPayload,
 } from './question-payload-schema';
-import {
-  MATCH_SCORING_MODES,
-  SORT_SCORING_MODES,
-  type ScoringMode,
-} from './scoring-mode';
+import { SCORING_MODES_BY_TYPE, type ScoringMode } from './scoring-mode';
 import {
   answerOnlyCsv,
   choicesCsv,
@@ -133,7 +129,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'auto',
     kahootAllowed: true,
     gradingSettings: ['scoringMode'],
-    scoringModes: SORT_SCORING_MODES,
+    scoringModes: SCORING_MODES_BY_TYPE.sort,
   },
   match: {
     type: 'match',
@@ -150,7 +146,7 @@ export const QUESTION_KINDS: {
     gradingMode: 'auto',
     kahootAllowed: true,
     gradingSettings: ['scoringMode'],
-    scoringModes: MATCH_SCORING_MODES,
+    scoringModes: SCORING_MODES_BY_TYPE.match,
   },
   closest_guess: {
     type: 'closest_guess',
