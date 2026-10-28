@@ -37,7 +37,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: null,
       phaseStartedAt: null,
       phaseElapsedByKey: {},
-      openedQuestionIds: null,
+      openedQuestionIds: [],
       revealedKahootQuestionIds: [],
     });
   });
@@ -56,7 +56,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: null,
       phaseStartedAt: null,
       phaseElapsedByKey: {},
-      openedQuestionIds: null,
+      openedQuestionIds: [],
       revealedKahootQuestionIds: [],
     });
 
@@ -87,7 +87,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: null,
       phaseStartedAt: null,
       phaseElapsedByKey: {},
-      openedQuestionIds: null,
+      openedQuestionIds: [],
       revealedKahootQuestionIds: [],
     });
 
@@ -149,6 +149,24 @@ describe('GameProgressRepository (Postgres integration)', () => {
     expect(reloaded?.revealedKahootQuestionIds).toEqual([7, 8]);
   });
 
+  it('loads a row whose opened-questions column is null as an empty list', async () => {
+    await db.orm.em
+      .getConnection()
+      .execute(
+        'UPDATE game_sessions SET opened_question_ids = NULL WHERE id = ?',
+        [sessionId],
+      );
+    const freshRepository = new GameProgressRepository(
+      db.orm.em
+        .fork()
+        .getRepository<GameSession, GameSessionRepository>(GameSession),
+    );
+
+    const saved = await freshRepository.load(sessionId);
+
+    expect(saved?.openedQuestionIds).toEqual([]);
+  });
+
   it('returns null for a session that does not exist', async () => {
     const saved = await repository.load(999_999_999);
     expect(saved).toBeNull();
@@ -169,7 +187,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: 'q:0:1',
       phaseStartedAt: startedAt,
       phaseElapsedByKey: { 'q:0:0': 12_345 },
-      openedQuestionIds: null,
+      openedQuestionIds: [],
       revealedKahootQuestionIds: [],
     });
 
@@ -194,7 +212,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: 'q:0:0',
       phaseStartedAt: Date.now(),
       phaseElapsedByKey: {},
-      openedQuestionIds: null,
+      openedQuestionIds: [],
       revealedKahootQuestionIds: [],
     });
 
@@ -214,7 +232,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: 'q:0:0',
       phaseStartedAt: null,
       phaseElapsedByKey: {},
-      openedQuestionIds: null,
+      openedQuestionIds: [],
       revealedKahootQuestionIds: [],
     });
 

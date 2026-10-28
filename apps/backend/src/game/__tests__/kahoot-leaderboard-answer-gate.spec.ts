@@ -50,6 +50,29 @@ describe('GameGateway — kahoot question hidden behind the leaderboard', () => 
     expect(await storedAnswers()).toEqual([]);
   });
 
+  it('still refuses an answer to a revealed kahoot question after a restart and a step back onto it', async () => {
+    const restarted = await game.restart();
+    await restarted.act('TOGGLE_LEADERBOARD');
+    await restarted.act('PREVIOUS'); // -> reveal q0
+    const back = await restarted.act('PREVIOUS'); // -> locking q0
+    expect(back.progress).toMatchObject({
+      status: 'locking',
+      questionIndex: 0,
+    });
+    const [{ socket, teamId }] = game.teams;
+
+    const result = await restarted.gateway.handleSubmitAnswer(
+      asSocket(socket),
+      {
+        questionId: game.rounds[0].questionIds[0],
+        teamId,
+        value: 'Jupiter',
+      },
+    );
+
+    expect(result).toMatchObject({ success: false });
+  });
+
   it('accepts SUBMIT_ANSWER for that question once TOGGLE_LEADERBOARD reveals it', async () => {
     await game.act('TOGGLE_LEADERBOARD');
 
