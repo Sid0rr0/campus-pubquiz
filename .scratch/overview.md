@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| team-seat-check | [One team-seat check for every team event](team-seat-check/spec.md) | 2 | none |
 | control-on-air-panel | [Control: question detail column and on-air cards](control-on-air-panel/spec.md) | 5 | — |
 
 ## Won't do

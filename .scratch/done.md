@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| team-seat-check | [One team-seat check for every team event](team-seat-check/spec.md) | 2 |
 | opened-question-fields | [The quiz editor and the live-edit guard share one opened-question rule](opened-question-fields/spec.md) | 2 |
 | saved-progress-restore | [Saved progress is one shape from save to restore](saved-progress-restore/spec.md) | 2 |
 | scoring-mode-registry | [The question type registry owns each type's scoring modes](scoring-mode-registry/spec.md) | 3 |
