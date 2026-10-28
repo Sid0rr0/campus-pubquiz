@@ -11,6 +11,7 @@
 - main:
   - complementary:
     - heading "Quiz Master" [level=1]
+    - text: /\d+:\d{2}/
     - paragraph: /Quiz:\s+Quiz night [0-9a-f]{6} [A-Z]+(-[A-Z]+){2}/
     - paragraph: "Status: break_intro"
     - paragraph: /Display:\s+R2Q1 \(B\)/
@@ -37,24 +38,18 @@
   - heading "Grade Questions" [level=2]
   - img "Round 1"
   - navigation "Warm-up questions":
-    - img "Warm-up title card": T
-    - button "Grade question 1 of Warm-up (not yet graded)" [pressed]
+    - button "Show title card of Warm-up": T
+    - button "Grade question 1 of Warm-up (not yet graded)"
     - button "Grade question 2 of Warm-up"
+  - paragraph: Warm-up
   - img "Round 2"
   - navigation "Name that tune questions":
-    - img "Name that tune title card": T
+    - button "Show title card of Name that tune": T
     - button "Grade question 1 of Name that tune"
-    - img "Name that tune break card (live on display)": B
-  - paragraph: Round 1 (Warm-up) — Q1 of 2
-  - heading "What is the capital of France?" [level=2]
-  - paragraph: "Correct answer: Paris 2/2 answered 1 correct"
-  - list:
-    - listitem:
-      - text: /Team B [0-9a-f]{6} Marseille/
-      - button /Grade Team B [0-9a-f]{6} half points/: Half (1)
-    - listitem:
-      - text: /Team A [0-9a-f]{6} Paris/
-      - button /Grade Team A [0-9a-f]{6} full points/: ✓ Full (2)
+    - button "Show break after Name that tune (live on display)" [pressed]: B
+  - paragraph: Name that tune
+  - region "Break card":
+    - heading "Break 1 (final)" [level=2]
   - heading "Teams" [level=2]
   - table:
     - rowgroup:

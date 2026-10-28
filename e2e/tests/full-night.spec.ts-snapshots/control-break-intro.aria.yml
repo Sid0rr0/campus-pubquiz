@@ -39,7 +39,7 @@
   - navigation "Name that tune questions":
     - button /Grade question 1 of Name that tune/
     - button /Grade question 2 of Name that tune/
-    - img /Name that tune break card \(live on display\)/: B
+    - button /Show break after Name that tune \(live on display\)/: B
   - navigation "Look closer questions":
     - button /Grade question 1 of Look closer/
     - button /Grade question 2 of Look closer/

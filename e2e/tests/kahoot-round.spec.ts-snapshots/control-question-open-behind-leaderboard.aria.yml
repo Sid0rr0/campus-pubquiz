@@ -34,12 +34,16 @@
   - heading "Grade Questions" [level=2]
   - img "Round 1"
   - navigation "Quick fire questions":
-    - img "Quick fire title card": T
+    - button "Show title card of Quick fire": T
     - button "Grade question 1 of Quick fire"
     - button "Grade question 2 of Quick fire (live on display)" [pressed]
-  - paragraph: Round 1 (Quick fire) — Q2 of 2
-  - heading "Which ocean is the largest?" [level=2]
-  - paragraph: "Correct answer: Pacific 0/2 answered 0 correct"
+    - button "Show break after Quick fire": B
+  - paragraph: Quick fire
+  - region "Question detail":
+    - paragraph: Round 1 (Quick fire) — Q2 of 2
+    - heading "Which ocean is the largest?" [level=2]
+    - paragraph: "Correct answer: Pacific"
+  - paragraph: 0/2 answered 0 correct
   - heading "Teams" [level=2]
   - table:
     - rowgroup:

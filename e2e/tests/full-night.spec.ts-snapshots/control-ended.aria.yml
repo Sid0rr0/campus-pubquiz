@@ -34,7 +34,9 @@
   - navigation "Quick fire questions":
     - button /Grade question 1 of Quick fire/
     - button /Grade question 2 of Quick fire/
-  - heading "How many players does a football team field?" [level=2]
+    - button "Show break after Quick fire": B
+  - region "Question detail":
+    - heading "How many players does a football team field?" [level=2]
   - heading "Teams" [level=2]
   - table:
     - rowgroup:
