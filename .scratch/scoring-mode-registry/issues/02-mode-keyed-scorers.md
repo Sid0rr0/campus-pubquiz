@@ -10,7 +10,7 @@
 
 **Blocked by:** 01 (Each type's scoring modes come from one table)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The existing scoring and answer-kind tests for every sort and match mode pass unchanged
 - [ ] One case each: a sort question with the mode unset scores as `one_off`, and a match question with the mode unset scores as `per_item`
