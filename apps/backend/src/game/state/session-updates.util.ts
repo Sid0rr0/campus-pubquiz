@@ -84,13 +84,15 @@ export function requireSeat(
   refusal: string,
   claimedTeamId?: number,
 ): number {
-  const teamId = seatOfSocket(session, socketId);
-  if (
-    teamId === null ||
-    (claimedTeamId !== undefined && teamId !== claimedTeamId)
-  ) {
-    throw new SessionRefusal(refusal);
-  }
+  // Compare the claimed seat directly: a socket can hold two seats, and the
+  // first one `seatOfSocket` finds may not be the claimed team's.
+  const teamId =
+    claimedTeamId === undefined
+      ? seatOfSocket(session, socketId)
+      : session.connectedTeamSockets[claimedTeamId] === socketId
+        ? claimedTeamId
+        : null;
+  if (teamId === null) throw new SessionRefusal(refusal);
   return teamId;
 }
 
