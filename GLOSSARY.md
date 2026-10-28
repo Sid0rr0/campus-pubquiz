@@ -110,7 +110,7 @@ An answer still waiting for the quiz master to grade it, and a question with at 
 The pause after a block locks, in which the quiz master finishes any grading still open. The quiz cannot leave the break while an answer is ungraded.
 
 **Fun fact**:
-A line of trivia about the session so far, shown on the big screen during a break. It is drawn only from blocks already revealed, or from figures that give no answer away, so it never hints at the block in play. It appears about a minute into the break, and the quiz master can switch all fun facts off for a session.
+A line of trivia about the session so far, shown on the big screen during a break. It is drawn only from blocks already revealed, or from figures that give no answer away, so it never hints at the block in play. It appears about 30 seconds into the break, and the quiz master can switch all fun facts off for a session.
 _Avoid_: stat, highlight (that's a stats-page tile)
 
 **Break review**:

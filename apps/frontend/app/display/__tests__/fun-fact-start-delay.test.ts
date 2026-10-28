@@ -13,10 +13,10 @@ describe('FUN_FACT_START_DELAY_MS', () => {
     vi.unstubAllEnvs();
   });
 
-  it('waits a minute when no build override is set', async () => {
+  it('waits 30 seconds when no build override is set', async () => {
     vi.stubEnv(ENV_NAME, '');
 
-    expect(await loadStartDelay()).toBe(60_000);
+    expect(await loadStartDelay()).toBe(30_000);
   });
 
   it('uses a positive whole-number build override', async () => {
@@ -30,7 +30,7 @@ describe('FUN_FACT_START_DELAY_MS', () => {
     async (value) => {
       vi.stubEnv(ENV_NAME, value);
 
-      expect(await loadStartDelay()).toBe(60_000);
+      expect(await loadStartDelay()).toBe(30_000);
     },
   );
 });

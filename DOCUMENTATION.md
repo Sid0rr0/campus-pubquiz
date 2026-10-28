@@ -747,11 +747,13 @@ reduced motion drops the spin and scale), and on `break_round_intro` and
 
 `/display` (`BreakIntroScreen`, via `FunFactRotator`) first shows the break card
 as it was before fun facts; the first fact appears `FUN_FACT_START_DELAY_MS`
-(60 s) after the rotator mounts, then it shows one fact at a time under the
+(30 s) after the rotator mounts, then it shows one fact at a time under the
 BREAK heading and moves to the next every `FUN_FACT_ROTATE_MS` (8 s), fading in
 unless the viewer prefers reduced motion. The wait is a client-side timer from
 mount, so reloading `/display` during a break restarts it. A single fact stays
-put; an empty list draws nothing, leaving the break card as before.
+put; an empty list draws nothing, leaving the break card as before. The bonus
+list sits in its own column on the right, so a long fact grows the main column
+and never pushes the bonuses off screen.
 
 **The phone's verdict card.** When the big screen lands on a revealed question
 (a live forward move: not on connect or reconnect, not on Previous), every

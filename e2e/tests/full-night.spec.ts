@@ -25,7 +25,7 @@ const TEAM_B_AFTER_BLOCK_TWO = TEAM_B_AFTER_BLOCK_ONE;
 const TEAM_A_FINAL = TEAM_A_AFTER_BLOCK_TWO + quickFire.badminton.points;
 const TEAM_B_FINAL = TEAM_B_AFTER_BLOCK_TWO + quickFire.football.points;
 
-/** The E2E build shortens the break screen's wait for its first fun fact (see `FUN_FACT_START_DELAY_MS` in `support/env.ts`); clocks are never faked. A reused build from before that change still waits a minute and fails here: rebuild. */
+/** The E2E build shortens the break screen's wait for its first fun fact (see `FUN_FACT_START_DELAY_MS` in `support/env.ts`); clocks are never faked. A reused build from before that change still waits 30 seconds and fails here: rebuild. */
 const FUN_FACT_WAIT_MS = 15_000;
 const NIGHT_TIMEOUT_MS = 360_000;
 
