@@ -21,6 +21,15 @@ import { DesktopSidebar } from '@/app/control/desktop-sidebar';
 import { AnswersPanel } from '@/app/control/answers-panel';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
 import { QuestionDetail } from '@/app/control/question-detail';
+import {
+  RoundCardDetail,
+  titleCardKindLabel,
+} from '@/app/control/round-card-detail';
+import {
+  isSameItem,
+  onAirItem,
+  type DetailItem,
+} from '@/app/control/detail-item';
 import { MobileAdminBar } from '@/app/control/mobile-admin-bar';
 import { SessionSettingsPanel } from '@/app/control/session-settings-panel';
 import type { ControlPanel } from '@/app/control/control-panel';
@@ -35,9 +44,7 @@ const NO_INDICATORS: AdminIndicators = {
 
 function AdminPageContent() {
   const router = useRouter();
-  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(
-    null,
-  );
+  const [selectedItem, setSelectedItem] = useState<DetailItem | null>(null);
   const queryClient = useQueryClient();
 
   const {
@@ -99,29 +106,34 @@ function AdminPageContent() {
     useState(connectedJoinCode);
   if (connectedJoinCode !== prevConnectedJoinCode) {
     setPrevConnectedJoinCode(connectedJoinCode);
-    setSelectedQuestionId(null);
+    setSelectedItem(null);
   }
 
   // What the big screen is showing was resolved by the server (the admin
   // view): the question on display, the round whose title card is up, and
   // the round whose break indicator is lit.
   const indicators = snapshot ?? NO_INDICATORS;
-  const displayQuestionId = indicators.onDisplayQuestionId;
-  // Grading defaults to whatever's on display, but a manual pick from the
-  // browser sticks — until Prev/Advance brings the displayed question back
-  // around to match it, at which point the sync check below drops the
-  // override so the two keep moving together again instead of the pick
-  // going stale. Outside display statuses, grading still needs *something*
-  // to default to, so it falls back to the block's first question —
-  // naturally null wherever blockQuestions is empty (e.g. round_intro).
+  const onAir = onAirItem(indicators);
+  // The detail column shows whatever's on air, but a manual pick from the
+  // browser sticks — until Prev/Advance brings the big screen onto the picked
+  // item, at which point the sync check below drops the override so the two
+  // keep moving together again instead of the pick going stale. With nothing
+  // on air, it falls back to the block's first question — naturally null
+  // wherever blockQuestions is empty (e.g. round_intro).
   const defaultBlockQuestionId = snapshot?.blockQuestions[0]?.id ?? null;
-  // Adjusted during render rather than in an Effect — once selectedQuestionId
+  // Adjusted during render rather than in an Effect — once selectedItem
   // is nulled, this condition is false on the next render, so it can't loop.
-  if (selectedQuestionId !== null && selectedQuestionId === displayQuestionId) {
-    setSelectedQuestionId(null);
+  if (isSameItem(selectedItem, onAir)) {
+    setSelectedItem(null);
   }
+  const effectiveItem: DetailItem | null =
+    selectedItem ??
+    onAir ??
+    (defaultBlockQuestionId !== null
+      ? { kind: 'question', questionId: defaultBlockQuestionId }
+      : null);
   const effectiveQuestionId =
-    selectedQuestionId ?? displayQuestionId ?? defaultBlockQuestionId;
+    effectiveItem?.kind === 'question' ? effectiveItem.questionId : null;
 
   const answersJoinCode = snapshot?.joinCode;
   const answersQuery = useQuery({
@@ -292,19 +304,31 @@ function AdminPageContent() {
                   rounds={activeQuizRounds}
                   currentRoundIndex={progress.roundIndex}
                   activeBlockStartIndex={activeBlockStartIndex}
-                  selectedQuestionId={effectiveQuestionId}
+                  selected={effectiveItem}
                   indicators={indicators}
-                  onSelectQuestion={setSelectedQuestionId}
+                  onSelect={setSelectedItem}
                   ungradedQuestionIds={ungradedQuestionIds}
                 />
               </div>
               <div className="md:min-w-0 md:flex-1">
-                <QuestionDetail
-                  questionId={effectiveQuestionId}
-                  rounds={activeQuizRounds}
-                  liveAnswers={liveAnswers}
-                  fallbackQuestions={fallbackQuestions}
-                />
+                {effectiveItem && effectiveItem.kind !== 'question' ? (
+                  <RoundCardDetail
+                    item={effectiveItem}
+                    rounds={activeQuizRounds}
+                    kindLabel={
+                      selectedItem === null
+                        ? titleCardKindLabel(progress.status)
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <QuestionDetail
+                    questionId={effectiveQuestionId}
+                    rounds={activeQuizRounds}
+                    liveAnswers={liveAnswers}
+                    fallbackQuestions={fallbackQuestions}
+                  />
+                )}
               </div>
             </div>
             {liveAnswers && liveAnswers.questionId === effectiveQuestionId && (

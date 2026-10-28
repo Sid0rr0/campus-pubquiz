@@ -2,6 +2,7 @@
 
 import type { AdminIndicators, QuizSummaryRound } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { isSameItem, type DetailItem } from '@/app/control/detail-item';
 
 interface QuestionBrowserPanelProps {
   rounds: QuizSummaryRound[];
@@ -9,10 +10,11 @@ interface QuestionBrowserPanelProps {
   currentRoundIndex: number;
   /** First round of the block currently in play — rounds before it are already locked and graded. */
   activeBlockStartIndex: number;
-  selectedQuestionId: number | null;
+  /** The item the detail column shows. */
+  selected: DetailItem | null;
   /** What the admin view marks as on air: the question, title card and break indicator. */
   indicators: AdminIndicators;
-  onSelectQuestion: (questionId: number) => void;
+  onSelect: (item: DetailItem) => void;
   /** IDs of current-block questions still missing a grade — drives the "not yet graded" dot. */
   ungradedQuestionIds: number[];
 }
@@ -37,15 +39,19 @@ function questionButtonClasses(
   return `flex items-center justify-center rounded-md bg-white font-extrabold ${idle} ${size} ${displayRing}`;
 }
 
-/** Non-interactive marker for a title/break card — there's no question behind it to select for grading. */
+/** Marker button for a title/break card; selecting it shows the card in the detail column. */
 function displayMarkerClasses(
   isOnDisplay: boolean,
   isCompact: boolean,
+  isSelected: boolean,
 ): string {
   const size = isCompact ? 'h-6 min-w-6 text-[10px]' : 'h-8 min-w-8 text-xs';
   const displayRing = isOnDisplay
     ? 'ring-2 ring-green-500 ring-offset-1 ring-offset-background'
     : '';
+  if (isSelected) {
+    return `flex items-center justify-center rounded-full border-2 border-magenta bg-white font-extrabold text-magenta ${size} ${displayRing}`;
+  }
   const idle = isCompact
     ? 'border border-dashed border-foreground/20 text-foreground/40'
     : 'border-2 border-dashed border-foreground/30 text-foreground/60';
@@ -56,9 +62,9 @@ export function QuestionBrowserPanel({
   rounds,
   currentRoundIndex,
   activeBlockStartIndex,
-  selectedQuestionId,
+  selected,
   indicators,
-  onSelectQuestion,
+  onSelect,
   ungradedQuestionIds,
 }: QuestionBrowserPanelProps) {
   if (rounds.length === 0) {
@@ -77,6 +83,8 @@ export function QuestionBrowserPanel({
             const isTitleOnDisplay =
               roundIndex === indicators.titleCardRoundIndex;
             const isBreakOnDisplay = roundIndex === indicators.breakRoundIndex;
+            const titleItem: DetailItem = { kind: 'title', roundIndex };
+            const breakItem: DetailItem = { kind: 'break', roundIndex };
             return (
               <div
                 key={`${round.title}-${roundIndex}`}
@@ -90,18 +98,23 @@ export function QuestionBrowserPanel({
                     aria-label={`${round.title} questions`}
                     className="flex flex-wrap items-center gap-1"
                   >
-                    <span
-                      role="img"
-                      title={`${round.title} title card${isTitleOnDisplay ? ' (live on display)' : ''}`}
+                    <Button
+                      type="button"
+                      aria-label={`Show title card of ${round.title}${isTitleOnDisplay ? ' (live on display)' : ''}`}
+                      aria-pressed={isSameItem(selected, titleItem)}
+                      onClick={() => onSelect(titleItem)}
                       className={displayMarkerClasses(
                         isTitleOnDisplay,
                         !isActiveRound,
+                        isSameItem(selected, titleItem),
                       )}
                     >
                       T
-                    </span>
+                    </Button>
                     {round.questions.map((question, questionIndex) => {
-                      const isSelected = question.id === selectedQuestionId;
+                      const isSelected =
+                        selected?.kind === 'question' &&
+                        question.id === selected.questionId;
                       const isOnDisplay =
                         question.id === indicators.onDisplayQuestionId;
                       const isUngraded = ungradedQuestionIds.includes(
@@ -117,7 +130,12 @@ export function QuestionBrowserPanel({
                             type="button"
                             aria-label={label}
                             aria-pressed={isSelected}
-                            onClick={() => onSelectQuestion(question.id)}
+                            onClick={() =>
+                              onSelect({
+                                kind: 'question',
+                                questionId: question.id,
+                              })
+                            }
                             className={questionButtonClasses(
                               isSelected,
                               isOnDisplay,
@@ -136,17 +154,20 @@ export function QuestionBrowserPanel({
                         </span>
                       );
                     })}
-                    {round.breakAfter && (
-                      <span
-                        role="img"
-                        title={`${round.title} break card${isBreakOnDisplay ? ' (live on display)' : ''}`}
+                    {round.breakNumber !== undefined && (
+                      <Button
+                        type="button"
+                        aria-label={`Show break after ${round.title}${isBreakOnDisplay ? ' (live on display)' : ''}`}
+                        aria-pressed={isSameItem(selected, breakItem)}
+                        onClick={() => onSelect(breakItem)}
                         className={displayMarkerClasses(
                           isBreakOnDisplay,
                           !isActiveRound,
+                          isSameItem(selected, breakItem),
                         )}
                       >
                         B
-                      </span>
+                      </Button>
                     )}
                   </nav>
 
@@ -159,14 +180,6 @@ export function QuestionBrowserPanel({
                   >
                     {round.title}
                   </p>
-                  {round.note && (
-                    <p className="flex items-baseline gap-1 text-xs whitespace-pre-line text-foreground/60">
-                      <span className="text-[10px] font-extrabold tracking-wide text-foreground/40 uppercase">
-                        Round note
-                      </span>
-                      {round.note}
-                    </p>
-                  )}
                 </div>
               </div>
             );
