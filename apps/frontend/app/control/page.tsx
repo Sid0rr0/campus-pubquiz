@@ -19,7 +19,6 @@ import { useToastOnError } from '@/app/lib/use-toast-on-error';
 import { TeamsTable } from '@/app/control/teams-table';
 import { DesktopSidebar } from '@/app/control/desktop-sidebar';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
-import { PhaseTimer } from '@/app/control/phase-timer';
 import { MobileAdminBar } from '@/app/control/mobile-admin-bar';
 import { SessionSettingsPanel } from '@/app/control/session-settings-panel';
 import type { ControlPanel } from '@/app/control/control-panel';
@@ -249,8 +248,6 @@ function AdminPageContent() {
     roundTitles,
     teams,
     ungradedQuestionIds,
-    phaseStartedAt,
-    phaseElapsedMs,
     settings,
   } = snapshot;
   const fallbackQuestions = currentQuestion
@@ -303,10 +300,6 @@ function AdminPageContent() {
                   ungradedQuestionIds={ungradedQuestionIds}
                 />
               </div>
-              <PhaseTimer
-                phaseStartedAt={phaseStartedAt}
-                phaseElapsedMs={phaseElapsedMs}
-              />
             </div>
             <section className="flex flex-col gap-3">
               <h2 className="font-display text-xl">Teams</h2>
