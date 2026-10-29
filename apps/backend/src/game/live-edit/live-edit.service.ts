@@ -23,11 +23,13 @@ import type { SessionOutcome } from '@/game/state/session-outcome';
 import { SessionWrite, type HeldWriter } from '@/game/state/session-write';
 import {
   findDroppedAnsweredQuestions,
+  findForeignQuestionIds,
   findLiveEditViolations,
   findRegradeQuestionIds,
   QuizLiveEditBlockedError,
 } from '@/quiz/live-edit-guard';
 import {
+  QuizDraftInvalidError,
   QuizNotFoundError,
   QuizService,
   QuizStaleSaveError,
@@ -167,6 +169,8 @@ export class LiveEditService {
           const rounds = strategy
             ? strategy.identifyQuestions(currentDraft.rounds, requestedRounds)
             : requestedRounds;
+          const foreign = findForeignQuestionIds(currentDraft.rounds, rounds);
+          if (foreign.length > 0) throw new QuizDraftInvalidError(foreign);
           const droppedAnswered = findDroppedAnsweredQuestions(
             currentDraft.rounds,
             rounds,

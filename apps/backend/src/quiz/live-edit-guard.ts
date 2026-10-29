@@ -123,6 +123,42 @@ function findRoundQuestionViolations(
   return issues;
 }
 
+const FOREIGN_QUESTION_MESSAGE =
+  'This question does not belong to this quiz — reload the editor and try again.';
+
+/**
+ * Issues for incoming questions that name a stored question id the quiz does
+ * not hold. An id keys the save's upsert, so one from another quiz would move
+ * that question, and the answers of every session played on it, into this one.
+ * `current` is the quiz as stored.
+ */
+export function findForeignQuestionIds(
+  current: readonly ImportRoundPreview[],
+  incoming: readonly ImportRoundPreview[],
+): QuizDraftIssue[] {
+  const ownIds = new Set(
+    current.flatMap((round) =>
+      round.questions.flatMap(({ questionId }) =>
+        questionId === undefined ? [] : [questionId],
+      ),
+    ),
+  );
+  return incoming.flatMap((round, roundIndex) =>
+    round.questions.flatMap(({ questionId }, questionIndex) =>
+      questionId !== undefined && !ownIds.has(questionId)
+        ? [
+            {
+              roundIndex,
+              questionIndex,
+              field: 'questionId',
+              message: FOREIGN_QUESTION_MESSAGE,
+            },
+          ]
+        : [],
+    ),
+  );
+}
+
 const DROPPED_ANSWERED_MESSAGE =
   'Cannot delete a question teams have already answered in a played session — it would delete those answers and change past scores. Start a new quiz instead.';
 
