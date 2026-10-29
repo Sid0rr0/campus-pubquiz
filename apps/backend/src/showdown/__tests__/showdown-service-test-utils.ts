@@ -37,7 +37,10 @@ export function setupShowdownServiceTest(): ShowdownServiceTestContext {
   const state = {} as ShowdownServiceTestState;
 
   beforeEach(async () => {
-    state.em = db.orm.em.fork();
+    // useContext, like the request-scoped EntityManager the services get in
+    // production: a plain fork ignores a transaction opened with `transactional`,
+    // which would let a test pass without the services' transactions working.
+    state.em = db.orm.em.fork({ useContext: true });
     state.bonusService = new BonusService(
       state.em.getRepository<BonusAward, BonusAwardRepository>(BonusAward),
       state.em.getRepository<GameSessionTeam, GameSessionTeamRepository>(

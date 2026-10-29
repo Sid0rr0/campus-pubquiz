@@ -151,6 +151,16 @@ export class ShowdownService {
    * the minimum sets isTie instead, awarding nothing (sudden death).
    */
   async resolve(roundId: number): Promise<ShowdownResolution> {
+    // One transaction: marking the round resolved and awarding the winner's
+    // bonus stand or fall together. Resolved on its own, a refused bonus (the
+    // winner left the roster) would leave a winner on screen with no points,
+    // and the idempotency guard below would stop any retry from awarding them.
+    return this.showdownRounds
+      .getEntityManager()
+      .transactional(() => this.resolveWithin(roundId));
+  }
+
+  private async resolveWithin(roundId: number): Promise<ShowdownResolution> {
     const round = await this.showdownRounds.findOneOrFail(roundId, {
       populate: ['winnerTeam'],
     });

@@ -1,3 +1,5 @@
+import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { InvalidBonusAwardError } from '@/bonus/bonus.service';
 import { InvalidShowdownError } from '@/showdown/showdown.service';
 import { setupShowdownServiceTest } from '@/showdown/__tests__/showdown-service-test-utils';
 
@@ -186,6 +188,49 @@ describe('ShowdownService (Postgres integration)', () => {
       teamA.id,
     );
     expect(awards).toHaveLength(1);
+  });
+
+  it('a resolve whose bonus is refused leaves the round open, so a retry still awards the winner', async () => {
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+    const round = await state.showdownService.createRound(
+      state.session.id,
+      [
+        { teamId: teamA.id, teamName: 'Team A' },
+        { teamId: teamB.id, teamName: 'Team B' },
+      ],
+      'How many?',
+      '1000',
+      7,
+    );
+    await state.showdownService.submitGuess(round.id, teamA.id, '990');
+    await state.showdownService.submitGuess(round.id, teamB.id, '1200');
+    // The closest team leaves the roster before the reveal, so its bonus is refused.
+    await state.em.nativeDelete(GameSessionTeam, {
+      gameSession: state.session.id,
+      team: teamA.id,
+    });
+    state.em.clear();
+
+    await expect(state.showdownService.resolve(round.id)).rejects.toThrow(
+      InvalidBonusAwardError,
+    );
+
+    const now = new Date();
+    await state.em.insert(GameSessionTeam, {
+      gameSession: state.session.id,
+      team: teamA.id,
+      createdAt: now,
+      updatedAt: now,
+    });
+    state.em.clear();
+    await expect(state.showdownService.resolve(round.id)).resolves.toEqual({
+      winnerTeamId: teamA.id,
+      isTie: false,
+    });
+    expect(
+      await state.bonusService.listForTeam(state.session.id, teamA.id),
+    ).toHaveLength(1);
   });
 
   it('two or more teams tied for closest resolves as a tie, awarding nothing', async () => {
