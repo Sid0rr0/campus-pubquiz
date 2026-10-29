@@ -66,3 +66,4 @@ apps/graphify-out/
 # Impeccable design sketches and review screenshots
 .impeccable/mocks/
 .impeccable/review/
+.impeccable/config.json
