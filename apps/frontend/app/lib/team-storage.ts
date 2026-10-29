@@ -32,3 +32,18 @@ export function clearStoredSession(clearAll: boolean = false): void {
     window.localStorage.removeItem(TEAM_CODE_STORAGE_KEY);
   }
 }
+
+/** Remembers the team code typed on /team. A different code than the stored one means a different team, so the stored name goes too: the join form must not pair one team's name with another's code. */
+export function saveTeamCode(code: string): void {
+  const stored = window.localStorage.getItem(TEAM_CODE_STORAGE_KEY);
+  if (stored?.toLowerCase() !== code.toLowerCase()) {
+    window.localStorage.removeItem(TEAM_NAME_STORAGE_KEY);
+  }
+  window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, code);
+}
+
+/** Forgets the saved team (code and name) but keeps any live game link, so a phone mid-game still plays on. */
+export function forgetSavedTeam(): void {
+  window.localStorage.removeItem(TEAM_CODE_STORAGE_KEY);
+  window.localStorage.removeItem(TEAM_NAME_STORAGE_KEY);
+}

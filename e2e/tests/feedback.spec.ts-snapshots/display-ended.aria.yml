@@ -3,8 +3,8 @@
   - link "Campus Pub Quiz":
     - /url: /
   - list "Podium":
-    - listitem: /Team [AB] [0-9a-f]{6} 0 pts\s+1\.–2\./
-    - listitem: /Team [AB] [0-9a-f]{6} 0 pts\s+1\.–2\./
+    - listitem: /Team B [0-9a-f]{6} 0 pts\s+2\./
+    - listitem: /Team A [0-9a-f]{6} 2 pts\s+1\./
   - heading "Quiz complete!" [level=1]
   - paragraph: Thank you for playing today's pub quiz! Tell us how it went on your phone ★ See you next week!
 - region "Notifications alt+T"

@@ -26,6 +26,20 @@ export function LeagueLink({ onClick }: { onClick?: () => void }) {
   );
 }
 
+/** The public team page link: in the nav for everyone, beside League; the page asks for the team code when this device has none saved. */
+export function MyTeamLink({ onClick }: { onClick?: () => void }) {
+  return (
+    <Link
+      href="/team"
+      onClick={onClick}
+      className="flex items-center gap-1 underline"
+    >
+      <PersonIcon aria-hidden="true" />
+      My Team
+    </Link>
+  );
+}
+
 interface AccountMenuLinksProps {
   user: AuthUser;
   onLogout: () => void;
@@ -56,6 +70,8 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
       </Link>
 
       <LeagueLink />
+
+      <MyTeamLink />
 
       {user.role === 'admin' && (
         <Link href="/leagues" className="flex items-center gap-1 underline">

@@ -384,9 +384,10 @@ async function endTheNight(night: Night): Promise<void> {
   await openTeamPageFromPhone(phoneA);
 }
 
-/** The ended screen's "Our team page" link opens /team with the phone's stored code, showing the night just played and, opened, the team's own answers beside the right ones. */
+/** The ended screen's "My Team" link opens /team with the phone's stored code, showing the night just played and, opened, the team's own answers beside the right ones. */
 async function openTeamPageFromPhone(phone: PhoneScreen): Promise<void> {
-  await phone.page.getByRole('link', { name: 'Our team page' }).click();
+  // The header's own "My Team" link comes first in the page; the ended screen's is last.
+  await phone.page.getByRole('link', { name: 'My Team' }).last().click();
   await expect(phone.page).toHaveURL(/\/team$/);
   await expect(
     phone.page.getByRole('heading', { name: phone.teamName, level: 1 }),

@@ -33,8 +33,8 @@
         - text: Saved ✓
   - paragraph: Warm-up
   - navigation "Round 1 questions":
-    - button "Question 1"
-    - button "Question 2"
+    - button "Question 1 (answered)": "1"
+    - button "Question 2": "2"
   - paragraph: Name that tune
   - navigation "Round 2 questions":
     - button "Question 1"

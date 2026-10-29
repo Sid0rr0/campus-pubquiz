@@ -284,45 +284,18 @@ describe('SiteHeader', () => {
     expect(onLogOut).toHaveBeenCalled();
   });
 
-  it('links to the team page from the mobile hamburger once the team has a code, and none before', async () => {
-    pathnameRef.current = '/play';
-    mockUsePlayerMenu.mockReturnValue(playerMenu({ team: null }));
-    const { unmount } = render(<SiteHeader />);
-    await userEvent
-      .setup()
-      .click(screen.getByRole('button', { name: /open menu/i }));
-    expect(
-      within(screen.getByRole('dialog')).queryByRole('link', {
-        name: /our team page/i,
-      }),
-    ).not.toBeInTheDocument();
-    unmount();
-
-    mockUsePlayerMenu.mockReturnValue(
-      playerMenu({
-        team: {
-          teamId: 1,
-          teamToken: 'token-1',
-          teamCode: 'QUICK-JADE-FOX',
-          teamName: 'The Quizzards',
-          answers: [],
-          bonusAwards: [],
-          roundRatings: [],
-          feedback: { comment: '', topics: [] },
-          sessionRatings: { pacing: null, feltDifficulty: null },
-          playerCount: null,
-          joker: null,
-        },
-      }),
-    );
+  it('links My Team for everyone, from the nav and the mobile hamburger', async () => {
+    const user = userEvent.setup();
     render(<SiteHeader />);
-    await userEvent
-      .setup()
-      .click(screen.getByRole('button', { name: /open menu/i }));
 
+    expect(screen.getByRole('link', { name: /^my team$/i })).toHaveAttribute(
+      'href',
+      '/team',
+    );
+    await user.click(screen.getByRole('button', { name: /open menu/i }));
     expect(
       within(screen.getByRole('dialog')).getByRole('link', {
-        name: /our team page/i,
+        name: /^my team$/i,
       }),
     ).toHaveAttribute('href', '/team');
   });

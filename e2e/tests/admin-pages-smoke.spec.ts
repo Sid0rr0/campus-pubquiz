@@ -10,10 +10,12 @@ test('after a short played session, /sessions, /stats and /teams show its data',
   joinPhone,
   session,
 }) => {
-  // 1. A short session: two teams, one question, Team A answers the key, then the quiz master ends it.
+  // 1. A short session: two teams, one question, Team A answers the key and Team B answers wrong (a team that never answers doesn't count), then the quiz master ends it.
   const { phoneA, phoneB } = await startWithTwoTeams(control, joinPhone);
   await phoneA.submitText(freeText.key);
+  await phoneB.submitText('Lyon');
   await control.expectTeamAnswered(phoneA.teamName);
+  await control.expectTeamAnswered(phoneB.teamName);
   await endQuiz(control);
   const page = control.page;
 

@@ -2093,14 +2093,19 @@ when there are none. The page lists them under "Leagues" as "3rd of 18 · 14 pts
   `ThrottlerGuard` (5 requests per minute per client IP) so team codes can't be
   guessed. The limit is per IP only, with no per-code or per-team counter, so
   phones behind one venue NAT share it; that is accepted at this scale.
-- On a phone that stores a team code (`team-storage.ts`) the page opens directly;
-  otherwise it shows a code form. A typed code is kept in memory only and is not
-  saved.
-- **Links from the phone:** the `ended` phone screen shows an "Our team page"
-  link under the final placing, and the player menu (the hamburger drawer on
-  `/play`) shows one once the team has a team code. Both are plain `/team` links
-  with no code in the URL, and are hidden on a phone with no stored team code
-  (the ended screen reads `team-storage.ts`; the menu needs the joined team).
+- On a device that stores a team code (`team-storage.ts`) the page opens
+  directly; otherwise it shows a code form. A typed code is saved under the same
+  key `/play` uses once the server accepts it, so a laptop or a second phone
+  stays signed in; when it differs from the stored code the stored team name is
+  cleared too, so the join form never pairs one team's name with another's code.
+  "Not your team? Switch" forgets the saved code and name (a live game link is
+  kept). A saved code the server no longer knows (404: the team was merged or
+  removed) is dropped quietly and the form shows.
+- **Links:** the site header shows "My Team" next to "League" for everyone, signed
+  in or not (inline on desktop, in the hamburger drawer on mobile; not on
+  `/display`), and the `ended` phone screen shows a "My Team" link under the final
+  placing, hidden on a phone with no stored team code. All are plain `/team`
+  links with no code in the URL.
 
 **A night in detail.** Each listed session is a button; opening it calls
 `POST /team-page/sessions/:sessionId` with `{ teamCode }` and shows the night

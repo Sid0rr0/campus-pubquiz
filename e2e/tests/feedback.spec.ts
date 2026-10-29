@@ -22,10 +22,12 @@ test('teams rate the rounds and suggest topics on their phones, and the quiz mas
   const phoneA = await joinPhone('Team A');
   const phoneB = await joinPhone('Team B');
 
-  // 1. Play the block (nobody answers) up to the break.
+  // 1. Play the block up to the break. Each team answers once, since a team that never answers doesn't count in the ended stats.
   await control.startQuiz();
   await control.advance('round_intro');
   await control.advance('question_open');
+  await phoneA.submitText('Paris');
+  await phoneB.submitText('Lyon');
   await control.advance('question_open');
   await control.advance('round_intro');
   await control.advance('question_open');

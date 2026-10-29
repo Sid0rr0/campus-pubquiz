@@ -2,7 +2,10 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { TeamNightDetail, TeamPageHistory } from '@campus-pubquiz/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TEAM_CODE_STORAGE_KEY } from '@/app/lib/team-storage';
+import {
+  TEAM_CODE_STORAGE_KEY,
+  TEAM_NAME_STORAGE_KEY,
+} from '@/app/lib/team-storage';
 import { TeamsApiError } from '@/app/lib/teams-api';
 import { TeamPagePanel } from '@/app/team/team-page-panel';
 import { renderWithQuery } from '@/test-utils/query';
@@ -97,7 +100,12 @@ describe('TeamPagePanel', () => {
     expect(screen.queryByRole('link', { name: 'Winter Quiz' })).toBeNull();
   });
 
-  it('does not save a code the phone did not already store', async () => {
+  it('saves a typed code once it works, dropping a name stored for another team', async () => {
+    window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, 'OLD1');
+    window.localStorage.setItem(TEAM_NAME_STORAGE_KEY, 'Old Team');
+    mockFetchTeamPage.mockRejectedValueOnce(
+      new TeamsApiError('No team with that code', 404),
+    );
     const user = userEvent.setup();
     renderWithQuery(<TeamPagePanel />);
 
@@ -105,6 +113,34 @@ describe('TeamPagePanel', () => {
     await user.click(screen.getByRole('button', { name: 'Open team page' }));
     await waitFor(() => screen.getByText('Winter Quiz'));
 
+    expect(window.localStorage.getItem(TEAM_CODE_STORAGE_KEY)).toBe('ABC');
+    expect(window.localStorage.getItem(TEAM_NAME_STORAGE_KEY)).toBeNull();
+  });
+
+  it('forgets the saved team and shows the form again on Switch', async () => {
+    window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, 'STORED1');
+    window.localStorage.setItem(TEAM_NAME_STORAGE_KEY, 'The Quizzards');
+    const user = userEvent.setup();
+    renderWithQuery(<TeamPagePanel />);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Not your team? Switch' }),
+    );
+
+    expect(await screen.findByLabelText('Team code')).toBeInTheDocument();
+    expect(window.localStorage.getItem(TEAM_CODE_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(TEAM_NAME_STORAGE_KEY)).toBeNull();
+  });
+
+  it('quietly drops a saved code the server no longer knows', async () => {
+    window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, 'GONE1');
+    mockFetchTeamPage.mockRejectedValue(
+      new TeamsApiError('No team with that code', 404),
+    );
+    renderWithQuery(<TeamPagePanel />);
+
+    expect(await screen.findByLabelText('Team code')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(window.localStorage.getItem(TEAM_CODE_STORAGE_KEY)).toBeNull();
   });
 

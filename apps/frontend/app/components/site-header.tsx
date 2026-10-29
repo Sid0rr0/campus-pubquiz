@@ -7,6 +7,7 @@ import { Header } from '@/app/components/header';
 import {
   AccountMenuLinks,
   LeagueLink,
+  MyTeamLink,
 } from '@/app/components/account-menu-links';
 import { MobileHeaderMenu } from '@/app/components/mobile-header-menu';
 
@@ -62,7 +63,10 @@ function SiteHeaderContent({
         {accountUser ? (
           <AccountMenuLinks user={accountUser} onLogout={handleLogout} />
         ) : (
-          <LeagueLink />
+          <>
+            <LeagueLink />
+            <MyTeamLink />
+          </>
         )}
       </nav>
       <MobileHeaderMenu

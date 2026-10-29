@@ -57,7 +57,7 @@ interface GameStatusScreensProps {
   ) => void;
 }
 
-/** "Our team page" — only on a phone that has a stored team code to open it with. */
+/** "My Team" — only on a phone that has a stored team code to open it with. */
 function TeamPageLink() {
   const [hasCode, setHasCode] = useState(false);
   useEffect(() => {
@@ -68,7 +68,7 @@ function TeamPageLink() {
   if (!hasCode) return null;
   return (
     <Link href="/team" className="text-sm font-extrabold text-cyan underline">
-      Our team page
+      My Team
     </Link>
   );
 }

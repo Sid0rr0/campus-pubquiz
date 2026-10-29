@@ -114,7 +114,7 @@ describe('PlayPage — final placing', () => {
     renderWithQuery(<PlayPage />);
 
     expect(
-      await screen.findByRole('link', { name: 'Our team page' }),
+      await screen.findByRole('link', { name: 'My Team' }),
     ).toHaveAttribute('href', '/team');
   });
 
@@ -123,7 +123,7 @@ describe('PlayPage — final placing', () => {
     renderWithQuery(<PlayPage />);
 
     expect(
-      screen.queryByRole('link', { name: 'Our team page' }),
+      screen.queryByRole('link', { name: 'My Team' }),
     ).not.toBeInTheDocument();
   });
 

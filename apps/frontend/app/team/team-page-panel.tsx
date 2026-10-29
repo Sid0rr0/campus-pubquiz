@@ -7,7 +7,11 @@ import { Button } from '@/app/components/button';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { ordinal } from '@/app/lib/placing-text';
 import { queryKeys } from '@/app/lib/query-keys';
-import { readStoredIdentity } from '@/app/lib/team-storage';
+import {
+  forgetSavedTeam,
+  readStoredIdentity,
+  saveTeamCode,
+} from '@/app/lib/team-storage';
 import type { TeamNightQuestion, Verdict } from '@campus-pubquiz/types';
 import {
   fetchTeamNight,
@@ -34,7 +38,7 @@ function CodeForm({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 bg-background p-6 text-foreground">
-      <h1 className="font-display text-2xl">Our team page</h1>
+      <h1 className="font-display text-2xl">My Team</h1>
       <p className="text-foreground/70">
         Enter your team code to see your history and each night&apos;s answers.
       </p>
@@ -184,8 +188,8 @@ function NightDetail({
 
 /**
  * A team's own history, opened with its team code: the phone's stored code
- * when it has one, otherwise a code typed here. A typed code is kept in
- * memory only and never put in a URL.
+ * when it has one, otherwise a code typed here, which is saved once it works. The
+ * code is never put in a URL.
  */
 export function TeamPagePanel() {
   // undefined until localStorage has been read after mount.
@@ -209,16 +213,44 @@ export function TeamPagePanel() {
     retry: false,
   });
 
+  const storedCodeIsStale =
+    enteredCode === null &&
+    pageQuery.error instanceof TeamsApiError &&
+    pageQuery.error.status === 404;
+  const enteredCodeWorked = enteredCode !== null && pageQuery.isSuccess;
+
+  useEffect(() => {
+    // A saved code the server no longer knows (team merged or removed) is dropped quietly.
+    if (storedCodeIsStale) {
+      forgetSavedTeam();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStoredCode(null);
+    }
+  }, [storedCodeIsStale]);
+
+  useEffect(() => {
+    if (enteredCodeWorked) saveTeamCode(enteredCode);
+  }, [enteredCodeWorked, enteredCode]);
+
+  function handleSwitchTeam(): void {
+    forgetSavedTeam();
+    setOpenSessionId(null);
+    setEnteredCode(null);
+    setStoredCode(null);
+  }
+
   if (storedCode === undefined)
     return <CenteredMessage>Loading…</CenteredMessage>;
 
   const data = pageQuery.data ?? null;
   if (!data) {
-    const error = apiErrorMessage(
-      pageQuery.error,
-      TeamsApiError,
-      'Could not load team page',
-    );
+    const error = storedCodeIsStale
+      ? null
+      : apiErrorMessage(
+          pageQuery.error,
+          TeamsApiError,
+          'Could not load team page',
+        );
     if (code === null || error) {
       return <CodeForm error={error} onSubmit={setEnteredCode} />;
     }
@@ -231,11 +263,7 @@ export function TeamPagePanel() {
         code={code}
         gameSessionId={openSessionId}
         onBack={() => setOpenSessionId(null)}
-        onChangeCode={() => {
-          setOpenSessionId(null);
-          setEnteredCode(null);
-          setStoredCode(null);
-        }}
+        onChangeCode={handleSwitchTeam}
       />
     );
   }
@@ -250,6 +278,13 @@ export function TeamPagePanel() {
           ← Back to the quiz
         </Link>
         <h1 className="font-display text-2xl">{data.name}</h1>
+        <button
+          type="button"
+          onClick={handleSwitchTeam}
+          className="self-start text-sm text-foreground/60 underline underline-offset-2"
+        >
+          Not your team? Switch
+        </button>
       </div>
 
       {data.leagues.length > 0 && (

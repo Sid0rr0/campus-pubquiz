@@ -7,13 +7,12 @@ import {
   ExitIcon,
   GearIcon,
   HamburgerMenuIcon,
-  PersonIcon,
 } from '@radix-ui/react-icons';
-import Link from 'next/link';
 import type { AuthUser } from '@campus-pubquiz/types';
 import {
   AccountMenuLinks,
   LeagueLink,
+  MyTeamLink,
 } from '@/app/components/account-menu-links';
 import { Button } from '@/app/components/button';
 import { CopyButton } from '@/app/components/copy-button';
@@ -94,8 +93,9 @@ export function MobileHeaderMenu({
                 />
               </div>
             ) : (
-              <div className="text-sm font-extrabold">
+              <div className="flex flex-col gap-4 text-sm font-extrabold">
                 <LeagueLink onClick={() => setIsDrawerOpen(false)} />
+                <MyTeamLink onClick={() => setIsDrawerOpen(false)} />
               </div>
             )}
             {playerMenu && (
@@ -109,16 +109,6 @@ export function MobileHeaderMenu({
                     />{' '}
                     (save it to play as this team another night)
                   </p>
-                )}
-                {playerMenu.team && (
-                  <Link
-                    href="/team"
-                    onClick={() => setIsDrawerOpen(false)}
-                    className="flex items-center gap-1 text-sm font-extrabold underline"
-                  >
-                    <PersonIcon aria-hidden="true" />
-                    Our team page
-                  </Link>
                 )}
                 <Button
                   type="button"
