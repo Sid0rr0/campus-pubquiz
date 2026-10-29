@@ -4,6 +4,7 @@ import {
   type SessionState,
   type TeamRosterEntry,
 } from '@campus-pubquiz/types';
+import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 
 /**
  * Pure per-field updates over one session record. Internal to the Live
@@ -61,7 +62,8 @@ export function withoutTeamConnection(
   };
 }
 
-export function findTeamIdBySocketId(
+/** The team whose seat `socketId` holds, or null. */
+export function seatOfSocket(
   session: SessionState,
   socketId: string,
 ): number | null {
@@ -69,6 +71,29 @@ export function findTeamIdBySocketId(
     ([, connectedSocketId]) => connectedSocketId === socketId,
   );
   return entry ? Number(entry[0]) : null;
+}
+
+/**
+ * The team id a team event acts for, refusing with `refusal` unless `socketId`
+ * holds a seat (and, when the event names `claimedTeamId`, that team's seat).
+ * Every team event checks its seat through this, never the connected sockets.
+ */
+export function requireSeat(
+  session: SessionState,
+  socketId: string,
+  refusal: string,
+  claimedTeamId?: number,
+): number {
+  // Compare the claimed seat directly: a socket can hold two seats, and the
+  // first one `seatOfSocket` finds may not be the claimed team's.
+  const teamId =
+    claimedTeamId === undefined
+      ? seatOfSocket(session, socketId)
+      : session.connectedTeamSockets[claimedTeamId] === socketId
+        ? claimedTeamId
+        : null;
+  if (teamId === null) throw new SessionRefusal(refusal);
+  return teamId;
 }
 
 export function withAnsweredTeamIds(

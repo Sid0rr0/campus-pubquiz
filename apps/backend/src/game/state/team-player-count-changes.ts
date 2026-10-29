@@ -8,7 +8,7 @@ import { StandingsService } from '@/standings/standings.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
 import {
-  findTeamIdBySocketId,
+  requireSeat,
   withPlayerCount,
 } from '@/game/state/session-updates.util';
 import {
@@ -38,12 +38,11 @@ export class TeamPlayerCountChanges {
     { playerCount }: SetPlayerCountPayload,
     socketId: string,
   ): Promise<SessionChange<SessionOutcome>> {
-    const teamId = findTeamIdBySocketId(session, socketId);
-    if (teamId === null) {
-      throw new SessionRefusal(
-        'Join a team before reporting your player count',
-      );
-    }
+    const teamId = requireSeat(
+      session,
+      socketId,
+      'Join a team before reporting your player count',
+    );
     return await this.store(session, teamId, playerCount);
   }
 

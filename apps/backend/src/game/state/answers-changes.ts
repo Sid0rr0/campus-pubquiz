@@ -17,7 +17,10 @@ import {
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
-import { withAnsweredTeamIds } from '@/game/state/session-updates.util';
+import {
+  requireSeat,
+  withAnsweredTeamIds,
+} from '@/game/state/session-updates.util';
 
 /**
  * The answers change module: builds the changes for a team submitting an
@@ -47,9 +50,7 @@ export class AnswersChanges {
     if (question === undefined) {
       throw new SessionRefusal('Answers are locked for this question');
     }
-    if (session.connectedTeamSockets[teamId] !== socketId) {
-      throw new SessionRefusal(NOT_YOUR_TEAM_ANSWER_ERROR);
-    }
+    requireSeat(session, socketId, NOT_YOUR_TEAM_ANSWER_ERROR, teamId);
 
     const responseMs =
       session.phaseStartedAt === null

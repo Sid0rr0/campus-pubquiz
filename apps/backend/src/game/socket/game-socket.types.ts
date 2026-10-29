@@ -1,11 +1,24 @@
-import type { BroadcastOperator, Server, Socket } from 'socket.io';
+import type {
+  BroadcastOperator,
+  DefaultEventsMap,
+  Server,
+  Socket,
+} from 'socket.io';
 import {
   SOCKET_EVENTS,
   sessionRoom,
+  type AuthUser,
   type ClientToServerEvents,
   type ServerToClientEvents,
   type SocketRoomName,
 } from '@campus-pubquiz/types';
+
+/** What the socket layer keeps on each connection (`socket.data`). */
+export interface GameSocketData {
+  user?: AuthUser;
+  joinCode?: string;
+  refusedJoins?: number;
+}
 
 /**
  * What the server may emit without naming a room: every server-to-client
@@ -18,10 +31,20 @@ export type GameEmitEvents = Omit<
 >;
 
 /** The gateway's `socket.io` server, typed by the socket protocol. */
-export type GameServer = Server<ClientToServerEvents, GameEmitEvents>;
+export type GameServer = Server<
+  ClientToServerEvents,
+  GameEmitEvents,
+  DefaultEventsMap,
+  GameSocketData
+>;
 
 /** One connected client, typed by the socket protocol. */
-export type GameSocket = Socket<ClientToServerEvents, GameEmitEvents>;
+export type GameSocket = Socket<
+  ClientToServerEvents,
+  GameEmitEvents,
+  DefaultEventsMap,
+  GameSocketData
+>;
 
 /** Emits to one room of a session, with that room's state view on `STATE_SYNC` and `STATE_UPDATED`. */
 export type RoomEmitter<R extends SocketRoomName> = Pick<

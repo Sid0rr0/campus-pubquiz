@@ -14,7 +14,7 @@ import { JokerService } from '@/joker/joker.service';
 import { TeamService } from '@/team/team.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
-import { findTeamIdBySocketId } from '@/game/state/session-updates.util';
+import { requireSeat } from '@/game/state/session-updates.util';
 import {
   BROADCAST_STATE_OUTCOME,
   connectedTeamSyncs,
@@ -60,10 +60,11 @@ export class JokerChanges {
     { roundId }: PickJokerPayload,
     socketId: string,
   ): Promise<SessionChange<SessionOutcome>> {
-    const teamId = findTeamIdBySocketId(session, socketId);
-    if (teamId === null) {
-      throw new SessionRefusal('Join a team before picking a joker');
-    }
+    const teamId = requireSeat(
+      session,
+      socketId,
+      'Join a team before picking a joker',
+    );
     if (!isJokerPickOpen(session)) {
       throw new SessionRefusal('The joker pick is not open');
     }
