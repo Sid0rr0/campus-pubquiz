@@ -1478,7 +1478,7 @@ or counted. It is a read of the quiz.
   the preview can't draw anything `/display` wouldn't.
 
 **Question ids belong to the quiz.** A save naming a `questionId` the quiz does
-not hold is refused with a `422` before anything is written: the id keys the
+not hold (every id, for `POST /quizzes`, since a new quiz holds none) is refused with a `422` before anything is written: the id keys the
 save's upsert, so an id from another quiz would move that question, with the
 answers of every session played on it, into this one.
 

@@ -314,6 +314,19 @@ describe('QuizService (Postgres integration)', () => {
   });
 
   describe('create', () => {
+    it('refuses a question id, which can only belong to another quiz, and leaves that quiz alone', async () => {
+      const other = await quizService.create('Other quiz', [VALID_ROUND]);
+      const otherDraft = await quizService.findDraftById(other.quizId);
+      const foreign = otherDraft!.rounds[0].questions[0];
+
+      await expect(
+        quizService.create('Copy', [{ ...VALID_ROUND, questions: [foreign] }]),
+      ).rejects.toBeInstanceOf(QuizDraftInvalidError);
+
+      const after = await quizService.findDraftById(other.quizId);
+      expect(after!.rounds[0].questions).toHaveLength(2);
+    });
+
     it('creates a new quiz with its rounds and questions', async () => {
       const result = await quizService.create('Trivia Night', [VALID_ROUND]);
 

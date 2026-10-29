@@ -1,5 +1,9 @@
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import {
+  EVENT_WINDOW_MS,
+  MAX_EVENTS_PER_WINDOW,
+} from '@/game/socket/event-rate-limit.util';
+import {
   asSocket,
   createMockSocket,
   type MockSocket,
@@ -141,8 +145,8 @@ describe('GameGateway — socket payload validation', () => {
   });
 
   describe('event rate limit', () => {
-    const EVENTS_PER_WINDOW = 60;
-    const WINDOW_MS = 10_000;
+    const EVENTS_PER_WINDOW = MAX_EVENTS_PER_WINDOW;
+    const WINDOW_MS = EVENT_WINDOW_MS;
     let now: number;
 
     beforeEach(() => {
@@ -195,11 +199,9 @@ describe('GameGateway — socket payload validation', () => {
 
       await expect(
         game.gateway.handleAdminAction(asSocket(admin), {
-          action: 'DELETE_EVERYTHING',
+          action: 'TOGGLE_LEADERBOARD',
         }),
-      ).resolves.not.toMatchObject({
-        error: expect.stringMatching(/too many/i) as string,
-      });
+      ).resolves.toMatchObject({ success: true });
     });
   });
 

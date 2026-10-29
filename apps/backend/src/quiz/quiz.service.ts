@@ -21,6 +21,7 @@ import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
 import { readQuestionPayload } from '@/db/question-payload';
+import { findForeignQuestionIds } from '@/quiz/live-edit-guard';
 import { validateQuizDraft } from '@/quiz/quiz-draft.schema';
 
 function toSummaryPayload(question: Question): QuestionPayload {
@@ -207,7 +208,11 @@ export class QuizService {
     rounds: ImportRoundPreview[],
   ): Promise<QuizDraftSaveResult> {
     const normalizedRounds = forceLastRoundBreak(rounds);
-    const issues = validateQuizDraft({ title, rounds: normalizedRounds });
+    // A new quiz holds no questions yet, so any id in the draft is another quiz's.
+    const issues = [
+      ...validateQuizDraft({ title, rounds: normalizedRounds }),
+      ...findForeignQuestionIds([], normalizedRounds),
+    ];
     if (issues.length > 0) throw new QuizDraftInvalidError(issues);
 
     const quiz = this.quizzes.create({ title: title.trim() });
