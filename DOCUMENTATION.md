@@ -2240,8 +2240,11 @@ points, the table and the public page.
   Tradeoffs). It must never go on Vercel: serverless and Socket.IO are
   incompatible. Deploys are manual: pushing a `v*` tag runs
   `.github/workflows/deploy.yml`, which builds the image, pushes it to GHCR
-  and points the Web App at it. `render.yaml` is the earlier Render config;
-  it still lists the env vars the backend needs.
+  and points the Web App at it. The backend reads these env vars:
+  `DATABASE_URL` (Postgres), `FRONTEND_ORIGIN` (the one origin CORS allows),
+  `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` (the first admin,
+  created at boot) and `BLOB_READ_WRITE_TOKEN` (media uploads; without it the
+  app boots and uploads answer 503). `GET /` is the health check.
 - **Node version** is pinned to an exact patch release (`node:22.23.4-alpine`
   in the Dockerfile, `node-version: 22.23.4` in CI) so a security fix
   shows up as a commit. Bump both together when Node ships a security
