@@ -289,7 +289,7 @@ function AdminPageContent() {
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
       <MobileAdminBar panel={panel} user={auth.user} onLogout={handleLogout} />
       <DesktopSidebar panel={panel} />
-      <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
+      <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 pt-0">
         {progress.status === 'lobby' && (
           <SessionSettingsPanel
             joinCode={snapshot.joinCode}
@@ -299,7 +299,7 @@ function AdminPageContent() {
         {progress.status !== 'lobby' && (
           <>
             <div className="flex flex-col gap-3 md:flex-row md:items-start">
-              <div className="md:min-w-0 md:flex-1">
+              <div className="md:max-w-[60%] md:flex-none">
                 <QuestionBrowserPanel
                   rounds={activeQuizRounds}
                   currentRoundIndex={progress.roundIndex}

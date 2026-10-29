@@ -121,7 +121,10 @@ export function QuestionDetail(props: QuestionDetailProps) {
   const headings = type && OPTION_HEADINGS[resolveAnswerKind({ type })];
 
   return (
-    <section aria-label="Question detail" className="flex flex-col gap-2">
+    <section
+      aria-label="Question detail"
+      className="flex flex-col gap-2 break-words"
+    >
       {detail.roundLine && (
         <p className="text-xs font-extrabold tracking-wide text-foreground/55">
           {detail.roundLine}
@@ -135,14 +138,16 @@ export function QuestionDetail(props: QuestionDetailProps) {
       )}
       {detail.notes && <NotesLine notes={detail.notes} />}
       {headings && options && (
-        <OptionList
-          heading={headings[0]}
-          items={options}
-          correct={correctAnswer}
-        />
-      )}
-      {headings?.[1] && matchTargets && (
-        <OptionList heading={headings[1]} items={matchTargets} />
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] items-start gap-3">
+          <OptionList
+            heading={headings[0]}
+            items={options}
+            correct={correctAnswer}
+          />
+          {headings[1] && matchTargets && (
+            <OptionList heading={headings[1]} items={matchTargets} />
+          )}
+        </div>
       )}
     </section>
   );

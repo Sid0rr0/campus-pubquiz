@@ -39,7 +39,10 @@ export function RoundCardDetail({
   }
 
   return (
-    <section aria-label="Title card" className="flex flex-col gap-1">
+    <section
+      aria-label="Title card"
+      className="flex flex-col gap-1 break-words"
+    >
       {kindLabel && (
         <p className="text-xs font-extrabold tracking-wide text-foreground/55">
           {kindLabel}
