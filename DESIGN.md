@@ -162,7 +162,7 @@ The palette is ESN's brand colours: one dominant accent, four supporting ones, a
 
 Tailwind's 4px spacing grid. Most gaps are 4–16px, and cards and sections use 16–24px. The site header is a fixed 64px (`--site-header-height`), with the wordmark on the left, nav on the right, and an optional element centred in the bar.
 
-- **Phones (`/play`, landing join):** one column, full-width tall controls (48–56px). Nav moves into a hamburger drawer below `md`.
+- **Phones (`/play`, landing join):** one column, full-width tall controls (48–56px). Nav moves into a hamburger drawer below `md` (below `xl` when signed in, since the staff nav is long).
 - **Staff (`/control`, authoring, tables):** denser. Small buttons (`xs`/`sm`), sortable tables, sticky side panels. `/control` has its own mobile drawer and hides the site header below `md`.
 - **Big screen (`/display`):** the site header is hidden. Each status screen fills the viewport with its own header (round/question badge), and a team list that overflows scrolls sideways in a loop.
 - **Landing:** an ink hero band (title, tagline, and the app's features as a ruled list on desktop), with the join ticket overlapping its lower edge, then the three steps as one line of small print.
@@ -207,7 +207,7 @@ Chunky and tactile. Everything renders through the shared `Button` component (`a
 - **Internal padding:** 12–16px on staff screens, more on the landing page.
 
 ### Navigation
-The header wordmark is in accent 1, extra-bold, on the `display-xl` size. Nav links are extra-bold, small and widely tracked in ink. Below `md`, links move into a hamburger drawer, which `/play` also uses for the team code and log out.
+The header sits on cream with no border. The wordmark is in accent 1, extra-bold, on the `display-xl` size. Nav items (`.nav-item` in `globals.css`) are extra-bold, small, widely tracked and not underlined; hover gives a faint ink tint, and the current page (`aria-current`) is an ink pill with cream text, matching the selected league tab. Below `md` (`xl` when signed in), links move into an ink drawer that slides in from the right: full-width rows at least 48px tall, with the current page as a cream pill and Log out set apart and muted. On `/play` the drawer leads with the team code block, then Settings and Change team.
 
 ### Status badge
 A small ink-filled pill with cream text, used in the big-screen header for round/question position.

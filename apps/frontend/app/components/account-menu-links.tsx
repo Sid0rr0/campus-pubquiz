@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   BarChartIcon,
   ExitIcon,
@@ -12,31 +15,44 @@ import {
 import type { AuthUser } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
-/** The public league table link: in the nav for everyone, so a signed-in user gets it from AccountMenuLinks and everyone else from here. */
-export function LeagueLink({ onClick }: { onClick?: () => void }) {
+/** One nav entry, marked `aria-current` on its own route (and below it); `.nav-item` in globals.css styles it per container (`.site-nav` or `.drawer-nav`). */
+function NavLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname() ?? '';
+  const isCurrent = pathname === href || pathname.startsWith(`${href}/`);
   return (
     <Link
-      href="/league"
-      onClick={onClick}
-      className="flex items-center gap-1 underline"
+      href={href}
+      aria-current={isCurrent ? 'page' : undefined}
+      className="nav-item"
     >
-      <StarFilledIcon aria-hidden="true" />
-      League
+      {children}
     </Link>
   );
 }
 
-/** The public team page link: in the nav for everyone, beside League; the page asks for the team code when this device has none saved. */
-export function MyTeamLink({ onClick }: { onClick?: () => void }) {
+/** The public league table link: in the nav for everyone, so a signed-in user gets it from AccountMenuLinks and everyone else from here. */
+export function LeagueLink() {
   return (
-    <Link
-      href="/team"
-      onClick={onClick}
-      className="flex items-center gap-1 underline"
-    >
+    <NavLink href="/league">
+      <StarFilledIcon aria-hidden="true" />
+      League
+    </NavLink>
+  );
+}
+
+/** The public team page link: in the nav for everyone, beside League; the page asks for the team code when this device has none saved. */
+export function MyTeamLink() {
+  return (
+    <NavLink href="/team">
       <PersonIcon aria-hidden="true" />
       My Team
-    </Link>
+    </NavLink>
   );
 }
 
@@ -49,47 +65,43 @@ interface AccountMenuLinksProps {
 export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
   return (
     <>
-      <span className="text-magenta">{user.username}</span>
-      <Link href="/guide" className="flex items-center gap-1 underline">
+      <span className="nav-user">{user.username}</span>
+      <NavLink href="/guide">
         <QuestionMarkCircledIcon aria-hidden="true" />
         Guide
-      </Link>
-      <Link href="/sessions" className="flex items-center gap-1 underline">
+      </NavLink>
+      <NavLink href="/sessions">
         <ListBulletIcon aria-hidden="true" />
         Sessions
-      </Link>
+      </NavLink>
 
-      <Link href="/teams" className="flex items-center gap-1 underline">
+      <NavLink href="/teams">
         <PersonIcon aria-hidden="true" />
         Teams
-      </Link>
+      </NavLink>
 
-      <Link href="/stats" className="flex items-center gap-1 underline">
+      <NavLink href="/stats">
         <BarChartIcon aria-hidden="true" />
         Stats
-      </Link>
+      </NavLink>
 
       <LeagueLink />
 
       <MyTeamLink />
 
       {user.role === 'admin' && (
-        <Link href="/leagues" className="flex items-center gap-1 underline">
+        <NavLink href="/leagues">
           <StarIcon aria-hidden="true" />
           Manage leagues
-        </Link>
+        </NavLink>
       )}
       {user.role === 'admin' && (
-        <Link href="/users" className="flex items-center gap-1 underline">
+        <NavLink href="/users">
           <GearIcon aria-hidden="true" />
           Users
-        </Link>
+        </NavLink>
       )}
-      <Button
-        type="button"
-        onClick={onLogout}
-        className="flex items-center gap-1 underline"
-      >
+      <Button type="button" onClick={onLogout} className="nav-item nav-logout">
         <ExitIcon aria-hidden="true" />
         Log out
       </Button>

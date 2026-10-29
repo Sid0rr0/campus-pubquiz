@@ -53,8 +53,8 @@ export function MobileAdminBar({ panel, user, onLogout }: MobileAdminBarProps) {
           </Button>
         </Dialog.Trigger>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
-          <Dialog.Content className="fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col gap-5 overflow-y-auto bg-foreground p-5 text-background">
+          <Dialog.Overlay className="drawer-overlay fixed inset-0 z-30 bg-foreground/60" />
+          <Dialog.Content className="drawer-left fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col gap-5 overflow-y-auto bg-foreground p-5 text-background">
             <div className="flex items-center justify-between">
               <Dialog.Title className="font-display text-lg">
                 Quiz Master
@@ -71,7 +71,7 @@ export function MobileAdminBar({ panel, user, onLogout }: MobileAdminBarProps) {
               </Dialog.Close>
             </div>
             {user && (
-              <div className="flex flex-col items-center gap-4 font-extrabold text-background pb-2 border-b">
+              <div className="drawer-nav border-b border-background/20 pb-4">
                 <AccountMenuLinks user={user} onLogout={onLogout} />
               </div>
             )}

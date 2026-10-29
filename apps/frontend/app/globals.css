@@ -77,3 +77,146 @@ body {
     cursor: pointer;
   }
 }
+
+/* Nav entries (AccountMenuLinks, LeagueLink, MyTeamLink) render flat, so their container decides the look:
+   `.site-nav` inline in the header on cream, `.drawer-nav` as full-width rows in an ink drawer. */
+@layer components {
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    font-weight: 800;
+    white-space: nowrap;
+    transition:
+      background-color 150ms ease-out,
+      color 150ms ease-out;
+  }
+  .nav-item:focus-visible {
+    outline: 2px solid var(--color-magenta);
+    outline-offset: 2px;
+  }
+
+  .site-nav .nav-item {
+    padding: 0.375rem 0.625rem;
+    color: color-mix(in srgb, var(--foreground) 75%, transparent);
+  }
+  .site-nav .nav-item:hover {
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  }
+  .site-nav .nav-item[aria-current='page'] {
+    color: var(--background);
+    background: var(--foreground);
+  }
+  .site-nav .nav-user {
+    max-width: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-magenta);
+    padding-right: 0.75rem;
+    margin-right: 0.25rem;
+    border-right: 1px solid
+      color-mix(in srgb, var(--foreground) 15%, transparent);
+  }
+
+  .drawer-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .drawer-nav .nav-item {
+    min-height: 3rem;
+    padding: 0 0.75rem;
+    font-size: 1.125rem;
+    color: var(--background);
+  }
+  .drawer-nav .nav-item:hover {
+    background: color-mix(in srgb, var(--background) 10%, transparent);
+  }
+  .drawer-nav .nav-item[aria-current='page'] {
+    color: var(--foreground);
+    background: var(--background);
+  }
+  .drawer-nav .nav-logout {
+    margin-top: 0.75rem;
+    color: color-mix(in srgb, var(--background) 70%, transparent);
+  }
+  .drawer-nav .nav-item svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+  .drawer-nav .nav-user {
+    padding: 0 0.75rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--background) 65%, transparent);
+  }
+  .drawer-nav .nav-user::before {
+    content: 'Signed in as ';
+  }
+
+  /* Radix Dialog drawers: data-state drives enter/exit; Radix waits for the exit animation before unmounting. */
+  .drawer-overlay[data-state='open'] {
+    animation: drawer-fade-in 200ms ease-out;
+  }
+  .drawer-overlay[data-state='closed'] {
+    animation: drawer-fade-out 150ms ease-in;
+  }
+  .drawer-right[data-state='open'] {
+    animation: drawer-in-right 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .drawer-right[data-state='closed'] {
+    animation: drawer-out-right 180ms ease-in;
+  }
+  .drawer-left[data-state='open'] {
+    animation: drawer-in-left 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .drawer-left[data-state='closed'] {
+    animation: drawer-out-left 180ms ease-in;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drawer-right[data-state='open'],
+    .drawer-left[data-state='open'] {
+      animation: drawer-fade-in 200ms ease-out;
+    }
+    .drawer-right[data-state='closed'],
+    .drawer-left[data-state='closed'] {
+      animation: drawer-fade-out 150ms ease-in;
+    }
+  }
+}
+
+@keyframes drawer-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes drawer-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes drawer-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes drawer-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes drawer-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes drawer-out-left {
+  to {
+    transform: translateX(-100%);
+  }
+}

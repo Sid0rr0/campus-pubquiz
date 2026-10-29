@@ -15,11 +15,11 @@ export function Header({
 }: HeaderProps) {
   return (
     <header
-      className={`relative h-(--site-header-height) items-center justify-between px-4 ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}
+      className={`relative h-(--site-header-height) items-center justify-between gap-4 px-4 ${isHiddenOnMobile ? 'hidden md:flex' : 'flex'}`}
     >
       <Link
         href="/"
-        className="font-display text-display-xl font-extrabold text-magenta"
+        className="shrink-0 rounded-lg font-display text-display-xl font-extrabold text-magenta focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-magenta"
       >
         Campus Pub Quiz
       </Link>

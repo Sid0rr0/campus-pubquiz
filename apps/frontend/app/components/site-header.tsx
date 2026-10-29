@@ -15,7 +15,8 @@ import { MobileHeaderMenu } from '@/app/components/mobile-header-menu';
  * Shared top bar rendered once from the root layout — same "🍺 Trivia Night"
  * branding as display's TriviaHeader. Signed-in admins/moderators get
  * Guide/Sessions/Teams/Log out links on every page (Users is admin-only),
- * inline on desktop or behind a hamburger drawer on mobile; /play publishes
+ * inline on wide screens or behind a hamburger drawer below xl (md when
+ * signed out, whose nav is just two links); /play publishes
  * its team's code/Log out into the same drawer via PlayerMenuProvider, since
  * useTeamLink lives route-locally on that page and has no other way to reach
  * this layout-level component. Everyone, signed in or not, gets the public
@@ -59,7 +60,10 @@ function SiteHeaderContent({
 
   return (
     <Header isHiddenOnMobile={isHiddenOnMobile}>
-      <nav className="hidden items-center gap-4 text-sm font-extrabold tracking-wide md:flex">
+      {/* The full staff nav needs ~1200px, so signed-in users keep the drawer up to xl. */}
+      <nav
+        className={`site-nav hidden items-center gap-1 text-sm tracking-wide ${accountUser ? 'xl:flex' : 'md:flex'}`}
+      >
         {accountUser ? (
           <AccountMenuLinks user={accountUser} onLogout={handleLogout} />
         ) : (
@@ -69,11 +73,13 @@ function SiteHeaderContent({
           </>
         )}
       </nav>
-      <MobileHeaderMenu
-        accountUser={accountUser}
-        onAccountLogout={handleLogout}
-        playerMenu={playerMenu}
-      />
+      <div className={accountUser ? 'xl:hidden' : 'md:hidden'}>
+        <MobileHeaderMenu
+          accountUser={accountUser}
+          onAccountLogout={handleLogout}
+          playerMenu={playerMenu}
+        />
+      </div>
     </Header>
   );
 }
