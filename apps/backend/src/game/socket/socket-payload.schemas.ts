@@ -46,6 +46,11 @@ const STAR_STEP = 0.5;
 
 const positiveInt = z.number().int().positive();
 const finiteNumber = z.number().finite();
+// Whole or half points only (see nearestHalfPoint): the points columns are
+// single-precision, so any other decimal comes back as float noise in totals.
+const halfPointNumber = finiteNumber.multipleOf(0.5, {
+  error: 'Points must be a whole or half point',
+});
 
 export const adminActionPayloadSchema = z.object({
   action: z.enum(GAME_ACTIONS as [GameAction, ...GameAction[]]),
@@ -112,7 +117,7 @@ export const setTeamJokerPayloadSchema = z.object({
 
 export const gradeAnswerPayloadSchema = z.object({
   answerId: positiveInt,
-  pointsAwarded: finiteNumber,
+  pointsAwarded: halfPointNumber,
 });
 
 export const kickTeamPayloadSchema = z.object({
@@ -142,13 +147,13 @@ export const awardBonusPayloadSchema = z.object({
   teamId: positiveInt,
   category: z.enum(BONUS_CATEGORIES as [BonusCategory, ...BonusCategory[]]),
   reason: z.string().max(BONUS_REASON_MAX_LENGTH).optional(),
-  points: finiteNumber,
+  points: halfPointNumber,
 });
 
 export const createShowdownRoundPayloadSchema = z.object({
   question: z.string().min(1).max(SHOWDOWN_QUESTION_MAX_LENGTH),
   answer: z.string().min(1).max(SHOWDOWN_ANSWER_MAX_LENGTH),
-  points: finiteNumber,
+  points: halfPointNumber,
 });
 
 export const submitShowdownGuessPayloadSchema = z.object({

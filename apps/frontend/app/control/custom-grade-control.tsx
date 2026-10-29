@@ -92,7 +92,7 @@ export function CustomGradeControl({
         <input
           type="number"
           min={0}
-          step="any"
+          step={0.5}
           inputMode="decimal"
           autoFocus
           value={draft}

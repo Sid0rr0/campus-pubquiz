@@ -105,6 +105,41 @@ describe('GameGateway — socket payload validation', () => {
     expect(team.emit).not.toHaveBeenCalled();
   });
 
+  it('rejects GRADE_ANSWER with points that are not a whole or half point', async () => {
+    await game.gateway.handleSubmitAnswer(asSocket(team), {
+      questionId: game.questionIds.multipleChoice,
+      teamId,
+      value: 'Paris',
+    });
+    const [{ answers }] = game.payloadsTo<{
+      answers: { answerId: number }[];
+    }>(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.ANSWERS_UPDATED);
+    game.clearEmits();
+    team.emit.mockClear();
+
+    await expect(
+      game.gateway.handleGradeAnswer(asSocket(admin), {
+        answerId: answers[0].answerId,
+        pointsAwarded: 0.3,
+      }),
+    ).resolves.toMatchObject({ success: false });
+    expectNothingDelivered(admin);
+    expect(team.emit).not.toHaveBeenCalled();
+  });
+
+  it('rejects AWARD_BONUS with points that are not a whole or half point', async () => {
+    await expect(
+      game.gateway.handleAwardBonus(asSocket(admin), {
+        teamId,
+        category: 'shot',
+        points: 0.3,
+      }),
+    ).resolves.toMatchObject({ success: false });
+    expectNothingDelivered(admin);
+    const { leaderboard } = await game.snapshot();
+    expect(leaderboard.filter((entry) => entry.bonusPoints !== 0)).toEqual([]);
+  });
+
   it('rejects AWARD_BONUS with an unrecognized category', async () => {
     await expect(
       game.gateway.handleAwardBonus(asSocket(admin), {

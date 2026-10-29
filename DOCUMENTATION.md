@@ -936,6 +936,10 @@ itself — the display and other players just see counts.
    and, for `custom`, the reason; about 8 seconds, success-styled for a bonus,
    plain for a penalty) — not for edits, deletions or awards restored on
    rejoin, which only appear in the bonus drawer.
+   A hand grade (`GRADE_ANSWER`), a bonus and a showdown's points are whole or
+   half points: the server refuses any other decimal, because the points
+   columns are single-precision and a value like 0.3 would come back in totals
+   as float noise.
    The quiz master gets a success toast on `/control` once the server accepts
    the award (e.g. "+1 Selfie → The Quizzly Bears"), whether or not the team's
    phone is connected; a refused award shows only the error toast and the
