@@ -807,6 +807,14 @@ membership is checked server-side on every handler; violations raise
 close) now go over REST (`/quizzes`, `/sessions`) rather than sockets — see
 [Sessions](#sessions-running-multiple-quizzes-at-once).
 
+**Rate limit.** Every client-to-server event counts against its connection's
+window of 60 events per 10 seconds (`event-rate-limit.util.ts`, run first in
+`dispatchSocketEvent`, malformed events included); past it the event is
+refused with "Too many requests — slow down and try again" and the window
+clears 10 seconds after it opened. It is per connection, not per IP, so a
+script can still open more connections: the client IP behind the host's proxy
+is not trusted here, and limiting a shared address would lock a whole venue out.
+
 `RATE_ROUND` — `{ roundId, stars }`, `stars` 1–5 in half-star steps (Zod-validated) —
 saves a team's **round rating** for one round of the break card or the final form. The ack is the
 result: `{ success: true }` once saved, or an error with a reason — "Feedback is off

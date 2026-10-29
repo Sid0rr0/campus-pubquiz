@@ -140,6 +140,69 @@ describe('GameGateway — socket payload validation', () => {
     expect(leaderboard.filter((entry) => entry.bonusPoints !== 0)).toEqual([]);
   });
 
+  describe('event rate limit', () => {
+    const EVENTS_PER_WINDOW = 60;
+    const WINDOW_MS = 10_000;
+    let now: number;
+
+    beforeEach(() => {
+      now = Date.now();
+      jest.spyOn(Date, 'now').mockImplementation(() => now);
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    const sendGarbage = () =>
+      game.gateway.handleSubmitAnswer(asSocket(team), { nonsense: true });
+    const sendValid = () =>
+      game.gateway.handleSubmitAnswer(asSocket(team), {
+        questionId: game.questionIds.multipleChoice,
+        teamId,
+        value: 'Paris',
+      });
+
+    it('refuses a connection that sends more events than the window allows, garbage included', async () => {
+      for (let sent = 0; sent < EVENTS_PER_WINDOW; sent += 1) {
+        await sendGarbage();
+      }
+
+      await expect(sendValid()).resolves.toMatchObject({
+        success: false,
+        error: expect.stringMatching(/too many/i),
+      });
+      const answers = await game.inRequestContext(() =>
+        game.answerService.listForQuestion(
+          game.gameSessionId,
+          game.questionIds.multipleChoice,
+        ),
+      );
+      expect(answers).toEqual([]);
+    });
+
+    it('serves the connection again once the window has passed', async () => {
+      for (let sent = 0; sent < EVENTS_PER_WINDOW; sent += 1) {
+        await sendGarbage();
+      }
+      now += WINDOW_MS;
+
+      await expect(sendValid()).resolves.toMatchObject({ success: true });
+    });
+
+    it('counts each connection on its own', async () => {
+      for (let sent = 0; sent < EVENTS_PER_WINDOW; sent += 1) {
+        await sendGarbage();
+      }
+
+      await expect(
+        game.gateway.handleAdminAction(asSocket(admin), {
+          action: 'DELETE_EVERYTHING',
+        }),
+      ).resolves.not.toMatchObject({
+        error: expect.stringMatching(/too many/i),
+      });
+    });
+  });
+
   it('rejects AWARD_BONUS with an unrecognized category', async () => {
     await expect(
       game.gateway.handleAwardBonus(asSocket(admin), {

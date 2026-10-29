@@ -4,6 +4,7 @@ import type { GameSocket } from '@/game/socket/game-socket.types';
 import type { z } from 'zod';
 import { sessionRoom, type AckResult } from '@campus-pubquiz/types';
 import { acknowledge } from '@/game/socket/acknowledge.util';
+import { countEventAgainstLimit } from '@/game/socket/event-rate-limit.util';
 import type { DeliverFn } from '@/game/socket/outcome-delivery.util';
 import type { SocketEventDeclaration } from '@/game/socket/socket-event-declarations';
 import { parseSocketPayload } from '@/game/socket/socket-payload.schemas';
@@ -48,7 +49,8 @@ function logAccepted<S extends z.ZodType>(
 
 /**
  * The template every client-to-server event shares, in one fixed order so
- * rejection precedence never varies: validate the payload, find the
+ * rejection precedence never varies: count the event against the
+ * connection's rate limit, validate the payload, find the
  * session, check the sender's room, log, run the body, deliver its outcome.
  * The module's refusals become socket errors here, and only here.
  * A plain function rather than a Nest guard/pipe so specs calling the
@@ -62,6 +64,7 @@ export async function dispatchSocketEvent<S extends z.ZodType>(
   body: (context: EventContext<z.infer<S>>) => Promise<EventResult>,
 ): Promise<AckResult> {
   return acknowledge(client, deps.logger, declaration.event, async () => {
+    countEventAgainstLimit(client);
     const payload = parseSocketPayload(declaration.schema, rawPayload);
     const joinCode = resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, declaration.allowedRoom))) {

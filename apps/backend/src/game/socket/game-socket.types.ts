@@ -18,6 +18,8 @@ export interface GameSocketData {
   user?: AuthUser;
   joinCode?: string;
   refusedJoins?: number;
+  /** The events this connection has sent in its current rate-limit window. */
+  eventWindow?: { startedAt: number; count: number };
 }
 
 /**
