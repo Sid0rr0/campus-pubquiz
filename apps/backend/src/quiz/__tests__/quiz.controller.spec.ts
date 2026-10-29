@@ -100,7 +100,12 @@ describe('QuizController', () => {
   describe('findById', () => {
     it('returns the draft for an existing quiz', async () => {
       const { controller, quizService } = makeController();
-      const draft: QuizDraft = { id: 1, title: 'Trivia Night', rounds: [] };
+      const draft: QuizDraft = {
+        id: 1,
+        title: 'Trivia Night',
+        updatedAt: '2026-10-28T20:00:00.000Z',
+        rounds: [],
+      };
       quizService.findDraftById.mockResolvedValue(draft);
 
       await expect(controller.findById(1)).resolves.toBe(draft);
@@ -116,7 +121,12 @@ describe('QuizController', () => {
 
     it('attaches the live-edit frontier the Live edit module reports', async () => {
       const { controller, quizService, liveEdit } = makeController();
-      const draft: QuizDraft = { id: 1, title: 'Trivia Night', rounds: [] };
+      const draft: QuizDraft = {
+        id: 1,
+        title: 'Trivia Night',
+        updatedAt: '2026-10-28T20:00:00.000Z',
+        rounds: [],
+      };
       const frontier: LiveEditFrontier = {
         openedQuestionIds: [5, 6],
         currentRoundIndex: 1,
@@ -134,7 +144,12 @@ describe('QuizController', () => {
 
     it('omits liveEdit when no session is live on the quiz', async () => {
       const { controller, quizService } = makeController();
-      const draft: QuizDraft = { id: 1, title: 'Trivia Night', rounds: [] };
+      const draft: QuizDraft = {
+        id: 1,
+        title: 'Trivia Night',
+        updatedAt: '2026-10-28T20:00:00.000Z',
+        rounds: [],
+      };
       quizService.findDraftById.mockResolvedValue(draft);
 
       await expect(controller.findById(1)).resolves.toBe(draft);

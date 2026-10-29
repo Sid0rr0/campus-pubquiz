@@ -40,7 +40,12 @@ vi.mock('@/app/lib/quiz-draft-api', async () => {
   };
 });
 
-const SAVED = { quizId: 9, roundCount: 1, questionCount: 0 };
+const SAVED = {
+  quizId: 9,
+  roundCount: 1,
+  questionCount: 0,
+  updatedAt: '2026-10-28T20:05:00.000Z',
+};
 
 const emptyRound: ImportRoundPreview = {
   title: 'History',
@@ -279,6 +284,33 @@ describe('saving', () => {
 
     await waitFor(() => expect(mockToast.success).toHaveBeenCalled());
     expect(routerRef.replace).not.toHaveBeenCalled();
+  });
+
+  it('saves from the version it loaded, then from the version the last save returned', async () => {
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'T',
+      updatedAt: '2026-10-28T20:00:00.000Z',
+      rounds: [emptyRound],
+    });
+    mockUpdateQuiz.mockResolvedValue({ ...SAVED, quizId: 5 });
+    const { result } = renderDraft('5');
+    await waitFor(() => expect(result.current.phase).toBe('editor'));
+
+    act(() => result.current.save());
+    await waitFor(() => expect(mockUpdateQuiz).toHaveBeenCalledTimes(1));
+    expect(mockUpdateQuiz).toHaveBeenLastCalledWith(
+      5,
+      expect.objectContaining({ loadedUpdatedAt: '2026-10-28T20:00:00.000Z' }),
+    );
+
+    await waitFor(() => expect(mockToast.success).toHaveBeenCalled());
+    act(() => result.current.save());
+    await waitFor(() => expect(mockUpdateQuiz).toHaveBeenCalledTimes(2));
+    expect(mockUpdateQuiz).toHaveBeenLastCalledWith(
+      5,
+      expect.objectContaining({ loadedUpdatedAt: SAVED.updatedAt }),
+    );
   });
 
   it('refreshes every cached quiz query after a save', async () => {

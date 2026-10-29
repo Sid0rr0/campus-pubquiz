@@ -1,11 +1,16 @@
 import {
   ConflictException,
   NotFoundException,
+  PreconditionFailedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
 import { toQuizHttpError } from '@/quiz/quiz-http-errors';
-import { QuizDraftInvalidError, QuizNotFoundError } from '@/quiz/quiz.service';
+import {
+  QuizDraftInvalidError,
+  QuizNotFoundError,
+  QuizStaleSaveError,
+} from '@/quiz/quiz.service';
 
 const ISSUES = [{ message: 'nope' }] as never;
 
@@ -26,6 +31,13 @@ describe('toQuizHttpError', () => {
     expect((error as ConflictException).getResponse()).toMatchObject({
       issues: ISSUES,
     });
+  });
+
+  it('maps a save from an out-of-date copy to 412 with its message', () => {
+    const error = toQuizHttpError(new QuizStaleSaveError(7));
+
+    expect(error).toBeInstanceOf(PreconditionFailedException);
+    expect(error.message).toMatch(/changed by someone else/);
   });
 
   it('maps an unknown quiz to 404', () => {

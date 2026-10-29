@@ -185,8 +185,11 @@ export class ImportService {
         strategy: {
           identifyQuestions: withQuestionIdsBySlot,
           persist: async (rounds) => {
-            await this.quizService.syncRoundsAndQuestions(quizId, rounds);
-            return toSaveResult(quizId, rounds);
+            const updatedAt = await this.quizService.syncRoundsAndQuestions(
+              quizId,
+              rounds,
+            );
+            return toSaveResult(quizId, rounds, updatedAt);
           },
         },
       },

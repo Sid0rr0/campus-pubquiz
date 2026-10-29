@@ -1372,6 +1372,16 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   overwrites the current draft.
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated
   server-side, surfacing structured issues per round/question on failure.
+- **A stale tab can't overwrite a newer save.** `GET /quizzes/:id` returns the
+  quiz's `updatedAt`, which every content write moves (the editor's Save and a
+  CSV re-import both do, in `syncRoundsAndQuestions`). The editor sends it back
+  as `loadedUpdatedAt`, and a `PUT` whose value differs from the stored one is
+  refused with a `412` ("changed by someone else since you opened it") before
+  anything is written; the editor then needs a reload. The save result returns
+  the new `updatedAt`, which the next save sends. A request with no
+  `loadedUpdatedAt` (a re-import, an API client) is not checked. With no
+  session on the quiz the check and the write are not locked together, so two
+  saves in the same instant could both pass.
 - Export the quiz's questions with **Export CSV** in the header bar.
 - **Preview** in the header bar (once the quiz is saved) opens the saved quiz's
   [Quiz preview](#quiz-preview) in a new tab. With unsaved changes the editor
@@ -1528,7 +1538,7 @@ editor's disabled controls:
   edited round just before it — and the quiz master reloads (the "Refresh lock
   state" button). A save waits for a press already in flight on a session of
   the quiz; sessions on other quizzes aren't held. The quiz controller only
-  maps the module's errors to `409`, `422` and `404`. Only running sessions
+  maps the module's errors to `409`, `412`, `422` and `404`. Only running sessions
   are checked against the frontier and regraded. Every save, with or without
   a running session, also reloads each session still in the `lobby` and
   broadcasts it to every room, so Start quiz plays exactly what the editor

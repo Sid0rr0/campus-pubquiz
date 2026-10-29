@@ -27,7 +27,11 @@ import {
   findRegradeQuestionIds,
   QuizLiveEditBlockedError,
 } from '@/quiz/live-edit-guard';
-import { QuizNotFoundError, QuizService } from '@/quiz/quiz.service';
+import {
+  QuizNotFoundError,
+  QuizService,
+  QuizStaleSaveError,
+} from '@/quiz/quiz.service';
 
 /** How a save differs from the editor's plain one — a re-import sheet's. */
 export interface LiveEditSaveStrategy {
@@ -138,7 +142,7 @@ export class LiveEditService {
    */
   async save(
     quizId: number,
-    { title, rounds: requestedRounds }: QuizDraftSaveRequest,
+    { title, rounds: requestedRounds, loadedUpdatedAt }: QuizDraftSaveRequest,
     { reloadJoinCode, strategy }: LiveEditSaveOptions = {},
   ): Promise<QuizDraftSaveResult> {
     const deliveries: PendingDelivery[] = [];
@@ -153,6 +157,13 @@ export class LiveEditService {
         async (held) => {
           const currentDraft = await this.quizService.findDraftById(quizId);
           if (!currentDraft) throw new QuizNotFoundError(quizId);
+          // shortcut: checked and written without a lock when no session is on the quiz (the hold covers none), so two saves landing in the same instant can both pass; fine for two staff, move the check into the UPDATE if it ever matters.
+          if (
+            loadedUpdatedAt !== undefined &&
+            loadedUpdatedAt !== currentDraft.updatedAt
+          ) {
+            throw new QuizStaleSaveError(quizId);
+          }
           const rounds = strategy
             ? strategy.identifyQuestions(currentDraft.rounds, requestedRounds)
             : requestedRounds;

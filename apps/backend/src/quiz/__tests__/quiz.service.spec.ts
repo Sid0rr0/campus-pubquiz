@@ -289,6 +289,7 @@ describe('QuizService (Postgres integration)', () => {
       expect(draft).toEqual({
         id: created.quizId,
         title: 'Trivia Night',
+        updatedAt: created.updatedAt,
         rounds: [
           {
             title: 'Music',

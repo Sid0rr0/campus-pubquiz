@@ -31,6 +31,16 @@ function toSummaryPayload(question: Question): QuestionPayload {
   };
 }
 
+/** A save carried the version of a copy older than the stored quiz: someone else saved since it was loaded, and this save would overwrite their work. */
+export class QuizStaleSaveError extends Error {
+  constructor(quizId: number) {
+    super(
+      `Quiz ${quizId} was changed by someone else since you opened it. Reload the page to see their changes, then make your edits again.`,
+    );
+    this.name = 'QuizStaleSaveError';
+  }
+}
+
 export class QuizDraftInvalidError extends Error {
   constructor(public readonly issues: QuizDraftIssue[]) {
     super(
@@ -83,9 +93,11 @@ interface SyncContext {
 export function toSaveResult(
   quizId: number,
   rounds: readonly ImportRoundPreview[],
+  updatedAt: Date,
 ): QuizDraftSaveResult {
   return {
     quizId,
+    updatedAt: updatedAt.toISOString(),
     roundCount: rounds.length,
     questionCount: rounds.reduce(
       (total, round) => total + round.questions.length,
@@ -172,6 +184,7 @@ export class QuizService {
     return {
       id: quiz.id,
       title: quiz.title,
+      updatedAt: quiz.updatedAt.toISOString(),
       rounds: quiz.rounds.getItems().map((round) => ({
         title: round.title,
         breakAfter: round.breakAfter,
@@ -199,9 +212,12 @@ export class QuizService {
 
     const quiz = this.quizzes.create({ title: title.trim() });
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
-    await this.syncRoundsAndQuestions(quiz.id, normalizedRounds);
+    const updatedAt = await this.syncRoundsAndQuestions(
+      quiz.id,
+      normalizedRounds,
+    );
 
-    return toSaveResult(quiz.id, normalizedRounds);
+    return toSaveResult(quiz.id, normalizedRounds, updatedAt);
   }
 
   async update(
@@ -217,15 +233,13 @@ export class QuizService {
     if (!quiz) throw new QuizNotFoundError(quizId);
 
     quiz.title = title.trim();
-    // Editing a round/question alone leaves `title` unchanged, so MikroORM
-    // sees no dirty property on `quiz` and skips the UPDATE — the onUpdate
-    // hook (which only fires on an actual UPDATE) would then never bump
-    // `updatedAt`, even though the rounds/questions underneath did change.
-    quiz.updatedAt = new Date();
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
-    await this.syncRoundsAndQuestions(quizId, normalizedRounds);
+    const updatedAt = await this.syncRoundsAndQuestions(
+      quizId,
+      normalizedRounds,
+    );
 
-    return toSaveResult(quizId, normalizedRounds);
+    return toSaveResult(quizId, normalizedRounds, updatedAt);
   }
 
   /** Deletes a quiz and, via the DB's `game_sessions.quiz_id` cascade rule, every session ever run from it. Callers must reject this while a live session is running — see QuizController.remove. */
@@ -245,14 +259,24 @@ export class QuizService {
    *
    * Runs in one transaction: the up-front delete cascades to answers, so a
    * later park/upsert failure must roll it back rather than lose the rows.
+   *
+   * Stamps the quiz's `updatedAt` in the same transaction and returns it: the
+   * rounds and questions changed even when the title did not, which MikroORM's
+   * own onUpdate hook would not notice. A save from an out-of-date copy is
+   * recognised by this stamp (see LiveEditService.save), so every write of a
+   * quiz's content, a CSV re-import included, has to move it.
    */
   async syncRoundsAndQuestions(
     quizId: number,
     rounds: ImportRoundPreview[],
-  ): Promise<void> {
+  ): Promise<Date> {
+    const updatedAt = new Date();
     // The callback's EntityManager carries the transaction; the injected
     // repositories may sit on an EntityManager that does not, so use its own.
     await this.quizzes.getEntityManager().transactional(async (em) => {
+      await em
+        .getRepository<Quiz, QuizRepository>(Quiz)
+        .nativeUpdate({ id: quizId }, { updatedAt });
       await this.syncWithin({
         quizId,
         rounds,
@@ -260,6 +284,7 @@ export class QuizService {
         questionRepo: em.getRepository<Question, QuestionRepository>(Question),
       });
     });
+    return updatedAt;
   }
 
   private async syncWithin({

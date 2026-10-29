@@ -118,6 +118,13 @@ export function useQuizDraft(quizId: string): QuizDraft {
   const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
   // The draft as last loaded or saved, to tell whether the editor has unsaved changes.
   const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
+  // The quiz's updatedAt as this tab last loaded or saved it. Sent with a save
+  // so one made from an out-of-date copy is refused instead of overwriting a
+  // newer save. Deliberately not refreshed by a background refetch: that
+  // would adopt someone else's save without their changes being merged in.
+  const [loadedUpdatedAt, setLoadedUpdatedAt] = useState<string | undefined>(
+    undefined,
+  );
   const [savedFlash, setSavedFlash] = useState(false);
   const [savedFlashRun, setSavedFlashRun] = useState(0);
   const [liveEdit, setLiveEdit] = useState<LiveEditFrontier | undefined>(
@@ -148,6 +155,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
       fingerprintOf(toSaveRequest(draftQuery.data.title, hydratedRounds)),
     );
     setLiveEdit(draftQuery.data.liveEdit);
+    setLoadedUpdatedAt(draftQuery.data.updatedAt);
     setPhase('editor');
   } else if (draftQuery.data && draftQuery.data !== mergedDraft) {
     // A background refetch of the same quiz (e.g. the post-save cache
@@ -178,9 +186,10 @@ export function useQuizDraft(quizId: string): QuizDraft {
     mutationFn: (request: ReturnType<typeof toSaveRequest>) =>
       savedQuizId === null
         ? createQuiz(request)
-        : updateQuiz(savedQuizId, request),
+        : updateQuiz(savedQuizId, { ...request, loadedUpdatedAt }),
     onSuccess: (result, request) => {
       setSavedFingerprint(fingerprintOf(request));
+      setLoadedUpdatedAt(result.updatedAt);
       if (savedQuizId === null) {
         setSavedQuizId(result.quizId);
         router.replace(`/quizzes/${result.quizId}`);
