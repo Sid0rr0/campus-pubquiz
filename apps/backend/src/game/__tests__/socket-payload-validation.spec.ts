@@ -168,7 +168,7 @@ describe('GameGateway — socket payload validation', () => {
 
       await expect(sendValid()).resolves.toMatchObject({
         success: false,
-        error: expect.stringMatching(/too many/i),
+        error: expect.stringMatching(/too many/i) as string,
       });
       const answers = await game.inRequestContext(() =>
         game.answerService.listForQuestion(
@@ -198,7 +198,7 @@ describe('GameGateway — socket payload validation', () => {
           action: 'DELETE_EVERYTHING',
         }),
       ).resolves.not.toMatchObject({
-        error: expect.stringMatching(/too many/i),
+        error: expect.stringMatching(/too many/i) as string,
       });
     });
   });
