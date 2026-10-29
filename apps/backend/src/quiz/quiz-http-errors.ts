@@ -4,7 +4,9 @@ import {
   PreconditionFailedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import type { QuizDraftSaveRequest } from '@campus-pubquiz/types';
 import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
+import { parseQuizDraftEnvelope } from '@/quiz/quiz-draft-envelope.schema';
 import {
   QuizDraftInvalidError,
   QuizNotFoundError,
@@ -32,4 +34,16 @@ export function toQuizHttpError(error: unknown): Error {
     return new NotFoundException(error.message);
   }
   return error instanceof Error ? error : new Error(String(error));
+}
+
+/** A save body shaped like a quiz draft, or a 422 saying how it is not; field-level problems are `validateQuizDraft`'s, later. */
+export function parseDraftBody(body: unknown): QuizDraftSaveRequest {
+  const parsed = parseQuizDraftEnvelope(body);
+  if (!parsed.success) {
+    throw new UnprocessableEntityException({
+      message: parsed.message,
+      issues: [],
+    });
+  }
+  return parsed.data;
 }

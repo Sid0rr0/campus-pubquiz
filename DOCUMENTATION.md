@@ -1380,6 +1380,10 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   overwrites the current draft.
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated
   server-side, surfacing structured issues per round/question on failure.
+- The save body's outer shape (a title, a list of rounds, each with a title and
+  a list of questions) is checked at the controller, and a body that is not
+  shaped like a draft gets a `422` with a message. Every field inside is
+  checked by the draft validation after that.
 - **A stale tab can't overwrite a newer save.** `GET /quizzes/:id` returns the
   quiz's `updatedAt`, which every content write moves (the editor's Save and a
   CSV re-import both do, in `syncRoundsAndQuestions`). The editor sends it back

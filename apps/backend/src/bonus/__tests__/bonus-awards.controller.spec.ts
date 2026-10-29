@@ -121,6 +121,23 @@ describe('BonusAwardMutationsController', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it.each([
+      ['a reason that is not text', { points: 3, reason: 5 }],
+      ['no points', { reason: 'Great singing' }],
+      ['points that are not a whole or half point', { points: 0.3 }],
+      ['no body at all', undefined],
+    ])(
+      'answers a body with %s with a 400, without editing',
+      async (_, body) => {
+        const { controller, rest } = makeController();
+
+        await expect(
+          controller.update('ABCDEF', 9, body as never),
+        ).rejects.toThrow(BadRequestException);
+        expect(rest.editBonus).not.toHaveBeenCalled();
+      },
+    );
+
     it('maps InvalidBonusAwardError to a 400', async () => {
       const { controller, rest } = makeController();
       rest.editBonus.mockRejectedValue(

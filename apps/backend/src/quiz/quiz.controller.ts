@@ -16,7 +16,6 @@ import {
 } from '@nestjs/common';
 import {
   type QuizDraft,
-  type QuizDraftSaveRequest,
   type QuizDraftSaveResult,
   type QuizPreviewPayload,
   type QuizzesListedPayload,
@@ -26,7 +25,7 @@ import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameStateService } from '@/game/state/game-state.service';
-import { toQuizHttpError } from '@/quiz/quiz-http-errors';
+import { parseDraftBody, toQuizHttpError } from '@/quiz/quiz-http-errors';
 import { QuizPreviewService } from '@/quiz/quiz-preview.service';
 import { quizPreviewQuerySchema } from '@/quiz/quiz-preview-query.schema';
 import { QuizService } from '@/quiz/quiz.service';
@@ -84,11 +83,10 @@ export class QuizController {
   }
 
   @Post()
-  async create(
-    @Body() body: QuizDraftSaveRequest,
-  ): Promise<QuizDraftSaveResult> {
+  async create(@Body() body: unknown): Promise<QuizDraftSaveResult> {
+    const draft = parseDraftBody(body);
     try {
-      return await this.quizService.create(body.title, body.rounds);
+      return await this.quizService.create(draft.title, draft.rounds);
     } catch (error) {
       throw toQuizHttpError(error);
     }
@@ -97,10 +95,11 @@ export class QuizController {
   @Put(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: QuizDraftSaveRequest,
+    @Body() body: unknown,
   ): Promise<QuizDraftSaveResult> {
+    const draft = parseDraftBody(body);
     try {
-      return await this.liveEdit.save(id, body);
+      return await this.liveEdit.save(id, draft);
     } catch (error) {
       throw toQuizHttpError(error);
     }

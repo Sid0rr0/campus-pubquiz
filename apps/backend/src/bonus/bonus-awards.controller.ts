@@ -14,7 +14,6 @@ import {
 import type {
   BonusAwardAdminView,
   BonusAwardsListedPayload,
-  UpdateBonusAwardRequest,
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
@@ -23,7 +22,15 @@ import {
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
 import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
+import { awardBonusPayloadSchema } from '@/game/socket/socket-payload.schemas';
+import { parseOrThrow } from '@/league/league-http';
 import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
+
+/** An award edit's body (`UpdateBonusAwardRequest`): the same points and reason rules as awarding one over the socket. */
+const updateBonusAwardSchema = awardBonusPayloadSchema.pick({
+  points: true,
+  reason: true,
+});
 
 /**
  * Nested under teams/:teamId (rather than living on BonusAwardMutationsController
@@ -61,10 +68,14 @@ export class BonusAwardMutationsController {
   async update(
     @Param('joinCode') joinCode: string,
     @Param('awardId', ParseIntPipe) awardId: number,
-    @Body() body: UpdateBonusAwardRequest,
+    @Body() body: unknown,
   ): Promise<BonusAwardAdminView> {
+    const { points, reason } = parseOrThrow(
+      updateBonusAwardSchema.safeParse(body),
+      'Invalid bonus award',
+    );
     return mapBonusErrors(() =>
-      this.liveSession.editBonus(joinCode, awardId, body.points, body.reason),
+      this.liveSession.editBonus(joinCode, awardId, points, reason),
     );
   }
 

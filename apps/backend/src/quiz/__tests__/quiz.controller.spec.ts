@@ -189,6 +189,61 @@ describe('QuizController', () => {
     });
   });
 
+  it('hands a well-formed draft to the save with every field the editor sent', async () => {
+    const { controller, liveEdit } = makeController();
+    liveEdit.save.mockResolvedValue({});
+    const body = {
+      title: 'Trivia Night',
+      loadedUpdatedAt: '2026-10-28T20:00:00.000Z',
+      rounds: [
+        {
+          title: 'Music',
+          breakAfter: true,
+          kahootMode: false,
+          note: 'Headphones on',
+          questions: [
+            {
+              questionId: 4,
+              type: 'multiple_choice',
+              prompt: 'Which?',
+              answer: 'A',
+              options: ['A', 'B'],
+              points: 2,
+            },
+          ],
+        },
+      ],
+    };
+
+    await controller.update(1, body as never);
+
+    expect(liveEdit.save).toHaveBeenCalledWith(1, body);
+  });
+
+  describe('a body that is not a quiz draft', () => {
+    it.each([
+      ['no rounds', { title: 'Trivia Night' }],
+      ['rounds that are not a list', { title: 'T', rounds: 'many' }],
+      [
+        'a round with no questions list',
+        { title: 'T', rounds: [{ title: 'R' }] },
+      ],
+      ['no title', { rounds: [] }],
+      ['no body at all', undefined],
+    ])('answers %s with a 422, without saving', async (_, body) => {
+      const { controller, quizService, liveEdit } = makeController();
+
+      await expect(controller.create(body as never)).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+      await expect(controller.update(1, body as never)).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+      expect(quizService.create).not.toHaveBeenCalled();
+      expect(liveEdit.save).not.toHaveBeenCalled();
+    });
+  });
+
   describe('update', () => {
     const body = { title: 'Trivia Night', rounds: [] };
 
