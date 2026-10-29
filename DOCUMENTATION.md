@@ -1336,8 +1336,16 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   stored on `Round.note`, seeded onto the session's round, and shown on
   `/remote`'s Notes panel while that round's intro, break round intro or reveal
   intro is on air ("No note for this round." when it has none), and on `/control`
-  under the round in the question browser (`QuizSummaryRound.note`). The
-  reveal intro never shows it on the big screen. The round's **Show on
+  on the round's title card in the detail column (`QuizSummaryRound.note`), on
+  every kind including the reveal intro and a title card browsed with its T
+  marker, never in the question browser rows. The reveal intro never shows it
+  on the big screen. `GET /quizzes` also gives each round `category` and
+  `author` (absent when unset) for that card, and `breakNumber` and
+  `isFinalBreak` on block-ending rounds, built with `getQuizStructureSummary`
+  / `getBreakNumber`: the last round always ends a block, so it carries them
+  even when its stored `breakAfter` is false. The browser shows a B marker
+  wherever they are present, and `/control` shows "Break N" ("(final)" on the
+  final break) when that break is on air. The round's **Show on
   screen** checkbox (`Round.showNoteOnScreen`, off by default, disabled while the
   note is blank) also puts the note on the big screen's round intro and break
   round intro, drawn as text (line breaks kept, display text scale applied)

@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Desktop: the phase timer renders in the sidebar header beside "Quiz Master"
 - [ ] Mobile: the phase timer renders in the mobile admin bar

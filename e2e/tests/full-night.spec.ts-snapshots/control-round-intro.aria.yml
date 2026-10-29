@@ -32,7 +32,7 @@
   - heading "Grade Questions" [level=2]
   - img "Round 1"
   - navigation "Warm-up questions":
-    - img /Warm-up title card/: T
+    - button /Show title card of Warm-up/: T
     - button /Grade question 1 of Warm-up/
     - button /Grade question 2 of Warm-up/
   - navigation "Name that tune questions":

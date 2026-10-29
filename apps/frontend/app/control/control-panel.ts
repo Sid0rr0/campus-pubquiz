@@ -8,6 +8,8 @@ import type { UseAdminGameResult } from '@/app/lib/use-admin-game';
 export type ControlPanelView = Pick<
   AdminStatePayload,
   | 'progress'
+  | 'phaseStartedAt'
+  | 'phaseElapsedMs'
   | 'joinCode'
   | 'teams'
   | 'settableJokerRounds'

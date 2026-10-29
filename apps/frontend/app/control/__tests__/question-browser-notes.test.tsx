@@ -1,9 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import type {
-  AnswersUpdatedPayload,
-  QuizSummaryRound,
-} from '@campus-pubquiz/types';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import type { QuizSummaryRound } from '@campus-pubquiz/types';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
 
 const ROUNDS: QuizSummaryRound[] = [
@@ -24,79 +22,71 @@ const ROUNDS: QuizSummaryRound[] = [
   },
   {
     title: 'Sport',
-    breakAfter: true,
+    breakAfter: false,
+    breakNumber: 1,
+    isFinalBreak: true,
     questions: [{ id: 3, type: 'free_text', prompt: 'Sport?', answer: 'Golf' }],
   },
 ];
 
-function renderPanel(
-  selectedQuestionId: number | null,
-  liveAnswers: AnswersUpdatedPayload | null = null,
-) {
+function renderPanel(onSelect = vi.fn()) {
   render(
     <QuestionBrowserPanel
       rounds={ROUNDS}
       currentRoundIndex={0}
       activeBlockStartIndex={0}
-      selectedQuestionId={selectedQuestionId}
+      selected={null}
       indicators={{
         titleCardRoundIndex: null,
         breakRoundIndex: null,
         onDisplayQuestionId: null,
       }}
-      onSelectQuestion={() => {}}
-      liveAnswers={liveAnswers}
-      teams={[]}
-      onGrade={() => {}}
-      fallbackQuestions={[]}
+      onSelect={onSelect}
       ungradedQuestionIds={[]}
     />,
   );
 }
 
 describe('QuestionBrowserPanel notes', () => {
-  it('shows the notes of the selected question', () => {
-    renderPanel(1);
+  it('leaves the Round note and the question notes to the detail column', () => {
+    renderPanel();
 
-    expect(screen.getByText('Accept "Abba".')).toBeInTheDocument();
-  });
-
-  it('shows the notes under the correct answer, above the answers list', () => {
-    renderPanel(1, {
-      questionId: 1,
-      question: {
-        type: 'free_text',
-        prompt: 'Band?',
-        points: 1,
-        correctAnswer: 'ABBA',
-        roundTitle: 'Music',
-        roundNumber: 1,
-        questionNumberInRound: 1,
-        totalQuestionsInRound: 2,
-      },
-      answers: [],
-    });
-
-    const notes = screen.getByText('Accept "Abba".');
-    const correct = screen.getByText(/Correct answer/);
-    expect(
-      correct.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it('shows no notes block for a selected question without notes', () => {
-    renderPanel(2);
-
+    expect(screen.queryByText(/Round note/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Play the jingle/)).not.toBeInTheDocument();
     expect(screen.queryByText('Accept "Abba".')).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Notes$/)).not.toBeInTheDocument();
   });
+});
 
-  it("shows a round's note next to its title, and none for a round without one", () => {
-    renderPanel(null);
+describe('QuestionBrowserPanel markers', () => {
+  it("shows a B marker wherever the round has break fields, including the last round's", () => {
+    renderPanel();
 
     expect(
-      screen.getByText(/Play the jingle first\./, { selector: 'p' }),
+      screen.getAllByRole('button', { name: /show break after/i }),
+    ).toHaveLength(1);
+    expect(
+      screen.getByRole('button', { name: /show break after sport/i }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/Round note/i)).toHaveLength(1);
+  });
+
+  it('selects a title card, a break and a question when their markers are clicked', async () => {
+    const onSelect = vi.fn();
+    renderPanel(onSelect);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /show title card of music/i }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /show break after sport/i }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /grade question 2 of music/i }),
+    );
+
+    expect(onSelect.mock.calls).toEqual([
+      [{ kind: 'title', roundIndex: 0 }],
+      [{ kind: 'break', roundIndex: 1 }],
+      [{ kind: 'question', questionId: 2 }],
+    ]);
   });
 });

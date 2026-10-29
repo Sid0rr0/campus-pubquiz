@@ -34,17 +34,21 @@
   - heading "Grade Questions" [level=2]
   - img "Round 1"
   - navigation "Warm-up questions":
-    - img "Warm-up title card": T
+    - button "Show title card of Warm-up": T
     - button "Grade question 1 of Warm-up (live on display)" [pressed]
     - button "Grade question 2 of Warm-up"
+  - paragraph: Warm-up
   - img "Round 2"
   - navigation "Name that tune questions":
-    - img "Name that tune title card": T
+    - button "Show title card of Name that tune": T
     - button "Grade question 1 of Name that tune"
-    - img "Name that tune break card": B
-  - paragraph: Round 1 (Warm-up) — Q1 of 2
-  - heading "What is the capital of France?" [level=2]
-  - paragraph: "Correct answer: Paris 2/2 answered 1 correct"
+    - button "Show break after Name that tune": B
+  - paragraph: Name that tune
+  - region "Question detail":
+    - paragraph: Round 1 (Warm-up) — Q1 of 2
+    - heading "What is the capital of France?" [level=2]
+    - paragraph: "Correct answer: Paris"
+  - paragraph: 2/2 answered 1 correct
   - list:
     - listitem:
       - text: /Team A [0-9a-f]{6} Paris/

@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (both edit the page row that holds the browser and the timer)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Detail column beside the browser shows round line, prompt, correct answer, notes
 - [ ] Options shown per type as above, preferring what the question type registry or existing answer formatting already exposes over a new per-type switch

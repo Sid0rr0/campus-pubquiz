@@ -8,7 +8,7 @@ The on-air item comes from the existing admin indicators; in break review the on
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `QuizService.list()` returns category/author when set and break fields on block-ending rounds, including the last round with break-after false (`quiz.service.spec.ts`)
 - [ ] On-air round intro, reveal intro and break round intro each show the title card with the right kind label and all round fields

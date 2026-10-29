@@ -219,6 +219,18 @@ describe('GuideContent', () => {
     }
   });
 
+  it('describes the Control layout: timer, detail column, title and break cards, look-ahead and grading list', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('phase timer sits beside "Quiz Master"');
+    expect(text).toContain('detail column');
+    expect(text).toContain('(category, author, Round note)');
+    expect(text).toContain('"Break N"');
+    expect(text).toContain('Click a question number, T or B');
+    expect(text).toContain('follows the big screen again');
+    expect(text).toContain('grading list sits full width below');
+  });
+
   it('says grading can start before the break and must finish in it', () => {
     const text = renderGuideText();
 

@@ -9,6 +9,7 @@ import { AdminActions } from '@/app/control/admin-actions';
 import { BreakEndTimeControl } from '@/app/control/break-end-time-control';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { EditQuizLink } from '@/app/control/edit-quiz-link';
+import { PhaseTimer } from '@/app/control/phase-timer';
 import { ShowdownPanel } from '@/app/control/showdown-panel';
 import { TeamsPanel } from '@/app/control/teams-panel';
 import { SessionStatusPanel } from '@/app/control/session-status-panel';
@@ -135,6 +136,11 @@ export function MobileAdminBar({ panel, user, onLogout }: MobileAdminBarProps) {
         previousState={view.previousState}
         onAction={actions.sendAction}
         className="flex-1"
+      />
+      <PhaseTimer
+        phaseStartedAt={view.phaseStartedAt}
+        phaseElapsedMs={view.phaseElapsedMs}
+        className="shrink-0"
       />
     </div>
   );

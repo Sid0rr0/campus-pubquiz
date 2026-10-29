@@ -130,6 +130,8 @@ describe('QuizService (Postgres integration)', () => {
       {
         title: 'Round 1',
         breakAfter: true,
+        breakNumber: 1,
+        isFinalBreak: false,
         kahootMode: false,
         questions: [
           {
@@ -146,8 +148,44 @@ describe('QuizService (Postgres integration)', () => {
           },
         ],
       },
-      { title: 'Round 2', breakAfter: false, kahootMode: false, questions: [] },
+      {
+        title: 'Round 2',
+        breakAfter: false,
+        breakNumber: 2,
+        isFinalBreak: true,
+        kahootMode: false,
+        questions: [],
+      },
     ]);
+  });
+
+  it('gives category and author when set, and break fields only on block-ending rounds (the last round always ends a block)', async () => {
+    const quiz = await insertQuiz('Campus Pub Quiz Night');
+    const r1 = await insertRound(quiz, 'Round 1', 0);
+    r1.category = 'Music';
+    r1.author = 'Sam';
+    await insertRound(quiz, 'Round 2', 1, true);
+    await insertRound(quiz, 'Round 3', 2);
+    await em.flush();
+
+    const [listed] = await quizService.list();
+
+    expect(listed.rounds[0]).toMatchObject({
+      category: 'Music',
+      author: 'Sam',
+    });
+    expect(listed.rounds[0]).not.toHaveProperty('breakNumber');
+    expect(listed.rounds[0]).not.toHaveProperty('isFinalBreak');
+    expect(listed.rounds[1]).not.toHaveProperty('category');
+    expect(listed.rounds[1]).not.toHaveProperty('author');
+    expect(listed.rounds[1]).toMatchObject({
+      breakNumber: 1,
+      isFinalBreak: false,
+    });
+    expect(listed.rounds[2]).toMatchObject({
+      breakNumber: 2,
+      isFinalBreak: true,
+    });
   });
 
   it("includes each question's options and correct answer", async () => {

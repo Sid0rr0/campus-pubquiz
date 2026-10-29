@@ -34,14 +34,16 @@
   - heading "Grade Questions" [level=2]
   - img "Round 1"
   - navigation "Warm-up questions":
-    - img "Warm-up title card": T
+    - button "Show title card of Warm-up": T
     - button "Grade question 1 of Warm-up"
     - button "Grade question 2 of Warm-up"
+  - paragraph: Warm-up
   - img "Round 2"
   - navigation "Name that tune questions":
-    - img "Name that tune title card": T
+    - button "Show title card of Name that tune": T
     - button "Grade question 1 of Name that tune"
-    - img "Name that tune break card": B
+    - button "Show break after Name that tune": B
+  - paragraph: Name that tune
   - heading "Teams" [level=2]
   - table:
     - rowgroup:

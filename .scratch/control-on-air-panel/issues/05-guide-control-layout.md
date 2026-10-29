@@ -4,7 +4,7 @@
 
 **Blocked by:** 01, 02, 03, 04
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Guide covers every point above within the guide's word cap
 - [ ] No guide text still says the Round note sits in the browser or the timer beside it

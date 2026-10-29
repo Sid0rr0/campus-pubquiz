@@ -31,7 +31,7 @@
         - button "Kick"
   - heading "Grade Questions" [level=2]
   - navigation "Warm-up questions":
-    - img /Warm-up title card \(live on display\)/: T
+    - button /Show title card of Warm-up \(live on display\)/: T
     - button /Grade question 1 of Warm-up/
     - button /Grade question 2 of Warm-up/
   - navigation "Name that tune questions":

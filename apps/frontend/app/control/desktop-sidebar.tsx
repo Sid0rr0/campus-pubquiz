@@ -3,6 +3,7 @@ import { AdminActions } from '@/app/control/admin-actions';
 import { BreakEndTimeControl } from '@/app/control/break-end-time-control';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { EditQuizLink } from '@/app/control/edit-quiz-link';
+import { PhaseTimer } from '@/app/control/phase-timer';
 import { ShowdownPanel } from '@/app/control/showdown-panel';
 import { TeamsPanel } from '@/app/control/teams-panel';
 import { SessionStatusPanel } from '@/app/control/session-status-panel';
@@ -14,7 +15,13 @@ export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
   const { progress } = view;
   return (
     <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-y-auto bg-foreground p-5 text-background md:sticky md:top-(--site-header-height) md:flex md:h-[calc(100vh-var(--site-header-height))]">
-      <h1 className="font-display text-lg">Quiz Master</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="font-display text-lg">Quiz Master</h1>
+        <PhaseTimer
+          phaseStartedAt={view.phaseStartedAt}
+          phaseElapsedMs={view.phaseElapsedMs}
+        />
+      </div>
       <SessionStatusPanel
         progressStatus={progress.status}
         roundIndex={progress.roundIndex}
