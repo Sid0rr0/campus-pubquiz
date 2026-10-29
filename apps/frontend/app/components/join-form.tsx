@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type SubmitEvent } from 'react';
-import { EnterIcon } from '@radix-ui/react-icons';
+import { ChevronRightIcon, EnterIcon } from '@radix-ui/react-icons';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPublicSessions } from '@/app/lib/sessions-api';
 import { queryKeys } from '@/app/lib/query-keys';
@@ -19,6 +19,80 @@ interface JoinFormProps {
   onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   /** /play shows the team code field from the start — it's the reconnect/direct-visit fallback, where "played before?" is the common case rather than the exception the home page's collapsed toggle assumes. */
   alwaysShowTeamCode?: boolean;
+  /** The home page renders `TeamCodeField` itself, on the ticket's stub below the Join button. */
+  omitTeamCode?: boolean;
+}
+
+/** The form's id, for a `TeamCodeField` rendered outside it so Enter there still submits the join. */
+export const JOIN_FORM_ID = 'join-form';
+
+interface TeamCodeFieldProps {
+  value: string;
+  onChange: (value: string) => void;
+  connectionError: string | null;
+  alwaysShow?: boolean;
+  /** Collapsed, reads as the home page ticket's tear-off stub instead of a quiet link. */
+  onStub?: boolean;
+}
+
+/** The returning team's code: collapsed behind a "Played before?" toggle on a fresh join. */
+export function TeamCodeField({
+  value,
+  onChange,
+  connectionError,
+  alwaysShow = false,
+  onStub = false,
+}: TeamCodeFieldProps) {
+  const [revealed, setRevealed] = useState(false);
+  // A stored team code (returning team) or a connection error asking for one
+  // (name collision) both mean the field should just be there already —
+  // only a fresh join with nothing to say yet starts it collapsed.
+  const show =
+    alwaysShow || revealed || Boolean(value) || Boolean(connectionError);
+
+  return show ? (
+    <>
+      <label
+        htmlFor="join-team-code"
+        className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55"
+      >
+        Team code (for returning teams)
+      </label>
+      <input
+        id="join-team-code"
+        form={JOIN_FORM_ID}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        autoCapitalize="characters"
+        autoComplete="off"
+        spellCheck={false}
+        placeholder="e.g. QUICK-JADE-FOX"
+        className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
+      />
+    </>
+  ) : onStub ? (
+    <Button
+      type="button"
+      onClick={() => setRevealed(true)}
+      className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
+    >
+      <span className="text-sm font-bold text-foreground/70">
+        Played before? Keep this stub.
+      </span>
+      <span className="flex shrink-0 items-center gap-1 text-xs font-extrabold tracking-[0.2em] whitespace-nowrap uppercase">
+        Team code
+        <ChevronRightIcon aria-hidden="true" />
+      </span>
+    </Button>
+  ) : (
+    <Button
+      type="button"
+      onClick={() => setRevealed(true)}
+      className="mt-2 self-start text-[13px] font-extrabold text-foreground/55 underline"
+    >
+      Played before? Enter your team code
+    </Button>
+  );
 }
 
 /**
@@ -38,8 +112,8 @@ export function JoinForm({
   connectionError,
   onSubmit,
   alwaysShowTeamCode = false,
+  omitTeamCode = false,
 }: JoinFormProps) {
-  const [teamCodeRevealed, setTeamCodeRevealed] = useState(false);
   const [gameCodeRevealed, setGameCodeRevealed] = useState(false);
   // Same query (and cache) as the select below.
   const sessionsQuery = useQuery({
@@ -57,14 +131,6 @@ export function JoinForm({
   ) {
     setGameCodeRevealed(true);
   }
-  // A stored team code (returning team) or a connection error asking for one
-  // (name collision) both mean the field should just be there already —
-  // only a fresh join with nothing to say yet starts it collapsed.
-  const showTeamCode =
-    alwaysShowTeamCode ||
-    teamCodeRevealed ||
-    Boolean(teamCodeInput) ||
-    Boolean(connectionError);
 
   return (
     <>
@@ -76,7 +142,11 @@ export function JoinForm({
           {connectionError}
         </p>
       )}
-      <form onSubmit={onSubmit} className="flex flex-col gap-2">
+      <form
+        id={JOIN_FORM_ID}
+        onSubmit={onSubmit}
+        className="flex flex-col gap-2"
+      >
         <label
           htmlFor="join-team-name"
           className="text-xs font-extrabold tracking-wide text-foreground/55"
@@ -123,33 +193,13 @@ export function JoinForm({
             Have a game code?
           </Button>
         )}
-        {showTeamCode ? (
-          <>
-            <label
-              htmlFor="join-team-code"
-              className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55"
-            >
-              Team code (for returning teams)
-            </label>
-            <input
-              id="join-team-code"
-              value={teamCodeInput}
-              onChange={(event) => onTeamCodeInputChange(event.target.value)}
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="e.g. QUICK-JADE-FOX"
-              className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
-            />
-          </>
-        ) : (
-          <Button
-            type="button"
-            onClick={() => setTeamCodeRevealed(true)}
-            className="mt-2 self-start text-[13px] font-extrabold text-foreground/55 underline"
-          >
-            Played before? Enter your team code
-          </Button>
+        {!omitTeamCode && (
+          <TeamCodeField
+            value={teamCodeInput}
+            onChange={onTeamCodeInputChange}
+            connectionError={connectionError}
+            alwaysShow={alwaysShowTeamCode}
+          />
         )}
         <Button
           type="submit"

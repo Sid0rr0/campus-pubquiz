@@ -68,7 +68,7 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', { name: /campus pub quiz/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/enter the code/i)).toBeInTheDocument();
+    expect(screen.getByText(/pick tonight.s game/i)).toBeInTheDocument();
     expect(screen.getByText(/answer as a team/i)).toBeInTheDocument();
     expect(screen.getByText(/climb the board/i)).toBeInTheDocument();
   });
