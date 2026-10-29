@@ -100,6 +100,12 @@ describe('GameGateway — leaderboard', () => {
 
   it('shows "Quiz complete!" rather than the leaderboard when the End Quiz button ends the quiz, until the admin reveals it', async () => {
     await game.act('START_QUIZ');
+    // A team with nothing scored has no place on the ended board.
+    await game.gateway.handleAwardBonus(asSocket(await game.connectAdmin()), {
+      teamId: game.teams[0].teamId,
+      category: 'shot',
+      points: 1,
+    });
 
     const ended = await displayAfter('END_QUIZ');
 

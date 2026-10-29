@@ -248,8 +248,8 @@ describe('GameGateway — the leaderboard description on the display view', () =
       await game.act('ADVANCE'); // -> ended, leaderboard up
     }
 
-    it('gives every team up when everyone was tied before the last question', async () => {
-      await reachEndAwarding(['First', 'Second'], [BONUS_POINTS]);
+    it('gives every team on the board up when everyone was tied before the last question, leaving out a team that scored nothing', async () => {
+      await reachEndAwarding(['First', 'Second', 'Third'], [BONUS_POINTS, 1]);
 
       expect(board().trends).toEqual({
         [game.teams[0].teamId]: 'up',

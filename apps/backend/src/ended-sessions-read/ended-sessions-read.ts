@@ -146,10 +146,10 @@ function scoped<Q extends { whereIn(column: string, ids: number[]): Q }>(
 
 /**
  * The database side of looking back at past nights, and the one definition of
- * **took part**: a team took part in a session if it is on the roster now, or
- * has an answer or a bonus award stored for it (kicking or leaving deletes the
- * roster row but keeps those). Session status is ignored on purpose: the
- * Standings module also uses this for live sessions.
+ * **took part**: a team took part in a session if it has an answer or a bonus
+ * award stored for it (kicking or leaving deletes the roster row but keeps
+ * those), or, while the session has not ended, is on the roster. The Standings
+ * module also uses this for live sessions, which list quiet roster teams.
  */
 @Injectable()
 export class EndedSessionsRead {
@@ -164,7 +164,14 @@ export class EndedSessionsRead {
    */
   participantsQuery(scope?: ParticipantScope) {
     const knex: Knex = this.gameSessionTeams.getKnex();
+    // A roster row alone counts only while the session is still running (the
+    // lobby and live leaderboard list quiet teams); once it has ended, a team
+    // with no answer or bonus did not take part.
     const marks = scoped(knex('game_session_teams'), scope)
+      .whereNotIn(
+        'game_session_id',
+        knex('game_sessions').where('status', 'ended').select('id'),
+      )
       .select('game_session_id', 'team_id')
       .union([
         scoped(knex('answers'), scope).select('game_session_id', 'team_id'),

@@ -416,6 +416,22 @@ describe('StandingsService (Postgres integration)', () => {
     expect(result.participantCount).toBe(2);
   });
 
+  it('leaves a roster team with no answer or bonus out of an ended session, and out of its participant count', async () => {
+    const active = await insertTeam('Active', 'token-a');
+    await insertTeam('Quiet Team', 'token-q');
+    await awardBonus(active, 3);
+    await state.em.nativeUpdate(
+      GameSession,
+      { id: state.session.id },
+      { status: 'ended' },
+    );
+
+    const result = await standings.forSession(state.session.id);
+
+    expect(result.leaderboard.map((e) => e.teamName)).toEqual(['Active']);
+    expect(result.participantCount).toBe(1);
+  });
+
   it('orders departed teams by total, highest first', async () => {
     const low = await insertTeam('Low', 'token-1');
     const high = await insertTeam('High', 'token-2');

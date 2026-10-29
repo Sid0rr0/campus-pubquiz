@@ -201,7 +201,7 @@ The mean of a team's placings across the ended sessions it played, leaving out t
 _Avoid_: average position, average rank
 
 **Took part**:
-A team took part in a session if it is on the roster, or was kicked or departed and left an answer or bonus award behind. Used by every screen about a session.
+A team took part in a session if it has an answer or bonus award stored for it. While the session is still running, a team on the roster counts too (the lobby and live leaderboard list quiet teams); once it has ended, a roster team with no answer and no bonus did not take part, so it is left out of the final board, the stats and sessions played. A team that was kicked or departed counts the same way. Used by every screen about a session.
 
 **Sessions played**:
 The ended sessions a team took part in. Shown the same in the team directory and on the team page.

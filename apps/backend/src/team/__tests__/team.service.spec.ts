@@ -1,6 +1,7 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
+import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
@@ -365,6 +366,18 @@ describe('TeamService (Postgres integration)', () => {
       return team;
     }
 
+    /** A bonus award, so the team counts as having taken part once the session ends. */
+    async function markPlayed(id: number, teamId: number): Promise<void> {
+      em.create(BonusAward, {
+        gameSession: em.getReference(GameSession, id),
+        team: em.getReference(Team, teamId),
+        category: 'custom',
+        reason: 'Because',
+        points: 1,
+      });
+      await em.flush();
+    }
+
     async function endSession(id: number): Promise<void> {
       await em.nativeUpdate(GameSession, { id }, { status: 'ended' });
     }
@@ -382,6 +395,9 @@ describe('TeamService (Postgres integration)', () => {
         joinCode: 'GHIJKL',
       });
       const bareTeam = await createBareTeam('Bare Team');
+      await markPlayed(sessionId, soloTeam.id);
+      await markPlayed(sessionId, multiTeam.id);
+      await markPlayed(session2Id, multiTeam.id);
       await endSession(sessionId);
       await endSession(session2Id);
 
@@ -418,6 +434,7 @@ describe('TeamService (Postgres integration)', () => {
         expect.objectContaining({ id: team.id, sessionsJoined: 0 }),
       ]);
 
+      await markPlayed(sessionId, team.id);
       await endSession(sessionId);
 
       expect(await items()).toEqual([

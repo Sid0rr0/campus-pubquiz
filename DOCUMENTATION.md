@@ -2117,7 +2117,9 @@ none), its verdict and points earned, and the right answer.
 - **Only the team's own answers are read.** Another team's answers never enter
   the response.
 - **Only ended sessions the team took part in** (`StandingsService.hasTakenPart`;
-  see **Took part** in the glossary). A session still
+  see **Took part** in the glossary: once a session ends, a roster team with no
+  answer and no bonus award did not take part, and is left out of its standings,
+  participant count and every correct-rate denominator). A session still
   running, one the team never joined and an unknown session or code all get the
   same generic 404, so a kicked team still sees its answers. Validation and the
   public route are the same as for `POST /team-page`. The throttle is looser

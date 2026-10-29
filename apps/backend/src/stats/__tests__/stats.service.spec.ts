@@ -1580,7 +1580,8 @@ describe('StatsService (Postgres integration)', () => {
       const { quiz } = await createQuiz('Quiz B', [[5]]);
       const session = await createSession(quiz, 'BONUSLEFT1', 'ended');
       const leaver = await joinTeam(session, 'Leaver');
-      await joinTeam(session, 'Stayer');
+      const stayer = await joinTeam(session, 'Stayer');
+      await awardBonus(session, stayer, 1);
       await awardBonus(session, leaver, 2);
       await leave(session, leaver);
 
@@ -1613,7 +1614,10 @@ describe('StatsService (Postgres integration)', () => {
       const session = await createSession(quiz, 'PLAYERS1', 'ended');
       const amy = await joinTeam(session, 'Amy');
       const bob = await joinTeam(session, 'Bob');
-      await joinTeam(session, 'Silent');
+      const silent = await joinTeam(session, 'Silent');
+      for (const team of [amy, bob, silent]) {
+        await awardBonus(session, team, 1);
+      }
       await report(session, amy, 4);
       await report(session, bob, 3);
 
@@ -1646,6 +1650,7 @@ describe('StatsService (Postgres integration)', () => {
       const leaver = await joinTeam(session, 'Leaver');
       const stayer = await joinTeam(session, 'Stayer');
       await grade(session, questions[0][0], leaver, 5);
+      await awardBonus(session, stayer, 1);
       await report(session, leaver, 5);
       await report(session, stayer, 2);
       await em.nativeDelete(GameSessionTeam, {
@@ -1668,6 +1673,7 @@ describe('StatsService (Postgres integration)', () => {
       const amy = await joinTeam(session, 'Amy');
       const silent = await joinTeam(session, 'Silent');
       await grade(session, questions[0][0], amy, 5);
+      await awardBonus(session, silent, 1);
       await report(session, amy, 6);
 
       const detail = await statsService.getSessionDetail(session.id);
@@ -1685,6 +1691,8 @@ describe('StatsService (Postgres integration)', () => {
       const amy = await joinTeam(reported, 'Amy');
       const bob = await joinTeam(reported, 'Bob');
       await joinTeam(unreported, 'Silent');
+      await awardBonus(reported, amy, 1);
+      await awardBonus(reported, bob, 1);
       await report(reported, amy, 4);
       await report(reported, bob, 2);
 

@@ -64,6 +64,22 @@ describe('EndedSessionsRead (Postgres integration)', () => {
     ]);
   });
 
+  it('does not count a roster team with no answer or bonus once the session has ended', async () => {
+    const quiet = await insertTeam('Quiet', 'token-q');
+    const active = await insertTeam('Active', 'token-a');
+    await answer(active);
+    await state.em.nativeUpdate(
+      GameSession,
+      { id: state.session.id },
+      { status: 'ended' },
+    );
+
+    expect(await read.participants(inThisSession())).toEqual([
+      { gameSessionId: state.session.id, teamId: active.id, isOnRoster: true },
+    ]);
+    expect(await read.participants({ teamIds: [quiet.id] })).toEqual([]);
+  });
+
   it('counts a kicked team with answers as having taken part, off the roster', async () => {
     const team = await insertTeam('Kicked', 'token-k');
     await answer(team);
@@ -160,6 +176,7 @@ describe('EndedSessionsRead (Postgres integration)', () => {
 
     it('leaves out lobby and running sessions', async () => {
       const team = await insertTeam('Waiting', 'token-w');
+      await answer(team);
       expect(await playedBy(team)).toBe(0);
 
       await state.em.nativeUpdate(
@@ -228,6 +245,7 @@ describe('EndedSessionsRead (Postgres integration)', () => {
       await setStatus(running.id, 'question_open');
       state.em.create(GameSessionTeam, { gameSession: running, team });
       await state.em.flush();
+      await answer(team);
 
       expect(await endedIds()).toEqual([]);
       expect(await read.participations([team.id])).toEqual([]);
@@ -305,8 +323,16 @@ describe('EndedSessionsRead (Postgres integration)', () => {
       const tieB = await otherSession('TIEBBB', { playedAt: played });
       for (const session of [older, tieA, tieB]) {
         state.em.create(GameSessionTeam, { gameSession: session, team });
+        state.em.create(BonusAward, {
+          gameSession: session,
+          team,
+          category: 'custom',
+          reason: 'Because',
+          points: 1,
+        });
       }
       await state.em.flush();
+      await answer(team);
       await setStatus(state.session.id, 'ended');
       await state.em.nativeUpdate(
         GameSession,
