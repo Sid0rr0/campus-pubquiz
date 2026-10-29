@@ -62,3 +62,7 @@ reports/
 # graphify
 graphify-out/
 apps/graphify-out/
+
+# Impeccable design sketches and review screenshots
+.impeccable/mocks/
+.impeccable/review/
