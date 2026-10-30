@@ -1,5 +1,8 @@
 import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
+import { Purchase } from '@/db/entities/purchase.entity';
+import { PurchaseService } from '@/purchase/purchase.service';
+import type { PurchaseRepository } from '@/db/repositories/purchase.repository';
 import { AnswerService } from '@/answer/answer.service';
 import type { AnswerRepository } from '@/db/repositories/answer.repository';
 import type { TeamRepository } from '@/db/repositories/team.repository';
@@ -1335,6 +1338,9 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const freshService = new AnswerService(
         freshEm.getRepository<Answer, AnswerRepository>(Answer),
         freshEm.getRepository<Team, TeamRepository>(Team),
+        new PurchaseService(
+          freshEm.getRepository<Purchase, PurchaseRepository>(Purchase),
+        ),
       );
       await regradeAuto(
         freshService,

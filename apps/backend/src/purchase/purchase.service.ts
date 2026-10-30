@@ -70,6 +70,21 @@ export class PurchaseService {
       effect: purchaseEffectSchema.parse(row.effect),
     }));
   }
+
+  /** Which team bought which power-up on the question, oldest first: the answer list's "used" column and the wider-margin grading read it. */
+  async listForQuestion(
+    gameSessionId: number,
+    questionId: number,
+  ): Promise<{ teamId: number; powerUp: PowerUpId }[]> {
+    return (await this.purchases
+      .getKnex()('purchases')
+      .where({ game_session_id: gameSessionId, question_id: questionId })
+      .orderBy('id')
+      .select('team_id as teamId', 'power_up as powerUp')) as {
+      teamId: number;
+      powerUp: PowerUpId;
+    }[];
+  }
 }
 
 /** What a team's phone is sent of its purchases: the ledger row without its cost. */

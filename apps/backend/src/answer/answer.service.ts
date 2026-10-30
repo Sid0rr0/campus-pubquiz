@@ -12,6 +12,7 @@ import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
+import { PurchaseService } from '@/purchase/purchase.service';
 import {
   canGradeByHand,
   gradeOnKeyFix,
@@ -96,6 +97,7 @@ export class AnswerService {
   constructor(
     @InjectRepository(Answer) private readonly answers: AnswerRepository,
     @InjectRepository(Team) private readonly teams: TeamRepository,
+    private readonly purchases: PurchaseService,
   ) {}
 
   /** Stores a team's answer to `question` (the session's copy) and grades it as the Grading policy decides. */
@@ -163,15 +165,15 @@ export class AnswerService {
     gameSessionId: number,
     questionId: number,
   ): Promise<Set<number>> {
-    const rows = (await this.answers
-      .getKnex()('purchases')
-      .where({
-        game_session_id: gameSessionId,
-        question_id: questionId,
-        power_up: 'wider_margin',
-      })
-      .select('team_id as teamId')) as { teamId: number }[];
-    return new Set(rows.map(({ teamId }) => teamId));
+    const bought = await this.purchases.listForQuestion(
+      gameSessionId,
+      questionId,
+    );
+    return new Set(
+      bought
+        .filter(({ powerUp }) => powerUp === 'wider_margin')
+        .map(({ teamId }) => teamId),
+    );
   }
 
   /** The rows as the policy reads them, each flagged when its team's margin is widened. */
@@ -208,14 +210,10 @@ export class AnswerService {
     questionId: number,
     rows: readonly Answer[],
   ): Promise<AnswerView[]> {
-    const used = (await this.answers
-      .getKnex()('purchases')
-      .where({ game_session_id: gameSessionId, question_id: questionId })
-      .orderBy('id')
-      .select('team_id as teamId', 'power_up as powerUp')) as {
-      teamId: number;
-      powerUp: PowerUpId;
-    }[];
+    const used = await this.purchases.listForQuestion(
+      gameSessionId,
+      questionId,
+    );
     return rows.map((row) =>
       toAnswerView(
         row,
