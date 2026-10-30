@@ -31,6 +31,10 @@ import type {
   TeamJokerSyncedPayload,
 } from './joker';
 import type {
+  BuyPowerUpPayload,
+  TeamPurchasesSyncedPayload,
+} from './power-ups';
+import type {
   SetPlayerCountPayload,
   SetTeamPlayerCountPayload,
   TeamPlayerCountSyncedPayload,
@@ -99,6 +103,7 @@ export interface ClientToServerProtocol {
     payload: SetTeamJokerPayload;
     ack: void;
   };
+  [SOCKET_EVENTS.BUY_POWER_UP]: { payload: BuyPowerUpPayload; ack: void };
 }
 
 export type ClientToServerEvent = keyof ClientToServerProtocol;
@@ -131,6 +136,7 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.SESSION_CLOSED]: SessionClosedPayload;
   [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
   [SOCKET_EVENTS.TEAM_JOKER_SYNCED]: TeamJokerSyncedPayload;
+  [SOCKET_EVENTS.TEAM_PURCHASES_SYNCED]: TeamPurchasesSyncedPayload;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
   exception: ExceptionPayload | string;
 }

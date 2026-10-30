@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { PowerUpId } from './power-ups';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
 import {
   closestGuessPreviewSchema,
@@ -75,6 +76,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
    * nothing (long answer chains would bury the useful data).
    */
   briefWrongAnswers: 'typed' | 'options' | 'spread' | 'none';
+  /** The question power-ups a team can buy on this type (see `powerUpApplies`); empty when none apply. */
+  powerUps: readonly PowerUpId[];
 }
 
 export const QUESTION_KINDS: {
@@ -84,6 +87,7 @@ export const QUESTION_KINDS: {
     type: 'free_text',
     hasCorrectRate: true,
     briefWrongAnswers: 'typed',
+    powerUps: [],
     revealKind: 'answer',
     label: 'Free text',
     moderatorNote:
@@ -101,6 +105,7 @@ export const QUESTION_KINDS: {
     type: 'multiple_choice',
     hasCorrectRate: true,
     briefWrongAnswers: 'options',
+    powerUps: ['fifty_fifty'],
     revealKind: 'answer',
     label: 'Multiple choice',
     moderatorNote:
@@ -118,6 +123,7 @@ export const QUESTION_KINDS: {
     type: 'sort',
     hasCorrectRate: true,
     briefWrongAnswers: 'none',
+    powerUps: [],
     revealKind: 'answer',
     label: 'Sort / order',
     moderatorNote:
@@ -135,6 +141,7 @@ export const QUESTION_KINDS: {
     type: 'match',
     hasCorrectRate: true,
     briefWrongAnswers: 'none',
+    powerUps: [],
     revealKind: 'answer',
     label: 'Match pairs',
     moderatorNote:
@@ -152,6 +159,7 @@ export const QUESTION_KINDS: {
     type: 'closest_guess',
     hasCorrectRate: false,
     briefWrongAnswers: 'spread',
+    powerUps: [],
     revealKind: 'closest_guess',
     label: 'Closest guess',
     moderatorNote:
@@ -169,6 +177,7 @@ export const QUESTION_KINDS: {
     type: 'number',
     hasCorrectRate: true,
     briefWrongAnswers: 'typed',
+    powerUps: [],
     revealKind: 'answer',
     label: 'Number',
     moderatorNote:

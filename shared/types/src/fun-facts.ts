@@ -2,6 +2,7 @@ import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import { formatAnswer, type Verdict } from './answer-kind';
 import { jokerRoundPoints } from './joker';
+import type { PowerUpId } from './power-ups';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import { questionOutcome } from './question-outcome';
 import type { QuestionType } from './question-types';
@@ -26,14 +27,25 @@ export interface FunFactBonusAward {
   points: number;
 }
 
+/** One power-up purchase, as far as the live views need it: the reveal's power-up count and each team's coins. */
+export interface FunFactPowerUp {
+  teamId: number;
+  powerUp: PowerUpId;
+  /** The question it was bought for; null for a round power-up. */
+  questionId: number | null;
+  cost: number;
+}
+
 /**
- * The session's stored answers and bonus awards that fun facts are built
- * from, and the reveal's teams-correct count reads it too. A cache filled
- * with the standings, so the display view stays synchronous.
+ * The session's stored answers, bonus awards and power-up purchases that fun
+ * facts are built from, and the reveal's teams-correct and power-up counts read
+ * it too. A cache filled with the standings, so the display view stays
+ * synchronous.
  */
 export interface FunFactData {
   answers: FunFactAnswer[];
   bonusAwards: FunFactBonusAward[];
+  powerUps: FunFactPowerUp[];
 }
 
 /** The question a fun fact is about, as the big screen words it ("Round 2 · Q3"). */

@@ -237,7 +237,7 @@ export function freshSessionState(
     leaderboard: [],
     leaderboardRevealCount: 0,
     priorStandings: null,
-    funFactData: { answers: [], bonusAwards: [] },
+    funFactData: { answers: [], bonusAwards: [], powerUps: [] },
     leagueTop: null,
     teams: [],
     playerCounts: {},

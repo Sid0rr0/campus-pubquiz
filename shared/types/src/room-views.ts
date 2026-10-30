@@ -14,6 +14,7 @@ import type {
   JokerPickRound,
 } from './joker';
 import type { LeagueTop } from './league';
+import type { PowerUpCount } from './power-ups';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
@@ -199,6 +200,8 @@ export interface DisplayStatePayload
   jokerPickEndsAt: number | null;
   /** The revealed question's teams-correct count; null outside a reveal and on closest_guess, whose reveal names the closest teams. */
   teamsCorrect: TeamsCorrect | null;
+  /** The power-ups used on the revealed question, counted without naming a team; empty outside a reveal and when none was used. */
+  powerUpCounts: PowerUpCount[];
   /** The session's league for the lobby screen: its name and top rows, or null when the session is in no league. */
   leagueTop: LeagueTop | null;
 }

@@ -18,7 +18,7 @@ import {
   type JokerPickRound,
 } from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
-import { teamCoins } from './power-ups';
+import { powerUpCountsFor, teamCoins, type PowerUpCount } from './power-ups';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import {
   isCurrentKahootQuestionRevealed,
@@ -102,6 +102,16 @@ function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
   };
 }
 
+/** The power-ups used on the question on air in 'reveal'; empty outside a reveal. */
+function describePowerUpCounts(session: SessionState): PowerUpCount[] {
+  if (session.progress.status !== 'reveal') return [];
+  const question =
+    getBlockSeededQuestions(session)[session.progress.revealIndex];
+  return question
+    ? powerUpCountsFor(question.id, session.funFactData.powerUps)
+    : [];
+}
+
 /** The fields only the big screen and /control (and /remote) read — added to the display and admin views, never the players view. */
 export function buildScreenOperatorFields(
   session: SessionState,
@@ -169,9 +179,11 @@ export function buildDisplayFields(
   | 'kahootQuestionEndsAt'
   | 'jokerPickEndsAt'
   | 'teamsCorrect'
+  | 'powerUpCounts'
 > {
   const { rounds } = session.seededGame;
   return {
+    powerUpCounts: describePowerUpCounts(session),
     roundCategories: rounds.map((round) => round.category ?? ''),
     roundAuthors: rounds.map((round) => round.author ?? ''),
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
@@ -210,6 +222,9 @@ export function buildAdminFields(
           session.seededGame.settings,
           session.carriedCoins[team.teamId],
           session.coinAwards[team.teamId],
+          session.funFactData.powerUps
+            .filter((purchase) => purchase.teamId === team.teamId)
+            .reduce((sum, purchase) => sum + purchase.cost, 0),
         ),
       };
     }),

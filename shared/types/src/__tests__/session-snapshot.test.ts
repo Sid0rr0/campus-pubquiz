@@ -185,6 +185,7 @@ describe('the teams-correct count on the display view', () => {
     leaderboard: [1, 2, 3, 4].map(standing),
     funFactData: {
       bonusAwards: [],
+      powerUps: [],
       answers: [
         answer(2, 1, 'correct', 2),
         answer(2, 2, 'partial', 1),
@@ -236,6 +237,82 @@ describe('the teams-correct count on the display view', () => {
     );
 
     expect(buildDisplayFields(session).teamsCorrect).toBeNull();
+  });
+});
+
+describe('the power-up count on the display view', () => {
+  const reveal = progressAt('reveal', {
+    questionIndex: 1,
+    revealIndex: 1,
+    furthestOpenIndex: 1,
+  });
+  const bought = (teamId: number, questionId: number) => ({
+    teamId,
+    questionId,
+    powerUp: 'fifty_fifty' as const,
+    cost: 1,
+  });
+  const withPurchases = (session: SessionState): SessionState => ({
+    ...session,
+    funFactData: {
+      answers: [],
+      bonusAwards: [],
+      powerUps: [bought(1, 2), bought(2, 2), bought(3, 1)],
+    },
+  });
+
+  it('counts each power-up used on the revealed question, naming no team', () => {
+    const fields = buildDisplayFields(
+      withPurchases(sessionOver(rounds, reveal)),
+    );
+
+    expect(fields.powerUpCounts).toEqual([
+      { powerUp: 'fifty_fifty', count: 2 },
+    ]);
+  });
+
+  it('is empty when none was used on the revealed question', () => {
+    const session = withPurchases(
+      sessionOver(rounds, { ...reveal, questionIndex: 0, revealIndex: 0 }),
+    );
+    session.funFactData.powerUps = [bought(1, 2)];
+
+    expect(buildDisplayFields(session).powerUpCounts).toEqual([]);
+  });
+
+  it('is empty outside a reveal', () => {
+    const session = withPurchases(
+      sessionOver(rounds, { ...reveal, status: 'break' }),
+    );
+
+    expect(buildDisplayFields(session).powerUpCounts).toEqual([]);
+  });
+});
+
+describe('the coins on the admin view', () => {
+  it('subtract what each team spent on power-ups', () => {
+    const base = sessionOver(rounds, progressAt('lobby'), {
+      powerUpsEnabled: true,
+      startingCoins: 3,
+    });
+    const session: SessionState = {
+      ...base,
+      teams: [
+        { teamId: 1, teamName: 'Alpha' },
+        { teamId: 2, teamName: 'Bravo' },
+      ],
+      funFactData: {
+        answers: [],
+        bonusAwards: [],
+        powerUps: [
+          { teamId: 1, questionId: 1, powerUp: 'fifty_fifty', cost: 2 },
+        ],
+      },
+    };
+
+    expect(buildAdminFields(session).teams.map((team) => team.coins)).toEqual([
+      1, 3,
+    ]);
   });
 });
 

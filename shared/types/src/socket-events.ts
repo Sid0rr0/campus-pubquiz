@@ -15,6 +15,7 @@ export const SOCKET_EVENTS = {
   TEAM_KICKED: 'game:team_kicked',
   TEAM_PLAYER_COUNT_SYNCED: 'game:team_player_count_synced',
   TEAM_JOKER_SYNCED: 'game:team_joker_synced',
+  TEAM_PURCHASES_SYNCED: 'game:team_purchases_synced',
   // client -> server
   ADMIN_ACTION: 'game:admin_action',
   SUBMIT_ANSWER: 'game:submit_answer',
@@ -35,6 +36,7 @@ export const SOCKET_EVENTS = {
   SET_TEAM_PLAYER_COUNT: 'game:set_team_player_count',
   PICK_JOKER: 'game:pick_joker',
   SET_TEAM_JOKER: 'game:set_team_joker',
+  BUY_POWER_UP: 'game:buy_power_up',
 } as const;
 
 export const SOCKET_ROOMS = {

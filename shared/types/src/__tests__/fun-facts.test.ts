@@ -112,7 +112,7 @@ function sessionOf(
       progress,
     ),
     leaderboard: leaderboardOf(TEAM_NAMES),
-    funFactData: { answers: [], bonusAwards: [], ...data },
+    funFactData: { answers: [], bonusAwards: [], powerUps: [], ...data },
   };
 }
 
