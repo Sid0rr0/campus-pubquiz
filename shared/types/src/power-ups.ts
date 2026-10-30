@@ -154,9 +154,19 @@ export type BuyPowerUpPayload =
   | { powerUp: PowerUpId; questionId: number; roundId?: undefined }
   | { powerUp: 'extra_joker'; roundId: number; questionId?: undefined };
 
+/** The statuses before any round intro has been on air. */
+const BEFORE_FIRST_INTRO: readonly string[] = [
+  'lobby',
+  'rules',
+  'round_overview',
+  'joker_pick',
+];
+
 /**
  * The round an extra joker can be bought for right now: the first round with
- * no opened question whose intro is not on air. Null when there is none.
+ * no opened question whose intro has not been on air (the current round's
+ * intro is on air or past in every status after the joker pick). Null when
+ * there is none.
  */
 export function extraJokerRoundId(session: {
   seededGame: {
@@ -166,13 +176,12 @@ export function extraJokerRoundId(session: {
   progress: { status: string; roundIndex: number };
 }): number | null {
   const { rounds } = session.seededGame;
-  const onAir =
-    session.progress.status === 'round_intro'
-      ? rounds[session.progress.roundIndex]?.id
-      : undefined;
+  const { status, roundIndex } = session.progress;
+  if (status === 'ended') return null;
+  const lastIntroIndex = BEFORE_FIRST_INTRO.includes(status) ? -1 : roundIndex;
   return (
     pickableRounds(rounds, session.openedQuestionIds).find(
-      (round) => round.id !== onAir,
+      (round) => rounds.indexOf(round) > lastIntroIndex,
     )?.id ?? null
   );
 }

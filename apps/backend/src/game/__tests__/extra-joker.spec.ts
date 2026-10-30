@@ -124,6 +124,18 @@ describe('GameGateway — buying an extra joker', () => {
       expect(await buy(game, alpha, 2)).toEqual({ success: true });
     });
 
+    it.each(['locking', 'break_intro'] as const)(
+      'offers no round whose intro has passed, in %s',
+      async (status) => {
+        const game = await night();
+        const [alpha] = game.teams;
+        await advanceUntil(game, status);
+
+        expect(await refusal(game, alpha, 0)).toMatch(/next round/);
+        expect(await buy(game, alpha, 1)).toEqual({ success: true });
+      },
+    );
+
     it('refuses a round the team already doubled with an extra joker', async () => {
       const game = await night();
       const [alpha] = game.teams;

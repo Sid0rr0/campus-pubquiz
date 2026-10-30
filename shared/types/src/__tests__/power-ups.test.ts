@@ -5,6 +5,7 @@ import {
   defaultPowerUpSettings,
   DEFAULT_SESSION_SETTINGS,
   drawRemovedOptions,
+  extraJokerRoundId,
   fiftyFiftyLeaveCount,
   optionsAfterPurchases,
   powerUpApplies,
@@ -37,6 +38,34 @@ describe('defaultPowerUpSettings', () => {
     expect(DEFAULT_SESSION_SETTINGS.powerUps).toEqual(
       defaultPowerUpSettings(false),
     );
+  });
+});
+
+describe('extraJokerRoundId', () => {
+  const rounds = [
+    { id: 1, questions: [{ id: 10 }] },
+    { id: 2, questions: [{ id: 20 }] },
+  ];
+  const offered = (status: string, roundIndex: number, opened: number[] = []) =>
+    extraJokerRoundId({
+      seededGame: { rounds },
+      openedQuestionIds: opened,
+      progress: { status, roundIndex },
+    });
+
+  it('offers the first round before any intro has been on air', () => {
+    expect(offered('joker_pick', 0)).toBe(1);
+  });
+
+  it.each(['round_intro', 'question_open', 'locking', 'break_intro', 'break'])(
+    'never offers a round whose intro has passed, in %s, even with no question opened',
+    (status) => {
+      expect(offered(status, 0)).toBe(2);
+    },
+  );
+
+  it('offers nothing once the quiz has ended', () => {
+    expect(offered('ended', 1)).toBeNull();
   });
 });
 
