@@ -132,7 +132,10 @@ describe('askTheRoomSplit', () => {
     expect(Object.values(split ?? {}).reduce((a, b) => a + b, 0)).toBe(100);
   });
 
-  it('counts an answer that is no option towards the threshold but not the split', () => {
+  it('does not count an answer that is no option towards the threshold', () => {
+    expect(
+      askTheRoomSplit(options, ['Paris', 'Paris', 'stale', 'other']),
+    ).toBeNull();
     expect(
       askTheRoomSplit(options, ['Paris', 'Paris', 'Paris', 'stale']),
     ).toEqual({ Paris: 100, London: 0, Berlin: 0, Rome: 0 });

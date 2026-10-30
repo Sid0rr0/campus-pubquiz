@@ -249,25 +249,23 @@ export const ASK_THE_ROOM_MIN_ANSWERS = 3;
 /**
  * Ask the room's split: each option's whole-percent share of the other teams'
  * current answers (summing to 100, largest remainders rounded up), or null
- * below `ASK_THE_ROOM_MIN_ANSWERS` answers. An answer that is no option counts
- * towards the threshold but not the shares.
+ * below `ASK_THE_ROOM_MIN_ANSWERS` answers that match an option. An answer that
+ * is no option counts towards neither the threshold nor the shares.
  */
 export function askTheRoomSplit(
   options: readonly string[],
   answers: readonly string[],
 ): Record<string, number> | null {
-  if (answers.length < ASK_THE_ROOM_MIN_ANSWERS) return null;
   const counts = options.map(
     (option) => answers.filter((answer) => answer === option).length,
   );
   const total = counts.reduce((a, b) => a + b, 0);
-  const shares = counts.map((count) =>
-    total === 0 ? 0 : Math.floor((count * 100) / total),
-  );
+  if (total < ASK_THE_ROOM_MIN_ANSWERS) return null;
+  const shares = counts.map((count) => Math.floor((count * 100) / total));
   const byRemainder = counts
-    .map((count, i) => ({ i, rest: total === 0 ? 0 : (count * 100) % total }))
+    .map((count, i) => ({ i, rest: (count * 100) % total }))
     .sort((a, b) => b.rest - a.rest || a.i - b.i);
-  const leftover = total === 0 ? 0 : 100 - shares.reduce((a, b) => a + b, 0);
+  const leftover = 100 - shares.reduce((a, b) => a + b, 0);
   for (const { i } of byRemainder.slice(0, leftover)) shares[i] += 1;
   return Object.fromEntries(options.map((option, i) => [option, shares[i]]));
 }

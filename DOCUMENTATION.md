@@ -679,7 +679,7 @@ member to `PurchaseEffect`/`purchaseEffectSchema`, a case to the effect builder 
 teams' current answers at the moment of purchase (`askTheRoomSplit`, summing to 100)
 as `{ kind: 'ask_the_room', split }`: no team count, right/wrong or names. It is
 refused with "Waiting for more answers" (nothing charged) until 3 other teams have a
-current answer. The phone's button is not greyed meanwhile (it never learns how many
+current answer that matches an option. The phone's button is not greyed meanwhile (it never learns how many
 teams answered), and shows the split under the question, with options its 50/50
 removed crossed out.
 
