@@ -5,6 +5,7 @@ import {
   type SessionState,
   SOCKET_EVENTS,
   type TeamBonusAwardView,
+  purchaseCostsOf,
   teamCoins,
 } from '@campus-pubquiz/types';
 import {
@@ -70,7 +71,12 @@ export class BonusAwardsChanges {
           coins: coinsGiven,
           // Only the quiz master's own coins carry the reason typed in the form.
           reason: coins ? reason?.trim() || undefined : undefined,
-          balance: teamCoins(settings, session.carriedCoins[teamId], coinTotal),
+          balance: teamCoins(
+            settings,
+            session.carriedCoins[teamId],
+            coinTotal,
+            purchaseCostsOf(session.funFactData.powerUps, teamId),
+          ),
         },
       });
     }
@@ -115,6 +121,7 @@ export class BonusAwardsChanges {
         next.seededGame.settings,
         next.carriedCoins[teamId],
         coinTotal,
+        purchaseCostsOf(next.funFactData.powerUps, teamId),
       ),
     });
   }

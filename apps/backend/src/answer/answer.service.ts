@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   AnswerView,
+  PowerUpId,
   ScoredQuestion,
   TeamAnswerView,
   Verdict,
@@ -154,8 +155,35 @@ export class AnswerService {
     gameSessionId: number,
     questionId: number,
   ): Promise<AnswerView[]> {
-    const rows = await this.findForQuestion(gameSessionId, questionId);
-    return rows.map(toAnswerView);
+    return await this.viewsOf(
+      gameSessionId,
+      questionId,
+      await this.findForQuestion(gameSessionId, questionId),
+    );
+  }
+
+  /** `rows` (a question's answers) as admin answer views, each with the power-ups its team used on the question. */
+  private async viewsOf(
+    gameSessionId: number,
+    questionId: number,
+    rows: readonly Answer[],
+  ): Promise<AnswerView[]> {
+    const used = (await this.answers
+      .getKnex()('purchases')
+      .where({ game_session_id: gameSessionId, question_id: questionId })
+      .orderBy('id')
+      .select('team_id as teamId', 'power_up as powerUp')) as {
+      teamId: number;
+      powerUp: PowerUpId;
+    }[];
+    return rows.map((row) =>
+      toAnswerView(
+        row,
+        used
+          .filter(({ teamId }) => teamId === row.team.id)
+          .map((u) => u.powerUp),
+      ),
+    );
   }
 
   /**
@@ -255,7 +283,10 @@ export class AnswerService {
       hasBatchRun,
     });
     await this.applyWrites(rows, writes);
-    return { rescored, answers: rows.map(toAnswerView) };
+    return {
+      rescored,
+      answers: await this.viewsOf(gameSessionId, question.id, rows),
+    };
   }
 
   /** Applies the policy's grade writes (one per row), stamping one grading time per flush; keep is a no-op. */
@@ -295,7 +326,7 @@ export class AnswerService {
   ): Promise<AnswerView[]> {
     const rows = await this.findForQuestion(gameSessionId, question.id);
     await this.applyWrites(rows, lockBatchWrites(question, rows));
-    return rows.map(toAnswerView);
+    return await this.viewsOf(gameSessionId, question.id, rows);
   }
 
   /** Every answer to one question, with its team and the question (one extra query, not one per answer), ordered by team name. */
@@ -337,8 +368,9 @@ export class AnswerService {
 }
 
 /** An answer row as the admin's answer list shows it; the one place a stored answer becomes an admin answer view, its grading state asked of the Grading policy. */
-function toAnswerView(row: Answer): AnswerView {
+function toAnswerView(row: Answer, powerUps: PowerUpId[]): AnswerView {
   return {
+    powerUps,
     answerId: row.id,
     teamId: row.team.id,
     teamName: row.team.name,

@@ -9,6 +9,7 @@ import {
   MAX_PLAYER_COUNT,
   MIN_PLAYER_COUNT,
   DISPLAY_TEXT_SCALE_STEPS,
+  POWER_UP_IDS,
   type BonusCategory,
   type GameAction,
 } from '@campus-pubquiz/types';
@@ -115,6 +116,11 @@ export const pickJokerPayloadSchema = z.object({
 export const setTeamJokerPayloadSchema = z.object({
   teamId: positiveInt,
   roundId: positiveInt,
+});
+
+export const buyPowerUpPayloadSchema = z.object({
+  powerUp: z.enum(POWER_UP_IDS),
+  questionId: positiveInt,
 });
 
 export const gradeAnswerPayloadSchema = z.object({

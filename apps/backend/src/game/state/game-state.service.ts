@@ -18,6 +18,7 @@ import {
   freshSessionState,
   type GameAction,
   type JoinPlayersPayload,
+  type BuyPowerUpPayload,
   type PickJokerPayload,
   type SetTeamJokerPayload,
   type PresenterContextPayload,
@@ -53,6 +54,8 @@ import {
 } from '@/game/state/joker-changes';
 import { CarriedCoinService } from '@/coins/carried-coin.service';
 import { JokerService } from '@/joker/joker.service';
+import { PurchaseChanges } from '@/game/state/purchase-changes';
+import { PurchaseService } from '@/purchase/purchase.service';
 import { TimerExpiryChanges } from '@/game/state/timer-expiry-changes';
 import { TeamRosterChanges } from '@/game/state/team-roster-changes';
 import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
@@ -111,6 +114,7 @@ export class GameStateService implements OnModuleInit {
   private readonly showdownsChanges: ShowdownsChanges;
   private readonly leagueChanges: LeagueChanges;
   private readonly jokerChanges: JokerChanges;
+  private readonly purchaseChanges: PurchaseChanges;
   private readonly timerExpiryChanges: TimerExpiryChanges;
 
   constructor(
@@ -130,8 +134,13 @@ export class GameStateService implements OnModuleInit {
     private readonly leagueService: LeagueService,
     private readonly jokerService: JokerService,
     private readonly carriedCoinService: CarriedCoinService,
+    private readonly purchaseService: PurchaseService,
     @Optional() @Inject(JOKER_RANDOM) random?: RandomSource,
   ) {
+    this.purchaseChanges = new PurchaseChanges(
+      this.purchaseService,
+      random ?? Math.random,
+    );
     this.jokerChanges = new JokerChanges(
       this.jokerService,
       this.teamService,
@@ -148,6 +157,7 @@ export class GameStateService implements OnModuleInit {
       this.playerCountService,
       this.jokerChanges,
       this.carriedCoinService,
+      this.purchaseChanges,
     );
     this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
     this.playerCountChanges = new TeamPlayerCountChanges(
@@ -381,6 +391,17 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
       this.jokerChanges.pick(session, payload, socketId),
+    );
+  }
+
+  /** A team buys a power-up from `socketId`; refused unless the shared purchase rule allows it. Only the team's own phones and the admin room are told. */
+  powerUpBought(
+    joinCode: string,
+    payload: BuyPowerUpPayload,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.purchaseChanges.buy(session, payload, socketId),
     );
   }
 

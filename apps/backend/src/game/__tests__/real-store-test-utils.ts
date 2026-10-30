@@ -26,6 +26,7 @@ import { FeedbackService } from '@/feedback/feedback.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { CarriedCoinService } from '@/coins/carried-coin.service';
 import { JokerService } from '@/joker/joker.service';
+import { PurchaseService } from '@/purchase/purchase.service';
 import { JOKER_RANDOM } from '@/game/state/joker-changes';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -229,6 +230,7 @@ export interface RealStoreGateway extends PlayableQuiz {
   playerCountService: PlayerCountService;
   jokerService: JokerService;
   carriedCoinService: CarriedCoinService;
+  purchaseService: PurchaseService;
   showdownService: ShowdownService;
   seedService: SeedService;
   quizService: QuizService;
@@ -634,6 +636,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       playerCountService: moduleRef.get(PlayerCountService),
       jokerService: moduleRef.get(JokerService),
       carriedCoinService: moduleRef.get(CarriedCoinService),
+      purchaseService: moduleRef.get(PurchaseService),
       showdownService: moduleRef.get(ShowdownService),
       seedService: moduleRef.get(SeedService),
       progressRepository: moduleRef.get(GameProgressRepository),

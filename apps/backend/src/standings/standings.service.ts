@@ -4,6 +4,7 @@ import type {
   FunFactAnswer,
   FunFactBonusAward,
   FunFactData,
+  FunFactPowerUp,
   LeaderboardEntry,
 } from '@campus-pubquiz/types';
 import {
@@ -155,7 +156,7 @@ export class StandingsService {
    */
   async funFactData(gameSessionId: number): Promise<FunFactData> {
     const knex = this.gameSessionTeams.getKnex();
-    const [answerRows, bonusRows] = await Promise.all([
+    const [answerRows, bonusRows, powerUpRows] = await Promise.all([
       knex('answers as a')
         .join('game_session_teams as gst', function joinRoster() {
           this.on('gst.game_session_id', 'a.game_session_id').andOn(
@@ -174,8 +175,15 @@ export class StandingsService {
       knex('bonus_awards')
         .where('game_session_id', gameSessionId)
         .select('category', 'points') as Promise<FunFactBonusAward[]>,
+      knex('purchases')
+        .where('game_session_id', gameSessionId)
+        .select('team_id as teamId', 'power_up as powerUp')
+        .select('question_id as questionId', 'cost') as Promise<
+        FunFactPowerUp[]
+      >,
     ]);
     return {
+      powerUps: powerUpRows,
       answers: answerRows.map((row) => ({
         ...row,
         pointsAwarded: Number(row.pointsAwarded),

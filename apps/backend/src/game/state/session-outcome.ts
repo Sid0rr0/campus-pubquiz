@@ -4,6 +4,7 @@ import {
   type SessionState,
   SOCKET_EVENTS,
   type TeamJoker,
+  type TeamPurchasesSyncedPayload,
 } from '@campus-pubquiz/types';
 
 /** One server-to-client event paired with its protocol payload, so a mismatched pair doesn't compile. An event that carries no payload (`TEAM_KICKED`) takes `undefined`. */
@@ -43,6 +44,11 @@ export interface JokerSync extends TeamSync {
 /** A connected team whose phone needs its new coin balance (no toast), with the socket it is on. */
 export interface CoinSync extends TeamSync {
   balance: number;
+}
+
+/** A connected team whose phone needs its power-up purchases and coins, with the socket it is on. */
+export interface PurchaseSync extends TeamSync {
+  payload: TeamPurchasesSyncedPayload;
 }
 
 /** The session's phase timer deadlines (epoch-ms, or null when none is due) after a write that moved any of them. */
@@ -96,6 +102,8 @@ export interface SessionOutcome {
   playerCountSyncs: readonly PlayerCountSync[];
   /** Connected teams whose own joker changed (a pick, a draw when the pick closed), each told the joker it now holds (never sent room-wide). */
   jokerSyncs: readonly JokerSync[];
+  /** Connected teams whose own power-up purchases changed (a purchase), each told its purchases and coins (never sent room-wide). */
+  purchaseSyncs: readonly PurchaseSync[];
   /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
   bonusSyncs: readonly TeamSync[];
   /** Connected teams whose coin balance changed under them (a bonus award deleted took its coin award), each told its new balance. */
@@ -134,6 +142,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   teamSyncs: [],
   playerCountSyncs: [],
   jokerSyncs: [],
+  purchaseSyncs: [],
   bonusSyncs: [],
   coinSyncs: [],
   notices: [],

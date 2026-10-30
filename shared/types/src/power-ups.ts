@@ -196,6 +196,16 @@ export function teamCoins(
   });
 }
 
+/** The sum of the costs of one team's purchases among `purchases` (the figure `teamCoins` subtracts). */
+export function purchaseCostsOf(
+  purchases: readonly { teamId: number; cost: number }[],
+  teamId: number,
+): number {
+  return purchases
+    .filter((purchase) => purchase.teamId === teamId)
+    .reduce((sum, purchase) => sum + purchase.cost, 0);
+}
+
 /** How many times one power-up was used on the revealed question. */
 export interface PowerUpCount {
   powerUp: PowerUpId;

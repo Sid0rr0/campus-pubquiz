@@ -4,9 +4,13 @@ import {
   type SessionSettings,
   type SessionState,
   SOCKET_EVENTS,
-  teamCoins,
   type TeamJoker,
 } from '@campus-pubquiz/types';
+import { toPurchaseViews } from '@/purchase/purchase.service';
+import {
+  coinsAfter,
+  type PurchaseChanges,
+} from '@/game/state/purchase-changes';
 import { AnswerService } from '@/answer/answer.service';
 import type { CarriedCoinService } from '@/coins/carried-coin.service';
 import { BonusService } from '@/bonus/bonus.service';
@@ -57,6 +61,7 @@ export class TeamRosterChanges {
     private readonly playerCountService: PlayerCountService,
     private readonly jokerChanges: JokerChanges,
     private readonly carriedCoinService: Pick<CarriedCoinService, 'decide'>,
+    private readonly purchaseChanges: PurchaseChanges,
   ) {}
 
   /**
@@ -150,6 +155,10 @@ export class TeamRosterChanges {
     settings: SessionSettings,
     carriedCoin: number,
   ): Promise<SessionOutcome['replies'][number]> {
+    const purchases = await this.purchaseChanges.loadForTeam(
+      gameSessionId,
+      team.id,
+    );
     return {
       event: SOCKET_EVENTS.JOIN_ACCEPTED,
       payload: {
@@ -179,12 +188,14 @@ export class TeamRosterChanges {
           team.id,
         ),
         joker,
-        coins: teamCoins(
+        coins: coinsAfter(
           settings,
+          purchases,
           carriedCoin,
           await this.bonusService.coinAwardTotal(gameSessionId, team.id),
         ),
         hasCarriedCoin: carriedCoin > 0,
+        purchases: toPurchaseViews(purchases),
       },
     };
   }

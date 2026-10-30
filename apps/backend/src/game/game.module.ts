@@ -18,6 +18,7 @@ import { JokerService } from '@/joker/joker.service';
 import { LeagueTableService } from '@/league/league-table.service';
 import { LeagueService } from '@/league/league.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { PurchaseService } from '@/purchase/purchase.service';
 import { QuizPreviewService } from '@/quiz/quiz-preview.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { ShowdownService } from '@/showdown/showdown.service';
@@ -38,6 +39,7 @@ import { TeamService } from '@/team/team.service';
   providers: [
     JokerService,
     CarriedCoinService,
+    PurchaseService,
     SeedService,
     TeamService,
     TeamHistoryService,

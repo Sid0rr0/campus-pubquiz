@@ -18,7 +18,12 @@ import {
   type JokerPickRound,
 } from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
-import { powerUpCountsFor, teamCoins, type PowerUpCount } from './power-ups';
+import {
+  powerUpCountsFor,
+  purchaseCostsOf,
+  teamCoins,
+  type PowerUpCount,
+} from './power-ups';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import {
   isCurrentKahootQuestionRevealed,
@@ -222,9 +227,7 @@ export function buildAdminFields(
           session.seededGame.settings,
           session.carriedCoins[team.teamId],
           session.coinAwards[team.teamId],
-          session.funFactData.powerUps
-            .filter((purchase) => purchase.teamId === team.teamId)
-            .reduce((sum, purchase) => sum + purchase.cost, 0),
+          purchaseCostsOf(session.funFactData.powerUps, team.teamId),
         ),
       };
     }),
