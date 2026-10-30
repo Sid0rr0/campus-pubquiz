@@ -177,7 +177,7 @@ export const QUESTION_KINDS: {
     type: 'number',
     hasCorrectRate: true,
     briefWrongAnswers: 'typed',
-    powerUps: [],
+    powerUps: ['wider_margin'],
     revealKind: 'answer',
     label: 'Number',
     moderatorNote:

@@ -3,6 +3,7 @@ import {
   isHttpUrl,
   optionsAfterPurchases,
   POWER_UP_LABELS,
+  widenedMargin,
 } from '@campus-pubquiz/types';
 import type {
   BlockMode,
@@ -214,7 +215,16 @@ export function QuestionBrowser({
             {selectedQuestion.prompt}
           </h1>
           <NumberMarginText
-            question={selectedQuestion}
+            question={
+              selectedQuestion.margin &&
+              powerUpShop?.purchases.some(
+                (p) =>
+                  p.effect.kind === 'wider_margin' &&
+                  p.questionId === selectedQuestion.id,
+              )
+                ? { margin: widenedMargin(selectedQuestion.margin) }
+                : selectedQuestion
+            }
             className="text-center text-sm font-extrabold tracking-wide text-foreground/55"
           />
           {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (

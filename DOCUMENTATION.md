@@ -695,6 +695,16 @@ the key at purchase time and stored as `{ kind, hint }`, so a later key fix does
 change what the team saw. The phone shows it above the answer box, also after a
 reconnect.
 
+**Wider margin** (Number only, not closest guess) grades the buying team against
+`widenedMargin` of the question's margin: the value doubled in its unit, or
+`DEFAULT_MARGIN` (10%) when the margin is 0 (exact only). It stores just
+`{ kind: 'wider_margin' }`: the margin is derived from the question's current one
+wherever it is used, so it follows a key fix. `AnswerService` grades that team's
+answer with `withWiderMargin` at submit, and on a key fix or kahoot speed score
+(`StoredAnswerRow.hasWiderMargin`). The phone shows the doubled margin text instead
+of the question's. Buying after already submitting does not re-grade: the team
+resubmits (or the quiz master grades by hand).
+
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like
 every other setting; a stored settings JSON without the field reads as off) turns

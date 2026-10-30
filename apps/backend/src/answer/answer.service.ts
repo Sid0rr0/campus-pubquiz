@@ -7,7 +7,7 @@ import type {
   TeamAnswerView,
   Verdict,
 } from '@campus-pubquiz/types';
-import { verdictForManualGrade } from '@campus-pubquiz/types';
+import { verdictForManualGrade, withWiderMargin } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
@@ -20,6 +20,7 @@ import {
   lockBatchWrites,
   speedScore,
   type GradeWrite,
+  type StoredAnswerRow,
 } from '@/answer/grading-policy';
 
 export interface SubmittedAnswer {
@@ -114,7 +115,13 @@ export class AnswerService {
       { gameSession: gameSessionId, question: questionId, team: teamId },
       { fields: ['value', 'gradedAt'] },
     );
-    const write = gradeOnSubmit(question, value, existing);
+    const write = gradeOnSubmit(
+      (await this.widerMarginTeamIds(gameSessionId, questionId)).has(teamId)
+        ? withWiderMargin(question)
+        : question,
+      value,
+      existing,
+    );
 
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
@@ -149,6 +156,39 @@ export class AnswerService {
       gradedAt: answer.gradedAt?.toISOString() ?? null,
       verdict: answer.verdict,
     };
+  }
+
+  /** The teams that bought a wider margin on the question: graded against the widened one. */
+  private async widerMarginTeamIds(
+    gameSessionId: number,
+    questionId: number,
+  ): Promise<Set<number>> {
+    const rows = (await this.answers
+      .getKnex()('purchases')
+      .where({
+        game_session_id: gameSessionId,
+        question_id: questionId,
+        power_up: 'wider_margin',
+      })
+      .select('team_id as teamId')) as { teamId: number }[];
+    return new Set(rows.map(({ teamId }) => teamId));
+  }
+
+  /** The rows as the policy reads them, each flagged when its team's margin is widened. */
+  private async policyRows(
+    gameSessionId: number,
+    questionId: number,
+    rows: readonly Answer[],
+  ): Promise<StoredAnswerRow[]> {
+    const wider = await this.widerMarginTeamIds(gameSessionId, questionId);
+    return rows.map((row) => ({
+      value: row.value,
+      gradedAt: row.gradedAt,
+      responseMs: row.responseMs,
+      verdict: row.verdict,
+      pointsAwarded: row.pointsAwarded,
+      hasWiderMargin: wider.has(row.team.id),
+    }));
   }
 
   async listForQuestion(
@@ -278,7 +318,7 @@ export class AnswerService {
     const { rescored, writes } = gradeOnKeyFix({
       question,
       previous,
-      rows,
+      rows: await this.policyRows(gameSessionId, question.id, rows),
       kahootTimerSeconds,
       hasBatchRun,
     });
@@ -362,7 +402,11 @@ export class AnswerService {
     const rows = await this.findForQuestion(gameSessionId, question.id);
     await this.applyWrites(
       rows,
-      speedScore(question, rows, questionTimerSeconds),
+      speedScore(
+        question,
+        await this.policyRows(gameSessionId, question.id, rows),
+        questionTimerSeconds,
+      ),
     );
   }
 }

@@ -69,6 +69,8 @@ function effectOf(
         kind: powerUp,
         hint: textHint(powerUp, question.answer),
       };
+    case 'wider_margin':
+      return { kind: 'wider_margin' };
     default:
       throw new Error(`No effect is defined for the ${powerUp} power-up`);
   }

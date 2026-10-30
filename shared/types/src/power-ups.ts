@@ -58,12 +58,14 @@ export function defaultPowerUpSettings(
  */
 export type PurchaseEffect =
   | { kind: 'fifty_fifty'; removedOptions: string[] }
-  | { kind: TextHintId; hint: string };
+  | { kind: TextHintId; hint: string }
+  | { kind: 'wider_margin' };
 
 /** The free-text power-ups: each stores the hint worked out from the key at purchase time. */
 export type TextHintId = 'first_letter' | 'letter_count';
 
 export const purchaseEffectSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('wider_margin') }),
   z.object({
     kind: z.literal('fifty_fifty'),
     removedOptions: z.array(z.string()),

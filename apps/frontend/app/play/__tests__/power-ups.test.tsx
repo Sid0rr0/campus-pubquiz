@@ -183,6 +183,33 @@ describe('PlayPage — the power-up bar', () => {
     expect(toastError).toHaveBeenCalledWith('Not enough coins');
   });
 
+  it('tells the team its doubled margin after a wider margin, as after a reconnect', () => {
+    const NUMBER = {
+      type: 'number',
+      prompt: 'How many bones?',
+      points: 3,
+      margin: { value: 5, unit: 'percent' },
+    };
+    phone({
+      question: NUMBER,
+      purchases: [
+        {
+          powerUp: 'wider_margin',
+          questionId: 1,
+          roundId: null,
+          effect: { kind: 'wider_margin' },
+        },
+      ],
+      coins: 0,
+    });
+
+    expect(
+      screen.getByText(
+        'Answers within 10% of the real number count as correct',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('hides the removed options and the used power-up, as after a reconnect', () => {
     phone({ purchases: [fiftyFifty], coins: 0 });
 
