@@ -8,6 +8,7 @@ import {
   type TeamJoker,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
+import type { CarriedCoinService } from '@/coins/carried-coin.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
@@ -55,6 +56,7 @@ export class TeamRosterChanges {
     private readonly feedbackService: FeedbackService,
     private readonly playerCountService: PlayerCountService,
     private readonly jokerChanges: JokerChanges,
+    private readonly carriedCoinService: Pick<CarriedCoinService, 'decide'>,
   ) {}
 
   /**
@@ -106,10 +108,15 @@ export class TeamRosterChanges {
       team.id,
       heldJoker,
     );
+    // A team joining after the start has its carried coin decided now; in the lobby it is decided at the start.
+    const carriedCoins =
+      session.progress.status === 'lobby'
+        ? session.carriedCoins
+        : await this.carriedCoinService.decide(gameSessionId, [team.id]);
     const joined = withTeams(
       withJoker(
         withPlayerCount(
-          withTeamConnected(session, team.id, socketId),
+          withTeamConnected({ ...session, carriedCoins }, team.id, socketId),
           team.id,
           playerCount,
         ),
@@ -141,6 +148,7 @@ export class TeamRosterChanges {
     team: TeamIdentity,
     joker: TeamJoker | null,
     settings: SessionSettings,
+    carriedCoin: number,
   ): Promise<SessionOutcome['replies'][number]> {
     return {
       event: SOCKET_EVENTS.JOIN_ACCEPTED,
@@ -171,7 +179,8 @@ export class TeamRosterChanges {
           team.id,
         ),
         joker,
-        coins: teamCoins(settings),
+        coins: teamCoins(settings, carriedCoin),
+        hasCarriedCoin: carriedCoin > 0,
       },
     };
   }

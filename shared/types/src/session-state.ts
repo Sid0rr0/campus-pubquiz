@@ -85,6 +85,8 @@ export interface SessionState {
   jokerPickEndsAt: number | null;
   /** teamId -> the team's joker, for teams that have one. A cache of the stored jokers, read when the session is placed and as teams join, and updated as teams pick and as the pick closes, so the views stay synchronous. */
   jokers: Record<number, TeamJoker>;
+  /** teamId -> the team's carried coin (0 or 1), for teams it was decided for (at the start, or at a late join). A cache of the stored carried coins, read when the session is placed and as teams join. */
+  carriedCoins: Record<number, number>;
   /** Epoch-ms time the admin expects the break to end, or null when unset — see StateSnapshotPayload.breakEndsAt. */
   breakEndsAt: number | null;
   /** Text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
@@ -220,6 +222,7 @@ export function freshSessionState(
     kahootQuestionEndsAt: null,
     jokerPickEndsAt: null,
     jokers: {},
+    carriedCoins: {},
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
     isDisplaySoundMuted: false,

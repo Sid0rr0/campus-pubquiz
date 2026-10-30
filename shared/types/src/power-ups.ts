@@ -67,15 +67,18 @@ export function coinBalance(ledger: CoinLedger): number {
   );
 }
 
-/** A team's coins in a session. Until the ledger exists (purchases, awards, carried coin) that is just the starting coins. */
-export function teamCoins(settings: {
-  powerUpsEnabled: boolean;
-  startingCoins: number;
-}): number {
+/** A team's coins in a session. Until the rest of the ledger exists (purchases, awards) that is the starting coins plus the carried coin. */
+export function teamCoins(
+  settings: {
+    powerUpsEnabled: boolean;
+    startingCoins: number;
+  },
+  carriedCoin = 0,
+): number {
   return coinBalance({
     powerUpsEnabled: settings.powerUpsEnabled,
     startingCoins: settings.startingCoins,
-    carriedCoin: 0,
+    carriedCoin,
     coinAwards: 0,
     purchaseCosts: 0,
   });

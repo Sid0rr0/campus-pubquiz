@@ -15,6 +15,8 @@ interface LeaderboardScreenProps {
   isConnected: boolean;
   /** The team's coins, shown next to its points; absent when the session has no power-ups. */
   coins?: number;
+  /** Whether one of the coins is the carried coin, earned by rating every round of the team's last league night. */
+  hasCarriedCoin?: boolean;
 }
 
 /**
@@ -28,6 +30,7 @@ export function LeaderboardScreen({
   myTeamId,
   isConnected,
   coins,
+  hasCarriedCoin,
 }: LeaderboardScreenProps) {
   const standing = findMyStanding(board, revealCount, myTeamId);
   useOnLiveForwardMove(standing ? 1 : 0, isConnected, () => {
@@ -57,6 +60,12 @@ export function LeaderboardScreen({
               <> · {coins === 1 ? '1 coin' : `${coins} coins`}</>
             )}
           </p>
+          {hasCarriedCoin && (
+            <p className="text-sm text-foreground/65">
+              One coin is yours for rating every round of your last league
+              night.
+            </p>
+          )}
         </div>
       )}
     </div>

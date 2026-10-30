@@ -51,6 +51,7 @@ import {
   JokerChanges,
   type RandomSource,
 } from '@/game/state/joker-changes';
+import { CarriedCoinService } from '@/coins/carried-coin.service';
 import { JokerService } from '@/joker/joker.service';
 import { TimerExpiryChanges } from '@/game/state/timer-expiry-changes';
 import { TeamRosterChanges } from '@/game/state/team-roster-changes';
@@ -128,6 +129,7 @@ export class GameStateService implements OnModuleInit {
     private readonly leagueTableService: LeagueTableService,
     private readonly leagueService: LeagueService,
     private readonly jokerService: JokerService,
+    private readonly carriedCoinService: CarriedCoinService,
     @Optional() @Inject(JOKER_RANDOM) random?: RandomSource,
   ) {
     this.jokerChanges = new JokerChanges(
@@ -145,6 +147,7 @@ export class GameStateService implements OnModuleInit {
       this.feedbackService,
       this.playerCountService,
       this.jokerChanges,
+      this.carriedCoinService,
     );
     this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
     this.playerCountChanges = new TeamPlayerCountChanges(
@@ -164,6 +167,7 @@ export class GameStateService implements OnModuleInit {
       this.showdownService,
       (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
       this.jokerChanges,
+      this.carriedCoinService,
     );
     this.timerExpiryChanges = new TimerExpiryChanges(this.moveCommitter);
   }
@@ -470,6 +474,7 @@ export class GameStateService implements OnModuleInit {
             team,
             heldJoker,
             this.sessionWrite.read(joinCode).seededGame.settings,
+            this.sessionWrite.read(joinCode).carriedCoins[team.id] ?? 0,
           ),
         ],
       };

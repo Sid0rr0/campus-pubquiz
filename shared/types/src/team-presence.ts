@@ -47,6 +47,8 @@ export interface JoinAcceptedPayload {
   joker: TeamJoker | null;
   /** The team's own coins, worked out by the server from its ledger, so a reconnect restores them. */
   coins: number;
+  /** Whether one of those coins is the carried coin, earned by rating every round of the team's last night in the league, so the phone can say where it came from. */
+  hasCarriedCoin: boolean;
 }
 
 export interface KickTeamPayload {

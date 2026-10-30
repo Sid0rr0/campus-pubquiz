@@ -265,6 +265,7 @@ describe('SiteHeader', () => {
           playerCount: null,
           joker: null,
           coins: 0,
+          hasCarriedCoin: false,
         },
         onLogOut,
       }),

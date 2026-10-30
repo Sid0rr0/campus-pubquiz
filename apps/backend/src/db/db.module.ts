@@ -12,6 +12,7 @@ import { Round } from '@/db/entities/round.entity';
 import { RoundRating } from '@/db/entities/round-rating.entity';
 import { SessionFeedback } from '@/db/entities/session-feedback.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
+import { SessionCarriedCoin } from '@/db/entities/session-carried-coin.entity';
 import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
 import { Session } from '@/db/entities/session.entity';
 import { ShowdownRound } from '@/db/entities/showdown-round.entity';
@@ -34,6 +35,7 @@ export const DB_ENTITIES = [
   SessionFeedback,
   SessionPlayerCount,
   SessionTeamJoker,
+  SessionCarriedCoin,
   League,
   LeagueSession,
   User,

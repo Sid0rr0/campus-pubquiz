@@ -318,7 +318,10 @@ function PlayPageContent() {
           activeShowdown={activeShowdown}
           showdownRevealStep={showdownRevealStep}
           myTeamId={myTeamId}
-          coins={settings.powerUpsEnabled ? team?.coins : undefined}
+          coins={
+            settings.powerUpsEnabled || team?.coins ? team?.coins : undefined
+          }
+          hasCarriedCoin={team?.hasCarriedCoin}
           phoneLeaderboard={phoneLeaderboard}
           isConnected={connectionError === null}
           teamName={teamName}

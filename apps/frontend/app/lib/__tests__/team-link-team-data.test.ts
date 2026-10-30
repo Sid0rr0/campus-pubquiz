@@ -38,6 +38,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   playerCount: null,
   joker: null,
   coins: 0,
+  hasCarriedCoin: false,
 };
 
 const STORED = {

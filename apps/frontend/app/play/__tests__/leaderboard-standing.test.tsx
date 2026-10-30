@@ -92,10 +92,23 @@ describe('PlayPage — own placing on the leaderboard screen', () => {
     );
     unmount();
 
-    mockUseTeamLink.mockReturnValue(linkFor(boardSession(2), team));
+    const noCoins = { ...team, coins: 0 };
+    mockUseTeamLink.mockReturnValue(linkFor(boardSession(2), noCoins));
     renderWithQuery(<PlayPage />);
     expect(screen.getByTestId('own-leaderboard-row')).not.toHaveTextContent(
       /coin/,
+    );
+  });
+
+  it('still shows a carried coin, and where it came from, when power-ups are off', () => {
+    const team = { ...BETA_TEAM, coins: 1, hasCarriedCoin: true };
+    mockUseTeamLink.mockReturnValue(linkFor(boardSession(2), team));
+    renderWithQuery(<PlayPage />);
+
+    const row = screen.getByTestId('own-leaderboard-row');
+    expect(row).toHaveTextContent('10 pts · 1 coin');
+    expect(row).toHaveTextContent(
+      /rating every round of your last league night/,
     );
   });
 

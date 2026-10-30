@@ -11,9 +11,9 @@ Parent spec: `.scratch/power-ups/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres spec: the night A / missed B / non-league N / night C scenario from the grilling (coin on C, none on N)
-- [ ] Late join gets it, a league removed after start doesn't take it away
-- [ ] Power-ups off: shop only for the coin holder
-- [ ] `DOCUMENTATION.md`, phone copy explaining where the coin came from
+- [x] Real-Postgres spec: the night A / missed B / non-league N / night C scenario from the grilling (coin on C, none on N)
+- [x] Late join gets it, a league removed after start doesn't take it away
+- [x] Power-ups off: shop only for the coin holder (no shop exists yet: the coin and its balance reach only holders; the shop ticket must show the shop when `coins > 0` with power-ups off)
+- [x] `DOCUMENTATION.md`, phone copy explaining where the coin came from

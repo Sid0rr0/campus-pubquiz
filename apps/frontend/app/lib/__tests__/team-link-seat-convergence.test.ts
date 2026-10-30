@@ -42,6 +42,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   playerCount: null,
   joker: null,
   coins: 0,
+  hasCarriedCoin: false,
 };
 
 const SEAT_TAKEN = `"T" ${SEAT_TAKEN_REFUSAL_MARKER} — ask the quiz master`;

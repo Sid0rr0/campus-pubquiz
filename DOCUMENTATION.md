@@ -617,12 +617,25 @@ panel show them as a "Power-ups" tab.
 
 A team's **coins** are `coinBalance` in shared types: starting coins (only with
 power-ups on) + carried coin + coin awards − purchase costs, never below 0.
-Until the ledger exists only the starting coins count. The balance is sent as
+Until the rest of the ledger exists the starting coins and the carried coin count.
+The balance is sent as
 `coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again) and
 in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
 "Power-ups are on: you start with N coins. Earn more with shots and selfies."
 when power-ups are on.
+
+**Carried coin.** A team that rated every round (a round rating from the break or
+the final form; other feedback doesn't count) of the last ended session it took
+part in that shares a league with this one brings 1 coin; a session in no league
+brings none, and with two leagues the last session sharing either counts. It is
+decided once, when the quiz leaves the lobby for every team on the roster and at
+the join for a team that comes later, and stored in `session_carried_coins`, so
+removing the league afterwards, a rejoin or a restart doesn't take it back.
+It counts even with power-ups off: the phone then shows the coin (and "One coin is
+yours for rating every round of your last league night", from `hasCarriedCoin` in
+`JOIN_ACCEPTED`) only to teams holding one, and the shop uses the session's
+power-up table. Merging teams keeps it with the kept team.
 
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like

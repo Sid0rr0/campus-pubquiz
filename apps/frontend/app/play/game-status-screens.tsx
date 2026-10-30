@@ -38,6 +38,8 @@ interface GameStatusScreensProps {
   myTeamId: number | null;
   /** The team's coins; absent when the session has no power-ups. */
   coins?: number;
+  /** Whether one of the coins is the carried coin, for the line saying where it came from. */
+  hasCarriedCoin?: boolean;
   phoneLeaderboard: PlayersStatePayload['phoneLeaderboard'];
   /** Whether the phone's connection is live; one-off effects stay silent otherwise. */
   isConnected: boolean;
@@ -106,6 +108,7 @@ export function GameStatusScreens({
   showdownRevealStep,
   myTeamId,
   coins,
+  hasCarriedCoin,
   phoneLeaderboard,
   isConnected,
   teamName,
@@ -148,6 +151,7 @@ export function GameStatusScreens({
           myTeamId={myTeamId}
           isConnected={isConnected}
           coins={coins}
+          hasCarriedCoin={hasCarriedCoin}
         />
       );
     case 'lobby':
