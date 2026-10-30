@@ -335,6 +335,46 @@ describe('GameGateway — buying a 50/50', () => {
       expect(await storedPurchases(game, a)).toEqual([]);
     });
 
+    it('tells each team only whether its Ask the room is ready, as others answer and on a rejoin', async () => {
+      const { game, france, answer, teams } = await room();
+      const [a, b, c, d] = teams;
+      const readyTo = (team: JoinedTeam) =>
+        game
+          .roomEmits()
+          .filter(
+            (emit) =>
+              emit.rooms.includes(team.socket.id) &&
+              emit.event === SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
+          )
+          .map((emit) => emit.payload);
+
+      await answer(a, 'Paris'); // the buyer's own answer never counts
+      await answer(b, 'Paris');
+      await answer(c, 'Rome');
+      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: false });
+
+      await answer(d, 'Berlin');
+      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: true });
+      // D hears it too: A, B and C are three other teams to D.
+      expect(readyTo(d).at(-1)).toEqual({ questionId: france, isReady: true });
+
+      await answer(d, 'stale'); // last write wins: no longer an option
+      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: false });
+
+      await answer(d, 'Rome');
+      const second = await game.connectPlayer();
+      await game.gateway.handleJoinPlayers(asSocket(second), {
+        teamName: 'A',
+        teamToken: a.teamToken,
+        joinCode: game.joinCode,
+        previousSocketId: a.socket.id,
+      });
+      expect(
+        (joinedWith(second) as unknown as { roomReadyQuestionIds: number[] })
+          .roomReadyQuestionIds,
+      ).toEqual([france]);
+    });
+
     it('stores the split without the buyer, and the split survives a rejoin', async () => {
       const { game, france, answer, teams } = await room();
       const [a, b, c, d] = teams;

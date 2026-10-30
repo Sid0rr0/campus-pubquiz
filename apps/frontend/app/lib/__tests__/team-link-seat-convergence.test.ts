@@ -44,6 +44,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   coins: 0,
   hasCarriedCoin: false,
   purchases: [],
+  roomReadyQuestionIds: [],
 };
 
 const SEAT_TAKEN = `"T" ${SEAT_TAKEN_REFUSAL_MARKER} — ask the quiz master`;

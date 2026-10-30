@@ -47,7 +47,9 @@ function phone({
   purchases = [],
   question = FRANCE,
   buyPowerUp = vi.fn().mockResolvedValue({ success: true }),
+  roomReadyQuestionIds = [],
 }: {
+  roomReadyQuestionIds?: number[];
   settings?: Partial<SessionSettings>;
   coins?: number;
   purchases?: PurchaseView[];
@@ -70,7 +72,7 @@ function phone({
           coins,
         },
       },
-      game: { myPurchases: purchases, buyPowerUp },
+      game: { myPurchases: purchases, buyPowerUp, roomReadyQuestionIds },
     }),
   );
   renderWithQuery(<PlayPage />);
@@ -137,6 +139,26 @@ describe('PlayPage — the power-up bar', () => {
 
     expect(screen.getByText('First letter: B')).toBeInTheDocument();
     expect(screen.getByText('Letter count: ______')).toBeInTheDocument();
+  });
+
+  it('greys Ask the room out as "Waiting for more answers" until the server says it is ready', async () => {
+    const buy = phone({ coins: 5 });
+    const waiting = screen.getByRole('button', {
+      name: /Ask the room · Waiting for more answers/,
+    });
+    expect(waiting).toBeDisabled();
+    await userEvent.click(waiting);
+    expect(buy).not.toHaveBeenCalled();
+  });
+
+  it('lets a team buy Ask the room once the server says it is ready', async () => {
+    const buy = phone({ coins: 5, roomReadyQuestionIds: [1] });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /Ask the room · \d+ 🪙/ }),
+    );
+
+    expect(buy).toHaveBeenCalledWith('ask_the_room', 1);
   });
 
   it('does not offer a 50/50 on a two-option question', () => {

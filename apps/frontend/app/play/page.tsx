@@ -169,6 +169,7 @@ function PlayPageContent() {
     myJoker,
     pickJoker,
     myPurchases,
+    roomReadyQuestionIds,
     buyPowerUp,
     buyExtraJoker,
     seenQuestions,
@@ -394,6 +395,7 @@ function PlayPageContent() {
                       settings: settings.powerUps,
                       coins: team.coins,
                       purchases: myPurchases,
+                      roomReadyQuestionIds,
                       onBuy: buyPowerUp,
                     }
                   : undefined

@@ -17,6 +17,8 @@ export interface PowerUpShop {
   settings: PowerUpSettings;
   coins: number;
   purchases: PurchaseView[];
+  /** Questions on which the server says Ask the room is ready: a flag only, the phone never learns how many teams answered. */
+  roomReadyQuestionIds: number[];
   onBuy: (powerUp: PowerUpId, questionId: number) => Promise<AckResult>;
 }
 
@@ -85,16 +87,20 @@ export function PowerUpBar({
     >
       {offered.map((powerUp) => {
         const { cost } = shop.settings[powerUp];
+        const isWaiting =
+          powerUp === 'ask_the_room' &&
+          !shop.roomReadyQuestionIds.includes(question.id);
         return (
           <Button
             key={powerUp}
             type="button"
             variant="outline"
             size="sm"
-            disabled={shop.coins < cost}
+            disabled={isWaiting || shop.coins < cost}
             onClick={() => void buy(powerUp)}
           >
-            {POWER_UP_LABELS[powerUp]} · {cost} 🪙
+            {POWER_UP_LABELS[powerUp]} ·{' '}
+            {isWaiting ? 'Waiting for more answers' : `${cost} 🪙`}
           </Button>
         );
       })}

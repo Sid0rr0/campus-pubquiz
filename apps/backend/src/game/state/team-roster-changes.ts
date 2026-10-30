@@ -1,7 +1,9 @@
 import {
+  askTheRoomReady,
+  findQuestionOpenForAnswering,
+  getBlockInPlay,
   type JoinPlayersPayload,
   SEAT_TAKEN_REFUSAL_MARKER,
-  type SessionSettings,
   type SessionState,
   SOCKET_EVENTS,
   type TeamJoker,
@@ -152,13 +154,33 @@ export class TeamRosterChanges {
     gameSessionId: number,
     team: TeamIdentity,
     joker: TeamJoker | null,
-    settings: SessionSettings,
-    carriedCoin: number,
+    session: SessionState,
   ): Promise<SessionOutcome['replies'][number]> {
+    const { settings } = session.seededGame;
+    const carriedCoin = session.carriedCoins[team.id] ?? 0;
     const purchases = await this.purchaseChanges.loadForTeam(
       gameSessionId,
       team.id,
     );
+    const roomReadyQuestionIds: number[] = [];
+    if (settings.powerUps.ask_the_room.maxUses > 0) {
+      for (const { questionId } of getBlockInPlay(
+        session.seededGame.rounds,
+        session.progress,
+      )) {
+        const question = findQuestionOpenForAnswering(session, questionId);
+        if (
+          question &&
+          askTheRoomReady(
+            question,
+            await this.answerService.listForQuestion(gameSessionId, questionId),
+            team.id,
+          )
+        ) {
+          roomReadyQuestionIds.push(questionId);
+        }
+      }
+    }
     return {
       event: SOCKET_EVENTS.JOIN_ACCEPTED,
       payload: {
@@ -196,6 +218,7 @@ export class TeamRosterChanges {
         ),
         hasCarriedCoin: carriedCoin > 0,
         purchases: toPurchaseViews(purchases),
+        roomReadyQuestionIds,
       },
     };
   }

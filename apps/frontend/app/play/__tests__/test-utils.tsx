@@ -61,6 +61,7 @@ export function teamLinkResult({
         myJoker: null,
         pickJoker: vi.fn().mockResolvedValue({ success: true }),
         myPurchases: [],
+        roomReadyQuestionIds: [],
         buyPowerUp: vi.fn().mockResolvedValue({ success: true }),
         buyExtraJoker: vi.fn().mockResolvedValue({ success: true }),
         sendFeedback: vi.fn().mockResolvedValue({ success: true }),

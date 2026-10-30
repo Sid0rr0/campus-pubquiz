@@ -52,6 +52,8 @@ export interface JoinAcceptedPayload {
   hasCarriedCoin: boolean;
   /** The team's own power-up purchases this session, so a reconnect shows the options a 50/50 removed. Never another team's. */
   purchases: PurchaseView[];
+  /** The open questions on which the team's Ask the room is ready now, so a reconnect restores the button. No counts. */
+  roomReadyQuestionIds: number[];
 }
 
 export interface KickTeamPayload {

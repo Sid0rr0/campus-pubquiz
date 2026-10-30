@@ -123,6 +123,10 @@ async function deliverEmits(
     server.to(socketId).emit(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, payload);
   }
 
+  for (const { socketId, payload } of outcome.roomReadySyncs) {
+    server.to(socketId).emit(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, payload);
+  }
+
   for (const { teamId, socketId } of outcome.bonusSyncs) {
     const bonusAwards = await bonusService.listForTeam(
       gameState.getGameSessionId(joinCode),

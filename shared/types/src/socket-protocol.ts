@@ -33,6 +33,7 @@ import type {
 import type {
   BuyPowerUpPayload,
   TeamPurchasesSyncedPayload,
+  TeamRoomReadySyncedPayload,
 } from './power-ups';
 import type {
   SetPlayerCountPayload,
@@ -137,6 +138,7 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
   [SOCKET_EVENTS.TEAM_JOKER_SYNCED]: TeamJokerSyncedPayload;
   [SOCKET_EVENTS.TEAM_PURCHASES_SYNCED]: TeamPurchasesSyncedPayload;
+  [SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED]: TeamRoomReadySyncedPayload;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
   exception: ExceptionPayload | string;
 }

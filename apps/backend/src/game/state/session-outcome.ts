@@ -5,6 +5,7 @@ import {
   SOCKET_EVENTS,
   type TeamJoker,
   type TeamPurchasesSyncedPayload,
+  type TeamRoomReadySyncedPayload,
 } from '@campus-pubquiz/types';
 
 /** One server-to-client event paired with its protocol payload, so a mismatched pair doesn't compile. An event that carries no payload (`TEAM_KICKED`) takes `undefined`. */
@@ -49,6 +50,11 @@ export interface CoinSync extends TeamSync {
 /** A connected team whose phone needs its power-up purchases and coins, with the socket it is on. */
 export interface PurchaseSync extends TeamSync {
   payload: TeamPurchasesSyncedPayload;
+}
+
+/** A connected team whose phone needs to know whether Ask the room is ready on a question, with the socket it is on. */
+export interface RoomReadySync extends TeamSync {
+  payload: TeamRoomReadySyncedPayload;
 }
 
 /** The session's phase timer deadlines (epoch-ms, or null when none is due) after a write that moved any of them. */
@@ -104,6 +110,8 @@ export interface SessionOutcome {
   jokerSyncs: readonly JokerSync[];
   /** Connected teams whose own power-up purchases changed (a purchase), each told its purchases and coins (never sent room-wide). */
   purchaseSyncs: readonly PurchaseSync[];
+  /** Connected teams told whether their Ask the room is ready on a question, after any team's answer landed there (a flag per team, never a count). */
+  roomReadySyncs: readonly RoomReadySync[];
   /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
   bonusSyncs: readonly TeamSync[];
   /** Connected teams whose coin balance changed under them (a bonus award deleted took its coin award), each told its new balance. */
@@ -143,6 +151,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   playerCountSyncs: [],
   jokerSyncs: [],
   purchaseSyncs: [],
+  roomReadySyncs: [],
   bonusSyncs: [],
   coinSyncs: [],
   notices: [],

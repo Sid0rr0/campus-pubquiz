@@ -267,6 +267,7 @@ describe('SiteHeader', () => {
           coins: 0,
           hasCarriedCoin: false,
           purchases: [],
+          roomReadyQuestionIds: [],
         },
         onLogOut,
       }),

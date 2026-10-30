@@ -684,9 +684,15 @@ member to `PurchaseEffect`/`purchaseEffectSchema`, a case to the effect builder 
 teams' current answers at the moment of purchase (`askTheRoomSplit`, summing to 100)
 as `{ kind: 'ask_the_room', split }`: no team count, right/wrong or names. It is
 refused with "Waiting for more answers" (nothing charged) until 3 other teams have a
-current answer that matches an option. The phone's button is not greyed meanwhile (it never learns how many
-teams answered), and shows the split under the question, with options its 50/50
-removed crossed out.
+current answer that matches an option (the server refusal stays as the backstop).
+The phone's button is greyed out as "Waiting for more answers" until the server
+says it is ready: every time an answer lands on an open question, each connected
+team gets `TEAM_ROOM_READY_SYNCED` (`{ questionId, isReady }`, its own phones
+only), `isReady` meaning 3 _other_ teams have a matching answer. The join reply
+carries `roomReadyQuestionIds` (the block in play's ready questions) so a
+reconnect restores it. Only that boolean travels; the phone never learns how many
+teams answered. The phone shows the split under the question, with options its
+50/50 removed crossed out.
 
 **Pin one** (sort and match) draws one item of the answer key with the injected
 random source (`drawPin`) and stores `{ kind: 'pin_one', item, position }`: the item
@@ -941,6 +947,8 @@ phone's list with no toast, and a disconnected team catches up on rejoin),
 above),
 `TEAM_PURCHASES_SYNCED` (`{ purchases, coins }`, to the buying team's own phones
 only; see Buying a power-up above),
+`TEAM_ROOM_READY_SYNCED` (`{ questionId, isReady }`, to each connected team's own
+phones after an answer lands; see Ask the room above),
 `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 

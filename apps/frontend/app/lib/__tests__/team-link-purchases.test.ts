@@ -24,6 +24,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   coins: 2,
   hasCarriedCoin: false,
   purchases: [BOUGHT],
+  roomReadyQuestionIds: [5],
 };
 
 const start = () =>
@@ -59,6 +60,26 @@ describe('the Team link — power-up purchases', () => {
 
     expect(state.myPurchases).toEqual([BOUGHT]);
     expect(state.team?.coins).toBe(1);
+  });
+
+  it('restores the ready flag from a join and follows each sync, per question', () => {
+    const joined = teamLink(start(), {
+      type: 'joinAccepted',
+      payload: ACCEPTED,
+    }).state;
+    expect(joined.roomReadyQuestionIds).toEqual([5]);
+
+    const second = teamLink(joined, {
+      type: 'roomReadySynced',
+      payload: { questionId: 6, isReady: true },
+    }).state;
+    expect(second.roomReadyQuestionIds).toEqual([5, 6]);
+
+    const { state } = teamLink(second, {
+      type: 'roomReadySynced',
+      payload: { questionId: 5, isReady: false },
+    });
+    expect(state.roomReadyQuestionIds).toEqual([6]);
   });
 
   it('forgets the purchases with the rest of the team data', () => {

@@ -32,6 +32,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   coins: 0,
   hasCarriedCoin: false,
   purchases: [],
+  roomReadyQuestionIds: [],
 };
 
 /** Feeds inputs in order and returns the final state with every command emitted along the way. */

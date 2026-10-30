@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  askTheRoomReady,
   askTheRoomSplit,
   coinBalance,
   defaultPowerUpSettings,
@@ -139,6 +140,33 @@ describe('askTheRoomSplit', () => {
     expect(
       askTheRoomSplit(options, ['Paris', 'Paris', 'Paris', 'stale']),
     ).toEqual({ Paris: 100, London: 0, Berlin: 0, Rome: 0 });
+  });
+});
+
+describe('askTheRoomReady', () => {
+  const question = {
+    type: 'multiple_choice' as const,
+    options: ['Paris', 'London', 'Rome'],
+  };
+  const answer = (teamId: number, value: string) => ({ teamId, value });
+
+  it('needs three other teams with an option-matching answer', () => {
+    const others = [answer(2, 'Paris'), answer(3, 'Rome'), answer(4, 'stale')];
+    expect(askTheRoomReady(question, others, 1)).toBe(false);
+    expect(askTheRoomReady(question, [...others, answer(5, 'London')], 1)).toBe(
+      true,
+    );
+  });
+
+  it('does not count the team’s own answer', () => {
+    const answers = [answer(1, 'Paris'), answer(2, 'Paris'), answer(3, 'Rome')];
+    expect(askTheRoomReady(question, answers, 1)).toBe(false);
+    expect(askTheRoomReady(question, answers, 4)).toBe(true);
+  });
+
+  it('is never ready on a question the power-up does not work on', () => {
+    const answers = [answer(2, 'a'), answer(3, 'a'), answer(4, 'a')];
+    expect(askTheRoomReady({ type: 'free_text' }, answers, 1)).toBe(false);
   });
 });
 

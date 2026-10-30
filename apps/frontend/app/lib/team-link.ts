@@ -22,6 +22,7 @@ import {
   type TeamFeedbackView,
   type TeamJoker,
   type TeamPurchasesSyncedPayload,
+  type TeamRoomReadySyncedPayload,
   type TeamSessionRatingsView,
   type Verdict,
 } from '@campus-pubquiz/types';
@@ -176,6 +177,8 @@ export interface TeamLinkState {
   myJoker: TeamJoker | null;
   /** The team's own power-up purchases as the server last said them (the join, or a sync after a purchase); a 50/50's removed options stay hidden through them. */
   myPurchases: PurchaseView[];
+  /** The questions on which the server says this team's Ask the room is ready (the join, then a sync as other teams answer). A flag only, never a count. */
+  roomReadyQuestionIds: number[];
   /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
   roundRatingsEpoch: number;
   /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
@@ -224,6 +227,8 @@ export type TeamLinkInput =
   | { type: 'jokerSaved'; joker: TeamJoker }
   // The server told the team's phones its purchases and coins after a purchase.
   | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
+  // The server said whether Ask the room is ready on a question, after another team's answer.
+  | { type: 'roomReadySynced'; payload: TeamRoomReadySyncedPayload }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
@@ -321,6 +326,7 @@ const EMPTY_TEAM_DATA = {
   myPlayerCount: null,
   myJoker: null,
   myPurchases: [],
+  roomReadyQuestionIds: [],
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
 
@@ -602,6 +608,7 @@ function acceptJoin(
     myPlayerCount: payload.playerCount ?? null,
     myJoker: payload.joker ?? null,
     myPurchases: payload.purchases,
+    roomReadyQuestionIds: payload.roomReadyQuestionIds,
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -853,6 +860,16 @@ export function teamLink(
         myPurchases: input.payload.purchases,
         team: state.team && { ...state.team, coins: input.payload.coins },
       });
+    case 'roomReadySynced': {
+      const { questionId, isReady } = input.payload;
+      const others = state.roomReadyQuestionIds.filter(
+        (id) => id !== questionId,
+      );
+      return unchanged({
+        ...state,
+        roomReadyQuestionIds: isReady ? [...others, questionId] : others,
+      });
+    }
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
       if (input.connectionId !== state.joinSentFor) return unchanged(state);

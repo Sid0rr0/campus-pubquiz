@@ -149,6 +149,12 @@ export interface TeamPurchasesSyncedPayload {
   coins: number;
 }
 
+/** Whether the team's Ask the room is ready on one question, pushed to that team's phones alone whenever another team's answer lands (never a count of teams). */
+export interface TeamRoomReadySyncedPayload {
+  questionId: number;
+  isReady: boolean;
+}
+
 /** The single client-to-server event to buy a power-up: on a question, or (the extra joker) for a round. */
 export type BuyPowerUpPayload =
   | { powerUp: PowerUpId; questionId: number; roundId?: undefined }
@@ -268,6 +274,23 @@ export function askTheRoomSplit(
   const leftover = 100 - shares.reduce((a, b) => a + b, 0);
   for (const { i } of byRemainder.slice(0, leftover)) shares[i] += 1;
   return Object.fromEntries(options.map((option, i) => [option, shares[i]]));
+}
+
+/** Whether Ask the room would go through on `question` for `teamId` now: it works there and enough other teams have a current option-matching answer. Says nothing of how many. */
+export function askTheRoomReady(
+  question: { type: QuestionType; options?: readonly string[] },
+  answers: readonly { teamId: number; value: string }[],
+  teamId: number,
+): boolean {
+  return (
+    powerUpApplies('ask_the_room', question) &&
+    askTheRoomSplit(
+      question.options ?? [],
+      answers
+        .filter((answer) => answer.teamId !== teamId)
+        .map((answer) => answer.value),
+    ) !== null
+  );
 }
 
 /** Whether a power-up can be used on this question at all: its type lists the power-up (the registry's `powerUps`), and a 50/50 needs more than two options. */

@@ -145,6 +145,8 @@ export interface TeamLinkGame {
   pickJoker: (roundId: number) => Promise<AckResult>;
   /** The team's own power-up purchases as the server last said them. */
   myPurchases: PurchaseView[];
+  /** The questions on which this team's Ask the room is ready, as the server last said. */
+  roomReadyQuestionIds: number[];
   /** Buys a power-up on a question; resolves to the server's verdict (the refusal's reason when it says no). */
   buyPowerUp: (powerUp: PowerUpId, questionId: number) => Promise<AckResult>;
   buyExtraJoker: (roundId: number) => Promise<AckResult>;
@@ -364,6 +366,9 @@ export function useTeamLink(
       );
       socket.on(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, (payload) =>
         dispatch({ type: 'purchasesSynced', payload }),
+      );
+      socket.on(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, (payload) =>
+        dispatch({ type: 'roomReadySynced', payload }),
       );
       socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload) =>
         dispatch({ type: 'bonusAwarded', payload }),
@@ -663,6 +668,7 @@ export function useTeamLink(
           myJoker: link.myJoker,
           pickJoker,
           myPurchases: link.myPurchases,
+          roomReadyQuestionIds: link.roomReadyQuestionIds,
           buyPowerUp,
           buyExtraJoker,
           submitShowdownGuess,

@@ -496,8 +496,7 @@ export class GameStateService implements OnModuleInit {
             gameSessionId,
             team,
             heldJoker,
-            this.sessionWrite.read(joinCode).seededGame.settings,
-            this.sessionWrite.read(joinCode).carriedCoins[team.id] ?? 0,
+            this.sessionWrite.read(joinCode),
           ),
         ],
       };
