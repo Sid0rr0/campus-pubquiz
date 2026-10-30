@@ -25,7 +25,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1450;
+const MAX_GUIDE_WORDS = 1490;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -85,6 +85,17 @@ describe('GuideContent', () => {
     expect(text).toContain('50/50');
     expect(text).toContain('names the power-ups each answer used');
     expect(text).toContain('Never refunded');
+  });
+
+  it('covers all seven power-ups, the carried coin, ask the room’s rule and giving a coin back', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Seven power-ups');
+    expect(text).toContain('Extra joker');
+    expect(text).toContain('needs 3 other teams');
+    expect(text).toContain('carries 1 coin in');
+    expect(text).toContain('give the coin back with a coin award');
+    expect(text).toContain('Deleting a shot or selfie award removes its coin');
   });
 
   it('explains that the joker round counts double and how the Teams table marks it', () => {
