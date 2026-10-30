@@ -611,8 +611,9 @@ settings JSON without them reads as off with the default table.
 `ask_the_room` and `extra_joker`, where `maxUses: 0` means not offered. Defaults:
 every power-up costs 1 and may be used once, except ask the room (2) and the extra
 joker (3 with `showRoundOverview` on, 2 off; a session created without a table
-gets the one matching its overview, and the settings form moves the cost with the
-overview until it is edited). The start dialog and the `/control` lobby settings
+gets the one matching its overview, and the settings form and a lobby settings
+patch that changes only `showRoundOverview` move the cost with the overview while
+it is still the default). The start dialog and the `/control` lobby settings
 panel show them as a "Power-ups" tab.
 
 A team's **coins** are `coinBalance` in shared types: starting coins (only with
@@ -622,8 +623,10 @@ The balance is sent as
 `coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
 `TEAM_PURCHASES_SYNCED` after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
-"Power-ups are on: you start with N coins. Earn more with shots and selfies."
-when power-ups are on.
+"Power-ups are on: you start with N coins. Earn more with shots, selfies and
+coins from the quiz master." when power-ups are on. With them off, a phone whose
+team holds a carried coin gets "You have 1 coin for rating every round of your last
+league night. Spend it on a power-up." instead (the big screen can't know).
 
 **Carried coin.** A team that rated every round (a round rating from the break or
 the final form; other feedback doesn't count) of the last ended session it took
@@ -823,8 +826,9 @@ still open, which replaces the quiz master's choice.
 **Extra joker.** `BUY_POWER_UP` with `{ powerUp: 'extra_joker', roundId }`
 doubles a round for the buying team, with or without Jokers. Only the round
 on offer can be bought (`extraJokerRoundId`: the first round with no opened
-question whose `round_intro` is not on air, so any time before that intro,
-mid-block included); a round that is the team's joker round or already has an
+question whose intro has not been on air: any status after the joker pick has
+the current round's intro on air or past, so only later rounds are offered; any
+time before that intro, mid-block included); a round that is the team's joker round or already has an
 extra joker is refused ("That round is already doubled"), as are the usual
 limit and coin refusals. The purchase row stores `roundId` (no `questionId`)
 and the effect `{ kind: 'extra_joker' }`. Scoring treats a round as doubled
@@ -832,7 +836,7 @@ when the team has a joker row or an extra-joker purchase on it (the same SQL
 step as the joker, so no round counts more than double; bonus awards never
 double), and the round's cell carries `isJoker`. A joker can't be put on a round
 the team holds an extra joker for: `PICK_JOKER` and `SET_TEAM_JOKER` refuse it
-and draws skip it. The players view carries `extraJokerOffer`
+and draws skip it, also the redraw after a live edit. The players view carries `extraJokerOffer`
 (`{ roundId, roundNumber, title }`, title `""` with the round overview off, or
 `null`); the phone shows "Double the next round: _Title_ — N coins" (or
 "Round N" when the title is empty) from it.

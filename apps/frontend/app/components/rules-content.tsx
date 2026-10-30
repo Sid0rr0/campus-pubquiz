@@ -23,6 +23,9 @@ export type RulesSettings = Pick<
 const JOKER_RULE =
   "Joker: pick one round to score double. You'll choose after the round overview.";
 
+const CARRIED_COIN_RULE =
+  'You have 1 coin for rating every round of your last league night. Spend it on a power-up.';
+
 /** Standalone, with no live session to read from: default house rules and team size, and no bonus bullets (those are session config). */
 const STANDALONE_RULES_SETTINGS: RulesSettings = {
   rules: DEFAULT_SESSION_SETTINGS.rules,
@@ -37,6 +40,8 @@ interface RulesContentProps {
   quizStructure?: QuizStructureSummary;
   /** The session's settings: `rules` is one bullet per entry, `enabledBonusCategories` appends a bullet per category with a fixed explanation (shot, selfie; "custom" has none), and `maxPlayersPerTeam` with `extraPlayerPenaltyPoints` make a generated bullet shown first, and `jokersEnabled` appends the joker line. Omitted when there is no live session. */
   settings?: RulesSettings;
+  /** The viewing team holds a carried coin (phone only): with power-ups off, the rules say it can still be spent. */
+  hasCarriedCoin?: boolean;
 }
 
 function pluralize(count: number, singular: string): string {
@@ -81,6 +86,7 @@ function getQuizStructureText({
 export function RulesContent({
   quizStructure,
   settings = STANDALONE_RULES_SETTINGS,
+  hasCarriedCoin = false,
 }: RulesContentProps) {
   const {
     rules,
@@ -107,9 +113,11 @@ export function RulesContent({
     ...(jokersEnabled ? [JOKER_RULE] : []),
     ...(powerUpsEnabled
       ? [
-          `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. Earn more with shots and selfies.`,
+          `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. Earn more with shots, selfies and coins from the quiz master.`,
         ]
-      : []),
+      : hasCarriedCoin
+        ? [CARRIED_COIN_RULE]
+        : []),
   ];
 
   return (

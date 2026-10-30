@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { RulesContent } from '@/app/components/rules-content';
+import { DEFAULT_SESSION_SETTINGS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
@@ -61,12 +62,12 @@ describe('DisplayPage — rules and round intro', () => {
     [
       true,
       2,
-      'Power-ups are on: you start with 2 coins. Earn more with shots and selfies.',
+      'Power-ups are on: you start with 2 coins. Earn more with shots, selfies and coins from the quiz master.',
     ],
     [
       true,
       1,
-      'Power-ups are on: you start with 1 coin. Earn more with shots and selfies.',
+      'Power-ups are on: you start with 1 coin. Earn more with shots, selfies and coins from the quiz master.',
     ],
     [false, 2, null],
   ])(
@@ -84,6 +85,26 @@ describe('DisplayPage — rules and round intro', () => {
 
       expect(screen.queryByText(/power-ups are on/i)?.textContent ?? null).toBe(
         line,
+      );
+    },
+  );
+
+  it.each([
+    [false, true],
+    [false, false],
+    [true, true],
+  ])(
+    'with power-ups %s and a carried coin %s the rules hint about the coin is shown only with power-ups off and a coin',
+    (powerUpsEnabled, hasCarriedCoin) => {
+      render(
+        <RulesContent
+          settings={{ ...DEFAULT_SESSION_SETTINGS, powerUpsEnabled }}
+          hasCarriedCoin={hasCarriedCoin}
+        />,
+      );
+
+      expect(screen.queryByText(/for rating every round/i) !== null).toBe(
+        !powerUpsEnabled && hasCarriedCoin,
       );
     },
   );

@@ -176,7 +176,11 @@ export function GameStatusScreens({
     case 'rules':
       return (
         <div className="mt-6">
-          <RulesContent quizStructure={quizStructure} settings={settings} />
+          <RulesContent
+            quizStructure={quizStructure}
+            settings={settings}
+            hasCarriedCoin={hasCarriedCoin}
+          />
         </div>
       );
     case 'round_overview':
