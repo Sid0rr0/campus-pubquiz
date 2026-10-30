@@ -246,7 +246,7 @@ export function QuestionBrowser({
           {powerUpShop?.purchases.map(
             ({ questionId, effect }) =>
               questionId === selectedQuestion.id &&
-              effect.kind !== 'fifty_fifty' && (
+              'hint' in effect && (
                 <p
                   key={effect.kind}
                   className="text-center font-mono text-lg font-extrabold tracking-widest"

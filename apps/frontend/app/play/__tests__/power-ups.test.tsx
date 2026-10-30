@@ -94,7 +94,7 @@ describe('PlayPage — the power-up bar', () => {
 
   it('shows only the power-ups that apply to the question type', () => {
     phone({
-      question: { type: 'number', prompt: 'How many?', points: 1 },
+      question: { type: 'closest_guess', prompt: 'How many?', points: 1 },
     });
 
     expect(screen.queryByTestId('power-up-bar')).not.toBeInTheDocument();
