@@ -56,6 +56,16 @@ export function MyTeamLink() {
   );
 }
 
+/** The public how-to-play link: signed-out nav only, since staff have the Guide and their nav is full. */
+export function HowToPlayLink() {
+  return (
+    <NavLink href="/how-to-play">
+      <QuestionMarkCircledIcon aria-hidden="true" />
+      How to play
+    </NavLink>
+  );
+}
+
 interface AccountMenuLinksProps {
   user: AuthUser;
   onLogout: () => void;

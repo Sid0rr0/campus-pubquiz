@@ -89,6 +89,7 @@ management and authoring UI:
 | `/team`                 | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)                   |
 | `/leagues`              | Admin only                  | Create, edit and delete leagues; add or remove ended sessions (see Leagues)                    |
 | `/league`               | Anyone                      | The public league tables (see Leagues)                                                         |
+| `/how-to-play`          | Anyone                      | Short player explainer: basics, bonuses, joker, power-ups, question types, scoring             |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
