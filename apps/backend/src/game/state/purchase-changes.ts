@@ -4,6 +4,7 @@ import {
   powerUpApplies,
   purchaseRefusal,
   teamCoins,
+  textHint,
   type BuyPowerUpPayload,
   type PowerUpId,
   type PurchaseEffect,
@@ -61,6 +62,12 @@ function effectOf(
           question.answer,
           random,
         ),
+      };
+    case 'first_letter':
+    case 'letter_count':
+      return {
+        kind: powerUp,
+        hint: textHint(powerUp, question.answer),
       };
     default:
       throw new Error(`No effect is defined for the ${powerUp} power-up`);

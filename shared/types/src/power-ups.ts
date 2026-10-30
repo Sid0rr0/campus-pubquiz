@@ -56,12 +56,21 @@ export function defaultPowerUpSettings(
  * by `kind`. A new power-up adds a member here and to `purchaseEffectSchema`;
  * the purchase row and the socket event stay as they are.
  */
-export type PurchaseEffect = { kind: 'fifty_fifty'; removedOptions: string[] };
+export type PurchaseEffect =
+  | { kind: 'fifty_fifty'; removedOptions: string[] }
+  | { kind: TextHintId; hint: string };
+
+/** The free-text power-ups: each stores the hint worked out from the key at purchase time. */
+export type TextHintId = 'first_letter' | 'letter_count';
 
 export const purchaseEffectSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('fifty_fifty'),
     removedOptions: z.array(z.string()),
+  }),
+  z.object({
+    kind: z.enum(['first_letter', 'letter_count']),
+    hint: z.string(),
   }),
 ]) satisfies z.ZodType<PurchaseEffect>;
 
@@ -107,6 +116,14 @@ export function drawRemovedOptions(
     removed.add(pool.splice(index, 1)[0]);
   }
   return options.filter((option) => removed.has(option));
+}
+
+/** The hint a free-text power-up shows for `answer`: its literal first character, or the answer with each letter and digit as `_` (spaces and punctuation kept). */
+export function textHint(powerUp: TextHintId, answer: string): string {
+  const key = answer.trim();
+  return powerUp === 'first_letter'
+    ? (Array.from(key)[0] ?? '')
+    : key.replace(/[\p{L}\p{N}]/gu, '_');
 }
 
 /** Whether a power-up can be used on this question at all: its type lists the power-up (the registry's `powerUps`), and a 50/50 needs more than two options. */

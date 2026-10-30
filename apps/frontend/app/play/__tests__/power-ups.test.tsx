@@ -94,10 +94,49 @@ describe('PlayPage — the power-up bar', () => {
 
   it('shows only the power-ups that apply to the question type', () => {
     phone({
-      question: { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      question: { type: 'number', prompt: 'How many?', points: 1 },
     });
 
     expect(screen.queryByTestId('power-up-bar')).not.toBeInTheDocument();
+  });
+
+  it('offers the first letter and letter count on a free-text question and buys one', async () => {
+    const buy = phone({
+      question: { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+    });
+
+    expect(
+      screen.getByRole('button', { name: /Letter count · 1/ }),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: /First letter · 1/ }),
+    );
+
+    expect(buy).toHaveBeenCalledWith('first_letter', 1);
+  });
+
+  it('shows the stored hints on the question, as after a reconnect', () => {
+    phone({
+      question: { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      coins: 0,
+      purchases: [
+        {
+          powerUp: 'first_letter',
+          questionId: 1,
+          roundId: null,
+          effect: { kind: 'first_letter', hint: 'B' },
+        },
+        {
+          powerUp: 'letter_count',
+          questionId: 1,
+          roundId: null,
+          effect: { kind: 'letter_count', hint: '______' },
+        },
+      ],
+    });
+
+    expect(screen.getByText('First letter: B')).toBeInTheDocument();
+    expect(screen.getByText('Letter count: ______')).toBeInTheDocument();
   });
 
   it('does not offer a 50/50 on a two-option question', () => {

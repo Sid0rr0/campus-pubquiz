@@ -9,6 +9,7 @@ import {
   powerUpApplies,
   purchaseEffectSchema,
   purchaseRefusal,
+  textHint,
   type PurchaseView,
 } from '../index';
 
@@ -188,6 +189,30 @@ describe('optionsAfterPurchases', () => {
       'c',
       'd',
     ]);
+  });
+});
+
+describe('textHint', () => {
+  it('first letter is the key literal first character, case kept', () => {
+    expect(textHint('first_letter', 'Eiffel Tower')).toBe('E');
+    expect(textHint('first_letter', '  été')).toBe('é');
+  });
+
+  it('letter count blanks each letter and digit, keeping spaces and punctuation', () => {
+    expect(textHint('letter_count', "Saint-Denis d'Or 2")).toBe(
+      "_____-_____ _'__ _",
+    );
+  });
+
+  it('both hints apply to free text only', () => {
+    expect(powerUpApplies('first_letter', { type: 'free_text' })).toBe(true);
+    expect(powerUpApplies('letter_count', { type: 'free_text' })).toBe(true);
+    expect(powerUpApplies('first_letter', { type: 'number' })).toBe(false);
+  });
+
+  it('a stored hint survives the effect schema', () => {
+    const effect = { kind: 'letter_count', hint: '___' };
+    expect(purchaseEffectSchema.parse(effect)).toEqual(effect);
   });
 });
 

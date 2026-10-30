@@ -87,7 +87,7 @@ export const QUESTION_KINDS: {
     type: 'free_text',
     hasCorrectRate: true,
     briefWrongAnswers: 'typed',
-    powerUps: [],
+    powerUps: ['first_letter', 'letter_count'],
     revealKind: 'answer',
     label: 'Free text',
     moderatorNote:

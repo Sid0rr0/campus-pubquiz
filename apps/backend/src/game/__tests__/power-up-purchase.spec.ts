@@ -140,7 +140,8 @@ describe('GameGateway — buying a 50/50', () => {
         questionId: france,
         roundId: null,
       });
-      expect(purchase.effect.kind).toBe('fifty_fifty');
+      if (purchase.effect.kind !== 'fifty_fifty')
+        throw new Error('not a 50/50');
       const removed = purchase.effect.removedOptions;
       expect(removed).toHaveLength(2);
       expect(removed).not.toContain('Paris');
@@ -160,6 +161,26 @@ describe('GameGateway — buying a 50/50', () => {
         removedOptions: ['London', 'Berlin'],
       });
       expect(stored.cost).toBe(1);
+    });
+
+    it('stores the first letter and the letter count of a free-text key', async () => {
+      const game = await night();
+      const [alpha] = game.teams;
+      const { planet } = ids(game);
+      for (let i = 0; i < 3; i += 1) await game.act('ADVANCE');
+
+      expect(await buy(game, alpha, planet, 'first_letter')).toEqual({
+        success: true,
+      });
+      expect(await buy(game, alpha, planet, 'letter_count')).toEqual({
+        success: true,
+      });
+
+      const stored = await storedPurchases(game, alpha);
+      expect(stored.map((p) => p.effect)).toEqual([
+        { kind: 'first_letter', hint: 'J' },
+        { kind: 'letter_count', hint: '_______' },
+      ]);
     });
 
     it('takes the cost from the balance on the phone and on /control', async () => {

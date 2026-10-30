@@ -2,6 +2,7 @@ import {
   formatAnswer,
   isHttpUrl,
   optionsAfterPurchases,
+  POWER_UP_LABELS,
 } from '@campus-pubquiz/types';
 import type {
   BlockMode,
@@ -231,6 +232,18 @@ export function QuestionBrowser({
                 options: selectedQuestion.options,
               })}
             </p>
+          )}
+          {powerUpShop?.purchases.map(
+            ({ questionId, effect }) =>
+              questionId === selectedQuestion.id &&
+              effect.kind !== 'fifty_fifty' && (
+                <p
+                  key={effect.kind}
+                  className="text-center font-mono text-lg font-extrabold tracking-widest"
+                >
+                  {POWER_UP_LABELS[effect.kind]}: {effect.hint}
+                </p>
+              ),
           )}
           {mode === 'answering' && isAnswerable && team && powerUpShop && (
             <PowerUpBar question={selectedQuestion} shop={powerUpShop} />

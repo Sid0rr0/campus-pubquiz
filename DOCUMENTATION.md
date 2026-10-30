@@ -688,6 +688,13 @@ power-ups each answer used (`AnswerView.powerUps`), and the big screen's reveal
 shows the **power-up count** per question (`DisplayStatePayload.powerUpCounts`,
 only when non-zero, no team names).
 
+**First letter** and **letter count** work on free-text questions. First letter is the
+answer key's literal first character; letter count is the key with each letter and
+digit as `_`, spaces and punctuation kept (`textHint`). The hint is worked out from
+the key at purchase time and stored as `{ kind, hint }`, so a later key fix doesn't
+change what the team saw. The phone shows it above the answer box, also after a
+reconnect.
+
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like
 every other setting; a stored settings JSON without the field reads as off) turns
