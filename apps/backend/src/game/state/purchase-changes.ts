@@ -1,4 +1,5 @@
 import {
+  askTheRoomSplit,
   findQuestionOpenForAnswering,
   drawRemovedOptions,
   powerUpApplies,
@@ -12,6 +13,7 @@ import {
   type SessionSettings,
   type SessionState,
 } from '@campus-pubquiz/types';
+import { AnswerService } from '@/answer/answer.service';
 import {
   PurchaseService,
   toPurchaseViews,
@@ -52,6 +54,7 @@ function effectOf(
   powerUp: PowerUpId,
   question: SeededQuestion,
   random: RandomSource,
+  otherAnswers: readonly string[],
 ): PurchaseEffect {
   switch (powerUp) {
     case 'fifty_fifty':
@@ -71,6 +74,11 @@ function effectOf(
       };
     case 'wider_margin':
       return { kind: 'wider_margin' };
+    case 'ask_the_room': {
+      const split = askTheRoomSplit(question.options ?? [], otherAnswers);
+      if (split === null) throw new SessionRefusal('Waiting for more answers');
+      return { kind: 'ask_the_room', split };
+    }
     default:
       throw new Error(`No effect is defined for the ${powerUp} power-up`);
   }
@@ -85,6 +93,7 @@ export class PurchaseChanges {
   constructor(
     private readonly purchaseService: PurchaseService,
     private readonly random: RandomSource,
+    private readonly answerService: AnswerService,
   ) {}
 
   /**
@@ -139,7 +148,21 @@ export class PurchaseChanges {
       questionId,
       roundId: null,
       cost: setting.cost,
-      effect: effectOf(powerUp, question, this.random),
+      effect: effectOf(
+        powerUp,
+        question,
+        this.random,
+        powerUp === 'ask_the_room'
+          ? (
+              await this.answerService.listForQuestion(
+                gameSessionId,
+                questionId,
+              )
+            )
+              .filter((answer) => answer.teamId !== teamId)
+              .map((answer) => answer.value)
+          : [],
+      ),
     };
     await this.purchaseService.add({ gameSessionId, teamId, ...bought });
 

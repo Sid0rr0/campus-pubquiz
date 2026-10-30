@@ -306,6 +306,68 @@ describe('GameGateway — buying a 50/50', () => {
     });
   });
 
+  describe('buying Ask the room', () => {
+    async function room() {
+      const game = await night({}, { teamNames: ['A', 'B', 'C', 'D'] });
+      const { france } = ids(game);
+      const answer = (team: JoinedTeam, value: string) =>
+        game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+          questionId: france,
+          teamId: team.teamId,
+          value,
+        });
+      return { game, france, answer, teams: game.teams };
+    }
+
+    it('is refused until three other teams have a current answer, and costs nothing', async () => {
+      const { game, france, answer, teams } = await room();
+      const [a, b, c] = teams;
+      await answer(a, 'Paris'); // the buyer's own answer never counts
+      await answer(b, 'Paris');
+      await answer(c, 'Rome');
+
+      const ack = await buy(game, a, france, 'ask_the_room');
+
+      expect(ack).toEqual({
+        success: false,
+        error: 'Waiting for more answers',
+      });
+      expect(await storedPurchases(game, a)).toEqual([]);
+    });
+
+    it('stores the split without the buyer, and the split survives a rejoin', async () => {
+      const { game, france, answer, teams } = await room();
+      const [a, b, c, d] = teams;
+      await answer(a, 'London');
+      await answer(b, 'Paris');
+      await answer(c, 'Paris');
+      await answer(d, 'Rome');
+      game.clearEmits();
+
+      expect(await buy(game, a, france, 'ask_the_room')).toEqual({
+        success: true,
+      });
+      await answer(b, 'Berlin'); // later answers don't move the stored split
+
+      const expected = {
+        kind: 'ask_the_room',
+        split: { Paris: 67, London: 0, Berlin: 0, Rome: 33 },
+      };
+      expect(syncsTo(game, a)[0].purchases[0].effect).toEqual(expected);
+      expect(syncsTo(game, a)[0].coins).toBe(1);
+      const second = await game.connectPlayer();
+      await game.gateway.handleJoinPlayers(asSocket(second), {
+        teamName: 'A',
+        teamToken: a.teamToken,
+        joinCode: game.joinCode,
+        previousSocketId: a.socket.id,
+      });
+      expect(joinedWith(second).purchases).toMatchObject([
+        { powerUp: 'ask_the_room', effect: expected },
+      ]);
+    });
+  });
+
   describe('a refused purchase', () => {
     async function refusal(
       game: RealStoreGateway,

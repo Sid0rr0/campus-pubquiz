@@ -22,7 +22,11 @@ import {
 } from '@/app/components/closest-guess-reveal-screen';
 import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
-import { PowerUpBar, type PowerUpShop } from '@/app/play/power-up-bar';
+import {
+  PowerUpBar,
+  RoomSplit,
+  type PowerUpShop,
+} from '@/app/play/power-up-bar';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
 
@@ -257,6 +261,12 @@ export function QuestionBrowser({
           )}
           {mode === 'answering' && isAnswerable && team && powerUpShop && (
             <PowerUpBar question={selectedQuestion} shop={powerUpShop} />
+          )}
+          {mode === 'answering' && isAnswerable && team && powerUpShop && (
+            <RoomSplit
+              question={selectedQuestion}
+              purchases={powerUpShop.purchases}
+            />
           )}
           {mode === 'answering' && isAnswerable && team && (
             <AnswerForm

@@ -140,6 +140,7 @@ export class GameStateService implements OnModuleInit {
     this.purchaseChanges = new PurchaseChanges(
       this.purchaseService,
       random ?? Math.random,
+      this.answerService,
     );
     this.jokerChanges = new JokerChanges(
       this.jokerService,

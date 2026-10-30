@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  askTheRoomSplit,
   coinBalance,
   defaultPowerUpSettings,
   DEFAULT_SESSION_SETTINGS,
@@ -84,7 +85,38 @@ describe('drawRemovedOptions', () => {
   });
 });
 
+describe('askTheRoomSplit', () => {
+  const options = ['Paris', 'London', 'Berlin', 'Rome'];
+
+  it('is null until three other teams have answered', () => {
+    expect(askTheRoomSplit(options, ['Paris', 'Rome'])).toBeNull();
+  });
+
+  it('gives each option its whole-percent share, options nobody picked at 0', () => {
+    expect(
+      askTheRoomSplit(options, ['Paris', 'Paris', 'Rome', 'London']),
+    ).toEqual({ Paris: 50, London: 25, Berlin: 0, Rome: 25 });
+  });
+
+  it('shares sum to 100 when thirds do not divide evenly', () => {
+    const split = askTheRoomSplit(options, ['Paris', 'London', 'Rome']);
+    expect(Object.values(split ?? {}).reduce((a, b) => a + b, 0)).toBe(100);
+  });
+
+  it('counts an answer that is no option towards the threshold but not the split', () => {
+    expect(
+      askTheRoomSplit(options, ['Paris', 'Paris', 'Paris', 'stale']),
+    ).toEqual({ Paris: 100, London: 0, Berlin: 0, Rome: 0 });
+  });
+});
+
 describe('powerUpApplies', () => {
+  it('offers ask the room on multiple choice only', () => {
+    const two = { type: 'multiple_choice' as const, options: ['a', 'b'] };
+    expect(powerUpApplies('ask_the_room', two)).toBe(true);
+    expect(powerUpApplies('ask_the_room', { type: 'free_text' })).toBe(false);
+  });
+
   it('offers 50/50 on multiple choice with more than two options', () => {
     expect(
       powerUpApplies('fifty_fifty', {

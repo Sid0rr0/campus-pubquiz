@@ -105,7 +105,7 @@ export const QUESTION_KINDS: {
     type: 'multiple_choice',
     hasCorrectRate: true,
     briefWrongAnswers: 'options',
-    powerUps: ['fifty_fifty'],
+    powerUps: ['fifty_fifty', 'ask_the_room'],
     revealKind: 'answer',
     label: 'Multiple choice',
     moderatorNote:

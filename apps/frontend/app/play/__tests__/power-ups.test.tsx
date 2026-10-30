@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -142,7 +142,7 @@ describe('PlayPage — the power-up bar', () => {
   it('does not offer a 50/50 on a two-option question', () => {
     phone({ question: { ...FRANCE, options: ['Paris', 'London'] } });
 
-    expect(screen.queryByTestId('power-up-bar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /50\/50/ })).toBeNull();
   });
 
   it('disables a power-up the team cannot afford', () => {
@@ -154,6 +154,7 @@ describe('PlayPage — the power-up bar', () => {
   it('hides a power-up the session does not offer', () => {
     const powerUps = defaultPowerUpSettings(false);
     powerUps.fifty_fifty = { cost: 1, maxUses: 0 };
+    powerUps.ask_the_room = { cost: 2, maxUses: 0 };
     phone({ settings: { powerUpsEnabled: true, powerUps } });
 
     expect(screen.queryByTestId('power-up-bar')).not.toBeInTheDocument();
@@ -210,6 +211,31 @@ describe('PlayPage — the power-up bar', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the room split with the 50/50-removed options crossed out', () => {
+    phone({
+      purchases: [
+        fiftyFifty,
+        {
+          powerUp: 'ask_the_room',
+          questionId: 1,
+          roundId: null,
+          effect: {
+            kind: 'ask_the_room',
+            split: { Paris: 60, London: 20, Berlin: 0, Rome: 20 },
+          },
+        },
+      ],
+      coins: 5,
+    });
+
+    const room = within(screen.getByTestId('room-split'));
+    expect(room.getByText('Paris').closest('li')).toHaveTextContent('60%');
+    expect(room.getByText('London').tagName).toBe('S');
+    expect(room.getByText('London').closest('li')).toHaveTextContent('20%');
+    expect(room.getByText('Rome').tagName).not.toBe('S');
+    expect(screen.queryByRole('button', { name: /Ask the room/ })).toBeNull();
+  });
+
   it('hides the removed options and the used power-up, as after a reconnect', () => {
     phone({ purchases: [fiftyFifty], coins: 0 });
 
@@ -217,6 +243,6 @@ describe('PlayPage — the power-up bar', () => {
     expect(screen.getByRole('button', { name: 'Rome' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'London' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Berlin' })).toBeNull();
-    expect(screen.queryByTestId('power-up-bar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /50\/50/ })).toBeNull();
   });
 });

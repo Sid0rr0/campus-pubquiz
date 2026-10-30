@@ -675,6 +675,14 @@ room is refreshed (the Coins column and the answer list). A later power-up adds 
 member to `PurchaseEffect`/`purchaseEffectSchema`, a case to the effect builder in
 `purchase-changes.ts` and the id to its question types' `powerUps`.
 
+**Ask the room** (multiple choice) stores the whole-percent split of the other
+teams' current answers at the moment of purchase (`askTheRoomSplit`, summing to 100)
+as `{ kind: 'ask_the_room', split }`: no team count, right/wrong or names. It is
+refused with "Waiting for more answers" (nothing charged) until 3 other teams have a
+current answer. The phone's button is not greyed meanwhile (it never learns how many
+teams answered), and shows the split under the question, with options its 50/50
+removed crossed out.
+
 **50/50** leaves ⌊n/2⌋ options, never fewer than two, and always the correct one
 (`fiftyFiftyLeaveCount`, `drawRemovedOptions`); it is not offered on a two-option
 question. Which options go is drawn once with the injected random source and stored

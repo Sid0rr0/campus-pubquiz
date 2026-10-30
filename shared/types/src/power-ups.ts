@@ -58,6 +58,7 @@ export function defaultPowerUpSettings(
  */
 export type PurchaseEffect =
   | { kind: 'fifty_fifty'; removedOptions: string[] }
+  | { kind: 'ask_the_room'; split: Record<string, number> }
   | { kind: TextHintId; hint: string }
   | { kind: 'wider_margin' };
 
@@ -66,6 +67,10 @@ export type TextHintId = 'first_letter' | 'letter_count';
 
 export const purchaseEffectSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('wider_margin') }),
+  z.object({
+    kind: z.literal('ask_the_room'),
+    split: z.record(z.string(), z.number()),
+  }),
   z.object({
     kind: z.literal('fifty_fifty'),
     removedOptions: z.array(z.string()),
@@ -126,6 +131,35 @@ export function textHint(powerUp: TextHintId, answer: string): string {
   return powerUp === 'first_letter'
     ? (Array.from(key)[0] ?? '')
     : key.replace(/[\p{L}\p{N}]/gu, '_');
+}
+
+/** How many other teams must have a current answer before Ask the room can be bought. */
+export const ASK_THE_ROOM_MIN_ANSWERS = 3;
+
+/**
+ * Ask the room's split: each option's whole-percent share of the other teams'
+ * current answers (summing to 100, largest remainders rounded up), or null
+ * below `ASK_THE_ROOM_MIN_ANSWERS` answers. An answer that is no option counts
+ * towards the threshold but not the shares.
+ */
+export function askTheRoomSplit(
+  options: readonly string[],
+  answers: readonly string[],
+): Record<string, number> | null {
+  if (answers.length < ASK_THE_ROOM_MIN_ANSWERS) return null;
+  const counts = options.map(
+    (option) => answers.filter((answer) => answer === option).length,
+  );
+  const total = counts.reduce((a, b) => a + b, 0);
+  const shares = counts.map((count) =>
+    total === 0 ? 0 : Math.floor((count * 100) / total),
+  );
+  const byRemainder = counts
+    .map((count, i) => ({ i, rest: total === 0 ? 0 : (count * 100) % total }))
+    .sort((a, b) => b.rest - a.rest || a.i - b.i);
+  const leftover = total === 0 ? 0 : 100 - shares.reduce((a, b) => a + b, 0);
+  for (const { i } of byRemainder.slice(0, leftover)) shares[i] += 1;
+  return Object.fromEntries(options.map((option, i) => [option, shares[i]]));
 }
 
 /** Whether a power-up can be used on this question at all: its type lists the power-up (the registry's `powerUps`), and a 50/50 needs more than two options. */
