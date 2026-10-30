@@ -2,7 +2,11 @@
 
 import { useState, type ReactNode, type SubmitEvent } from 'react';
 import { CheckIcon } from '@radix-ui/react-icons';
-import { type AnswerKind, type QuestionView } from '@campus-pubquiz/types';
+import {
+  type AnswerKind,
+  type PinEffect,
+  type QuestionView,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { getOptionLetter } from '@/app/lib/option-letters';
 import { MatchAnswer } from '@/app/play/match-answer';
@@ -15,6 +19,8 @@ export interface AnswerInputProps {
   /** Active round's Kahoot-style speed scoring flag: a tapped choice submits immediately and locks. */
   isKahootMode: boolean;
   onSubmit: (value: string) => void;
+  /** A pin the team bought on this sort or match question. */
+  pin?: PinEffect;
   /** The "I don't know" button, placed by each input where it belongs in its own layout. */
   idkButton: ReactNode;
 }
@@ -133,6 +139,7 @@ function ChoiceInput({
 function SortInput({
   question,
   initialValue,
+  pin,
   onSubmit,
   idkButton,
 }: AnswerInputProps) {
@@ -141,6 +148,7 @@ function SortInput({
       <SortAnswer
         options={question.options ?? NO_ITEMS}
         initialValue={initialValue}
+        pin={pin}
         onSubmit={onSubmit}
       />
       {idkButton}
@@ -151,6 +159,7 @@ function SortInput({
 function MatchInput({
   question,
   initialValue,
+  pin,
   onSubmit,
   idkButton,
 }: AnswerInputProps) {
@@ -160,6 +169,7 @@ function MatchInput({
         leftItems={question.options ?? NO_ITEMS}
         rightItems={question.matchTargets ?? NO_ITEMS}
         initialValue={initialValue}
+        pin={pin}
         onSubmit={onSubmit}
       />
       {idkButton}

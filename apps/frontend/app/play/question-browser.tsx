@@ -2,6 +2,7 @@ import {
   formatAnswer,
   isHttpUrl,
   optionsAfterPurchases,
+  pinFor,
   POWER_UP_LABELS,
   widenedMargin,
 } from '@campus-pubquiz/types';
@@ -274,6 +275,10 @@ export function QuestionBrowser({
               question={answerableQuestion}
               initialValue={myAnswers[selectedQuestion.id] ?? ''}
               isKahootMode={isKahootMode}
+              pin={
+                powerUpShop &&
+                pinFor(selectedQuestion.id, powerUpShop.purchases)
+              }
               onSubmit={(value) =>
                 onSubmitAnswer(selectedQuestion.id, team.teamId, value)
               }

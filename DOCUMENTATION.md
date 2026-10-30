@@ -683,6 +683,14 @@ current answer. The phone's button is not greyed meanwhile (it never learns how 
 teams answered), and shows the split under the question, with options its 50/50
 removed crossed out.
 
+**Pin one** (sort and match) draws one item of the answer key with the injected
+random source (`drawPin`) and stores `{ kind: 'pin_one', item, position }`: the item
+belongs at `position` of the sort order, or of the match's right-hand column (the
+right item beside left item `position`). The phone puts it there (`lockPin`), shows
+it with a pin, and locks it: no drag handle or move buttons, and other items move
+around it, also after a reconnect. The submitted answer is the phone's order; the
+server does not check it against the pin.
+
 **50/50** leaves ⌊n/2⌋ options, never fewer than two, and always the correct one
 (`fiftyFiftyLeaveCount`, `drawRemovedOptions`); it is not offered on a two-option
 question. Which options go is drawn once with the injected random source and stored

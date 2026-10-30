@@ -2,6 +2,7 @@ import {
   askTheRoomSplit,
   findQuestionOpenForAnswering,
   drawRemovedOptions,
+  drawPin,
   powerUpApplies,
   purchaseRefusal,
   teamCoins,
@@ -79,6 +80,8 @@ function effectOf(
       if (split === null) throw new SessionRefusal('Waiting for more answers');
       return { kind: 'ask_the_room', split };
     }
+    case 'pin_one':
+      return drawPin(question.answer, random);
     default:
       throw new Error(`No effect is defined for the ${powerUp} power-up`);
   }

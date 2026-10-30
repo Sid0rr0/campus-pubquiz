@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { QUESTION_KINDS } from './question-kind';
 import type { QuestionType } from './question-types';
+import { splitPipeList } from './sort-match';
 
 export const POWER_UP_IDS = [
   'fifty_fifty',
@@ -60,10 +61,18 @@ export type PurchaseEffect =
   | { kind: 'fifty_fifty'; removedOptions: string[] }
   | { kind: 'ask_the_room'; split: Record<string, number> }
   | { kind: TextHintId; hint: string }
-  | { kind: 'wider_margin' };
+  | { kind: 'wider_margin' }
+  | PinEffect;
 
 /** The free-text power-ups: each stores the hint worked out from the key at purchase time. */
 export type TextHintId = 'first_letter' | 'letter_count';
+
+/** A pin: `item` belongs at `position` (0-based) of the sort order, or of the right-hand column of a match (aligned to the left items). */
+export interface PinEffect {
+  kind: 'pin_one';
+  item: string;
+  position: number;
+}
 
 export const purchaseEffectSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('wider_margin') }),
@@ -79,7 +88,49 @@ export const purchaseEffectSchema = z.discriminatedUnion('kind', [
     kind: z.enum(['first_letter', 'letter_count']),
     hint: z.string(),
   }),
+  z.object({
+    kind: z.literal('pin_one'),
+    item: z.string(),
+    position: z.number().int().min(0),
+  }),
 ]) satisfies z.ZodType<PurchaseEffect>;
+
+/** Pins one item of the answer key (a pipe list, sort order or match right-hand column). `random` is in [0, 1). */
+export function drawPin(answer: string, random: () => number): PinEffect {
+  const items = splitPipeList(answer);
+  const position = Math.min(
+    Math.floor(random() * items.length),
+    items.length - 1,
+  );
+  return { kind: 'pin_one', item: items[position], position };
+}
+
+/** `order` with the pinned item put at its place and the rest kept in order; unchanged without a pin. */
+export function lockPin(
+  order: readonly string[],
+  pin: PinEffect | undefined,
+): string[] {
+  if (!pin || !order.includes(pin.item)) return [...order];
+  const rest = order.filter((item) => item !== pin.item);
+  rest.splice(pin.position, 0, pin.item);
+  return rest;
+}
+
+/** The pin a team bought for `questionId`, if any. */
+export function pinFor(
+  questionId: number,
+  purchases: readonly PurchaseView[],
+): PinEffect | undefined {
+  for (const purchase of purchases) {
+    if (
+      purchase.questionId === questionId &&
+      purchase.effect.kind === 'pin_one'
+    ) {
+      return purchase.effect;
+    }
+  }
+  return undefined;
+}
 
 /** A team's own purchase as its phone gets it (never another team's). `questionId` or `roundId` names what it was bought for. */
 export interface PurchaseView {

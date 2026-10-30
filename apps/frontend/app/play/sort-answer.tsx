@@ -22,7 +22,7 @@ import {
   ArrowUpIcon,
   DragHandleDots2Icon,
 } from '@radix-ui/react-icons';
-import { ANSWER_FORMATS } from '@campus-pubquiz/types';
+import { ANSWER_FORMATS, lockPin, type PinEffect } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { reorderOnDragEnd } from '@/app/lib/reorder-list';
 import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
@@ -30,11 +30,14 @@ import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 interface SortAnswerProps {
   options: string[];
   initialValue?: string;
+  /** A bought pin: its item stays in its correct place. */
+  pin?: PinEffect;
   onSubmit: (value: string) => void;
 }
 
 interface SortItemProps {
   item: string;
+  isPinned: boolean;
   itemIndex: number;
   itemCount: number;
   onMove: (itemIndex: number, direction: -1 | 1) => void;
@@ -83,13 +86,14 @@ function useIsMultiline<T extends HTMLElement>(): [
 /** One reorderable row — the drag handle carries dnd-kit's listeners so dragging never swallows clicks on the up/down buttons. Long options that wrap onto multiple lines stack the index above the drag handle in one column, self-centered against the tall card, alongside a similarly centered stacked up/down button column. */
 function SortItem({
   item,
+  isPinned,
   itemIndex,
   itemCount,
   onMove,
   animatePositionChange,
 }: SortItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: item });
+    useSortable({ id: item, disabled: isPinned });
   const [textRef, isMultiline] = useIsMultiline<HTMLSpanElement>();
 
   const upButton = (
@@ -97,7 +101,7 @@ function SortItem({
       type="button"
       aria-label={`Move ${item} up`}
       onClick={() => onMove(itemIndex, -1)}
-      disabled={itemIndex === 0}
+      disabled={isPinned || itemIndex === 0}
       variant="icon"
       size="icon-lg"
     >
@@ -109,7 +113,7 @@ function SortItem({
       type="button"
       aria-label={`Move ${item} down`}
       onClick={() => onMove(itemIndex, 1)}
-      disabled={itemIndex === itemCount - 1}
+      disabled={isPinned || itemIndex === itemCount - 1}
       variant="icon"
       size="icon-lg"
     >
@@ -120,6 +124,7 @@ function SortItem({
     <button
       type="button"
       aria-label={`Drag to reorder ${item}`}
+      disabled={isPinned}
       className="flex h-12 w-12 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-foreground/40 active:cursor-grabbing active:bg-foreground/10"
       {...attributes}
       {...listeners}
@@ -159,6 +164,7 @@ function SortItem({
       )}
       <span ref={textRef} className="flex-1 text-foreground">
         {item}
+        {isPinned && <span title="Pinned in place"> 📌</span>}
       </span>
       {isMultiline ? (
         <div className="flex flex-col items-center gap-2 self-center">
@@ -179,13 +185,17 @@ function SortItem({
 export function SortAnswer({
   options,
   initialValue,
+  pin,
   onSubmit,
 }: SortAnswerProps) {
   const restoredOrder = initialValue
     ? ANSWER_FORMATS.sort.decode(initialValue)
     : [];
   const [order, setOrder] = useState<string[]>(
-    restoredOrder.length === options.length ? restoredOrder : options,
+    lockPin(
+      restoredOrder.length === options.length ? restoredOrder : options,
+      pin,
+    ),
   );
   const [isDragging, setIsDragging] = useState(false);
   const isSubmitted =
@@ -198,7 +208,9 @@ export function SortAnswer({
   );
 
   function move(itemIndex: number, direction: -1 | 1): void {
-    const targetIndex = itemIndex + direction;
+    let targetIndex = itemIndex + direction;
+    // Hop over the pinned item: it never moves.
+    if (order[targetIndex] === pin?.item) targetIndex += direction;
     if (targetIndex < 0 || targetIndex >= order.length) return;
     const next = [...order];
     [next[itemIndex], next[targetIndex]] = [next[targetIndex], next[itemIndex]];
@@ -211,7 +223,7 @@ export function SortAnswer({
     if (!over) return;
     const next = reorderOnDragEnd(order, String(active.id), String(over.id));
     if (!next) return;
-    setOrder(next);
+    setOrder(lockPin(next, pin));
   }
 
   return (
@@ -233,6 +245,7 @@ export function SortAnswer({
                 itemIndex={itemIndex}
                 itemCount={order.length}
                 onMove={move}
+                isPinned={item === pin?.item}
                 animatePositionChange={!isDragging}
               />
             ))}

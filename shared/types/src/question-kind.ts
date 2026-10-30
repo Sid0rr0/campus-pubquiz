@@ -123,7 +123,7 @@ export const QUESTION_KINDS: {
     type: 'sort',
     hasCorrectRate: true,
     briefWrongAnswers: 'none',
-    powerUps: [],
+    powerUps: ['pin_one'],
     revealKind: 'answer',
     label: 'Sort / order',
     moderatorNote:
@@ -141,7 +141,7 @@ export const QUESTION_KINDS: {
     type: 'match',
     hasCorrectRate: true,
     briefWrongAnswers: 'none',
-    powerUps: [],
+    powerUps: ['pin_one'],
     revealKind: 'answer',
     label: 'Match pairs',
     moderatorNote:

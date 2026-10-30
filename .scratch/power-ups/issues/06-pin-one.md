@@ -6,7 +6,7 @@ Parent spec: `.scratch/power-ups/spec.md`
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Stored pin, real-Postgres spec
-- [ ] Phone sort/match input keeps the pinned item locked, Vitest
+- [x] Stored pin, real-Postgres spec
+- [x] Phone sort/match input keeps the pinned item locked, Vitest
