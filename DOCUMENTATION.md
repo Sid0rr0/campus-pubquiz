@@ -626,8 +626,9 @@ The balance is sent as
 `coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
 `TEAM_PURCHASES_SYNCED` after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
-"Power-ups are on: you start with N coins. Earn more with shots, selfies and
-coins from the quiz master." when power-ups are on. With them off, a phone whose
+"Power-ups are on: you start with N coins. If your team rated all rounds of the
+last pub quiz, you get a bonus coin. Earn more with shots and selfies." when
+power-ups are on, and each shot and selfie bonus rule reads "1 point + 1 coin". With them off, a phone whose
 team holds a carried coin gets "You have 1 coin for rating every round of your last
 league night. Spend it on a power-up." instead (the big screen can't know).
 

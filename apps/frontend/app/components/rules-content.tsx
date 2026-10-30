@@ -44,6 +44,22 @@ interface RulesContentProps {
   hasCarriedCoin?: boolean;
 }
 
+const COIN_AMOUNT = /(\d+ points? \+ \d+ coins?|\d+ coins?)/;
+
+/** The rule's text with coin amounts ("2 coins", "1 point + 1 coin") picked out in colour. */
+function highlightCoins(rule: string) {
+  return rule.split(COIN_AMOUNT).map((part, index) =>
+    // split() with one capture group puts the matches at the odd indices
+    index % 2 === 1 ? (
+      <strong key={index} className="font-black text-magenta">
+        {part}
+      </strong>
+    ) : (
+      part
+    ),
+  );
+}
+
 function pluralize(count: number, singular: string): string {
   return count === 1 ? singular : `${singular}s`;
 }
@@ -101,10 +117,10 @@ export function RulesContent({
     (category) =>
       enabledBonusCategories.includes(category) &&
       BONUS_CATEGORY_EXPLANATIONS[category] !== undefined,
-  ).map(
-    (category) =>
-      `${BONUS_CATEGORY_LABELS[category]} bonus: ${BONUS_CATEGORY_EXPLANATIONS[category]}`,
-  );
+  ).map((category) => {
+    const explanation = BONUS_CATEGORY_EXPLANATIONS[category];
+    return `${BONUS_CATEGORY_LABELS[category]} bonus: ${powerUpsEnabled ? explanation?.replace('(1 point', '(1 point + 1 coin') : explanation}`;
+  });
   const teamSizeRule = `Max ${maxPlayersPerTeam} players per team, every additional player costs the team −${extraPlayerPenaltyPoints} points.`;
   const displayedRules = [
     teamSizeRule,
@@ -113,7 +129,7 @@ export function RulesContent({
     ...(jokersEnabled ? [JOKER_RULE] : []),
     ...(powerUpsEnabled
       ? [
-          `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. Earn more with shots, selfies and coins from the quiz master.`,
+          `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. If your team rated all rounds of the last pub quiz, you get a bonus coin. Earn more with shots and selfies.`,
         ]
       : hasCarriedCoin
         ? [CARRIED_COIN_RULE]
@@ -139,7 +155,7 @@ export function RulesContent({
             <span aria-hidden="true" className="text-cyan">
               •
             </span>
-            <span>{rule}</span>
+            <span>{highlightCoins(rule)}</span>
           </li>
         ))}
       </ul>

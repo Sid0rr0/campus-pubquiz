@@ -45,7 +45,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
   {
     title: 'Power-ups',
     lines: [
-      'If the quiz has them, spend coins on your phone. Coins are never points. Earn more from shots, selfies and the quiz master; rate every round of your last league night to bring one along.',
+      'If the quiz has them, spend coins on your phone. Coins are never points. If your team rated all rounds of the last pub quiz, you get a bonus coin. Earn more from shots, selfies and the quiz master.',
       ...POWER_UP_NOTES,
     ],
   },
