@@ -580,8 +580,10 @@ three joker facts that name no team can appear (and the list is `[]` when no
 bonus was awarded and Jokers is off). The joker facts that name a team
 (`best_joker`, `joker_backfired`) read only joker rounds whose questions are
 all revealed, so no pick leaks before its leaderboard; the other three count
-the roster's jokers and give no pick away. The session holds the
-answers and bonus awards (`funFactData`) and re-reads them with the standings
+the roster's jokers and give no pick away. A bought extra joker counts as a
+joker on its round in all five joker facts (a team may hold several). The
+session holds the answers, bonus awards and power-up purchases (`funFactData`)
+and re-reads them with the standings
 at the end of every session write and when a session is placed, so the facts
 follow hand grades and key fixes.
 

@@ -182,9 +182,8 @@ export class StandingsService {
       knex('purchases')
         .where('game_session_id', gameSessionId)
         .select('team_id as teamId', 'power_up as powerUp')
-        .select('question_id as questionId', 'cost') as Promise<
-        FunFactPowerUp[]
-      >,
+        .select('question_id as questionId', 'round_id as roundId')
+        .select('cost') as Promise<FunFactPowerUp[]>,
     ]);
     return {
       powerUps: powerUpRows,
