@@ -1,4 +1,8 @@
-import { formatAnswer, isHttpUrl } from '@campus-pubquiz/types';
+import {
+  formatAnswer,
+  isHttpUrl,
+  optionsAfterPurchases,
+} from '@campus-pubquiz/types';
 import type {
   BlockMode,
   BlockQuestionView,
@@ -16,6 +20,7 @@ import {
 } from '@/app/components/closest-guess-reveal-screen';
 import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
+import { PowerUpBar, type PowerUpShop } from '@/app/play/power-up-bar';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
 
@@ -56,6 +61,8 @@ interface QuestionBrowserProps {
   navigation?: QuestionNavigation;
   /** Whether the selected question belongs to the team's joker round — its answers count double, so the browser wears a joker border. */
   isJokerQuestion?: boolean;
+  /** Set when the team can spend coins: draws the power-up bar and hides the options its 50/50s removed. */
+  powerUpShop?: PowerUpShop;
 }
 
 interface RevealBodyProps {
@@ -111,8 +118,21 @@ export function QuestionBrowser({
   onSubmitAnswer,
   navigation,
   isJokerQuestion = false,
+  powerUpShop,
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
+  // A 50/50 hides its removed options for good, so a reconnect shows the same choices.
+  const answerableQuestion =
+    powerUpShop && selectedQuestion.options
+      ? {
+          ...selectedQuestion,
+          options: optionsAfterPurchases(
+            selectedQuestion.id,
+            selectedQuestion.options,
+            powerUpShop.purchases,
+          ),
+        }
+      : selectedQuestion;
 
   return (
     <div
@@ -212,10 +232,13 @@ export function QuestionBrowser({
               })}
             </p>
           )}
+          {mode === 'answering' && isAnswerable && team && powerUpShop && (
+            <PowerUpBar question={selectedQuestion} shop={powerUpShop} />
+          )}
           {mode === 'answering' && isAnswerable && team && (
             <AnswerForm
               key={selectedQuestion.id}
-              question={selectedQuestion}
+              question={answerableQuestion}
               initialValue={myAnswers[selectedQuestion.id] ?? ''}
               isKahootMode={isKahootMode}
               onSubmit={(value) =>

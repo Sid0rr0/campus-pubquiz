@@ -79,6 +79,14 @@ describe('GuideContent', () => {
     expect(text).toContain('Coins field');
   });
 
+  it('explains buying a 50/50, where the quiz master sees it and that it is never refunded', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('50/50');
+    expect(text).toContain('names the power-ups each answer used');
+    expect(text).toContain('Never refunded');
+  });
+
   it('explains that the joker round counts double and how the Teams table marks it', () => {
     const text = renderGuideText();
 

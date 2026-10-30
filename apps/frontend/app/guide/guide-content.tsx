@@ -77,6 +77,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Power-ups',
     paragraphs: [
       'The "Power-ups" tab (lobby Session Settings) lets teams spend coins on helps: set starting coins, and each power-up\'s cost and uses. The Teams table has a Coins column.',
+      'Teams buy a 50/50 on multiple-choice questions; grading names the power-ups each answer used. Never refunded: give coins back with an award.',
     ],
   },
   {

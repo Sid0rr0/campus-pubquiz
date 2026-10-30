@@ -35,6 +35,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   joker: null,
   coins: 0,
   hasCarriedCoin: false,
+  purchases: [],
 };
 
 const SEAT_TAKEN = `Team is ${SEAT_TAKEN_REFUSAL_MARKER}`;

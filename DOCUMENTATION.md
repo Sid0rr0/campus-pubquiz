@@ -617,10 +617,10 @@ panel show them as a "Power-ups" tab.
 
 A team's **coins** are `coinBalance` in shared types: starting coins (only with
 power-ups on) + carried coin + coin awards − purchase costs, never below 0.
-Until purchases exist the starting coins, the carried coin and the coin awards
-count. The balance is sent as
-`coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again) and
-in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
+The starting coins, the carried coin, the coin awards and the purchases all count.
+The balance is sent as
+`coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
+`TEAM_PURCHASES_SYNCED` after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
 "Power-ups are on: you start with N coins. Earn more with shots and selfies."
 when power-ups are on.
@@ -654,6 +654,39 @@ snapshot's `coins` stay synchronous. The awarded team's phone hears
 in all, with the new balance), and `TEAM_COINS_SYNCED` (`{ balance }`, no toast)
 when deleting a bonus award took its coin award with it. The balance never shows
 below 0, even when a removed award's coins were already spent.
+
+**Buying a power-up.** A team sends one event, `BUY_POWER_UP`
+(`{ powerUp, questionId }`, players only, validated with Zod), for the question it
+is answering. The server refuses, before storing anything, when: the question can
+no longer be answered (a locked block, or a question not open yet; never a
+showdown), the power-up does not work on the question (the type registry's
+`powerUps` list, and a 50/50 needs more than two options), the session does not
+offer it (`maxUses: 0`), the team used it `maxUses` times already, it already ran
+on this question, or the balance is below the cost. These rules are
+`purchaseRefusal` in shared types. A purchase works in a session with power-ups off
+too, for a team that has coins. It is a row in the `purchases` table (team,
+session, power-up, question or round, the cost paid, and the **stored effect** as
+JSON, parsed on read by `purchaseEffectSchema`): the effect is drawn once at
+purchase and never changes, so a reconnect or backend restart shows the same
+thing. The balance subtracts the sum of the `cost` column through `coinBalance`,
+nowhere else. The buying team's phones get `TEAM_PURCHASES_SYNCED`
+(`{ purchases, coins }`) and `JOIN_ACCEPTED` carries the same `purchases`; the admin
+room is refreshed (the Coins column and the answer list). A later power-up adds a
+member to `PurchaseEffect`/`purchaseEffectSchema`, a case to the effect builder in
+`purchase-changes.ts` and the id to its question types' `powerUps`.
+
+**50/50** leaves ⌊n/2⌋ options, never fewer than two, and always the correct one
+(`fiftyFiftyLeaveCount`, `drawRemovedOptions`); it is not offered on a two-option
+question. Which options go is drawn once with the injected random source and stored
+as `{ kind: 'fifty_fifty', removedOptions }`. The phone shows a power-up bar under
+the question with only the power-ups that apply to its type, each with its cost,
+and hides the removed options (also after a reconnect, from the purchases in
+`JOIN_ACCEPTED`). A power-up already used never changes or resubmits the answer
+and is never refunded: a key fix after a purchase refunds nothing, and the quiz
+master gives the coin back with a coin award. `/control`'s answer list names the
+power-ups each answer used (`AnswerView.powerUps`), and the big screen's reveal
+shows the **power-up count** per question (`DisplayStatePayload.powerUpCounts`,
+only when non-zero, no team names).
 
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like
@@ -850,13 +883,15 @@ phone only when the quiz master edits or deletes an award; it replaces the
 phone's list with no toast, and a disconnected team catches up on rejoin),
 `COIN_AWARDED` and `TEAM_COINS_SYNCED` (to the team's own phone; see Coin awards
 above),
+`TEAM_PURCHASES_SYNCED` (`{ purchases, coins }`, to the buying team's own phones
+only; see Buying a power-up above),
 `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
 Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `SET_TEAM_JOKER`, `AWARD_BONUS`,
 `SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE`, `SET_DISPLAY_SOUND_MUTED`
 (`{ isDisplaySoundMuted: boolean }`) and `CREATE_SHOWDOWN_ROUND` (admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
-`SEND_FEEDBACK`, `RATE_SESSION`, `SET_PLAYER_COUNT`, `PICK_JOKER` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
+`SEND_FEEDBACK`, `RATE_SESSION`, `SET_PLAYER_COUNT`, `PICK_JOKER`, `BUY_POWER_UP` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
 acknowledged with `AckResult`. Room
 membership is checked server-side on every handler; violations raise
 `WsException`. Quiz listing/creation and session lifecycle (list, start,

@@ -33,12 +33,40 @@ function liveAnswers(
         pointsAwarded: 0,
         gradedAt: null,
         gradingState: 'ungraded',
+        powerUps: [],
         verdict: null,
       },
     ],
     ...overrides,
   };
 }
+
+describe('AnswersPanel — power-ups', () => {
+  it('names the power-ups an answer used, and shows nothing for an answer that used none', () => {
+    const [answer] = liveAnswers().answers;
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers({
+          answers: [
+            { ...answer, powerUps: ['fifty_fifty'] },
+            {
+              ...answer,
+              answerId: 42,
+              teamId: 2,
+              teamName: 'Beer Necessities',
+            },
+          ],
+        })}
+        teams={TEAMS}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    const used = screen.getAllByTestId('answer-power-ups');
+    expect(used).toHaveLength(1);
+    expect(used[0]).toHaveTextContent('50/50');
+  });
+});
 
 describe('AnswersPanel', () => {
   it('shows how many teams have answered and how many are graded for full points', () => {
@@ -54,6 +82,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
               gradingState: 'graded',
+              powerUps: [],
               verdict: 'correct',
             },
             {
@@ -64,6 +93,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 0,
               gradedAt: '2026-01-01T00:00:00.000Z',
               gradingState: 'graded',
+              powerUps: [],
               verdict: 'incorrect',
             },
           ],
@@ -114,6 +144,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 0,
               gradedAt: new Date().toISOString(),
               gradingState: 'graded',
+              powerUps: [],
               verdict: 'incorrect',
             },
           ],
@@ -150,6 +181,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 0,
               gradedAt: new Date().toISOString(),
               gradingState: 'graded',
+              powerUps: [],
               verdict: 'incorrect',
             },
           ],
@@ -177,6 +209,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 0,
               gradedAt: null,
               gradingState: 'ungraded',
+              powerUps: [],
               verdict: null,
             },
           ],
@@ -272,6 +305,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
               gradingState: 'graded',
+              powerUps: [],
               verdict: 'correct',
             },
           ],
@@ -347,6 +381,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 0.5,
               gradedAt: '2026-01-01T00:00:00.000Z',
               gradingState: 'graded',
+              powerUps: [],
               verdict: 'partial',
             },
           ],
@@ -501,6 +536,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 1.5,
                 gradedAt: '2026-01-01T00:00:00.000Z',
                 gradingState: 'graded',
+                powerUps: [],
                 verdict: 'partial',
               },
             ],
@@ -550,6 +586,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
               gradingState: 'graded',
+              powerUps: [],
               verdict: 'correct',
             },
           ],
@@ -594,6 +631,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 0,
                 gradedAt: '2026-01-01T00:00:00.000Z',
                 gradingState: 'graded',
+                powerUps: [],
                 verdict: 'incorrect',
               },
             ],
@@ -630,6 +668,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 0,
                 gradedAt: null,
                 gradingState: 'awaiting_batch',
+                powerUps: [],
                 verdict: null,
               },
             ],
@@ -664,6 +703,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 0,
                 gradedAt: null,
                 gradingState: 'ungraded',
+                powerUps: [],
                 verdict: null,
               },
             ],
@@ -697,6 +737,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 0,
               gradedAt: null,
               gradingState: 'awaiting_batch',
+              powerUps: [],
               verdict: null,
             },
           ],
@@ -740,6 +781,7 @@ describe('AnswersPanel', () => {
               pointsAwarded: 1,
               gradedAt: '2026-01-01T00:00:00.000Z',
               gradingState: 'graded',
+              powerUps: [],
               verdict: 'partial',
             },
           ],
@@ -784,6 +826,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
                 gradingState: 'graded',
+                powerUps: [],
                 verdict: 'correct',
               },
             ],
@@ -812,6 +855,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 0,
                 gradedAt: null,
                 gradingState: 'ungraded',
+                powerUps: [],
                 verdict: null,
               },
             ],
@@ -840,6 +884,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 0,
                 gradedAt: null,
                 gradingState: 'ungraded',
+                powerUps: [],
                 verdict: null,
               },
               {
@@ -850,6 +895,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 0,
                 gradedAt: null,
                 gradingState: 'ungraded',
+                powerUps: [],
                 verdict: null,
               },
             ],
@@ -875,6 +921,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
                 gradingState: 'graded',
+                powerUps: [],
                 verdict: 'correct',
               },
               {
@@ -885,6 +932,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 0,
                 gradedAt: null,
                 gradingState: 'ungraded',
+                powerUps: [],
                 verdict: null,
               },
             ],
@@ -913,6 +961,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
                 gradingState: 'graded',
+                powerUps: [],
                 verdict: 'correct',
               },
               {
@@ -923,6 +972,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
                 gradingState: 'graded',
+                powerUps: [],
                 verdict: 'correct',
               },
             ],
@@ -949,6 +999,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 0,
                 gradedAt: null,
                 gradingState: 'ungraded',
+                powerUps: [],
                 verdict: null,
               },
               {
@@ -959,6 +1010,7 @@ describe('AnswersPanel', () => {
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
                 gradingState: 'graded',
+                powerUps: [],
                 verdict: 'correct',
               },
             ],

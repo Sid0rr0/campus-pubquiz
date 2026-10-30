@@ -31,6 +31,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   joker: null,
   coins: 0,
   hasCarriedCoin: false,
+  purchases: [],
 };
 
 /** Feeds inputs in order and returns the final state with every command emitted along the way. */

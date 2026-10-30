@@ -167,6 +167,8 @@ function PlayPageContent() {
     setPlayerCount,
     myJoker,
     pickJoker,
+    myPurchases,
+    buyPowerUp,
     seenQuestions,
     submitShowdownGuess,
   } = game;
@@ -373,6 +375,17 @@ function PlayPageContent() {
               onSubmitAnswer={submitAndConfirm}
               navigation={navigation}
               isJokerQuestion={isJokerQuestion}
+              powerUpShop={
+                // The shop shows for a team with coins, even in a session without power-ups (a carried coin).
+                team && (settings.powerUpsEnabled || team.coins > 0)
+                  ? {
+                      settings: settings.powerUps,
+                      coins: team.coins,
+                      purchases: myPurchases,
+                      onBuy: buyPowerUp,
+                    }
+                  : undefined
+              }
             />
           </div>
         )}

@@ -295,6 +295,7 @@ export function buildSessionState(
       description.closestGuessRevealStep ??
       0,
     funFactData: {
+      powerUps: [],
       answers: Object.entries(description.answerVerdicts ?? {}).flatMap(
         ([questionId, verdicts]) =>
           verdicts.map((verdict, index) => ({

@@ -15,6 +15,8 @@ import {
   type JoinAcceptedPayload,
   type LeaveSessionPayload,
   type PickJokerPayload,
+  type PowerUpId,
+  type PurchaseView,
   type RateRoundPayload,
   type RateSessionPayload,
   type SendFeedbackPayload,
@@ -141,6 +143,10 @@ export interface TeamLinkGame {
   myJoker: TeamJoker | null;
   /** Resolves to the server's verdict on a joker pick; the picker shows it ("Saved ✓", or the reason), so nothing is toasted here. */
   pickJoker: (roundId: number) => Promise<AckResult>;
+  /** The team's own power-up purchases as the server last said them. */
+  myPurchases: PurchaseView[];
+  /** Buys a power-up on a question; resolves to the server's verdict (the refusal's reason when it says no). */
+  buyPowerUp: (powerUp: PowerUpId, questionId: number) => Promise<AckResult>;
   submitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -355,6 +361,9 @@ export function useTeamLink(
       socket.on(SOCKET_EVENTS.TEAM_JOKER_SYNCED, (payload) =>
         dispatch({ type: 'jokerSynced', joker: payload.joker }),
       );
+      socket.on(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, (payload) =>
+        dispatch({ type: 'purchasesSynced', payload }),
+      );
       socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload) =>
         dispatch({ type: 'bonusAwarded', payload }),
       );
@@ -538,6 +547,13 @@ export function useTeamLink(
     [emitWithAck, dispatch],
   );
 
+  /** Buys a power-up; the purchase and the coins left arrive as a sync, so nothing is dispatched here. */
+  const buyPowerUp = useCallback(
+    (powerUp: PowerUpId, questionId: number) =>
+      emitWithAck(SOCKET_EVENTS.BUY_POWER_UP, { powerUp, questionId }),
+    [emitWithAck],
+  );
+
   const submitShowdownGuess = useCallback(
     async (showdownRoundId: number, teamId: number, value: string) => {
       const payload: SubmitShowdownGuessPayload = {
@@ -635,6 +651,8 @@ export function useTeamLink(
           setPlayerCount,
           myJoker: link.myJoker,
           pickJoker,
+          myPurchases: link.myPurchases,
+          buyPowerUp,
           submitShowdownGuess,
         }
       : undefined,

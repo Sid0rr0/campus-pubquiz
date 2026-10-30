@@ -13,6 +13,7 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type CoinAwardedPayload,
+  type PurchaseView,
   type RateSessionPayload,
   type RoundRatingView,
   type SubmitAnswerPayload,
@@ -20,6 +21,7 @@ import {
   type TeamBonusAwardView,
   type TeamFeedbackView,
   type TeamJoker,
+  type TeamPurchasesSyncedPayload,
   type TeamSessionRatingsView,
   type Verdict,
 } from '@campus-pubquiz/types';
@@ -172,6 +174,8 @@ export interface TeamLinkState {
   myPlayerCount: number | null;
   /** The team's own joker as the server last said it (the join, a sync, or an acknowledged pick), or null while it has none. */
   myJoker: TeamJoker | null;
+  /** The team's own power-up purchases as the server last said them (the join, or a sync after a purchase); a 50/50's removed options stay hidden through them. */
+  myPurchases: PurchaseView[];
   /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
   roundRatingsEpoch: number;
   /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
@@ -218,6 +222,8 @@ export type TeamLinkInput =
   | { type: 'jokerSynced'; joker: TeamJoker | null }
   // The server acknowledged a joker pick this phone sent.
   | { type: 'jokerSaved'; joker: TeamJoker }
+  // The server told the team's phones its purchases and coins after a purchase.
+  | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
@@ -314,6 +320,7 @@ const EMPTY_TEAM_DATA = {
   mySessionRatings: NO_SESSION_RATINGS,
   myPlayerCount: null,
   myJoker: null,
+  myPurchases: [],
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
 
@@ -594,6 +601,7 @@ function acceptJoin(
     mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
     myPlayerCount: payload.playerCount ?? null,
     myJoker: payload.joker ?? null,
+    myPurchases: payload.purchases,
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -839,6 +847,12 @@ export function teamLink(
       return syncJoker(state, input.joker);
     case 'jokerSaved':
       return unchanged({ ...state, myJoker: input.joker });
+    case 'purchasesSynced':
+      return unchanged({
+        ...state,
+        myPurchases: input.payload.purchases,
+        team: state.team && { ...state.team, coins: input.payload.coins },
+      });
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
       if (input.connectionId !== state.joinSentFor) return unchanged(state);

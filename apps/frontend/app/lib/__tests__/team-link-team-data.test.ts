@@ -39,6 +39,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   joker: null,
   coins: 0,
   hasCarriedCoin: false,
+  purchases: [],
 };
 
 const STORED = {
