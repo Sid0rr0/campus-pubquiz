@@ -57,6 +57,8 @@ export interface UseAdminGameResult {
     category: BonusCategory,
     points: number,
     reason?: string,
+    /** A manual coin award apart from the points; only in a session with power-ups. */
+    coins?: number,
   ) => Promise<AckResult>;
   /** Sets/clears the epoch-ms "back at HH:MM" time on the display's break screen — null clears it. */
   setBreakEndTime: (breakEndsAt: number | null) => Promise<AckResult>;
@@ -189,8 +191,15 @@ export function useAdminGame(
       category: BonusCategory,
       points: number,
       reason?: string,
+      coins?: number,
     ) => {
-      const payload: AwardBonusPayload = { teamId, category, points, reason };
+      const payload: AwardBonusPayload = {
+        teamId,
+        category,
+        points,
+        reason,
+        ...(coins === undefined ? {} : { coins }),
+      };
       return emitAction(SOCKET_EVENTS.AWARD_BONUS, payload);
     },
     // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `awardBonus` is the same function either way

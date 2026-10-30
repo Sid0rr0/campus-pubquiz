@@ -1,9 +1,11 @@
 import {
   type AwardBonusPayload,
   type BonusAwardAdminView,
+  type CoinAwardedPayload,
   type SessionState,
   SOCKET_EVENTS,
   type TeamBonusAwardView,
+  teamCoins,
 } from '@campus-pubquiz/types';
 import {
   BonusAwardNotFoundError,
@@ -36,24 +38,43 @@ export class BonusAwardsChanges {
    */
   async award(
     session: SessionState,
-    { teamId, category, points, reason }: AwardBonusPayload,
+    { teamId, category, points, reason, coins }: AwardBonusPayload,
   ): Promise<SessionChange<SessionOutcome>> {
-    const { enabledBonusCategories, maxBonusAwardsPerCategory } =
-      session.seededGame.settings;
-    await this.refusing(() =>
+    const { settings } = session.seededGame;
+    const { coinsGiven, coinTotal } = await this.refusing(() =>
       this.bonusService.award(
         session.seededGame.gameSessionId,
         teamId,
         category,
         points,
         reason,
-        enabledBonusCategories,
-        maxBonusAwardsPerCategory,
+        settings.enabledBonusCategories,
+        settings.maxBonusAwardsPerCategory,
+        { powerUpsEnabled: settings.powerUpsEnabled, manual: coins },
       ),
     );
-    return bonusChange(session, {
-      noticeFor: { teamId, notice: { category, points, reason } },
-    });
+    const notices: TeamNotice[] = [];
+    // Coins alone give no bonus award, so there is no bonus toast.
+    if (points !== 0) {
+      notices.push({
+        teamId,
+        event: SOCKET_EVENTS.BONUS_AWARDED,
+        payload: { category, points, reason },
+      });
+    }
+    if (coinsGiven !== 0) {
+      notices.push({
+        teamId,
+        event: SOCKET_EVENTS.COIN_AWARDED,
+        payload: {
+          coins: coinsGiven,
+          // Only the quiz master's own coins carry the reason typed in the form.
+          reason: coins ? reason?.trim() || undefined : undefined,
+          balance: teamCoins(settings, session.carriedCoins[teamId], coinTotal),
+        },
+      });
+    }
+    return bonusChange(withCoinTotal(session, teamId, coinTotal), { notices });
   }
 
   /**
@@ -84,10 +105,18 @@ export class BonusAwardsChanges {
     session: SessionState,
     awardId: number,
   ): Promise<SessionChange<SessionOutcome>> {
-    const { teamId } = await this.refusing(() =>
+    const { teamId, coinTotal } = await this.refusing(() =>
       this.bonusService.remove(session.seededGame.gameSessionId, awardId),
     );
-    return bonusChange(session, { syncTeamId: teamId });
+    const next = withCoinTotal(session, teamId, coinTotal);
+    return bonusChange(next, {
+      syncTeamId: teamId,
+      coinSync: teamCoins(
+        next.seededGame.settings,
+        next.carriedCoins[teamId],
+        coinTotal,
+      ),
+    });
   }
 
   /** Runs a bonus service call, turning its refusals into session refusals. */
@@ -106,40 +135,55 @@ export class BonusAwardsChanges {
   }
 }
 
+/** A notice for one team's phone: the bonus toast or the coin toast of a fresh award. */
+type TeamNotice = { teamId: number } & (
+  | { event: typeof SOCKET_EVENTS.BONUS_AWARDED; payload: TeamBonusAwardView }
+  | { event: typeof SOCKET_EVENTS.COIN_AWARDED; payload: CoinAwardedPayload }
+);
+
+/** The session with the team's coin award total replaced (what the views read). */
+function withCoinTotal(
+  session: SessionState,
+  teamId: number,
+  coinTotal: number,
+): SessionState {
+  return {
+    ...session,
+    coinAwards: { ...session.coinAwards, [teamId]: coinTotal },
+  };
+}
+
 /**
  * The change a bonus award makes, shared by all three events and private to
- * this module. `noticeFor` (a fresh award only) carries its BONUS_AWARDED
- * notice for that team's socket, if it is connected. `syncTeamId` (an edit or
- * deletion) lists the team for a bonus awards sync instead, if it is connected.
+ * this module. `notices` (a fresh award only) go to that team's socket, if it
+ * is connected. `syncTeamId` (an edit or deletion) lists the team for a bonus
+ * awards sync instead, if it is connected; `coinSync` (a deletion) also tells
+ * it its new coin balance.
  */
 function bonusChange(
   session: SessionState,
   {
-    noticeFor,
+    notices = [],
     syncTeamId,
-  }: {
-    noticeFor?: { teamId: number; notice: TeamBonusAwardView };
-    syncTeamId?: number;
-  } = {},
+    coinSync,
+  }: { notices?: TeamNotice[]; syncTeamId?: number; coinSync?: number } = {},
 ): SessionChange<SessionOutcome> {
-  const socketId = noticeFor
-    ? session.connectedTeamSockets[noticeFor.teamId]
-    : undefined;
-  const notices =
-    noticeFor && socketId
-      ? [
-          {
-            socketId,
-            event: SOCKET_EVENTS.BONUS_AWARDED,
-            payload: noticeFor.notice,
-          },
-        ]
-      : [];
   const bonusSyncs =
     syncTeamId === undefined ? [] : connectedTeamSyncs(session, [syncTeamId]);
   return {
     session,
-    outcome: { ...BROADCAST_STATE_OUTCOME, notices, bonusSyncs },
+    outcome: {
+      ...BROADCAST_STATE_OUTCOME,
+      notices: notices.flatMap(({ teamId, ...notice }) => {
+        const socketId = session.connectedTeamSockets[teamId];
+        return socketId ? [{ socketId, ...notice }] : [];
+      }),
+      bonusSyncs,
+      coinSyncs:
+        coinSync === undefined
+          ? []
+          : bonusSyncs.map((sync) => ({ ...sync, balance: coinSync })),
+    },
     touchedScores: true,
   };
 }

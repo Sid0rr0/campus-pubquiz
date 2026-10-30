@@ -617,8 +617,8 @@ panel show them as a "Power-ups" tab.
 
 A team's **coins** are `coinBalance` in shared types: starting coins (only with
 power-ups on) + carried coin + coin awards − purchase costs, never below 0.
-Until the rest of the ledger exists the starting coins and the carried coin count.
-The balance is sent as
+Until purchases exist the starting coins, the carried coin and the coin awards
+count. The balance is sent as
 `coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again) and
 in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
@@ -636,6 +636,24 @@ It counts even with power-ups off: the phone then shows the coin (and "One coin 
 yours for rating every round of your last league night", from `hasCarriedCoin` in
 `JOIN_ACCEPTED`) only to teams holding one, and the shop uses the session's
 power-up table. Merging teams keeps it with the kept team.
+
+**Coin awards.** Stored in `coin_awards` (team, session, `coins`, optional
+`reason`, optional `bonus_award_id`). A shot or selfie bonus award in a session with
+power-ups on writes a linked +1 coin award in the same flush; the foreign key
+cascades, so deleting the bonus award deletes the coin award, and editing its
+points leaves it alone. The bonus award form's optional **coins** field (any
+non-zero integer, negative takes coins, up to 100 either way) is sent as `coins`
+on `AWARD_BONUS` and stored as its own unlinked coin award, with the form's
+reason if one was typed. With `points` 0 and `coins` set, only the coin award is
+stored (no bonus award, no bonus toast, no category limit check). A coins value
+in a session without power-ups is refused, and the form hides the field. The
+session keeps each team's coin award sum in a cache (`SessionState.coinAwards`,
+read from the table when the session is placed, so a restart gets it back) so the
+snapshot's `coins` stay synchronous. The awarded team's phone hears
+`COIN_AWARDED` (`{ coins, reason?, balance }`, a toast: the coins this award gave
+in all, with the new balance), and `TEAM_COINS_SYNCED` (`{ balance }`, no toast)
+when deleting a bonus award took its coin award with it. The balance never shows
+below 0, even when a removed award's coins were already spent.
 
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like
@@ -830,6 +848,8 @@ phone with a toast), `TEAM_BONUS_AWARDS_SYNCED` (`{ bonusAwards }`, the team's
 full list in award order as `TeamBonusAwardView[]`, to the awarded team's own
 phone only when the quiz master edits or deletes an award; it replaces the
 phone's list with no toast, and a disconnected team catches up on rejoin),
+`COIN_AWARDED` and `TEAM_COINS_SYNCED` (to the team's own phone; see Coin awards
+above),
 `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
@@ -979,7 +999,9 @@ itself — the display and other players just see counts.
    awarded team's phone shows a toast for a new award (category, signed points
    and, for `custom`, the reason; about 8 seconds, success-styled for a bonus,
    plain for a penalty) — not for edits, deletions or awards restored on
-   rejoin, which only appear in the bonus drawer.
+   rejoin, which only appear in the bonus drawer. In a session with power-ups
+   the form also has a coins field, and a shot or selfie comes with a +1 coin
+   (see Coin awards under the session settings).
    A hand grade (`GRADE_ANSWER`), a bonus and a showdown's points are whole or
    half points: the server refuses any other decimal, because the points
    columns are single-precision and a value like 0.3 would come back in totals

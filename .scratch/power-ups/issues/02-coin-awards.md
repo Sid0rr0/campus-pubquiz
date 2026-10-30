@@ -12,9 +12,9 @@ Parent spec: `.scratch/power-ups/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Entity + migration, real-Postgres spec for the linked create/delete
-- [ ] Admin endpoints with Zod bodies, payload types in shared types
-- [ ] Form field and phone toast, Vitest
-- [ ] `DOCUMENTATION.md` bonus section, `/guide` tip
+- [x] Entity + migration, real-Postgres spec for the linked create/delete
+- [x] Admin endpoints with Zod bodies, payload types in shared types
+- [x] Form field and phone toast, Vitest
+- [x] `DOCUMENTATION.md` bonus section, `/guide` tip

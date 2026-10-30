@@ -187,6 +187,52 @@ describe('team link: the team data', () => {
     });
   });
 
+  describe('the coins', () => {
+    it('toasts coins the quiz master gave and shows the new balance', () => {
+      const gained = run(linkedPhone(), {
+        type: 'coinAwarded',
+        payload: { coins: 2, balance: 3, reason: 'Trivia hero' },
+      });
+
+      expect(gained.state.team?.coins).toBe(3);
+      expect(ofType(gained.commands, 'toast')).toEqual([
+        expect.objectContaining({
+          tone: 'success',
+          message: expect.stringContaining('+2 coins') as string,
+        }),
+      ]);
+      expect(ofType(gained.commands, 'toast')[0].message).toContain(
+        'Trivia hero',
+      );
+    });
+
+    it('toasts a single coin in the singular and coins taken as neutral', () => {
+      const one = run(linkedPhone(), {
+        type: 'coinAwarded',
+        payload: { coins: 1, balance: 1 },
+      });
+      expect(ofType(one.commands, 'toast')[0].message).toContain('+1 coin');
+      expect(ofType(one.commands, 'toast')[0].message).not.toContain('coins');
+
+      const taken = run(linkedPhone(), {
+        type: 'coinAwarded',
+        payload: { coins: -2, balance: 0 },
+      });
+      expect(taken.state.team?.coins).toBe(0);
+      expect(ofType(taken.commands, 'toast')[0]).toMatchObject({
+        tone: 'neutral',
+      });
+      expect(ofType(taken.commands, 'toast')[0].message).toContain('-2 coins');
+    });
+
+    it('updates the balance quietly when a sync says it changed', () => {
+      const synced = run(linkedPhone(), { type: 'coinsSynced', balance: 5 });
+
+      expect(synced.state.team?.coins).toBe(5);
+      expect(ofType(synced.commands, 'toast')).toEqual([]);
+    });
+  });
+
   describe('the joker', () => {
     it('toasts a joker the quiz master set, and one drawn for the team', () => {
       const bySetting = run(linkedPhone(), {

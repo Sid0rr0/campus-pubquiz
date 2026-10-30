@@ -48,6 +48,7 @@ const REFERENCES_SQL = `
   select game_session_id, team_id from game_session_teams
   union select game_session_id, team_id from answers
   union select game_session_id, team_id from bonus_awards
+  union select game_session_id, team_id from coin_awards
   union select game_session_id, team_id from round_ratings
   union select game_session_id, team_id from session_feedback
   union select game_session_id, team_id from session_team_jokers
@@ -70,6 +71,7 @@ export const TEAM_COLUMNS: readonly [table: string, column: string][] = [
   ['game_session_teams', 'team_id'],
   ['answers', 'team_id'],
   ['bonus_awards', 'team_id'],
+  ['coin_awards', 'team_id'],
   ['round_ratings', 'team_id'],
   ['session_feedback', 'team_id'],
   ['session_team_jokers', 'team_id'],

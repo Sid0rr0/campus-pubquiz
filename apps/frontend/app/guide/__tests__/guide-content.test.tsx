@@ -72,6 +72,13 @@ describe('GuideContent', () => {
     expect(text).toContain('Coins column');
   });
 
+  it('explains the coin a shot or selfie gives and the bonus form’s Coins field', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('a shot or selfie also gives 1 coin');
+    expect(text).toContain('Coins field');
+  });
+
   it('explains that the joker round counts double and how the Teams table marks it', () => {
     const text = renderGuideText();
 

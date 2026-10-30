@@ -179,7 +179,11 @@ export class TeamRosterChanges {
           team.id,
         ),
         joker,
-        coins: teamCoins(settings, carriedCoin),
+        coins: teamCoins(
+          settings,
+          carriedCoin,
+          await this.bonusService.coinAwardTotal(gameSessionId, team.id),
+        ),
         hasCarriedCoin: carriedCoin > 0,
       },
     };

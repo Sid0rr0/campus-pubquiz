@@ -209,6 +209,7 @@ export function buildAdminFields(
         coins: teamCoins(
           session.seededGame.settings,
           session.carriedCoins[team.teamId],
+          session.coinAwards[team.teamId],
         ),
       };
     }),

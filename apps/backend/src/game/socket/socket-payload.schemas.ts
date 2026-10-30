@@ -45,6 +45,8 @@ const MAX_STARS = 5;
 const STAR_STEP = 0.5;
 
 const positiveInt = z.number().int().positive();
+/** The most coins one manual coin award may give or take. */
+const MAX_COIN_AWARD = 100;
 const finiteNumber = z.number().finite();
 // Whole or half points only (see nearestHalfPoint): the points columns are
 // single-precision, so any other decimal comes back as float noise in totals.
@@ -148,6 +150,7 @@ export const awardBonusPayloadSchema = z.object({
   category: z.enum(BONUS_CATEGORIES as [BonusCategory, ...BonusCategory[]]),
   reason: z.string().max(BONUS_REASON_MAX_LENGTH).optional(),
   points: halfPointNumber,
+  coins: z.number().int().min(-MAX_COIN_AWARD).max(MAX_COIN_AWARD).optional(),
 });
 
 export const createShowdownRoundPayloadSchema = z.object({

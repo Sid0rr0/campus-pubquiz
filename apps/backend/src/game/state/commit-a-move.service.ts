@@ -61,6 +61,9 @@ export class MoveCommitter {
       CarriedCoinService,
       'decide' | 'loadAll'
     >,
+    private readonly readCoinAwards: (
+      gameSessionId: number,
+    ) => Promise<Record<number, number>>,
   ) {}
 
   /**
@@ -143,7 +146,11 @@ export class MoveCommitter {
     const carriedCoins = await this.carriedCoins.loadAll(
       placed.seededGame.gameSessionId,
     );
-    return { ...withResults, leagueTop, jokers, carriedCoins };
+    // Coin awards are stored too: the cache starts from them.
+    const coinAwards = await this.readCoinAwards(
+      placed.seededGame.gameSessionId,
+    );
+    return { ...withResults, leagueTop, jokers, carriedCoins, coinAwards };
   }
 
   private async commitProgressMove(

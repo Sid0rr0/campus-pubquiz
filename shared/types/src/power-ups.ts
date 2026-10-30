@@ -67,19 +67,20 @@ export function coinBalance(ledger: CoinLedger): number {
   );
 }
 
-/** A team's coins in a session. Until the rest of the ledger exists (purchases, awards) that is the starting coins plus the carried coin. */
+/** A team's coins in a session, given its carried coin and the sum of its coin awards. Until purchases exist that is the starting coins plus both. */
 export function teamCoins(
   settings: {
     powerUpsEnabled: boolean;
     startingCoins: number;
   },
   carriedCoin = 0,
+  coinAwards = 0,
 ): number {
   return coinBalance({
     powerUpsEnabled: settings.powerUpsEnabled,
     startingCoins: settings.startingCoins,
     carriedCoin,
-    coinAwards: 0,
+    coinAwards,
     purchaseCosts: 0,
   });
 }

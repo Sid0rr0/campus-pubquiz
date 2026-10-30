@@ -9,6 +9,8 @@ export const SOCKET_EVENTS = {
   TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
   BONUS_AWARDED: 'game:bonus_awarded',
   TEAM_BONUS_AWARDS_SYNCED: 'game:team_bonus_awards_synced',
+  COIN_AWARDED: 'game:coin_awarded',
+  TEAM_COINS_SYNCED: 'game:team_coins_synced',
   SESSION_CLOSED: 'game:session_closed',
   TEAM_KICKED: 'game:team_kicked',
   TEAM_PLAYER_COUNT_SYNCED: 'game:team_player_count_synced',

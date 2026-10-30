@@ -573,4 +573,52 @@ describe('TeamsTable coins', () => {
       screen.queryByRole('columnheader', { name: 'Coins' }),
     ).not.toBeInTheDocument();
   });
+
+  describe('the bonus award form’s coins field', () => {
+    const renderAwarding = (coinsByTeamId?: Record<number, number>) => {
+      const onAwardBonus = vi.fn().mockResolvedValue({ success: true });
+      renderWithQuery(
+        <TeamsTable
+          joinCode={JOIN_CODE}
+          leaderboard={LEADERBOARD}
+          roundTitles={ROUND_TITLES}
+          onAwardBonus={onAwardBonus}
+          enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+          coinsByTeamId={coinsByTeamId}
+        />,
+      );
+      return onAwardBonus;
+    };
+
+    it('is hidden when power-ups are off', async () => {
+      renderAwarding();
+      await openBonusModalFor('The Quizzards');
+
+      expect(screen.queryByLabelText('Coin award')).not.toBeInTheDocument();
+    });
+
+    it('sends coins beside the points', async () => {
+      const onAwardBonus = renderAwarding({ 1: 1, 2: 1 });
+      await openBonusModalFor('The Quizzards');
+
+      await userEvent.type(screen.getByLabelText('Coin award'), '2');
+      await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
+
+      expect(onAwardBonus).toHaveBeenCalledWith(1, 'shot', 1, undefined, 2);
+    });
+
+    it('can be used alone, with 0 points, and can be negative', async () => {
+      const onAwardBonus = renderAwarding({ 1: 1, 2: 1 });
+      await openBonusModalFor('The Quizzards');
+
+      await userEvent.clear(screen.getByLabelText('Bonus points'));
+      await userEvent.type(screen.getByLabelText('Bonus points'), '0');
+      expect(screen.getByRole('button', { name: /^award$/i })).toBeDisabled();
+
+      await userEvent.type(screen.getByLabelText('Coin award'), '-2');
+      await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
+
+      expect(onAwardBonus).toHaveBeenCalledWith(1, 'shot', 0, undefined, -2);
+    });
+  });
 });

@@ -364,6 +364,12 @@ export function useTeamLink(
           bonusAwards: payload.bonusAwards,
         }),
       );
+      socket.on(SOCKET_EVENTS.COIN_AWARDED, (payload) =>
+        dispatch({ type: 'coinAwarded', payload }),
+      );
+      socket.on(SOCKET_EVENTS.TEAM_COINS_SYNCED, (payload) =>
+        dispatch({ type: 'coinsSynced', balance: payload.balance }),
+      );
       socket.on(SOCKET_EVENTS.SESSION_CLOSED, () =>
         dispatch({ type: 'sessionClosed' }),
       );

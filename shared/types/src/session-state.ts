@@ -87,6 +87,8 @@ export interface SessionState {
   jokers: Record<number, TeamJoker>;
   /** teamId -> the team's carried coin (0 or 1), for teams it was decided for (at the start, or at a late join). A cache of the stored carried coins, read when the session is placed and as teams join. */
   carriedCoins: Record<number, number>;
+  /** teamId -> the sum of the team's coin awards (absent: none). A cache of the stored coin awards, read when the session is placed and updated as awards are given and removed, so the views stay synchronous. */
+  coinAwards: Record<number, number>;
   /** Epoch-ms time the admin expects the break to end, or null when unset — see StateSnapshotPayload.breakEndsAt. */
   breakEndsAt: number | null;
   /** Text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
@@ -223,6 +225,7 @@ export function freshSessionState(
     jokerPickEndsAt: null,
     jokers: {},
     carriedCoins: {},
+    coinAwards: {},
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
     isDisplaySoundMuted: false,

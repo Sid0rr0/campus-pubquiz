@@ -129,6 +129,10 @@ async function deliverEmits(
       .emit(SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED, { bonusAwards });
   }
 
+  for (const { socketId, balance } of outcome.coinSyncs) {
+    server.to(socketId).emit(SOCKET_EVENTS.TEAM_COINS_SYNCED, { balance });
+  }
+
   for (const notice of outcome.notices) {
     emitNotice(server.to(notice.socketId), notice);
   }
@@ -158,6 +162,9 @@ function emitNotice(
       target.emit(notice.event);
       return;
     case SOCKET_EVENTS.BONUS_AWARDED:
+      target.emit(notice.event, notice.payload);
+      return;
+    case SOCKET_EVENTS.COIN_AWARDED:
       target.emit(notice.event, notice.payload);
       return;
     default:

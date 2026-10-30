@@ -12,6 +12,7 @@ import {
   type GameStatus,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
+  type CoinAwardedPayload,
   type RateSessionPayload,
   type RoundRatingView,
   type SubmitAnswerPayload,
@@ -197,6 +198,10 @@ export type TeamLinkInput =
   | { type: 'answerReceived'; payload: AnswerReceivedPayload }
   | { type: 'teamAnswersSynced'; answers: TeamAnswerView[] }
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
+  // The quiz master gave (or took) coins: a toast and the new balance.
+  | { type: 'coinAwarded'; payload: CoinAwardedPayload }
+  // The team's coins changed without a new award (a bonus award went, and its coin with it).
+  | { type: 'coinsSynced'; balance: number }
   | { type: 'bonusAwardsSynced'; bonusAwards: TeamBonusAwardView[] }
   | { type: 'answerResult'; attempt: number; result: AckResult }
   // The answer never left the socket (not connected, or no acknowledgement in time).
@@ -692,6 +697,32 @@ function awardBonus(
   };
 }
 
+/** The state with the team's coin balance replaced (the balance rides on the joined team). */
+function withCoins(state: TeamLinkState, balance: number): TeamLinkState {
+  return state.team
+    ? { ...state, team: { ...state.team, coins: balance } }
+    : state;
+}
+
+function awardCoins(
+  state: TeamLinkState,
+  { coins, reason, balance }: CoinAwardedPayload,
+): TeamLinkStep {
+  const amount = `${coins > 0 ? '+' : ''}${coins} ${Math.abs(coins) === 1 ? 'coin' : 'coins'}`;
+  const message = reason ? `${amount}: ${reason}` : amount;
+  return {
+    state: withCoins(state, balance),
+    commands: [
+      {
+        type: 'toast',
+        tone: coins > 0 ? 'success' : 'neutral',
+        message: coins > 0 ? `🪙 ${message}` : message,
+        durationMs: BONUS_AWARD_TOAST_DURATION_MS,
+      },
+    ],
+  };
+}
+
 /**
  * The server told the team's phones its joker. A joker the team did not pick
  * itself (the quiz master's change, a draw) that differs from the one held is
@@ -769,6 +800,10 @@ export function teamLink(
       return awardBonus(state, input.payload);
     case 'bonusAwardsSynced':
       return unchanged({ ...state, myBonusAwards: input.bonusAwards });
+    case 'coinAwarded':
+      return awardCoins(state, input.payload);
+    case 'coinsSynced':
+      return unchanged(withCoins(state, input.balance));
     case 'answerResult':
       return receiveAnswerResult(state, input.attempt, input.result);
     case 'answerNotDelivered':

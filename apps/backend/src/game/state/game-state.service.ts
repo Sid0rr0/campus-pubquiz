@@ -168,6 +168,7 @@ export class GameStateService implements OnModuleInit {
       (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
       this.jokerChanges,
       this.carriedCoinService,
+      (gameSessionId) => this.bonusService.coinAwardTotals(gameSessionId),
     );
     this.timerExpiryChanges = new TimerExpiryChanges(this.moveCommitter);
   }

@@ -14,7 +14,9 @@ type EventEmit<E extends keyof ServerToClientProtocol> =
 
 /** A direct emit to one socket (kicked, bonus awarded), delivered after every room push. */
 export type SocketNotice = { socketId: string } & EventEmit<
-  typeof SOCKET_EVENTS.TEAM_KICKED | typeof SOCKET_EVENTS.BONUS_AWARDED
+  | typeof SOCKET_EVENTS.TEAM_KICKED
+  | typeof SOCKET_EVENTS.BONUS_AWARDED
+  | typeof SOCKET_EVENTS.COIN_AWARDED
 >;
 
 /** A direct emit to the socket that sent the event (answer received, join accepted), delivered before any room push. */
@@ -36,6 +38,11 @@ export interface PlayerCountSync extends TeamSync {
 /** A connected team whose phone needs its joker (null: none), with the socket it is on. */
 export interface JokerSync extends TeamSync {
   joker: TeamJoker | null;
+}
+
+/** A connected team whose phone needs its new coin balance (no toast), with the socket it is on. */
+export interface CoinSync extends TeamSync {
+  balance: number;
 }
 
 /** The session's phase timer deadlines (epoch-ms, or null when none is due) after a write that moved any of them. */
@@ -91,6 +98,8 @@ export interface SessionOutcome {
   jokerSyncs: readonly JokerSync[];
   /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
   bonusSyncs: readonly TeamSync[];
+  /** Connected teams whose coin balance changed under them (a bonus award deleted took its coin award), each told its new balance. */
+  coinSyncs: readonly CoinSync[];
   notices: readonly SocketNotice[];
   /** Sockets to disconnect, last of all, after the notices. */
   socketsToClose: readonly string[];
@@ -126,6 +135,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   playerCountSyncs: [],
   jokerSyncs: [],
   bonusSyncs: [],
+  coinSyncs: [],
   notices: [],
   socketsToClose: [],
 };

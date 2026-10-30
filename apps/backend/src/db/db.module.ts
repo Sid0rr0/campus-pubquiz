@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
+import { CoinAward } from '@/db/entities/coin-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { League } from '@/db/entities/league.entity';
@@ -31,6 +32,7 @@ export const DB_ENTITIES = [
   GameSessionTeam,
   Answer,
   BonusAward,
+  CoinAward,
   RoundRating,
   SessionFeedback,
   SessionPlayerCount,

@@ -10,8 +10,16 @@ import {
 import { Button } from '@/app/components/button';
 
 interface BonusAwardFormProps {
-  onAward: (category: BonusCategory, points: number, reason?: string) => void;
+  /** `coins` is passed only when the form gave some (a manual coin award, apart from the points; may be negative). */
+  onAward: (
+    category: BonusCategory,
+    points: number,
+    reason?: string,
+    coins?: number,
+  ) => void;
   onCancel: () => void;
+  /** Whether the session has power-ups: shows the coins field. */
+  isCoinsEnabled?: boolean;
   /** This session's enabled bonus categories — hides any predefined button not in the list, and the "Custom" button unless 'custom' is included. */
   enabledCategories: BonusCategory[];
 }
@@ -26,6 +34,7 @@ export function BonusAwardForm({
   onAward,
   onCancel,
   enabledCategories,
+  isCoinsEnabled = false,
 }: BonusAwardFormProps) {
   const availablePredefined = PREDEFINED_CATEGORIES.filter((option) =>
     enabledCategories.includes(option.value),
@@ -39,17 +48,24 @@ export function BonusAwardForm({
   const [pointsInput, setPointsInput] = useState(String(DEFAULT_BONUS_POINTS));
   const [reason, setReason] = useState('');
 
+  const [coinsInput, setCoinsInput] = useState('');
+
   const points = Number(pointsInput);
+  const coins = coinsInput === '' ? 0 : Number(coinsInput);
   const isCustom = category === 'custom';
+  // Coins alone (0 points) are a coin award, which needs no reason.
   const canSubmit =
     Number.isFinite(points) &&
-    points !== 0 &&
-    (!isCustom || reason.trim().length > 0);
+    Number.isInteger(coins) &&
+    (points !== 0 || coins !== 0) &&
+    (!isCustom || points === 0 || reason.trim().length > 0);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (!canSubmit) return;
-    onAward(category, points, isCustom ? reason.trim() : undefined);
+    const trimmed = isCustom ? reason.trim() : undefined;
+    if (coins === 0) onAward(category, points, trimmed);
+    else onAward(category, points, trimmed, coins);
   }
 
   return (
@@ -109,6 +125,20 @@ export function BonusAwardForm({
           className="w-16 rounded border-2 border-background/30 bg-transparent px-2 py-1"
         />
       </label>
+      {isCoinsEnabled && (
+        <label className="flex items-center gap-2 font-bold">
+          Coins
+          <input
+            type="number"
+            step={1}
+            value={coinsInput}
+            onChange={(event) => setCoinsInput(event.target.value)}
+            placeholder="0"
+            aria-label="Coin award"
+            className="w-16 rounded border-2 border-background/30 bg-transparent px-2 py-1 placeholder:text-background/40"
+          />
+        </label>
+      )}
       <div className="flex gap-2">
         <Button
           type="submit"

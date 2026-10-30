@@ -19,7 +19,9 @@ import type {
 import type {
   AwardBonusPayload,
   BonusAwardedPayload,
+  CoinAwardedPayload,
   TeamBonusAwardsSyncedPayload,
+  TeamCoinsSyncedPayload,
 } from './bonus';
 import type { RateRoundPayload, SendFeedbackPayload } from './feedback';
 import type { RateSessionPayload } from './session-scales';
@@ -124,6 +126,8 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.TEAM_ANSWERS_SYNCED]: TeamAnswersSyncedPayload;
   [SOCKET_EVENTS.BONUS_AWARDED]: BonusAwardedPayload;
   [SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED]: TeamBonusAwardsSyncedPayload;
+  [SOCKET_EVENTS.COIN_AWARDED]: CoinAwardedPayload;
+  [SOCKET_EVENTS.TEAM_COINS_SYNCED]: TeamCoinsSyncedPayload;
   [SOCKET_EVENTS.SESSION_CLOSED]: SessionClosedPayload;
   [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
   [SOCKET_EVENTS.TEAM_JOKER_SYNCED]: TeamJokerSyncedPayload;
