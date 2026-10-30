@@ -74,6 +74,7 @@ describe('SessionBroadcaster', () => {
       SOCKET_EVENTS.STATE_UPDATED,
       SOCKET_EVENTS.STATE_UPDATED,
       SOCKET_EVENTS.ANSWERS_UPDATED,
+      SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
     ]);
   });
 
