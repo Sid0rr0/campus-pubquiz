@@ -5,10 +5,13 @@ import {
   coinBalance,
   defaultPowerUpSettings,
   DEFAULT_SESSION_SETTINGS,
+  drawPin,
   drawRemovedOptions,
+  extraJokerRefusal,
   extraJokerRoundId,
   fiftyFiftyLeaveCount,
   optionsAfterPurchases,
+  POWER_UP_LABELS,
   powerUpApplies,
   purchaseEffectSchema,
   purchaseRefusal,
@@ -54,9 +57,13 @@ describe('extraJokerRoundId', () => {
       progress: { status, roundIndex },
     });
 
-  it('offers the first round before any intro has been on air', () => {
-    expect(offered('joker_pick', 0)).toBe(1);
-  });
+  it.each(['lobby', 'rules', 'round_overview', 'joker_pick'])(
+    'offers the first round before any intro has been on air, in %s, whatever the round index',
+    (status) => {
+      expect(offered(status, 0)).toBe(1);
+      expect(offered(status, 1)).toBe(1);
+    },
+  );
 
   it.each(['round_intro', 'question_open', 'locking', 'break_intro', 'break'])(
     'never offers a round whose intro has passed, in %s, even with no question opened',
@@ -66,7 +73,82 @@ describe('extraJokerRoundId', () => {
   );
 
   it('offers nothing once the quiz has ended', () => {
+    expect(offered('ended', 0)).toBeNull();
     expect(offered('ended', 1)).toBeNull();
+  });
+});
+
+describe('extraJokerRefusal', () => {
+  const ok = {
+    setting: { cost: 2, maxUses: 2 },
+    usesInSession: 0,
+    balance: 2,
+    roundId: 5,
+    offeredRoundId: 5,
+    doubledRoundIds: [3],
+  };
+
+  it('lets a purchase through', () => {
+    expect(extraJokerRefusal(ok)).toBeNull();
+  });
+
+  it('refuses a power-up the session does not offer, before anything else', () => {
+    expect(
+      extraJokerRefusal({
+        ...ok,
+        setting: { cost: 2, maxUses: 0 },
+        roundId: 9,
+      }),
+    ).toBe('That power-up is not offered');
+  });
+
+  it('refuses any round but the one on offer, including when none is', () => {
+    const wrong = 'Only the next round can be doubled, before its intro';
+    expect(extraJokerRefusal({ ...ok, roundId: 6 })).toBe(wrong);
+    expect(extraJokerRefusal({ ...ok, offeredRoundId: null })).toBe(wrong);
+  });
+
+  it('refuses a round the team already doubles', () => {
+    expect(extraJokerRefusal({ ...ok, doubledRoundIds: [5] })).toBe(
+      'That round is already doubled',
+    );
+  });
+
+  it('refuses at the per-session limit, but not below it', () => {
+    expect(extraJokerRefusal({ ...ok, usesInSession: 2 })).toBe(
+      'You have reached the limit for that power-up',
+    );
+    expect(extraJokerRefusal({ ...ok, usesInSession: 1 })).toBeNull();
+  });
+
+  it('refuses when the balance is short of the cost, but not when it equals it', () => {
+    expect(extraJokerRefusal({ ...ok, balance: 1 })).toBe('Not enough coins');
+    expect(extraJokerRefusal({ ...ok, balance: 2 })).toBeNull();
+  });
+});
+
+describe('POWER_UP_LABELS', () => {
+  // These are the names on the phone's buttons and the /control answer list.
+  it('names every power-up as the screens show it', () => {
+    expect(POWER_UP_LABELS).toEqual({
+      fifty_fifty: '50/50',
+      first_letter: 'First letter',
+      letter_count: 'Letter count',
+      pin_one: 'Pin one',
+      wider_margin: 'Wider margin',
+      ask_the_room: 'Ask the room',
+      extra_joker: 'Extra joker',
+    });
+  });
+});
+
+describe('drawPin', () => {
+  it('stays on the last item when the random source reaches 1', () => {
+    expect(drawPin('a|b|c', () => 1)).toEqual({
+      kind: 'pin_one',
+      item: 'c',
+      position: 2,
+    });
   });
 });
 
@@ -85,6 +167,15 @@ describe('fiftyFiftyLeaveCount', () => {
 
   it('never leaves fewer than two', () => {
     expect(fiftyFiftyLeaveCount(3)).toBe(2);
+  });
+});
+
+describe('drawRemovedOptions at the top of the random range', () => {
+  it('stays inside the pool when the random source reaches 1', () => {
+    expect(drawRemovedOptions(['A', 'B', 'C', 'D'], 'A', () => 1)).toEqual([
+      'C',
+      'D',
+    ]);
   });
 });
 
@@ -133,6 +224,21 @@ describe('askTheRoomSplit', () => {
     expect(Object.values(split ?? {}).reduce((a, b) => a + b, 0)).toBe(100);
   });
 
+  it('hands the leftover percent to the largest remainder, whatever its place', () => {
+    // 1/7, 2/7, 4/7 floor to 14, 28, 57; the lost point goes to the biggest remainder (the middle option).
+    expect(
+      askTheRoomSplit(['A', 'B', 'C'], ['A', 'B', 'B', 'C', 'C', 'C', 'C']),
+    ).toEqual({ A: 14, B: 29, C: 57 });
+  });
+
+  it('breaks equal remainders towards the earlier option', () => {
+    expect(askTheRoomSplit(['A', 'B', 'C'], ['A', 'B', 'C'])).toEqual({
+      A: 34,
+      B: 33,
+      C: 33,
+    });
+  });
+
   it('does not count an answer that is no option towards the threshold', () => {
     expect(
       askTheRoomSplit(options, ['Paris', 'Paris', 'stale', 'other']),
@@ -162,6 +268,13 @@ describe('askTheRoomReady', () => {
     const answers = [answer(1, 'Paris'), answer(2, 'Paris'), answer(3, 'Rome')];
     expect(askTheRoomReady(question, answers, 1)).toBe(false);
     expect(askTheRoomReady(question, answers, 4)).toBe(true);
+  });
+
+  it('is not ready on a multiple-choice question that carries no options', () => {
+    const answers = [answer(2, 'x'), answer(3, 'x'), answer(4, 'x')];
+    expect(askTheRoomReady({ type: 'multiple_choice' }, answers, 1)).toBe(
+      false,
+    );
   });
 
   it('is never ready on a question the power-up does not work on', () => {
@@ -281,6 +394,13 @@ describe('optionsAfterPurchases', () => {
       'c',
       'd',
     ]);
+  });
+});
+
+describe('textHint of an empty key', () => {
+  it('gives an empty hint, not a placeholder', () => {
+    expect(textHint('first_letter', '   ')).toBe('');
+    expect(textHint('letter_count', '')).toBe('');
   });
 });
 

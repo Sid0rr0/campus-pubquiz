@@ -5,6 +5,7 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
+  advanceUntil,
   setupRealStoreGatewayTest,
   type JoinedTeam,
   type QuizRoundSpec,
@@ -92,6 +93,68 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
 
     expect(await stored(game, alpha)).toEqual([]);
     expect(syncsTo(game, alpha).at(-1)).toEqual({ purchases: [], coins: 5 });
+  });
+
+  it('refunds the second of two extra jokers that land on one round when rounds are merged', async () => {
+    const { game, alpha } = await withExtraOnRoundOne();
+    await advanceUntil(game, 'round_intro'); // round 1's intro is on air: round 2 is next
+    expect(
+      await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
+        powerUp: 'extra_joker',
+        roundId: game.rounds[1].id,
+      }),
+    ).toEqual({ success: true });
+    game.clearEmits();
+
+    // Round 2's questions move into round 1: both purchases now double one round.
+    await game.saveQuizEdit((rounds) => [
+      {
+        ...rounds[0],
+        questions: [...rounds[0].questions, ...rounds[1].questions],
+      },
+      rounds[2],
+    ]);
+
+    expect(await stored(game, alpha)).toMatchObject([
+      { powerUp: 'extra_joker', roundId: game.rounds[0].id },
+    ]);
+    expect(syncsTo(game, alpha).at(-1)?.coins).toBe(4);
+  });
+
+  it('keeps two extra jokers of one team on their own rounds', async () => {
+    const { game, alpha } = await withExtraOnRoundOne();
+    await advanceUntil(game, 'round_intro');
+    await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
+      powerUp: 'extra_joker',
+      roundId: game.rounds[1].id,
+    });
+
+    await game.saveQuizEdit((rounds) => [rounds[0], rounds[1], rounds[2]]);
+
+    expect(await stored(game, alpha)).toMatchObject([
+      { roundId: game.rounds[0].id },
+      { roundId: game.rounds[1].id },
+    ]);
+  });
+
+  it('sends no purchase sync in a session that does not offer extra jokers', async () => {
+    const game = await harness.createGateway({
+      rounds: THREE_ROUNDS,
+      teamNames: ['Alpha'],
+      settings: {
+        powerUpsEnabled: true,
+        powerUps: {
+          ...DEFAULT_SESSION_SETTINGS.powerUps,
+          extra_joker: { cost: 1, maxUses: 0 },
+        },
+      },
+    });
+    await game.act('START_QUIZ');
+    game.clearEmits();
+
+    await game.saveQuizEdit((rounds) => rounds);
+
+    expect(syncsTo(game, game.teams[0])).toEqual([]);
   });
 
   it('leaves it alone when the edit does not touch the rounds', async () => {

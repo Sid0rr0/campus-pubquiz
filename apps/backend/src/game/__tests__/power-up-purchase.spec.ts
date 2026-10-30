@@ -1,5 +1,6 @@
 import {
   DEFAULT_SESSION_SETTINGS,
+  sessionRoom,
   SOCKET_EVENTS,
   type AckResult,
   type AnswersUpdatedPayload,
@@ -521,7 +522,43 @@ describe('GameGateway — buying a 50/50', () => {
 
       const ack = await buy(game, { socket: stranger }, ids(game).france);
 
-      expect(ack.success).toBe(false);
+      expect(ack).toEqual({
+        success: false,
+        error: 'Join a team before buying a power-up',
+      });
+      const extra = await game.gateway.handleBuyPowerUp(asSocket(stranger), {
+        powerUp: 'extra_joker',
+        roundId: game.rounds[0].id,
+      });
+      expect(extra).toEqual({
+        success: false,
+        error: 'Join a team before buying a power-up',
+      });
+    });
+
+    it('counts the use per question, so a second question is allowed within the limit', async () => {
+      const game = await night({ powerUps: powerUps({ maxUses: 2 }) });
+      const [alpha] = game.teams;
+      const { france, italy } = ids(game);
+
+      expect(await buy(game, alpha, france)).toEqual({ success: true });
+      await game.act('ADVANCE'); // the block's next question opens
+      expect(await buy(game, alpha, italy)).toEqual({ success: true });
+      expect(await buy(game, alpha, france)).toMatchObject({ success: false });
+    });
+
+    it('refreshes the quiz master’s room alone, not the big screen or the phones', async () => {
+      const game = await night();
+      const [alpha] = game.teams;
+      game.clearEmits();
+
+      await buy(game, alpha, ids(game).france);
+
+      const stateRooms = game
+        .roomEmits()
+        .filter((emit) => emit.event === SOCKET_EVENTS.STATE_UPDATED)
+        .flatMap((emit) => emit.rooms);
+      expect(stateRooms).toEqual([sessionRoom(game.joinCode, 'admin')]);
     });
 
     it('rejects a malformed payload before touching any state', async () => {

@@ -33,9 +33,12 @@ const COST = DEFAULT_SESSION_SETTINGS.powerUps.extra_joker.cost;
 describe('GameGateway — buying an extra joker', () => {
   const harness = setupRealStoreGatewayTest();
 
-  async function night(settings: Partial<SessionSettings> = {}) {
+  async function night(
+    settings: Partial<SessionSettings> = {},
+    { maxUses = 3, rounds = THREE_ROUNDS } = {},
+  ) {
     const game = await harness.createGateway({
-      rounds: THREE_ROUNDS,
+      rounds,
       teamNames: ['Alpha', 'Bravo'],
       settings: {
         powerUpsEnabled: true,
@@ -43,7 +46,7 @@ describe('GameGateway — buying an extra joker', () => {
         ...settings,
         powerUps: {
           ...DEFAULT_SESSION_SETTINGS.powerUps,
-          extra_joker: { cost: COST, maxUses: 3 },
+          extra_joker: { cost: COST, maxUses },
         },
       },
     });
@@ -142,6 +145,47 @@ describe('GameGateway — buying an extra joker', () => {
       await buy(game, alpha, 0);
 
       expect(await refusal(game, alpha, 0)).toMatch(/already doubled/);
+    });
+
+    it('counts only extra jokers against its limit, not other power-ups', async () => {
+      // Capped at one extra joker; a 50/50 bought on the open question must not use that up.
+      const game = await night(
+        {},
+        {
+          maxUses: 1,
+          rounds: THREE_ROUNDS.map((round, index) =>
+            index > 0
+              ? round
+              : {
+                  ...round,
+                  questions: [
+                    {
+                      ...round.questions[0],
+                      payload: { options: ['right', 'a', 'b', 'c'] },
+                    },
+                  ],
+                },
+          ),
+        },
+      );
+      const [alpha] = game.teams;
+      await advanceUntil(game, 'question_open');
+      await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
+        powerUp: 'fifty_fifty',
+        questionId: game.rounds[0].questionIds[0],
+      });
+
+      expect(await buy(game, alpha, 1)).toEqual({ success: true });
+      expect(await refusal(game, alpha, 1)).toMatch(/already doubled/);
+    });
+
+    it('refuses a second extra joker over the limit', async () => {
+      const game = await night({}, { maxUses: 1 });
+      const [alpha] = game.teams;
+      expect(await buy(game, alpha, 0)).toEqual({ success: true });
+      await advanceUntil(game, 'question_open'); // round 2 is next
+
+      expect(await refusal(game, alpha, 1)).toMatch(/limit/);
     });
 
     it('refuses the joker round', async () => {
