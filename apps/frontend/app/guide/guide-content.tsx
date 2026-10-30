@@ -74,6 +74,12 @@ const GUIDE_SECTIONS: GuideSection[] = [
     ],
   },
   {
+    title: 'Power-ups',
+    paragraphs: [
+      'The "Power-ups" tab (lobby Session Settings) lets teams spend coins on helps: set starting coins, and each power-up\'s cost and uses. The Teams table has a Coins column.',
+    ],
+  },
+  {
     title: 'The Control layout',
     paragraphs: [
       'The phase timer sits beside "Quiz Master" in the sidebar, and in the mobile bar.',

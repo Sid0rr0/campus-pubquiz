@@ -219,6 +219,11 @@ describe('SessionSettingsForm', () => {
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_SESSION_SETTINGS,
       showRoundOverview: !DEFAULT_SESSION_SETTINGS.showRoundOverview,
+      // The extra joker's cost follows the overview while it is the default.
+      powerUps: {
+        ...DEFAULT_SESSION_SETTINGS.powerUps,
+        extra_joker: { cost: 3, maxUses: 1 },
+      },
     });
   });
 
@@ -239,6 +244,10 @@ describe('SessionSettingsForm', () => {
       ...DEFAULT_SESSION_SETTINGS,
       showRoundOverview: true,
       jokersEnabled: true,
+      powerUps: {
+        ...DEFAULT_SESSION_SETTINGS.powerUps,
+        extra_joker: { cost: 3, maxUses: 1 },
+      },
     });
   });
 

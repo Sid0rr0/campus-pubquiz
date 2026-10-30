@@ -25,7 +25,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1350;
+const MAX_GUIDE_WORDS = 1400;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -61,6 +61,15 @@ describe('GuideContent', () => {
     expect(text).toContain('random round');
     expect(text).toContain('N/M picked');
     expect(text).toContain('"Countdown sound"');
+  });
+
+  it('explains the Power-ups tab, starting coins and the Coins column', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('"Power-ups" tab');
+    expect(text).toContain('starting coins');
+    expect(text).toContain('cost and uses');
+    expect(text).toContain('Coins column');
   });
 
   it('explains that the joker round counts double and how the Teams table marks it', () => {

@@ -33,6 +33,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   sessionRatings: { pacing: null, feltDifficulty: null },
   playerCount: null,
   joker: null,
+  coins: 0,
 };
 
 const SEAT_TAKEN = `Team is ${SEAT_TAKEN_REFUSAL_MARKER}`;

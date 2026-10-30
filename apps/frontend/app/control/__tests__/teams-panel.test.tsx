@@ -12,6 +12,7 @@ const TEAMS: AdminTeamView[] = [
     playerCount: 4,
     isOverPlayerCap: false,
     joker: null,
+    coins: 2,
   },
   {
     teamId: 2,
@@ -20,6 +21,7 @@ const TEAMS: AdminTeamView[] = [
     playerCount: null,
     isOverPlayerCap: false,
     joker: null,
+    coins: 2,
   },
 ];
 

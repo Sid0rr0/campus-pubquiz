@@ -2,6 +2,9 @@ import { z } from 'zod';
 import {
   BONUS_CATEGORIES,
   DEFAULT_SESSION_SETTINGS,
+  defaultPowerUpSettings,
+  POWER_UP_IDS,
+  type PowerUpId,
   hasJokersWithoutOverview,
   JOKERS_NEED_OVERVIEW_MESSAGE,
   type BonusCategory,
@@ -21,6 +24,17 @@ const maxBonusAwardsPerCategorySchema = z
     ) as Record<BonusCategory, z.ZodNumber>,
   )
   .partial();
+
+const powerUpSettingSchema = z.object({
+  cost: z.number().int().nonnegative(),
+  maxUses: z.number().int().nonnegative(),
+});
+
+const powerUpsSchema = z.object(
+  Object.fromEntries(
+    POWER_UP_IDS.map((id) => [id, powerUpSettingSchema]),
+  ) as Record<PowerUpId, typeof powerUpSettingSchema>,
+);
 
 export const sessionSettingsPartialSchema = z
   .object({
@@ -42,6 +56,9 @@ export const sessionSettingsPartialSchema = z
     collectFeedback: z.boolean(),
     funFactsEnabled: z.boolean(),
     listed: z.boolean(),
+    powerUpsEnabled: z.boolean(),
+    startingCoins: z.number().int().nonnegative(),
+    powerUps: powerUpsSchema,
   })
   .partial()
   // Only catches a patch naming both; a patch naming one is checked against the
@@ -58,5 +75,12 @@ export type SessionSettingsPartial = z.infer<
 export function resolveSessionSettings(
   partial: SessionSettingsPartial,
 ): SessionSettings {
-  return { ...DEFAULT_SESSION_SETTINGS, ...partial };
+  const settings = { ...DEFAULT_SESSION_SETTINGS, ...partial };
+  // The extra joker's default cost follows the overview until a table is given.
+  return partial.powerUps
+    ? settings
+    : {
+        ...settings,
+        powerUps: defaultPowerUpSettings(settings.showRoundOverview),
+      };
 }

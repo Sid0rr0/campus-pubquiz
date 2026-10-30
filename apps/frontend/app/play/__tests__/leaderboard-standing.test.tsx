@@ -78,6 +78,27 @@ describe('PlayPage — own placing on the leaderboard screen', () => {
     expect(screen.getByTestId('own-leaderboard-row')).toHaveTextContent('Beta');
   });
 
+  it('shows the team coins next to its points when power-ups are on, and none otherwise', () => {
+    const team = { ...BETA_TEAM, coins: 3 };
+    mockUseTeamLink.mockReturnValue(
+      linkFor(
+        { ...boardSession(2), settings: { powerUpsEnabled: true } },
+        team,
+      ),
+    );
+    const { unmount } = renderWithQuery(<PlayPage />);
+    expect(screen.getByTestId('own-leaderboard-row')).toHaveTextContent(
+      '10 pts · 3 coins',
+    );
+    unmount();
+
+    mockUseTeamLink.mockReturnValue(linkFor(boardSession(2), team));
+    renderWithQuery(<PlayPage />);
+    expect(screen.getByTestId('own-leaderboard-row')).not.toHaveTextContent(
+      /coin/,
+    );
+  });
+
   it('says "Joint 2nd" for a team tied on points', () => {
     const tiedBoard = [
       { teamId: 3, teamName: 'Gamma', totalPoints: 10 },

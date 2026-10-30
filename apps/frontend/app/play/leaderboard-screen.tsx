@@ -13,6 +13,8 @@ interface LeaderboardScreenProps {
   revealCount: number;
   myTeamId: number | null;
   isConnected: boolean;
+  /** The team's coins, shown next to its points; absent when the session has no power-ups. */
+  coins?: number;
 }
 
 /**
@@ -25,6 +27,7 @@ export function LeaderboardScreen({
   revealCount,
   myTeamId,
   isConnected,
+  coins,
 }: LeaderboardScreenProps) {
   const standing = findMyStanding(board, revealCount, myTeamId);
   useOnLiveForwardMove(standing ? 1 : 0, isConnected, () => {
@@ -50,6 +53,9 @@ export function LeaderboardScreen({
           <p className="font-display text-3xl">{placingText(standing.entry)}</p>
           <p className="text-base font-bold">
             {standing.entry.teamName} · {standing.entry.totalPoints} pts
+            {coins !== undefined && (
+              <> · {coins === 1 ? '1 coin' : `${coins} coins`}</>
+            )}
           </p>
         </div>
       )}

@@ -45,6 +45,8 @@ export interface JoinAcceptedPayload {
   playerCount: number | null;
   /** The team's own joker this session (null until it has one), so a reconnect, a second phone or a rejoin after a kick restores it. Never another team's. */
   joker: TeamJoker | null;
+  /** The team's own coins, worked out by the server from its ledger, so a reconnect restores them. */
+  coins: number;
 }
 
 export interface KickTeamPayload {

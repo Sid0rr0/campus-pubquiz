@@ -1,8 +1,10 @@
 import {
   type JoinPlayersPayload,
   SEAT_TAKEN_REFUSAL_MARKER,
+  type SessionSettings,
   type SessionState,
   SOCKET_EVENTS,
+  teamCoins,
   type TeamJoker,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
@@ -138,6 +140,7 @@ export class TeamRosterChanges {
     gameSessionId: number,
     team: TeamIdentity,
     joker: TeamJoker | null,
+    settings: SessionSettings,
   ): Promise<SessionOutcome['replies'][number]> {
     return {
       event: SOCKET_EVENTS.JOIN_ACCEPTED,
@@ -168,6 +171,7 @@ export class TeamRosterChanges {
           team.id,
         ),
         joker,
+        coins: teamCoins(settings),
       },
     };
   }

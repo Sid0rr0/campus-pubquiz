@@ -89,6 +89,8 @@ export interface AdminTeamView extends TeamView {
   isOverPlayerCap: boolean;
   /** The team's joker round and how it came to hold it, or null while it has none. The quiz master sees every team's; no other room is sent one. */
   joker: AdminTeamJoker | null;
+  /** The team's coins, worked out by the server. */
+  coins: number;
 }
 
 export interface StateSnapshotPayload {

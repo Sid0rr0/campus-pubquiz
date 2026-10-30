@@ -17,7 +17,8 @@ export type RulesSettings = Pick<
   | 'maxPlayersPerTeam'
   | 'extraPlayerPenaltyPoints'
   | 'jokersEnabled'
->;
+> &
+  Partial<Pick<SessionSettings, 'powerUpsEnabled' | 'startingCoins'>>;
 
 const JOKER_RULE =
   "Joker: pick one round to score double. You'll choose after the round overview.";
@@ -87,6 +88,8 @@ export function RulesContent({
     maxPlayersPerTeam,
     extraPlayerPenaltyPoints,
     jokersEnabled,
+    powerUpsEnabled,
+    startingCoins = 0,
   } = settings;
   const bonusRules = BONUS_CATEGORIES.filter(
     (category) =>
@@ -102,6 +105,11 @@ export function RulesContent({
     ...rules,
     ...bonusRules,
     ...(jokersEnabled ? [JOKER_RULE] : []),
+    ...(powerUpsEnabled
+      ? [
+          `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. Earn more with shots and selfies.`,
+        ]
+      : []),
   ];
 
   return (

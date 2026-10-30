@@ -18,6 +18,7 @@ import {
   type JokerPickRound,
 } from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
+import { teamCoins } from './power-ups';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import {
   isCurrentKahootQuestionRevealed,
@@ -205,6 +206,7 @@ export function buildAdminFields(
           // Stryker disable next-line ConditionalExpression: equivalent for the `true &&` variant, null > number is false anyway; the null guard is for the type checker
           playerCount !== null && playerCount > maxPlayersPerTeam,
         joker: describeAdminTeamJoker(session, team.teamId),
+        coins: teamCoins(session.seededGame.settings),
       };
     }),
     ungradedQuestionIds: session.ungradedQuestionIds,

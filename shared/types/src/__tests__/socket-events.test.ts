@@ -298,6 +298,17 @@ describe('SessionSettings defaults', () => {
       collectFeedback: true,
       funFactsEnabled: true,
       listed: true,
+      powerUpsEnabled: false,
+      startingCoins: 1,
+      powerUps: {
+        fifty_fifty: { cost: 1, maxUses: 1 },
+        first_letter: { cost: 1, maxUses: 1 },
+        letter_count: { cost: 1, maxUses: 1 },
+        pin_one: { cost: 1, maxUses: 1 },
+        wider_margin: { cost: 1, maxUses: 1 },
+        ask_the_room: { cost: 2, maxUses: 1 },
+        extra_joker: { cost: 2, maxUses: 1 },
+      },
       rules: [
         'No cheating.',
         'Please write your answers in English.',

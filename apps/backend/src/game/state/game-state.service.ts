@@ -465,7 +465,12 @@ export class GameStateService implements OnModuleInit {
       return {
         ...joined,
         replies: [
-          await this.rosterChanges.joinReply(gameSessionId, team, heldJoker),
+          await this.rosterChanges.joinReply(
+            gameSessionId,
+            team,
+            heldJoker,
+            this.sessionWrite.read(joinCode).seededGame.settings,
+          ),
         ],
       };
     } catch (error) {

@@ -36,6 +36,8 @@ interface GameStatusScreensProps {
   activeShowdown: ActiveShowdownView | null;
   showdownRevealStep: number;
   myTeamId: number | null;
+  /** The team's coins; absent when the session has no power-ups. */
+  coins?: number;
   phoneLeaderboard: PlayersStatePayload['phoneLeaderboard'];
   /** Whether the phone's connection is live; one-off effects stay silent otherwise. */
   isConnected: boolean;
@@ -103,6 +105,7 @@ export function GameStatusScreens({
   activeShowdown,
   showdownRevealStep,
   myTeamId,
+  coins,
   phoneLeaderboard,
   isConnected,
   teamName,
@@ -144,6 +147,7 @@ export function GameStatusScreens({
           revealCount={phoneLeaderboard.revealCount}
           myTeamId={myTeamId}
           isConnected={isConnected}
+          coins={coins}
         />
       );
     case 'lobby':

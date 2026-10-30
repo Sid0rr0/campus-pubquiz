@@ -317,3 +317,43 @@ describe('resolveSessionSettings', () => {
     });
   });
 });
+
+describe('power-up settings', () => {
+  const table = (cost: number, maxUses: number) => ({
+    fifty_fifty: { cost, maxUses },
+    first_letter: { cost, maxUses },
+    letter_count: { cost, maxUses },
+    pin_one: { cost, maxUses },
+    wider_margin: { cost, maxUses },
+    ask_the_room: { cost, maxUses },
+    extra_joker: { cost, maxUses },
+  });
+
+  it('accepts a full table, starting coins and the switch', () => {
+    const input = {
+      powerUpsEnabled: true,
+      startingCoins: 3,
+      powerUps: table(2, 0),
+    };
+    expect(sessionSettingsPartialSchema.safeParse(input).data).toEqual(input);
+  });
+
+  it('rejects negative or fractional coins, costs and uses, and a table missing a power-up', () => {
+    const parse = (v: object) => sessionSettingsPartialSchema.safeParse(v);
+    expect(parse({ startingCoins: -1 }).success).toBe(false);
+    expect(parse({ startingCoins: 1.5 }).success).toBe(false);
+    expect(parse({ powerUps: table(-1, 1) }).success).toBe(false);
+    expect(parse({ powerUps: table(1, 0.5) }).success).toBe(false);
+    expect(
+      parse({ powerUps: { fifty_fifty: { cost: 1, maxUses: 1 } } }).success,
+    ).toBe(false);
+  });
+
+  it('defaults the extra joker to 2 coins without the overview and 3 with it', () => {
+    expect(resolveSessionSettings({}).powerUps.extra_joker.cost).toBe(2);
+    expect(
+      resolveSessionSettings({ showRoundOverview: true }).powerUps.extra_joker
+        .cost,
+    ).toBe(3);
+  });
+});

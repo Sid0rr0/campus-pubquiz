@@ -264,6 +264,7 @@ describe('SiteHeader', () => {
           sessionRatings: { pacing: null, feltDifficulty: null },
           playerCount: null,
           joker: null,
+          coins: 0,
         },
         onLogOut,
       }),

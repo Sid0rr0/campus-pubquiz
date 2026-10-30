@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DEFAULT_SESSION_SETTINGS,
+  DEFAULT_STARTING_COINS,
+  defaultPowerUpSettings,
   questionNotesOf,
   rowToSeededQuestion,
   type SeededGame,
@@ -133,6 +135,13 @@ export class SeedService {
         jokersEnabled: gameSessionRow.settings.jokersEnabled ?? false,
         // ...and before "Show in the game list", the session is listed.
         listed: gameSessionRow.settings.listed ?? true,
+        // ...and before power-ups, they are off with the default table.
+        powerUpsEnabled: gameSessionRow.settings.powerUpsEnabled ?? false,
+        startingCoins:
+          gameSessionRow.settings.startingCoins ?? DEFAULT_STARTING_COINS,
+        powerUps:
+          gameSessionRow.settings.powerUps ??
+          defaultPowerUpSettings(gameSessionRow.settings.showRoundOverview),
       },
     };
   }

@@ -58,6 +58,37 @@ describe('DisplayPage — rules and round intro', () => {
   });
 
   it.each([
+    [
+      true,
+      2,
+      'Power-ups are on: you start with 2 coins. Earn more with shots and selfies.',
+    ],
+    [
+      true,
+      1,
+      'Power-ups are on: you start with 1 coin. Earn more with shots and selfies.',
+    ],
+    [false, 2, null],
+  ])(
+    'with power-ups %s and %s starting coins the rules screen shows %s',
+    (powerUpsEnabled, startingCoins, line) => {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          settings: { powerUpsEnabled, startingCoins },
+          progress: { status: 'rules' },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      expect(screen.queryByText(/power-ups are on/i)?.textContent ?? null).toBe(
+        line,
+      );
+    },
+  );
+
+  it.each([
     [true, true],
     [false, false],
   ])(

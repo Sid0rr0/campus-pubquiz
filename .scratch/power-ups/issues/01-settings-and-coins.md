@@ -12,9 +12,9 @@ Parent spec: `.scratch/power-ups/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Shared-types settings, defaults and balance rule, with unit tests
-- [ ] Settings form tab and lobby panel, Vitest
-- [ ] Balance in the team link and admin view, survives reconnect
-- [ ] `DOCUMENTATION.md` settings section, `/guide` power-ups setup tip
+- [x] Shared-types settings, defaults and balance rule, with unit tests
+- [x] Settings form tab and lobby panel, Vitest
+- [x] Balance in the team link and admin view, survives reconnect
+- [x] `DOCUMENTATION.md` settings section, `/guide` power-ups setup tip

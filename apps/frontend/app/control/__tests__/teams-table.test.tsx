@@ -542,3 +542,35 @@ describe('TeamsTable', () => {
     );
   });
 });
+
+describe('TeamsTable coins', () => {
+  const renderTable = (coinsByTeamId?: Record<number, number>) =>
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+        coinsByTeamId={coinsByTeamId}
+      />,
+    );
+
+  it('shows a Coins column with each team’s coins when given', () => {
+    renderTable({ 1: 7, 2: 0 });
+
+    expect(
+      screen.getByRole('columnheader', { name: 'Coins' }),
+    ).toBeInTheDocument();
+    const row = screen.getByText('The Quizzards').closest('tr') as HTMLElement;
+    expect(within(row).getByText('7')).toBeInTheDocument();
+  });
+
+  it('has no Coins column without balances', () => {
+    renderTable();
+
+    expect(
+      screen.queryByRole('columnheader', { name: 'Coins' }),
+    ).not.toBeInTheDocument();
+  });
+});

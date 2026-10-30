@@ -601,6 +601,29 @@ still see it in the `/sessions` list, marked "Unlisted". Joining and
 reconnecting by join code are unchanged. The start-session dialog and the
 `/control` lobby settings panel show it as the "Show in the game list" switch.
 
+**Power-ups settings.** Three session settings, validated by the partial-settings
+Zod schema and editable in the lobby only like every other setting; a stored
+settings JSON without them reads as off with the default table.
+**`powerUpsEnabled`** (boolean, default `false`) switches power-ups on;
+**`startingCoins`** (integer ≥ 0, default 1) is what every team starts with;
+**`powerUps`** is a table of `{ cost, maxUses }` (integers ≥ 0) for each of
+`fifty_fifty`, `first_letter`, `letter_count`, `pin_one`, `wider_margin`,
+`ask_the_room` and `extra_joker`, where `maxUses: 0` means not offered. Defaults:
+every power-up costs 1 and may be used once, except ask the room (2) and the extra
+joker (3 with `showRoundOverview` on, 2 off; a session created without a table
+gets the one matching its overview, and the settings form moves the cost with the
+overview until it is edited). The start dialog and the `/control` lobby settings
+panel show them as a "Power-ups" tab.
+
+A team's **coins** are `coinBalance` in shared types: starting coins (only with
+power-ups on) + carried coin + coin awards − purchase costs, never below 0.
+Until the ledger exists only the starting coins count. The balance is sent as
+`coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again) and
+in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
+screen, `/control`'s Teams table has a Coins column, and the rules screen adds
+"Power-ups are on: you start with N coins. Earn more with shots and selfies."
+when power-ups are on.
+
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like
 every other setting; a stored settings JSON without the field reads as off) turns

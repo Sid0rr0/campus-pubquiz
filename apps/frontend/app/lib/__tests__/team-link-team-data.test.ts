@@ -37,6 +37,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   sessionRatings: { pacing: null, feltDifficulty: null },
   playerCount: null,
   joker: null,
+  coins: 0,
 };
 
 const STORED = {

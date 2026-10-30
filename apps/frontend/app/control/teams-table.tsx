@@ -42,6 +42,8 @@ interface TeamsTableProps {
     reason?: string,
   ) => Promise<AckResult>;
   enabledBonusCategories: BonusCategory[];
+  /** Each team's coins; the Coins column shows only when this is given (power-ups on). */
+  coinsByTeamId?: Record<number, number>;
 }
 
 // Rows keep the server's ranking until a round column header is clicked.
@@ -62,6 +64,7 @@ export function TeamsTable({
   roundTitles,
   onAwardBonus,
   enabledBonusCategories,
+  coinsByTeamId,
 }: TeamsTableProps) {
   const [awardingTeamId, setAwardingTeamId] = useState<number | null>(null);
   // Drops a second submit while the first award awaits its acknowledgement.
@@ -110,6 +113,15 @@ export function TeamsTable({
           header: 'Total',
           enableSorting: false,
         }),
+        ...(coinsByTeamId
+          ? [
+              helper.display({
+                id: 'coins',
+                header: 'Coins',
+                cell: (context) => coinsByTeamId[context.row.original.teamId],
+              }),
+            ]
+          : []),
         helper.display({
           id: 'actions',
           header: 'Actions',
@@ -160,7 +172,7 @@ export function TeamsTable({
           },
         }),
       ]),
-    [roundTitles],
+    [roundTitles, coinsByTeamId],
   );
   const table = useTable({
     features,
