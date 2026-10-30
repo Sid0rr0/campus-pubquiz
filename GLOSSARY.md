@@ -176,7 +176,7 @@ What a bonus award was given for: shot, selfie, or custom. A custom award carrie
 
 **Joker**:
 A team's one chance per session to score double on a round it chooses, in a session played with jokers. A team "plays its joker" on a round.
-_Avoid_: double points (that's the effect), power-up, 2× round
+_Avoid_: double points (that's the effect), 2× round, power-up (that's bought with coins; see **Extra joker**)
 
 **Joker round**:
 The round a team played its joker on: the team's points from its answers to that round's questions count double, while bonus awards never do. Once the joker pick closes every team has exactly one, chosen or drawn at random, and the quiz master can change it until that round starts.
@@ -185,6 +185,42 @@ _Avoid_: double round, doubled round
 **Joker pick**:
 The timed window after the round overview in which teams choose their joker round on their phones. It closes when its minute runs out or the quiz master moves on, and stepping back onto it reopens it with a fresh minute. A team that hasn't chosen when it closes gets a random round. It is the `joker_pick` status, switched on by the Jokers session setting, which needs the round overview.
 _Avoid_: joker vote, joker selection
+
+## Power-ups
+
+**Power-up**:
+A one-off help a team buys with coins, in a session played with power-ups. Most act on one question and can be used once per question while it can still be answered: **50/50**, **first letter** and **letter count** (free text: the key's first letter, or its letters as blanks), **pin one** (sort or match: one item's right place or one right pair, locked in) and **wider margin**. The extra joker acts on a round. Showdowns take no power-ups. The quiz master chooses which power-ups a session offers, what each costs and how many times a team may use each in the session. A used power-up is never refunded.
+_Avoid_: lifeline, boost, cheat
+
+**Coin**:
+What a team spends on power-ups. Coins are never points: they count towards no score, placing or league. A team starts a session played with power-ups with the session's starting coins, plus its carried coin, and earns more from coin awards; coins left at the end of the session are lost. A team's coins never go below zero.
+_Avoid_: points, credits, token (that's the team's reconnect credential)
+
+**Coin award**:
+Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award comes with a one-coin award in a session played with power-ups.
+_Avoid_: bonus coins, coin bonus
+
+**Carried coin**:
+The one coin a team brings into a session for having rated every round of its last ended session that shares a league with it. It is decided when the quiz starts (or when the team joins, if later) and can be spent even in a session played without power-ups. A session in no league brings no carried coin.
+_Avoid_: rating coin, loyalty coin
+
+**50/50**:
+A power-up on a multiple-choice question that removes options for one team, leaving half of them (rounded down, never fewer than two) with the right one always among them. Not offered on a two-option question.
+_Avoid_: fifty-fifty hint, option removal
+
+**Ask the room**:
+A power-up on a multiple-choice question that shows one team how the other teams' answers split across the options, as percentages taken at the moment it is bought. It needs at least three other teams' answers and never names a team or says which option is right.
+_Avoid_: poll, ask the audience
+
+**Wider margin**:
+A power-up on a Number question that doubles its margin for one team; on a question with no margin it gives the default margin instead.
+
+**Extra joker**:
+A power-up that doubles the next round for a team, on top of its joker if the session has jokers, bought before that round's intro. It can't be bought for a round already doubled, so no round counts more than double. Without the round overview the team buys it blind, knowing only the round's number.
+_Avoid_: second joker, double joker
+
+**Power-up count**:
+How many times each power-up was used on a question, shown on the big screen when that question is revealed. It never names a team.
 
 ## Team link
 
