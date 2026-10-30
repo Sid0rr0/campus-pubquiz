@@ -15,10 +15,19 @@ describe('widenedMargin', () => {
     });
   });
 
-  it('falls back to the default margin when there is none or it is exact-only', () => {
-    expect(widenedMargin(undefined)).toEqual({ value: 20, unit: 'percent' });
+  it('falls back to the default margin when it is exact-only', () => {
     expect(widenedMargin({ value: 0, unit: 'absolute' })).toEqual({
       value: 10,
+      unit: 'percent',
+    });
+  });
+});
+
+describe('withWiderMargin', () => {
+  it('doubles the default margin of a Number question with none stored', () => {
+    const question = { type: 'number' as const, answer: '100', points: 1 };
+    expect(withWiderMargin(question).margin).toEqual({
+      value: 20,
       unit: 'percent',
     });
   });

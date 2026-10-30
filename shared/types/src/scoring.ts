@@ -1,4 +1,8 @@
-import { resolvedAnswerKeyOf, type GradingSettingsSource } from './answer-key';
+import {
+  gradingSettingsOf,
+  resolvedAnswerKeyOf,
+  type GradingSettingsSource,
+} from './answer-key';
 import { QUESTION_KINDS, type QuestionKind } from './question-kind';
 import {
   ANSWER_FORMATS,
@@ -98,7 +102,8 @@ function scoreBase(question: ScoredQuestion, value: string): ScoreResult {
 
 /** The question as a team with the wider-margin power-up on it is graded against: its margin widened. */
 export function withWiderMargin<Q extends ScoredQuestion>(question: Q): Q {
-  return { ...question, margin: widenedMargin(question.margin) };
+  const { margin } = gradingSettingsOf(question);
+  return margin ? { ...question, margin: widenedMargin(margin) } : question;
 }
 
 /** Kahoot's `1 - fraction/2`: full points answered instantly, a 50% floor at or past the timer, 1 when speed can't be judged. */
