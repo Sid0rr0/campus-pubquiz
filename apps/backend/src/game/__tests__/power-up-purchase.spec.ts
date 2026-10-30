@@ -177,6 +177,25 @@ describe('GameGateway — buying a 50/50', () => {
       ).toEqual({ Alpha: 1, Bravo: 3 });
     });
 
+    it('spends coin awards too: the balance is the one ledger, awards minus purchases', async () => {
+      const game = await night({ startingCoins: 0 });
+      const [alpha] = game.teams;
+      const admin = await game.connectAdmin();
+      await game.gateway.handleAwardBonus(asSocket(admin), {
+        teamId: alpha.teamId,
+        category: 'custom',
+        points: 0,
+        coins: 2,
+      });
+      game.clearEmits();
+
+      await buy(game, alpha, ids(game).france);
+
+      expect(syncsTo(game, alpha)[0].coins).toBe(1);
+      const view = await game.snapshot();
+      expect(view.teams.find((t) => t.teamName === 'Alpha')?.coins).toBe(1);
+    });
+
     it('survives a reconnect and a backend restart: the join reply carries the same effect and coins', async () => {
       const game = await night({}, { jokerRandom: () => 0.5 });
       const [alpha] = game.teams;

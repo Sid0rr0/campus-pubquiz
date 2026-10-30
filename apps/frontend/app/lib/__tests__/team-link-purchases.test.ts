@@ -22,6 +22,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   playerCount: null,
   joker: null,
   coins: 2,
+  hasCarriedCoin: false,
   purchases: [BOUGHT],
 };
 
