@@ -423,6 +423,27 @@ describe('GameGateway — buying a 50/50', () => {
       expect(await refusal(game, alpha, ids(game).france)).toMatch(/coins/);
     });
 
+    it('lets a team spend its carried coin with power-ups off, from the session table', async () => {
+      const game = await harness.createGateway({
+        rounds: QUIZ,
+        teamNames: ['Alpha'],
+        settings: { powerUpsEnabled: false, startingCoins: 3 },
+      });
+      jest
+        .spyOn(game.carriedCoinService, 'decide')
+        .mockImplementation((_, teamIds) =>
+          Promise.resolve(Object.fromEntries(teamIds.map((id) => [id, 1]))),
+        );
+      await game.openFirstQuestion(await game.connectAdmin());
+      const [alpha] = game.teams;
+      game.clearEmits();
+
+      expect(await buy(game, alpha, ids(game).france)).toEqual({
+        success: true,
+      });
+      expect(syncsTo(game, alpha)).toMatchObject([{ coins: 0 }]);
+    });
+
     it('refuses a question that is not open or already locked', async () => {
       const game = await night();
       const [alpha] = game.teams;
