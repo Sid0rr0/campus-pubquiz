@@ -197,6 +197,34 @@ describe('GameGateway — buying an extra joker', () => {
     });
   });
 
+  describe('default cost in the lobby', () => {
+    const costAfter = async (
+      settings: Partial<SessionSettings>,
+      partial: Partial<SessionSettings>,
+    ) => {
+      const game = await harness.createGateway({ settings });
+      await game.inRequestContext(() =>
+        game.gameState.updateSessionSettings(game.joinCode, partial),
+      );
+      return game.gameState.getSnapshot(game.joinCode).settings.powerUps
+        .extra_joker.cost;
+    };
+
+    it('follows a settings patch that changes only the round overview', async () => {
+      expect(await costAfter({}, { showRoundOverview: true })).toBe(3);
+    });
+
+    it('stays where the quiz master put it', async () => {
+      const powerUps = {
+        ...DEFAULT_SESSION_SETTINGS.powerUps,
+        extra_joker: { cost: 5, maxUses: 1 },
+      };
+      expect(await costAfter({ powerUps }, { showRoundOverview: true })).toBe(
+        5,
+      );
+    });
+  });
+
   describe('joker round changes', () => {
     async function withExtraOnRoundOne() {
       const game = await night({
