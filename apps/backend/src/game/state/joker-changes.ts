@@ -288,9 +288,17 @@ export class JokerChanges {
     for (const [key, joker] of held) {
       const teamId = Number(key);
       const followed = roundNowHolding(started, reloaded, joker.roundId);
+      const extra = await this.jokerService.extraJokerRoundIds(
+        gameSessionId,
+        teamId,
+      );
       let next: TeamJoker | null = joker;
-      if (followed === null) {
-        const roundId = drawJoker(pickableRoundIds, this.random);
+      if (followed === null || extra.includes(followed)) {
+        // Gone, or moved onto a round the team doubles with an extra joker: draw anew.
+        const roundId = drawJoker(
+          pickableRoundIds.filter((id) => !extra.includes(id)),
+          this.random,
+        );
         next = roundId === null ? null : { roundId, source: 'drawn' };
       } else if (followed !== joker.roundId) {
         next = { ...joker, roundId: followed };
