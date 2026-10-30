@@ -11,6 +11,7 @@ import {
   DISPLAY_TEXT_SCALE_STEPS,
   POWER_UP_IDS,
   type BonusCategory,
+  type BuyPowerUpPayload,
   type GameAction,
 } from '@campus-pubquiz/types';
 
@@ -118,10 +119,10 @@ export const setTeamJokerPayloadSchema = z.object({
   roundId: positiveInt,
 });
 
-export const buyPowerUpPayloadSchema = z.object({
-  powerUp: z.enum(POWER_UP_IDS),
-  questionId: positiveInt,
-});
+export const buyPowerUpPayloadSchema = z.union([
+  z.object({ powerUp: z.enum(POWER_UP_IDS), questionId: positiveInt }),
+  z.object({ powerUp: z.literal('extra_joker'), roundId: positiveInt }),
+]) satisfies z.ZodType<BuyPowerUpPayload>;
 
 export const gradeAnswerPayloadSchema = z.object({
   answerId: positiveInt,

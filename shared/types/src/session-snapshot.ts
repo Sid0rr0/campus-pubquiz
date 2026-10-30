@@ -19,6 +19,7 @@ import {
 } from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
 import {
+  extraJokerRoundId,
   powerUpCountsFor,
   purchaseCostsOf,
   teamCoins,
@@ -241,9 +242,24 @@ export function buildPlayersFields(
   session: SessionState,
 ): Pick<
   PlayersStatePayload,
-  'upcomingQuestions' | 'pastRevealedQuestions' | 'jokerPick' | 'jokerRounds'
+  | 'upcomingQuestions'
+  | 'pastRevealedQuestions'
+  | 'jokerPick'
+  | 'jokerRounds'
+  | 'extraJokerOffer'
 > {
+  const { rounds, settings } = session.seededGame;
+  const offeredId = extraJokerRoundId(session);
+  const offeredIndex = rounds.findIndex((round) => round.id === offeredId);
   return {
+    extraJokerOffer:
+      offeredIndex === -1
+        ? null
+        : {
+            roundId: rounds[offeredIndex].id,
+            roundNumber: offeredIndex + 1,
+            title: settings.showRoundOverview ? rounds[offeredIndex].title : '',
+          },
     jokerRounds: isJokerLineupKnown(session)
       ? describeJokerPickRounds(session, false)
       : [],

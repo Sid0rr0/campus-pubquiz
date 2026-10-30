@@ -74,6 +74,7 @@ export class JokerChanges {
         'That round cannot be your joker: it has already started',
       );
     }
+    await this.refuseDoubledRound(session, teamId, roundId);
     return await this.storeJoker(
       session,
       teamId,
@@ -110,12 +111,42 @@ export class JokerChanges {
         'That round cannot be the joker: it has already started, or the joker pick has not opened',
       );
     }
+    await this.refuseDoubledRound(session, teamId, roundId);
     return await this.storeJoker(
       session,
       teamId,
       { roundId, source: 'set_by_quiz_master' },
       {},
     );
+  }
+
+  /** Refuses a joker on a round the team bought an extra joker for: the two would not stack. */
+  private async refuseDoubledRound(
+    session: SessionState,
+    teamId: number,
+    roundId: number,
+  ): Promise<void> {
+    const extra = await this.jokerService.extraJokerRoundIds(
+      session.seededGame.gameSessionId,
+      teamId,
+    );
+    if (extra.includes(roundId)) {
+      throw new SessionRefusal(
+        'That round is already doubled by an extra joker',
+      );
+    }
+  }
+
+  /** The rounds a joker may be drawn for the team: those with no opened question and no extra joker. */
+  private async drawableRoundIds(
+    session: SessionState,
+    teamId: number,
+  ): Promise<number[]> {
+    const extra = await this.jokerService.extraJokerRoundIds(
+      session.seededGame.gameSessionId,
+      teamId,
+    );
+    return pickableRoundIdsOf(session).filter((id) => !extra.includes(id));
   }
 
   /** Saves `joker` for the team, then tells its phones and refreshes the admin room (and the big screen when asked). */
@@ -154,12 +185,14 @@ export class JokerChanges {
     const { gameSessionId } = session.seededGame;
     const stored = await this.jokerService.listForSession(gameSessionId);
     const roster = await this.teamService.listForSession(gameSessionId);
-    const pickableRoundIds = pickableRoundIdsOf(session);
 
     const jokers: Record<number, TeamJoker> = Object.fromEntries(stored);
     for (const { teamId } of roster) {
       if (jokers[teamId]) continue;
-      const roundId = drawJoker(pickableRoundIds, this.random);
+      const roundId = drawJoker(
+        await this.drawableRoundIds(session, teamId),
+        this.random,
+      );
       if (roundId === null) continue;
       const drawn: TeamJoker = { roundId, source: 'drawn' };
       await this.jokerService.set(gameSessionId, teamId, drawn);
@@ -217,7 +250,10 @@ export class JokerChanges {
     if (held || !session.seededGame.settings.jokersEnabled || !isPickClosed) {
       return null;
     }
-    const roundId = drawJoker(pickableRoundIdsOf(session), this.random);
+    const roundId = drawJoker(
+      await this.drawableRoundIds(session, teamId),
+      this.random,
+    );
     if (roundId === null) return null;
     const drawn: TeamJoker = { roundId, source: 'drawn' };
     await this.jokerService.set(

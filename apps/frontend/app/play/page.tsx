@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
 import { isShowingLastBreak } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { ExtraJokerOffer } from '@/app/play/extra-joker-offer';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
@@ -169,6 +170,7 @@ function PlayPageContent() {
     pickJoker,
     myPurchases,
     buyPowerUp,
+    buyExtraJoker,
     seenQuestions,
     submitShowdownGuess,
   } = game;
@@ -312,6 +314,16 @@ function PlayPageContent() {
           savedCount={myPlayerCount}
           onSend={setPlayerCount}
         />
+        {team && (settings.powerUpsEnabled || team.coins > 0) && (
+          <ExtraJokerOffer
+            offer={view.extraJokerOffer}
+            setting={settings.powerUps.extra_joker}
+            coins={team.coins}
+            purchases={myPurchases}
+            jokerRoundId={myJoker?.roundId ?? null}
+            onBuy={buyExtraJoker}
+          />
+        )}
         <GameStatusScreens
           phoneScreen={phoneScreen}
           quizStructure={quizStructure}

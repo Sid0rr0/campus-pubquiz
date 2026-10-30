@@ -147,6 +147,7 @@ export interface TeamLinkGame {
   myPurchases: PurchaseView[];
   /** Buys a power-up on a question; resolves to the server's verdict (the refusal's reason when it says no). */
   buyPowerUp: (powerUp: PowerUpId, questionId: number) => Promise<AckResult>;
+  buyExtraJoker: (roundId: number) => Promise<AckResult>;
   submitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -554,6 +555,16 @@ export function useTeamLink(
     [emitWithAck],
   );
 
+  /** Buys an extra joker for a round; like `buyPowerUp`, the sync carries the result. */
+  const buyExtraJoker = useCallback(
+    (roundId: number) =>
+      emitWithAck(SOCKET_EVENTS.BUY_POWER_UP, {
+        powerUp: 'extra_joker',
+        roundId,
+      }),
+    [emitWithAck],
+  );
+
   const submitShowdownGuess = useCallback(
     async (showdownRoundId: number, teamId: number, value: string) => {
       const payload: SubmitShowdownGuessPayload = {
@@ -653,6 +664,7 @@ export function useTeamLink(
           pickJoker,
           myPurchases: link.myPurchases,
           buyPowerUp,
+          buyExtraJoker,
           submitShowdownGuess,
         }
       : undefined,

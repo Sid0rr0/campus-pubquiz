@@ -820,6 +820,23 @@ same way: `TEAM_JOKER_SYNCED` to that team's own connected phones and a fresh
 `STATE_UPDATED` to the admin room alone. The team can pick again while the pick is
 still open, which replaces the quiz master's choice.
 
+**Extra joker.** `BUY_POWER_UP` with `{ powerUp: 'extra_joker', roundId }`
+doubles a round for the buying team, with or without Jokers. Only the round
+on offer can be bought (`extraJokerRoundId`: the first round with no opened
+question whose `round_intro` is not on air, so any time before that intro,
+mid-block included); a round that is the team's joker round or already has an
+extra joker is refused ("That round is already doubled"), as are the usual
+limit and coin refusals. The purchase row stores `roundId` (no `questionId`)
+and the effect `{ kind: 'extra_joker' }`. Scoring treats a round as doubled
+when the team has a joker row or an extra-joker purchase on it (the same SQL
+step as the joker, so no round counts more than double; bonus awards never
+double), and the round's cell carries `isJoker`. A joker can't be put on a round
+the team holds an extra joker for: `PICK_JOKER` and `SET_TEAM_JOKER` refuse it
+and draws skip it. The players view carries `extraJokerOffer`
+(`{ roundId, roundNumber, title }`, title `""` with the round overview off, or
+`null`); the phone shows "Double the next round: _Title_ — N coins" (or
+"Round N" when the title is empty) from it.
+
 **One joker per team.** In a session with Jokers every team always holds exactly
 one joker:
 

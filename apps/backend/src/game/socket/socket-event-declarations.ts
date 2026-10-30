@@ -142,7 +142,7 @@ export const SOCKET_EVENT_DECLARATIONS = {
     schema: buyPowerUpPayloadSchema,
     allowedRoom: SOCKET_ROOMS.PLAYERS,
     rejection: 'Only player clients may buy a power-up',
-    logFields: ['powerUp', 'questionId'],
+    logFields: ['powerUp'],
   }),
   gradeAnswer: declareSocketEvent({
     event: SOCKET_EVENTS.GRADE_ANSWER,

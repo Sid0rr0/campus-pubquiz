@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { pickableRounds } from './joker';
 import { QUESTION_KINDS } from './question-kind';
 import type { QuestionType } from './question-types';
 import { splitPipeList } from './sort-match';
@@ -62,7 +63,8 @@ export type PurchaseEffect =
   | { kind: 'ask_the_room'; split: Record<string, number> }
   | { kind: TextHintId; hint: string }
   | { kind: 'wider_margin' }
-  | PinEffect;
+  | PinEffect
+  | { kind: 'extra_joker' };
 
 /** The free-text power-ups: each stores the hint worked out from the key at purchase time. */
 export type TextHintId = 'first_letter' | 'letter_count';
@@ -93,6 +95,7 @@ export const purchaseEffectSchema = z.discriminatedUnion('kind', [
     item: z.string(),
     position: z.number().int().min(0),
   }),
+  z.object({ kind: z.literal('extra_joker') }),
 ]) satisfies z.ZodType<PurchaseEffect>;
 
 /** Pins one item of the answer key (a pipe list, sort order or match right-hand column). `random` is in [0, 1). */
@@ -146,10 +149,57 @@ export interface TeamPurchasesSyncedPayload {
   coins: number;
 }
 
-/** The single client-to-server event to buy a power-up on a question. */
-export interface BuyPowerUpPayload {
-  powerUp: PowerUpId;
-  questionId: number;
+/** The single client-to-server event to buy a power-up: on a question, or (the extra joker) for a round. */
+export type BuyPowerUpPayload =
+  | { powerUp: PowerUpId; questionId: number; roundId?: undefined }
+  | { powerUp: 'extra_joker'; roundId: number; questionId?: undefined };
+
+/**
+ * The round an extra joker can be bought for right now: the first round with
+ * no opened question whose intro is not on air. Null when there is none.
+ */
+export function extraJokerRoundId(session: {
+  seededGame: {
+    rounds: readonly { id: number; questions: readonly { id: number }[] }[];
+  };
+  openedQuestionIds: readonly number[];
+  progress: { status: string; roundIndex: number };
+}): number | null {
+  const { rounds } = session.seededGame;
+  const onAir =
+    session.progress.status === 'round_intro'
+      ? rounds[session.progress.roundIndex]?.id
+      : undefined;
+  return (
+    pickableRounds(rounds, session.openedQuestionIds).find(
+      (round) => round.id !== onAir,
+    )?.id ?? null
+  );
+}
+
+/** Why an extra joker for `roundId` is refused (worded for the team), or null when it goes through. */
+export function extraJokerRefusal(input: {
+  setting: PowerUpSetting;
+  usesInSession: number;
+  balance: number;
+  roundId: number;
+  /** What `extraJokerRoundId` says is on offer. */
+  offeredRoundId: number | null;
+  /** Rounds the team already doubles: its joker round and earlier extra jokers. */
+  doubledRoundIds: readonly number[];
+}): string | null {
+  if (input.setting.maxUses === 0) return 'That power-up is not offered';
+  if (input.roundId !== input.offeredRoundId) {
+    return 'Only the next round can be doubled, before its intro';
+  }
+  if (input.doubledRoundIds.includes(input.roundId)) {
+    return 'That round is already doubled';
+  }
+  if (input.usesInSession >= input.setting.maxUses) {
+    return 'You have reached the limit for that power-up';
+  }
+  if (input.balance < input.setting.cost) return 'Not enough coins';
+  return null;
 }
 
 /** How many options a 50/50 leaves: half, rounded down, never fewer than two. */

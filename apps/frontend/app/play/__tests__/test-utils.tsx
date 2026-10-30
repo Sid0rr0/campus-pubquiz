@@ -62,6 +62,7 @@ export function teamLinkResult({
         pickJoker: vi.fn().mockResolvedValue({ success: true }),
         myPurchases: [],
         buyPowerUp: vi.fn().mockResolvedValue({ success: true }),
+        buyExtraJoker: vi.fn().mockResolvedValue({ success: true }),
         sendFeedback: vi.fn().mockResolvedValue({ success: true }),
         mySessionRatings: { pacing: null, feltDifficulty: null },
         rateSession: vi.fn().mockResolvedValue({ success: true }),

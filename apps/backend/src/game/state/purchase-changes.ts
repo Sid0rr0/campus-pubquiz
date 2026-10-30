@@ -3,6 +3,8 @@ import {
   findQuestionOpenForAnswering,
   drawRemovedOptions,
   drawPin,
+  extraJokerRefusal,
+  extraJokerRoundId,
   powerUpApplies,
   purchaseRefusal,
   teamCoins,
@@ -110,9 +112,13 @@ export class PurchaseChanges {
    */
   async buy(
     session: SessionState,
-    { powerUp, questionId }: BuyPowerUpPayload,
+    request: BuyPowerUpPayload,
     socketId: string,
   ): Promise<SessionChange<SessionOutcome>> {
+    if (request.roundId !== undefined) {
+      return await this.buyExtraJoker(session, request.roundId, socketId);
+    }
+    const { powerUp, questionId } = request;
     const teamId = requireSeat(
       session,
       socketId,
@@ -181,6 +187,78 @@ export class PurchaseChanges {
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
         answerListQuestionIds: [questionId],
+        purchaseSyncs: connectedTeamSyncs(session, [teamId]).map((sync) => ({
+          ...sync,
+          payload,
+        })),
+      },
+      touchedScores: true,
+    };
+  }
+
+  /**
+   * A team buys an extra joker for `roundId`: refused unless it is the next
+   * round (`extraJokerRoundId`) and the rest of `extraJokerRefusal` allows it.
+   * Scoring reads the stored purchase; nothing is cached on the session.
+   */
+  private async buyExtraJoker(
+    session: SessionState,
+    roundId: number,
+    socketId: string,
+  ): Promise<SessionChange<SessionOutcome>> {
+    const teamId = requireSeat(
+      session,
+      socketId,
+      'Join a team before buying a power-up',
+    );
+    const { settings, gameSessionId } = session.seededGame;
+    const carriedCoin = session.carriedCoins[teamId];
+    const coinAwards = session.coinAwards[teamId];
+    const records = await this.purchaseService.listForTeam(
+      gameSessionId,
+      teamId,
+    );
+    const setting = settings.powerUps.extra_joker;
+    const jokerRoundId = session.jokers[teamId]?.roundId;
+    const refusal = extraJokerRefusal({
+      setting,
+      usesInSession: records.filter(
+        (record) => record.powerUp === 'extra_joker',
+      ).length,
+      balance: coinsAfter(settings, records, carriedCoin, coinAwards),
+      roundId,
+      offeredRoundId: extraJokerRoundId(session),
+      doubledRoundIds: [
+        ...(jokerRoundId === undefined ? [] : [jokerRoundId]),
+        ...records.flatMap((record) =>
+          record.powerUp === 'extra_joker' && record.roundId !== null
+            ? [record.roundId]
+            : [],
+        ),
+      ],
+    });
+    if (refusal !== null) throw new SessionRefusal(refusal);
+
+    const bought: PurchaseRecord = {
+      powerUp: 'extra_joker',
+      questionId: null,
+      roundId,
+      cost: setting.cost,
+      effect: { kind: 'extra_joker' },
+    };
+    await this.purchaseService.add({ gameSessionId, teamId, ...bought });
+
+    const all = [...records, bought];
+    const payload = {
+      purchases: toPurchaseViews(all),
+      coins: coinsAfter(settings, all, carriedCoin, coinAwards),
+    };
+    return {
+      session,
+      outcome: {
+        ...BROADCAST_STATE_OUTCOME,
+        shouldBroadcastState: false,
+        shouldBroadcastAdminState: true,
         purchaseSyncs: connectedTeamSyncs(session, [teamId]).map((sync) => ({
           ...sync,
           payload,

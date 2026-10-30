@@ -303,6 +303,16 @@ export interface PlayersStatePayload
    */
   jokerRounds: JokerPickRound[];
   /**
+   * The round an extra joker can be bought for right now (`extraJokerRoundId`),
+   * its title left out ("") when the round overview is off so the offer stays
+   * blind. Null when there is none.
+   */
+  extraJokerOffer: {
+    roundId: number;
+    roundNumber: number;
+    title: string;
+  } | null;
+  /**
    * Positions (and round titles) of the current block's remaining
    * questions — not open yet, shown as disabled slots in the block picker
    * so the whole block's shape is visible up front, spanning every round up
