@@ -71,6 +71,36 @@ export class PurchaseService {
     }));
   }
 
+  /** Every extra joker the session's teams bought, oldest first, for a live edit to re-point. */
+  async extraJokerRows(
+    gameSessionId: number,
+  ): Promise<{ id: number; teamId: number; roundId: number }[]> {
+    return (await this.purchases
+      .getKnex()('purchases')
+      .where({ game_session_id: gameSessionId, power_up: 'extra_joker' })
+      .whereNotNull('round_id')
+      .orderBy('id')
+      .select('id', 'team_id as teamId', 'round_id as roundId')) as {
+      id: number;
+      teamId: number;
+      roundId: number;
+    }[];
+  }
+
+  /** Puts the purchase on another round. */
+  async moveToRound(id: number, roundId: number): Promise<void> {
+    await this.purchases.getKnex()('purchases').where({ id }).update({
+      round_id: roundId,
+      updated_at: new Date(),
+    });
+  }
+
+  /** Deletes purchases, which hands their cost back: the balance is worked out from the rows. */
+  async remove(ids: readonly number[]): Promise<void> {
+    if (ids.length === 0) return;
+    await this.purchases.getKnex()('purchases').whereIn('id', ids).delete();
+  }
+
   /** Which team bought which power-up on the question, oldest first: the answer list's "used" column and the wider-margin grading read it. */
   async listForQuestion(
     gameSessionId: number,

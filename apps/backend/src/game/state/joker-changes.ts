@@ -355,7 +355,7 @@ function pickableRoundIdsOf(session: SessionState): number[] {
  * The id of the round in `reloaded` that now holds most of the questions the
  * round `roundId` held in `started`, or null when none of them is left.
  */
-function roundNowHolding(
+export function roundNowHolding(
   started: SessionState,
   reloaded: SessionState,
   roundId: number,

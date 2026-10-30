@@ -9,7 +9,10 @@ import {
   type SessionState,
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
+import { AnswerService } from '@/answer/answer.service';
 import { JokerService } from '@/joker/joker.service';
+import { PurchaseService } from '@/purchase/purchase.service';
+import { PurchaseChanges } from '@/game/state/purchase-changes';
 import { TeamService } from '@/team/team.service';
 import {
   JOKER_RANDOM,
@@ -80,6 +83,7 @@ export class LiveEditService {
   private readonly logger = new Logger(LiveEditService.name);
 
   private readonly jokerChanges: JokerChanges;
+  private readonly purchaseChanges: PurchaseChanges;
 
   constructor(
     private readonly quizService: QuizService,
@@ -89,8 +93,15 @@ export class LiveEditService {
     private readonly grading: BlockGradingService,
     jokerService: JokerService,
     teamService: TeamService,
+    purchaseService: PurchaseService,
+    answerService: AnswerService,
     @Optional() @Inject(JOKER_RANDOM) random?: RandomSource,
   ) {
+    this.purchaseChanges = new PurchaseChanges(
+      purchaseService,
+      random ?? Math.random,
+      answerService,
+    );
     this.jokerChanges = new JokerChanges(
       jokerService,
       teamService,
@@ -215,6 +226,7 @@ export class LiveEditService {
                   this.seedService,
                   this.grading,
                   this.jokerChanges,
+                  this.purchaseChanges,
                   regradeQuestionIds,
                 ),
               ),
@@ -237,6 +249,7 @@ export class LiveEditService {
               this.seedService,
               this.grading,
               this.jokerChanges,
+              this.purchaseChanges,
               [],
             ),
           ),
@@ -266,7 +279,13 @@ export class LiveEditService {
         joinCode: seededGame.joinCode,
         outcome: await held.write(
           seededGame.joinCode,
-          quizEditChange(this.seedService, this.grading, this.jokerChanges, []),
+          quizEditChange(
+            this.seedService,
+            this.grading,
+            this.jokerChanges,
+            this.purchaseChanges,
+            [],
+          ),
         ),
       });
     }

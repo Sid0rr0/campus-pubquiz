@@ -22,11 +22,12 @@ import {
   toPurchaseViews,
   type PurchaseRecord,
 } from '@/purchase/purchase.service';
-import type { RandomSource } from '@/game/state/joker-changes';
+import { roundNowHolding, type RandomSource } from '@/game/state/joker-changes';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
   connectedTeamSyncs,
+  type PurchaseSync,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
@@ -272,6 +273,64 @@ export class PurchaseChanges {
       effect: { kind: 'extra_joker' },
     };
     return await this.store(session, teamId, records, bought, {});
+  }
+
+  /**
+   * Keeps every extra joker on its round after a live edit reloaded the quiz
+   * (`reloaded`; `started` is the session before it), as the quiz master's
+   * joker does: a round is known by its questions, so the purchase follows the
+   * round now holding them. Unlike the joker it is not redrawn when its round
+   * is gone (a team must hold a joker, but an extra one is optional): the
+   * purchase is removed and its cost handed back, as the database already does
+   * when the edit deletes the round row. A second extra joker that lands on a
+   * round the team already doubles is refunded the same way. Runs before the
+   * jokers follow, which read these rows. Every connected team is told its
+   * purchases and coins, since a refund moves the balance.
+   */
+  async followRoundsAfterEdit(
+    started: SessionState,
+    reloaded: SessionState,
+  ): Promise<{ session: SessionState; purchaseSyncs: PurchaseSync[] }> {
+    const { gameSessionId, settings } = reloaded.seededGame;
+    if (settings.powerUps.extra_joker.maxUses === 0) {
+      return { session: reloaded, purchaseSyncs: [] };
+    }
+    const doubled = new Set<string>();
+    const removed: number[] = [];
+    for (const row of await this.purchaseService.extraJokerRows(
+      gameSessionId,
+    )) {
+      const next = roundNowHolding(started, reloaded, row.roundId);
+      const key = `${row.teamId}:${next}`;
+      if (next === null || doubled.has(key)) {
+        removed.push(row.id);
+        continue;
+      }
+      doubled.add(key);
+      if (next !== row.roundId) {
+        await this.purchaseService.moveToRound(row.id, next);
+      }
+    }
+    await this.purchaseService.remove(removed);
+
+    const purchaseSyncs: PurchaseSync[] = [];
+    for (const sync of connectedTeamSyncs(
+      reloaded,
+      Object.keys(reloaded.connectedTeamSockets).map(Number),
+    )) {
+      const records = await this.purchaseService.listForTeam(
+        gameSessionId,
+        sync.teamId,
+      );
+      purchaseSyncs.push({
+        ...sync,
+        payload: {
+          purchases: toPurchaseViews(records),
+          coins: balanceAfter(reloaded, sync.teamId, records),
+        },
+      });
+    }
+    return { session: reloaded, purchaseSyncs };
   }
 
   /** The team's stored purchases, for a team joining or rejoining. */

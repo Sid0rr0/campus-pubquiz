@@ -849,6 +849,16 @@ and draws skip it, also the redraw after a live edit. The players view carries `
 `null`); the phone shows "Double the next round: _Title_ — N coins" (or
 "Round N" when the title is empty) from it.
 
+A Live edit save moves an extra joker with its round the way it moves the quiz
+master's joker (a round is known by its questions; the extra jokers are
+re-pointed before the jokers, inside the same save). The two differ when the
+round is gone: a joker is redrawn because every team must hold one, but an extra
+joker is optional, so it is removed and its cost handed back (the balance is
+worked out from the purchase rows). That also happens when the database drops
+the row with a deleted round, and when two extra jokers of a team would land on
+one round. Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
+and purchases stay right.
+
 **One joker per team.** In a session with Jokers every team always holds exactly
 one joker:
 
