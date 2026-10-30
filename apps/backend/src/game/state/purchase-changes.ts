@@ -47,6 +47,20 @@ export function coinsAfter(
   );
 }
 
+/** The team's coins after `records`: the session's cached carried coin and coin awards (decided elsewhere) and the stored purchases. */
+function balanceAfter(
+  session: SessionState,
+  teamId: number,
+  records: readonly PurchaseRecord[],
+): number {
+  return coinsAfter(
+    session.seededGame.settings,
+    records,
+    session.carriedCoins[teamId],
+    session.coinAwards[teamId],
+  );
+}
+
 /**
  * What a power-up stores when bought on `question`: drawn once here and kept,
  * so every later read shows the same effect. A new power-up adds its case; the
@@ -125,9 +139,6 @@ export class PurchaseChanges {
       'Join a team before buying a power-up',
     );
     const { settings, gameSessionId } = session.seededGame;
-    // The caches the views read: carried coin and coin awards are decided elsewhere.
-    const carriedCoin = session.carriedCoins[teamId];
-    const coinAwards = session.coinAwards[teamId];
     const question = findQuestionOpenForAnswering(session, questionId);
     const records = await this.purchaseService.listForTeam(
       gameSessionId,
@@ -142,7 +153,7 @@ export class PurchaseChanges {
         (record) =>
           record.powerUp === powerUp && record.questionId === questionId,
       ),
-      balance: coinsAfter(settings, records, carriedCoin, coinAwards),
+      balance: balanceAfter(session, teamId, records),
       isAnswerable: question !== undefined,
       applies: question !== undefined && powerUpApplies(powerUp, question),
     });
@@ -173,12 +184,28 @@ export class PurchaseChanges {
           : [],
       ),
     };
-    await this.purchaseService.add({ gameSessionId, teamId, ...bought });
+    return await this.store(session, teamId, records, bought, {
+      answerListQuestionIds: [questionId],
+    });
+  }
 
+  /** Stores `bought`, then tells the team's own phones its purchases and coins and refreshes the admin room. */
+  private async store(
+    session: SessionState,
+    teamId: number,
+    records: readonly PurchaseRecord[],
+    bought: PurchaseRecord,
+    outcome: Partial<SessionOutcome>,
+  ): Promise<SessionChange<SessionOutcome>> {
+    await this.purchaseService.add({
+      gameSessionId: session.seededGame.gameSessionId,
+      teamId,
+      ...bought,
+    });
     const all = [...records, bought];
     const payload = {
       purchases: toPurchaseViews(all),
-      coins: coinsAfter(settings, all, carriedCoin, coinAwards),
+      coins: balanceAfter(session, teamId, all),
     };
     return {
       session,
@@ -186,7 +213,7 @@ export class PurchaseChanges {
         ...BROADCAST_STATE_OUTCOME,
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
-        answerListQuestionIds: [questionId],
+        ...outcome,
         purchaseSyncs: connectedTeamSyncs(session, [teamId]).map((sync) => ({
           ...sync,
           payload,
@@ -212,8 +239,6 @@ export class PurchaseChanges {
       'Join a team before buying a power-up',
     );
     const { settings, gameSessionId } = session.seededGame;
-    const carriedCoin = session.carriedCoins[teamId];
-    const coinAwards = session.coinAwards[teamId];
     const records = await this.purchaseService.listForTeam(
       gameSessionId,
       teamId,
@@ -225,7 +250,7 @@ export class PurchaseChanges {
       usesInSession: records.filter(
         (record) => record.powerUp === 'extra_joker',
       ).length,
-      balance: coinsAfter(settings, records, carriedCoin, coinAwards),
+      balance: balanceAfter(session, teamId, records),
       roundId,
       offeredRoundId: extraJokerRoundId(session),
       doubledRoundIds: [
@@ -246,26 +271,7 @@ export class PurchaseChanges {
       cost: setting.cost,
       effect: { kind: 'extra_joker' },
     };
-    await this.purchaseService.add({ gameSessionId, teamId, ...bought });
-
-    const all = [...records, bought];
-    const payload = {
-      purchases: toPurchaseViews(all),
-      coins: coinsAfter(settings, all, carriedCoin, coinAwards),
-    };
-    return {
-      session,
-      outcome: {
-        ...BROADCAST_STATE_OUTCOME,
-        shouldBroadcastState: false,
-        shouldBroadcastAdminState: true,
-        purchaseSyncs: connectedTeamSyncs(session, [teamId]).map((sync) => ({
-          ...sync,
-          payload,
-        })),
-      },
-      touchedScores: true,
-    };
+    return await this.store(session, teamId, records, bought, {});
   }
 
   /** The team's stored purchases, for a team joining or rejoining. */

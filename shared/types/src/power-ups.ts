@@ -357,6 +357,24 @@ export function teamCoins(
   });
 }
 
+/** A team's coins read from a session's caches: its settings, the team's carried coin and coin award sum, and the purchases in `funFactData`. */
+export function coinBalanceOf(
+  session: {
+    seededGame: { settings: Parameters<typeof teamCoins>[0] };
+    carriedCoins: Readonly<Record<number, number>>;
+    coinAwards: Readonly<Record<number, number>>;
+    funFactData: { powerUps: readonly { teamId: number; cost: number }[] };
+  },
+  teamId: number,
+): number {
+  return teamCoins(
+    session.seededGame.settings,
+    session.carriedCoins[teamId],
+    session.coinAwards[teamId],
+    purchaseCostsOf(session.funFactData.powerUps, teamId),
+  );
+}
+
 /** The sum of the costs of one team's purchases among `purchases` (the figure `teamCoins` subtracts). */
 export function purchaseCostsOf(
   purchases: readonly { teamId: number; cost: number }[],

@@ -5,8 +5,7 @@ import {
   type SessionState,
   SOCKET_EVENTS,
   type TeamBonusAwardView,
-  purchaseCostsOf,
-  teamCoins,
+  coinBalanceOf,
 } from '@campus-pubquiz/types';
 import {
   BonusAwardNotFoundError,
@@ -63,6 +62,7 @@ export class BonusAwardsChanges {
         payload: { category, points, reason },
       });
     }
+    const next = withCoinTotal(session, teamId, coinTotal);
     if (coinsGiven !== 0) {
       notices.push({
         teamId,
@@ -71,16 +71,11 @@ export class BonusAwardsChanges {
           coins: coinsGiven,
           // Only the quiz master's own coins carry the reason typed in the form.
           reason: coins ? reason?.trim() || undefined : undefined,
-          balance: teamCoins(
-            settings,
-            session.carriedCoins[teamId],
-            coinTotal,
-            purchaseCostsOf(session.funFactData.powerUps, teamId),
-          ),
+          balance: coinBalanceOf(next, teamId),
         },
       });
     }
-    return bonusChange(withCoinTotal(session, teamId, coinTotal), { notices });
+    return bonusChange(next, { notices });
   }
 
   /**
@@ -117,12 +112,7 @@ export class BonusAwardsChanges {
     const next = withCoinTotal(session, teamId, coinTotal);
     return bonusChange(next, {
       syncTeamId: teamId,
-      coinSync: teamCoins(
-        next.seededGame.settings,
-        next.carriedCoins[teamId],
-        coinTotal,
-        purchaseCostsOf(next.funFactData.powerUps, teamId),
-      ),
+      coinSync: coinBalanceOf(next, teamId),
     });
   }
 

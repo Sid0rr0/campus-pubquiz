@@ -21,8 +21,7 @@ import { getQuizStructureSummary } from './game-state-structure';
 import {
   extraJokerRoundId,
   powerUpCountsFor,
-  purchaseCostsOf,
-  teamCoins,
+  coinBalanceOf,
   type PowerUpCount,
 } from './power-ups';
 import { getTimedPhaseKey } from './game-state-timed-phase';
@@ -224,12 +223,7 @@ export function buildAdminFields(
           // Stryker disable next-line ConditionalExpression: equivalent for the `true &&` variant, null > number is false anyway; the null guard is for the type checker
           playerCount !== null && playerCount > maxPlayersPerTeam,
         joker: describeAdminTeamJoker(session, team.teamId),
-        coins: teamCoins(
-          session.seededGame.settings,
-          session.carriedCoins[team.teamId],
-          session.coinAwards[team.teamId],
-          purchaseCostsOf(session.funFactData.powerUps, team.teamId),
-        ),
+        coins: coinBalanceOf(session, team.teamId),
       };
     }),
     ungradedQuestionIds: session.ungradedQuestionIds,
