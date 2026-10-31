@@ -189,6 +189,17 @@ const BEFORE_FIRST_INTRO: readonly string[] = [
   'joker_pick',
 ];
 
+/** The title a phone may be told for a round it can double: the real one once the round overview is on air, "" before that (lobby, rules) and with the overview off, so a team never learns a topic it was not shown. */
+export function visibleRoundTitle(
+  settings: { showRoundOverview: boolean },
+  status: string,
+  title: string,
+): string {
+  return settings.showRoundOverview && !['lobby', 'rules'].includes(status)
+    ? title
+    : '';
+}
+
 /**
  * The round an extra joker can be bought for right now: the first round with
  * no opened question whose intro has not been on air (the current round's

@@ -358,6 +358,40 @@ describe('the players view fields', () => {
         .jokerPick,
     ).toBeNull();
   });
+
+  describe('the extra joker offer', () => {
+    const offerAt = (status: 'lobby' | 'rules' | 'round_overview') =>
+      buildPlayersFields(
+        sessionOver(rounds, progressAt(status), { showRoundOverview: true }),
+      ).extraJokerOffer;
+
+    it.each(['lobby', 'rules'] as const)(
+      'names the round by number alone while the overview has not aired (%s)',
+      (status) => {
+        expect(offerAt(status)).toEqual({
+          roundId: 10,
+          roundNumber: 1,
+          title: '',
+        });
+      },
+    );
+
+    it('names the round by title once the overview is on air', () => {
+      expect(offerAt('round_overview')).toEqual({
+        roundId: 10,
+        roundNumber: 1,
+        title: 'Round 10',
+      });
+    });
+
+    it('never names the round with the overview off', () => {
+      const session = sessionOver(rounds, progressAt('round_overview'), {
+        showRoundOverview: false,
+      });
+
+      expect(buildPlayersFields(session).extraJokerOffer?.title).toBe('');
+    });
+  });
 });
 
 describe('the snapshot', () => {

@@ -205,7 +205,11 @@ export class PurchaseChanges {
     });
     const all = [...records, bought];
     const payload = {
-      purchases: toPurchaseViews(all, session.seededGame),
+      purchases: toPurchaseViews(
+        all,
+        session.seededGame,
+        session.progress.status,
+      ),
       coins: balanceAfter(session, teamId, all),
     };
     return {
@@ -325,7 +329,11 @@ export class PurchaseChanges {
       purchaseSyncs.push({
         ...sync,
         payload: {
-          purchases: toPurchaseViews(records, reloaded.seededGame),
+          purchases: toPurchaseViews(
+            records,
+            reloaded.seededGame,
+            reloaded.progress.status,
+          ),
           coins: balanceAfter(reloaded, sync.teamId, records),
         },
       });

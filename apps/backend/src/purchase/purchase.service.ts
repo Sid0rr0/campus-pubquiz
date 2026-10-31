@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   purchaseEffectSchema,
+  visibleRoundTitle,
   type PowerUpId,
   type PurchaseEffect,
   type PurchaseView,
@@ -118,10 +119,11 @@ export class PurchaseService {
   }
 }
 
-/** What a team's phone is sent of its purchases: the ledger row without its cost, with the round an extra joker doubles named. */
+/** What a team's phone is sent of its purchases: the ledger row without its cost, with the round an extra joker doubles named (by title only once the overview has aired, at `status`). */
 export function toPurchaseViews(
   records: readonly PurchaseRecord[],
   { rounds, settings }: Pick<SeededGame, 'rounds' | 'settings'>,
+  status: string,
 ): PurchaseView[] {
   return records.map(({ powerUp, questionId, roundId, effect }) => {
     const roundIndex = rounds.findIndex((round) => round.id === roundId);
@@ -133,7 +135,7 @@ export function toPurchaseViews(
       ...(roundIndex !== -1 && {
         round: {
           roundNumber: roundIndex + 1,
-          title: settings.showRoundOverview ? rounds[roundIndex].title : '',
+          title: visibleRoundTitle(settings, status, rounds[roundIndex].title),
         },
       }),
     };

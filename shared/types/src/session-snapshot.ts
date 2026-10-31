@@ -22,6 +22,7 @@ import {
   extraJokerRoundId,
   powerUpCountsFor,
   coinBalanceOf,
+  visibleRoundTitle,
   type PowerUpCount,
 } from './power-ups';
 import { getTimedPhaseKey } from './game-state-timed-phase';
@@ -252,7 +253,11 @@ export function buildPlayersFields(
         : {
             roundId: rounds[offeredIndex].id,
             roundNumber: offeredIndex + 1,
-            title: settings.showRoundOverview ? rounds[offeredIndex].title : '',
+            title: visibleRoundTitle(
+              settings,
+              session.progress.status,
+              rounds[offeredIndex].title,
+            ),
           },
     jokerRounds: isJokerLineupKnown(session)
       ? describeJokerPickRounds(session, false)

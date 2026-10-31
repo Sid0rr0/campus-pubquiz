@@ -103,14 +103,26 @@ describe('GameGateway — buying an extra joker', () => {
         .at(-1);
     }
 
-    it('sends the round number and title with the round overview on', async () => {
+    it('sends the round number and title with the round overview on air', async () => {
+      const game = await night({ showRoundOverview: true });
+      const [alpha] = game.teams;
+      await game.act('ADVANCE'); // rules -> round_overview
+
+      await buy(game, alpha, 0);
+
+      expect(lastSync(game, alpha)?.purchases).toMatchObject([
+        { round: { roundNumber: 1, title: 'Round 1' } },
+      ]);
+    });
+
+    it('keeps the title back before the round overview has aired, as the offer does', async () => {
       const game = await night({ showRoundOverview: true });
       const [alpha] = game.teams;
 
       await buy(game, alpha, 0);
 
       expect(lastSync(game, alpha)?.purchases).toMatchObject([
-        { round: { roundNumber: 1, title: 'Round 1' } },
+        { round: { roundNumber: 1, title: '' } },
       ]);
     });
 

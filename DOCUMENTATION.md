@@ -853,7 +853,7 @@ step as the joker, so no round counts more than double; bonus awards never
 double), and the round's cell carries `isJoker`. A joker can't be put on a round
 the team holds an extra joker for: `PICK_JOKER` and `SET_TEAM_JOKER` refuse it
 and draws skip it, also the redraw after a live edit. The players view carries `extraJokerOffer`
-(`{ roundId, roundNumber, title }`, title `""` with the round overview off, or
+(`{ roundId, roundNumber, title }`, title `""` with the round overview off or not yet on air (`lobby`, `rules`; `visibleRoundTitle`), or
 `null`); the phone's Extra joker card offers "Activate for the next round: _Title_"
 (or "Round N" when the title is empty) from it. A bought extra joker gets everything
 a joker round gets on that team's phone: the joker line and picker heading, the joker
@@ -901,7 +901,7 @@ Every phone whose team has a doubled round (its joker or an extra joker) shows a
 and the question picker's heading for that round reads "🃏 Music · 2×", shown even
 when it is the block's only round. The phone names a joker round from `jokerRounds`
 in the players view and an extra joker's from its `PurchaseView.round`, which only
-that team's phones get (title `""` with the round overview off: the line then reads
+that team's phones get (title `""` with the round overview off or not yet on air: the line then reads
 "Round 4 scores double"). Once a doubled round's block has been revealed (a question
 of it is among `pastRevealedQuestions`, or the quiz has `ended`) the line reads
 "scored double"; the phone derives this from the view, no event carries it.
