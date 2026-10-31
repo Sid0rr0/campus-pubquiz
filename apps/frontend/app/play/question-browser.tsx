@@ -1,9 +1,7 @@
 import {
-  ANSWER_FORMATS,
   formatAnswer,
   isHttpUrl,
-  isSameOrder,
-  lockPin,
+  isPinOffPlace,
   removedOptionsOf,
   resolveAnswerKind,
   pinFor,
@@ -147,16 +145,10 @@ export function QuestionBrowser({
       p.effect.kind === 'wider_margin' && p.questionId === selectedQuestion.id,
   );
   const pin = pinFor(selectedQuestion.id, purchases);
-  const answerKind = resolveAnswerKind(selectedQuestion);
   // A pin snaps its item into place on the phone, but the answer already sent keeps the old order.
   const hasPinOffPlace =
-    pin !== undefined &&
     myAnswer !== undefined &&
-    (answerKind === 'sort' || answerKind === 'match') &&
-    (() => {
-      const order = ANSWER_FORMATS[answerKind].decode(myAnswer);
-      return !isSameOrder(order, lockPin(order, pin));
-    })();
+    isPinOffPlace(resolveAnswerKind(selectedQuestion), myAnswer, pin);
   // The answer already given was graded without what was bought; only a new submit uses it.
   const resubmitNote =
     hasWiderMargin && myAnswer !== undefined

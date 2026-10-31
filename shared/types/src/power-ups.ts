@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { ANSWER_FORMATS, type AnswerKind } from './answer-kind';
 import type { GameStatus } from './game-state-types';
 import { pickableRounds } from './joker';
 import { QUESTION_KINDS } from './question-kind';
 import type { QuestionType } from './question-types';
-import { splitPipeList } from './sort-match';
+import { isSameOrder, splitPipeList } from './sort-match';
 
 export const POWER_UP_IDS = [
   'fifty_fifty',
@@ -137,6 +138,25 @@ export function lockPin(
   const rest = order.filter((item) => item !== pin.item);
   rest.splice(pin.position, 0, pin.item);
   return rest;
+}
+
+/**
+ * Whether an answer already sent has the pinned item off its place: the phone
+ * snaps the item into place at once, but the answer keeps the order it was sent
+ * in until the team submits again. False without a pin, and for an answer that
+ * is no list (a pin only ever exists on a sort or match question).
+ */
+export function isPinOffPlace(
+  kind: AnswerKind,
+  answer: string,
+  pin: PinEffect | undefined,
+): boolean {
+  if (pin === undefined) return false;
+  const order: unknown = ANSWER_FORMATS[kind].decode(answer);
+  if (!Array.isArray(order) || order.some((item) => typeof item !== 'string')) {
+    return false;
+  }
+  return !isSameOrder(order as string[], lockPin(order as string[], pin));
 }
 
 /** The pin a team bought for `questionId`, if any. */

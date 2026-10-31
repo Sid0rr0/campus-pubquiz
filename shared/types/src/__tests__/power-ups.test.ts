@@ -9,6 +9,7 @@ import {
   extraJokerRefusal,
   extraJokerRoundId,
   fiftyFiftyLeaveCount,
+  isPinOffPlace,
   optionsAfterPurchases,
   POWER_UP_LABELS,
   powerUpApplies,
@@ -482,5 +483,27 @@ describe('visibleRoundTitle', () => {
     expect(
       visibleRoundTitle({ showRoundOverview: false }, 'question_open', 'Music'),
     ).toBe('');
+  });
+});
+
+describe('isPinOffPlace', () => {
+  const pin = { kind: 'pin_one', item: 'A', position: 0 } as const;
+
+  it('is true when a sent sort order has the item off its place', () => {
+    expect(isPinOffPlace('sort', 'B|A|C', pin)).toBe(true);
+  });
+
+  it('is false when the item already sits in its place', () => {
+    expect(isPinOffPlace('sort', 'A|B|C', pin)).toBe(false);
+  });
+
+  it('reads a match answer by its right-hand column', () => {
+    expect(isPinOffPlace('match', 'B|A|C', pin)).toBe(true);
+    expect(isPinOffPlace('match', 'A|B|C', pin)).toBe(false);
+  });
+
+  it('is false without a pin, and for an answer the pin is not in', () => {
+    expect(isPinOffPlace('sort', 'B|A|C', undefined)).toBe(false);
+    expect(isPinOffPlace('sort', "I don't know", pin)).toBe(false);
   });
 });
