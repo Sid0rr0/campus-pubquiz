@@ -365,16 +365,17 @@ describe('the players view fields', () => {
         sessionOver(rounds, progressAt(status), { showRoundOverview: true }),
       ).extraJokerOffer;
 
-    it.each(['lobby', 'rules'] as const)(
-      'names the round by number alone while the overview has not aired (%s)',
-      (status) => {
-        expect(offerAt(status)).toEqual({
-          roundId: 10,
-          roundNumber: 1,
-          title: '',
-        });
-      },
-    );
+    it('names the round by number alone while the overview has not aired (rules)', () => {
+      expect(offerAt('rules')).toEqual({
+        roundId: 10,
+        roundNumber: 1,
+        title: '',
+      });
+    });
+
+    it('offers no round in the lobby', () => {
+      expect(offerAt('lobby')).toBeNull();
+    });
 
     it('names the round by title once the overview is on air', () => {
       expect(offerAt('round_overview')).toEqual({
