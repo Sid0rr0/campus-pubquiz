@@ -102,9 +102,11 @@ export function MatchAnswer({
   const restored = initialValue
     ? ANSWER_FORMATS.match.decode(initialValue)
     : [];
-  const [order, setOrder] = useState<string[]>(
-    lockPin(restored.length === rightItems.length ? restored : rightItems, pin),
+  const [draft, setOrder] = useState<string[]>(
+    restored.length === rightItems.length ? restored : rightItems,
   );
+  // Derived, so a pin bought while the question is open snaps its pair into place at once.
+  const order = lockPin(draft, pin);
   const [isDragging, setIsDragging] = useState(false);
   const isSubmitted =
     Boolean(initialValue) &&

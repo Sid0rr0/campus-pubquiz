@@ -63,3 +63,38 @@ describe('MatchAnswer with a pin', () => {
     expect(handles[1]).toBeEnabled();
   });
 });
+
+describe('a pin bought while the question is open', () => {
+  it('snaps the pinned sort item into place at once', async () => {
+    const onSubmit = vi.fn();
+    const options = ['Horse', 'Mouse', 'Cat'];
+    const { rerender } = render(
+      <SortAnswer options={options} onSubmit={onSubmit} />,
+    );
+
+    rerender(<SortAnswer options={options} pin={pin} onSubmit={onSubmit} />);
+    await userEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith('Cat|Horse|Mouse');
+  });
+
+  it('snaps the pinned match pair into place at once', async () => {
+    const onSubmit = vi.fn();
+    const props = {
+      leftItems: ['France', 'Italy'],
+      rightItems: ['Rome', 'Paris'],
+      onSubmit,
+    };
+    const { rerender } = render(<MatchAnswer {...props} />);
+
+    rerender(
+      <MatchAnswer
+        {...props}
+        pin={{ kind: 'pin_one', item: 'Paris', position: 0 }}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith('Paris|Rome');
+  });
+});

@@ -191,12 +191,11 @@ export function SortAnswer({
   const restoredOrder = initialValue
     ? ANSWER_FORMATS.sort.decode(initialValue)
     : [];
-  const [order, setOrder] = useState<string[]>(
-    lockPin(
-      restoredOrder.length === options.length ? restoredOrder : options,
-      pin,
-    ),
+  const [draft, setOrder] = useState<string[]>(
+    restoredOrder.length === options.length ? restoredOrder : options,
   );
+  // Derived, so a pin bought while the question is open snaps its item into place at once.
+  const order = lockPin(draft, pin);
   const [isDragging, setIsDragging] = useState(false);
   const isSubmitted =
     Boolean(initialValue) && ANSWER_FORMATS.sort.encode(order) === initialValue;
