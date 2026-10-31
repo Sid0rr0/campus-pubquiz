@@ -133,8 +133,8 @@ export class BonusService {
         points,
       });
       em.persist(bonusAward);
-      // A shot or selfie earns coins of its own, which goes with the award.
-      if (coins.powerUpsEnabled && category !== 'custom') {
+      // A shot or selfie earns coins of its own, which go with the award; a penalty earns none.
+      if (coins.powerUpsEnabled && category !== 'custom' && points > 0) {
         em.persist(
           this.coinAwards.create({
             gameSession: gameSessionId,

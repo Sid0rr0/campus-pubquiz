@@ -619,7 +619,7 @@ patch that changes only `showRoundOverview` move the cost with the overview whil
 it is still the default). The start dialog and the `/control` lobby settings
 panel show them as a "Power-ups" tab.
 
-A team's **coins** are `coinBalance` in shared types: starting coins (only with
+A team's **coins** are `teamCoins` in shared types: starting coins (only with
 power-ups on) + carried coins + coin awards − purchase costs, never below 0.
 The starting coins, the carried coins, the coin awards and the purchases all count.
 The balance is sent as
@@ -645,7 +645,7 @@ yours for rating every round of your last league night", from `hasCarriedCoin` i
 power-up table. Merging teams keeps it with the kept team.
 
 **Coin awards.** Stored in `coin_awards` (team, session, `coins`, optional
-`reason`, optional `bonus_award_id`). A shot or selfie bonus award in a session with
+`reason`, optional `bonus_award_id`). A shot or selfie bonus award with positive points in a session with
 power-ups on writes a linked +2 coin award (`SHOT_SELFIE_COINS`) in the same flush; the foreign key
 cascades, so deleting the bonus award deletes the coin award, and editing its
 points leaves it alone. The bonus award form's optional **coins** field (any
@@ -677,7 +677,7 @@ too, for a team that has coins. It is a row in the `purchases` table (team,
 session, power-up, question or round, the cost paid, and the **stored effect** as
 JSON, parsed on read by `purchaseEffectSchema`): the effect is drawn once at
 purchase and never changes, so a reconnect or backend restart shows the same
-thing. The balance subtracts the sum of the `cost` column through `coinBalance`,
+thing. The balance subtracts the sum of the `cost` column through `teamCoins`,
 nowhere else. The buying team's phones get `TEAM_PURCHASES_SYNCED`
 (`{ purchases, coins }`) and `JOIN_ACCEPTED` carries the same `purchases`; the admin
 room is refreshed (the Coins column and the answer list). A later power-up adds a

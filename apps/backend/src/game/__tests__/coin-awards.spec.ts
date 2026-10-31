@@ -95,6 +95,15 @@ describe('Coin awards', () => {
     expect(emitted(SOCKET_EVENTS.TEAM_COINS_SYNCED)).toEqual([]);
   });
 
+  it('gives no coin for a shot award that takes points away', async () => {
+    await start();
+
+    await award({ category: 'shot', points: -5 });
+
+    expect(adminCoins()).toBe(1);
+    expect(emitted(SOCKET_EVENTS.COIN_AWARDED)).toEqual([]);
+  });
+
   it('gives no coin for a custom bonus award', async () => {
     await start();
 
