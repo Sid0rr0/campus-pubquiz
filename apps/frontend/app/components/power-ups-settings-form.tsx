@@ -132,7 +132,7 @@ export function PowerUpsSettingsForm({
   );
 }
 
-/** Applies a round overview change; the extra joker's cost follows it (3 with the overview, 2 without) while it still holds the old default. */
+/** Applies a round overview change; the extra joker's cost follows it (4 with the overview, 3 without) while it still holds the old default. */
 export function withShowRoundOverview(
   value: SessionSettings,
   showRoundOverview: boolean,
