@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode, type SubmitEvent } from 'react';
 import { CheckIcon } from '@radix-ui/react-icons';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
   type AnswerKind,
   type PinEffect,
@@ -99,31 +100,54 @@ function ChoiceInput({
 
   return (
     <div className="flex flex-col gap-2.5">
-      {(question.options ?? NO_ITEMS).map((option, index) => {
-        const isChosen = option === value;
-        return (
-          <Button
-            key={index}
-            type="button"
-            aria-pressed={isChosen}
-            disabled={isKahootMode && hasAnswered}
-            onClick={() => handleOptionClick(option)}
-            className={
-              isChosen
-                ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-dark-blue bg-white px-4 text-lg font-bold'
-                : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-foreground/30 bg-white px-4 text-lg font-bold'
-            }
-          >
-            <span aria-hidden="true" className="font-display text-cyan">
-              {getOptionLetter(index)}
-            </span>
-            {option}
-            {isChosen && (
-              <CheckIcon aria-hidden="true" className="ml-auto text-magenta" />
-            )}
-          </Button>
-        );
-      })}
+      <MotionConfig reducedMotion="user">
+        {/* An option only ever leaves to a 50/50: it fades and closes up once the drawer has cleared. */}
+        <AnimatePresence initial={false}>
+          {(question.options ?? NO_ITEMS).map((option, index, options) => {
+            const isChosen = option === value;
+            // Nothing forbids two options with the same text, so the text alone can't be the key.
+            const occurrence = options
+              .slice(0, index)
+              .filter((other) => other === option).length;
+            return (
+              <motion.div
+                key={`${option}#${occurrence}`}
+                className="flex flex-col"
+                exit={{
+                  opacity: 0,
+                  height: 0,
+                  marginTop: -10,
+                  overflow: 'hidden',
+                  transition: { delay: 0.3, duration: 0.3, ease: 'easeInOut' },
+                }}
+              >
+                <Button
+                  type="button"
+                  aria-pressed={isChosen}
+                  disabled={isKahootMode && hasAnswered}
+                  onClick={() => handleOptionClick(option)}
+                  className={
+                    isChosen
+                      ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-dark-blue bg-white px-4 text-lg font-bold'
+                      : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-foreground/30 bg-white px-4 text-lg font-bold'
+                  }
+                >
+                  <span aria-hidden="true" className="font-display text-cyan">
+                    {getOptionLetter(index)}
+                  </span>
+                  {option}
+                  {isChosen && (
+                    <CheckIcon
+                      aria-hidden="true"
+                      className="ml-auto text-magenta"
+                    />
+                  )}
+                </Button>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </MotionConfig>
       {!isKahootMode && (
         <SubmitAnswerButton
           isSubmitted={isSubmitted}

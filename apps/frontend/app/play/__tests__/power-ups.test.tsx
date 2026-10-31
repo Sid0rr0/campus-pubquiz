@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import { MotionGlobalConfig } from 'motion/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -78,6 +79,9 @@ function phone({
   renderWithQuery(<PlayPage />);
   return buyPowerUp;
 }
+
+// A stamp cut off mid-flight by the test's cleanup would reject in happy-dom.
+MotionGlobalConfig.skipAnimations = true;
 
 describe('PlayPage — the power-up bar', () => {
   beforeEach(() => {
@@ -339,6 +343,26 @@ describe('PlayPage — the power-up bar', () => {
       within(drawer).getByRole('button', { name: 'Activate 50/50' }),
     );
     expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
+  });
+
+  it('stamps the power-up and its cost once the server accepted it, not on a refusal', async () => {
+    const buy = phone({ coins: 3 });
+    const activate = () =>
+      userEvent.click(screen.getByRole('button', { name: 'Activate 50/50' }));
+
+    buy.mockResolvedValueOnce({ success: false, error: 'Not enough coins' });
+    await activate();
+    expect(screen.queryByText('−1 coin')).toBeNull();
+
+    buy.mockResolvedValueOnce({ success: true });
+    await activate();
+    expect(await screen.findByText('−1 coin')).toBeInTheDocument();
+  });
+
+  it('plays no stamp for a purchase already made when the phone loads', () => {
+    phone({ purchases: [fiftyFifty] });
+
+    expect(screen.queryByText('−1 coin')).toBeNull();
   });
 
   it('closes the drawer once the purchase went through, and keeps it open on a refusal', async () => {

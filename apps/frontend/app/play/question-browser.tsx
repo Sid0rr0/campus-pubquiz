@@ -23,9 +23,17 @@ import {
 } from '@/app/components/closest-guess-reveal-screen';
 import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { RoomSplit, type PowerUpShop } from '@/app/play/power-up-bar';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
+
+/** How a bought hint or room split arrives: after the stamp has landed and the drawer has cleared. */
+const POWER_UP_EFFECT_ARRIVAL = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay: 0.3, duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+} as const;
 
 interface QuestionNavigation {
   canGoBack: boolean;
@@ -248,24 +256,39 @@ export function QuestionBrowser({
               })}
             </p>
           )}
-          {powerUpShop?.purchases.map(
-            ({ questionId, effect }) =>
-              questionId === selectedQuestion.id &&
-              'hint' in effect && (
-                <p
-                  key={effect.kind}
-                  className="text-center font-mono text-lg font-extrabold tracking-widest"
-                >
-                  {POWER_UP_LABELS[effect.kind]}: {effect.hint}
-                </p>
-              ),
-          )}
-          {mode === 'answering' && isAnswerable && team && powerUpShop && (
-            <RoomSplit
-              question={selectedQuestion}
-              purchases={powerUpShop.purchases}
-            />
-          )}
+          <MotionConfig reducedMotion="user">
+            {/* Keyed by question and initial={false}: only an effect bought here and now eases in, never one already there on a load or when moving between questions. */}
+            <AnimatePresence key={selectedQuestion.id} initial={false}>
+              {powerUpShop?.purchases.map(
+                ({ questionId, effect }) =>
+                  questionId === selectedQuestion.id &&
+                  'hint' in effect && (
+                    <motion.p
+                      key={effect.kind}
+                      {...POWER_UP_EFFECT_ARRIVAL}
+                      className="text-center font-mono text-lg font-extrabold tracking-widest"
+                    >
+                      {POWER_UP_LABELS[effect.kind]}: {effect.hint}
+                    </motion.p>
+                  ),
+              )}
+              {mode === 'answering' &&
+                isAnswerable &&
+                team &&
+                powerUpShop?.purchases.some(
+                  (p) =>
+                    p.questionId === selectedQuestion.id &&
+                    p.effect.kind === 'ask_the_room',
+                ) && (
+                  <motion.div key="room-split" {...POWER_UP_EFFECT_ARRIVAL}>
+                    <RoomSplit
+                      question={selectedQuestion}
+                      purchases={powerUpShop.purchases}
+                    />
+                  </motion.div>
+                )}
+            </AnimatePresence>
+          </MotionConfig>
           {mode === 'answering' && isAnswerable && team && (
             <AnswerForm
               key={selectedQuestion.id}

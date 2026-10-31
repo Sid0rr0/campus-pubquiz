@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
-import { isShowingLastBreak } from '@campus-pubquiz/types';
+import { isShowingLastBreak, type PowerUpId } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
@@ -17,6 +17,7 @@ import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
 import { PowerUpsPanel } from '@/app/play/power-ups-panel';
 import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
+import { PowerUpMoment, usePowerUpMoment } from '@/app/play/power-up-moment';
 import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
@@ -72,6 +73,7 @@ function PlayPageContent() {
   // header so its mobile hamburger can surface them — see
   // player-menu-context.tsx.
   usePublishPlayerMenu(teamName, team, handleLogOut, openSettings);
+  const { moment: powerUpMoment, showMoment } = usePowerUpMoment();
   const { isSaved, submitAndConfirm } = useSavedConfirmation(
     game?.submitAnswer,
   );
@@ -230,10 +232,22 @@ function PlayPageContent() {
         coins: team.coins,
         question: answeringQuestion,
         roomReadyQuestionIds,
-        onBuy: buyPowerUp,
+        onBuy: async (powerUp: PowerUpId, questionId: number) => {
+          const result = await buyPowerUp(powerUp, questionId);
+          if (result.success) {
+            showMoment(powerUp, settings.powerUps[powerUp].cost);
+          }
+          return result;
+        },
         extraJokerOffer: view.extraJokerOffer,
         jokerRoundId: myJoker?.roundId ?? null,
-        onBuyExtraJoker: buyExtraJoker,
+        onBuyExtraJoker: async (roundId: number) => {
+          const result = await buyExtraJoker(roundId);
+          if (result.success) {
+            showMoment('extra_joker', settings.powerUps.extra_joker.cost);
+          }
+          return result;
+        },
       }
     : null;
   const showBonusAvailability = !isShowingLastBreak(progress, quizStructure);
@@ -486,6 +500,7 @@ function PlayPageContent() {
         doubledRoundNumbers={doubledRoundNumbers}
       />
       <SavedConfirmation isVisible={isSaved} />
+      <PowerUpMoment moment={powerUpMoment} />
       <SettingsModal
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
