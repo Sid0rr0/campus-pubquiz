@@ -217,7 +217,7 @@ export class TeamRosterChanges {
           await this.bonusService.coinAwardTotal(gameSessionId, team.id),
         ),
         hasCarriedCoin: carriedCoin > 0,
-        purchases: toPurchaseViews(purchases),
+        purchases: toPurchaseViews(purchases, session.seededGame),
         roomReadyQuestionIds,
       },
     };

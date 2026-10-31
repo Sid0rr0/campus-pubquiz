@@ -298,7 +298,7 @@ export interface PlayersStatePayload
   /**
    * Every round of a session played with jokers, by id, number and title, from
    * the joker pick onward (empty before it and without jokers), so a phone can
-   * name its joker round ("🃏 R4", "Round 4 — Music") whatever the status. Never
+   * name its joker round ("Round 4 — Music") whatever the status. Never
    * any team's choice.
    */
   jokerRounds: JokerPickRound[];

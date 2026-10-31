@@ -153,6 +153,8 @@ export interface PurchaseView {
   questionId: number | null;
   roundId: number | null;
   effect: PurchaseEffect;
+  /** The round an extra joker doubles, so the phone can name it; its title is "" with the round overview off, as in the offer. */
+  round?: { roundNumber: number; title: string };
 }
 
 /** A team's own purchases, pushed to its phones alone after a purchase (and carried by the join reply), with the coins left. */

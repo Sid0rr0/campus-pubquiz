@@ -1,7 +1,9 @@
 import {
   DEFAULT_SESSION_SETTINGS,
+  SOCKET_EVENTS,
   type AckResult,
   type SessionSettings,
+  type TeamPurchasesSyncedPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
@@ -87,6 +89,42 @@ describe('GameGateway — buying an extra joker', () => {
       leaderboard.map((row) => [row.teamName, row.totalPoints]),
     );
   }
+
+  describe('naming the doubled round to the buying team', () => {
+    function lastSync(game: RealStoreGateway, team: JoinedTeam) {
+      return game
+        .roomEmits()
+        .filter(
+          (emit) =>
+            emit.rooms.includes(team.socket.id) &&
+            emit.event === SOCKET_EVENTS.TEAM_PURCHASES_SYNCED,
+        )
+        .map((emit) => emit.payload as TeamPurchasesSyncedPayload)
+        .at(-1);
+    }
+
+    it('sends the round number and title with the round overview on', async () => {
+      const game = await night({ showRoundOverview: true });
+      const [alpha] = game.teams;
+
+      await buy(game, alpha, 0);
+
+      expect(lastSync(game, alpha)?.purchases).toMatchObject([
+        { round: { roundNumber: 1, title: 'Round 1' } },
+      ]);
+    });
+
+    it('keeps the title back with the round overview off, as the offer does', async () => {
+      const game = await night({ showRoundOverview: false });
+      const [alpha] = game.teams;
+
+      await buy(game, alpha, 0);
+
+      expect(lastSync(game, alpha)?.purchases).toMatchObject([
+        { round: { roundNumber: 1, title: '' } },
+      ]);
+    });
+  });
 
   describe('the purchase window', () => {
     it('sells the next round at any point before its intro, mid-block included, and stores the round', async () => {

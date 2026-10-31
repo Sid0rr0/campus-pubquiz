@@ -5,6 +5,7 @@ import {
   type PowerUpId,
   type PurchaseEffect,
   type PurchaseView,
+  type SeededGame,
 } from '@campus-pubquiz/types';
 import { Purchase } from '@/db/entities/purchase.entity';
 import { PurchaseRepository } from '@/db/repositories/purchase.repository';
@@ -117,14 +118,24 @@ export class PurchaseService {
   }
 }
 
-/** What a team's phone is sent of its purchases: the ledger row without its cost. */
+/** What a team's phone is sent of its purchases: the ledger row without its cost, with the round an extra joker doubles named. */
 export function toPurchaseViews(
   records: readonly PurchaseRecord[],
+  { rounds, settings }: Pick<SeededGame, 'rounds' | 'settings'>,
 ): PurchaseView[] {
-  return records.map(({ powerUp, questionId, roundId, effect }) => ({
-    powerUp,
-    questionId,
-    roundId,
-    effect,
-  }));
+  return records.map(({ powerUp, questionId, roundId, effect }) => {
+    const roundIndex = rounds.findIndex((round) => round.id === roundId);
+    return {
+      powerUp,
+      questionId,
+      roundId,
+      effect,
+      ...(roundIndex !== -1 && {
+        round: {
+          roundNumber: roundIndex + 1,
+          title: settings.showRoundOverview ? rounds[roundIndex].title : '',
+        },
+      }),
+    };
+  });
 }

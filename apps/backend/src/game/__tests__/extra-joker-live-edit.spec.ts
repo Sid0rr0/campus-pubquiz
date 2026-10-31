@@ -76,6 +76,10 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
 
     await game.saveQuizEdit((rounds) => [rounds[1], rounds[0], rounds[2]]);
 
+    expect(syncsTo(game, alpha).at(-1)?.purchases[0].round?.roundNumber).toBe(
+      2,
+    );
+
     // Round 1 now sits second, on the second round row.
     expect(await stored(game, alpha)).toMatchObject([
       { powerUp: 'extra_joker', roundId: game.rounds[1].id, cost: 1 },
