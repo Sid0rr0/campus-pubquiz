@@ -171,6 +171,21 @@ describe('Coin awards', () => {
     );
   });
 
+  it('lists the team’s coin awards for the quiz master, oldest first, with each reason', async () => {
+    await start();
+    await award({ category: 'shot', points: 1 });
+    await award({ points: 0, coins: -3, reason: 'Phone out' });
+
+    const { coinAwards } = await game.inRequestContext(() =>
+      game.rest.listBonusAwards(game.joinCode, team.teamId),
+    );
+
+    expect(coinAwards).toMatchObject([
+      { coins: 2 },
+      { coins: -3, reason: 'Phone out' },
+    ]);
+  });
+
   it('gives no coins in a session without power-ups and refuses a coins field', async () => {
     await start(false);
 

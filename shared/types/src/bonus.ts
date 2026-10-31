@@ -48,10 +48,21 @@ export interface BonusAwardAdminView extends TeamBonusAwardView {
   createdAt: string;
 }
 
+/** Admin-only view of one coin award: the quiz master's coins given or taken, or the +2 that came with a shot or selfie award. */
+export interface CoinAwardAdminView {
+  id: number;
+  /** Negative when coins were taken. */
+  coins: number;
+  reason?: string;
+  createdAt: string;
+}
+
 /** Response for GET /sessions/:joinCode/teams/:teamId/bonus-awards. */
 export interface BonusAwardsListedPayload {
   teamId: number;
   awards: BonusAwardAdminView[];
+  /** The team's coin awards, oldest first; empty in a session without power-ups. */
+  coinAwards: CoinAwardAdminView[];
 }
 
 /** Request body for PATCH /sessions/:joinCode/bonus-awards/:awardId. Category is intentionally not editable — changing it could invalidate the reason requirement for "custom". */

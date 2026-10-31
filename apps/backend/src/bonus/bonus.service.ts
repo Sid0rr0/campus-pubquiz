@@ -5,6 +5,7 @@ import {
   SHOT_SELFIE_COINS,
   type BonusAwardAdminView,
   type BonusCategory,
+  type CoinAwardAdminView,
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
@@ -195,6 +196,20 @@ export class BonusService {
   ): Promise<BonusAwardAdminView[]> {
     const awards = await this.bonusAwards.listForTeam(gameSessionId, teamId);
     return awards.map(toAdminView);
+  }
+
+  /** Admin view of a team's coin awards, oldest first: what each gave or took and why. */
+  async listCoinAwardsForTeam(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<CoinAwardAdminView[]> {
+    const awards = await this.coinAwards.listForTeam(gameSessionId, teamId);
+    return awards.map((award) => ({
+      id: award.id,
+      coins: award.coins,
+      reason: award.reason ?? undefined,
+      createdAt: award.createdAt.toISOString(),
+    }));
   }
 
   private async findOwnedAward(

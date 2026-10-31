@@ -662,7 +662,11 @@ in all, with the new balance), and `TEAM_COINS_SYNCED` (`{ balance, hasCarriedCo
 no toast) when deleting a bonus award took its coin award with it, when the quiz
 leaves the lobby (carried coins were just decided) and when the lobby settings
 change. The balance never shows
-below 0, even when a removed award's coins were already spent.
+below 0, even when a removed award's coins were already spent. The quiz master sees a
+team's coin awards, oldest first with their reasons, under its bonus awards on
+`/control`: `GET /sessions/:joinCode/teams/:teamId/bonus-awards` carries them as
+`coinAwards` (`{ id, coins, reason?, createdAt }`). The list is read-only; to undo
+one, give the opposite coins.
 
 **Buying a power-up.** A team sends one event, `BUY_POWER_UP`
 (`{ powerUp, questionId }`, players only, validated with Zod), for the question it

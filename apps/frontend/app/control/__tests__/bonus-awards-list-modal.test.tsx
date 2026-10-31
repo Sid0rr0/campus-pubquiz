@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,6 +43,15 @@ const AWARDS: BonusAwardsListedPayload = {
       createdAt: '2026-01-01T00:01:00.000Z',
     },
   ],
+  coinAwards: [
+    { id: 4, coins: 2, createdAt: '2026-01-01T00:00:00.000Z' },
+    {
+      id: 5,
+      coins: -3,
+      reason: 'Phone out',
+      createdAt: '2026-01-01T00:02:00.000Z',
+    },
+  ],
 };
 
 function renderModal() {
@@ -67,6 +76,26 @@ describe('BonusAwardsListModal', () => {
     mockFetchBonusAwards.mockResolvedValue(AWARDS);
     mockUpdateBonusAward.mockResolvedValue(AWARDS.awards[0]);
     mockDeleteBonusAward.mockResolvedValue(undefined);
+  });
+
+  it('lists the coin awards after the bonus awards, with their reasons', async () => {
+    renderModal();
+
+    const coins = await screen.findByRole('list', { name: 'Coin awards' });
+
+    expect(within(coins).getAllByRole('listitem')).toHaveLength(2);
+    expect(coins).toHaveTextContent('+2 coins');
+    expect(coins).toHaveTextContent('-3 coins');
+    expect(coins).toHaveTextContent('Phone out');
+  });
+
+  it('shows no coin awards list when the team has none', async () => {
+    mockFetchBonusAwards.mockResolvedValue({ ...AWARDS, coinAwards: [] });
+    renderModal();
+
+    await screen.findByText(/shot/i);
+
+    expect(screen.queryByRole('list', { name: 'Coin awards' })).toBeNull();
   });
 
   it("lists every award for the team, showing each one's category, points, and reason", async () => {

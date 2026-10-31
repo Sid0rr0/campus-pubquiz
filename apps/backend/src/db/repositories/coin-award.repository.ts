@@ -7,6 +7,17 @@ interface SumRow {
 }
 
 export class CoinAwardRepository extends EntityRepository<CoinAward> {
+  /** One team's coin awards in the session, oldest first. */
+  async listForTeam(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<CoinAward[]> {
+    return this.find(
+      { gameSession: gameSessionId, team: teamId },
+      { orderBy: { id: 'asc' } },
+    );
+  }
+
   /** The sum of each team's coin awards in the session, by team id (teams with none are absent). */
   async totalsForSession(
     gameSessionId: number,
