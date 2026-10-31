@@ -139,38 +139,45 @@ describe('Coin awards', () => {
     ).resolves.toEqual([]);
   });
 
-  it('adds manual coins beside a points award and never shows a balance below 0', async () => {
+  it('adds manual coins beside a points award and takes them back down to 0', async () => {
     await start();
 
     await award({ category: 'shot', points: 1, coins: 2 });
     expect(adminCoins()).toBe(5);
 
-    await award({ category: 'custom', points: 0, coins: -10 });
+    await award({ category: 'custom', points: 0, coins: -5 });
     expect(adminCoins()).toBe(0);
     expect(emitted(SOCKET_EVENTS.COIN_AWARDED).at(-1)?.payload).toEqual(
       expect.objectContaining({ coins: -5, balance: 0 }),
     );
   });
 
-  it('takes no more coins than the team has, so a later award is not eaten by a hidden debt', async () => {
+  it('refuses a take of more coins than the team has, with its points, and changes nothing', async () => {
     await start();
 
-    await award({ category: 'custom', points: 0, coins: -10 });
-    expect(adminCoins()).toBe(0);
-    await award({ category: 'shot', points: 1 });
+    const ack = await award({ category: 'shot', points: 1, coins: -10 });
 
-    expect(adminCoins()).toBe(2);
+    expect(ack).toEqual({
+      success: false,
+      error: 'That team has only 1 coin to take',
+    });
+    expect(adminCoins()).toBe(1);
+    expect(
+      await game.inRequestContext(() =>
+        game.bonusService.listForTeamAdmin(game.gameSessionId, team.teamId),
+      ),
+    ).toEqual([]);
   });
 
   it('refuses to take coins from a team with none', async () => {
     await start();
-    await award({ category: 'custom', points: 0, coins: -10 });
+    await award({ category: 'custom', points: 0, coins: -1 });
 
     const ack = await award({ category: 'custom', points: 0, coins: -1 });
 
     expect(ack).toEqual({
       success: false,
-      error: 'That team has no coins to take',
+      error: 'That team has only 0 coins to take',
     });
   });
 

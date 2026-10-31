@@ -649,12 +649,13 @@ power-up table. Merging teams keeps it with the kept team.
 power-ups on writes a linked +2 coin award (`SHOT_SELFIE_COINS`) in the same flush; the foreign key
 cascades, so deleting the bonus award deletes the coin award, and editing its
 points leaves it alone. The bonus award form's optional **coins** field (any
-non-zero integer, negative takes coins, up to 100 either way, but never more than
-the team has) is sent as `coins`
+non-zero integer, negative takes coins, up to 100 either way) is sent as `coins`
 on `AWARD_BONUS` and stored as its own unlinked coin award, with the form's
 reason if one was typed. With `points` 0 and `coins` set, only the coin award is
 stored (no bonus award, no bonus toast, no category limit check). A coins value
-in a session without power-ups is refused, and the form hides the field. The
+in a session without power-ups is refused, and the form hides the field. A take of
+more coins than the team has is refused whole, with its points: "That team has only N
+coins to take", so a balance never hides a debt. The
 session keeps each team's coin award sum in a cache (`SessionState.coinAwards`,
 read from the table when the session is placed, so a restart gets it back) so the
 snapshot's `coins` stay synchronous. The awarded team's phone hears

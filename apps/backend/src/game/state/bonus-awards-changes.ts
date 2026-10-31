@@ -42,13 +42,14 @@ export class BonusAwardsChanges {
     { teamId, category, points, reason, coins }: AwardBonusPayload,
   ): Promise<SessionChange<SessionOutcome>> {
     const { settings } = session.seededGame;
-    // Coins taken stop at what the team has, so a balance never hides a debt.
-    const manual =
-      coins !== undefined && coins < 0
-        ? Math.max(coins, -coinBalanceOf(session, teamId))
-        : coins;
-    if (coins !== undefined && coins < 0 && manual === 0 && points === 0) {
-      throw new InvalidBonusAwardRefusal('That team has no coins to take');
+    // A take is refused whole when it is more than the team has, so a balance never hides a debt.
+    if (coins !== undefined && coins < 0) {
+      const balance = coinBalanceOf(session, teamId);
+      if (-coins > balance) {
+        throw new InvalidBonusAwardRefusal(
+          `That team has only ${balance} ${balance === 1 ? 'coin' : 'coins'} to take`,
+        );
+      }
     }
     const { coinsGiven, coinTotal } = await this.refusing(() =>
       this.bonusService.award(
@@ -59,7 +60,7 @@ export class BonusAwardsChanges {
         reason,
         settings.enabledBonusCategories,
         settings.maxBonusAwardsPerCategory,
-        { powerUpsEnabled: settings.powerUpsEnabled, manual },
+        { powerUpsEnabled: settings.powerUpsEnabled, manual: coins },
       ),
     );
     const notices: TeamNotice[] = [];
@@ -79,7 +80,7 @@ export class BonusAwardsChanges {
         payload: {
           coins: coinsGiven,
           // Only the quiz master's own coins carry the reason typed in the form.
-          reason: manual ? reason?.trim() || undefined : undefined,
+          reason: coins ? reason?.trim() || undefined : undefined,
           balance: coinBalanceOf(next, teamId),
         },
       });
