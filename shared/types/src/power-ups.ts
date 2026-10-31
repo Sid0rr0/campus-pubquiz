@@ -339,19 +339,25 @@ export function purchaseRefusal(input: {
   return null;
 }
 
+/** The options the team's 50/50s on the question removed. */
+export function removedOptionsOf(
+  questionId: number,
+  purchases: readonly PurchaseView[],
+): string[] {
+  return purchases.flatMap(({ questionId: boughtFor, effect }) =>
+    boughtFor === questionId && effect.kind === 'fifty_fifty'
+      ? effect.removedOptions
+      : [],
+  );
+}
+
 /** The question's options minus those the team's 50/50s on it removed. */
 export function optionsAfterPurchases(
   questionId: number,
   options: readonly string[],
   purchases: readonly PurchaseView[],
 ): string[] {
-  const removed = new Set(
-    purchases.flatMap(({ questionId: boughtFor, effect }) =>
-      boughtFor === questionId && effect.kind === 'fifty_fifty'
-        ? effect.removedOptions
-        : [],
-    ),
-  );
+  const removed = new Set(removedOptionsOf(questionId, purchases));
   return options.filter((option) => !removed.has(option));
 }
 

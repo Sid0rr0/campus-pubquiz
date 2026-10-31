@@ -1,7 +1,7 @@
 import {
   formatAnswer,
   isHttpUrl,
-  optionsAfterPurchases,
+  removedOptionsOf,
   pinFor,
   POWER_UP_LABELS,
   widenedMargin,
@@ -135,18 +135,10 @@ export function QuestionBrowser({
   powerUpShop,
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
-  // A 50/50 hides its removed options for good, so a reconnect shows the same choices.
-  const answerableQuestion =
-    powerUpShop && selectedQuestion.options
-      ? {
-          ...selectedQuestion,
-          options: optionsAfterPurchases(
-            selectedQuestion.id,
-            selectedQuestion.options,
-            powerUpShop.purchases,
-          ),
-        }
-      : selectedQuestion;
+  // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
+  const removedOptions = powerUpShop
+    ? removedOptionsOf(selectedQuestion.id, powerUpShop.purchases)
+    : undefined;
 
   return (
     <div
@@ -292,7 +284,8 @@ export function QuestionBrowser({
           {mode === 'answering' && isAnswerable && team && (
             <AnswerForm
               key={selectedQuestion.id}
-              question={answerableQuestion}
+              question={selectedQuestion}
+              removedOptions={removedOptions}
               initialValue={myAnswers[selectedQuestion.id] ?? ''}
               isKahootMode={isKahootMode}
               pin={

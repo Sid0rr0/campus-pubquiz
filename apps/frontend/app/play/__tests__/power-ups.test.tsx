@@ -277,13 +277,13 @@ describe('PlayPage — the power-up bar', () => {
     expect(screen.queryByRole('button', { name: /Ask the room/ })).toBeNull();
   });
 
-  it('hides the removed options and the used power-up, as after a reconnect', () => {
+  it('greys out the removed options and hides the used power-up, as after a reconnect', () => {
     phone({ purchases: [fiftyFifty], coins: 0 });
 
-    expect(screen.getByRole('button', { name: 'Paris' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Rome' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'London' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Berlin' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Paris' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Rome' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'London' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Berlin' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Activate 50/50' })).toBeNull();
   });
 

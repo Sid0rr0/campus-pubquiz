@@ -711,9 +711,9 @@ as `{ kind: 'fifty_fifty', removedOptions }`. The phone's power-ups list (a draw
 mobile, which closes once a purchase goes through; a sidebar on desktop) puts the
 power-ups usable right now first, each with its cost and an activate button. An
 accepted purchase plays a short stamp naming the power-up and its cost (the team's
-own action, so never on a load or reconnect), then the effect arrives: removed
-options fade and close up, hints and the room split ease in. The phone hides the
-removed options (also after a reconnect, from the purchases in
+own action, so never on a load or reconnect), then the effect arrives: hints and
+the room split ease in. The phone greys the removed options out, still in their
+place and not selectable (also after a reconnect, from the purchases in
 `JOIN_ACCEPTED`). A power-up already used never changes or resubmits the answer
 and is never refunded: a key fix after a purchase refunds nothing, and the quiz
 master gives the coin back with a coin award. `/control`'s answer list names the

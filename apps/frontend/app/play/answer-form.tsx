@@ -18,6 +18,8 @@ interface AnswerFormProps {
   onSubmit: (value: string) => void;
   /** A pin the team bought on this question (sort or match). */
   pin?: PinEffect;
+  /** Options the team's 50/50 removed from this multiple-choice question: shown greyed out and not selectable. */
+  removedOptions?: string[];
 }
 
 interface IdkButtonProps {
@@ -52,6 +54,7 @@ export function AnswerForm({
   isKahootMode = false,
   onSubmit,
   pin,
+  removedOptions,
 }: AnswerFormProps) {
   const AnswerInput = ANSWER_INPUTS[resolveAnswerKind(question)];
   const isIdk = initialValue === IDK_ANSWER_VALUE;
@@ -63,6 +66,7 @@ export function AnswerForm({
       isKahootMode={isKahootMode}
       onSubmit={onSubmit}
       pin={pin}
+      removedOptions={removedOptions}
       idkButton={
         <IdkButton
           isChosen={isIdk}
