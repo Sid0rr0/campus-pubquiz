@@ -852,7 +852,8 @@ doubles a round for the buying team, with or without Jokers. Only the round
 on offer can be bought (`extraJokerRoundId`: the first round with no opened
 question whose intro has not been on air: any status after the joker pick has
 the current round's intro on air or past, so only later rounds are offered; any
-time before that intro, mid-block included); a round that is the team's joker round or already has an
+time before that intro from the rules on, mid-block included, but never in the
+lobby, where the settings can still turn power-ups off under a purchase); a round that is the team's joker round or already has an
 extra joker is refused ("That round is already doubled"), as are the usual
 limit and coin refusals. The purchase row stores `roundId` (no `questionId`)
 and the effect `{ kind: 'extra_joker' }`. Scoring treats a round as doubled

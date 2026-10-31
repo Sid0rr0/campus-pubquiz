@@ -205,7 +205,8 @@ export function visibleRoundTitle(
  * The round an extra joker can be bought for right now: the first round with
  * no opened question whose intro has not been on air (the current round's
  * intro is on air or past in every status after the joker pick). Null when
- * there is none.
+ * there is none, and in the lobby, where the settings can still turn
+ * power-ups off under a purchase.
  */
 export function extraJokerRoundId(session: {
   seededGame: {
@@ -216,7 +217,7 @@ export function extraJokerRoundId(session: {
 }): number | null {
   const { rounds } = session.seededGame;
   const { status, roundIndex } = session.progress;
-  if (status === 'ended') return null;
+  if (status === 'ended' || status === 'lobby') return null;
   const lastIntroIndex = BEFORE_FIRST_INTRO.includes(status) ? -1 : roundIndex;
   return (
     pickableRounds(rounds, session.openedQuestionIds).find(

@@ -51,7 +51,7 @@ describe('extraJokerRoundId', () => {
       progress: { status, roundIndex },
     });
 
-  it.each(['lobby', 'rules', 'round_overview', 'joker_pick'])(
+  it.each(['rules', 'round_overview', 'joker_pick'])(
     'offers the first round before any intro has been on air, in %s, whatever the round index',
     (status) => {
       expect(offered(status, 0)).toBe(1);
@@ -65,6 +65,10 @@ describe('extraJokerRoundId', () => {
       expect(offered(status, 0)).toBe(2);
     },
   );
+
+  it('offers nothing in the lobby, where the settings can still turn power-ups off', () => {
+    expect(offered('lobby', 0)).toBeNull();
+  });
 
   it('offers nothing once the quiz has ended', () => {
     expect(offered('ended', 0)).toBeNull();
