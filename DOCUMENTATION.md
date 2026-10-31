@@ -707,9 +707,10 @@ server does not check it against the pin.
 **50/50** leaves ⌊n/2⌋ options, never fewer than two, and always the correct one
 (`fiftyFiftyLeaveCount`, `drawRemovedOptions`); it is not offered on a two-option
 question. Which options go is drawn once with the injected random source and stored
-as `{ kind: 'fifty_fifty', removedOptions }`. The phone shows a power-up bar under
-the question with only the power-ups that apply to its type, each with its cost,
-and hides the removed options (also after a reconnect, from the purchases in
+as `{ kind: 'fifty_fifty', removedOptions }`. The phone's power-ups list (a drawer on
+mobile, which closes once a purchase goes through; a sidebar on desktop) puts the
+power-ups usable right now first, each with its cost and an activate button, and
+the phone hides the removed options (also after a reconnect, from the purchases in
 `JOIN_ACCEPTED`). A power-up already used never changes or resubmits the answer
 and is never refunded: a key fix after a purchase refunds nothing, and the quiz
 master gives the coin back with a coin award. `/control`'s answer list names the
@@ -848,8 +849,10 @@ double), and the round's cell carries `isJoker`. A joker can't be put on a round
 the team holds an extra joker for: `PICK_JOKER` and `SET_TEAM_JOKER` refuse it
 and draws skip it, also the redraw after a live edit. The players view carries `extraJokerOffer`
 (`{ roundId, roundNumber, title }`, title `""` with the round overview off, or
-`null`); the phone shows "Double the next round: _Title_ — N coins" (or
-"Round N" when the title is empty) from it.
+`null`); the phone's Extra joker card offers "Activate for the next round: _Title_"
+(or "Round N" when the title is empty) from it. A bought extra joker gets everything
+a joker round gets on that team's phone: the joker line and picker heading, the joker
+moment on its intro, the joker border and the extra points on the reveal.
 
 A Live edit save moves an extra joker with its round the way it moves the quiz
 master's joker (a round is known by its questions; the extra jokers are
@@ -884,19 +887,21 @@ pick and does not already hold: "Your joker was changed by the quiz master"
 (`set_by_quiz_master`) or "A joker was drawn for your team" (`drawn`). The team's
 own pick (`chosen`), a joker it already holds (closing the pick re-sends every
 joker), and the joker `JOIN_ACCEPTED` carries on a reconnect or rejoin only update
-the chip, never toast.
+the joker line, never toast.
 
 The phone screen for the pick is `{ kind: 'joker_pick', isOpen }`: the picker while
 `isOpen`, and the team's joker with "Look at the screen" once the pick has closed.
-Every phone whose team has a joker shows a **joker chip** in the actions bar
-("🃏 R4"); tapping it opens a drawer saying "Round 4 — Music scores double". The
-phone names the round from `jokerRounds` in the players view. Once the joker
-round's block has been revealed (a question of it is among
-`pastRevealedQuestions`, or the quiz has `ended`) the chip reads "🃏 R4 · played"
-and the drawer "scored double"; the phone derives this from the view, no event
-carries it.
+Every phone whose team has a doubled round (its joker or an extra joker) shows a
+**joker line** beside the team name for each ("🃏 Round 4 — Music scores double"),
+and the question picker's heading for that round reads "🃏 Music · 2×", shown even
+when it is the block's only round. The phone names a joker round from `jokerRounds`
+in the players view and an extra joker's from its `PurchaseView.round`, which only
+that team's phones get (title `""` with the round overview off: the line then reads
+"Round 4 scores double"). Once a doubled round's block has been revealed (a question
+of it is among `pastRevealedQuestions`, or the quiz has `ended`) the line reads
+"scored double"; the phone derives this from the view, no event carries it.
 
-While the phone shows a question of its joker round, in every block browser mode
+While the phone shows a question of a doubled round, in every block browser mode
 (`answering`, `locked`, `revealing`), the browser wears a **joker border**; other
 rounds' questions in the same block never do. The `round_title` phone screen
 carries `roundNumber` (the 1-based round it introduces) so the phone can tell

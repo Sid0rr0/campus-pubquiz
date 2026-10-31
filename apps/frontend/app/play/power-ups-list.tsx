@@ -27,13 +27,19 @@ export interface PowerUpsListProps {
   extraJokerOffer: PlayersStatePayload['extraJokerOffer'];
   jokerRoundId: number | null;
   onBuyExtraJoker: (roundId: number) => Promise<AckResult>;
+  /** Called after the server accepted a purchase: the drawer closes on it. */
+  onActivated?: () => void;
+}
+
+export function formatCoins(coins: number): string {
+  return `${coins} ${coins === 1 ? 'coin' : 'coins'}`;
 }
 
 /**
- * The power-ups the session offers (maxUses above 0), each card with its cost,
- * how many times this team used it and, when it can be used right now, its
- * activation button. The server decides every purchase; a refusal is shown as
- * its reason.
+ * The team's balance over the power-ups the session offers (maxUses above 0),
+ * each with its cost and how many times this team used it: first those it can
+ * use right now, as cards with an activation button, then the rest as plain
+ * rows. The server decides every purchase; a refusal is shown as its reason.
  */
 export function PowerUpsList({
   settings,
@@ -45,10 +51,39 @@ export function PowerUpsList({
   extraJokerOffer,
   jokerRoundId,
   onBuyExtraJoker,
+  onActivated,
 }: PowerUpsListProps) {
-  const offered = POWER_UP_IDS.filter(
+  const rows = POWER_UP_IDS.filter(
     (powerUp) => settings[powerUp].maxUses > 0,
-  );
+  ).map((powerUp) => {
+    const { cost, maxUses } = settings[powerUp];
+    const bought = purchases.filter((p) => p.powerUp === powerUp);
+    const target =
+      bought.length >= maxUses
+        ? null
+        : powerUp === 'extra_joker'
+          ? extraJokerOffer !== null &&
+            extraJokerOffer.roundId !== jokerRoundId &&
+            !bought.some((p) => p.roundId === extraJokerOffer.roundId)
+            ? `the next round: ${
+                extraJokerOffer.title === ''
+                  ? `Round ${extraJokerOffer.roundNumber}`
+                  : extraJokerOffer.title
+              }`
+            : null
+          : question !== null &&
+              powerUpApplies(powerUp, question) &&
+              !bought.some((p) => p.questionId === question.id)
+            ? 'this question'
+            : null;
+    const isWaiting =
+      powerUp === 'ask_the_room' &&
+      question !== null &&
+      !roomReadyQuestionIds.includes(question.id);
+    return { powerUp, cost, maxUses, used: bought.length, target, isWaiting };
+  });
+  const available = rows.filter((row) => row.target !== null);
+  const unavailable = rows.filter((row) => row.target === null);
 
   async function activate(powerUp: PowerUpId) {
     const result =
@@ -58,83 +93,91 @@ export function PowerUpsList({
           ? await onBuy(powerUp, question.id)
           : null;
     if (result && !result.success) toast.error(result.error);
+    if (result?.success) onActivated?.();
   }
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <p className="text-sm font-extrabold">
-        <span className="text-foreground/55">Balance: </span>
-        {coins} {coins === 1 ? 'coin' : 'coins'}
+    <div className="flex flex-col gap-3">
+      <p className="sticky top-0 z-10 bg-background pb-1 text-lg font-extrabold tabular-nums">
+        <span className="text-sm text-foreground/70">Balance: </span>
+        <span className="font-black text-magenta">{formatCoins(coins)}</span>
       </p>
-      {offered.length === 0 && (
+      {rows.length === 0 && (
         <p className="text-sm text-foreground/55">No power-ups offered.</p>
       )}
-      <ul className="flex flex-col gap-2.5">
-        {offered.map((powerUp) => {
-          const { cost, maxUses } = settings[powerUp];
-          const bought = purchases.filter((p) => p.powerUp === powerUp);
-          const isFree = bought.length < maxUses;
-          const target =
-            powerUp === 'extra_joker'
-              ? extraJokerOffer !== null &&
-                extraJokerOffer.roundId !== jokerRoundId &&
-                !bought.some((p) => p.roundId === extraJokerOffer.roundId)
-                ? `the next round: ${
-                    extraJokerOffer.title === ''
-                      ? `Round ${extraJokerOffer.roundNumber}`
-                      : extraJokerOffer.title
-                  }`
-                : null
-              : question !== null &&
-                  powerUpApplies(powerUp, question) &&
-                  !bought.some((p) => p.questionId === question.id)
-                ? 'this question'
-                : null;
-          const isWaiting =
-            powerUp === 'ask_the_room' &&
-            question !== null &&
-            !roomReadyQuestionIds.includes(question.id);
-          return (
-            <li
-              key={powerUp}
-              className="rounded-xl border border-foreground/15 bg-white px-4 py-3"
-            >
-              <p className="flex items-baseline justify-between gap-2">
-                <span className="text-[15px] font-bold">
-                  {POWER_UP_LABELS[powerUp]}
-                </span>
-                <span className="shrink-0 text-xs font-extrabold text-foreground/45">
-                  {cost} {cost === 1 ? 'coin' : 'coins'}
-                </span>
-              </p>
-              <p className="mt-1 text-sm text-foreground/70">
-                {POWER_UP_DESCRIPTIONS[powerUp]}
-              </p>
-              <p className="mt-1.5 text-sm">
-                <span className="font-extrabold text-foreground/55">
-                  Used:{' '}
-                </span>
-                {bought.length} / {maxUses}
-              </p>
-              {isFree && target && (
+      {available.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-extrabold">Available now</h3>
+          <ul className="flex flex-col gap-2.5">
+            {available.map((row) => (
+              <li
+                key={row.powerUp}
+                className="rounded-xl border border-foreground/15 bg-white px-4 py-3"
+              >
+                <PowerUpDetails {...row} />
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 w-full"
-                  aria-label={`Activate ${POWER_UP_LABELS[powerUp]}`}
-                  disabled={isWaiting || coins < cost}
-                  onClick={() => void activate(powerUp)}
+                  variant="solid-flat"
+                  className="mt-3 min-h-12 w-full px-3 py-1.5 disabled:bg-foreground/10 disabled:text-foreground/70"
+                  aria-label={`Activate ${POWER_UP_LABELS[row.powerUp]}`}
+                  disabled={row.isWaiting || coins < row.cost}
+                  onClick={() => void activate(row.powerUp)}
                 >
-                  {isWaiting
+                  {row.isWaiting
                     ? 'Waiting for more answers'
-                    : `Activate for ${target}`}
+                    : coins < row.cost
+                      ? 'Not enough coins'
+                      : `Activate for ${row.target}`}
                 </Button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {unavailable.length > 0 && (
+        <section className="flex flex-col gap-1">
+          <h3 className="text-sm font-extrabold text-foreground/70">
+            Not available now
+          </h3>
+          <ul className="flex flex-col divide-y divide-foreground/10">
+            {unavailable.map((row) => (
+              <li key={row.powerUp} className="py-2.5">
+                <PowerUpDetails {...row} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/** A power-up's name and what it does, beside what it costs and how often the team used it. */
+function PowerUpDetails({
+  powerUp,
+  cost,
+  used,
+  maxUses,
+}: {
+  powerUp: PowerUpId;
+  cost: number;
+  used: number;
+  maxUses: number;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-[15px] font-bold">{POWER_UP_LABELS[powerUp]}</p>
+        <p className="text-sm text-foreground/70">
+          {POWER_UP_DESCRIPTIONS[powerUp]}
+        </p>
+      </div>
+      <div className="shrink-0 text-right text-xs font-extrabold tabular-nums text-foreground/70">
+        <p className="font-black text-magenta">{formatCoins(cost)}</p>
+        <p className="mt-0.5">
+          Used: {used} / {maxUses}
+        </p>
+      </div>
     </div>
   );
 }

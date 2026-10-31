@@ -22,7 +22,7 @@ export function AnsweredQuestionsList({
 }: AnsweredQuestionsListProps) {
   if (entries.length === 0) {
     return (
-      <p className="text-sm text-foreground/55">No questions opened yet.</p>
+      <p className="text-sm text-foreground/70">No questions opened yet.</p>
     );
   }
 

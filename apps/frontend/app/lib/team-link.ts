@@ -742,7 +742,7 @@ function awardCoins(
  * The server told the team's phones its joker. A joker the team did not pick
  * itself (the quiz master's change, a draw) that differs from the one held is
  * announced once; the team's own pick, and a joker already held (the pick
- * closing re-sends every joker), change the chip quietly.
+ * closing re-sends every joker), change the joker line quietly.
  */
 function syncJoker(
   state: TeamLinkState,

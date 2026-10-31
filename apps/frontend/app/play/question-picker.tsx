@@ -5,6 +5,8 @@ import type { PickerRound } from '@/app/play/question-picker-slots';
 
 interface QuestionPickerProps {
   pickerRounds: PickerRound[];
+  /** The numbers of the rounds doubled for the team: their heading says so, even as the only round in the block. */
+  doubledRoundNumbers: readonly number[];
   selectedQuestionId: BlockQuestionView['id'];
   myAnswers: Record<number, string>;
   onSelect: (questionId: BlockQuestionView['id']) => void;
@@ -12,6 +14,7 @@ interface QuestionPickerProps {
 
 export function QuestionPicker({
   pickerRounds,
+  doubledRoundNumbers,
   selectedQuestionId,
   myAnswers,
   onSelect,
@@ -20,10 +23,17 @@ export function QuestionPicker({
     <div className="flex flex-col gap-2">
       {pickerRounds.map((round) => (
         <div key={round.roundNumber} className="flex flex-col flex-wrap gap-2">
-          {pickerRounds.length > 1 && (
-            <p className="text-xs font-extrabold tracking-wide text-foreground/45">
-              {round.roundTitle}
+          {doubledRoundNumbers.includes(round.roundNumber) ? (
+            <p className="w-fit rounded-full bg-yellow/25 px-2.5 py-0.5 text-xs font-extrabold tracking-wide">
+              <span aria-hidden="true">🃏 </span>
+              {round.roundTitle} · 2×
             </p>
+          ) : (
+            pickerRounds.length > 1 && (
+              <p className="text-xs font-extrabold tracking-wide text-foreground/45">
+                {round.roundTitle}
+              </p>
+            )
           )}
           <nav
             aria-label={`Round ${round.roundNumber} questions`}

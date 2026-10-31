@@ -21,7 +21,11 @@ import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
 import { JokerMoment } from '@/app/play/joker-moment';
-import { isJokerRoundPlayed, jokerExtraPoints } from '@/app/play/joker-round';
+import {
+  doubledRoundsOf,
+  isJokerRoundPlayed,
+  jokerExtraPoints,
+} from '@/app/play/joker-round';
 import { ReconnectingBar } from '@/app/play/reconnecting-bar';
 import {
   SavedConfirmation,
@@ -236,31 +240,31 @@ function PlayPageContent() {
   const jokerRound = view.jokerRounds.find(
     (round) => round.roundId === myJoker?.roundId,
   );
+  const doubledRounds = doubledRoundsOf(jokerRound, myPurchases);
+  const doubledRoundNumbers = doubledRounds.map((round) => round.roundNumber);
   const isJokerTitleCard =
     phoneScreen.kind === 'round_title' &&
-    jokerRound !== undefined &&
-    phoneScreen.roundNumber === jokerRound.roundNumber;
+    doubledRoundNumbers.includes(phoneScreen.roundNumber);
+  const selectedRoundNumber = blockQuestions.find(
+    (question) => question.id === selectedQuestion?.id,
+  )?.roundNumber;
   const isJokerQuestion =
-    jokerRound !== undefined &&
-    selectedQuestion !== null &&
-    blockQuestions.find((question) => question.id === selectedQuestion.id)
-      ?.roundNumber === jokerRound.roundNumber;
+    selectedRoundNumber !== undefined &&
+    doubledRoundNumbers.includes(selectedRoundNumber);
   const selectedQuestionJokerExtra = selectedEntry
     ? jokerExtraPoints(
         selectedEntry.pointsAwarded,
         selectedEntry.roundNumber,
-        jokerRound?.roundNumber ?? null,
+        doubledRoundNumbers,
       )
     : null;
-  const hasMobileActionBar =
-    hasBonusPanel || openedQuestions.length > 0 || jokerRound !== undefined;
 
   return (
     <main
       className={`flex min-h-screen flex-col bg-background px-5 text-foreground ${
         // The fixed bar sits over the top edge, so leave room for it.
         isReconnecting ? 'pt-14' : 'pt-1'
-      } ${hasMobileActionBar ? 'pb-24 md:pb-5' : 'pb-5'}`}
+      } pb-24 md:pb-5`}
     >
       {/* Order below is mobile-first (team identity sits last, under the
           block browser) and reshuffled back to the original top-down
@@ -292,6 +296,26 @@ function PlayPageContent() {
             </Button>
           </div>
         </div>
+        {doubledRounds.map(({ roundNumber, title }) => {
+          const isPlayed = isJokerRoundPlayed(
+            roundNumber,
+            progress.status,
+            view.pastRevealedQuestions,
+          );
+          return (
+            <p
+              key={roundNumber}
+              className={`mb-2 w-fit rounded-lg px-3 py-1.5 text-sm font-extrabold ${
+                isPlayed ? 'bg-foreground/5 text-foreground/70' : 'bg-yellow/25'
+              }`}
+            >
+              <span aria-hidden="true">🃏 </span>
+              {`Round ${roundNumber}${title === '' ? '' : ` — ${title}`} ${
+                isPlayed ? 'scored' : 'scores'
+              } double`}
+            </p>
+          );
+        })}
         {team && (
           <p className="mb-4 hidden flex-wrap items-center gap-1 text-xs text-foreground/45 md:flex">
             Team code: {team.teamCode}
@@ -401,6 +425,7 @@ function PlayPageContent() {
               onSubmitAnswer={submitAndConfirm}
               navigation={navigation}
               isJokerQuestion={isJokerQuestion}
+              doubledRoundNumbers={doubledRoundNumbers}
               powerUpShop={
                 // The shop shows for a team with coins, even in a session without power-ups (a carried coin).
                 team && (settings.powerUpsEnabled || team.coins > 0)
@@ -417,13 +442,11 @@ function PlayPageContent() {
           </div>
         )}
         <div className="flex flex-col gap-6 md:flex-row">
-          {openedQuestions.length > 0 && (
-            <AnsweredQuestionsPanel
-              entries={openedQuestions}
-              jumpableIds={jumpableQuestionIds}
-              onSelectQuestion={selectQuestion}
-            />
-          )}
+          <AnsweredQuestionsPanel
+            entries={openedQuestions}
+            jumpableIds={jumpableQuestionIds}
+            onSelectQuestion={selectQuestion}
+          />
           {hasPowerUpsPanel && powerUpsList && (
             <PowerUpsPanel {...powerUpsList} />
           )}
@@ -443,19 +466,6 @@ function PlayPageContent() {
         jumpableHistoryIds={jumpableQuestionIds}
         onSelectHistoryQuestion={selectQuestion}
         powerUps={hasPowerUpsPanel ? powerUpsList : null}
-        joker={
-          jokerRound
-            ? {
-                roundNumber: jokerRound.roundNumber,
-                roundTitle: jokerRound.title,
-                isPlayed: isJokerRoundPlayed(
-                  jokerRound.roundNumber,
-                  progress.status,
-                  view.pastRevealedQuestions,
-                ),
-              }
-            : null
-        }
         bonus={
           hasBonusPanel
             ? {
@@ -473,7 +483,7 @@ function PlayPageContent() {
         myAnswers={myAnswers}
         myAnswerGrades={myAnswerGrades}
         isConnected={connectionError === null}
-        jokerRoundNumber={jokerRound?.roundNumber ?? null}
+        doubledRoundNumbers={doubledRoundNumbers}
       />
       <SavedConfirmation isVisible={isSaved} />
       <SettingsModal

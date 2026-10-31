@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -304,7 +304,9 @@ describe('PlayPage — the power-up bar', () => {
     expect(fifty).toHaveTextContent('Used: 1 / 2');
     expect(within(panel).queryByText('Pin one')).toBeNull();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Power-ups' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Power-ups \(/ }),
+    );
     expect(screen.getByRole('dialog')).toHaveTextContent('Used: 1 / 2');
   });
 
@@ -312,7 +314,7 @@ describe('PlayPage — the power-up bar', () => {
     phone({ settings: { powerUpsEnabled: false }, coins: 0 });
 
     expect(screen.queryByRole('heading', { name: 'Power-ups' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Power-ups' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Power-ups/ })).toBeNull();
   });
 
   it('shows the balance and the activation buttons in the power-ups panel and drawer, not under the question', async () => {
@@ -328,12 +330,35 @@ describe('PlayPage — the power-up bar', () => {
       screen.getAllByRole('button', { name: 'Activate 50/50' }),
     ).toHaveLength(1);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Power-ups' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Power-ups \(/ }),
+    );
     const drawer = screen.getByRole('dialog');
     expect(drawer).toHaveTextContent('Balance: 3 coins');
     await userEvent.click(
       within(drawer).getByRole('button', { name: 'Activate 50/50' }),
     );
     expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
+  });
+
+  it('closes the drawer once the purchase went through, and keeps it open on a refusal', async () => {
+    const buy = phone({ coins: 3 });
+    const activate = () =>
+      userEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'Activate 50/50',
+        }),
+      );
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Power-ups \(/ }),
+    );
+
+    buy.mockResolvedValueOnce({ success: false, error: 'Not enough coins' });
+    await activate();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    buy.mockResolvedValueOnce({ success: true });
+    await activate();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

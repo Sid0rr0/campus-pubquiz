@@ -64,6 +64,8 @@ interface QuestionBrowserProps {
   navigation?: QuestionNavigation;
   /** Whether the selected question belongs to the team's joker round — its answers count double, so the browser wears a joker border. */
   isJokerQuestion?: boolean;
+  /** The numbers of the rounds doubled for the team, marked in the picker. */
+  doubledRoundNumbers?: readonly number[];
   /** Set when the team can spend coins: draws the power-up bar and hides the options its 50/50s removed. */
   powerUpShop?: PowerUpShop;
 }
@@ -121,6 +123,7 @@ export function QuestionBrowser({
   onSubmitAnswer,
   navigation,
   isJokerQuestion = false,
+  doubledRoundNumbers = [],
   powerUpShop,
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
@@ -170,6 +173,7 @@ export function QuestionBrowser({
         <div className="order-last md:order-0">
           <QuestionPicker
             pickerRounds={pickerRounds}
+            doubledRoundNumbers={doubledRoundNumbers}
             selectedQuestionId={selectedQuestion.id}
             myAnswers={myAnswers}
             onSelect={onSelectQuestion}

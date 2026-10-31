@@ -25,11 +25,11 @@ interface RevealVerdictCardProps {
   myAnswers: Record<number, string>;
   myAnswerGrades: Record<number, MyAnswerGrade>;
   isConnected: boolean;
-  /** The round number of the team's joker round, or null while it has none. */
-  jokerRoundNumber: number | null;
+  /** The numbers of the rounds doubled for the team. */
+  doubledRoundNumbers: readonly number[];
 }
 
-/** The verdict plus the extra points the joker adds to it (null outside the joker round). */
+/** The verdict plus the extra points the joker adds to it (null outside a doubled round). */
 type RevealedVerdict = VerdictCardContent & { jokerExtra: number | null };
 
 /**
@@ -55,7 +55,7 @@ function describeLandedQuestion({
   view,
   myAnswers,
   myAnswerGrades,
-  jokerRoundNumber,
+  doubledRoundNumbers,
 }: RevealVerdictCardProps): RevealedVerdict | null {
   const { progress, revealQuestions } = view;
   const landed = revealQuestions[progress.revealIndex];
@@ -76,7 +76,7 @@ function describeLandedQuestion({
     jokerExtra: jokerExtraPoints(
       entry.pointsAwarded,
       entry.roundNumber,
-      jokerRoundNumber,
+      doubledRoundNumbers,
     ),
   };
 }
