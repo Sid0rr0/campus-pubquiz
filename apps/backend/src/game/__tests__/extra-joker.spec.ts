@@ -291,6 +291,21 @@ describe('GameGateway — buying an extra joker', () => {
     });
   });
 
+  it('still sells an extra joker for a kahootMode round, which no question power-up works in', async () => {
+    const game = await night(
+      {},
+      {
+        rounds: THREE_ROUNDS.map((round) => ({ ...round, kahootMode: true })),
+      },
+    );
+    const [alpha] = game.teams;
+
+    expect(await buy(game, alpha, 0)).toEqual({ success: true });
+    expect(await stored(game, alpha)).toMatchObject([
+      { powerUp: 'extra_joker', roundId: game.rounds[0].id },
+    ]);
+  });
+
   describe('default cost in the lobby', () => {
     const costAfter = async (
       settings: Partial<SessionSettings>,
