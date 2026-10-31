@@ -742,7 +742,10 @@ wherever it is used, so it follows a key fix. `AnswerService` grades that team's
 answer with `withWiderMargin` at submit, and on a key fix or kahoot speed score
 (`StoredAnswerRow.hasWiderMargin`). The phone shows the doubled margin text instead
 of the question's. Buying after already submitting does not re-grade: the team
-resubmits (or the quiz master grades by hand).
+resubmits (or the quiz master grades by hand). Since the phone can't tell which
+came first, it adds "Submit again to use the wider margin." under the margin text
+whenever the team holds the power-up and has an answer on the question that can
+still be changed.
 
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like

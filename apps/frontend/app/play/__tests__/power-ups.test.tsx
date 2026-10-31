@@ -49,8 +49,10 @@ function phone({
   question = FRANCE,
   buyPowerUp = vi.fn().mockResolvedValue({ success: true }),
   roomReadyQuestionIds = [],
+  answers = {},
 }: {
   roomReadyQuestionIds?: number[];
+  answers?: Record<number, string>;
   settings?: Partial<SessionSettings>;
   coins?: number;
   purchases?: PurchaseView[];
@@ -73,7 +75,12 @@ function phone({
           coins,
         },
       },
-      game: { myPurchases: purchases, buyPowerUp, roomReadyQuestionIds },
+      game: {
+        myPurchases: purchases,
+        buyPowerUp,
+        roomReadyQuestionIds,
+        myAnswers: answers,
+      },
     }),
   );
   renderWithQuery(<PlayPage />);
@@ -261,6 +268,45 @@ describe('PlayPage — the power-up bar', () => {
         'Answers within 10% of the real number count as correct',
       ),
     ).toBeInTheDocument();
+  });
+
+  describe('a wider margin and an answer already given', () => {
+    const NUMBER = {
+      type: 'number',
+      prompt: 'How many bones?',
+      points: 3,
+      margin: { value: 5, unit: 'percent' },
+    };
+    const widerMargin: PurchaseView = {
+      powerUp: 'wider_margin',
+      questionId: 1,
+      roundId: null,
+      effect: { kind: 'wider_margin' },
+    };
+    const RESUBMIT = /Submit again to use the wider margin/;
+
+    it('tells the team to submit again, since the answer already given keeps the old margin', () => {
+      phone({
+        question: NUMBER,
+        purchases: [widerMargin],
+        answers: { 1: '206' },
+        coins: 0,
+      });
+
+      expect(screen.getByText(RESUBMIT)).toBeInTheDocument();
+    });
+
+    it('says nothing before an answer is given', () => {
+      phone({ question: NUMBER, purchases: [widerMargin], coins: 0 });
+
+      expect(screen.queryByText(RESUBMIT)).toBeNull();
+    });
+
+    it('says nothing without the power-up', () => {
+      phone({ question: NUMBER, answers: { 1: '206' }, coins: 0 });
+
+      expect(screen.queryByText(RESUBMIT)).toBeNull();
+    });
   });
 
   it('shows the room split with the 50/50-removed options crossed out', () => {

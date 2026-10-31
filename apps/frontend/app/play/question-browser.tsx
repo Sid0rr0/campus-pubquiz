@@ -138,6 +138,10 @@ export function QuestionBrowser({
   const myAnswer = myAnswers[selectedQuestion.id];
   // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
   const removedOptions = removedOptionsOf(selectedQuestion.id, purchases);
+  const hasWiderMargin = purchases.some(
+    (p) =>
+      p.effect.kind === 'wider_margin' && p.questionId === selectedQuestion.id,
+  );
 
   return (
     <div
@@ -220,17 +224,21 @@ export function QuestionBrowser({
           </h1>
           <NumberMarginText
             question={
-              selectedQuestion.margin &&
-              purchases.some(
-                (p) =>
-                  p.effect.kind === 'wider_margin' &&
-                  p.questionId === selectedQuestion.id,
-              )
+              selectedQuestion.margin && hasWiderMargin
                 ? { margin: widenedMargin(selectedQuestion.margin) }
                 : selectedQuestion
             }
             className="text-center text-sm font-extrabold tracking-wide text-foreground/55"
           />
+          {/* The answer already given was graded with the old margin; only a new submit uses the wider one. */}
+          {hasWiderMargin &&
+            mode === 'answering' &&
+            isAnswerable &&
+            myAnswer !== undefined && (
+              <p className="text-center text-sm font-extrabold text-magenta">
+                Submit again to use the wider margin.
+              </p>
+            )}
           {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               {selectedQuestion.isVideoHidden
