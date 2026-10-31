@@ -97,7 +97,7 @@ describe('GameGateway — buying a pin one', () => {
       )
       .map((emit) => emit.payload as TeamPurchasesSyncedPayload);
     expect(sync[0].purchases[0].effect).toEqual(purchase.effect);
-    expect(sync[0].coins).toBe(2);
+    expect(sync[0].coins).toBe(1);
   });
 
   it('pins one pair of a match: the right-hand item beside its left item', async () => {

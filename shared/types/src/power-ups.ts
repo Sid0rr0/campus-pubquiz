@@ -46,11 +46,17 @@ export const POWER_UP_LABELS: Record<PowerUpId, string> = {
   extra_joker: 'Extra joker',
 };
 
-export const DEFAULT_STARTING_COINS = 1;
+export const DEFAULT_STARTING_COINS = 2;
 
-/** The extra joker's default cost: 3 when the round overview names the round, 2 when the team buys it blind. */
+/** The coins a shot or selfie bonus award brings with it. */
+export const SHOT_SELFIE_COINS = 2;
+
+/** The coins a team brings for rating every round of its last league night. */
+export const CARRIED_COINS = 2;
+
+/** The extra joker's default cost: 4 when the round overview names the round, 3 when the team buys it blind. */
 export function defaultExtraJokerCost(showRoundOverview: boolean): number {
-  return showRoundOverview ? 3 : 2;
+  return showRoundOverview ? 4 : 3;
 }
 
 /** The default power-up table for a session with the given round overview setting. */
@@ -58,9 +64,10 @@ export function defaultPowerUpSettings(
   showRoundOverview: boolean,
 ): PowerUpSettings {
   const table = Object.fromEntries(
-    POWER_UP_IDS.map((id) => [id, { cost: 1, maxUses: 1 }]),
+    POWER_UP_IDS.map((id) => [id, { cost: 2, maxUses: 1 }]),
   ) as PowerUpSettings;
-  table.ask_the_room.cost = 2;
+  table.letter_count.cost = 1;
+  table.ask_the_room.cost = 3;
   table.extra_joker.cost = defaultExtraJokerCost(showRoundOverview);
   return table;
 }

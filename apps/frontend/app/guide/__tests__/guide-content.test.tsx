@@ -75,7 +75,7 @@ describe('GuideContent', () => {
   it('explains the coin a shot or selfie gives and the bonus form’s Coins field', () => {
     const text = renderGuideText();
 
-    expect(text).toContain('a shot or selfie also gives 1 coin');
+    expect(text).toContain('a shot or selfie also gives 2 coins');
     expect(text).toContain('Coins field');
   });
 
@@ -93,7 +93,7 @@ describe('GuideContent', () => {
     expect(text).toContain('Seven power-ups');
     expect(text).toContain('Extra joker');
     expect(text).toContain('needs 3 other teams');
-    expect(text).toContain('carries 1 coin in');
+    expect(text).toContain('carries 2 coins in');
     expect(text).toContain('give the coin back with a coin award');
     expect(text).toContain('Deleting a shot or selfie award removes its coin');
   });

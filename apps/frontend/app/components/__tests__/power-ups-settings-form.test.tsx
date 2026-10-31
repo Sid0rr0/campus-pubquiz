@@ -44,7 +44,7 @@ describe('PowerUpsSettingsForm', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Power-ups' }));
 
     expect(onChange).toHaveBeenLastCalledWith({ ...ON });
-    expect(screen.getByLabelText(/starting coins/i)).toHaveValue(1);
+    expect(screen.getByLabelText(/starting coins/i)).toHaveValue(2);
   });
 
   it('edits the starting coins', async () => {
@@ -68,7 +68,7 @@ describe('PowerUpsSettingsForm', () => {
       ...ON,
       powerUps: {
         ...ON.powerUps,
-        fifty_fifty: { cost: 1, maxUses: 0 },
+        fifty_fifty: { cost: 2, maxUses: 0 },
       },
     });
     expect(screen.queryByLabelText('50/50 cost')).not.toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('PowerUpsSettingsForm', () => {
       powerUps: {
         ...ON.powerUps,
         ask_the_room: { cost: 5, maxUses: 1 },
-        pin_one: { cost: 1, maxUses: 3 },
+        pin_one: { cost: 2, maxUses: 3 },
       },
     });
   });
@@ -101,9 +101,9 @@ describe('withShowRoundOverview', () => {
     const next = withShowRoundOverview(DEFAULT_SESSION_SETTINGS, true);
 
     expect(next.showRoundOverview).toBe(true);
-    expect(next.powerUps.extra_joker.cost).toBe(3);
+    expect(next.powerUps.extra_joker.cost).toBe(4);
     expect(withShowRoundOverview(next, false).powerUps.extra_joker.cost).toBe(
-      2,
+      3,
     );
   });
 

@@ -59,7 +59,7 @@ describe('DisplayPage — rules and round intro', () => {
   });
 
   it.each([
-    [true, '(1 point + 1 coin, doable twice per quiz)'],
+    [true, '(1 point + 2 coins, doable twice per quiz)'],
     [false, '(1 point, doable twice per quiz)'],
   ])(
     'with power-ups %s the shot bonus rule reads %s',
@@ -94,19 +94,19 @@ describe('DisplayPage — rules and round intro', () => {
     render(<DisplayPage />);
 
     expect(screen.getByText('2 coins').tagName).toBe('STRONG');
-    expect(screen.getByText('1 point + 1 coin').tagName).toBe('STRONG');
+    expect(screen.getByText('1 point + 2 coins').tagName).toBe('STRONG');
   });
 
   it.each([
     [
       true,
       2,
-      'Power-ups are on: you start with 2 coins. If your team rated all rounds of the last pub quiz, you get a bonus coin. Earn more with shots and selfies.',
+      'Power-ups are on: you start with 2 coins. If your team rated all rounds of the last pub quiz, you get 2 bonus coins. Earn more with shots and selfies.',
     ],
     [
       true,
       1,
-      'Power-ups are on: you start with 1 coin. If your team rated all rounds of the last pub quiz, you get a bonus coin. Earn more with shots and selfies.',
+      'Power-ups are on: you start with 1 coin. If your team rated all rounds of the last pub quiz, you get 2 bonus coins. Earn more with shots and selfies.',
     ],
     [false, 2, null],
   ])(

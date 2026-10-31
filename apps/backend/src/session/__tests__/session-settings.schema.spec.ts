@@ -349,11 +349,11 @@ describe('power-up settings', () => {
     ).toBe(false);
   });
 
-  it('defaults the extra joker to 2 coins without the overview and 3 with it', () => {
-    expect(resolveSessionSettings({}).powerUps.extra_joker.cost).toBe(2);
+  it('defaults the extra joker to 3 coins without the overview and 4 with it', () => {
+    expect(resolveSessionSettings({}).powerUps.extra_joker.cost).toBe(3);
     expect(
       resolveSessionSettings({ showRoundOverview: true }).powerUps.extra_joker
         .cost,
-    ).toBe(3);
+    ).toBe(4);
   });
 });

@@ -5,7 +5,7 @@
 - Can be bought only once ≥3 other teams have a current answer. Until then it's greyed out with "Waiting for more answers".
 - The split is stored with the purchase. No team count, no right/wrong, no names.
 - Options removed by this team's 50/50 show crossed out with their share.
-- Default cost 2, limit 1.
+- Default cost 3, limit 1.
 
 Parent spec: `.scratch/power-ups/spec.md`
 

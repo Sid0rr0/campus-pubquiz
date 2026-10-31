@@ -11,7 +11,7 @@ import { Team } from '@/db/entities/team.entity';
 import { SessionCarriedCoinRepository } from '@/db/repositories/session-carried-coin.repository';
 
 /**
- * The carried coin one team brings into one session: 1 when it rated every
+ * The carried coins one team brings into one session: 2 when it rated every
  * round of its last ended session in a shared league, else 0. Decided once
  * (at the start, or at the team's late join) and kept, so a later league
  * change doesn't take it back. Kept apart from the roster row, which a kick

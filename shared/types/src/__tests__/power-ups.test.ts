@@ -28,17 +28,18 @@ const ledger = {
 };
 
 describe('defaultPowerUpSettings', () => {
-  it('costs 1 each, ask the room 2, extra joker 3 with the overview and 2 without', () => {
+  it('costs letter count 1, ask the room 3, the rest 2, extra joker 4 with the overview and 3 without', () => {
     const withOverview = defaultPowerUpSettings(true);
-    expect(withOverview.fifty_fifty).toEqual({ cost: 1, maxUses: 1 });
-    expect(withOverview.ask_the_room.cost).toBe(2);
-    expect(withOverview.extra_joker.cost).toBe(3);
-    expect(defaultPowerUpSettings(false).extra_joker.cost).toBe(2);
+    expect(withOverview.fifty_fifty).toEqual({ cost: 2, maxUses: 1 });
+    expect(withOverview.letter_count.cost).toBe(1);
+    expect(withOverview.ask_the_room.cost).toBe(3);
+    expect(withOverview.extra_joker.cost).toBe(4);
+    expect(defaultPowerUpSettings(false).extra_joker.cost).toBe(3);
   });
 
-  it('is what a session starts with, power-ups off and 1 starting coin', () => {
+  it('is what a session starts with, power-ups off and 2 starting coins', () => {
     expect(DEFAULT_SESSION_SETTINGS.powerUpsEnabled).toBe(false);
-    expect(DEFAULT_SESSION_SETTINGS.startingCoins).toBe(1);
+    expect(DEFAULT_SESSION_SETTINGS.startingCoins).toBe(2);
     expect(DEFAULT_SESSION_SETTINGS.powerUps).toEqual(
       defaultPowerUpSettings(false),
     );

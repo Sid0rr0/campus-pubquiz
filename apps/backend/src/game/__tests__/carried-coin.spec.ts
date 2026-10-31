@@ -1,4 +1,8 @@
-import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import {
+  CARRIED_COINS,
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+} from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { League } from '@/db/entities/league.entity';
@@ -152,7 +156,7 @@ describe('Carried coin', () => {
 
     await game.act('START_QUIZ');
 
-    expect(adminCoins()).toEqual({ Quizzards: 1 });
+    expect(adminCoins()).toEqual({ Quizzards: CARRIED_COINS });
   });
 
   it('brings no coin when the last league night was not rated in every round', async () => {
@@ -182,17 +186,17 @@ describe('Carried coin', () => {
     const team = await seedTeam('Latecomers');
     await playNight(team, { inLeague: true, ratedRounds: [0, 1] });
     await game.act('START_QUIZ');
-    expect(await joinReplyCoins(team)).toBe(1);
+    expect(await joinReplyCoins(team)).toBe(CARRIED_COINS);
 
     const em = game.orm.em.fork();
     await em.nativeDelete(LeagueSession, {
       gameSession: game.gameSessionId,
     });
 
-    expect(await joinReplyCoins(team)).toBe(1);
-    expect(adminCoins()).toEqual({ Latecomers: 1 });
+    expect(await joinReplyCoins(team)).toBe(CARRIED_COINS);
+    expect(adminCoins()).toEqual({ Latecomers: CARRIED_COINS });
     const restarted = await game.restart();
-    expect(await joinReplyCoins(team, restarted)).toBe(1);
+    expect(await joinReplyCoins(team, restarted)).toBe(CARRIED_COINS);
   });
 
   it('shows the coin to its holder only when power-ups are off', async () => {
@@ -206,6 +210,6 @@ describe('Carried coin', () => {
 
     await game.act('START_QUIZ');
 
-    expect(adminCoins()).toEqual({ Holder: 1, Other: 0 });
+    expect(adminCoins()).toEqual({ Holder: CARRIED_COINS, Other: 0 });
   });
 });

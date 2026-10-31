@@ -1,6 +1,6 @@
 # 03: Carried coin
 
-**What to build:** a team that rated every round of its last ended session sharing a league with this one brings 1 coin.
+**What to build:** a team that rated every round of its last ended session sharing a league with this one brings 2 coins.
 
 - Decided at `START_QUIZ` for teams on the roster, and at join for later teams. Stored so a later league change doesn't remove it.
 - "Rated every round" means a round rating for each round of that session, from the break or the final form. Other feedback doesn't count.

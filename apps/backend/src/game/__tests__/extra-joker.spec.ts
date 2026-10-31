@@ -293,7 +293,7 @@ describe('GameGateway — buying an extra joker', () => {
     };
 
     it('follows a settings patch that changes only the round overview', async () => {
-      expect(await costAfter({}, { showRoundOverview: true })).toBe(3);
+      expect(await costAfter({}, { showRoundOverview: true })).toBe(4);
     });
 
     it('stays where the quiz master put it', async () => {

@@ -1,4 +1,5 @@
 import {
+  CARRIED_COINS,
   DEFAULT_SESSION_SETTINGS,
   sessionRoom,
   SOCKET_EVENTS,
@@ -133,7 +134,7 @@ describe('GameGateway — buying a 50/50', () => {
 
       expect(ack).toEqual({ success: true });
       const [sync] = syncsTo(game, alpha);
-      expect(sync.coins).toBe(2);
+      expect(sync.coins).toBe(1);
       expect(sync.purchases).toHaveLength(1);
       const [purchase] = sync.purchases;
       expect(purchase).toMatchObject({
@@ -161,7 +162,7 @@ describe('GameGateway — buying a 50/50', () => {
         kind: 'fifty_fifty',
         removedOptions: ['London', 'Berlin'],
       });
-      expect(stored.cost).toBe(1);
+      expect(stored.cost).toBe(2);
     });
 
     it('stores the first letter and the letter count of a free-text key', async () => {
@@ -207,7 +208,7 @@ describe('GameGateway — buying a 50/50', () => {
         teamId: alpha.teamId,
         category: 'custom',
         points: 0,
-        coins: 2,
+        coins: 3,
       });
       game.clearEmits();
 
@@ -233,7 +234,7 @@ describe('GameGateway — buying a 50/50', () => {
       });
       const reply = joinedWith(secondDevice);
 
-      expect(reply.coins).toBe(2);
+      expect(reply.coins).toBe(1);
       expect(reply.purchases).toEqual([
         {
           powerUp: 'fifty_fifty',
@@ -395,7 +396,7 @@ describe('GameGateway — buying a 50/50', () => {
         split: { Paris: 67, London: 0, Berlin: 0, Rome: 33 },
       };
       expect(syncsTo(game, a)[0].purchases[0].effect).toEqual(expected);
-      expect(syncsTo(game, a)[0].coins).toBe(1);
+      expect(syncsTo(game, a)[0].coins).toBe(0);
       const second = await game.connectPlayer();
       await game.gateway.handleJoinPlayers(asSocket(second), {
         teamName: 'A',
@@ -473,7 +474,9 @@ describe('GameGateway — buying a 50/50', () => {
       jest
         .spyOn(game.carriedCoinService, 'decide')
         .mockImplementation((_, teamIds) =>
-          Promise.resolve(Object.fromEntries(teamIds.map((id) => [id, 1]))),
+          Promise.resolve(
+            Object.fromEntries(teamIds.map((id) => [id, CARRIED_COINS])),
+          ),
         );
       await game.openFirstQuestion(await game.connectAdmin());
       const [alpha] = game.teams;

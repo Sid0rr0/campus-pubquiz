@@ -44,7 +44,7 @@ const fiftyFifty: PurchaseView = {
 
 function phone({
   settings = { powerUpsEnabled: true },
-  coins = 1,
+  coins = 2,
   purchases = [],
   question = FRANCE,
   buyPowerUp = vi.fn().mockResolvedValue({ success: true }),
@@ -352,17 +352,17 @@ describe('PlayPage — the power-up bar', () => {
 
     buy.mockResolvedValueOnce({ success: false, error: 'Not enough coins' });
     await activate();
-    expect(screen.queryByText('−1 coin')).toBeNull();
+    expect(screen.queryByText('−2 coins')).toBeNull();
 
     buy.mockResolvedValueOnce({ success: true });
     await activate();
-    expect(await screen.findByText('−1 coin')).toBeInTheDocument();
+    expect(await screen.findByText('−2 coins')).toBeInTheDocument();
   });
 
   it('plays no stamp for a purchase already made when the phone loads', () => {
     phone({ purchases: [fiftyFifty] });
 
-    expect(screen.queryByText('−1 coin')).toBeNull();
+    expect(screen.queryByText('−2 coins')).toBeNull();
   });
 
   it('closes the drawer once the purchase went through, and keeps it open on a refusal', async () => {

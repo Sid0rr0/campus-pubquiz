@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
+import { CARRIED_COINS } from '@campus-pubquiz/types';
 import { SessionCarriedCoin } from '@/db/entities/session-carried-coin.entity';
 import { SessionCarriedCoinRepository } from '@/db/repositories/session-carried-coin.repository';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 
-/** The carried coin: 1 coin for a team that rated every round of its last ended session sharing a league with this one. Decided once per team per session and stored. */
+/** The carried coins: `CARRIED_COINS` for a team that rated every round of its last ended session sharing a league with this one. Decided once per team per session and stored. */
 @Injectable()
 export class CarriedCoinService {
   constructor(
@@ -21,7 +22,9 @@ export class CarriedCoinService {
     const stored = await this.loadAll(gameSessionId);
     for (const teamId of teamIds) {
       if (teamId in stored) continue;
-      const coins = (await this.earnedBy(gameSessionId, teamId)) ? 1 : 0;
+      const coins = (await this.earnedBy(gameSessionId, teamId))
+        ? CARRIED_COINS
+        : 0;
       // An upsert skips the entity's timestamp hooks, so they are set here.
       const now = new Date();
       await this.carriedCoins.upsert(

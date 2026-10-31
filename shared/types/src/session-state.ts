@@ -85,7 +85,7 @@ export interface SessionState {
   jokerPickEndsAt: number | null;
   /** teamId -> the team's joker, for teams that have one. A cache of the stored jokers, read when the session is placed and as teams join, and updated as teams pick and as the pick closes, so the views stay synchronous. */
   jokers: Record<number, TeamJoker>;
-  /** teamId -> the team's carried coin (0 or 1), for teams it was decided for (at the start, or at a late join). A cache of the stored carried coins, read when the session is placed and as teams join. */
+  /** teamId -> the team's carried coins (0 or `CARRIED_COINS`), for teams it was decided for (at the start, or at a late join). A cache of the stored carried coins, read when the session is placed and as teams join. */
   carriedCoins: Record<number, number>;
   /** teamId -> the sum of the team's coin awards (absent: none). A cache of the stored coin awards, read when the session is placed and updated as awards are given and removed, so the views stay synchronous. */
   coinAwards: Record<number, number>;

@@ -608,45 +608,45 @@ reconnecting by join code are unchanged. The start-session dialog and the
 Zod schema and editable in the lobby only like every other setting; a stored
 settings JSON without them reads as off with the default table.
 **`powerUpsEnabled`** (boolean, default `false`) switches power-ups on;
-**`startingCoins`** (integer ≥ 0, default 1) is what every team starts with;
+**`startingCoins`** (integer ≥ 0, default 2, `DEFAULT_STARTING_COINS`) is what every team starts with;
 **`powerUps`** is a table of `{ cost, maxUses }` (integers ≥ 0) for each of
 `fifty_fifty`, `first_letter`, `letter_count`, `pin_one`, `wider_margin`,
 `ask_the_room` and `extra_joker`, where `maxUses: 0` means not offered. Defaults:
-every power-up costs 1 and may be used once, except ask the room (2) and the extra
-joker (3 with `showRoundOverview` on, 2 off; a session created without a table
+every power-up costs 2 and may be used once, except letter count (1), ask the room
+(3) and the extra joker (4 with `showRoundOverview` on, 3 off; a session created without a table
 gets the one matching its overview, and the settings form and a lobby settings
 patch that changes only `showRoundOverview` move the cost with the overview while
 it is still the default). The start dialog and the `/control` lobby settings
 panel show them as a "Power-ups" tab.
 
 A team's **coins** are `coinBalance` in shared types: starting coins (only with
-power-ups on) + carried coin + coin awards − purchase costs, never below 0.
-The starting coins, the carried coin, the coin awards and the purchases all count.
+power-ups on) + carried coins + coin awards − purchase costs, never below 0.
+The starting coins, the carried coins, the coin awards and the purchases all count.
 The balance is sent as
 `coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
 `TEAM_PURCHASES_SYNCED` after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
 "Power-ups are on: you start with N coins. If your team rated all rounds of the
-last pub quiz, you get a bonus coin. Earn more with shots and selfies." when
-power-ups are on, and each shot and selfie bonus rule reads "1 point + 1 coin". With them off, a phone whose
-team holds a carried coin gets "You have 1 coin for rating every round of your last
-league night. Spend it on a power-up." instead (the big screen can't know).
+last pub quiz, you get 2 bonus coins. Earn more with shots and selfies." when
+power-ups are on, and each shot and selfie bonus rule reads "1 point + 2 coins". With them off, a phone whose
+team holds carried coins gets "You have 2 coins for rating every round of your last
+league night. Spend them on power-ups." instead (the big screen can't know).
 
-**Carried coin.** A team that rated every round (a round rating from the break or
+**Carried coins.** A team that rated every round (a round rating from the break or
 the final form; other feedback doesn't count) of the last ended session it took
-part in that shares a league with this one brings 1 coin; a session in no league
+part in that shares a league with this one brings 2 coins (`CARRIED_COINS`); a session in no league
 brings none, and with two leagues the last session sharing either counts. It is
 decided once, when the quiz leaves the lobby for every team on the roster and at
 the join for a team that comes later, and stored in `session_carried_coins`, so
 removing the league afterwards, a rejoin or a restart doesn't take it back.
-It counts even with power-ups off: the phone then shows the coin (and "One coin is
+It counts even with power-ups off: the phone then shows the coins (and "Two coins are
 yours for rating every round of your last league night", from `hasCarriedCoin` in
 `JOIN_ACCEPTED`) only to teams holding one, and the shop uses the session's
 power-up table. Merging teams keeps it with the kept team.
 
 **Coin awards.** Stored in `coin_awards` (team, session, `coins`, optional
 `reason`, optional `bonus_award_id`). A shot or selfie bonus award in a session with
-power-ups on writes a linked +1 coin award in the same flush; the foreign key
+power-ups on writes a linked +2 coin award (`SHOT_SELFIE_COINS`) in the same flush; the foreign key
 cascades, so deleting the bonus award deletes the coin award, and editing its
 points leaves it alone. The bonus award form's optional **coins** field (any
 non-zero integer, negative takes coins, up to 100 either way) is sent as `coins`
@@ -1119,7 +1119,7 @@ itself — the display and other players just see counts.
    and, for `custom`, the reason; about 8 seconds, success-styled for a bonus,
    plain for a penalty) — not for edits, deletions or awards restored on
    rejoin, which only appear in the bonus drawer. In a session with power-ups
-   the form also has a coins field, and a shot or selfie comes with a +1 coin
+   the form also has a coins field, and a shot or selfie comes with +2 coins
    (see Coin awards under the session settings).
    A hand grade (`GRADE_ANSWER`), a bonus and a showdown's points are whole or
    half points: the server refuses any other decimal, because the points

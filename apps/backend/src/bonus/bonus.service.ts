@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   BONUS_CATEGORIES,
+  SHOT_SELFIE_COINS,
   type BonusAwardAdminView,
   type BonusCategory,
   type TeamBonusAwardView,
@@ -132,17 +133,17 @@ export class BonusService {
         points,
       });
       em.persist(bonusAward);
-      // A shot or selfie earns a coin of its own, which goes with the award.
+      // A shot or selfie earns coins of its own, which goes with the award.
       if (coins.powerUpsEnabled && category !== 'custom') {
         em.persist(
           this.coinAwards.create({
             gameSession: gameSessionId,
             team: teamId,
-            coins: 1,
+            coins: SHOT_SELFIE_COINS,
             bonusAward,
           }),
         );
-        coinsGiven += 1;
+        coinsGiven += SHOT_SELFIE_COINS;
       }
     }
     if (manualCoins !== 0) {

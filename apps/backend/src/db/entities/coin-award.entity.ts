@@ -29,7 +29,7 @@ export class CoinAward extends BaseEntity {
   @Property({ type: 'text', nullable: true })
   reason?: string;
 
-  // The shot or selfie bonus award this +1 coin came with; the database deletes
+  // The shot or selfie bonus award these coins came with; the database deletes
   // the coin award when that bonus award is deleted. Null for a manual award.
   @ManyToOne(() => BonusAward, { nullable: true, deleteRule: 'cascade' })
   bonusAward?: BonusAward;

@@ -1,5 +1,7 @@
 import {
   BONUS_CATEGORIES,
+  CARRIED_COINS,
+  SHOT_SELFIE_COINS,
   DEFAULT_SESSION_SETTINGS,
   type QuizStructureSummary,
   type SessionSettings,
@@ -23,8 +25,7 @@ export type RulesSettings = Pick<
 const JOKER_RULE =
   "Joker: pick one round to score double. You'll choose after the round overview.";
 
-const CARRIED_COIN_RULE =
-  'You have 1 coin for rating every round of your last league night. Spend it on a power-up.';
+const CARRIED_COIN_RULE = `You have ${CARRIED_COINS} coins for rating every round of your last league night. Spend them on power-ups.`;
 
 /** Standalone, with no live session to read from: default house rules and team size, and no bonus bullets (those are session config). */
 const STANDALONE_RULES_SETTINGS: RulesSettings = {
@@ -46,7 +47,7 @@ interface RulesContentProps {
 
 const COIN_AMOUNT = /(\d+ points? \+ \d+ coins?|\d+ coins?)/;
 
-/** The rule's text with coin amounts ("2 coins", "1 point + 1 coin") picked out in colour. */
+/** The rule's text with coin amounts ("2 coins", "1 point + 2 coins") picked out in colour. */
 function highlightCoins(rule: string) {
   return rule.split(COIN_AMOUNT).map((part, index) =>
     // split() with one capture group puts the matches at the odd indices
@@ -119,7 +120,14 @@ export function RulesContent({
       BONUS_CATEGORY_EXPLANATIONS[category] !== undefined,
   ).map((category) => {
     const explanation = BONUS_CATEGORY_EXPLANATIONS[category];
-    return `${BONUS_CATEGORY_LABELS[category]} bonus: ${powerUpsEnabled ? explanation?.replace('(1 point', '(1 point + 1 coin') : explanation}`;
+    return `${BONUS_CATEGORY_LABELS[category]} bonus: ${
+      powerUpsEnabled
+        ? explanation?.replace(
+            '(1 point',
+            `(1 point + ${SHOT_SELFIE_COINS} coins`,
+          )
+        : explanation
+    }`;
   });
   const teamSizeRule = `Max ${maxPlayersPerTeam} players per team, every additional player costs the team −${extraPlayerPenaltyPoints} points.`;
   const displayedRules = [
@@ -129,7 +137,7 @@ export function RulesContent({
     ...(jokersEnabled ? [JOKER_RULE] : []),
     ...(powerUpsEnabled
       ? [
-          `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. If your team rated all rounds of the last pub quiz, you get a bonus coin. Earn more with shots and selfies.`,
+          `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. If your team rated all rounds of the last pub quiz, you get ${CARRIED_COINS} bonus coins. Earn more with shots and selfies.`,
         ]
       : hasCarriedCoin
         ? [CARRIED_COIN_RULE]

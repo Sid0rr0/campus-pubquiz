@@ -52,16 +52,16 @@ describe('Coin awards', () => {
     return first.id;
   }
 
-  it('gives a shot a linked +1 coin, toasts it, and takes it away with the deleted bonus award', async () => {
+  it('gives a shot a linked +2 coins, toasts it, and takes it away with the deleted bonus award', async () => {
     await start();
 
     await award({ category: 'shot', points: 1 });
 
-    expect(adminCoins()).toBe(2);
+    expect(adminCoins()).toBe(3);
     expect(emitted(SOCKET_EVENTS.COIN_AWARDED)).toEqual([
       {
         rooms: [team.socket.id],
-        payload: { coins: 1, reason: undefined, balance: 2 },
+        payload: { coins: 2, reason: undefined, balance: 3 },
       },
     ]);
 
@@ -88,7 +88,7 @@ describe('Coin awards', () => {
       game.rest.editBonus(game.joinCode, awardId, 5, undefined),
     );
 
-    expect(adminCoins()).toBe(2);
+    expect(adminCoins()).toBe(3);
     expect(emitted(SOCKET_EVENTS.TEAM_COINS_SYNCED)).toEqual([]);
   });
 
@@ -131,7 +131,7 @@ describe('Coin awards', () => {
     await start();
 
     await award({ category: 'shot', points: 1, coins: 2 });
-    expect(adminCoins()).toBe(4);
+    expect(adminCoins()).toBe(5);
 
     await award({ category: 'custom', points: 0, coins: -10 });
     expect(adminCoins()).toBe(0);
@@ -152,10 +152,10 @@ describe('Coin awards', () => {
       teamToken: team.teamToken,
       joinCode: restarted.joinCode,
     });
-    expect(adminCoins(restarted)).toBe(2);
+    expect(adminCoins(restarted)).toBe(3);
     expect(device.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.JOIN_ACCEPTED,
-      expect.objectContaining({ coins: 2 }),
+      expect.objectContaining({ coins: 3 }),
     );
   });
 

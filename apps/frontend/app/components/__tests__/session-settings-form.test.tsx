@@ -222,7 +222,7 @@ describe('SessionSettingsForm', () => {
       // The extra joker's cost follows the overview while it is the default.
       powerUps: {
         ...DEFAULT_SESSION_SETTINGS.powerUps,
-        extra_joker: { cost: 3, maxUses: 1 },
+        extra_joker: { cost: 4, maxUses: 1 },
       },
     });
   });
@@ -246,7 +246,7 @@ describe('SessionSettingsForm', () => {
       jokersEnabled: true,
       powerUps: {
         ...DEFAULT_SESSION_SETTINGS.powerUps,
-        extra_joker: { cost: 3, maxUses: 1 },
+        extra_joker: { cost: 4, maxUses: 1 },
       },
     });
   });

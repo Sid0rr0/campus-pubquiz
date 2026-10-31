@@ -62,7 +62,7 @@ export function LeaderboardScreen({
           </p>
           {hasCarriedCoin && (
             <p className="text-sm text-foreground/65">
-              One coin is yours for rating every round of your last league
+              Two coins are yours for rating every round of your last league
               night.
             </p>
           )}
