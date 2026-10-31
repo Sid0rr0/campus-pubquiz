@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
-import { isShowingLastBreak } from '@campus-pubquiz/types';
+import { isShowingLastBreak, type PowerUpId } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
@@ -15,12 +15,18 @@ import { LatePlayerCountPrompt } from '@/app/play/late-player-count-prompt';
 import { PlayerCountCard } from '@/app/play/player-count-card';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
+import { PowerUpsPanel } from '@/app/play/power-ups-panel';
 import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
+import { PowerUpMoment, usePowerUpMoment } from '@/app/play/power-up-moment';
 import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
 import { JokerMoment } from '@/app/play/joker-moment';
-import { isJokerRoundPlayed, jokerExtraPoints } from '@/app/play/joker-round';
+import {
+  doubledRoundsOf,
+  isJokerRoundPlayed,
+  jokerExtraPoints,
+} from '@/app/play/joker-round';
 import { ReconnectingBar } from '@/app/play/reconnecting-bar';
 import {
   SavedConfirmation,
@@ -67,6 +73,7 @@ function PlayPageContent() {
   // header so its mobile hamburger can surface them — see
   // player-menu-context.tsx.
   usePublishPlayerMenu(teamName, team, handleLogOut, openSettings);
+  const { moment: powerUpMoment, showMoment } = usePowerUpMoment();
   const { isSaved, submitAndConfirm } = useSavedConfirmation(
     game?.submitAnswer,
   );
@@ -167,6 +174,10 @@ function PlayPageContent() {
     setPlayerCount,
     myJoker,
     pickJoker,
+    myPurchases,
+    roomReadyQuestionIds,
+    buyPowerUp,
+    buyExtraJoker,
     seenQuestions,
     submitShowdownGuess,
   } = game;
@@ -204,35 +215,72 @@ function PlayPageContent() {
   // page needs matching bottom padding there or the bar would cover the
   // last bit of inline content underneath it.
   const hasBonusPanel = settings.enabledBonusCategories.length > 0;
+  // The same condition as the shop: a team with coins sees it even in a session without power-ups (a carried coin).
+  const hasPowerUpsPanel =
+    !!team && (settings.powerUpsEnabled || team.coins > 0);
+  // The activation buttons live in the power-ups cards: the question being answered right now, and the next round's extra joker.
+  // None in a kahootMode round: a tap locks the pick, so no question power-up can help.
+  const answeringQuestion =
+    phoneScreen.kind === 'block' &&
+    phoneScreen.mode === 'answering' &&
+    isAnswerable &&
+    !isCurrentRoundKahoot
+      ? selectedQuestion
+      : null;
+  const powerUpsList = team
+    ? {
+        settings: settings.powerUps,
+        purchases: myPurchases,
+        coins: team.coins,
+        question: answeringQuestion,
+        roomReadyQuestionIds,
+        onBuy: async (powerUp: PowerUpId, questionId: number) => {
+          const result = await buyPowerUp(powerUp, questionId);
+          if (result.success) {
+            showMoment(powerUp, settings.powerUps[powerUp].cost);
+          }
+          return result;
+        },
+        extraJokerOffer: view.extraJokerOffer,
+        jokerRoundId: myJoker?.roundId ?? null,
+        onBuyExtraJoker: async (roundId: number) => {
+          const result = await buyExtraJoker(roundId);
+          if (result.success) {
+            showMoment('extra_joker', settings.powerUps.extra_joker.cost);
+          }
+          return result;
+        },
+      }
+    : null;
   const showBonusAvailability = !isShowingLastBreak(progress, quizStructure);
   const jokerRound = view.jokerRounds.find(
     (round) => round.roundId === myJoker?.roundId,
   );
+  const doubledRounds = doubledRoundsOf(jokerRound, myPurchases);
+  const doubledRoundNumbers = doubledRounds.map((round) => round.roundNumber);
   const isJokerTitleCard =
     phoneScreen.kind === 'round_title' &&
-    jokerRound !== undefined &&
-    phoneScreen.roundNumber === jokerRound.roundNumber;
+    doubledRoundNumbers.includes(phoneScreen.roundNumber);
+  const selectedRoundNumber = blockQuestions.find(
+    (question) => question.id === selectedQuestion?.id,
+  )?.roundNumber;
   const isJokerQuestion =
-    jokerRound !== undefined &&
-    selectedQuestion !== null &&
-    blockQuestions.find((question) => question.id === selectedQuestion.id)
-      ?.roundNumber === jokerRound.roundNumber;
+    selectedRoundNumber !== undefined &&
+    doubledRoundNumbers.includes(selectedRoundNumber);
   const selectedQuestionJokerExtra = selectedEntry
     ? jokerExtraPoints(
         selectedEntry.pointsAwarded,
         selectedEntry.roundNumber,
-        jokerRound?.roundNumber ?? null,
+        doubledRoundNumbers,
       )
     : null;
-  const hasMobileActionBar =
-    hasBonusPanel || openedQuestions.length > 0 || jokerRound !== undefined;
 
   return (
     <main
       className={`flex min-h-screen flex-col bg-background px-5 text-foreground ${
         // The fixed bar sits over the top edge, so leave room for it.
         isReconnecting ? 'pt-14' : 'pt-1'
-      } ${hasMobileActionBar ? 'pb-24 md:pb-5' : 'pb-5'}`}
+      } pb-24 md:pb-5`}
     >
       {/* Order below is mobile-first (team identity sits last, under the
           block browser) and reshuffled back to the original top-down
@@ -264,6 +312,26 @@ function PlayPageContent() {
             </Button>
           </div>
         </div>
+        {doubledRounds.map(({ roundNumber, title }) => {
+          const isPlayed = isJokerRoundPlayed(
+            roundNumber,
+            progress.status,
+            view.pastRevealedQuestions,
+          );
+          return (
+            <p
+              key={roundNumber}
+              className={`mb-2 w-fit rounded-lg px-3 py-1.5 text-sm font-extrabold ${
+                isPlayed ? 'bg-foreground/5 text-foreground/70' : 'bg-yellow/25'
+              }`}
+            >
+              <span aria-hidden="true">🃏 </span>
+              {`Round ${roundNumber}${title === '' ? '' : ` — ${title}`} ${
+                isPlayed ? 'scored' : 'scores'
+              } double`}
+            </p>
+          );
+        })}
         {team && (
           <p className="mb-4 hidden flex-wrap items-center gap-1 text-xs text-foreground/45 md:flex">
             Team code: {team.teamCode}
@@ -318,6 +386,10 @@ function PlayPageContent() {
           activeShowdown={activeShowdown}
           showdownRevealStep={showdownRevealStep}
           myTeamId={myTeamId}
+          coins={
+            settings.powerUpsEnabled || team?.coins ? team?.coins : undefined
+          }
+          hasCarriedCoin={team?.hasCarriedCoin}
           phoneLeaderboard={phoneLeaderboard}
           isConnected={connectionError === null}
           teamName={teamName}
@@ -369,16 +441,19 @@ function PlayPageContent() {
               onSubmitAnswer={submitAndConfirm}
               navigation={navigation}
               isJokerQuestion={isJokerQuestion}
+              doubledRoundNumbers={doubledRoundNumbers}
+              purchases={myPurchases}
             />
           </div>
         )}
         <div className="flex flex-col gap-6 md:flex-row">
-          {openedQuestions.length > 0 && (
-            <AnsweredQuestionsPanel
-              entries={openedQuestions}
-              jumpableIds={jumpableQuestionIds}
-              onSelectQuestion={selectQuestion}
-            />
+          <AnsweredQuestionsPanel
+            entries={openedQuestions}
+            jumpableIds={jumpableQuestionIds}
+            onSelectQuestion={selectQuestion}
+          />
+          {hasPowerUpsPanel && powerUpsList && (
+            <PowerUpsPanel {...powerUpsList} />
           )}
           {hasBonusPanel && (
             <BonusProgressPanel
@@ -395,19 +470,7 @@ function PlayPageContent() {
         historyEntries={openedQuestions}
         jumpableHistoryIds={jumpableQuestionIds}
         onSelectHistoryQuestion={selectQuestion}
-        joker={
-          jokerRound
-            ? {
-                roundNumber: jokerRound.roundNumber,
-                roundTitle: jokerRound.title,
-                isPlayed: isJokerRoundPlayed(
-                  jokerRound.roundNumber,
-                  progress.status,
-                  view.pastRevealedQuestions,
-                ),
-              }
-            : null
-        }
+        powerUps={hasPowerUpsPanel ? powerUpsList : null}
         bonus={
           hasBonusPanel
             ? {
@@ -425,9 +488,10 @@ function PlayPageContent() {
         myAnswers={myAnswers}
         myAnswerGrades={myAnswerGrades}
         isConnected={connectionError === null}
-        jokerRoundNumber={jokerRound?.roundNumber ?? null}
+        doubledRoundNumbers={doubledRoundNumbers}
       />
       <SavedConfirmation isVisible={isSaved} />
+      <PowerUpMoment moment={powerUpMoment} />
       <SettingsModal
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}

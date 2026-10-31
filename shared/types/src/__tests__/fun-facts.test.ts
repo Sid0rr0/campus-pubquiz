@@ -112,7 +112,7 @@ function sessionOf(
       progress,
     ),
     leaderboard: leaderboardOf(TEAM_NAMES),
-    funFactData: { answers: [], bonusAwards: [], ...data },
+    funFactData: { answers: [], bonusAwards: [], powerUps: [], ...data },
   };
 }
 
@@ -774,6 +774,53 @@ describe('describeFunFacts', () => {
         jokers,
       );
       expect(kinds(flopped)).not.toContain('best_joker');
+    });
+
+    it('counts a bought extra joker as a joker on its round', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+          answers: [answer(1, 0, 'correct')],
+          powerUps: [
+            {
+              teamId: 1,
+              powerUp: 'extra_joker',
+              questionId: null,
+              roundId: 1,
+              cost: 3,
+            },
+            // A team off the roster, and a purchase that is no extra joker.
+            {
+              teamId: 99,
+              powerUp: 'extra_joker',
+              questionId: null,
+              roundId: 2,
+              cost: 3,
+            },
+            {
+              teamId: 2,
+              powerUp: 'fifty_fifty',
+              questionId: 1,
+              roundId: null,
+              cost: 1,
+            },
+          ],
+        }),
+        { 2: { roundId: 3, source: 'chosen' } },
+      );
+
+      const facts = describeFunFacts(session);
+      expect(facts).toContainEqual({
+        kind: 'best_joker',
+        teamName: 'Alpha',
+        roundNumber: 1,
+        roundTitle: 'One',
+        extraPoints: 1000,
+      });
+      expect(facts).toContainEqual({
+        kind: 'joker_snubbed_round',
+        roundNumber: 2,
+        roundTitle: 'Two',
+      });
     });
 
     it('names a team whose revealed joker round was its lowest-scoring round', () => {

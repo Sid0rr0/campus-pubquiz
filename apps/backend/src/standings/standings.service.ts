@@ -4,6 +4,7 @@ import type {
   FunFactAnswer,
   FunFactBonusAward,
   FunFactData,
+  FunFactPowerUp,
   LeaderboardEntry,
 } from '@campus-pubquiz/types';
 import {
@@ -55,6 +56,9 @@ interface JokerRoundRow {
   roundId: number;
 }
 
+/** SQL: the team bought an extra joker for the round of `q` in the session of `a`. */
+const EXTRA_JOKER_ON_ROUND = `select 1 from purchases ex where ex.game_session_id = a.game_session_id and ex.team_id = a.team_id and ex.round_id = q.round_id and ex.power_up = 'extra_joker'`;
+
 type Knex = ReturnType<GameSessionTeamRepository['getKnex']>;
 
 /** Narrows a query to the given sessions; every session when no ids are given. */
@@ -90,10 +94,11 @@ function roundPointsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
       .select('a.game_session_id as game_session_id')
       .select('q.round_id as round_id', 'a.team_id as team_id')
       // The joker joins on the answer's own round, so it matches only a team's
-      // joker round: that round's answer points count double (ADR 0004).
+      // joker round: that round's answer points count double (ADR 0004). A
+      // bought extra joker for the round doubles it the same way, never more.
       .select(
         knex.raw(
-          'sum(a.points_awarded * case when j.id is null then 1 else ?::int end) as total',
+          `sum(a.points_awarded * case when j.id is null and not exists (${EXTRA_JOKER_ON_ROUND}) then 1 else ?::int end) as total`,
           [JOKER_MULTIPLIER],
         ),
       )
@@ -155,7 +160,7 @@ export class StandingsService {
    */
   async funFactData(gameSessionId: number): Promise<FunFactData> {
     const knex = this.gameSessionTeams.getKnex();
-    const [answerRows, bonusRows] = await Promise.all([
+    const [answerRows, bonusRows, powerUpRows] = await Promise.all([
       knex('answers as a')
         .join('game_session_teams as gst', function joinRoster() {
           this.on('gst.game_session_id', 'a.game_session_id').andOn(
@@ -174,8 +179,15 @@ export class StandingsService {
       knex('bonus_awards')
         .where('game_session_id', gameSessionId)
         .select('category', 'points') as Promise<FunFactBonusAward[]>,
+      knex('purchases')
+        .where('game_session_id', gameSessionId)
+        .orderBy('id')
+        .select('team_id as teamId', 'power_up as powerUp')
+        .select('question_id as questionId', 'round_id as roundId')
+        .select('cost') as Promise<FunFactPowerUp[]>,
     ]);
     return {
+      powerUps: powerUpRows,
       answers: answerRows.map((row) => ({
         ...row,
         pointsAwarded: Number(row.pointsAwarded),
@@ -215,8 +227,8 @@ export class StandingsService {
       this.loadRoundTotals(gameSessionIds),
       this.loadJokerRounds(gameSessionIds),
     ]);
-    const jokerRoundByTeam = new Map(
-      jokers.map((row) => [`${row.gameSessionId}:${row.teamId}`, row.roundId]),
+    const doubledRounds = new Set(
+      jokers.map((row) => `${row.gameSessionId}:${row.teamId}:${row.roundId}`),
     );
 
     const pointsByRoundAndTeam = new Map(
@@ -248,9 +260,9 @@ export class StandingsService {
                 pointsByRoundAndTeam.get(
                   `${gameSessionId}:${round.roundId}:${row.teamId}`,
                 ) ?? 0,
-              isJoker:
-                jokerRoundByTeam.get(`${gameSessionId}:${row.teamId}`) ===
-                round.roundId,
+              isJoker: doubledRounds.has(
+                `${gameSessionId}:${row.teamId}:${round.roundId}`,
+              ),
             })),
           } satisfies DepartedTeam,
         }));
@@ -443,10 +455,16 @@ export class StandingsService {
   ): Promise<JokerRoundRow[]> {
     if (gameSessionIds.length === 0) return [];
     const knex = this.gameSessionTeams.getKnex();
-    return (await knex('session_team_jokers')
+    const doubled = (await knex('session_team_jokers')
       .whereIn('game_session_id', [...gameSessionIds])
       .select('game_session_id as gameSessionId')
       .select('team_id as teamId', 'round_id as roundId')) as JokerRoundRow[];
+    const extra = (await knex('purchases')
+      .whereIn('game_session_id', [...gameSessionIds])
+      .where('power_up', 'extra_joker')
+      .select('game_session_id as gameSessionId')
+      .select('team_id as teamId', 'round_id as roundId')) as JokerRoundRow[];
+    return [...doubled, ...extra];
   }
 
   private async loadRoundTotals(

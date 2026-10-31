@@ -12,10 +12,10 @@ Parent spec: `.scratch/power-ups/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Leave-count rule in shared types with unit tests
-- [ ] Purchase service, real-Postgres spec for every refusal
-- [ ] Phone bar, admin answer list, display reveal, Vitest
-- [ ] `CLAUDE.md` Known Tradeoffs: a key fix after a power-up refunds nothing; the quiz master gives the coin back with a coin award
-- [ ] `DOCUMENTATION.md` power-ups section, `/guide` page
+- [x] Leave-count rule in shared types with unit tests
+- [x] Purchase service, real-Postgres spec for every refusal
+- [x] Phone bar, admin answer list, display reveal, Vitest
+- [x] `CLAUDE.md` Known Tradeoffs: a key fix after a power-up refunds nothing; the quiz master gives the coin back with a coin award
+- [x] `DOCUMENTATION.md` power-ups section, `/guide` page

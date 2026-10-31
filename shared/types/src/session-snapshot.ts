@@ -18,6 +18,13 @@ import {
   type JokerPickRound,
 } from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
+import {
+  extraJokerRoundId,
+  powerUpCountsFor,
+  coinBalanceOf,
+  visibleRoundTitle,
+  type PowerUpCount,
+} from './power-ups';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import {
   isCurrentKahootQuestionRevealed,
@@ -101,6 +108,16 @@ function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
   };
 }
 
+/** The power-ups used on the question on air in 'reveal'; empty outside a reveal. */
+function describePowerUpCounts(session: SessionState): PowerUpCount[] {
+  if (session.progress.status !== 'reveal') return [];
+  const question =
+    getBlockSeededQuestions(session)[session.progress.revealIndex];
+  return question
+    ? powerUpCountsFor(question.id, session.funFactData.powerUps)
+    : [];
+}
+
 /** The fields only the big screen and /control (and /remote) read — added to the display and admin views, never the players view. */
 export function buildScreenOperatorFields(
   session: SessionState,
@@ -168,9 +185,11 @@ export function buildDisplayFields(
   | 'kahootQuestionEndsAt'
   | 'jokerPickEndsAt'
   | 'teamsCorrect'
+  | 'powerUpCounts'
 > {
   const { rounds } = session.seededGame;
   return {
+    powerUpCounts: describePowerUpCounts(session),
     roundCategories: rounds.map((round) => round.category ?? ''),
     roundAuthors: rounds.map((round) => round.author ?? ''),
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
@@ -205,6 +224,7 @@ export function buildAdminFields(
           // Stryker disable next-line ConditionalExpression: equivalent for the `true &&` variant, null > number is false anyway; the null guard is for the type checker
           playerCount !== null && playerCount > maxPlayersPerTeam,
         joker: describeAdminTeamJoker(session, team.teamId),
+        coins: coinBalanceOf(session, team.teamId),
       };
     }),
     ungradedQuestionIds: session.ungradedQuestionIds,
@@ -217,9 +237,28 @@ export function buildPlayersFields(
   session: SessionState,
 ): Pick<
   PlayersStatePayload,
-  'upcomingQuestions' | 'pastRevealedQuestions' | 'jokerPick' | 'jokerRounds'
+  | 'upcomingQuestions'
+  | 'pastRevealedQuestions'
+  | 'jokerPick'
+  | 'jokerRounds'
+  | 'extraJokerOffer'
 > {
+  const { rounds, settings } = session.seededGame;
+  const offeredId = extraJokerRoundId(session);
+  const offeredIndex = rounds.findIndex((round) => round.id === offeredId);
   return {
+    extraJokerOffer:
+      offeredIndex === -1
+        ? null
+        : {
+            roundId: rounds[offeredIndex].id,
+            roundNumber: offeredIndex + 1,
+            title: visibleRoundTitle(
+              settings,
+              session.progress.status,
+              rounds[offeredIndex].title,
+            ),
+          },
     jokerRounds: isJokerLineupKnown(session)
       ? describeJokerPickRounds(session, false)
       : [],

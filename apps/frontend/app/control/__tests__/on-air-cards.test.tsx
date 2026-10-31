@@ -87,6 +87,7 @@ const LIVE_ANSWERS = {
       pointsAwarded: 0,
       gradedAt: null,
       gradingState: 'ungraded',
+      powerUps: [],
     },
   ],
 };

@@ -10,7 +10,7 @@ Parent spec: `.scratch/power-ups/spec.md`
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Masking rule in shared types with unit tests
-- [ ] Phone display, Vitest
+- [x] Masking rule in shared types with unit tests
+- [x] Phone display, Vitest

@@ -89,6 +89,7 @@ management and authoring UI:
 | `/team`                 | Anyone with a team code     | The team page: the team's own history, opened with its team code (see below)                   |
 | `/leagues`              | Admin only                  | Create, edit and delete leagues; add or remove ended sessions (see Leagues)                    |
 | `/league`               | Anyone                      | The public league tables (see Leagues)                                                         |
+| `/how-to-play`          | Anyone                      | Short player explainer: basics, bonuses, joker, power-ups, question types, scoring             |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -493,8 +494,8 @@ from the session, so a reloaded or second big screen draws the same thing):
   (it joined during the block) has no trend, and no team has one when there is
   no basis (after a backend restart, until the next block's first question
   opens). Ranks are compared with the shared ranking rule.
-- `jokerTeamIds` — the 2× stamp: the ids of the shown teams whose joker round
-  has a question in the block just scored, i.e. the block the prior standings
+- `jokerTeamIds` — the 2× stamp: the ids of the shown teams whose joker round,
+  or a round they bought an extra joker for, has a question in the block just scored, i.e. the block the prior standings
   were taken for (in a kahoot round, each question). The server decides; it is
   present only while the leaderboard is on air (so a pick is never sent early)
   and only when at least one team qualifies, and a team on 0 points is flagged
@@ -580,8 +581,10 @@ three joker facts that name no team can appear (and the list is `[]` when no
 bonus was awarded and Jokers is off). The joker facts that name a team
 (`best_joker`, `joker_backfired`) read only joker rounds whose questions are
 all revealed, so no pick leaks before its leaderboard; the other three count
-the roster's jokers and give no pick away. The session holds the
-answers and bonus awards (`funFactData`) and re-reads them with the standings
+the roster's jokers and give no pick away. A bought extra joker counts as a
+joker on its round in all five joker facts (a team may hold several). The
+session holds the answers, bonus awards and power-up purchases (`funFactData`)
+and re-reads them with the standings
 at the end of every session write and when a session is placed, so the facts
 follow hand grades and key fixes.
 
@@ -600,6 +603,155 @@ feeds the `/display` picker and the `/play` dropdown, leaves it out. Staff
 still see it in the `/sessions` list, marked "Unlisted". Joining and
 reconnecting by join code are unchanged. The start-session dialog and the
 `/control` lobby settings panel show it as the "Show in the game list" switch.
+
+**Power-ups settings.** Three session settings, validated by the partial-settings
+Zod schema and editable in the lobby only like every other setting; a stored
+settings JSON without them reads as off with the default table.
+**`powerUpsEnabled`** (boolean, default `false`) switches power-ups on;
+**`startingCoins`** (integer ≥ 0, default 2, `DEFAULT_STARTING_COINS`) is what every team starts with;
+**`powerUps`** is a table of `{ cost, maxUses }` (integers ≥ 0) for each of
+`fifty_fifty`, `first_letter`, `letter_count`, `pin_one`, `wider_margin`,
+`ask_the_room` and `extra_joker`, where `maxUses: 0` means not offered. Defaults:
+every power-up costs 2 and may be used once, except letter count (1), ask the room
+(3) and the extra joker (4 with `showRoundOverview` on, 3 off; a session created without a table
+gets the one matching its overview, and the settings form and a lobby settings
+patch that changes only `showRoundOverview` move the cost with the overview while
+it is still the default). The start dialog and the `/control` lobby settings
+panel show them as a "Power-ups" tab.
+
+A team's **coins** are `teamCoins` in shared types: starting coins (only with
+power-ups on) + carried coins + coin awards − purchase costs, never below 0.
+The starting coins, the carried coins, the coin awards and the purchases all count.
+The balance is sent as
+`coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
+`TEAM_PURCHASES_SYNCED` after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
+screen, `/control`'s Teams table has a Coins column, and the rules screen adds
+"Power-ups are on: you start with N coins. If your team rated all rounds of the
+last pub quiz, you get 2 bonus coins. Earn more with shots and selfies." when
+power-ups are on, and each shot and selfie bonus rule reads "1 point + 2 coins". With them off, a phone whose
+team holds carried coins gets "You have 2 coins for rating every round of your last
+league night. Spend them on power-ups." instead (the big screen can't know).
+
+**Carried coins.** A team that rated every round (a round rating from the break or
+the final form; other feedback doesn't count) of the last ended session it took
+part in that shares a league with this one brings 2 coins (`CARRIED_COINS`); a session in no league
+brings none, and with two leagues the last session sharing either counts. It is
+decided once, when the quiz leaves the lobby for every team on the roster and at
+the join for a team that comes later, and stored in `session_carried_coins`, so
+removing the league afterwards, a rejoin or a restart doesn't take it back.
+It counts even with power-ups off: the phone then shows the coins (and "Two coins are
+yours for rating every round of your last league night", from `hasCarriedCoin` in
+`JOIN_ACCEPTED`) only to teams holding one, and the shop uses the session's
+power-up table. Merging teams keeps it with the kept team.
+
+**Coin awards.** Stored in `coin_awards` (team, session, `coins`, optional
+`reason`, optional `bonus_award_id`). A shot or selfie bonus award with positive points in a session with
+power-ups on writes a linked +2 coin award (`SHOT_SELFIE_COINS`) in the same flush; the foreign key
+cascades, so deleting the bonus award deletes the coin award (and when the team
+has already spent those coins, an unlinked coin award covers them, so the
+balance never hides a debt), and editing its
+points leaves it alone. The bonus award form's optional **coins** field (any
+non-zero integer, negative takes coins, up to 100 either way) is sent as `coins`
+on `AWARD_BONUS` and stored as its own unlinked coin award, with the form's
+reason if one was typed. With `points` 0 and `coins` set, only the coin award is
+stored (no bonus award, no bonus toast, no category limit check). A coins value
+in a session without power-ups is refused, and the form hides the field. A take of
+more coins than the team has is refused whole, with its points: "That team has only N
+coins to take", so a balance never hides a debt. The
+session keeps each team's coin award sum in a cache (`SessionState.coinAwards`,
+read from the table when the session is placed, so a restart gets it back) so the
+snapshot's `coins` stay synchronous. The awarded team's phone hears
+`COIN_AWARDED` (`{ coins, reason?, balance }`, a toast: the coins this award gave
+in all, with the new balance), and `TEAM_COINS_SYNCED` (`{ balance, hasCarriedCoin }`,
+no toast) when deleting a bonus award took its coin award with it, when the quiz
+leaves the lobby (carried coins were just decided) and when the lobby settings
+change. The balance never shows
+below 0, even when a removed award's coins were already spent. The quiz master sees a
+team's coin awards, oldest first with their reasons, under its bonus awards on
+`/control`: `GET /sessions/:joinCode/teams/:teamId/bonus-awards` carries them as
+`coinAwards` (`{ id, coins, reason?, createdAt }`). The list is read-only; to undo
+one, give the opposite coins.
+
+**Buying a power-up.** A team sends one event, `BUY_POWER_UP`
+(`{ powerUp, questionId }`, players only, validated with Zod), for the question it
+is answering. The server refuses, before storing anything, when: the question can
+no longer be answered (a locked block, or a question not open yet; never a
+showdown), the power-up does not work on the question (the type registry's
+`powerUps` list, a 50/50 needs more than two options, and no question power-up
+works in a kahootMode round, where a tap locks the pick), the session does not
+offer it (`maxUses: 0`), the team used it `maxUses` times already, it already ran
+on this question, or the balance is below the cost. These rules are
+`purchaseRefusal` in shared types. A purchase works in a session with power-ups off
+too, for a team that has coins. It is a row in the `purchases` table (team,
+session, power-up, question or round, the cost paid, and the **stored effect** as
+JSON, parsed on read by `purchaseEffectSchema`): the effect is drawn once at
+purchase and never changes, so a reconnect or backend restart shows the same
+thing. The balance subtracts the sum of the `cost` column through `teamCoins`,
+nowhere else. The buying team's phones get `TEAM_PURCHASES_SYNCED`
+(`{ purchases, coins }`) and `JOIN_ACCEPTED` carries the same `purchases`; the admin
+room is refreshed (the Coins column and the answer list). A later power-up adds a
+member to `PurchaseEffect`/`purchaseEffectSchema`, a case to the effect builder in
+`purchase-changes.ts` and the id to its question types' `powerUps`.
+
+**Ask the room** (multiple choice) stores the whole-percent split of the other
+teams' current answers at the moment of purchase (`askTheRoomSplit`, summing to 100)
+as `{ kind: 'ask_the_room', split }`: no team count, right/wrong or names. It is
+refused with "Waiting for more answers" (nothing charged) until 3 other teams have a
+current answer that matches an option (the server refusal stays as the backstop).
+The phone's button is greyed out as "Waiting for more answers" until the server
+says it is ready: every time an answer lands on an open question, each connected
+team gets `TEAM_ROOM_READY_SYNCED` (`{ questionId, isReady }`, its own phones
+only), `isReady` meaning 3 _other_ teams have a matching answer. The join reply
+carries `roomReadyQuestionIds` (the block in play's ready questions) so a
+reconnect restores it. Only that boolean travels; the phone never learns how many
+teams answered. The phone shows the split under the question, with options its
+50/50 removed crossed out.
+
+**Pin one** (sort and match) draws one item of the answer key with the injected
+random source (`drawPin`) and stores `{ kind: 'pin_one', item, position }`: the item
+belongs at `position` of the sort order, or of the match's right-hand column (the
+right item beside left item `position`). The phone puts it there (`lockPin`), shows
+it with a pin, and locks it: no drag handle or move buttons, and other items move
+around it, also after a reconnect. The submitted answer is the phone's order; the
+server does not check it against the pin.
+
+**50/50** leaves ⌊n/2⌋ options, never fewer than two, and always the correct one
+(`fiftyFiftyLeaveCount`, `drawRemovedOptions`); it is not offered on a two-option
+question. Which options go is drawn once with the injected random source and stored
+as `{ kind: 'fifty_fifty', removedOptions }`. The phone's power-ups list (a drawer on
+mobile, which closes once a purchase goes through; a sidebar on desktop) puts the
+power-ups usable right now first, each with its cost and an activate button. An
+accepted purchase plays a short stamp naming the power-up and its cost (the team's
+own action, so never on a load or reconnect), then the effect arrives: hints and
+the room split ease in. The phone greys the removed options out, still in their
+place and not selectable (also after a reconnect, from the purchases in
+`JOIN_ACCEPTED`). A power-up already used never changes or resubmits the answer
+and is never refunded: a key fix after a purchase refunds nothing, and the quiz
+master gives the coin back with a coin award. `/control`'s answer list names the
+power-ups each answer used (`AnswerView.powerUps`), and the big screen's reveal
+shows the **power-up count** per question (`DisplayStatePayload.powerUpCounts`,
+only when non-zero, no team names).
+
+**First letter** and **letter count** work on free-text questions. First letter is the
+answer key's literal first character; letter count is the key with each letter and
+digit as `_`, spaces and punctuation kept (`textHint`). The hint is worked out from
+the key at purchase time and stored as `{ kind, hint }`, so a later key fix doesn't
+change what the team saw. The phone shows it above the answer box, also after a
+reconnect.
+
+**Wider margin** (Number only, not closest guess) grades the buying team against
+`widenedMargin` of the question's margin: the value doubled in its unit, or
+`DEFAULT_MARGIN` (10%) when the margin is 0 (exact only). It stores just
+`{ kind: 'wider_margin' }`: the margin is derived from the question's current one
+wherever it is used, so it follows a key fix. `AnswerService` grades that team's
+answer with `withWiderMargin` at submit, and on a key fix or kahoot speed score
+(`StoredAnswerRow.hasWiderMargin`). The phone shows the doubled margin text instead
+of the question's. Buying after already submitting re-grades the team's answer at
+once (`AnswerService.regradeForWiderMargin`, which keeps a grade at or above the
+new score) and sends the team its answers (`TEAM_ANSWERS_SYNCED`), so there is
+nothing to resubmit. A **pin** bought after answering is different: the order sent
+stays as it was until the team submits again, so when the answer given has the pinned item off its place, the phone adds "Submit again to
+send the pinned order."
 
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like
@@ -700,6 +852,39 @@ same way: `TEAM_JOKER_SYNCED` to that team's own connected phones and a fresh
 `STATE_UPDATED` to the admin room alone. The team can pick again while the pick is
 still open, which replaces the quiz master's choice.
 
+**Extra joker.** `BUY_POWER_UP` with `{ powerUp: 'extra_joker', roundId }`
+doubles a round for the buying team, with or without Jokers. Only the round
+on offer can be bought (`extraJokerRoundId`: the first round with no opened
+question whose intro has not been on air: any status after the joker pick has
+the current round's intro on air or past, so only later rounds are offered; any
+time before that intro from the rules on, mid-block included, but never in the
+lobby, where the settings can still turn power-ups off under a purchase, and never a kahootMode round: when the next
+round is one, nothing is offered); a round that is the team's joker round or already has an
+extra joker is refused ("That round is already doubled"), as are the usual
+limit and coin refusals. The purchase row stores `roundId` (no `questionId`)
+and the effect `{ kind: 'extra_joker' }`. Scoring treats a round as doubled
+when the team has a joker row or an extra-joker purchase on it (the same SQL
+step as the joker, so no round counts more than double; bonus awards never
+double), and the round's cell carries `isJoker`. A joker can't be put on a round
+the team holds an extra joker for: `PICK_JOKER` and `SET_TEAM_JOKER` refuse it
+and draws skip it, also the redraw after a live edit. The players view carries `extraJokerOffer`
+(`{ roundId, roundNumber, title }`, title `""` with the round overview off or not yet on air (`lobby`, `rules`; `visibleRoundTitle`), or
+`null`); the phone's Extra joker card offers "Activate for the next round: _Title_"
+(or "Round N" when the title is empty) from it. A bought extra joker gets everything
+a joker round gets on that team's phone: the joker line and picker heading, the joker
+moment on its intro, the joker border and the extra points on the reveal.
+
+A Live edit save moves an extra joker with its round the way it moves the quiz
+master's joker (a round is known by its questions; the extra jokers are
+re-pointed before the jokers, inside the same save). The two differ when the
+round is gone: a joker is redrawn because every team must hold one, but an extra
+joker is optional, so it is removed and its cost handed back (the balance is
+worked out from the purchase rows). That also happens when two extra jokers of a
+team would land on one round, and when the edit made the round a kahootMode round. A round that survives keeps its extra jokers even
+when the row it sat on is deleted (the save stores them again from the session's
+cache of purchases, since the database drops a deleted row's purchases). Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
+and purchases stay right.
+
 **One joker per team.** In a session with Jokers every team always holds exactly
 one joker:
 
@@ -723,19 +908,21 @@ pick and does not already hold: "Your joker was changed by the quiz master"
 (`set_by_quiz_master`) or "A joker was drawn for your team" (`drawn`). The team's
 own pick (`chosen`), a joker it already holds (closing the pick re-sends every
 joker), and the joker `JOIN_ACCEPTED` carries on a reconnect or rejoin only update
-the chip, never toast.
+the joker line, never toast.
 
 The phone screen for the pick is `{ kind: 'joker_pick', isOpen }`: the picker while
 `isOpen`, and the team's joker with "Look at the screen" once the pick has closed.
-Every phone whose team has a joker shows a **joker chip** in the actions bar
-("🃏 R4"); tapping it opens a drawer saying "Round 4 — Music scores double". The
-phone names the round from `jokerRounds` in the players view. Once the joker
-round's block has been revealed (a question of it is among
-`pastRevealedQuestions`, or the quiz has `ended`) the chip reads "🃏 R4 · played"
-and the drawer "scored double"; the phone derives this from the view, no event
-carries it.
+Every phone whose team has a doubled round (its joker or an extra joker) shows a
+**joker line** beside the team name for each ("🃏 Round 4 — Music scores double"),
+and the question picker's heading for that round reads "🃏 Music · 2×", shown even
+when it is the block's only round. The phone names a joker round from `jokerRounds`
+in the players view and an extra joker's from its `PurchaseView.round`, which only
+that team's phones get (title `""` with the round overview off or not yet on air: the line then reads
+"Round 4 scores double"). Once a doubled round's block has been revealed (a question
+of it is among `pastRevealedQuestions`, or the quiz has `ended`) the line reads
+"scored double"; the phone derives this from the view, no event carries it.
 
-While the phone shows a question of its joker round, in every block browser mode
+While the phone shows a question of a doubled round, in every block browser mode
 (`answering`, `locked`, `revealing`), the browser wears a **joker border**; other
 rounds' questions in the same block never do. The `round_title` phone screen
 carries `roundNumber` (the 1-based round it introduces) so the phone can tell
@@ -794,13 +981,19 @@ phone with a toast), `TEAM_BONUS_AWARDS_SYNCED` (`{ bonusAwards }`, the team's
 full list in award order as `TeamBonusAwardView[]`, to the awarded team's own
 phone only when the quiz master edits or deletes an award; it replaces the
 phone's list with no toast, and a disconnected team catches up on rejoin),
+`COIN_AWARDED` and `TEAM_COINS_SYNCED` (to the team's own phone; see Coin awards
+above),
+`TEAM_PURCHASES_SYNCED` (`{ purchases, coins }`, to the buying team's own phones
+only; see Buying a power-up above),
+`TEAM_ROOM_READY_SYNCED` (`{ questionId, isReady }`, to each connected team's own
+phones after an answer lands; see Ask the room above),
 `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
 Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `SET_TEAM_JOKER`, `AWARD_BONUS`,
 `SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE`, `SET_DISPLAY_SOUND_MUTED`
 (`{ isDisplaySoundMuted: boolean }`) and `CREATE_SHOWDOWN_ROUND` (admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
-`SEND_FEEDBACK`, `RATE_SESSION`, `SET_PLAYER_COUNT`, `PICK_JOKER` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
+`SEND_FEEDBACK`, `RATE_SESSION`, `SET_PLAYER_COUNT`, `PICK_JOKER`, `BUY_POWER_UP` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
 acknowledged with `AckResult`. Room
 membership is checked server-side on every handler; violations raise
 `WsException`. Quiz listing/creation and session lifecycle (list, start,
@@ -943,7 +1136,9 @@ itself — the display and other players just see counts.
    awarded team's phone shows a toast for a new award (category, signed points
    and, for `custom`, the reason; about 8 seconds, success-styled for a bonus,
    plain for a penalty) — not for edits, deletions or awards restored on
-   rejoin, which only appear in the bonus drawer.
+   rejoin, which only appear in the bonus drawer. In a session with power-ups
+   the form also has a coins field, and a shot or selfie comes with +2 coins
+   (see Coin awards under the session settings).
    A hand grade (`GRADE_ANSWER`), a bonus and a showdown's points are whole or
    half points: the server refuses any other decimal, because the points
    columns are single-precision and a value like 0.3 would come back in totals

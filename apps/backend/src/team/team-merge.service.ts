@@ -48,10 +48,13 @@ const REFERENCES_SQL = `
   select game_session_id, team_id from game_session_teams
   union select game_session_id, team_id from answers
   union select game_session_id, team_id from bonus_awards
+  union select game_session_id, team_id from coin_awards
   union select game_session_id, team_id from round_ratings
   union select game_session_id, team_id from session_feedback
   union select game_session_id, team_id from session_team_jokers
   union select game_session_id, team_id from session_player_counts
+  union select game_session_id, team_id from session_carried_coins
+  union select game_session_id, team_id from purchases
   union select sr.game_session_id, srt.team_id
     from showdown_round_teams srt join showdown_rounds sr on sr.id = srt.showdown_round_id
   union select game_session_id, winner_team_id from showdown_rounds where winner_team_id is not null
@@ -69,10 +72,13 @@ export const TEAM_COLUMNS: readonly [table: string, column: string][] = [
   ['game_session_teams', 'team_id'],
   ['answers', 'team_id'],
   ['bonus_awards', 'team_id'],
+  ['coin_awards', 'team_id'],
   ['round_ratings', 'team_id'],
   ['session_feedback', 'team_id'],
   ['session_team_jokers', 'team_id'],
   ['session_player_counts', 'team_id'],
+  ['session_carried_coins', 'team_id'],
+  ['purchases', 'team_id'],
   ['showdown_round_teams', 'team_id'],
   ['showdown_rounds', 'winner_team_id'],
 ];

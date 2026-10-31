@@ -5,12 +5,15 @@ import { readQuestionPayload } from '@/db/question-payload';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Purchase } from '@/db/entities/purchase.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
+import { PurchaseRepository } from '@/db/repositories/purchase.repository';
+import { PurchaseService } from '@/purchase/purchase.service';
 import { AnswerService, type GradableQuestion } from '@/answer/answer.service';
 import { useTestDatabase } from '@/test-db/test-database';
 
@@ -109,6 +112,9 @@ export function setupAnswerServiceTest(): AnswerServiceTestContext {
     state.answerService = new AnswerService(
       state.em.getRepository<Answer, AnswerRepository>(Answer),
       state.em.getRepository<Team, TeamRepository>(Team),
+      new PurchaseService(
+        state.em.getRepository<Purchase, PurchaseRepository>(Purchase),
+      ),
     );
     const quiz = state.em.create(Quiz, { title: 'Answer Test Quiz' });
     state.round = state.em.create(Round, {

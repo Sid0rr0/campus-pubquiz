@@ -178,13 +178,21 @@ body {
   .drawer-left[data-state='closed'] {
     animation: drawer-out-left 180ms ease-in;
   }
+  .drawer-bottom[data-state='open'] {
+    animation: drawer-in-bottom 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .drawer-bottom[data-state='closed'] {
+    animation: drawer-out-bottom 180ms ease-in;
+  }
   @media (prefers-reduced-motion: reduce) {
     .drawer-right[data-state='open'],
-    .drawer-left[data-state='open'] {
+    .drawer-left[data-state='open'],
+    .drawer-bottom[data-state='open'] {
       animation: drawer-fade-in 200ms ease-out;
     }
     .drawer-right[data-state='closed'],
-    .drawer-left[data-state='closed'] {
+    .drawer-left[data-state='closed'],
+    .drawer-bottom[data-state='closed'] {
       animation: drawer-fade-out 150ms ease-in;
     }
   }
@@ -218,5 +226,15 @@ body {
 @keyframes drawer-out-left {
   to {
     transform: translateX(-100%);
+  }
+}
+@keyframes drawer-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes drawer-out-bottom {
+  to {
+    transform: translateY(100%);
   }
 }

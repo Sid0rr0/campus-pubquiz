@@ -1,5 +1,7 @@
 import {
   BONUS_CATEGORIES,
+  CARRIED_COINS,
+  SHOT_SELFIE_COINS,
   DEFAULT_SESSION_SETTINGS,
   type QuizStructureSummary,
   type SessionSettings,
@@ -17,10 +19,13 @@ export type RulesSettings = Pick<
   | 'maxPlayersPerTeam'
   | 'extraPlayerPenaltyPoints'
   | 'jokersEnabled'
->;
+> &
+  Partial<Pick<SessionSettings, 'powerUpsEnabled' | 'startingCoins'>>;
 
 const JOKER_RULE =
   "Joker: pick one round to score double. You'll choose after the round overview.";
+
+const CARRIED_COIN_RULE = `You have ${CARRIED_COINS} coins for rating every round of your last league night. Spend them on power-ups.`;
 
 /** Standalone, with no live session to read from: default house rules and team size, and no bonus bullets (those are session config). */
 const STANDALONE_RULES_SETTINGS: RulesSettings = {
@@ -36,6 +41,24 @@ interface RulesContentProps {
   quizStructure?: QuizStructureSummary;
   /** The session's settings: `rules` is one bullet per entry, `enabledBonusCategories` appends a bullet per category with a fixed explanation (shot, selfie; "custom" has none), and `maxPlayersPerTeam` with `extraPlayerPenaltyPoints` make a generated bullet shown first, and `jokersEnabled` appends the joker line. Omitted when there is no live session. */
   settings?: RulesSettings;
+  /** The viewing team holds a carried coin (phone only): with power-ups off, the rules say it can still be spent. */
+  hasCarriedCoin?: boolean;
+}
+
+const COIN_AMOUNT = /(\d+ points? \+ \d+ coins?|\d+ coins?)/;
+
+/** The rule's text with coin amounts ("2 coins", "1 point + 2 coins") picked out in colour. */
+function highlightCoins(rule: string) {
+  return rule.split(COIN_AMOUNT).map((part, index) =>
+    // split() with one capture group puts the matches at the odd indices
+    index % 2 === 1 ? (
+      <strong key={index} className="font-black text-magenta">
+        {part}
+      </strong>
+    ) : (
+      part
+    ),
+  );
 }
 
 function pluralize(count: number, singular: string): string {
@@ -80,6 +103,7 @@ function getQuizStructureText({
 export function RulesContent({
   quizStructure,
   settings = STANDALONE_RULES_SETTINGS,
+  hasCarriedCoin = false,
 }: RulesContentProps) {
   const {
     rules,
@@ -87,21 +111,37 @@ export function RulesContent({
     maxPlayersPerTeam,
     extraPlayerPenaltyPoints,
     jokersEnabled,
+    powerUpsEnabled,
+    startingCoins = 0,
   } = settings;
   const bonusRules = BONUS_CATEGORIES.filter(
     (category) =>
       enabledBonusCategories.includes(category) &&
       BONUS_CATEGORY_EXPLANATIONS[category] !== undefined,
-  ).map(
-    (category) =>
-      `${BONUS_CATEGORY_LABELS[category]} bonus: ${BONUS_CATEGORY_EXPLANATIONS[category]}`,
-  );
+  ).map((category) => {
+    const explanation = BONUS_CATEGORY_EXPLANATIONS[category];
+    return `${BONUS_CATEGORY_LABELS[category]} bonus: ${
+      powerUpsEnabled
+        ? explanation?.replace(
+            '(1 point',
+            `(1 point + ${SHOT_SELFIE_COINS} coins`,
+          )
+        : explanation
+    }`;
+  });
   const teamSizeRule = `Max ${maxPlayersPerTeam} players per team, every additional player costs the team −${extraPlayerPenaltyPoints} points.`;
   const displayedRules = [
     teamSizeRule,
     ...rules,
     ...bonusRules,
     ...(jokersEnabled ? [JOKER_RULE] : []),
+    ...(powerUpsEnabled
+      ? [
+          `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. If your team rated all rounds of the last pub quiz, you get ${CARRIED_COINS} bonus coins. Earn more with shots and selfies.`,
+        ]
+      : hasCarriedCoin
+        ? [CARRIED_COIN_RULE]
+        : []),
   ];
 
   return (
@@ -123,7 +163,7 @@ export function RulesContent({
             <span aria-hidden="true" className="text-cyan">
               •
             </span>
-            <span>{rule}</span>
+            <span>{highlightCoins(rule)}</span>
           </li>
         ))}
       </ul>

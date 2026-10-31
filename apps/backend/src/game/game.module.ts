@@ -13,10 +13,12 @@ import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
 import { SessionWrite } from '@/game/state/session-write';
+import { CarriedCoinService } from '@/coins/carried-coin.service';
 import { JokerService } from '@/joker/joker.service';
 import { LeagueTableService } from '@/league/league-table.service';
 import { LeagueService } from '@/league/league.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { PurchaseService } from '@/purchase/purchase.service';
 import { QuizPreviewService } from '@/quiz/quiz-preview.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { ShowdownService } from '@/showdown/showdown.service';
@@ -36,6 +38,8 @@ import { TeamService } from '@/team/team.service';
   imports: [AuthModule],
   providers: [
     JokerService,
+    CarriedCoinService,
+    PurchaseService,
     SeedService,
     TeamService,
     TeamHistoryService,

@@ -8,6 +8,7 @@ import {
   type GradingState,
   type ScoredQuestion,
   type ScoreResult,
+  withWiderMargin,
 } from '@campus-pubquiz/types';
 
 /**
@@ -139,6 +140,8 @@ export interface StoredAnswerRow extends StoredAnswerGrade {
   responseMs: number | null;
   verdict: ScoreResult['verdict'] | null;
   pointsAwarded: number;
+  /** Whether the answering team bought a wider margin on this question: graded against the widened one. */
+  hasWiderMargin?: boolean;
 }
 
 export interface KeyFixInput {
@@ -188,7 +191,7 @@ export function rescoreAutoGraded(
   return rows.map((row) =>
     setOf(
       scoreSubmission(
-        question,
+        row.hasWiderMargin ? withWiderMargin(question) : question,
         row.value,
         timerMs === null ? undefined : { responseMs: row.responseMs, timerMs },
       ),

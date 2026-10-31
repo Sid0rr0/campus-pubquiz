@@ -193,16 +193,16 @@ A one-off help a team buys with coins, in a session played with power-ups. Most 
 _Avoid_: lifeline, boost, cheat
 
 **Coin**:
-What a team spends on power-ups. Coins are never points: they count towards no score, placing or league. A team starts a session played with power-ups with the session's starting coins, plus its carried coin, and earns more from coin awards; coins left at the end of the session are lost. A team's coins never go below zero.
+What a team spends on power-ups. Coins are never points: they count towards no score, placing or league. A team starts a session played with power-ups with the session's starting coins, plus any carried coins, and earns more from coin awards; coins left at the end of the session are lost. A team's coins never go below zero.
 _Avoid_: points, credits, token (that's the team's reconnect credential)
 
 **Coin award**:
-Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award comes with a one-coin award in a session played with power-ups.
+Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award with positive points comes with a two-coin award in a session played with power-ups.
 _Avoid_: bonus coins, coin bonus
 
-**Carried coin**:
-The one coin a team brings into a session for having rated every round of its last ended session that shares a league with it. It is decided when the quiz starts (or when the team joins, if later) and can be spent even in a session played without power-ups. A session in no league brings no carried coin.
-_Avoid_: rating coin, loyalty coin
+**Carried coins**:
+The two coins a team brings into a session for having rated every round of its last ended session that shares a league with it. They are decided when the quiz starts (or when the team joins, if later) and can be spent even in a session played without power-ups. A session in no league brings no carried coins.
+_Avoid_: carried coin, rating coin, loyalty coin
 
 **50/50**:
 A power-up on a multiple-choice question that removes options for one team, leaving half of them (rounded down, never fewer than two) with the right one always among them. Not offered on a two-option question.

@@ -1,9 +1,19 @@
-import { formatAnswer, isHttpUrl } from '@campus-pubquiz/types';
+import {
+  formatAnswer,
+  isHttpUrl,
+  isPinOffPlace,
+  removedOptionsOf,
+  resolveAnswerKind,
+  pinFor,
+  POWER_UP_LABELS,
+  widenedMargin,
+} from '@campus-pubquiz/types';
 import type {
   BlockMode,
   BlockQuestionView,
   PlayersRevealQuestionView,
   JoinAcceptedPayload,
+  PurchaseView,
   QuestionView,
   Verdict,
 } from '@campus-pubquiz/types';
@@ -16,8 +26,17 @@ import {
 } from '@/app/components/closest-guess-reveal-screen';
 import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
+import { RoomSplit } from '@/app/play/power-up-bar';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
+
+/** How a bought hint or room split arrives: after the stamp has landed and the drawer has cleared. */
+const POWER_UP_EFFECT_ARRIVAL = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay: 0.3, duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+} as const;
 
 interface QuestionNavigation {
   canGoBack: boolean;
@@ -56,6 +75,10 @@ interface QuestionBrowserProps {
   navigation?: QuestionNavigation;
   /** Whether the selected question belongs to the team's joker round — its answers count double, so the browser wears a joker border. */
   isJokerQuestion?: boolean;
+  /** The numbers of the rounds doubled for the team, marked in the picker. */
+  doubledRoundNumbers?: readonly number[];
+  /** The team's own power-up purchases: their effects show on the question, whatever the coins left. */
+  purchases?: PurchaseView[];
 }
 
 interface RevealBodyProps {
@@ -111,8 +134,25 @@ export function QuestionBrowser({
   onSubmitAnswer,
   navigation,
   isJokerQuestion = false,
+  doubledRoundNumbers = [],
+  purchases = [],
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
+  // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
+  const removedOptions = removedOptionsOf(selectedQuestion.id, purchases);
+  const hasWiderMargin = purchases.some(
+    (p) =>
+      p.effect.kind === 'wider_margin' && p.questionId === selectedQuestion.id,
+  );
+  const pin = pinFor(selectedQuestion.id, purchases);
+  // A pin snaps its item into place on the phone, but the answer already sent keeps the old order.
+  const hasPinOffPlace =
+    myAnswer !== undefined &&
+    isPinOffPlace(resolveAnswerKind(selectedQuestion), myAnswer, pin);
+  // The server grades a wider margin at once, but a pin changes the order only when it is sent again.
+  const resubmitNote = hasPinOffPlace
+    ? 'Submit again to send the pinned order.'
+    : null;
 
   return (
     <div
@@ -147,6 +187,7 @@ export function QuestionBrowser({
         <div className="order-last md:order-0">
           <QuestionPicker
             pickerRounds={pickerRounds}
+            doubledRoundNumbers={doubledRoundNumbers}
             selectedQuestionId={selectedQuestion.id}
             myAnswers={myAnswers}
             onSelect={onSelectQuestion}
@@ -193,9 +234,18 @@ export function QuestionBrowser({
             {selectedQuestion.prompt}
           </h1>
           <NumberMarginText
-            question={selectedQuestion}
+            question={
+              selectedQuestion.margin && hasWiderMargin
+                ? { margin: widenedMargin(selectedQuestion.margin) }
+                : selectedQuestion
+            }
             className="text-center text-sm font-extrabold tracking-wide text-foreground/55"
           />
+          {resubmitNote !== null && mode === 'answering' && isAnswerable && (
+            <p className="text-center text-sm font-extrabold text-magenta">
+              {resubmitNote}
+            </p>
+          )}
           {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               {selectedQuestion.isVideoHidden
@@ -212,12 +262,47 @@ export function QuestionBrowser({
               })}
             </p>
           )}
+          <MotionConfig reducedMotion="user">
+            {/* Keyed by question and initial={false}: only an effect bought here and now eases in, never one already there on a load or when moving between questions. */}
+            <AnimatePresence key={selectedQuestion.id} initial={false}>
+              {purchases.map(
+                ({ questionId, effect }) =>
+                  questionId === selectedQuestion.id &&
+                  'hint' in effect && (
+                    <motion.p
+                      key={effect.kind}
+                      {...POWER_UP_EFFECT_ARRIVAL}
+                      className="text-center font-mono text-lg font-extrabold tracking-widest"
+                    >
+                      {POWER_UP_LABELS[effect.kind]}: {effect.hint}
+                    </motion.p>
+                  ),
+              )}
+              {mode === 'answering' &&
+                isAnswerable &&
+                team &&
+                purchases.some(
+                  (p) =>
+                    p.questionId === selectedQuestion.id &&
+                    p.effect.kind === 'ask_the_room',
+                ) && (
+                  <motion.div key="room-split" {...POWER_UP_EFFECT_ARRIVAL}>
+                    <RoomSplit
+                      question={selectedQuestion}
+                      purchases={purchases}
+                    />
+                  </motion.div>
+                )}
+            </AnimatePresence>
+          </MotionConfig>
           {mode === 'answering' && isAnswerable && team && (
             <AnswerForm
               key={selectedQuestion.id}
               question={selectedQuestion}
+              removedOptions={removedOptions}
               initialValue={myAnswers[selectedQuestion.id] ?? ''}
               isKahootMode={isKahootMode}
+              pin={pin}
               onSubmit={(value) =>
                 onSubmitAnswer(selectedQuestion.id, team.teamId, value)
               }

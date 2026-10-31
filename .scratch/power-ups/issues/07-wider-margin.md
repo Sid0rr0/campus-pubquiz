@@ -9,8 +9,8 @@ Parent spec: `.scratch/power-ups/spec.md`
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Widening rule in shared types with unit tests
-- [ ] Real-Postgres spec: submit-time grade and key-fix re-score both use the team's margin
-- [ ] Phone shows the team's accepted range
+- [x] Widening rule in shared types with unit tests
+- [x] Real-Postgres spec: submit-time grade and key-fix re-score both use the team's margin
+- [x] Phone shows the team's accepted range

@@ -57,47 +57,56 @@ function renderPlay(
   renderWithQuery(<PlayPage />);
 }
 
-describe('PlayPage — the joker chip', () => {
+describe('PlayPage — the joker line', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
   });
 
-  it('shows the round number of the team’s joker in the actions bar', () => {
+  it('names the team’s joker round in full beside the team name', () => {
     renderPlay({ roundId: 2, source: 'chosen' });
-
-    expect(screen.getByRole('button', { name: /🃏 R2/ })).toBeInTheDocument();
-  });
-
-  it('explains on tap which round scores double', async () => {
-    renderPlay({ roundId: 2, source: 'chosen' });
-
-    await userEvent.click(screen.getByRole('button', { name: /🃏 R2/ }));
 
     expect(
-      await screen.findByText('Round 2 — World Capitals scores double'),
+      screen.getByText('Round 2 — World Capitals scores double'),
     ).toBeInTheDocument();
   });
 
-  it('carries the chip for a joker the quiz master set or the server drew', () => {
+  it('carries the line for a joker the quiz master set or the server drew', () => {
     renderPlay({ roundId: 1, source: 'set_by_quiz_master' });
 
-    expect(screen.getByRole('button', { name: /🃏 R1/ })).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Round 1 — .* scores double$/),
+    ).toBeInTheDocument();
   });
 
-  it('has no chip while the team has no joker', () => {
+  it('has no line while the team has no joker', () => {
     renderPlay(null);
 
-    expect(
-      screen.queryByRole('button', { name: /🃏/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/scores double$/)).not.toBeInTheDocument();
   });
 
-  it('has no chip when the session plays without jokers', () => {
+  it('has no line when the session plays without jokers', () => {
     renderPlay(null, jokerNight({ settings: { jokersEnabled: false } }));
 
-    expect(
-      screen.queryByRole('button', { name: /🃏/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/scores double$/)).not.toBeInTheDocument();
+  });
+});
+
+describe('PlayPage — the actions bar', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    searchParamsRef.current = new URLSearchParams();
+  });
+
+  it('offers the answer history from the start, with an empty drawer', async () => {
+    renderPlay(null, jokerNight({ progress: { status: 'lobby' } }));
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Answer history (0)' }),
+    );
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'No questions opened yet.',
+    );
   });
 });

@@ -9,7 +9,9 @@ import {
   MAX_PLAYER_COUNT,
   MIN_PLAYER_COUNT,
   DISPLAY_TEXT_SCALE_STEPS,
+  POWER_UP_IDS,
   type BonusCategory,
+  type BuyPowerUpPayload,
   type GameAction,
 } from '@campus-pubquiz/types';
 
@@ -45,6 +47,8 @@ const MAX_STARS = 5;
 const STAR_STEP = 0.5;
 
 const positiveInt = z.number().int().positive();
+/** The most coins one manual coin award may give or take. */
+const MAX_COIN_AWARD = 100;
 const finiteNumber = z.number().finite();
 // Whole or half points only (see nearestHalfPoint): the points columns are
 // single-precision, so any other decimal comes back as float noise in totals.
@@ -115,6 +119,11 @@ export const setTeamJokerPayloadSchema = z.object({
   roundId: positiveInt,
 });
 
+export const buyPowerUpPayloadSchema = z.union([
+  z.object({ powerUp: z.enum(POWER_UP_IDS), questionId: positiveInt }),
+  z.object({ powerUp: z.literal('extra_joker'), roundId: positiveInt }),
+]) satisfies z.ZodType<BuyPowerUpPayload>;
+
 export const gradeAnswerPayloadSchema = z.object({
   answerId: positiveInt,
   pointsAwarded: halfPointNumber,
@@ -148,6 +157,7 @@ export const awardBonusPayloadSchema = z.object({
   category: z.enum(BONUS_CATEGORIES as [BonusCategory, ...BonusCategory[]]),
   reason: z.string().max(BONUS_REASON_MAX_LENGTH).optional(),
   points: halfPointNumber,
+  coins: z.number().int().min(-MAX_COIN_AWARD).max(MAX_COIN_AWARD).optional(),
 });
 
 export const createShowdownRoundPayloadSchema = z.object({

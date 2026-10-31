@@ -2,13 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   BONUS_CATEGORIES,
+  SHOT_SELFIE_COINS,
   type BonusAwardAdminView,
   type BonusCategory,
+  type CoinAwardAdminView,
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
+import { CoinAward } from '@/db/entities/coin-award.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
+import { CoinAwardRepository } from '@/db/repositories/coin-award.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
 export class InvalidBonusAwardError extends Error {
@@ -28,6 +32,17 @@ export class BonusAwardNotFoundError extends Error {
 
 export interface AwardedBonus {
   teamId: number;
+  /** The coins this award gave in all (the linked `SHOT_SELFIE_COINS` plus any manual coins); 0 when none. */
+  coinsGiven: number;
+  /** The sum of the team's coin awards after this award. */
+  coinTotal: number;
+}
+
+/** What the session's power-ups setting and the form's coins field add to an award. */
+export interface AwardCoins {
+  powerUpsEnabled: boolean;
+  /** The form's manual coins (may be negative, absent or 0 for none). */
+  manual?: number;
 }
 
 function toAdminView(award: BonusAward): BonusAwardAdminView {
@@ -45,6 +60,8 @@ export class BonusService {
   constructor(
     @InjectRepository(BonusAward)
     private readonly bonusAwards: BonusAwardRepository,
+    @InjectRepository(CoinAward)
+    private readonly coinAwards: CoinAwardRepository,
     @InjectRepository(GameSessionTeam)
     private readonly gameSessionTeams: GameSessionTeamRepository,
   ) {}
@@ -57,21 +74,30 @@ export class BonusService {
     reason?: string,
     enabledCategories: readonly BonusCategory[] = BONUS_CATEGORIES,
     maxAwardsPerCategory: Partial<Record<BonusCategory, number>> = {},
+    coins: AwardCoins = { powerUpsEnabled: false },
   ): Promise<AwardedBonus> {
-    if (!Number.isFinite(points) || points === 0) {
+    const manualCoins = coins.manual ?? 0;
+    // Points of 0 give coins alone: no bonus award is stored.
+    const givesPoints = points !== 0;
+    if (!Number.isFinite(points) || (!givesPoints && manualCoins === 0)) {
       throw new InvalidBonusAwardError(
         'Bonus points must be a non-zero number',
       );
     }
+    if (manualCoins !== 0 && !coins.powerUpsEnabled) {
+      throw new InvalidBonusAwardError(
+        'Coins can only be awarded in a session with power-ups',
+      );
+    }
 
-    if (!enabledCategories.includes(category)) {
+    if (givesPoints && !enabledCategories.includes(category)) {
       throw new InvalidBonusAwardError(
         `"${category}" is not enabled for this session`,
       );
     }
 
     const trimmedReason = reason?.trim();
-    if (category === 'custom' && !trimmedReason) {
+    if (givesPoints && category === 'custom' && !trimmedReason) {
       throw new InvalidBonusAwardError('A custom bonus needs a reason');
     }
 
@@ -84,7 +110,7 @@ export class BonusService {
     }
 
     const cap = maxAwardsPerCategory[category];
-    if (cap !== undefined) {
+    if (givesPoints && cap !== undefined) {
       const awardedCount = await this.bonusAwards.countAwards(
         gameSessionId,
         teamId,
@@ -97,16 +123,58 @@ export class BonusService {
       }
     }
 
-    const bonusAward = this.bonusAwards.create({
-      gameSession: gameSessionId,
-      team: teamId,
-      category,
-      reason: category === 'custom' ? trimmedReason : undefined,
-      points,
-    });
-    await this.bonusAwards.getEntityManager().persistAndFlush(bonusAward);
+    const em = this.bonusAwards.getEntityManager();
+    let coinsGiven = 0;
+    if (givesPoints) {
+      const bonusAward = this.bonusAwards.create({
+        gameSession: gameSessionId,
+        team: teamId,
+        category,
+        reason: category === 'custom' ? trimmedReason : undefined,
+        points,
+      });
+      em.persist(bonusAward);
+      // A shot or selfie earns coins of its own, which go with the award; a penalty earns none.
+      if (coins.powerUpsEnabled && category !== 'custom' && points > 0) {
+        em.persist(
+          this.coinAwards.create({
+            gameSession: gameSessionId,
+            team: teamId,
+            coins: SHOT_SELFIE_COINS,
+            bonusAward,
+          }),
+        );
+        coinsGiven += SHOT_SELFIE_COINS;
+      }
+    }
+    if (manualCoins !== 0) {
+      em.persist(
+        this.coinAwards.create({
+          gameSession: gameSessionId,
+          team: teamId,
+          coins: manualCoins,
+          reason: trimmedReason || undefined,
+        }),
+      );
+      coinsGiven += manualCoins;
+    }
+    await em.flush();
 
-    return { teamId };
+    return {
+      teamId,
+      coinsGiven,
+      coinTotal: await this.coinAwardTotal(gameSessionId, teamId),
+    };
+  }
+
+  /** The sum of each team's coin awards in the session, by team id (teams with none are absent). */
+  coinAwardTotals(gameSessionId: number): Promise<Record<number, number>> {
+    return this.coinAwards.totalsForSession(gameSessionId);
+  }
+
+  /** The sum of one team's coin awards in the session. */
+  async coinAwardTotal(gameSessionId: number, teamId: number): Promise<number> {
+    return (await this.coinAwardTotals(gameSessionId))[teamId] ?? 0;
   }
 
   async listForTeam(
@@ -128,6 +196,20 @@ export class BonusService {
   ): Promise<BonusAwardAdminView[]> {
     const awards = await this.bonusAwards.listForTeam(gameSessionId, teamId);
     return awards.map(toAdminView);
+  }
+
+  /** Admin view of a team's coin awards, oldest first: what each gave or took and why. */
+  async listCoinAwardsForTeam(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<CoinAwardAdminView[]> {
+    const awards = await this.coinAwards.listForTeam(gameSessionId, teamId);
+    return awards.map((award) => ({
+      id: award.id,
+      coins: award.coins,
+      reason: award.reason ?? undefined,
+      createdAt: award.createdAt.toISOString(),
+    }));
   }
 
   private async findOwnedAward(
@@ -172,14 +254,17 @@ export class BonusService {
     return { award: toAdminView(award), teamId: award.team.id };
   }
 
-  /** Deletes an award and returns the id of the team that held it. */
+  /** Deletes an award, and with it (in the database) the coin award it created, and returns the id of the team that held it and that team's coin award total afterwards. */
   async remove(
     gameSessionId: number,
     awardId: number,
-  ): Promise<{ teamId: number }> {
+  ): Promise<{ teamId: number; coinTotal: number }> {
     const award = await this.findOwnedAward(gameSessionId, awardId);
     const teamId = award.team.id;
     await this.bonusAwards.getEntityManager().removeAndFlush(award);
-    return { teamId };
+    return {
+      teamId,
+      coinTotal: await this.coinAwardTotal(gameSessionId, teamId),
+    };
   }
 }

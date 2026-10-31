@@ -12,7 +12,26 @@ export interface AwardBonusPayload {
   category: BonusCategory;
   /** Free-text reason, required for category "custom", ignored otherwise. */
   reason?: string;
+  /** 0 gives coins alone (no bonus award is stored). Otherwise a non-zero half-point number. */
   points: number;
+  /** A manual coin award (any non-zero integer, negative takes coins), stored apart from the points. Refused when the session has no power-ups. */
+  coins?: number;
+}
+
+/** Pushed privately to a team's own socket when coins are awarded to it: what it got and its new balance. */
+export interface CoinAwardedPayload {
+  /** The coins this award gave (negative when taken). */
+  coins: number;
+  reason?: string;
+  /** The team's coin balance after the award. */
+  balance: number;
+}
+
+/** Pushed privately to a team's own socket when its coins changed without a new award: a linked coin award went with its deleted bonus award, the quiz left the lobby (carried coins), or the lobby settings changed. */
+export interface TeamCoinsSyncedPayload {
+  balance: number;
+  /** Whether the coins include carried coins, so the phone can say where they came from. */
+  hasCarriedCoin: boolean;
 }
 
 /** One bonus award a team has actually received — the team-facing view used by both JoinAcceptedPayload.bonusAwards and BONUS_AWARDED. */
@@ -29,10 +48,21 @@ export interface BonusAwardAdminView extends TeamBonusAwardView {
   createdAt: string;
 }
 
+/** Admin-only view of one coin award: the quiz master's coins given or taken, or the +2 that came with a shot or selfie award. */
+export interface CoinAwardAdminView {
+  id: number;
+  /** Negative when coins were taken. */
+  coins: number;
+  reason?: string;
+  createdAt: string;
+}
+
 /** Response for GET /sessions/:joinCode/teams/:teamId/bonus-awards. */
 export interface BonusAwardsListedPayload {
   teamId: number;
   awards: BonusAwardAdminView[];
+  /** The team's coin awards, oldest first; empty in a session without power-ups. */
+  coinAwards: CoinAwardAdminView[];
 }
 
 /** Request body for PATCH /sessions/:joinCode/bonus-awards/:awardId. Category is intentionally not editable — changing it could invalidate the reason requirement for "custom". */

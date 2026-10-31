@@ -27,10 +27,14 @@ describe('SOCKET_EVENTS', () => {
       TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
       BONUS_AWARDED: 'game:bonus_awarded',
       TEAM_BONUS_AWARDS_SYNCED: 'game:team_bonus_awards_synced',
+      COIN_AWARDED: 'game:coin_awarded',
+      TEAM_COINS_SYNCED: 'game:team_coins_synced',
       SESSION_CLOSED: 'game:session_closed',
       TEAM_KICKED: 'game:team_kicked',
       TEAM_PLAYER_COUNT_SYNCED: 'game:team_player_count_synced',
       TEAM_JOKER_SYNCED: 'game:team_joker_synced',
+      TEAM_PURCHASES_SYNCED: 'game:team_purchases_synced',
+      TEAM_ROOM_READY_SYNCED: 'game:team_room_ready_synced',
       ADMIN_ACTION: 'game:admin_action',
       SUBMIT_ANSWER: 'game:submit_answer',
       JOIN_PLAYERS: 'game:join_players',
@@ -50,6 +54,7 @@ describe('SOCKET_EVENTS', () => {
       SET_TEAM_PLAYER_COUNT: 'game:set_team_player_count',
       PICK_JOKER: 'game:pick_joker',
       SET_TEAM_JOKER: 'game:set_team_joker',
+      BUY_POWER_UP: 'game:buy_power_up',
     });
   });
 });
@@ -298,6 +303,17 @@ describe('SessionSettings defaults', () => {
       collectFeedback: true,
       funFactsEnabled: true,
       listed: true,
+      powerUpsEnabled: false,
+      startingCoins: 2,
+      powerUps: {
+        fifty_fifty: { cost: 2, maxUses: 1 },
+        first_letter: { cost: 2, maxUses: 1 },
+        letter_count: { cost: 1, maxUses: 1 },
+        pin_one: { cost: 2, maxUses: 1 },
+        wider_margin: { cost: 2, maxUses: 1 },
+        ask_the_room: { cost: 3, maxUses: 1 },
+        extra_joker: { cost: 3, maxUses: 1 },
+      },
       rules: [
         'No cheating.',
         'Please write your answers in English.',

@@ -2,6 +2,7 @@ import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import { formatAnswer, type Verdict } from './answer-kind';
 import { jokerRoundPoints } from './joker';
+import type { PowerUpId } from './power-ups';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import { questionOutcome } from './question-outcome';
 import type { QuestionType } from './question-types';
@@ -26,14 +27,27 @@ export interface FunFactBonusAward {
   points: number;
 }
 
+/** One power-up purchase, as far as the live views need it: the reveal's power-up count and each team's coins. */
+export interface FunFactPowerUp {
+  teamId: number;
+  powerUp: PowerUpId;
+  /** The question it was bought for; null for a round power-up. */
+  questionId: number | null;
+  /** The round an extra joker was bought for; null otherwise. */
+  roundId: number | null;
+  cost: number;
+}
+
 /**
- * The session's stored answers and bonus awards that fun facts are built
- * from, and the reveal's teams-correct count reads it too. A cache filled
- * with the standings, so the display view stays synchronous.
+ * The session's stored answers, bonus awards and power-up purchases that fun
+ * facts are built from, and the reveal's teams-correct and power-up counts read
+ * it too. A cache filled with the standings, so the display view stays
+ * synchronous.
  */
 export interface FunFactData {
   answers: FunFactAnswer[];
   bonusAwards: FunFactBonusAward[];
+  powerUps: FunFactPowerUp[];
 }
 
 /** The question a fun fact is about, as the big screen words it ("Round 2 · Q3"). */
@@ -275,13 +289,27 @@ function jokerFacts(
     questionIds: round.questions.map((question) => question.id),
   }));
   const roundById = new Map(rounds.map((round) => [round.roundId, round]));
-  // Only teams on the roster (the leaderboard) with a joker on a round that exists.
+  // Only teams on the roster (the leaderboard) with a joker, or a bought extra
+  // joker, on a round that exists. A team may hold several.
   const holders = [...session.leaderboard]
     .sort((a, b) => compareTeamNames(a.teamName, b.teamName))
     .flatMap((team) => {
       const joker = session.jokers[team.teamId];
-      const round = joker && roundById.get(joker.roundId);
-      return joker && round ? [{ team, joker, round }] : [];
+      const picks = [
+        ...(joker ? [{ roundId: joker.roundId, source: joker.source }] : []),
+        ...session.funFactData.powerUps
+          .filter(
+            (p) =>
+              p.teamId === team.teamId &&
+              p.powerUp === 'extra_joker' &&
+              p.roundId !== null,
+          )
+          .map((p) => ({ roundId: p.roundId as number, source: 'extra' })),
+      ];
+      return picks.flatMap((pick) => {
+        const round = roundById.get(pick.roundId);
+        return round ? [{ team, joker: pick, round }] : [];
+      });
     });
   if (holders.length === 0) return [];
 

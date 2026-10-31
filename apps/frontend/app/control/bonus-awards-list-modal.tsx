@@ -16,6 +16,7 @@ import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { BONUS_CATEGORY_LABELS } from '@/app/lib/bonus-categories';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
+import { formatCoins } from '@/app/play/power-ups-list';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 
 interface AwardRowProps {
@@ -164,7 +165,8 @@ interface BonusAwardsListModalProps {
 
 /**
  * Lists every bonus award a team has received this session, with inline
- * edit (points + reason) and delete per row. Leaderboard totals update on
+ * edit (points + reason) and delete per row, then its coin awards (read-only:
+ * to undo one, award the opposite coins). Leaderboard totals update on
  * their own once a mutation succeeds: the backend's notifyBonusAwardsChanged
  * pushes a fresh STATE_UPDATED snapshot down the same socket TeamsTable
  * already listens to, so only this modal's own award-list query needs
@@ -232,6 +234,7 @@ export function BonusAwardsListModal({
   });
 
   const awards = awardsQuery.data?.awards ?? [];
+  const coinAwards = awardsQuery.data?.coinAwards ?? [];
 
   return (
     <Dialog.Root
@@ -275,6 +278,32 @@ export function BonusAwardsListModal({
                 />
               ))}
             </ul>
+          )}
+          {coinAwards.length > 0 && (
+            <>
+              <h3 className="text-sm font-extrabold">Coin awards</h3>
+              <ul
+                aria-label="Coin awards"
+                className="flex max-h-40 flex-col gap-2 overflow-y-auto"
+              >
+                {coinAwards.map((coinAward) => (
+                  <li
+                    key={coinAward.id}
+                    className="flex flex-col gap-0.5 rounded-lg border border-background/20 bg-background/5 p-2.5 text-xs"
+                  >
+                    <span className="font-bold">
+                      {coinAward.coins > 0 ? '+' : ''}
+                      {formatCoins(coinAward.coins)}
+                    </span>
+                    {coinAward.reason && (
+                      <span className="text-background/70">
+                        {coinAward.reason}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
           <Button
             type="button"

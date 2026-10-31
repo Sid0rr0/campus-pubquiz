@@ -6,6 +6,7 @@ import { usePlayerMenu } from '@/app/lib/player-menu-context';
 import { Header } from '@/app/components/header';
 import {
   AccountMenuLinks,
+  HowToPlayLink,
   LeagueLink,
   MyTeamLink,
 } from '@/app/components/account-menu-links';
@@ -16,12 +17,12 @@ import { MobileHeaderMenu } from '@/app/components/mobile-header-menu';
  * branding as display's TriviaHeader. Signed-in admins/moderators get
  * Guide/Sessions/Teams/Log out links on every page (Users is admin-only),
  * inline on wide screens or behind a hamburger drawer below xl (md when
- * signed out, whose nav is just two links); /play publishes
+ * signed out, whose nav is just three links); /play publishes
  * its team's code/Log out into the same drawer via PlayerMenuProvider, since
  * useTeamLink lives route-locally on that page and has no other way to reach
  * this layout-level component. Everyone, signed in or not, gets the public
- * League link (inline, and in the drawer); signed-out visitors get nothing
- * else (no header-driven login entry point — /login and /register are
+ * League link (inline, and in the drawer); signed-out visitors also get My Team and How
+ * to play, and nothing else (no header-driven login entry point — /login and /register are
  * reached directly).
  *
  * Suppressed entirely on /display: that screen is audience-facing (no auth
@@ -70,6 +71,7 @@ function SiteHeaderContent({
           <>
             <LeagueLink />
             <MyTeamLink />
+            <HowToPlayLink />
           </>
         )}
       </nav>

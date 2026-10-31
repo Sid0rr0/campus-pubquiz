@@ -1,6 +1,7 @@
 import type { SessionState } from '@campus-pubquiz/types';
 import type { SeedService } from '@/db/seed.service';
 import type { JokerChanges } from '@/game/state/joker-changes';
+import type { PurchaseChanges } from '@/game/state/purchase-changes';
 import type { BlockGradingService } from '@/game/state/block-grading.service';
 import {
   BROADCAST_STATE_OUTCOME,
@@ -38,17 +39,26 @@ export function quizEditChange(
   seedService: SeedService,
   grading: BlockGradingService,
   jokers: Pick<JokerChanges, 'followRoundsAfterEdit'>,
+  purchases: Pick<PurchaseChanges, 'followRoundsAfterEdit'>,
   regradeQuestionIds: readonly number[],
 ): (started: SessionState) => Promise<SessionChange<SessionOutcome>> {
   return async (started) => {
-    // Jokers follow their rounds (and are redrawn for a deleted one) before
-    // anything is graded, so the regrade and every total see the final jokers.
-    const { session: reloaded, jokerSyncs } =
-      await jokers.followRoundsAfterEdit(
+    // Extra jokers, then jokers, follow their rounds (a joker is redrawn for a
+    // deleted one, an extra joker refunded) before anything is graded, so the
+    // regrade and every total see the final doubled rounds. The extra jokers go
+    // first: a joker never lands on a round its team doubles that way.
+    const { session: reloadedQuiz, purchaseSyncs } =
+      await purchases.followRoundsAfterEdit(
         started,
         await withReloadedQuiz(seedService, started),
       );
-    const broadcast = { ...BROADCAST_STATE_OUTCOME, jokerSyncs };
+    const { session: reloaded, jokerSyncs } =
+      await jokers.followRoundsAfterEdit(started, reloadedQuiz);
+    const broadcast = {
+      ...BROADCAST_STATE_OUTCOME,
+      jokerSyncs,
+      purchaseSyncs,
+    };
     if (regradeQuestionIds.length === 0) {
       return {
         session: reloaded,

@@ -14,6 +14,7 @@ import type {
   JokerPickRound,
 } from './joker';
 import type { LeagueTop } from './league';
+import type { PowerUpCount } from './power-ups';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
@@ -89,6 +90,8 @@ export interface AdminTeamView extends TeamView {
   isOverPlayerCap: boolean;
   /** The team's joker round and how it came to hold it, or null while it has none. The quiz master sees every team's; no other room is sent one. */
   joker: AdminTeamJoker | null;
+  /** The team's coins, worked out by the server. */
+  coins: number;
 }
 
 export interface StateSnapshotPayload {
@@ -197,6 +200,8 @@ export interface DisplayStatePayload
   jokerPickEndsAt: number | null;
   /** The revealed question's teams-correct count; null outside a reveal and on closest_guess, whose reveal names the closest teams. */
   teamsCorrect: TeamsCorrect | null;
+  /** The power-ups used on the revealed question, counted without naming a team; empty outside a reveal and when none was used. */
+  powerUpCounts: PowerUpCount[];
   /** The session's league for the lobby screen: its name and top rows, or null when the session is in no league. */
   leagueTop: LeagueTop | null;
 }
@@ -293,10 +298,20 @@ export interface PlayersStatePayload
   /**
    * Every round of a session played with jokers, by id, number and title, from
    * the joker pick onward (empty before it and without jokers), so a phone can
-   * name its joker round ("🃏 R4", "Round 4 — Music") whatever the status. Never
+   * name its joker round ("Round 4 — Music") whatever the status. Never
    * any team's choice.
    */
   jokerRounds: JokerPickRound[];
+  /**
+   * The round an extra joker can be bought for right now (`extraJokerRoundId`),
+   * its title left out ("") when the round overview is off so the offer stays
+   * blind. Null when there is none.
+   */
+  extraJokerOffer: {
+    roundId: number;
+    roundNumber: number;
+    title: string;
+  } | null;
   /**
    * Positions (and round titles) of the current block's remaining
    * questions — not open yet, shown as disabled slots in the block picker

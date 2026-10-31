@@ -64,13 +64,17 @@ export class LiveSessionRest {
     joinCode: string,
     teamId: number,
   ): Promise<BonusAwardsListedPayload> {
-    return this.inLiveSession(joinCode, async () => ({
-      teamId,
-      awards: await this.bonusService.listForTeamAdmin(
-        this.gameState.getGameSessionId(joinCode),
+    return this.inLiveSession(joinCode, async () => {
+      const gameSessionId = this.gameState.getGameSessionId(joinCode);
+      return {
         teamId,
-      ),
-    }));
+        awards: await this.bonusService.listForTeamAdmin(gameSessionId, teamId),
+        coinAwards: await this.bonusService.listCoinAwardsForTeam(
+          gameSessionId,
+          teamId,
+        ),
+      };
+    });
   }
 
   /** Edits an award's points and reason inside the Session write, then delivers the outcome. A refusal surfaces as the bonus service's own error type and message. */
@@ -130,8 +134,14 @@ export class LiveSessionRest {
   ): Promise<void> {
     return this.inLiveSession(joinCode, async () => {
       const { partial, leagueIds } = parseRequest();
-      await this.gameState.updateSessionSettings(joinCode, partial, leagueIds);
-      await this.broadcaster.broadcastState(joinCode);
+      await this.broadcaster.deliver(
+        joinCode,
+        await this.gameState.updateSessionSettings(
+          joinCode,
+          partial,
+          leagueIds,
+        ),
+      );
     });
   }
 

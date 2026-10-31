@@ -327,6 +327,7 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     expect(listed).toEqual({
       teamId: scorer.teamId,
       awards: [expect.objectContaining({ id: awardId, points: 1 })],
+      coinAwards: [],
     });
   });
 

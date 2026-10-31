@@ -25,7 +25,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1350;
+const MAX_GUIDE_WORDS = 1490;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -61,6 +61,41 @@ describe('GuideContent', () => {
     expect(text).toContain('random round');
     expect(text).toContain('N/M picked');
     expect(text).toContain('"Countdown sound"');
+  });
+
+  it('explains the Power-ups tab, starting coins and the Coins column', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('"Power-ups" tab');
+    expect(text).toContain('starting coins');
+    expect(text).toContain('cost and uses');
+    expect(text).toContain('Coins column');
+  });
+
+  it('explains the coin a shot or selfie gives and the bonus form’s Coins field', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('a shot or selfie also gives 2 coins');
+    expect(text).toContain('Coins field');
+  });
+
+  it('explains buying a 50/50, where the quiz master sees it and that it is never refunded', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('50/50');
+    expect(text).toContain('names the power-ups each answer used');
+    expect(text).toContain('Never refunded');
+  });
+
+  it('covers all seven power-ups, the carried coin, ask the room’s rule and giving a coin back', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Seven power-ups');
+    expect(text).toContain('Extra joker');
+    expect(text).toContain('needs 3 other teams');
+    expect(text).toContain('carries 2 coins in');
+    expect(text).toContain('give the coin back with a coin award');
+    expect(text).toContain('Deleting a shot or selfie award removes its coin');
   });
 
   it('explains that the joker round counts double and how the Teams table marks it', () => {

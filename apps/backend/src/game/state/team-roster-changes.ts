@@ -1,11 +1,21 @@
 import {
+  askTheRoomReady,
+  findQuestionOpenForAnswering,
+  getBlockInPlay,
+  powerUpApplies,
   type JoinPlayersPayload,
   SEAT_TAKEN_REFUSAL_MARKER,
   type SessionState,
   SOCKET_EVENTS,
   type TeamJoker,
 } from '@campus-pubquiz/types';
+import {
+  toPurchaseViews,
+  type PurchaseService,
+} from '@/purchase/purchase.service';
+import { balanceAfter } from '@/game/state/purchase-changes';
 import { AnswerService } from '@/answer/answer.service';
+import type { CarriedCoinService } from '@/coins/carried-coin.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
@@ -53,6 +63,8 @@ export class TeamRosterChanges {
     private readonly feedbackService: FeedbackService,
     private readonly playerCountService: PlayerCountService,
     private readonly jokerChanges: JokerChanges,
+    private readonly carriedCoinService: Pick<CarriedCoinService, 'decide'>,
+    private readonly purchases: Pick<PurchaseService, 'listForTeam'>,
   ) {}
 
   /**
@@ -104,10 +116,15 @@ export class TeamRosterChanges {
       team.id,
       heldJoker,
     );
+    // A team joining after the start has its carried coin decided now; in the lobby it is decided at the start.
+    const carriedCoins =
+      session.progress.status === 'lobby'
+        ? session.carriedCoins
+        : await this.carriedCoinService.decide(gameSessionId, [team.id]);
     const joined = withTeams(
       withJoker(
         withPlayerCount(
-          withTeamConnected(session, team.id, socketId),
+          withTeamConnected({ ...session, carriedCoins }, team.id, socketId),
           team.id,
           playerCount,
         ),
@@ -138,7 +155,31 @@ export class TeamRosterChanges {
     gameSessionId: number,
     team: TeamIdentity,
     joker: TeamJoker | null,
+    session: SessionState,
   ): Promise<SessionOutcome['replies'][number]> {
+    const { settings } = session.seededGame;
+    const carriedCoin = session.carriedCoins[team.id] ?? 0;
+    const purchases = await this.purchases.listForTeam(gameSessionId, team.id);
+    const roomReadyQuestionIds: number[] = [];
+    if (settings.powerUps.ask_the_room.maxUses > 0) {
+      for (const { questionId } of getBlockInPlay(
+        session.seededGame.rounds,
+        session.progress,
+      )) {
+        const question = findQuestionOpenForAnswering(session, questionId);
+        if (
+          question &&
+          powerUpApplies('ask_the_room', question) &&
+          askTheRoomReady(
+            question,
+            await this.answerService.listForQuestion(gameSessionId, questionId),
+            team.id,
+          )
+        ) {
+          roomReadyQuestionIds.push(questionId);
+        }
+      }
+    }
     return {
       event: SOCKET_EVENTS.JOIN_ACCEPTED,
       payload: {
@@ -168,6 +209,14 @@ export class TeamRosterChanges {
           team.id,
         ),
         joker,
+        coins: balanceAfter(session, team.id, purchases),
+        hasCarriedCoin: carriedCoin > 0,
+        purchases: toPurchaseViews(
+          purchases,
+          session.seededGame,
+          session.progress.status,
+        ),
+        roomReadyQuestionIds,
       },
     };
   }

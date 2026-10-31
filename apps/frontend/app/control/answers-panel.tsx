@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import {
   formatAnswer,
   halfPoints,
+  POWER_UP_LABELS,
   type AnswerView,
   type AnswersUpdatedPayload,
   type QuestionType,
@@ -89,6 +90,16 @@ function AnswerRow({
       }
     >
       <span className="w-40 shrink-0 font-extrabold">{teamName}</span>
+      {answer !== null && answer.powerUps.length > 0 && (
+        <span
+          data-testid="answer-power-ups"
+          className="shrink-0 text-xs font-extrabold text-cyan"
+        >
+          {answer.powerUps
+            .map((powerUp) => POWER_UP_LABELS[powerUp])
+            .join(', ')}
+        </span>
+      )}
       <span className="flex-1 text-[15px]">
         {hasAnswered
           ? formatAnswer(answer.value, {

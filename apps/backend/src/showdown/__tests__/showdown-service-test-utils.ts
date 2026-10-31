@@ -1,5 +1,6 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
+import { CoinAward } from '@/db/entities/coin-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { ShowdownRound } from '@/db/entities/showdown-round.entity';
@@ -7,6 +8,7 @@ import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Team } from '@/db/entities/team.entity';
 import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
+import { CoinAwardRepository } from '@/db/repositories/coin-award.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { ShowdownRoundRepository } from '@/db/repositories/showdown-round.repository';
 import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-team.repository';
@@ -43,6 +45,7 @@ export function setupShowdownServiceTest(): ShowdownServiceTestContext {
     state.em = db.orm.em.fork({ useContext: true });
     state.bonusService = new BonusService(
       state.em.getRepository<BonusAward, BonusAwardRepository>(BonusAward),
+      state.em.getRepository<CoinAward, CoinAwardRepository>(CoinAward),
       state.em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
         GameSessionTeam,
       ),

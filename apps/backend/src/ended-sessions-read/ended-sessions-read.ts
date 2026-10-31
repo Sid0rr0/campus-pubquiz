@@ -336,8 +336,16 @@ export class EndedSessionsRead {
       'team_id as teamId',
       'round_id as roundId',
     )) as { teamId: number; roundId: number }[];
-    const jokerRoundByTeam = new Map(
-      jokerRows.map((row) => [row.teamId, row.roundId]),
+    let extraQuery = knex('purchases')
+      .where('game_session_id', gameSessionId)
+      .where('power_up', 'extra_joker');
+    if (teamId !== undefined) extraQuery = extraQuery.where('team_id', teamId);
+    const extraRows = (await extraQuery.select(
+      'team_id as teamId',
+      'round_id as roundId',
+    )) as { teamId: number; roundId: number }[];
+    const doubledRounds = new Set(
+      [...jokerRows, ...extraRows].map((row) => `${row.teamId}:${row.roundId}`),
     );
     const roundIdByQuestion = new Map(
       questionRows.map((row) => [row.questionId, row.roundId]),
@@ -387,9 +395,9 @@ export class EndedSessionsRead {
         gradedAt: row.gradedAt === null ? null : new Date(row.gradedAt),
         responseMs: row.responseMs === null ? null : Number(row.responseMs),
         answer: formatAnswer(row.value, wordingById.get(row.questionId)!),
-        isJoker:
-          jokerRoundByTeam.get(row.teamId) ===
-          roundIdByQuestion.get(row.questionId),
+        isJoker: doubledRounds.has(
+          `${row.teamId}:${roundIdByQuestion.get(row.questionId)}`,
+        ),
       }),
     );
     return { questions, answers };

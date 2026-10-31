@@ -4,6 +4,7 @@ import { CheckIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import {
   IDK_ANSWER_VALUE,
   resolveAnswerKind,
+  type PinEffect,
   type QuestionView,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -15,6 +16,10 @@ interface AnswerFormProps {
   /** Active round's Kahoot-style speed scoring flag — for multiple_choice, tap submits immediately and locks the pick, with no Submit or "I don't know" button. */
   isKahootMode?: boolean;
   onSubmit: (value: string) => void;
+  /** A pin the team bought on this question (sort or match). */
+  pin?: PinEffect;
+  /** Options the team's 50/50 removed from this multiple-choice question: shown greyed out and not selectable. */
+  removedOptions?: string[];
 }
 
 interface IdkButtonProps {
@@ -48,6 +53,8 @@ export function AnswerForm({
   initialValue = '',
   isKahootMode = false,
   onSubmit,
+  pin,
+  removedOptions,
 }: AnswerFormProps) {
   const AnswerInput = ANSWER_INPUTS[resolveAnswerKind(question)];
   const isIdk = initialValue === IDK_ANSWER_VALUE;
@@ -58,6 +65,8 @@ export function AnswerForm({
       initialValue={initialValue}
       isKahootMode={isKahootMode}
       onSubmit={onSubmit}
+      pin={pin}
+      removedOptions={removedOptions}
       idkButton={
         <IdkButton
           isChosen={isIdk}

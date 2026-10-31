@@ -1,3 +1,4 @@
+import type { PowerUpId } from './power-ups';
 import type { AdminQuestionContext } from './room-views';
 import type { Verdict } from './scoring';
 
@@ -65,6 +66,8 @@ export interface AnswerView {
   gradedAt: string | null;
   /** Set together with gradedAt — what "correct" means everywhere (a speed-scaled kahoot answer is still correct). Null until graded. */
   verdict: Verdict | null;
+  /** The power-ups the team used on this question, so the quiz master can settle disputes. */
+  powerUps: PowerUpId[];
 }
 
 export interface AnswersUpdatedPayload {

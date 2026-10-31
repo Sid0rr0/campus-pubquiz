@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'motion/react';
 import { DragHandleDots2Icon } from '@radix-ui/react-icons';
-import { ANSWER_FORMATS } from '@campus-pubquiz/types';
+import { ANSWER_FORMATS, lockPin, type PinEffect } from '@campus-pubquiz/types';
 import { reorderOnDragEnd } from '@/app/lib/reorder-list';
 import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 
@@ -26,11 +26,14 @@ interface MatchAnswerProps {
   leftItems: string[];
   rightItems: string[];
   initialValue?: string;
+  /** A bought pin: its right-hand item stays beside its left item. */
+  pin?: PinEffect;
   onSubmit: (value: string) => void;
 }
 
 interface MatchRightRowProps {
   value: string;
+  isPinned: boolean;
   index: number;
   animatePositionChange: boolean;
 }
@@ -44,11 +47,12 @@ interface MatchRightRowProps {
  */
 function MatchRightRow({
   value,
+  isPinned,
   index,
   animatePositionChange,
 }: MatchRightRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: value });
+    useSortable({ id: value, disabled: isPinned });
 
   return (
     <motion.li
@@ -64,10 +68,14 @@ function MatchRightRow({
       }}
       className="flex min-h-16 items-center gap-2 bg-white py-1 pr-1 pl-1 text-lg font-bold text-foreground not-first:border-t-2 not-first:border-t-foreground/15"
     >
-      <span className="flex-1">{value}</span>
+      <span className="flex-1">
+        {value}
+        {isPinned && <span title="Pinned in place"> 📌</span>}
+      </span>
       <button
         type="button"
         aria-label={`Drag to reorder ${value}`}
+        disabled={isPinned}
         className="flex h-12 w-12 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-foreground/40 active:cursor-grabbing active:bg-foreground/10"
         {...attributes}
         {...listeners}
@@ -88,14 +96,17 @@ export function MatchAnswer({
   leftItems,
   rightItems,
   initialValue,
+  pin,
   onSubmit,
 }: MatchAnswerProps) {
   const restored = initialValue
     ? ANSWER_FORMATS.match.decode(initialValue)
     : [];
-  const [order, setOrder] = useState<string[]>(
+  const [draft, setOrder] = useState<string[]>(
     restored.length === rightItems.length ? restored : rightItems,
   );
+  // Derived, so a pin bought while the question is open snaps its pair into place at once.
+  const order = lockPin(draft, pin);
   const [isDragging, setIsDragging] = useState(false);
   const isSubmitted =
     Boolean(initialValue) &&
@@ -113,7 +124,7 @@ export function MatchAnswer({
     if (!over) return;
     const next = reorderOnDragEnd(order, String(active.id), String(over.id));
     if (!next) return;
-    setOrder(next);
+    setOrder(lockPin(next, pin));
   }
 
   return (
@@ -145,6 +156,7 @@ export function MatchAnswer({
                   key={value}
                   value={value}
                   index={index}
+                  isPinned={value === pin?.item}
                   animatePositionChange={!isDragging}
                 />
               ))}
