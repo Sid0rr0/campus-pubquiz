@@ -291,7 +291,7 @@ describe('GameGateway — buying an extra joker', () => {
     });
   });
 
-  it('still sells an extra joker for a kahootMode round, which no question power-up works in', async () => {
+  it('refuses an extra joker for a kahootMode round', async () => {
     const game = await night(
       {},
       {
@@ -300,10 +300,8 @@ describe('GameGateway — buying an extra joker', () => {
     );
     const [alpha] = game.teams;
 
-    expect(await buy(game, alpha, 0)).toEqual({ success: true });
-    expect(await stored(game, alpha)).toMatchObject([
-      { powerUp: 'extra_joker', roundId: game.rounds[0].id },
-    ]);
+    expect(await refusal(game, alpha, 0)).toMatch(/next round/);
+    expect(await stored(game, alpha)).toEqual([]);
   });
 
   describe('default cost in the lobby', () => {

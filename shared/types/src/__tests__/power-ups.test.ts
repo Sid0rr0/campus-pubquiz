@@ -67,6 +67,18 @@ describe('extraJokerRoundId', () => {
     },
   );
 
+  it('offers nothing when the next round is a kahootMode round', () => {
+    const kahootNext = extraJokerRoundId({
+      seededGame: {
+        rounds: [rounds[0], { ...rounds[1], kahootMode: true }],
+      },
+      openedQuestionIds: [],
+      progress: { status: 'round_intro', roundIndex: 0 },
+    });
+
+    expect(kahootNext).toBeNull();
+  });
+
   it('offers nothing in the lobby, where the settings can still turn power-ups off', () => {
     expect(offered('lobby', 0)).toBeNull();
   });

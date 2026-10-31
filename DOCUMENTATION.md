@@ -858,7 +858,8 @@ on offer can be bought (`extraJokerRoundId`: the first round with no opened
 question whose intro has not been on air: any status after the joker pick has
 the current round's intro on air or past, so only later rounds are offered; any
 time before that intro from the rules on, mid-block included, but never in the
-lobby, where the settings can still turn power-ups off under a purchase); a round that is the team's joker round or already has an
+lobby, where the settings can still turn power-ups off under a purchase, and never a kahootMode round: when the next
+round is one, nothing is offered); a round that is the team's joker round or already has an
 extra joker is refused ("That round is already doubled"), as are the usual
 limit and coin refusals. The purchase row stores `roundId` (no `questionId`)
 and the effect `{ kind: 'extra_joker' }`. Scoring treats a round as doubled
@@ -879,7 +880,7 @@ re-pointed before the jokers, inside the same save). The two differ when the
 round is gone: a joker is redrawn because every team must hold one, but an extra
 joker is optional, so it is removed and its cost handed back (the balance is
 worked out from the purchase rows). That also happens when two extra jokers of a
-team would land on one round. A round that survives keeps its extra jokers even
+team would land on one round, and when the edit made the round a kahootMode round. A round that survives keeps its extra jokers even
 when the row it sat on is deleted (the save stores them again from the session's
 cache of purchases, since the database drops a deleted row's purchases). Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
 and purchases stay right.

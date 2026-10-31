@@ -300,7 +300,11 @@ export class PurchaseChanges {
       if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
       const next = roundNowHolding(started, reloaded, bought.roundId);
       const key = `${bought.teamId}:${next}`;
-      if (next === null || kept.has(key)) continue;
+      const isKahoot =
+        reloaded.seededGame.rounds.find((round) => round.id === next)
+          ?.kahootMode ?? false;
+      // A round the edit made a kahootMode round is no longer doubled: refunded.
+      if (next === null || isKahoot || kept.has(key)) continue;
       kept.add(key);
       rebuilt.push({
         gameSessionId,
