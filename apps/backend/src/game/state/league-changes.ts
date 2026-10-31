@@ -4,6 +4,11 @@ import type {
   SessionSettings,
   SessionState,
 } from '@campus-pubquiz/types';
+import {
+  BROADCAST_STATE_OUTCOME,
+  coinSyncsFor,
+  type SessionOutcome,
+} from '@/game/state/session-outcome';
 import type { SessionSettingsChanges } from '@/game/state/session-settings-changes';
 import type { SessionChange } from '@/game/state/session-write';
 import type { LeagueTableService } from '@/league/league-table.service';
@@ -86,7 +91,7 @@ export class LeagueChanges {
     session: SessionState,
     partial: Partial<SessionSettings>,
     leagueIds: number[] | undefined,
-  ): Promise<SessionChange<void>> {
+  ): Promise<SessionChange<SessionOutcome>> {
     if (leagueIds) {
       await this.leagues.assertSessionAssignable(
         session.seededGame.joinCode,
@@ -97,9 +102,16 @@ export class LeagueChanges {
     if (Object.keys(partial).length > 0 || !leagueIds) {
       current = (await this.settings.lobbySettings(current, partial)).session;
     }
-    if (!leagueIds) {
-      return { session: current, outcome: undefined, touchedScores: false };
-    }
-    return this.setLeagues(current, leagueIds);
+    const change = leagueIds
+      ? await this.setLeagues(current, leagueIds)
+      : { session: current, touchedScores: false };
+    return {
+      ...change,
+      outcome: {
+        ...BROADCAST_STATE_OUTCOME,
+        // The settings decide the coins of a team already on its phone.
+        coinSyncs: coinSyncsFor(change.session),
+      },
+    };
   }
 }

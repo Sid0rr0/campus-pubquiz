@@ -494,8 +494,8 @@ from the session, so a reloaded or second big screen draws the same thing):
   (it joined during the block) has no trend, and no team has one when there is
   no basis (after a backend restart, until the next block's first question
   opens). Ranks are compared with the shared ranking rule.
-- `jokerTeamIds` — the 2× stamp: the ids of the shown teams whose joker round
-  has a question in the block just scored, i.e. the block the prior standings
+- `jokerTeamIds` — the 2× stamp: the ids of the shown teams whose joker round,
+  or a round they bought an extra joker for, has a question in the block just scored, i.e. the block the prior standings
   were taken for (in a kahoot round, each question). The server decides; it is
   present only while the leaderboard is on air (so a pick is never sent early)
   and only when at least one team qualifies, and a team on 0 points is flagged

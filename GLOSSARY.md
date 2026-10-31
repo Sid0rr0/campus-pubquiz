@@ -197,7 +197,7 @@ What a team spends on power-ups. Coins are never points: they count towards no s
 _Avoid_: points, credits, token (that's the team's reconnect credential)
 
 **Coin award**:
-Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award comes with a two-coin award in a session played with power-ups.
+Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award with positive points comes with a two-coin award in a session played with power-ups.
 _Avoid_: bonus coins, coin bonus
 
 **Carried coins**:
