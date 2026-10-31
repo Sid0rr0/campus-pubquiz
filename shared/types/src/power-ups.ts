@@ -405,7 +405,17 @@ export function optionsAfterPurchases(
   return options.filter((option) => !removed.has(option));
 }
 
-/** A team's coins: starting coins (only with power-ups on) + carried coin + the sum of its coin awards (may be negative) - the sum of its purchase costs, never below 0. */
+/** What a team has coming in: starting coins (only with power-ups on) + carried coin + the sum of its coin awards (may be negative). */
+function coinIncome(
+  settings: { powerUpsEnabled: boolean; startingCoins: number },
+  carriedCoin: number,
+  coinAwards: number,
+): number {
+  const starting = settings.powerUpsEnabled ? settings.startingCoins : 0;
+  return starting + carriedCoin + coinAwards;
+}
+
+/** A team's coins: what it has coming in (`coinIncome`) - the sum of its purchase costs, never below 0. */
 export function teamCoins(
   settings: {
     powerUpsEnabled: boolean;
@@ -415,8 +425,23 @@ export function teamCoins(
   coinAwards = 0,
   purchaseCosts = 0,
 ): number {
-  const starting = settings.powerUpsEnabled ? settings.startingCoins : 0;
-  return Math.max(0, starting + carriedCoin + coinAwards - purchaseCosts);
+  return Math.max(
+    0,
+    coinIncome(settings, carriedCoin, coinAwards) - purchaseCosts,
+  );
+}
+
+/** The coins a team has spent beyond what it has coming in: the debt `teamCoins`' floor at 0 would hide. */
+export function coinShortfall(
+  settings: Parameters<typeof teamCoins>[0],
+  carriedCoin = 0,
+  coinAwards = 0,
+  purchaseCosts = 0,
+): number {
+  return Math.max(
+    0,
+    purchaseCosts - coinIncome(settings, carriedCoin, coinAwards),
+  );
 }
 
 /** A team's coins read from a session's caches: its settings, the team's carried coin and coin award sum, and the purchases in `funFactData`. */

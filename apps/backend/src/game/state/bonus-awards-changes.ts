@@ -6,6 +6,7 @@ import {
   SOCKET_EVENTS,
   type TeamBonusAwardView,
   coinBalanceOf,
+  coinShortfall,
   purchaseCostsOf,
 } from '@campus-pubquiz/types';
 import {
@@ -125,7 +126,12 @@ export class BonusAwardsChanges {
     let { coinTotal } = removed;
     // The linked coin award went with it. Coins already spent must not turn into
     // a hidden debt (the balance shows 0, not less), so a coin award covers them.
-    const shortfall = coinShortfall(session, teamId, coinTotal);
+    const shortfall = coinShortfall(
+      settings,
+      session.carriedCoins[teamId],
+      coinTotal,
+      purchaseCostsOf(session.funFactData.powerUps, teamId),
+    );
     if (shortfall > 0) {
       ({ coinTotal } = await this.refusing(() =>
         this.bonusService.award(
@@ -167,23 +173,6 @@ type TeamNotice = { teamId: number } & (
   | { event: typeof SOCKET_EVENTS.BONUS_AWARDED; payload: TeamBonusAwardView }
   | { event: typeof SOCKET_EVENTS.COIN_AWARDED; payload: CoinAwardedPayload }
 );
-
-/** The coins the team has spent beyond what it has coming in (starting, carried, awards): what a balance floored at 0 would hide. */
-function coinShortfall(
-  session: SessionState,
-  teamId: number,
-  coinAwardTotal: number,
-): number {
-  const { settings } = session.seededGame;
-  const income =
-    (settings.powerUpsEnabled ? settings.startingCoins : 0) +
-    (session.carriedCoins[teamId] ?? 0) +
-    coinAwardTotal;
-  return Math.max(
-    0,
-    purchaseCostsOf(session.funFactData.powerUps, teamId) - income,
-  );
-}
 
 /** The session with the team's coin award total replaced (what the views read). */
 function withCoinTotal(
