@@ -649,7 +649,8 @@ power-up table. Merging teams keeps it with the kept team.
 power-ups on writes a linked +2 coin award (`SHOT_SELFIE_COINS`) in the same flush; the foreign key
 cascades, so deleting the bonus award deletes the coin award, and editing its
 points leaves it alone. The bonus award form's optional **coins** field (any
-non-zero integer, negative takes coins, up to 100 either way) is sent as `coins`
+non-zero integer, negative takes coins, up to 100 either way, but never more than
+the team has) is sent as `coins`
 on `AWARD_BONUS` and stored as its own unlinked coin award, with the form's
 reason if one was typed. With `points` 0 and `coins` set, only the coin award is
 stored (no bonus award, no bonus toast, no category limit check). A coins value

@@ -148,8 +148,30 @@ describe('Coin awards', () => {
     await award({ category: 'custom', points: 0, coins: -10 });
     expect(adminCoins()).toBe(0);
     expect(emitted(SOCKET_EVENTS.COIN_AWARDED).at(-1)?.payload).toEqual(
-      expect.objectContaining({ coins: -10, balance: 0 }),
+      expect.objectContaining({ coins: -5, balance: 0 }),
     );
+  });
+
+  it('takes no more coins than the team has, so a later award is not eaten by a hidden debt', async () => {
+    await start();
+
+    await award({ category: 'custom', points: 0, coins: -10 });
+    expect(adminCoins()).toBe(0);
+    await award({ category: 'shot', points: 1 });
+
+    expect(adminCoins()).toBe(2);
+  });
+
+  it('refuses to take coins from a team with none', async () => {
+    await start();
+    await award({ category: 'custom', points: 0, coins: -10 });
+
+    const ack = await award({ category: 'custom', points: 0, coins: -1 });
+
+    expect(ack).toEqual({
+      success: false,
+      error: 'That team has no coins to take',
+    });
   });
 
   it('keeps coin awards across a rejoin and a backend restart', async () => {
