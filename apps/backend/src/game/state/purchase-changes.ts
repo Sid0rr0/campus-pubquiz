@@ -14,7 +14,6 @@ import {
   type PowerUpId,
   type PurchaseEffect,
   type SeededQuestion,
-  type SessionSettings,
   type SessionState,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
@@ -35,32 +34,17 @@ import {
 import type { SessionChange } from '@/game/state/session-write';
 import { requireSeat } from '@/game/state/session-updates.util';
 
-/** The coins a team has left after `records`: the one place purchases subtract, through the shared balance. */
-export function coinsAfter(
-  settings: SessionSettings,
-  records: readonly PurchaseRecord[],
-  carriedCoin = 0,
-  coinAwards = 0,
-): number {
-  return teamCoins(
-    settings,
-    carriedCoin,
-    coinAwards,
-    records.reduce((sum, { cost }) => sum + cost, 0),
-  );
-}
-
-/** The team's coins after `records`: the session's cached carried coin and coin awards (decided elsewhere) and the stored purchases. */
-function balanceAfter(
+/** The team's coins after `records`: the session's cached carried coin and coin awards (decided elsewhere) and the stored purchases. The one place purchases subtract, through the shared balance. */
+export function balanceAfter(
   session: SessionState,
   teamId: number,
   records: readonly PurchaseRecord[],
 ): number {
-  return coinsAfter(
+  return teamCoins(
     session.seededGame.settings,
-    records,
     session.carriedCoins[teamId],
     session.coinAwards[teamId],
+    records.reduce((sum, { cost }) => sum + cost, 0),
   );
 }
 

@@ -145,6 +145,7 @@ export class GameStateService implements OnModuleInit {
     this.jokerChanges = new JokerChanges(
       this.jokerService,
       this.teamService,
+      this.purchaseService,
       random ?? Math.random,
     );
     this.settingsChanges = new SessionSettingsChanges(this.seedService);

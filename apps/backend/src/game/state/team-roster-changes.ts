@@ -10,7 +10,7 @@ import {
 } from '@campus-pubquiz/types';
 import { toPurchaseViews } from '@/purchase/purchase.service';
 import {
-  coinsAfter,
+  balanceAfter,
   type PurchaseChanges,
 } from '@/game/state/purchase-changes';
 import { AnswerService } from '@/answer/answer.service';
@@ -210,12 +210,7 @@ export class TeamRosterChanges {
           team.id,
         ),
         joker,
-        coins: coinsAfter(
-          settings,
-          purchases,
-          carriedCoin,
-          await this.bonusService.coinAwardTotal(gameSessionId, team.id),
-        ),
+        coins: balanceAfter(session, team.id, purchases),
         hasCarriedCoin: carriedCoin > 0,
         purchases: toPurchaseViews(
           purchases,

@@ -105,6 +105,7 @@ export class LiveEditService {
     this.jokerChanges = new JokerChanges(
       jokerService,
       teamService,
+      purchaseService,
       random ?? Math.random,
     );
   }

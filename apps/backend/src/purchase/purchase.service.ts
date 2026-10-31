@@ -74,13 +74,17 @@ export class PurchaseService {
     }));
   }
 
-  /** Every extra joker the session's teams bought, oldest first, for a live edit to re-point. */
+  /** Every extra joker the session's teams (or just `teamId`) bought, oldest first. */
   async extraJokerRows(
     gameSessionId: number,
+    teamId?: number,
   ): Promise<{ id: number; teamId: number; roundId: number }[]> {
     return (await this.purchases
       .getKnex()('purchases')
       .where({ game_session_id: gameSessionId, power_up: 'extra_joker' })
+      .modify((query) => {
+        if (teamId !== undefined) query.where('team_id', teamId);
+      })
       .whereNotNull('round_id')
       .orderBy('id')
       .select('id', 'team_id as teamId', 'round_id as roundId')) as {

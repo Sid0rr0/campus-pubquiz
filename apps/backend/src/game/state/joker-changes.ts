@@ -11,6 +11,7 @@ import {
   type TeamJoker,
 } from '@campus-pubquiz/types';
 import { JokerService } from '@/joker/joker.service';
+import { PurchaseService } from '@/purchase/purchase.service';
 import { TeamService } from '@/team/team.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
@@ -44,6 +45,7 @@ export class JokerChanges {
   constructor(
     private readonly jokerService: JokerService,
     private readonly teamService: TeamService,
+    private readonly purchaseService: PurchaseService,
     private readonly random: RandomSource,
   ) {}
 
@@ -120,13 +122,25 @@ export class JokerChanges {
     );
   }
 
+  /** The rounds the team bought an extra joker for: a joker may not sit on one, so no round counts more than double. */
+  private async extraJokerRoundIds(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<number[]> {
+    const rows = await this.purchaseService.extraJokerRows(
+      gameSessionId,
+      teamId,
+    );
+    return rows.map((row) => row.roundId);
+  }
+
   /** Refuses a joker on a round the team bought an extra joker for: the two would not stack. */
   private async refuseDoubledRound(
     session: SessionState,
     teamId: number,
     roundId: number,
   ): Promise<void> {
-    const extra = await this.jokerService.extraJokerRoundIds(
+    const extra = await this.extraJokerRoundIds(
       session.seededGame.gameSessionId,
       teamId,
     );
@@ -142,7 +156,7 @@ export class JokerChanges {
     session: SessionState,
     teamId: number,
   ): Promise<number[]> {
-    const extra = await this.jokerService.extraJokerRoundIds(
+    const extra = await this.extraJokerRoundIds(
       session.seededGame.gameSessionId,
       teamId,
     );
@@ -288,10 +302,7 @@ export class JokerChanges {
     for (const [key, joker] of held) {
       const teamId = Number(key);
       const followed = roundNowHolding(started, reloaded, joker.roundId);
-      const extra = await this.jokerService.extraJokerRoundIds(
-        gameSessionId,
-        teamId,
-      );
+      const extra = await this.extraJokerRoundIds(gameSessionId, teamId);
       let next: TeamJoker | null = joker;
       if (followed === null || extra.includes(followed)) {
         // Gone, or moved onto a round the team doubles with an extra joker: draw anew.

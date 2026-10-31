@@ -56,22 +56,6 @@ export class JokerService {
     return drawnTeamIds;
   }
 
-  /** The rounds the team bought an extra joker for: a joker may not sit on one, so no round counts more than double. */
-  async extraJokerRoundIds(
-    gameSessionId: number,
-    teamId: number,
-  ): Promise<number[]> {
-    const rows = (await this.jokers
-      .getKnex()('purchases')
-      .where({
-        game_session_id: gameSessionId,
-        team_id: teamId,
-        power_up: 'extra_joker',
-      })
-      .select('round_id as roundId')) as { roundId: number }[];
-    return rows.map((row) => row.roundId);
-  }
-
   /** The joker the team holds this session, or null when it has none. */
   async getForTeam(
     gameSessionId: number,
