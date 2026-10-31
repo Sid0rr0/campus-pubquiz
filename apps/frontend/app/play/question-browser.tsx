@@ -1,7 +1,11 @@
 import {
+  ANSWER_FORMATS,
   formatAnswer,
   isHttpUrl,
+  isSameOrder,
+  lockPin,
   removedOptionsOf,
+  resolveAnswerKind,
   pinFor,
   POWER_UP_LABELS,
   widenedMargin,
@@ -142,6 +146,24 @@ export function QuestionBrowser({
     (p) =>
       p.effect.kind === 'wider_margin' && p.questionId === selectedQuestion.id,
   );
+  const pin = pinFor(selectedQuestion.id, purchases);
+  const answerKind = resolveAnswerKind(selectedQuestion);
+  // A pin snaps its item into place on the phone, but the answer already sent keeps the old order.
+  const hasPinOffPlace =
+    pin !== undefined &&
+    myAnswer !== undefined &&
+    (answerKind === 'sort' || answerKind === 'match') &&
+    (() => {
+      const order = ANSWER_FORMATS[answerKind].decode(myAnswer);
+      return !isSameOrder(order, lockPin(order, pin));
+    })();
+  // The answer already given was graded without what was bought; only a new submit uses it.
+  const resubmitNote =
+    hasWiderMargin && myAnswer !== undefined
+      ? 'Submit again to use the wider margin.'
+      : hasPinOffPlace
+        ? 'Submit again to send the pinned order.'
+        : null;
 
   return (
     <div
@@ -230,15 +252,11 @@ export function QuestionBrowser({
             }
             className="text-center text-sm font-extrabold tracking-wide text-foreground/55"
           />
-          {/* The answer already given was graded with the old margin; only a new submit uses the wider one. */}
-          {hasWiderMargin &&
-            mode === 'answering' &&
-            isAnswerable &&
-            myAnswer !== undefined && (
-              <p className="text-center text-sm font-extrabold text-magenta">
-                Submit again to use the wider margin.
-              </p>
-            )}
+          {resubmitNote !== null && mode === 'answering' && isAnswerable && (
+            <p className="text-center text-sm font-extrabold text-magenta">
+              {resubmitNote}
+            </p>
+          )}
           {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               {selectedQuestion.isVideoHidden
@@ -295,7 +313,8 @@ export function QuestionBrowser({
               removedOptions={removedOptions}
               initialValue={myAnswers[selectedQuestion.id] ?? ''}
               isKahootMode={isKahootMode}
-              pin={pinFor(selectedQuestion.id, purchases)}
+              pin={pin}
+              mustResubmit={hasWiderMargin}
               onSubmit={(value) =>
                 onSubmitAnswer(selectedQuestion.id, team.teamId, value)
               }

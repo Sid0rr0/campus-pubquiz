@@ -747,7 +747,10 @@ of the question's. Buying after already submitting does not re-grade: the team
 resubmits (or the quiz master grades by hand). Since the phone can't tell which
 came first, it adds "Submit again to use the wider margin." under the margin text
 whenever the team holds the power-up and has an answer on the question that can
-still be changed.
+still be changed, and the Submit button does not read "Submitted" until the team
+sends the answer again. A **pin** bought after answering does the same: when the
+answer given has the pinned item off its place, the phone adds "Submit again to
+send the pinned order."
 
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,
 validated by the partial-settings Zod schema, editable in the lobby only like

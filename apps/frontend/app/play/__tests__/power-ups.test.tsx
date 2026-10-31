@@ -319,6 +319,71 @@ describe('PlayPage — the power-up bar', () => {
     });
   });
 
+  describe('a pin and an answer already given', () => {
+    const SORT = {
+      type: 'sort',
+      prompt: 'Order these',
+      options: ['A', 'B', 'C'],
+      points: 3,
+    };
+    const pin: PurchaseView = {
+      powerUp: 'pin_one',
+      questionId: 1,
+      roundId: null,
+      effect: { kind: 'pin_one', item: 'A', position: 0 },
+    };
+    const RESUBMIT = /Submit again to send the pinned order/;
+
+    it('tells the team to submit again when the answer given has the item off its place', () => {
+      phone({
+        question: SORT,
+        purchases: [pin],
+        answers: { 1: 'B|A|C' },
+        coins: 0,
+      });
+
+      expect(screen.getByText(RESUBMIT)).toBeInTheDocument();
+    });
+
+    it('says nothing when the answer given already has the item in place', () => {
+      phone({
+        question: SORT,
+        purchases: [pin],
+        answers: { 1: 'A|B|C' },
+        coins: 0,
+      });
+
+      expect(screen.queryByText(RESUBMIT)).toBeNull();
+    });
+  });
+
+  it('does not call a number answer submitted until it is sent again after a wider margin', async () => {
+    phone({
+      question: {
+        type: 'number',
+        prompt: 'How many bones?',
+        points: 3,
+        margin: { value: 5, unit: 'percent' },
+      },
+      purchases: [
+        {
+          powerUp: 'wider_margin',
+          questionId: 1,
+          roundId: null,
+          effect: { kind: 'wider_margin' },
+        },
+      ],
+      answers: { 1: '206' },
+      coins: 0,
+    });
+
+    expect(screen.queryByRole('button', { name: 'Submitted' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(
+      screen.getByRole('button', { name: 'Submitted' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows the room split with the 50/50-removed options crossed out', () => {
     phone({
       purchases: [

@@ -20,6 +20,8 @@ interface AnswerFormProps {
   pin?: PinEffect;
   /** Options the team's 50/50 removed from this multiple-choice question: shown greyed out and not selectable. */
   removedOptions?: string[];
+  /** Whether the answer already given must be sent again before it counts as submitted (it was graded without what the team just bought). */
+  mustResubmit?: boolean;
 }
 
 interface IdkButtonProps {
@@ -55,6 +57,7 @@ export function AnswerForm({
   onSubmit,
   pin,
   removedOptions,
+  mustResubmit,
 }: AnswerFormProps) {
   const AnswerInput = ANSWER_INPUTS[resolveAnswerKind(question)];
   const isIdk = initialValue === IDK_ANSWER_VALUE;
@@ -67,6 +70,7 @@ export function AnswerForm({
       onSubmit={onSubmit}
       pin={pin}
       removedOptions={removedOptions}
+      mustResubmit={mustResubmit}
       idkButton={
         <IdkButton
           isChosen={isIdk}
