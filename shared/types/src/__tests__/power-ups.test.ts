@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   askTheRoomReady,
   askTheRoomSplit,
-  coinBalance,
   defaultPowerUpSettings,
   DEFAULT_SESSION_SETTINGS,
   drawPin,
@@ -15,17 +14,10 @@ import {
   powerUpApplies,
   purchaseEffectSchema,
   purchaseRefusal,
+  teamCoins,
   textHint,
   type PurchaseView,
 } from '../index';
-
-const ledger = {
-  powerUpsEnabled: true,
-  startingCoins: 1,
-  carriedCoin: 0,
-  coinAwards: 0,
-  purchaseCosts: 0,
-};
 
 describe('defaultPowerUpSettings', () => {
   it('costs letter count 1, ask the room 3, the rest 2, extra joker 4 with the overview and 3 without', () => {
@@ -446,26 +438,18 @@ describe('purchaseEffectSchema', () => {
   });
 });
 
-describe('coinBalance', () => {
+describe('teamCoins', () => {
+  const on = { powerUpsEnabled: true, startingCoins: 3 };
+
   it('adds starting coins, carried coin and awards, minus purchases', () => {
-    expect(
-      coinBalance({
-        ...ledger,
-        startingCoins: 3,
-        carriedCoin: 1,
-        coinAwards: 2,
-        purchaseCosts: 4,
-      }),
-    ).toBe(2);
+    expect(teamCoins(on, 1, 2, 4)).toBe(2);
   });
 
   it('ignores starting coins with power-ups off but keeps the carried coin', () => {
-    expect(
-      coinBalance({ ...ledger, powerUpsEnabled: false, carriedCoin: 1 }),
-    ).toBe(1);
+    expect(teamCoins({ ...on, powerUpsEnabled: false }, 1)).toBe(1);
   });
 
   it('never goes below 0', () => {
-    expect(coinBalance({ ...ledger, coinAwards: -5 })).toBe(0);
+    expect(teamCoins(on, 0, -5)).toBe(0);
   });
 });

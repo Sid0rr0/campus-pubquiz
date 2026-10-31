@@ -31,7 +31,7 @@ export class BonusAwardNotFoundError extends Error {
 
 export interface AwardedBonus {
   teamId: number;
-  /** The coins this award gave in all (the linked +1 plus any manual coins); 0 when none. */
+  /** The coins this award gave in all (the linked `SHOT_SELFIE_COINS` plus any manual coins); 0 when none. */
   coinsGiven: number;
   /** The sum of the team's coin awards after this award. */
   coinTotal: number;

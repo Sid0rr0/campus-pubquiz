@@ -368,27 +368,7 @@ export function optionsAfterPurchases(
   return options.filter((option) => !removed.has(option));
 }
 
-/** The ledger a team's coins are worked out from. */
-export interface CoinLedger {
-  powerUpsEnabled: boolean;
-  startingCoins: number;
-  carriedCoin: number;
-  /** Sum of the team's coin awards (may be negative). */
-  coinAwards: number;
-  /** Sum of the costs of the team's purchases. */
-  purchaseCosts: number;
-}
-
-/** A team's coins: starting coins (only with power-ups on) + carried coin + coin awards - purchases, never below 0. */
-export function coinBalance(ledger: CoinLedger): number {
-  const starting = ledger.powerUpsEnabled ? ledger.startingCoins : 0;
-  return Math.max(
-    0,
-    starting + ledger.carriedCoin + ledger.coinAwards - ledger.purchaseCosts,
-  );
-}
-
-/** A team's coins in a session, given its carried coin, the sum of its coin awards and the sum of its purchase costs. */
+/** A team's coins: starting coins (only with power-ups on) + carried coin + the sum of its coin awards (may be negative) - the sum of its purchase costs, never below 0. */
 export function teamCoins(
   settings: {
     powerUpsEnabled: boolean;
@@ -398,13 +378,8 @@ export function teamCoins(
   coinAwards = 0,
   purchaseCosts = 0,
 ): number {
-  return coinBalance({
-    powerUpsEnabled: settings.powerUpsEnabled,
-    startingCoins: settings.startingCoins,
-    carriedCoin,
-    coinAwards,
-    purchaseCosts,
-  });
+  const starting = settings.powerUpsEnabled ? settings.startingCoins : 0;
+  return Math.max(0, starting + carriedCoin + coinAwards - purchaseCosts);
 }
 
 /** A team's coins read from a session's caches: its settings, the team's carried coin and coin award sum, and the purchases in `funFactData`. */
