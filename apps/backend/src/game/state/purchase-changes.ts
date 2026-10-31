@@ -175,8 +175,19 @@ export class PurchaseChanges {
           : [],
       ),
     };
+    // An answer already given was graded without the wider margin: grade it
+    // again and send the team its answers, so it need not submit twice.
+    const isWider = powerUp === 'wider_margin';
+    if (isWider) {
+      await this.answerService.regradeForWiderMargin(
+        gameSessionId,
+        question,
+        teamId,
+      );
+    }
     return await this.store(session, teamId, records, bought, {
       answerListQuestionIds: [questionId],
+      ...(isWider && { teamSyncs: connectedTeamSyncs(session, [teamId]) }),
     });
   }
 

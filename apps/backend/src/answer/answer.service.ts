@@ -15,6 +15,7 @@ import { TeamRepository } from '@/db/repositories/team.repository';
 import { PurchaseService } from '@/purchase/purchase.service';
 import {
   canGradeByHand,
+  gradeAtSubmit,
   gradeOnKeyFix,
   gradeOnSubmit,
   gradingStateOf,
@@ -325,6 +326,35 @@ export class AnswerService {
       rescored,
       answers: await this.viewsOf(gameSessionId, question.id, rows),
     };
+  }
+
+  /**
+   * A team just bought a wider margin on `question`: grades its answer already
+   * given against the widened margin. The widening only ever adds points, so a
+   * grade at or above the new score (a moderator's higher mark) is kept.
+   */
+  async regradeForWiderMargin(
+    gameSessionId: number,
+    question: GradableQuestion,
+    teamId: number,
+  ): Promise<void> {
+    const row = await this.answers.findOne({
+      gameSession: gameSessionId,
+      question: question.id,
+      team: teamId,
+    });
+    if (!row) return;
+    const score = gradeAtSubmit(withWiderMargin(question), row.value);
+    if (
+      score === null ||
+      (row.gradedAt !== null && row.pointsAwarded >= score.points)
+    ) {
+      return;
+    }
+    await this.applyWrites(
+      [row],
+      [{ kind: 'set', points: score.points, verdict: score.verdict }],
+    );
   }
 
   /** Applies the policy's grade writes (one per row), stamping one grading time per flush; keep is a no-op. */

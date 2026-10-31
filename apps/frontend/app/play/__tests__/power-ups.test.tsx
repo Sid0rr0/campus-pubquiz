@@ -293,9 +293,7 @@ describe('PlayPage — the power-up bar', () => {
       roundId: null,
       effect: { kind: 'wider_margin' },
     };
-    const RESUBMIT = /Submit again to use the wider margin/;
-
-    it('tells the team to submit again, since the answer already given keeps the old margin', () => {
+    it('asks for no second submit: the server grades the answer already given', () => {
       phone({
         question: NUMBER,
         purchases: [widerMargin],
@@ -303,19 +301,7 @@ describe('PlayPage — the power-up bar', () => {
         coins: 0,
       });
 
-      expect(screen.getByText(RESUBMIT)).toBeInTheDocument();
-    });
-
-    it('says nothing before an answer is given', () => {
-      phone({ question: NUMBER, purchases: [widerMargin], coins: 0 });
-
-      expect(screen.queryByText(RESUBMIT)).toBeNull();
-    });
-
-    it('says nothing without the power-up', () => {
-      phone({ question: NUMBER, answers: { 1: '206' }, coins: 0 });
-
-      expect(screen.queryByText(RESUBMIT)).toBeNull();
+      expect(screen.queryByText(/Submit again/)).toBeNull();
     });
   });
 

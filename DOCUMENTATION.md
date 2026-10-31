@@ -744,13 +744,11 @@ reconnect.
 wherever it is used, so it follows a key fix. `AnswerService` grades that team's
 answer with `withWiderMargin` at submit, and on a key fix or kahoot speed score
 (`StoredAnswerRow.hasWiderMargin`). The phone shows the doubled margin text instead
-of the question's. Buying after already submitting does not re-grade: the team
-resubmits (or the quiz master grades by hand). Since the phone can't tell which
-came first, it adds "Submit again to use the wider margin." under the margin text
-whenever the team holds the power-up and has an answer on the question that can
-still be changed, and the Submit button does not read "Submitted" until the team
-sends the answer again. A **pin** bought after answering does the same: when the
-answer given has the pinned item off its place, the phone adds "Submit again to
+of the question's. Buying after already submitting re-grades the team's answer at
+once (`AnswerService.regradeForWiderMargin`, which keeps a grade at or above the
+new score) and sends the team its answers (`TEAM_ANSWERS_SYNCED`), so there is
+nothing to resubmit. A **pin** bought after answering is different: the order sent
+stays as it was until the team submits again, so when the answer given has the pinned item off its place, the phone adds "Submit again to
 send the pinned order."
 
 **Jokers.** The **`jokersEnabled`** session setting (a boolean, default `false`,

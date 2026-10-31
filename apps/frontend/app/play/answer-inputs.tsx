@@ -23,8 +23,6 @@ export interface AnswerInputProps {
   pin?: PinEffect;
   /** Options a 50/50 removed from this multiple-choice question: greyed out, not selectable. */
   removedOptions?: string[];
-  /** The answer already given counts as submitted only once sent again. */
-  mustResubmit?: boolean;
   /** The "I don't know" button, placed by each input where it belongs in its own layout. */
   idkButton: ReactNode;
 }
@@ -34,29 +32,20 @@ const NO_ITEMS: string[] = [];
 function TypedInput({
   inputType,
   initialValue,
-  mustResubmit = false,
   onSubmit,
   idkButton,
-}: Pick<
-  AnswerInputProps,
-  'initialValue' | 'mustResubmit' | 'onSubmit' | 'idkButton'
-> & {
+}: Pick<AnswerInputProps, 'initialValue' | 'onSubmit' | 'idkButton'> & {
   inputType: 'text' | 'number';
 }) {
   const [value, setValue] = useState(initialValue);
-  const [isResent, setIsResent] = useState(false);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!value.trim()) return;
-    setIsResent(true);
     onSubmit(value.trim());
   }
 
-  const isSubmitted =
-    value.trim() !== '' &&
-    value.trim() === initialValue &&
-    (!mustResubmit || isResent);
+  const isSubmitted = value.trim() !== '' && value.trim() === initialValue;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">

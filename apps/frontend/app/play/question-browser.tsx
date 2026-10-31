@@ -149,13 +149,10 @@ export function QuestionBrowser({
   const hasPinOffPlace =
     myAnswer !== undefined &&
     isPinOffPlace(resolveAnswerKind(selectedQuestion), myAnswer, pin);
-  // The answer already given was graded without what was bought; only a new submit uses it.
-  const resubmitNote =
-    hasWiderMargin && myAnswer !== undefined
-      ? 'Submit again to use the wider margin.'
-      : hasPinOffPlace
-        ? 'Submit again to send the pinned order.'
-        : null;
+  // The server grades a wider margin at once, but a pin changes the order only when it is sent again.
+  const resubmitNote = hasPinOffPlace
+    ? 'Submit again to send the pinned order.'
+    : null;
 
   return (
     <div
@@ -306,7 +303,6 @@ export function QuestionBrowser({
               initialValue={myAnswers[selectedQuestion.id] ?? ''}
               isKahootMode={isKahootMode}
               pin={pin}
-              mustResubmit={hasWiderMargin}
               onSubmit={(value) =>
                 onSubmitAnswer(selectedQuestion.id, team.teamId, value)
               }

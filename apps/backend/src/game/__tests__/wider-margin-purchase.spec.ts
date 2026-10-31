@@ -1,3 +1,4 @@
+import { SOCKET_EVENTS, type TeamAnswerView } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import { setupRealStoreGatewayTest } from '@/game/__tests__/real-store-test-utils';
 
@@ -77,6 +78,39 @@ describe('GameGateway — buying a wider margin', () => {
       margin: { value: 8, unit: 'percent' },
     });
     expect(await storedPoints(game, bones)).toEqual({ Wide: 3, Plain: 0 });
+  });
+
+  it('re-grades an answer already given and tells the buying team, without a resubmit', async () => {
+    const game = await night();
+    const [wide, plain] = game.teams;
+    const [bones] = game.rounds[0].questionIds;
+    for (const team of [wide, plain]) {
+      await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+        questionId: bones,
+        teamId: team.teamId,
+        value: '115', // outside 10%, inside the doubled 20%
+      });
+    }
+    expect(await storedPoints(game, bones)).toEqual({ Wide: 0, Plain: 0 });
+    game.clearEmits();
+
+    await game.gateway.handleBuyPowerUp(asSocket(wide.socket), {
+      powerUp: 'wider_margin',
+      questionId: bones,
+    });
+
+    expect(await storedPoints(game, bones)).toEqual({ Wide: 3, Plain: 0 });
+    const synced = game
+      .roomEmits()
+      .filter(
+        (emit) =>
+          emit.rooms.includes(wide.socket.id) &&
+          emit.event === SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
+      )
+      .map((emit) => (emit.payload as { answers: TeamAnswerView[] }).answers);
+    expect(synced[0]).toEqual([
+      expect.objectContaining({ questionId: bones, pointsAwarded: 3 }),
+    ]);
   });
 
   it('is refused on a closest guess', async () => {
