@@ -90,14 +90,6 @@ export class PurchaseService {
     }[];
   }
 
-  /** Puts the purchase on another round. */
-  async moveToRound(id: number, roundId: number): Promise<void> {
-    await this.purchases.getKnex()('purchases').where({ id }).update({
-      round_id: roundId,
-      updated_at: new Date(),
-    });
-  }
-
   /** Deletes purchases, which hands their cost back: the balance is worked out from the rows. */
   async remove(ids: readonly number[]): Promise<void> {
     if (ids.length === 0) return;

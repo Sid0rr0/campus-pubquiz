@@ -181,6 +181,7 @@ export class StandingsService {
         .select('category', 'points') as Promise<FunFactBonusAward[]>,
       knex('purchases')
         .where('game_session_id', gameSessionId)
+        .orderBy('id')
         .select('team_id as teamId', 'power_up as powerUp')
         .select('question_id as questionId', 'round_id as roundId')
         .select('cost') as Promise<FunFactPowerUp[]>,

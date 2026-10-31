@@ -99,6 +99,20 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
     expect(syncsTo(game, alpha).at(-1)).toEqual({ purchases: [], coins: 5 });
   });
 
+  // The edit deletes the row the round sat on (the last one), and the database takes the purchase with it.
+  it('keeps an extra joker on a round that survives while the row it sat on is deleted', async () => {
+    const { game, alpha } = await withExtraOnRoundOne();
+    await game.saveQuizEdit((rounds) => [rounds[1], rounds[2], rounds[0]]);
+    game.clearEmits();
+
+    await game.saveQuizEdit((rounds) => [rounds[1], rounds[2]]);
+
+    expect(await stored(game, alpha)).toMatchObject([
+      { powerUp: 'extra_joker', roundId: game.rounds[1].id },
+    ]);
+    expect(syncsTo(game, alpha).at(-1)?.coins).toBe(4);
+  });
+
   it('refunds the second of two extra jokers that land on one round when rounds are merged', async () => {
     const { game, alpha } = await withExtraOnRoundOne();
     await advanceUntil(game, 'round_intro'); // round 1's intro is on air: round 2 is next

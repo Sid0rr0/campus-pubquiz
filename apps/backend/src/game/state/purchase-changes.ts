@@ -21,6 +21,7 @@ import { AnswerService } from '@/answer/answer.service';
 import {
   PurchaseService,
   toPurchaseViews,
+  type NewPurchase,
   type PurchaseRecord,
 } from '@/purchase/purchase.service';
 import { roundNowHolding, type RandomSource } from '@/game/state/joker-changes';
@@ -288,7 +289,9 @@ export class PurchaseChanges {
    * Keeps every extra joker on its round after a live edit reloaded the quiz
    * (`reloaded`; `started` is the session before it), as the quiz master's
    * joker does: a round is known by its questions, so the purchase follows the
-   * round now holding them. Unlike the joker it is not redrawn when its round
+   * round now holding them. The purchases are stored again from the session's
+   * cache (oldest first), since the edit's deleted round rows have already
+   * taken theirs. Unlike the joker it is not redrawn when its round
    * is gone (a team must hold a joker, but an extra one is optional): the
    * purchase is removed and its cost handed back, as the database already does
    * when the edit deletes the round row. A second extra joker that lands on a
@@ -304,23 +307,31 @@ export class PurchaseChanges {
     if (settings.powerUps.extra_joker.maxUses === 0) {
       return { session: reloaded, purchaseSyncs: [] };
     }
-    const doubled = new Set<string>();
-    const removed: number[] = [];
-    for (const row of await this.purchaseService.extraJokerRows(
-      gameSessionId,
-    )) {
-      const next = roundNowHolding(started, reloaded, row.roundId);
-      const key = `${row.teamId}:${next}`;
-      if (next === null || doubled.has(key)) {
-        removed.push(row.id);
-        continue;
-      }
-      doubled.add(key);
-      if (next !== row.roundId) {
-        await this.purchaseService.moveToRound(row.id, next);
-      }
+    // The rows come from the session's cache, not the database: a deleted round
+    // row has taken its purchases with it (cascade), even for a round that
+    // lives on in another row.
+    const kept = new Set<string>();
+    const rebuilt: NewPurchase[] = [];
+    for (const bought of started.funFactData.powerUps) {
+      if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
+      const next = roundNowHolding(started, reloaded, bought.roundId);
+      const key = `${bought.teamId}:${next}`;
+      if (next === null || kept.has(key)) continue;
+      kept.add(key);
+      rebuilt.push({
+        gameSessionId,
+        teamId: bought.teamId,
+        powerUp: 'extra_joker',
+        questionId: null,
+        roundId: next,
+        cost: bought.cost,
+        effect: { kind: 'extra_joker' },
+      });
     }
-    await this.purchaseService.remove(removed);
+    // Added before the old rows go, so a failure in between never loses one.
+    const old = await this.purchaseService.extraJokerRows(gameSessionId);
+    for (const purchase of rebuilt) await this.purchaseService.add(purchase);
+    await this.purchaseService.remove(old.map((row) => row.id));
 
     const purchaseSyncs: PurchaseSync[] = [];
     for (const sync of connectedTeamSyncs(

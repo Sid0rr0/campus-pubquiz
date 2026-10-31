@@ -873,9 +873,10 @@ master's joker (a round is known by its questions; the extra jokers are
 re-pointed before the jokers, inside the same save). The two differ when the
 round is gone: a joker is redrawn because every team must hold one, but an extra
 joker is optional, so it is removed and its cost handed back (the balance is
-worked out from the purchase rows). That also happens when the database drops
-the row with a deleted round, and when two extra jokers of a team would land on
-one round. Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
+worked out from the purchase rows). That also happens when two extra jokers of a
+team would land on one round. A round that survives keeps its extra jokers even
+when the row it sat on is deleted (the save stores them again from the session's
+cache of purchases, since the database drops a deleted row's purchases). Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
 and purchases stay right.
 
 **One joker per team.** In a session with Jokers every team always holds exactly
