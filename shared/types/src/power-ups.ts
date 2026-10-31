@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { GameStatus } from './game-state-types';
 import { pickableRounds } from './joker';
 import { QUESTION_KINDS } from './question-kind';
 import type { QuestionType } from './question-types';
@@ -192,7 +193,7 @@ const BEFORE_FIRST_INTRO: readonly string[] = [
 /** The title a phone may be told for a round it can double: the real one once the round overview is on air, "" before that (lobby, rules) and with the overview off, so a team never learns a topic it was not shown. */
 export function visibleRoundTitle(
   settings: { showRoundOverview: boolean },
-  status: string,
+  status: GameStatus,
   title: string,
 ): string {
   return settings.showRoundOverview && !['lobby', 'rules'].includes(status)

@@ -16,6 +16,7 @@ import {
   purchaseRefusal,
   teamCoins,
   textHint,
+  visibleRoundTitle,
   type PurchaseView,
 } from '../index';
 
@@ -451,5 +452,31 @@ describe('teamCoins', () => {
 
   it('never goes below 0', () => {
     expect(teamCoins(on, 0, -5)).toBe(0);
+  });
+});
+
+describe('visibleRoundTitle', () => {
+  const on = { showRoundOverview: true };
+
+  it.each(['lobby', 'rules'] as const)(
+    'keeps the title back while the overview has not aired (%s)',
+    (status) => {
+      expect(visibleRoundTitle(on, status, 'Music')).toBe('');
+    },
+  );
+
+  it.each([
+    'round_overview',
+    'joker_pick',
+    'round_intro',
+    'question_open',
+  ] as const)('gives the title once the overview has aired (%s)', (status) => {
+    expect(visibleRoundTitle(on, status, 'Music')).toBe('Music');
+  });
+
+  it('never gives the title with the overview off', () => {
+    expect(
+      visibleRoundTitle({ showRoundOverview: false }, 'question_open', 'Music'),
+    ).toBe('');
   });
 });

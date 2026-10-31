@@ -5,6 +5,7 @@ import {
   visibleRoundTitle,
   type PowerUpId,
   type PurchaseEffect,
+  type GameStatus,
   type PurchaseView,
   type SeededGame,
 } from '@campus-pubquiz/types';
@@ -123,7 +124,7 @@ export class PurchaseService {
 export function toPurchaseViews(
   records: readonly PurchaseRecord[],
   { rounds, settings }: Pick<SeededGame, 'rounds' | 'settings'>,
-  status: string,
+  status: GameStatus,
 ): PurchaseView[] {
   return records.map(({ powerUp, questionId, roundId, effect }) => {
     const roundIndex = rounds.findIndex((round) => round.id === roundId);
