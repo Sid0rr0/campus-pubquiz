@@ -673,7 +673,8 @@ one, give the opposite coins.
 is answering. The server refuses, before storing anything, when: the question can
 no longer be answered (a locked block, or a question not open yet; never a
 showdown), the power-up does not work on the question (the type registry's
-`powerUps` list, and a 50/50 needs more than two options), the session does not
+`powerUps` list, a 50/50 needs more than two options, and no question power-up
+works in a kahootMode round, where a tap locks the pick), the session does not
 offer it (`maxUses: 0`), the team used it `maxUses` times already, it already ran
 on this question, or the balance is below the cost. These rules are
 `purchaseRefusal` in shared types. A purchase works in a session with power-ups off

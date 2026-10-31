@@ -219,10 +219,12 @@ function PlayPageContent() {
   const hasPowerUpsPanel =
     !!team && (settings.powerUpsEnabled || team.coins > 0);
   // The activation buttons live in the power-ups cards: the question being answered right now, and the next round's extra joker.
+  // None in a kahootMode round: a tap locks the pick, so no question power-up can help.
   const answeringQuestion =
     phoneScreen.kind === 'block' &&
     phoneScreen.mode === 'answering' &&
-    isAnswerable
+    isAnswerable &&
+    !isCurrentRoundKahoot
       ? selectedQuestion
       : null;
   const powerUpsList = team

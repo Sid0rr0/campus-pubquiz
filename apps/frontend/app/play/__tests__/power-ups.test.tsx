@@ -50,9 +50,11 @@ function phone({
   buyPowerUp = vi.fn().mockResolvedValue({ success: true }),
   roomReadyQuestionIds = [],
   answers = {},
+  isKahoot = false,
 }: {
   roomReadyQuestionIds?: number[];
   answers?: Record<number, string>;
+  isKahoot?: boolean;
   settings?: Partial<SessionSettings>;
   coins?: number;
   purchases?: PurchaseView[];
@@ -63,7 +65,7 @@ function phone({
   mockUseTeamLink.mockReturnValue(
     teamLinkResult({
       session: {
-        rounds: [{ questions: [question] }],
+        rounds: [{ kahootMode: isKahoot, questions: [question] }],
         progress: { status: 'question_open' },
         settings: { powerUps: defaultPowerUpSettings(false), ...settings },
       } as never,
@@ -105,6 +107,14 @@ describe('PlayPage — the power-up bar', () => {
     );
 
     expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
+  });
+
+  it('offers no question power-up in a kahootMode round, where a tap locks the pick', () => {
+    phone({ isKahoot: true });
+
+    expect(
+      screen.queryByRole('button', { name: /^Activate/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows only the power-ups that apply to the question type', () => {

@@ -431,6 +431,19 @@ describe('GameGateway — buying a 50/50', () => {
       expect(await storedPurchases(game, alpha)).toEqual([]);
     });
 
+    it('refuses a question power-up in a kahootMode round, where a tap locks the pick', async () => {
+      const game = await night(
+        {},
+        { rounds: [{ ...QUIZ[0], breakAfter: false, kahootMode: true }] },
+      );
+      const [alpha] = game.teams;
+
+      expect(await refusal(game, alpha, ids(game).france)).toMatch(
+        /does not work/,
+      );
+      expect(await storedPurchases(game, alpha)).toEqual([]);
+    });
+
     it('refuses once the per-session limit is used up', async () => {
       const game = await night();
       const [alpha] = game.teams;

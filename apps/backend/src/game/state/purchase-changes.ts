@@ -1,6 +1,7 @@
 import {
   askTheRoomSplit,
   findQuestionOpenForAnswering,
+  isCurrentRoundKahoot,
   drawRemovedOptions,
   drawPin,
   extraJokerRefusal,
@@ -156,7 +157,11 @@ export class PurchaseChanges {
       ),
       balance: balanceAfter(session, teamId, records),
       isAnswerable: question !== undefined,
-      applies: question !== undefined && powerUpApplies(powerUp, question),
+      // A kahootMode tap locks the pick, so no question power-up can help there.
+      applies:
+        question !== undefined &&
+        !isCurrentRoundKahoot(session) &&
+        powerUpApplies(powerUp, question),
     });
     if (refusal !== null || question === undefined) {
       throw new SessionRefusal(
