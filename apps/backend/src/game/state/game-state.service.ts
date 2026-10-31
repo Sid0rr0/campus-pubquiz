@@ -68,6 +68,8 @@ import { SessionCloseBlockedError } from '@/game/state/errors/session-close-bloc
 import { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
+  BROADCAST_STATE_OUTCOME,
+  coinSyncsFor,
   type DeadlineChange,
   deadlinesOf,
   type SessionOutcome,
@@ -597,14 +599,26 @@ export class GameStateService implements OnModuleInit {
    * the session's leagues when `leagueIds` is given. The checks run against
    * the session the previous write left, before anything is written.
    */
-  async updateSessionSettings(
+  updateSessionSettings(
     joinCode: string,
     partial: Partial<SessionSettings>,
     leagueIds?: number[],
-  ): Promise<void> {
-    await this.sessionWrite.write(joinCode, (session) =>
-      this.leagueChanges.settingsAndLeagues(session, partial, leagueIds),
-    );
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, async (session) => {
+      const change = await this.leagueChanges.settingsAndLeagues(
+        session,
+        partial,
+        leagueIds,
+      );
+      return {
+        ...change,
+        outcome: {
+          ...BROADCAST_STATE_OUTCOME,
+          // The settings decide the coins of a team already on its phone.
+          coinSyncs: coinSyncsFor(change.session),
+        },
+      };
+    });
   }
 
   /**

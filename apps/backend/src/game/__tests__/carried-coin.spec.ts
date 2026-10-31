@@ -159,6 +159,28 @@ describe('Carried coin', () => {
     expect(adminCoins()).toEqual({ Quizzards: CARRIED_COINS });
   });
 
+  it('tells a phone that joined in the lobby its carried coins when the quiz starts', async () => {
+    await putCurrentSessionInLeague();
+    const team = await seedTeam('Quizzards');
+    await playNight(team, { inLeague: true, ratedRounds: [0, 1] });
+    await joinReplyCoins(team);
+    game.clearEmits();
+
+    await game.act('START_QUIZ');
+
+    expect(
+      game
+        .roomEmits()
+        .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_COINS_SYNCED)
+        .map(({ rooms, payload }) => ({ rooms, payload })),
+    ).toEqual([
+      {
+        rooms: [lastDevice.get(team.id)],
+        payload: { balance: CARRIED_COINS, hasCarriedCoin: true },
+      },
+    ]);
+  });
+
   it('brings no coin when the last league night was not rated in every round', async () => {
     await putCurrentSessionInLeague();
     const team = await seedTeam('Quizzards');

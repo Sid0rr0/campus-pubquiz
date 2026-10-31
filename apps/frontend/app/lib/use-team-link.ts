@@ -383,7 +383,7 @@ export function useTeamLink(
         dispatch({ type: 'coinAwarded', payload }),
       );
       socket.on(SOCKET_EVENTS.TEAM_COINS_SYNCED, (payload) =>
-        dispatch({ type: 'coinsSynced', balance: payload.balance }),
+        dispatch({ type: 'coinsSynced', payload }),
       );
       socket.on(SOCKET_EVENTS.SESSION_CLOSED, () =>
         dispatch({ type: 'sessionClosed' }),

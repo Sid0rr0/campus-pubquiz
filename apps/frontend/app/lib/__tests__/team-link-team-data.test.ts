@@ -228,9 +228,13 @@ describe('team link: the team data', () => {
     });
 
     it('updates the balance quietly when a sync says it changed', () => {
-      const synced = run(linkedPhone(), { type: 'coinsSynced', balance: 5 });
+      const synced = run(linkedPhone(), {
+        type: 'coinsSynced',
+        payload: { balance: 5, hasCarriedCoin: true },
+      });
 
       expect(synced.state.team?.coins).toBe(5);
+      expect(synced.state.team?.hasCarriedCoin).toBe(true);
       expect(ofType(synced.commands, 'toast')).toEqual([]);
     });
   });

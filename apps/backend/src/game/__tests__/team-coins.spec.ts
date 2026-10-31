@@ -49,6 +49,33 @@ describe('Team coins', () => {
     expect(await joinReplyCoins(restarted, team.teamToken)).toBe(3);
   });
 
+  it('tells a phone already in the lobby its new coins when the quiz master changes the settings', async () => {
+    const game = await harness.createGateway({
+      settings: { powerUpsEnabled: false, startingCoins: 3 },
+    });
+    const team = await game.joinTeam('The Quizzards');
+    game.clearEmits();
+
+    await game.inRequestContext(() =>
+      game.rest.updateSettingsAndLeagues(game.joinCode, () => ({
+        partial: { powerUpsEnabled: true },
+        leagueIds: undefined,
+      })),
+    );
+
+    expect(
+      game
+        .roomEmits()
+        .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_COINS_SYNCED)
+        .map(({ rooms, payload }) => ({ rooms, payload })),
+    ).toEqual([
+      {
+        rooms: [team.socket.id],
+        payload: { balance: 3, hasCarriedCoin: false },
+      },
+    ]);
+  });
+
   it('gives no coins in a session played without power-ups', async () => {
     const game = await harness.createGateway({
       settings: { powerUpsEnabled: false, startingCoins: 3 },

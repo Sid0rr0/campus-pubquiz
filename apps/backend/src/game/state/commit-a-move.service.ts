@@ -19,6 +19,7 @@ import type {
 } from '@/game/state/game-progress.repository';
 import {
   BROADCAST_STATE_OUTCOME,
+  coinSyncsFor,
   connectedTeamSyncs,
   isRevealEntry,
   type SessionOutcome,
@@ -174,16 +175,17 @@ export class MoveCommitter {
 
     // Leaving the lobby decides every rostered team's carried coin, once.
     const base = closedPick?.session ?? session;
-    const started =
-      session.progress.status === 'lobby' && progress.status !== 'lobby'
-        ? {
-            ...base,
-            carriedCoins: await this.carriedCoins.decide(
-              base.seededGame.gameSessionId,
-              base.teams.map((team) => team.teamId),
-            ),
-          }
-        : base;
+    const isLeavingLobby =
+      session.progress.status === 'lobby' && progress.status !== 'lobby';
+    const started = isLeavingLobby
+      ? {
+          ...base,
+          carriedCoins: await this.carriedCoins.decide(
+            base.seededGame.gameSessionId,
+            base.teams.map((team) => team.teamId),
+          ),
+        }
+      : base;
 
     const { session: refreshed, staleAnswerListIds } =
       await this.grading.gradeForMove(started, progress);
@@ -211,6 +213,8 @@ export class MoveCommitter {
             )
           : [],
         jokerSyncs: closedPick?.jokerSyncs ?? [],
+        // A phone joined in the lobby knows its coins from before they were decided.
+        coinSyncs: isLeavingLobby ? coinSyncsFor(committed) : [],
       },
       touchedScores: true,
     };

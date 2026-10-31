@@ -658,8 +658,10 @@ session keeps each team's coin award sum in a cache (`SessionState.coinAwards`,
 read from the table when the session is placed, so a restart gets it back) so the
 snapshot's `coins` stay synchronous. The awarded team's phone hears
 `COIN_AWARDED` (`{ coins, reason?, balance }`, a toast: the coins this award gave
-in all, with the new balance), and `TEAM_COINS_SYNCED` (`{ balance }`, no toast)
-when deleting a bonus award took its coin award with it. The balance never shows
+in all, with the new balance), and `TEAM_COINS_SYNCED` (`{ balance, hasCarriedCoin }`,
+no toast) when deleting a bonus award took its coin award with it, when the quiz
+leaves the lobby (carried coins were just decided) and when the lobby settings
+change. The balance never shows
 below 0, even when a removed award's coins were already spent.
 
 **Buying a power-up.** A team sends one event, `BUY_POWER_UP`

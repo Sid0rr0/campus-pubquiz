@@ -27,9 +27,11 @@ export interface CoinAwardedPayload {
   balance: number;
 }
 
-/** Pushed privately to a team's own socket when its coins changed without a new award (a linked coin award went with its deleted bonus award). */
+/** Pushed privately to a team's own socket when its coins changed without a new award: a linked coin award went with its deleted bonus award, the quiz left the lobby (carried coins), or the lobby settings changed. */
 export interface TeamCoinsSyncedPayload {
   balance: number;
+  /** Whether the coins include carried coins, so the phone can say where they came from. */
+  hasCarriedCoin: boolean;
 }
 
 /** One bonus award a team has actually received — the team-facing view used by both JoinAcceptedPayload.bonusAwards and BONUS_AWARDED. */

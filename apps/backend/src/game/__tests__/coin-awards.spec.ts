@@ -73,7 +73,10 @@ describe('Coin awards', () => {
 
     expect(adminCoins()).toBe(1);
     expect(emitted(SOCKET_EVENTS.TEAM_COINS_SYNCED)).toEqual([
-      { rooms: [team.socket.id], payload: { balance: 1 } },
+      {
+        rooms: [team.socket.id],
+        payload: { balance: 1, hasCarriedCoin: false },
+      },
     ]);
     expect(emitted(SOCKET_EVENTS.COIN_AWARDED)).toEqual([]);
   });

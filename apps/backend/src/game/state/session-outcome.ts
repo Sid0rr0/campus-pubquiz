@@ -1,8 +1,10 @@
 import {
+  coinBalanceOf,
   type GameStatus,
   type ServerToClientProtocol,
   type SessionState,
   SOCKET_EVENTS,
+  type TeamCoinsSyncedPayload,
   type TeamJoker,
   type TeamPurchasesSyncedPayload,
   type TeamRoomReadySyncedPayload,
@@ -42,9 +44,9 @@ export interface JokerSync extends TeamSync {
   joker: TeamJoker | null;
 }
 
-/** A connected team whose phone needs its new coin balance (no toast), with the socket it is on. */
+/** A connected team whose phone needs its new coins (no toast), with the socket it is on. */
 export interface CoinSync extends TeamSync {
-  balance: number;
+  payload: TeamCoinsSyncedPayload;
 }
 
 /** A connected team whose phone needs its power-up purchases and coins, with the socket it is on. */
@@ -114,7 +116,7 @@ export interface SessionOutcome {
   roomReadySyncs: readonly RoomReadySync[];
   /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
   bonusSyncs: readonly TeamSync[];
-  /** Connected teams whose coin balance changed under them (a bonus award deleted took its coin award), each told its new balance. */
+  /** Connected teams whose coins changed under them (a bonus award deleted took its coin award, the quiz left the lobby, the lobby settings changed), each told its new coins. */
   coinSyncs: readonly CoinSync[];
   notices: readonly SocketNotice[];
   /** Sockets to disconnect, last of all, after the notices. */
@@ -192,4 +194,20 @@ export function connectedTeamSyncs(
     const socketId = session.connectedTeamSockets[teamId];
     return socketId ? [{ teamId, socketId }] : [];
   });
+}
+
+/** What the coins of `teamIds` (every connected team by default) now are, for those connected: the balance read from the session's caches. */
+export function coinSyncsFor(
+  session: SessionState,
+  teamIds: Iterable<number> = Object.keys(session.connectedTeamSockets).map(
+    Number,
+  ),
+): CoinSync[] {
+  return connectedTeamSyncs(session, teamIds).map((sync) => ({
+    ...sync,
+    payload: {
+      balance: coinBalanceOf(session, sync.teamId),
+      hasCarriedCoin: (session.carriedCoins[sync.teamId] ?? 0) > 0,
+    },
+  }));
 }

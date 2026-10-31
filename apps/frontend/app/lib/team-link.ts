@@ -19,6 +19,7 @@ import {
   type SubmitAnswerPayload,
   type TeamAnswerView,
   type TeamBonusAwardView,
+  type TeamCoinsSyncedPayload,
   type TeamFeedbackView,
   type TeamJoker,
   type TeamPurchasesSyncedPayload,
@@ -207,8 +208,8 @@ export type TeamLinkInput =
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
   // The quiz master gave (or took) coins: a toast and the new balance.
   | { type: 'coinAwarded'; payload: CoinAwardedPayload }
-  // The team's coins changed without a new award (a bonus award went, and its coin with it).
-  | { type: 'coinsSynced'; balance: number }
+  // The team's coins changed without a new award (a bonus award went, the quiz left the lobby, the lobby settings changed).
+  | { type: 'coinsSynced'; payload: TeamCoinsSyncedPayload }
   | { type: 'bonusAwardsSynced'; bonusAwards: TeamBonusAwardView[] }
   | { type: 'answerResult'; attempt: number; result: AckResult }
   // The answer never left the socket (not connected, or no acknowledgement in time).
@@ -818,7 +819,18 @@ export function teamLink(
     case 'coinAwarded':
       return awardCoins(state, input.payload);
     case 'coinsSynced':
-      return unchanged(withCoins(state, input.balance));
+      return unchanged(
+        state.team
+          ? {
+              ...state,
+              team: {
+                ...state.team,
+                coins: input.payload.balance,
+                hasCarriedCoin: input.payload.hasCarriedCoin,
+              },
+            }
+          : state,
+      );
     case 'answerResult':
       return receiveAnswerResult(state, input.attempt, input.result);
     case 'answerNotDelivered':

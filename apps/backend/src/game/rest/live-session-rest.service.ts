@@ -130,8 +130,14 @@ export class LiveSessionRest {
   ): Promise<void> {
     return this.inLiveSession(joinCode, async () => {
       const { partial, leagueIds } = parseRequest();
-      await this.gameState.updateSessionSettings(joinCode, partial, leagueIds);
-      await this.broadcaster.broadcastState(joinCode);
+      await this.broadcaster.deliver(
+        joinCode,
+        await this.gameState.updateSessionSettings(
+          joinCode,
+          partial,
+          leagueIds,
+        ),
+      );
     });
   }
 

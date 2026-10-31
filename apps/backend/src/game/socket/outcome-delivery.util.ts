@@ -137,8 +137,8 @@ async function deliverEmits(
       .emit(SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED, { bonusAwards });
   }
 
-  for (const { socketId, balance } of outcome.coinSyncs) {
-    server.to(socketId).emit(SOCKET_EVENTS.TEAM_COINS_SYNCED, { balance });
+  for (const { socketId, payload } of outcome.coinSyncs) {
+    server.to(socketId).emit(SOCKET_EVENTS.TEAM_COINS_SYNCED, payload);
   }
 
   for (const notice of outcome.notices) {

@@ -17,6 +17,7 @@ import { InvalidBonusAwardRefusal } from '@/game/state/errors/invalid-bonus-awar
 import type { SessionChange } from '@/game/state/session-write';
 import {
   BROADCAST_STATE_OUTCOME,
+  coinSyncsFor,
   connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
@@ -109,10 +110,9 @@ export class BonusAwardsChanges {
     const { teamId, coinTotal } = await this.refusing(() =>
       this.bonusService.remove(session.seededGame.gameSessionId, awardId),
     );
-    const next = withCoinTotal(session, teamId, coinTotal);
-    return bonusChange(next, {
+    return bonusChange(withCoinTotal(session, teamId, coinTotal), {
       syncTeamId: teamId,
-      coinSync: coinBalanceOf(next, teamId),
+      syncsCoins: true,
     });
   }
 
@@ -154,16 +154,16 @@ function withCoinTotal(
  * The change a bonus award makes, shared by all three events and private to
  * this module. `notices` (a fresh award only) go to that team's socket, if it
  * is connected. `syncTeamId` (an edit or deletion) lists the team for a bonus
- * awards sync instead, if it is connected; `coinSync` (a deletion) also tells
- * it its new coin balance.
+ * awards sync instead, if it is connected; `syncsCoins` (a deletion) also tells
+ * it its new coins.
  */
 function bonusChange(
   session: SessionState,
   {
     notices = [],
     syncTeamId,
-    coinSync,
-  }: { notices?: TeamNotice[]; syncTeamId?: number; coinSync?: number } = {},
+    syncsCoins = false,
+  }: { notices?: TeamNotice[]; syncTeamId?: number; syncsCoins?: boolean } = {},
 ): SessionChange<SessionOutcome> {
   const bonusSyncs =
     syncTeamId === undefined ? [] : connectedTeamSyncs(session, [syncTeamId]);
@@ -177,9 +177,9 @@ function bonusChange(
       }),
       bonusSyncs,
       coinSyncs:
-        coinSync === undefined
-          ? []
-          : bonusSyncs.map((sync) => ({ ...sync, balance: coinSync })),
+        syncsCoins && syncTeamId !== undefined
+          ? coinSyncsFor(session, [syncTeamId])
+          : [],
     },
     touchedScores: true,
   };
