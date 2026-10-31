@@ -45,10 +45,13 @@ export function BonusAwardForm({
   );
   // Held as the raw typed string (not a number) so an in-progress "-" isn't
   // wiped out by re-rendering through Number("-") === NaN on every keystroke.
-  const [pointsInput, setPointsInput] = useState(String(DEFAULT_BONUS_POINTS));
+  const [typedPoints, setTypedPoints] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
   const [coinsInput, setCoinsInput] = useState('');
+  // Until points are typed: the default, or none once coins are, so taking a coin never also gives points and a shot's coins.
+  const pointsInput =
+    typedPoints ?? (coinsInput === '' ? String(DEFAULT_BONUS_POINTS) : '0');
 
   const points = Number(pointsInput);
   const coins = coinsInput === '' ? 0 : Number(coinsInput);
@@ -120,7 +123,7 @@ export function BonusAwardForm({
           type="number"
           step={1}
           value={pointsInput}
-          onChange={(event) => setPointsInput(event.target.value)}
+          onChange={(event) => setTypedPoints(event.target.value)}
           aria-label="Bonus points"
           className="w-16 rounded border-2 border-background/30 bg-transparent px-2 py-1"
         />

@@ -597,10 +597,33 @@ describe('TeamsTable coins', () => {
       expect(screen.queryByLabelText('Coin award')).not.toBeInTheDocument();
     });
 
-    it('sends coins beside the points', async () => {
+    it('gives coins alone when the points were left untouched, so taking a coin never gives points', async () => {
       const onAwardBonus = renderAwarding({ 1: 1, 2: 1 });
       await openBonusModalFor('The Quizzards');
 
+      await userEvent.type(screen.getByLabelText('Coin award'), '-1');
+      expect(screen.getByLabelText('Bonus points')).toHaveValue(0);
+      await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
+
+      expect(onAwardBonus).toHaveBeenCalledWith(1, 'shot', 0, undefined, -1);
+    });
+
+    it('brings the default points back when the coins are cleared', async () => {
+      renderAwarding({ 1: 1, 2: 1 });
+      await openBonusModalFor('The Quizzards');
+
+      await userEvent.type(screen.getByLabelText('Coin award'), '2');
+      await userEvent.clear(screen.getByLabelText('Coin award'));
+
+      expect(screen.getByLabelText('Bonus points')).toHaveValue(1);
+    });
+
+    it('sends coins beside points the quiz master typed', async () => {
+      const onAwardBonus = renderAwarding({ 1: 1, 2: 1 });
+      await openBonusModalFor('The Quizzards');
+
+      await userEvent.clear(screen.getByLabelText('Bonus points'));
+      await userEvent.type(screen.getByLabelText('Bonus points'), '1');
       await userEvent.type(screen.getByLabelText('Coin award'), '2');
       await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
 
