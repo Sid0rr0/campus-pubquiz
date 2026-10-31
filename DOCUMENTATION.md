@@ -647,7 +647,9 @@ power-up table. Merging teams keeps it with the kept team.
 **Coin awards.** Stored in `coin_awards` (team, session, `coins`, optional
 `reason`, optional `bonus_award_id`). A shot or selfie bonus award with positive points in a session with
 power-ups on writes a linked +2 coin award (`SHOT_SELFIE_COINS`) in the same flush; the foreign key
-cascades, so deleting the bonus award deletes the coin award, and editing its
+cascades, so deleting the bonus award deletes the coin award (and when the team
+has already spent those coins, an unlinked coin award covers them, so the
+balance never hides a debt), and editing its
 points leaves it alone. The bonus award form's optional **coins** field (any
 non-zero integer, negative takes coins, up to 100 either way) is sent as `coins`
 on `AWARD_BONUS` and stored as its own unlinked coin award, with the form's

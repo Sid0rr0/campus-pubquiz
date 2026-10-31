@@ -81,6 +81,42 @@ describe('Coin awards', () => {
     expect(emitted(SOCKET_EVENTS.COIN_AWARDED)).toEqual([]);
   });
 
+  it('lets a deleted shot take no more coins than the team has left, so a later award is not swallowed', async () => {
+    game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      settings: { powerUpsEnabled: true, startingCoins: 1 },
+      rounds: [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'Largest planet?', answer: 'Jupiter' },
+          ],
+        },
+      ],
+    });
+    admin = await game.connectAdmin();
+    [team] = game.teams;
+    const [question] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(admin);
+    await award({ category: 'shot', points: 1 });
+    for (const powerUp of ['first_letter', 'letter_count'] as const) {
+      await game.gateway.handleBuyPowerUp(asSocket(team.socket), {
+        powerUp,
+        questionId: question,
+      });
+    }
+    expect(adminCoins()).toBe(0);
+
+    await game.inRequestContext(async () =>
+      game.rest.removeBonus(game.joinCode, await bonusAwardId()),
+    );
+    await award({ category: 'shot', points: 1 });
+
+    // 1 starting + 2 for the new shot - 3 spent: the deleted shot left no debt.
+    expect(adminCoins()).toBe(2);
+  });
+
   it('leaves the linked coin alone when the bonus award’s points are edited', async () => {
     await start();
     await award({ category: 'selfie', points: 1 });

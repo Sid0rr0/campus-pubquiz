@@ -6,6 +6,7 @@ import {
   SOCKET_EVENTS,
   type TeamBonusAwardView,
   coinBalanceOf,
+  purchaseCostsOf,
 } from '@campus-pubquiz/types';
 import {
   BonusAwardNotFoundError,
@@ -116,9 +117,29 @@ export class BonusAwardsChanges {
     session: SessionState,
     awardId: number,
   ): Promise<SessionChange<SessionOutcome>> {
-    const { teamId, coinTotal } = await this.refusing(() =>
-      this.bonusService.remove(session.seededGame.gameSessionId, awardId),
+    const { gameSessionId, settings } = session.seededGame;
+    const removed = await this.refusing(() =>
+      this.bonusService.remove(gameSessionId, awardId),
     );
+    const { teamId } = removed;
+    let { coinTotal } = removed;
+    // The linked coin award went with it. Coins already spent must not turn into
+    // a hidden debt (the balance shows 0, not less), so a coin award covers them.
+    const shortfall = coinShortfall(session, teamId, coinTotal);
+    if (shortfall > 0) {
+      ({ coinTotal } = await this.refusing(() =>
+        this.bonusService.award(
+          gameSessionId,
+          teamId,
+          'custom',
+          0,
+          'Coins already spent when an award was deleted',
+          settings.enabledBonusCategories,
+          settings.maxBonusAwardsPerCategory,
+          { powerUpsEnabled: settings.powerUpsEnabled, manual: shortfall },
+        ),
+      ));
+    }
     return bonusChange(withCoinTotal(session, teamId, coinTotal), {
       syncTeamId: teamId,
       syncsCoins: true,
@@ -146,6 +167,23 @@ type TeamNotice = { teamId: number } & (
   | { event: typeof SOCKET_EVENTS.BONUS_AWARDED; payload: TeamBonusAwardView }
   | { event: typeof SOCKET_EVENTS.COIN_AWARDED; payload: CoinAwardedPayload }
 );
+
+/** The coins the team has spent beyond what it has coming in (starting, carried, awards): what a balance floored at 0 would hide. */
+function coinShortfall(
+  session: SessionState,
+  teamId: number,
+  coinAwardTotal: number,
+): number {
+  const { settings } = session.seededGame;
+  const income =
+    (settings.powerUpsEnabled ? settings.startingCoins : 0) +
+    (session.carriedCoins[teamId] ?? 0) +
+    coinAwardTotal;
+  return Math.max(
+    0,
+    purchaseCostsOf(session.funFactData.powerUps, teamId) - income,
+  );
+}
 
 /** The session with the team's coin award total replaced (what the views read). */
 function withCoinTotal(
