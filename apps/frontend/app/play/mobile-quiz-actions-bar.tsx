@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Dialog } from 'radix-ui';
-import { Cross2Icon, ListBulletIcon, StarIcon } from '@radix-ui/react-icons';
+import {
+  Cross2Icon,
+  LightningBoltIcon,
+  ListBulletIcon,
+  StarIcon,
+} from '@radix-ui/react-icons';
 import type {
   BonusCategory,
   QuizStructureSummary,
@@ -12,6 +17,10 @@ import type {
 import { Button } from '@/app/components/button';
 import { AnsweredQuestionsList } from '@/app/play/answered-questions-list';
 import { BonusProgressList } from '@/app/play/bonus-progress-list';
+import {
+  PowerUpsList,
+  type PowerUpsListProps,
+} from '@/app/play/power-ups-list';
 import type { OpenedQuestionEntry } from '@/app/play/opened-questions';
 
 interface BonusBarProps {
@@ -28,6 +37,8 @@ interface MobileQuizActionsBarProps {
   onSelectHistoryQuestion: (questionId: number) => void;
   /** Null when the quiz has no bonus categories enabled — omits that trigger entirely. */
   bonus: BonusBarProps | null;
+  /** Null when the team has no shop (power-ups off and no coins) — omits that trigger entirely. */
+  powerUps: PowerUpsListProps | null;
   /** The team's joker round, or null while it has none — omits the chip entirely. */
   joker: JokerChipProps | null;
 }
@@ -100,9 +111,9 @@ function MobileDrawerTrigger({
 }
 
 /**
- * Mobile-only bottom bar holding the answer-history, joker and bonus-points
- * drawer triggers side by side (history on the left, bonus on the right, the
- * joker chip between them when the team has one), so each stays one tap away
+ * Mobile-only bottom bar holding the answer-history, power-ups, joker and
+ * bonus-points drawer triggers side by side (history on the left, bonus on the
+ * right, power-ups and the joker chip between them when the team has one), so each stays one tap away
  * without scrolling. Desktop renders each as its
  * own sticky sidebar instead (see AnsweredQuestionsPanel/BonusProgressPanel).
  */
@@ -111,14 +122,16 @@ export function MobileQuizActionsBar({
   jumpableHistoryIds,
   onSelectHistoryQuestion,
   bonus,
+  powerUps,
   joker,
 }: MobileQuizActionsBarProps) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isBonusOpen, setIsBonusOpen] = useState(false);
+  const [isPowerUpsOpen, setIsPowerUpsOpen] = useState(false);
   const [isJokerOpen, setIsJokerOpen] = useState(false);
   const hasHistory = historyEntries.length > 0;
 
-  if (!hasHistory && !bonus && !joker) {
+  if (!hasHistory && !bonus && !joker && !powerUps) {
     return null;
   }
 
@@ -143,6 +156,18 @@ export function MobileQuizActionsBar({
             jumpableIds={jumpableHistoryIds}
             onSelectQuestion={handleHistorySelectQuestion}
           />
+        </MobileDrawerTrigger>
+      )}
+      {powerUps && (
+        <MobileDrawerTrigger
+          isOpen={isPowerUpsOpen}
+          onOpenChange={setIsPowerUpsOpen}
+          icon={<LightningBoltIcon aria-hidden="true" />}
+          label="Power-ups"
+          title="Power-ups"
+          closeLabel="Close power-ups"
+        >
+          <PowerUpsList {...powerUps} />
         </MobileDrawerTrigger>
       )}
       {joker && (

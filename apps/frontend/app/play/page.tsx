@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
 import { isShowingLastBreak } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
-import { ExtraJokerOffer } from '@/app/play/extra-joker-offer';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
@@ -16,6 +15,7 @@ import { LatePlayerCountPrompt } from '@/app/play/late-player-count-prompt';
 import { PlayerCountCard } from '@/app/play/player-count-card';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
+import { PowerUpsPanel } from '@/app/play/power-ups-panel';
 import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
@@ -209,6 +209,29 @@ function PlayPageContent() {
   // page needs matching bottom padding there or the bar would cover the
   // last bit of inline content underneath it.
   const hasBonusPanel = settings.enabledBonusCategories.length > 0;
+  // The same condition as the shop: a team with coins sees it even in a session without power-ups (a carried coin).
+  const hasPowerUpsPanel =
+    !!team && (settings.powerUpsEnabled || team.coins > 0);
+  // The activation buttons live in the power-ups cards: the question being answered right now, and the next round's extra joker.
+  const answeringQuestion =
+    phoneScreen.kind === 'block' &&
+    phoneScreen.mode === 'answering' &&
+    isAnswerable
+      ? selectedQuestion
+      : null;
+  const powerUpsList = team
+    ? {
+        settings: settings.powerUps,
+        purchases: myPurchases,
+        coins: team.coins,
+        question: answeringQuestion,
+        roomReadyQuestionIds,
+        onBuy: buyPowerUp,
+        extraJokerOffer: view.extraJokerOffer,
+        jokerRoundId: myJoker?.roundId ?? null,
+        onBuyExtraJoker: buyExtraJoker,
+      }
+    : null;
   const showBonusAvailability = !isShowingLastBreak(progress, quizStructure);
   const jokerRound = view.jokerRounds.find(
     (round) => round.roundId === myJoker?.roundId,
@@ -315,16 +338,6 @@ function PlayPageContent() {
           savedCount={myPlayerCount}
           onSend={setPlayerCount}
         />
-        {team && (settings.powerUpsEnabled || team.coins > 0) && (
-          <ExtraJokerOffer
-            offer={view.extraJokerOffer}
-            setting={settings.powerUps.extra_joker}
-            coins={team.coins}
-            purchases={myPurchases}
-            jokerRoundId={myJoker?.roundId ?? null}
-            onBuy={buyExtraJoker}
-          />
-        )}
         <GameStatusScreens
           phoneScreen={phoneScreen}
           quizStructure={quizStructure}
@@ -411,6 +424,9 @@ function PlayPageContent() {
               onSelectQuestion={selectQuestion}
             />
           )}
+          {hasPowerUpsPanel && powerUpsList && (
+            <PowerUpsPanel {...powerUpsList} />
+          )}
           {hasBonusPanel && (
             <BonusProgressPanel
               enabledCategories={settings.enabledBonusCategories}
@@ -426,6 +442,7 @@ function PlayPageContent() {
         historyEntries={openedQuestions}
         jumpableHistoryIds={jumpableQuestionIds}
         onSelectHistoryQuestion={selectQuestion}
+        powerUps={hasPowerUpsPanel ? powerUpsList : null}
         joker={
           jokerRound
             ? {

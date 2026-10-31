@@ -89,7 +89,9 @@ describe('PlayPage — the power-up bar', () => {
   it('offers a 50/50 with its cost under a multiple-choice question and buys it on a press', async () => {
     const buy = phone();
 
-    await userEvent.click(screen.getByRole('button', { name: /50\/50 · 1/ }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Activate 50/50' }),
+    );
 
     expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
   });
@@ -99,7 +101,9 @@ describe('PlayPage — the power-up bar', () => {
       question: { type: 'closest_guess', prompt: 'How many?', points: 1 },
     });
 
-    expect(screen.queryByTestId('power-up-bar')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Activate/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('offers the first letter and letter count on a free-text question and buys one', async () => {
@@ -108,10 +112,10 @@ describe('PlayPage — the power-up bar', () => {
     });
 
     expect(
-      screen.getByRole('button', { name: /Letter count · 1/ }),
+      screen.getByRole('button', { name: 'Activate Letter count' }),
     ).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole('button', { name: /First letter · 1/ }),
+      screen.getByRole('button', { name: 'Activate First letter' }),
     );
 
     expect(buy).toHaveBeenCalledWith('first_letter', 1);
@@ -144,9 +148,10 @@ describe('PlayPage — the power-up bar', () => {
   it('greys Ask the room out as "Waiting for more answers" until the server says it is ready', async () => {
     const buy = phone({ coins: 5 });
     const waiting = screen.getByRole('button', {
-      name: /Ask the room · Waiting for more answers/,
+      name: 'Activate Ask the room',
     });
     expect(waiting).toBeDisabled();
+    expect(waiting).toHaveTextContent('Waiting for more answers');
     await userEvent.click(waiting);
     expect(buy).not.toHaveBeenCalled();
   });
@@ -155,7 +160,7 @@ describe('PlayPage — the power-up bar', () => {
     const buy = phone({ coins: 5, roomReadyQuestionIds: [1] });
 
     await userEvent.click(
-      screen.getByRole('button', { name: /Ask the room · \d+ 🪙/ }),
+      screen.getByRole('button', { name: 'Activate Ask the room' }),
     );
 
     expect(buy).toHaveBeenCalledWith('ask_the_room', 1);
@@ -164,13 +169,15 @@ describe('PlayPage — the power-up bar', () => {
   it('does not offer a 50/50 on a two-option question', () => {
     phone({ question: { ...FRANCE, options: ['Paris', 'London'] } });
 
-    expect(screen.queryByRole('button', { name: /50\/50/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Activate 50/50' })).toBeNull();
   });
 
   it('disables a power-up the team cannot afford', () => {
     phone({ coins: 0, settings: { powerUpsEnabled: true } });
 
-    expect(screen.getByRole('button', { name: /50\/50/ })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Activate 50/50' }),
+    ).toBeDisabled();
   });
 
   it('hides a power-up the session does not offer', () => {
@@ -179,19 +186,25 @@ describe('PlayPage — the power-up bar', () => {
     powerUps.ask_the_room = { cost: 2, maxUses: 0 };
     phone({ settings: { powerUpsEnabled: true, powerUps } });
 
-    expect(screen.queryByTestId('power-up-bar')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Activate/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows no bar in a session without power-ups for a team with no coin', () => {
     phone({ settings: { powerUpsEnabled: false }, coins: 0 });
 
-    expect(screen.queryByTestId('power-up-bar')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Activate/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the bar in a session without power-ups for a team with a carried coin', () => {
     phone({ settings: { powerUpsEnabled: false }, coins: 1 });
 
-    expect(screen.getByTestId('power-up-bar')).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: /^Activate/ }).length,
+    ).toBeGreaterThan(0);
   });
 
   it('says why when the server refuses the purchase', async () => {
@@ -201,7 +214,9 @@ describe('PlayPage — the power-up bar', () => {
         .mockResolvedValue({ success: false, error: 'Not enough coins' }),
     });
 
-    await userEvent.click(screen.getByRole('button', { name: /50\/50/ }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Activate 50/50' }),
+    );
 
     expect(toastError).toHaveBeenCalledWith('Not enough coins');
   });
@@ -265,6 +280,60 @@ describe('PlayPage — the power-up bar', () => {
     expect(screen.getByRole('button', { name: 'Rome' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'London' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Berlin' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /50\/50/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Activate 50/50' })).toBeNull();
+  });
+
+  it('lists the offered power-ups with their cost and uses in a panel, and in the mobile drawer', async () => {
+    phone({
+      purchases: [fiftyFifty],
+      settings: {
+        powerUpsEnabled: true,
+        powerUps: {
+          ...defaultPowerUpSettings(false),
+          fifty_fifty: { cost: 1, maxUses: 2 },
+          pin_one: { cost: 2, maxUses: 0 },
+        },
+      },
+    });
+
+    const panel = screen.getByRole('heading', { name: 'Power-ups' })
+      .parentElement as HTMLElement;
+    const fifty = within(panel).getByText('50/50').closest('li') as HTMLElement;
+    expect(fifty).toHaveTextContent('1 coin');
+    expect(fifty).toHaveTextContent('Removes half the options');
+    expect(fifty).toHaveTextContent('Used: 1 / 2');
+    expect(within(panel).queryByText('Pin one')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Power-ups' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Used: 1 / 2');
+  });
+
+  it('shows no power-ups list when the session has none and the team has no coins', () => {
+    phone({ settings: { powerUpsEnabled: false }, coins: 0 });
+
+    expect(screen.queryByRole('heading', { name: 'Power-ups' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Power-ups' })).toBeNull();
+  });
+
+  it('shows the balance and the activation buttons in the power-ups panel and drawer, not under the question', async () => {
+    const buy = phone({ coins: 3 });
+
+    const panel = screen.getByRole('heading', { name: 'Power-ups' })
+      .parentElement as HTMLElement;
+    expect(panel).toHaveTextContent('Balance: 3 coins');
+    expect(
+      within(panel).getByRole('button', { name: 'Activate 50/50' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Activate 50/50' }),
+    ).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Power-ups' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Balance: 3 coins');
+    await userEvent.click(
+      within(drawer).getByRole('button', { name: 'Activate 50/50' }),
+    );
+    expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
   });
 });

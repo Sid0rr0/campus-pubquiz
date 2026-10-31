@@ -24,6 +24,18 @@ export interface PowerUpSetting {
 
 export type PowerUpSettings = Record<PowerUpId, PowerUpSetting>;
 
+/** One player-facing sentence per power-up: what it does, in the power-ups list and on /how-to-play. */
+export const POWER_UP_DESCRIPTIONS: Record<PowerUpId, string> = {
+  fifty_fifty: 'Removes half the options, never the right one.',
+  first_letter: "Shows the answer's first letter.",
+  letter_count: 'Shows the answer with its letters as blanks.',
+  pin_one: 'Locks one item or pair in its right place.',
+  wider_margin: "Doubles a Number question's margin.",
+  ask_the_room:
+    "Shows how the other teams' answers split, once three have answered.",
+  extra_joker: 'Doubles the next round, if bought before its intro.',
+};
+
 export const POWER_UP_LABELS: Record<PowerUpId, string> = {
   fifty_fifty: '50/50',
   first_letter: 'First letter',

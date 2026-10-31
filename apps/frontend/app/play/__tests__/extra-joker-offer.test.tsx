@@ -5,70 +5,81 @@ import {
   defaultPowerUpSettings,
   type PurchaseView,
 } from '@campus-pubquiz/types';
-import { ExtraJokerOffer } from '@/app/play/extra-joker-offer';
+import {
+  PowerUpsList,
+  type PowerUpsListProps,
+} from '@/app/play/power-ups-list';
 
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock('sonner', () => ({ toast: { error: toastError } }));
 
-const settings = defaultPowerUpSettings(true).extra_joker; // 3 coins
+// 3 coins
+const settings = defaultPowerUpSettings(true);
 
-function offer(overrides: Partial<Parameters<typeof ExtraJokerOffer>[0]> = {}) {
-  const onBuy = vi.fn().mockResolvedValue({ success: true });
+function list(overrides: Partial<PowerUpsListProps> = {}) {
+  const onBuyExtraJoker = vi.fn().mockResolvedValue({ success: true });
   render(
-    <ExtraJokerOffer
-      offer={{ roundId: 7, roundNumber: 2, title: 'Music' }}
-      setting={settings}
-      coins={5}
+    <PowerUpsList
+      settings={settings}
       purchases={[]}
+      coins={5}
+      question={null}
+      roomReadyQuestionIds={[]}
+      onBuy={vi.fn()}
+      extraJokerOffer={{ roundId: 7, roundNumber: 2, title: 'Music' }}
       jokerRoundId={null}
-      onBuy={onBuy}
+      onBuyExtraJoker={onBuyExtraJoker}
       {...overrides}
     />,
   );
-  return onBuy;
+  return onBuyExtraJoker;
 }
 
-describe('ExtraJokerOffer', () => {
+const button = () =>
+  screen.queryByRole('button', { name: 'Activate Extra joker' });
+
+describe('the extra joker card', () => {
   it('names the round by title with the round overview on, and buys it', async () => {
-    const onBuy = offer();
+    const onBuy = list();
 
     await userEvent.click(
       screen.getByRole('button', {
-        name: 'Double the next round: Music — 3 coins',
+        name: 'Activate Extra joker',
       }),
     );
 
+    expect(button()).toHaveTextContent('Activate for the next round: Music');
     expect(onBuy).toHaveBeenCalledWith(7);
   });
 
   it('names the round by number when the title is hidden', () => {
-    offer({ offer: { roundId: 7, roundNumber: 2, title: '' } });
+    list({ extraJokerOffer: { roundId: 7, roundNumber: 2, title: '' } });
 
-    expect(
-      screen.getByRole('button', {
-        name: 'Double the next round: Round 2 — 3 coins',
-      }),
-    ).toBeEnabled();
+    expect(button()).toHaveTextContent('Activate for the next round: Round 2');
+    expect(button()).toBeEnabled();
   });
 
   it('is disabled without enough coins', () => {
-    offer({ coins: 2 });
+    list({ coins: 2 });
 
-    expect(screen.getByRole('button')).toBeDisabled();
+    expect(button()).toBeDisabled();
   });
 
   it('shows the refusal reason', async () => {
-    const onBuy = offer();
+    const onBuy = list();
     onBuy.mockResolvedValue({ success: false, error: 'Not enough coins' });
 
-    await userEvent.click(screen.getByRole('button'));
+    await userEvent.click(button() as HTMLElement);
 
     expect(toastError).toHaveBeenCalledWith('Not enough coins');
   });
 
   it.each([
-    ['nothing is on offer', { offer: null }],
-    ['the power-up is not offered', { setting: { cost: 3, maxUses: 0 } }],
+    ['nothing is on offer', { extraJokerOffer: null }],
+    [
+      'the power-up is not offered',
+      { settings: { ...settings, extra_joker: { cost: 3, maxUses: 0 } } },
+    ],
     ['the round is the joker round', { jokerRoundId: 7 }],
     [
       'the round is already doubled',
@@ -81,7 +92,7 @@ describe('ExtraJokerOffer', () => {
             effect: { kind: 'extra_joker' },
           },
         ] satisfies PurchaseView[],
-        setting: { cost: 3, maxUses: 3 },
+        settings: { ...settings, extra_joker: { cost: 3, maxUses: 3 } },
       },
     ],
     [
@@ -97,9 +108,9 @@ describe('ExtraJokerOffer', () => {
         ] satisfies PurchaseView[],
       },
     ],
-  ])('offers nothing when %s', (_, overrides) => {
-    offer(overrides);
+  ])('has no button when %s', (_, overrides) => {
+    list(overrides);
 
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(button()).toBeNull();
   });
 });

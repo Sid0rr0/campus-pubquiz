@@ -1,17 +1,14 @@
 import {
+  POWER_UP_DESCRIPTIONS,
+  POWER_UP_IDS,
   POWER_UP_LABELS,
   QUESTION_KINDS,
   QUESTION_TYPES,
 } from '@campus-pubquiz/types';
 
-const POWER_UP_NOTES = [
-  `${POWER_UP_LABELS.fifty_fifty}: removes half the options, never the right one.`,
-  `${POWER_UP_LABELS.ask_the_room}: shows how other teams' answers split, once three have answered.`,
-  `${POWER_UP_LABELS.first_letter} / ${POWER_UP_LABELS.letter_count}: the answer's first letter, or its letters as blanks.`,
-  `${POWER_UP_LABELS.pin_one}: locks one item or pair in the right place.`,
-  `${POWER_UP_LABELS.wider_margin}: doubles a Number question's margin.`,
-  `${POWER_UP_LABELS.extra_joker}: doubles the next round, before its intro.`,
-];
+const POWER_UP_NOTES = POWER_UP_IDS.map(
+  (powerUp) => `${POWER_UP_LABELS[powerUp]}: ${POWER_UP_DESCRIPTIONS[powerUp]}`,
+);
 
 const SECTIONS: { title: string; lines: string[] }[] = [
   {
