@@ -4,6 +4,7 @@
   - button "Open menu"
 - main:
   - paragraph: /Playing as Team A [a-z0-9]{6}/
+  - paragraph: Round 1 — Warm-up scores double
   - heading "Pick your joker" [level=1]
   - timer "Time left to pick a joker": /\d+:\d+/
   - paragraph: Your points from the round you pick count double. Tap a round; you can change it until time is up.
@@ -14,7 +15,7 @@
       - button "ROUND 2 Music Music"
     - listitem:
       - button "ROUND 3 Sport Sports"
-  - button "🃏 R1"
+  - button "Answer history (0)"
   - button "Bonus points (0)"
 - region "Notifications alt+T"
 - alert

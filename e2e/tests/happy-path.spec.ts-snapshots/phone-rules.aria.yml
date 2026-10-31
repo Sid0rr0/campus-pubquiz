@@ -15,6 +15,7 @@
     - listitem: In case of no correct answers, the moderator CAN award a bonus point to the team with the funniest answer.
     - listitem: "Shot bonus: Order shots, at minimum more than half your player count. Must be checked by a moderator to get the points. (1 point, doable twice per quiz)"
     - listitem: "Selfie bonus: Snap a group photo or selfie with your whole team, post it as an Instagram story, and tag @esn.ctu and @isc_hub.cz. Must be checked by a moderator to get the points. (1 point)"
+  - button "Answer history (0)"
   - button "Bonus points (0)"
 - region "Notifications alt+T"
 - alert
