@@ -2,17 +2,18 @@ import {
   askTheRoomReady,
   findQuestionOpenForAnswering,
   getBlockInPlay,
+  powerUpApplies,
   type JoinPlayersPayload,
   SEAT_TAKEN_REFUSAL_MARKER,
   type SessionState,
   SOCKET_EVENTS,
   type TeamJoker,
 } from '@campus-pubquiz/types';
-import { toPurchaseViews } from '@/purchase/purchase.service';
 import {
-  balanceAfter,
-  type PurchaseChanges,
-} from '@/game/state/purchase-changes';
+  toPurchaseViews,
+  type PurchaseService,
+} from '@/purchase/purchase.service';
+import { balanceAfter } from '@/game/state/purchase-changes';
 import { AnswerService } from '@/answer/answer.service';
 import type { CarriedCoinService } from '@/coins/carried-coin.service';
 import { BonusService } from '@/bonus/bonus.service';
@@ -63,7 +64,7 @@ export class TeamRosterChanges {
     private readonly playerCountService: PlayerCountService,
     private readonly jokerChanges: JokerChanges,
     private readonly carriedCoinService: Pick<CarriedCoinService, 'decide'>,
-    private readonly purchaseChanges: PurchaseChanges,
+    private readonly purchases: Pick<PurchaseService, 'listForTeam'>,
   ) {}
 
   /**
@@ -158,10 +159,7 @@ export class TeamRosterChanges {
   ): Promise<SessionOutcome['replies'][number]> {
     const { settings } = session.seededGame;
     const carriedCoin = session.carriedCoins[team.id] ?? 0;
-    const purchases = await this.purchaseChanges.loadForTeam(
-      gameSessionId,
-      team.id,
-    );
+    const purchases = await this.purchases.listForTeam(gameSessionId, team.id);
     const roomReadyQuestionIds: number[] = [];
     if (settings.powerUps.ask_the_room.maxUses > 0) {
       for (const { questionId } of getBlockInPlay(
@@ -171,6 +169,7 @@ export class TeamRosterChanges {
         const question = findQuestionOpenForAnswering(session, questionId);
         if (
           question &&
+          powerUpApplies('ask_the_room', question) &&
           askTheRoomReady(
             question,
             await this.answerService.listForQuestion(gameSessionId, questionId),

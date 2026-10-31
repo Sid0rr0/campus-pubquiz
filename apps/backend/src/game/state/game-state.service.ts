@@ -159,7 +159,7 @@ export class GameStateService implements OnModuleInit {
       this.playerCountService,
       this.jokerChanges,
       this.carriedCoinService,
-      this.purchaseChanges,
+      this.purchaseService,
     );
     this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
     this.playerCountChanges = new TeamPlayerCountChanges(

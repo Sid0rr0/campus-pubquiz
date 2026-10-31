@@ -355,12 +355,4 @@ export class PurchaseChanges {
     }
     return { session: reloaded, purchaseSyncs };
   }
-
-  /** The team's stored purchases, for a team joining or rejoining. */
-  async loadForTeam(
-    gameSessionId: number,
-    teamId: number,
-  ): Promise<PurchaseRecord[]> {
-    return await this.purchaseService.listForTeam(gameSessionId, teamId);
-  }
 }
