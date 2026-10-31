@@ -203,6 +203,17 @@ describe('PlayPage — the power-up bar', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps a bought 50/50 in effect once a carried coin is spent in a session without power-ups', () => {
+    phone({
+      settings: { powerUpsEnabled: false },
+      coins: 0,
+      purchases: [fiftyFifty],
+    });
+
+    expect(screen.getByRole('button', { name: 'London' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Berlin' })).toBeDisabled();
+  });
+
   it('shows the bar in a session without power-ups for a team with a carried coin', () => {
     phone({ settings: { powerUpsEnabled: false }, coins: 1 });
 

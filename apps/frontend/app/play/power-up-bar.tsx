@@ -1,21 +1,8 @@
 import {
   optionsAfterPurchases,
-  type AckResult,
-  type PowerUpId,
-  type PowerUpSettings,
   type PurchaseView,
   type QuestionView,
 } from '@campus-pubquiz/types';
-
-/** What the phone needs to offer power-ups on a question. */
-export interface PowerUpShop {
-  settings: PowerUpSettings;
-  coins: number;
-  purchases: PurchaseView[];
-  /** Questions on which the server says Ask the room is ready: a flag only, the phone never learns how many teams answered. */
-  roomReadyQuestionIds: number[];
-  onBuy: (powerUp: PowerUpId, questionId: number) => Promise<AckResult>;
-}
 
 /** The split Ask the room stored for the question, each option with its share; options this team's 50/50 removed are crossed out. */
 export function RoomSplit({

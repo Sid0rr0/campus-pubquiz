@@ -11,6 +11,7 @@ import type {
   BlockQuestionView,
   PlayersRevealQuestionView,
   JoinAcceptedPayload,
+  PurchaseView,
   QuestionView,
   Verdict,
 } from '@campus-pubquiz/types';
@@ -24,7 +25,7 @@ import {
 import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import { RoomSplit, type PowerUpShop } from '@/app/play/power-up-bar';
+import { RoomSplit } from '@/app/play/power-up-bar';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
 
@@ -74,8 +75,8 @@ interface QuestionBrowserProps {
   isJokerQuestion?: boolean;
   /** The numbers of the rounds doubled for the team, marked in the picker. */
   doubledRoundNumbers?: readonly number[];
-  /** Set when the team can spend coins: draws the power-up bar and hides the options its 50/50s removed. */
-  powerUpShop?: PowerUpShop;
+  /** The team's own power-up purchases: their effects show on the question, whatever the coins left. */
+  purchases?: PurchaseView[];
 }
 
 interface RevealBodyProps {
@@ -132,13 +133,11 @@ export function QuestionBrowser({
   navigation,
   isJokerQuestion = false,
   doubledRoundNumbers = [],
-  powerUpShop,
+  purchases = [],
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
   // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
-  const removedOptions = powerUpShop
-    ? removedOptionsOf(selectedQuestion.id, powerUpShop.purchases)
-    : undefined;
+  const removedOptions = removedOptionsOf(selectedQuestion.id, purchases);
 
   return (
     <div
@@ -222,7 +221,7 @@ export function QuestionBrowser({
           <NumberMarginText
             question={
               selectedQuestion.margin &&
-              powerUpShop?.purchases.some(
+              purchases.some(
                 (p) =>
                   p.effect.kind === 'wider_margin' &&
                   p.questionId === selectedQuestion.id,
@@ -251,7 +250,7 @@ export function QuestionBrowser({
           <MotionConfig reducedMotion="user">
             {/* Keyed by question and initial={false}: only an effect bought here and now eases in, never one already there on a load or when moving between questions. */}
             <AnimatePresence key={selectedQuestion.id} initial={false}>
-              {powerUpShop?.purchases.map(
+              {purchases.map(
                 ({ questionId, effect }) =>
                   questionId === selectedQuestion.id &&
                   'hint' in effect && (
@@ -267,7 +266,7 @@ export function QuestionBrowser({
               {mode === 'answering' &&
                 isAnswerable &&
                 team &&
-                powerUpShop?.purchases.some(
+                purchases.some(
                   (p) =>
                     p.questionId === selectedQuestion.id &&
                     p.effect.kind === 'ask_the_room',
@@ -275,7 +274,7 @@ export function QuestionBrowser({
                   <motion.div key="room-split" {...POWER_UP_EFFECT_ARRIVAL}>
                     <RoomSplit
                       question={selectedQuestion}
-                      purchases={powerUpShop.purchases}
+                      purchases={purchases}
                     />
                   </motion.div>
                 )}
@@ -288,10 +287,7 @@ export function QuestionBrowser({
               removedOptions={removedOptions}
               initialValue={myAnswers[selectedQuestion.id] ?? ''}
               isKahootMode={isKahootMode}
-              pin={
-                powerUpShop &&
-                pinFor(selectedQuestion.id, powerUpShop.purchases)
-              }
+              pin={pinFor(selectedQuestion.id, purchases)}
               onSubmit={(value) =>
                 onSubmitAnswer(selectedQuestion.id, team.teamId, value)
               }

@@ -440,18 +440,7 @@ function PlayPageContent() {
               navigation={navigation}
               isJokerQuestion={isJokerQuestion}
               doubledRoundNumbers={doubledRoundNumbers}
-              powerUpShop={
-                // The shop shows for a team with coins, even in a session without power-ups (a carried coin).
-                team && (settings.powerUpsEnabled || team.coins > 0)
-                  ? {
-                      settings: settings.powerUps,
-                      coins: team.coins,
-                      purchases: myPurchases,
-                      roomReadyQuestionIds,
-                      onBuy: buyPowerUp,
-                    }
-                  : undefined
-              }
+              purchases={myPurchases}
             />
           </div>
         )}
