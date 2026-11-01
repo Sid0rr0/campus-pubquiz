@@ -2,8 +2,10 @@ import { test as base, expect } from '../fixtures';
 import { awardBonus, expectTeamsTablePoints } from '../support/bonus';
 import { recordMove } from '../support/coverage';
 import { E2E_LOCK_GRACE_SECONDS } from '../support/env';
+import { expectStampedStandingsRow } from '../support/joker-night';
 import {
   awardCoins,
+  buyExtraJoker,
   buyPowerUp,
   expectCoins,
   expectTeamsTableCoins,
@@ -260,5 +262,63 @@ questionPowerUpsTest(
     await snap(display, 'reveal', 'power-ups');
     await phone.expectRevealedAnswer('215');
     await phone.expectRevealedPoints(2, 2);
+  },
+);
+
+// The extra joker costs 6 with the round overview on; the team starts with exactly that.
+const EXTRA_JOKER_COST = 6;
+// It answers the first question right and doubles the whole round: 2 points, twice.
+const DOUBLED_TOTAL = 4;
+
+const named = base.extend({
+  session: async ({ adminApi }, use) => {
+    const quizTitle = `Power-ups ${Date.now().toString(36)}`;
+    await use(
+      await seedPowerUpSession(adminApi, quizTitle, {
+        lockGraceSeconds: E2E_LOCK_GRACE_SECONDS,
+        showRoundOverview: true,
+        startingCoins: EXTRA_JOKER_COST,
+      }),
+    );
+  },
+});
+
+named(
+  'extra joker, named: the offer names the round and costs 6, and the round scores double',
+  async ({ control, display, joinPhone }) => {
+    const phone = await joinPhone('Team A');
+    await control.startQuiz();
+    await control.advance('round_overview');
+
+    // 1. The offer names the next round and its price; buying takes all the coins.
+    await expectCoins(phone, EXTRA_JOKER_COST);
+    const drawer = await openShop(phone);
+    const offer = drawer.getByRole('button', { name: 'Activate Extra joker' });
+    await expect(offer).toContainText(`the next round: ${helps.title}`);
+    await expect(offer).toContainText('6 coins');
+    await buyExtraJoker(drawer);
+    await expectCoins(phone, 0);
+
+    // 2. Play the round, answering only the first question.
+    await control.advance('round_intro');
+    await control.advance('question_open');
+    await phone.expectQuestion(helps.multipleChoice.prompt);
+    await phone.submitChoice(helps.multipleChoice.key);
+    for (let i = 1; i < 5; i += 1) await control.advance('question_open');
+    await control.advance('locking');
+    await control.expectStatus('break_intro');
+    await control.advance('reveal_intro');
+    await control.advance('reveal');
+
+    // 3. The leaderboard total has the round's points doubled.
+    await control.toggleLeaderboard();
+    await control.revealNextLeaderboardTeam();
+    await expectStampedStandingsRow(
+      display,
+      phone.teamName,
+      DOUBLED_TOTAL,
+      true,
+    );
+    await phone.expectOwnStanding(DOUBLED_TOTAL);
   },
 );

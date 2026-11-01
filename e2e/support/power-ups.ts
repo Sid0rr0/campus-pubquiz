@@ -4,7 +4,7 @@
  * drawer. Effects a single journey reads live in its own helpers.
  */
 import path from 'node:path';
-import { expect, type APIRequestContext } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator } from '@playwright/test';
 import type { SeededSession, SessionSettingsInput } from './api';
 import { recordMove } from './coverage';
 import { seedCsvSession } from './csv-session';
@@ -112,6 +112,13 @@ export async function expectTeamsTableCoins(
       .getByRole('cell')
       .nth(index),
   ).toHaveText(String(coins));
+}
+
+/** Buys the extra joker from the open shop drawer for the offered round and records the move; the drawer closes once the server has accepted it. */
+export async function buyExtraJoker(drawer: Locator): Promise<void> {
+  await drawer.getByRole('button', { name: 'Activate Extra joker' }).click();
+  await expect(drawer).toHaveCount(0);
+  recordMove('power_up_extra_joker');
 }
 
 /** Buys the power-up (by its label, "50/50") from the shop; the drawer closes once the server has accepted it. */

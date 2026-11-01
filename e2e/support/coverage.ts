@@ -69,6 +69,8 @@ export const MOVES = [
   'power_up_letter_count',
   'power_up_pin_one',
   'power_up_wider_margin',
+  /** Buying the extra joker for a round. */
+  'power_up_extra_joker',
 ] as const;
 export type Move = (typeof MOVES)[number];
 
