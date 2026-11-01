@@ -40,6 +40,40 @@ describe('useLockCountdownSound', () => {
     expect(audio.currentTime).toBeCloseTo(0, 0);
   });
 
+  it('waits to start a 60s track until 60s remain when the lock is longer', () => {
+    const { result } = renderHook(() =>
+      useLockCountdownSound({ lockAt: 120_000, enabled: true }),
+    );
+
+    act(() => result.current.unlock());
+    // Only the priming element has played so far.
+    expect(playSpy.mock.contexts).toHaveLength(1);
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(playSpy.mock.contexts).toHaveLength(2);
+    const audio = playSpy.mock.contexts.at(-1) as HTMLAudioElement;
+    expect(audio.currentTime).toBeCloseTo(0, 0);
+  });
+
+  it('never starts a waiting track once the lock deadline clears', () => {
+    const { result, rerender } = renderHook(
+      ({ lockAt }: { lockAt: number | null }) =>
+        useLockCountdownSound({ lockAt, enabled: true }),
+      { initialProps: { lockAt: 120_000 as number | null } },
+    );
+    act(() => result.current.unlock());
+
+    rerender({ lockAt: null });
+    act(() => {
+      vi.advanceTimersByTime(120_000);
+    });
+
+    expect(playSpy.mock.contexts).toHaveLength(1);
+  });
+
   it('starts partway through when a shorter lock duration remains', () => {
     const { result } = renderHook(() =>
       useLockCountdownSound({ lockAt: 20_000, enabled: true }),

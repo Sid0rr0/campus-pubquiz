@@ -79,12 +79,29 @@ export function useLockCountdownSound({
       0,
       Math.ceil((lockAt - Date.now()) / 1000),
     );
-    audio.currentTime = Math.max(
+    // A lock longer than the track holds the track back until its length remains, so it still ends at the deadline.
+    const startInSeconds = Math.max(
       0,
-      LOCK_COUNTDOWN_TRACK_SECONDS - secondsRemaining,
+      secondsRemaining - LOCK_COUNTDOWN_TRACK_SECONDS,
     );
-    audio.play().catch(() => {});
+    const deadline = lockAt;
+    function start() {
+      const secondsLeft = Math.max(
+        0,
+        Math.ceil((deadline - Date.now()) / 1000),
+      );
+      audio.currentTime = Math.max(
+        0,
+        LOCK_COUNTDOWN_TRACK_SECONDS - secondsLeft,
+      );
+      audio.play().catch(() => {});
+    }
+    // Synchronous in the common case, so the track starts inside the click that unlocked it.
+    let startTimer: ReturnType<typeof setTimeout> | undefined;
+    if (startInSeconds === 0) start();
+    else startTimer = setTimeout(start, startInSeconds * 1000);
     return () => {
+      clearTimeout(startTimer);
       audio.pause();
       audio.currentTime = 0;
     };
