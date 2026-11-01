@@ -1,9 +1,11 @@
 // Creates (or resets) a throwaway admin in the LOCAL dev database, so a browser check can sign in
 // on :8888 without the real admin password. Refuses any database that is not on this machine.
+import { randomBytes } from 'node:crypto';
 import { createRequire } from 'node:module';
 
 const USERNAME = 'claude-dev';
-const PASSWORD = 'claude-dev-password';
+// Fresh on every run and printed, never committed: if this ever reaches a database through a tunnel, no known password opens it.
+const PASSWORD = randomBytes(12).toString('hex');
 
 const url =
   process.env.DATABASE_URL ??
