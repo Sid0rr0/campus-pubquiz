@@ -3,6 +3,7 @@
 import { useState, type ReactNode, type SubmitEvent } from 'react';
 import { CheckIcon } from '@radix-ui/react-icons';
 import {
+  IDK_ANSWER_VALUE,
   type AnswerKind,
   type PinEffect,
   type QuestionView,
@@ -37,7 +38,10 @@ function TypedInput({
 }: Pick<AnswerInputProps, 'initialValue' | 'onSubmit' | 'idkButton'> & {
   inputType: 'text' | 'number';
 }) {
-  const [value, setValue] = useState(initialValue);
+  // "I don't know" is stored as a sentinel; the box starts empty rather than showing it.
+  const [value, setValue] = useState(
+    initialValue === IDK_ANSWER_VALUE ? '' : initialValue,
+  );
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
