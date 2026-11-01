@@ -51,7 +51,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Starting a session',
     paragraphs: [
-      'In the lobby, Session Settings sets the quiz, rules text and bonus categories. Then press Start Quiz.',
+      'Session Settings sets the rules text and bonus categories in the lobby. Then press Start Quiz.',
       'Tick the leagues this session counts towards at the start or later in Session Settings.',
       'Advance shows the rules, the round overview, then the first round title card; Previous on the rules returns to the lobby.',
     ],
