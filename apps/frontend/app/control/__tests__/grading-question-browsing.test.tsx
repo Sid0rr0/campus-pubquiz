@@ -118,6 +118,7 @@ describe('AdminPage — grading question browsing', () => {
             pointsAwarded: 0,
             gradedAt: null,
             gradingState: 'ungraded',
+            powerUps: [],
           },
         ],
       },

@@ -1,4 +1,5 @@
 import {
+  askTheRoomReady,
   findQuestionOpenForAnswering,
   NOT_YOUR_TEAM_ANSWER_ERROR,
   SOCKET_EVENTS,
@@ -14,6 +15,7 @@ import type { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
+  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
@@ -149,6 +151,24 @@ export class AnswersChanges {
       ),
       this.grading.gradesChanged(started, [questionId]),
     ]);
+    // Each connected team hears only whether its own Ask the room is ready on
+    // this question, never how many teams answered.
+    const question = findQuestionOpenForAnswering(graded, questionId);
+    const offersRoom =
+      started.seededGame.settings.powerUps.ask_the_room.maxUses > 0;
+    const roomReadySyncs =
+      question && offersRoom
+        ? connectedTeamSyncs(
+            graded,
+            Object.keys(graded.connectedTeamSockets).map(Number),
+          ).map((sync) => ({
+            ...sync,
+            payload: {
+              questionId,
+              isReady: askTheRoomReady(question, answers, sync.teamId),
+            },
+          }))
+        : [];
     return {
       session: withAnsweredTeamIds(
         graded,
@@ -158,6 +178,7 @@ export class AnswersChanges {
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
         answerListQuestionIds: [questionId],
+        roomReadySyncs,
       },
       touchedScores: true,
     };

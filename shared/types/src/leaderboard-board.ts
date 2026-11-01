@@ -150,8 +150,9 @@ export function withPriorStandings(
 }
 
 /**
- * The shown teams whose joker round has a question in the block the prior
- * standings were taken for, i.e. the block just scored. Only while the
+ * The shown teams whose joker round, or a round they bought an extra joker for,
+ * has a question in the block the prior standings were taken for, i.e. the
+ * block just scored. Only while the
  * leaderboard is on air, so a pick never leaves the server early.
  */
 function describeJokerTeamIds(
@@ -174,7 +175,16 @@ function describeJokerTeamIds(
   return entries
     .filter(({ teamId }) => {
       const joker = session.jokers[teamId];
-      return joker !== undefined && blockRoundIds.has(joker.roundId);
+      return (
+        (joker !== undefined && blockRoundIds.has(joker.roundId)) ||
+        session.funFactData.powerUps.some(
+          (purchase) =>
+            purchase.teamId === teamId &&
+            purchase.powerUp === 'extra_joker' &&
+            purchase.roundId !== null &&
+            blockRoundIds.has(purchase.roundId),
+        )
+      );
     })
     .map(({ teamId }) => teamId);
 }

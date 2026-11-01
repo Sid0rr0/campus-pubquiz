@@ -11,6 +11,7 @@ import {
 import type { AuthUser } from '@campus-pubquiz/types';
 import {
   AccountMenuLinks,
+  HowToPlayLink,
   LeagueLink,
   MyTeamLink,
 } from '@/app/components/account-menu-links';
@@ -144,6 +145,7 @@ export function MobileHeaderMenu({
               <>
                 <LeagueLink />
                 <MyTeamLink />
+                <HowToPlayLink />
               </>
             )}
           </nav>

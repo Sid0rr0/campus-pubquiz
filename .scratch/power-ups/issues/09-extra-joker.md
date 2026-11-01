@@ -11,9 +11,9 @@ Parent spec: `.scratch/power-ups/spec.md`
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-Postgres spec: purchase window, refusal on a doubled round, leaderboard doubling
-- [ ] Joker-round changes by the quiz master can't stack with an extra joker on the same round
-- [ ] Phone offer between rounds, Vitest
-- [ ] `DOCUMENTATION.md` jokers section
+- [x] Real-Postgres spec: purchase window, refusal on a doubled round, leaderboard doubling
+- [x] Joker-round changes by the quiz master can't stack with an extra joker on the same round
+- [x] Phone offer between rounds, Vitest
+- [x] `DOCUMENTATION.md` jokers section

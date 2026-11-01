@@ -26,13 +26,25 @@ export function formatBonusAwardToast(award: TeamBonusAwardView): string {
   return `${formatSignedPoints(award.points)} ${unit} — ${category}`;
 }
 
-/** The quiz master's confirmation of an accepted award, e.g. "+1 Selfie → The Quizzly Bears". */
+/** The quiz master's confirmation of an accepted award, e.g. "+1 Selfie → The Quizzly Bears", or "+1 Selfie, +2 coins → …" with coins; coins alone read "+2 coins → …". */
 export function formatBonusAwardConfirmation(
   category: BonusCategory,
   points: number,
   teamName: string,
+  coins = 0,
 ): string {
-  return `${formatSignedPoints(points)} ${BONUS_CATEGORY_LABELS[category]} → ${teamName}`;
+  const parts = [];
+  if (points !== 0) {
+    parts.push(
+      `${formatSignedPoints(points)} ${BONUS_CATEGORY_LABELS[category]}`,
+    );
+  }
+  if (coins !== 0) {
+    parts.push(
+      `${formatSignedPoints(coins)} ${Math.abs(coins) === 1 ? 'coin' : 'coins'}`,
+    );
+  }
+  return `${parts.join(', ')} → ${teamName}`;
 }
 
 /**

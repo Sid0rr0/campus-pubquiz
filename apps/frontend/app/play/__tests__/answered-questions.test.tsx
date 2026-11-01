@@ -339,15 +339,16 @@ describe('PlayPage — answered questions history', () => {
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
-  it('does not render the history panel when no questions have been opened yet', () => {
+  it('shows the history panel, empty, before any question has been opened', () => {
     renderHistory({ progress: { status: 'lobby' } });
 
     expect(
-      screen.queryByRole('heading', { name: /answer history/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('heading', { name: /answer history/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('No questions opened yet.')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /answer history/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: 'Answer history (0)' }),
+    ).toBeInTheDocument();
   });
 
   describe('mid closest-guess reveal', () => {

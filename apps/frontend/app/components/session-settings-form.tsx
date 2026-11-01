@@ -9,6 +9,7 @@ import {
   DEFAULT_BONUS_POINTS,
 } from '@/app/lib/bonus-categories';
 import { Button } from '@/app/components/button';
+import { withShowRoundOverview } from '@/app/components/power-ups-settings-form';
 
 interface SessionSettingsFormProps {
   value: SessionSettings;
@@ -188,7 +189,7 @@ export function SessionSettingsForm({
           // Jokers build on the overview, so it stays on while they are.
           disabled={value.jokersEnabled}
           onChange={(event) =>
-            onChange({ ...value, showRoundOverview: event.target.checked })
+            onChange(withShowRoundOverview(value, event.target.checked))
           }
         />
         Show round overview after rules
@@ -200,10 +201,11 @@ export function SessionSettingsForm({
           checked={value.jokersEnabled}
           onChange={(event) =>
             onChange({
-              ...value,
-              jokersEnabled: event.target.checked,
               // Turning jokers on turns the overview on with them.
-              ...(event.target.checked ? { showRoundOverview: true } : {}),
+              ...(event.target.checked
+                ? withShowRoundOverview(value, true)
+                : value),
+              jokersEnabled: event.target.checked,
             })
           }
         />

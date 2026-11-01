@@ -34,6 +34,7 @@ describe('countCorrectAnswers', () => {
           pointsAwarded: 2,
           gradedAt: '2026-01-01T00:00:00.000Z',
           gradingState: 'graded',
+          powerUps: [],
           verdict: 'correct',
         },
         {
@@ -44,6 +45,7 @@ describe('countCorrectAnswers', () => {
           pointsAwarded: 1,
           gradedAt: '2026-01-01T00:00:00.000Z',
           gradingState: 'graded',
+          powerUps: [],
           verdict: 'partial',
         },
         {
@@ -54,6 +56,7 @@ describe('countCorrectAnswers', () => {
           pointsAwarded: 0,
           gradedAt: '2026-01-01T00:00:00.000Z',
           gradingState: 'graded',
+          powerUps: [],
           verdict: 'incorrect',
         },
       ],
@@ -74,6 +77,7 @@ describe('countCorrectAnswers', () => {
           pointsAwarded: 640,
           gradedAt: '2026-01-01T00:00:00.000Z',
           gradingState: 'graded',
+          powerUps: [],
           verdict: 'correct',
         },
       ],
@@ -91,6 +95,7 @@ describe('countCorrectAnswers', () => {
       pointsAwarded: 0,
       gradedAt: '2026-01-01T00:00:00.000Z',
       gradingState: 'graded' as const,
+      powerUps: [],
     };
     const before = liveAnswers({
       answers: [{ ...answer, verdict: 'incorrect' }],
@@ -115,6 +120,7 @@ describe('countCorrectAnswers', () => {
           pointsAwarded: 0,
           gradedAt: null,
           gradingState: 'ungraded',
+          powerUps: [],
           verdict: null,
         },
       ],

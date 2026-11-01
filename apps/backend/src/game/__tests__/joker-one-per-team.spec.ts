@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
   type TeamJoker,
   type TeamJokerSyncedPayload,
@@ -250,6 +251,37 @@ describe('GameGateway — every team keeps exactly one joker', () => {
         Bravo: [2, 'Round 3', 'chosen'],
       });
       expect(syncsTo(game, alpha)).toHaveLength(1);
+    });
+
+    it('never redraws a joker onto a round the team doubles with an extra joker', async () => {
+      const game = await jokerNight({
+        jokerRandom: () => 0,
+        settings: {
+          showRoundOverview: true,
+          jokersEnabled: true,
+          powerUpsEnabled: true,
+          startingCoins: 5,
+          powerUps: {
+            ...DEFAULT_SESSION_SETTINGS.powerUps,
+            extra_joker: { cost: 1, maxUses: 1 },
+          },
+        },
+      });
+      await openPick(game);
+      const [alpha] = game.teams;
+      await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
+        powerUp: 'extra_joker',
+        roundId: game.rounds[0].id,
+      });
+      await game.gateway.handlePickJoker(asSocket(alpha.socket), {
+        roundId: game.rounds[1].id,
+      });
+      await game.act('ADVANCE');
+
+      await game.saveQuizEdit((rounds) => [rounds[0], rounds[2]]);
+
+      // The draw would pick Round 1 first, which Alpha already doubles.
+      expect((await adminJokers(game)).Alpha).toEqual([2, 'Round 3', 'drawn']);
     });
 
     it('keeps a joker on its round when the rounds are reordered', async () => {

@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { RulesContent } from '@/app/components/rules-content';
+import { DEFAULT_SESSION_SETTINGS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
@@ -56,6 +57,96 @@ describe('DisplayPage — rules and round intro', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
+
+  it.each([
+    [true, '(1 point + 2 coins, doable twice per quiz)'],
+    [false, '(1 point, doable twice per quiz)'],
+  ])(
+    'with power-ups %s the shot bonus rule reads %s',
+    (powerUpsEnabled, reward) => {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          settings: { powerUpsEnabled, enabledBonusCategories: ['shot'] },
+          progress: { status: 'rules' },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      expect(screen.getByText(/^shot bonus:/i).textContent).toContain(reward);
+    },
+  );
+
+  it('highlights the coin amounts in the power-ups rules', () => {
+    mockUseGame.mockReturnValue({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        settings: {
+          powerUpsEnabled: true,
+          startingCoins: 2,
+          enabledBonusCategories: ['shot'],
+        },
+        progress: { status: 'rules' },
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('2 coins').tagName).toBe('STRONG');
+    expect(screen.getByText('1 point + 2 coins').tagName).toBe('STRONG');
+  });
+
+  it.each([
+    [
+      true,
+      2,
+      'Power-ups are on: you start with 2 coins. If your team rated all rounds of the last pub quiz, you get 2 bonus coins. Earn more with shots and selfies.',
+    ],
+    [
+      true,
+      1,
+      'Power-ups are on: you start with 1 coin. If your team rated all rounds of the last pub quiz, you get 2 bonus coins. Earn more with shots and selfies.',
+    ],
+    [false, 2, null],
+  ])(
+    'with power-ups %s and %s starting coins the rules screen shows %s',
+    (powerUpsEnabled, startingCoins, line) => {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          settings: { powerUpsEnabled, startingCoins },
+          progress: { status: 'rules' },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      expect(screen.queryByText(/power-ups are on/i)?.textContent ?? null).toBe(
+        line,
+      );
+    },
+  );
+
+  it.each([
+    [false, true],
+    [false, false],
+    [true, true],
+  ])(
+    'with power-ups %s and a carried coin %s the rules hint about the coin is shown only with power-ups off and a coin',
+    (powerUpsEnabled, hasCarriedCoin) => {
+      render(
+        <RulesContent
+          settings={{ ...DEFAULT_SESSION_SETTINGS, powerUpsEnabled }}
+          hasCarriedCoin={hasCarriedCoin}
+        />,
+      );
+
+      expect(screen.queryByText(/for rating every round/i) !== null).toBe(
+        !powerUpsEnabled && hasCarriedCoin,
+      );
+    },
+  );
 
   it.each([
     [true, true],

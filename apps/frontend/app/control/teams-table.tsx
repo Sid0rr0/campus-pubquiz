@@ -40,8 +40,11 @@ interface TeamsTableProps {
     category: BonusCategory,
     points: number,
     reason?: string,
+    coins?: number,
   ) => Promise<AckResult>;
   enabledBonusCategories: BonusCategory[];
+  /** Each team's coins; the Coins column shows only when this is given (power-ups on). */
+  coinsByTeamId?: Record<number, number>;
 }
 
 // Rows keep the server's ranking until a round column header is clicked.
@@ -62,6 +65,7 @@ export function TeamsTable({
   roundTitles,
   onAwardBonus,
   enabledBonusCategories,
+  coinsByTeamId,
 }: TeamsTableProps) {
   const [awardingTeamId, setAwardingTeamId] = useState<number | null>(null);
   // Drops a second submit while the first award awaits its acknowledgement.
@@ -110,6 +114,15 @@ export function TeamsTable({
           header: 'Total',
           enableSorting: false,
         }),
+        ...(coinsByTeamId
+          ? [
+              helper.display({
+                id: 'coins',
+                header: 'Coins',
+                cell: (context) => coinsByTeamId[context.row.original.teamId],
+              }),
+            ]
+          : []),
         helper.display({
           id: 'actions',
           header: 'Actions',
@@ -160,7 +173,7 @@ export function TeamsTable({
           },
         }),
       ]),
-    [roundTitles],
+    [roundTitles, coinsByTeamId],
   );
   const table = useTable({
     features,
@@ -191,16 +204,25 @@ export function TeamsTable({
             {awardingTeam && (
               <BonusAwardForm
                 enabledCategories={enabledBonusCategories}
-                onAward={async (category, points, reason) => {
+                isCoinsEnabled={coinsByTeamId !== undefined}
+                onAward={async (category, points, reason, coins) => {
                   if (isAwardInFlightRef.current) return;
                   isAwardInFlightRef.current = true;
                   try {
-                    const result = await onAwardBonus(
-                      awardingTeam.teamId,
-                      category,
-                      points,
-                      reason,
-                    );
+                    const result = await (coins === undefined
+                      ? onAwardBonus(
+                          awardingTeam.teamId,
+                          category,
+                          points,
+                          reason,
+                        )
+                      : onAwardBonus(
+                          awardingTeam.teamId,
+                          category,
+                          points,
+                          reason,
+                          coins,
+                        ));
                     // A rejection keeps the dialog open with what was typed;
                     // its error toast comes from the admin hook.
                     if (result.success) {
@@ -209,6 +231,7 @@ export function TeamsTable({
                           category,
                           points,
                           awardingTeam.teamName,
+                          coins,
                         ),
                       );
                       setAwardingTeamId(null);

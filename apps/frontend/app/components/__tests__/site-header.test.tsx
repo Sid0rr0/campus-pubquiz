@@ -264,6 +264,10 @@ describe('SiteHeader', () => {
           sessionRatings: { pacing: null, feltDifficulty: null },
           playerCount: null,
           joker: null,
+          coins: 0,
+          hasCarriedCoin: false,
+          purchases: [],
+          roomReadyQuestionIds: [],
         },
         onLogOut,
       }),
@@ -282,6 +286,21 @@ describe('SiteHeader', () => {
       .click(within(drawer).getByRole('button', { name: /change team/i }));
 
     expect(onLogOut).toHaveBeenCalled();
+  });
+
+  it('links How to play when signed out, from the nav and the mobile hamburger', async () => {
+    const user = userEvent.setup();
+    render(<SiteHeader />);
+
+    expect(
+      screen.getByRole('link', { name: /^how to play$/i }),
+    ).toHaveAttribute('href', '/how-to-play');
+    await user.click(screen.getByRole('button', { name: /open menu/i }));
+    expect(
+      within(screen.getByRole('dialog')).getByRole('link', {
+        name: /^how to play$/i,
+      }),
+    ).toHaveAttribute('href', '/how-to-play');
   });
 
   it('links My Team for everyone, from the nav and the mobile hamburger', async () => {

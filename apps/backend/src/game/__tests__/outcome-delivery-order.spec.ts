@@ -61,6 +61,7 @@ describe('GameGateway — outcome delivery order', () => {
       SOCKET_EVENTS.ANSWER_RECEIVED,
       ...ROOM_PUSH,
       SOCKET_EVENTS.ANSWERS_UPDATED,
+      SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
     ]);
   });
 

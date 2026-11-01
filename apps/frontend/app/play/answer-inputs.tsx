@@ -2,7 +2,11 @@
 
 import { useState, type ReactNode, type SubmitEvent } from 'react';
 import { CheckIcon } from '@radix-ui/react-icons';
-import { type AnswerKind, type QuestionView } from '@campus-pubquiz/types';
+import {
+  type AnswerKind,
+  type PinEffect,
+  type QuestionView,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { getOptionLetter } from '@/app/lib/option-letters';
 import { MatchAnswer } from '@/app/play/match-answer';
@@ -15,6 +19,10 @@ export interface AnswerInputProps {
   /** Active round's Kahoot-style speed scoring flag: a tapped choice submits immediately and locks. */
   isKahootMode: boolean;
   onSubmit: (value: string) => void;
+  /** A pin the team bought on this sort or match question. */
+  pin?: PinEffect;
+  /** Options a 50/50 removed from this multiple-choice question: greyed out, not selectable. */
+  removedOptions?: string[];
   /** The "I don't know" button, placed by each input where it belongs in its own layout. */
   idkButton: ReactNode;
 }
@@ -74,6 +82,7 @@ function ChoiceInput({
   initialValue,
   isKahootMode,
   onSubmit,
+  removedOptions = NO_ITEMS,
   idkButton,
 }: AnswerInputProps) {
   const [value, setValue] = useState(initialValue);
@@ -93,20 +102,23 @@ function ChoiceInput({
 
   return (
     <div className="flex flex-col gap-2.5">
-      {(question.options ?? NO_ITEMS).map((option, index) => {
+      {(question.options ?? NO_ITEMS).map((option, index, options) => {
         const isChosen = option === value;
+        const isRemoved = removedOptions.includes(option);
+        // Nothing forbids two options with the same text, so the text alone can't be the key.
+        const occurrence = options
+          .slice(0, index)
+          .filter((other) => other === option).length;
         return (
           <Button
-            key={index}
+            key={`${option}#${occurrence}`}
             type="button"
             aria-pressed={isChosen}
-            disabled={isKahootMode && hasAnswered}
+            disabled={isRemoved || (isKahootMode && hasAnswered)}
             onClick={() => handleOptionClick(option)}
-            className={
-              isChosen
-                ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-dark-blue bg-white px-4 text-lg font-bold'
-                : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-foreground/30 bg-white px-4 text-lg font-bold'
-            }
+            className={`flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs bg-white px-4 text-lg font-bold ${
+              isChosen ? 'border-dark-blue' : 'border-foreground/30'
+            } ${isRemoved ? 'opacity-40' : ''}`}
           >
             <span aria-hidden="true" className="font-display text-cyan">
               {getOptionLetter(index)}
@@ -133,6 +145,7 @@ function ChoiceInput({
 function SortInput({
   question,
   initialValue,
+  pin,
   onSubmit,
   idkButton,
 }: AnswerInputProps) {
@@ -141,6 +154,7 @@ function SortInput({
       <SortAnswer
         options={question.options ?? NO_ITEMS}
         initialValue={initialValue}
+        pin={pin}
         onSubmit={onSubmit}
       />
       {idkButton}
@@ -151,6 +165,7 @@ function SortInput({
 function MatchInput({
   question,
   initialValue,
+  pin,
   onSubmit,
   idkButton,
 }: AnswerInputProps) {
@@ -160,6 +175,7 @@ function MatchInput({
         leftItems={question.options ?? NO_ITEMS}
         rightItems={question.matchTargets ?? NO_ITEMS}
         initialValue={initialValue}
+        pin={pin}
         onSubmit={onSubmit}
       />
       {idkButton}

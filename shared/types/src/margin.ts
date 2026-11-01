@@ -16,6 +16,13 @@ export const MARGIN_UNITS = ['percent', 'absolute'] as const;
 /** The margin a Number question without a stored one gets. */
 export const DEFAULT_MARGIN: Margin = { value: 10, unit: 'percent' };
 
+/** The wider-margin power-up's margin: the value doubled in its unit; `DEFAULT_MARGIN` when it is 0 (exact only). Read the question's margin through the Answer key first. */
+export function widenedMargin(margin: Margin): Margin {
+  return margin.value === 0
+    ? { ...DEFAULT_MARGIN }
+    : { value: margin.value * 2, unit: margin.unit };
+}
+
 const PERCENT_DIVISOR = 100;
 
 /** The furthest an answer may be from `key` and still be inside `margin`. */

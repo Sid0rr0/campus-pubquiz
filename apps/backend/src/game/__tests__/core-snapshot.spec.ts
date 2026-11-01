@@ -33,6 +33,8 @@ describe('GameStateService — core snapshot', () => {
       game.leagueTableService,
       game.leagueService,
       game.jokerService,
+      game.carriedCoinService,
+      game.purchaseService,
     );
 
     await expect(
@@ -75,6 +77,7 @@ describe('GameStateService — core snapshot', () => {
         playerCount: null,
         isOverPlayerCap: false,
         joker: null,
+        coins: 0,
       },
     ]);
 
@@ -88,6 +91,7 @@ describe('GameStateService — core snapshot', () => {
         playerCount: null,
         isOverPlayerCap: false,
         joker: null,
+        coins: 0,
       },
     ]);
   });

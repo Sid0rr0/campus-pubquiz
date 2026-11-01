@@ -1,5 +1,6 @@
 import type { TeamAnswerView } from './answers';
 import type { TeamBonusAwardView } from './bonus';
+import type { PurchaseView } from './power-ups';
 import type { RoundRatingView, TeamFeedbackView } from './feedback';
 import type { TeamJoker } from './joker';
 import type { TeamSessionRatingsView } from './session-scales';
@@ -45,6 +46,14 @@ export interface JoinAcceptedPayload {
   playerCount: number | null;
   /** The team's own joker this session (null until it has one), so a reconnect, a second phone or a rejoin after a kick restores it. Never another team's. */
   joker: TeamJoker | null;
+  /** The team's own coins, worked out by the server from its ledger, so a reconnect restores them. */
+  coins: number;
+  /** Whether one of those coins is the carried coin, earned by rating every round of the team's last night in the league, so the phone can say where it came from. */
+  hasCarriedCoin: boolean;
+  /** The team's own power-up purchases this session, so a reconnect shows the options a 50/50 removed. Never another team's. */
+  purchases: PurchaseView[];
+  /** The open questions on which the team's Ask the room is ready now, so a reconnect restores the button. No counts. */
+  roomReadyQuestionIds: number[];
 }
 
 export interface KickTeamPayload {

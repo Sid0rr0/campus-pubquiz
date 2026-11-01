@@ -1,9 +1,13 @@
 import {
+  coinBalanceOf,
   type GameStatus,
   type ServerToClientProtocol,
   type SessionState,
   SOCKET_EVENTS,
+  type TeamCoinsSyncedPayload,
   type TeamJoker,
+  type TeamPurchasesSyncedPayload,
+  type TeamRoomReadySyncedPayload,
 } from '@campus-pubquiz/types';
 
 /** One server-to-client event paired with its protocol payload, so a mismatched pair doesn't compile. An event that carries no payload (`TEAM_KICKED`) takes `undefined`. */
@@ -14,7 +18,9 @@ type EventEmit<E extends keyof ServerToClientProtocol> =
 
 /** A direct emit to one socket (kicked, bonus awarded), delivered after every room push. */
 export type SocketNotice = { socketId: string } & EventEmit<
-  typeof SOCKET_EVENTS.TEAM_KICKED | typeof SOCKET_EVENTS.BONUS_AWARDED
+  | typeof SOCKET_EVENTS.TEAM_KICKED
+  | typeof SOCKET_EVENTS.BONUS_AWARDED
+  | typeof SOCKET_EVENTS.COIN_AWARDED
 >;
 
 /** A direct emit to the socket that sent the event (answer received, join accepted), delivered before any room push. */
@@ -36,6 +42,21 @@ export interface PlayerCountSync extends TeamSync {
 /** A connected team whose phone needs its joker (null: none), with the socket it is on. */
 export interface JokerSync extends TeamSync {
   joker: TeamJoker | null;
+}
+
+/** A connected team whose phone needs its new coins (no toast), with the socket it is on. */
+export interface CoinSync extends TeamSync {
+  payload: TeamCoinsSyncedPayload;
+}
+
+/** A connected team whose phone needs its power-up purchases and coins, with the socket it is on. */
+export interface PurchaseSync extends TeamSync {
+  payload: TeamPurchasesSyncedPayload;
+}
+
+/** A connected team whose phone needs to know whether Ask the room is ready on a question, with the socket it is on. */
+export interface RoomReadySync extends TeamSync {
+  payload: TeamRoomReadySyncedPayload;
 }
 
 /** The session's phase timer deadlines (epoch-ms, or null when none is due) after a write that moved any of them. */
@@ -89,8 +110,14 @@ export interface SessionOutcome {
   playerCountSyncs: readonly PlayerCountSync[];
   /** Connected teams whose own joker changed (a pick, a draw when the pick closed), each told the joker it now holds (never sent room-wide). */
   jokerSyncs: readonly JokerSync[];
+  /** Connected teams whose own power-up purchases changed (a purchase), each told its purchases and coins (never sent room-wide). */
+  purchaseSyncs: readonly PurchaseSync[];
+  /** Connected teams told whether their Ask the room is ready on a question, after any team's answer landed there (a flag per team, never a count). */
+  roomReadySyncs: readonly RoomReadySync[];
   /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
   bonusSyncs: readonly TeamSync[];
+  /** Connected teams whose coins changed under them (a bonus award deleted took its coin award, the quiz left the lobby, the lobby settings changed), each told its new coins. */
+  coinSyncs: readonly CoinSync[];
   notices: readonly SocketNotice[];
   /** Sockets to disconnect, last of all, after the notices. */
   socketsToClose: readonly string[];
@@ -125,7 +152,10 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   teamSyncs: [],
   playerCountSyncs: [],
   jokerSyncs: [],
+  purchaseSyncs: [],
+  roomReadySyncs: [],
   bonusSyncs: [],
+  coinSyncs: [],
   notices: [],
   socketsToClose: [],
 };
@@ -164,4 +194,20 @@ export function connectedTeamSyncs(
     const socketId = session.connectedTeamSockets[teamId];
     return socketId ? [{ teamId, socketId }] : [];
   });
+}
+
+/** What the coins of `teamIds` (every connected team by default) now are, for those connected: the balance read from the session's caches. */
+export function coinSyncsFor(
+  session: SessionState,
+  teamIds: Iterable<number> = Object.keys(session.connectedTeamSockets).map(
+    Number,
+  ),
+): CoinSync[] {
+  return connectedTeamSyncs(session, teamIds).map((sync) => ({
+    ...sync,
+    payload: {
+      balance: coinBalanceOf(session, sync.teamId),
+      hasCarriedCoin: (session.carriedCoins[sync.teamId] ?? 0) > 0,
+    },
+  }));
 }

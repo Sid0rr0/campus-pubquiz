@@ -5,6 +5,7 @@ import {
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
 import type { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
+import type { CoinAwardRepository } from '@/db/repositories/coin-award.repository';
 import type { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
 function createFakeBonusAwardRepository(
@@ -21,14 +22,17 @@ function createFakeBonusAwardRepository(
   const persistAndFlush = jest.fn().mockResolvedValue(undefined);
   const flush = jest.fn().mockResolvedValue(undefined);
   const removeAndFlush = jest.fn().mockResolvedValue(undefined);
+  const persist = jest.fn();
   const create = jest.fn((data: Record<string, unknown>) => data);
   return {
     create,
     getEntityManager: jest.fn(() => ({
+      persist,
       persistAndFlush,
       flush,
       removeAndFlush,
     })),
+    persist,
     persistAndFlush,
     flush,
     removeAndFlush,
@@ -36,6 +40,14 @@ function createFakeBonusAwardRepository(
     listForTeam: jest.fn().mockResolvedValue(teamAwards),
     findOne: jest.fn().mockResolvedValue(foundAward),
   };
+}
+
+/** A coin award repository holding no coin awards; the real-Postgres specs cover the ledger. */
+function createFakeCoinAwardRepository() {
+  return {
+    create: jest.fn((data: Record<string, unknown>) => data),
+    totalsForSession: jest.fn().mockResolvedValue({}),
+  } as unknown as CoinAwardRepository;
 }
 
 // Defaults to "team is on the roster" so tests exercising unrelated
@@ -54,6 +66,7 @@ describe('BonusService', () => {
     const gameSessionTeams = createFakeGameSessionTeamRepository(isOnRoster);
     const service = new BonusService(
       repo as unknown as BonusAwardRepository,
+      createFakeCoinAwardRepository(),
       gameSessionTeams as unknown as GameSessionTeamRepository,
     );
     return { service, repo, gameSessionTeams };
@@ -64,7 +77,7 @@ describe('BonusService', () => {
 
     const result = await service.award(101, 31, 'shot', 1, 'ignored');
 
-    expect(result).toEqual({ teamId: 31 });
+    expect(result).toEqual({ teamId: 31, coinsGiven: 0, coinTotal: 0 });
     expect(repo.create).toHaveBeenCalledWith({
       gameSession: 101,
       team: 31,
@@ -72,7 +85,8 @@ describe('BonusService', () => {
       reason: undefined,
       points: 1,
     });
-    expect(repo.persistAndFlush).toHaveBeenCalled();
+    expect(repo.persist).toHaveBeenCalled();
+    expect(repo.flush).toHaveBeenCalled();
   });
 
   it('trims and stores the reason for a custom award', async () => {
@@ -111,7 +125,7 @@ describe('BonusService', () => {
 
     const result = await service.award(101, 31, 'custom', -2, 'Late arrival');
 
-    expect(result).toEqual({ teamId: 31 });
+    expect(result).toEqual({ teamId: 31, coinsGiven: 0, coinTotal: 0 });
     expect(repo.create).toHaveBeenCalledWith({
       gameSession: 101,
       team: 31,
@@ -229,6 +243,7 @@ describe('BonusService', () => {
     const gameSessionTeams = createFakeGameSessionTeamRepository();
     const service = new BonusService(
       repo as unknown as BonusAwardRepository,
+      createFakeCoinAwardRepository(),
       gameSessionTeams as unknown as GameSessionTeamRepository,
     );
 
@@ -249,6 +264,7 @@ describe('BonusService', () => {
     const gameSessionTeams = createFakeGameSessionTeamRepository();
     const service = new BonusService(
       repo as unknown as BonusAwardRepository,
+      createFakeCoinAwardRepository(),
       gameSessionTeams as unknown as GameSessionTeamRepository,
     );
 
@@ -272,6 +288,7 @@ describe('BonusService', () => {
       const gameSessionTeams = createFakeGameSessionTeamRepository();
       const service = new BonusService(
         repo as unknown as BonusAwardRepository,
+        createFakeCoinAwardRepository(),
         gameSessionTeams as unknown as GameSessionTeamRepository,
       );
       return { service, repo };
@@ -377,10 +394,14 @@ describe('BonusService', () => {
       const gameSessionTeams = createFakeGameSessionTeamRepository();
       const service = new BonusService(
         repo as unknown as BonusAwardRepository,
+        createFakeCoinAwardRepository(),
         gameSessionTeams as unknown as GameSessionTeamRepository,
       );
 
-      await expect(service.remove(101, 9)).resolves.toEqual({ teamId: 31 });
+      await expect(service.remove(101, 9)).resolves.toEqual({
+        teamId: 31,
+        coinTotal: 0,
+      });
 
       expect(repo.findOne).toHaveBeenCalledWith({ id: 9, gameSession: 101 });
       expect(repo.removeAndFlush).toHaveBeenCalledWith(award);
@@ -391,6 +412,7 @@ describe('BonusService', () => {
       const gameSessionTeams = createFakeGameSessionTeamRepository();
       const service = new BonusService(
         repo as unknown as BonusAwardRepository,
+        createFakeCoinAwardRepository(),
         gameSessionTeams as unknown as GameSessionTeamRepository,
       );
 

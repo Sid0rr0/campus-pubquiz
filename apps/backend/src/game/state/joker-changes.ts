@@ -11,6 +11,7 @@ import {
   type TeamJoker,
 } from '@campus-pubquiz/types';
 import { JokerService } from '@/joker/joker.service';
+import { PurchaseService } from '@/purchase/purchase.service';
 import { TeamService } from '@/team/team.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
@@ -44,6 +45,7 @@ export class JokerChanges {
   constructor(
     private readonly jokerService: JokerService,
     private readonly teamService: TeamService,
+    private readonly purchaseService: PurchaseService,
     private readonly random: RandomSource,
   ) {}
 
@@ -74,6 +76,7 @@ export class JokerChanges {
         'That round cannot be your joker: it has already started',
       );
     }
+    await this.refuseDoubledRound(session, teamId, roundId);
     return await this.storeJoker(
       session,
       teamId,
@@ -110,12 +113,54 @@ export class JokerChanges {
         'That round cannot be the joker: it has already started, or the joker pick has not opened',
       );
     }
+    await this.refuseDoubledRound(session, teamId, roundId);
     return await this.storeJoker(
       session,
       teamId,
       { roundId, source: 'set_by_quiz_master' },
       {},
     );
+  }
+
+  /** The rounds the team bought an extra joker for: a joker may not sit on one, so no round counts more than double. */
+  private async extraJokerRoundIds(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<number[]> {
+    const rows = await this.purchaseService.extraJokerRows(
+      gameSessionId,
+      teamId,
+    );
+    return rows.map((row) => row.roundId);
+  }
+
+  /** Refuses a joker on a round the team bought an extra joker for: the two would not stack. */
+  private async refuseDoubledRound(
+    session: SessionState,
+    teamId: number,
+    roundId: number,
+  ): Promise<void> {
+    const extra = await this.extraJokerRoundIds(
+      session.seededGame.gameSessionId,
+      teamId,
+    );
+    if (extra.includes(roundId)) {
+      throw new SessionRefusal(
+        'That round is already doubled by an extra joker',
+      );
+    }
+  }
+
+  /** The rounds a joker may be drawn for the team: those with no opened question and no extra joker. */
+  private async drawableRoundIds(
+    session: SessionState,
+    teamId: number,
+  ): Promise<number[]> {
+    const extra = await this.extraJokerRoundIds(
+      session.seededGame.gameSessionId,
+      teamId,
+    );
+    return pickableRoundIdsOf(session).filter((id) => !extra.includes(id));
   }
 
   /** Saves `joker` for the team, then tells its phones and refreshes the admin room (and the big screen when asked). */
@@ -154,12 +199,14 @@ export class JokerChanges {
     const { gameSessionId } = session.seededGame;
     const stored = await this.jokerService.listForSession(gameSessionId);
     const roster = await this.teamService.listForSession(gameSessionId);
-    const pickableRoundIds = pickableRoundIdsOf(session);
 
     const jokers: Record<number, TeamJoker> = Object.fromEntries(stored);
     for (const { teamId } of roster) {
       if (jokers[teamId]) continue;
-      const roundId = drawJoker(pickableRoundIds, this.random);
+      const roundId = drawJoker(
+        await this.drawableRoundIds(session, teamId),
+        this.random,
+      );
       if (roundId === null) continue;
       const drawn: TeamJoker = { roundId, source: 'drawn' };
       await this.jokerService.set(gameSessionId, teamId, drawn);
@@ -217,7 +264,10 @@ export class JokerChanges {
     if (held || !session.seededGame.settings.jokersEnabled || !isPickClosed) {
       return null;
     }
-    const roundId = drawJoker(pickableRoundIdsOf(session), this.random);
+    const roundId = drawJoker(
+      await this.drawableRoundIds(session, teamId),
+      this.random,
+    );
     if (roundId === null) return null;
     const drawn: TeamJoker = { roundId, source: 'drawn' };
     await this.jokerService.set(
@@ -252,9 +302,14 @@ export class JokerChanges {
     for (const [key, joker] of held) {
       const teamId = Number(key);
       const followed = roundNowHolding(started, reloaded, joker.roundId);
+      const extra = await this.extraJokerRoundIds(gameSessionId, teamId);
       let next: TeamJoker | null = joker;
-      if (followed === null) {
-        const roundId = drawJoker(pickableRoundIds, this.random);
+      if (followed === null || extra.includes(followed)) {
+        // Gone, or moved onto a round the team doubles with an extra joker: draw anew.
+        const roundId = drawJoker(
+          pickableRoundIds.filter((id) => !extra.includes(id)),
+          this.random,
+        );
         next = roundId === null ? null : { roundId, source: 'drawn' };
       } else if (followed !== joker.roundId) {
         next = { ...joker, roundId: followed };
@@ -311,7 +366,7 @@ function pickableRoundIdsOf(session: SessionState): number[] {
  * The id of the round in `reloaded` that now holds most of the questions the
  * round `roundId` held in `started`, or null when none of them is left.
  */
-function roundNowHolding(
+export function roundNowHolding(
   started: SessionState,
   reloaded: SessionState,
   roundId: number,

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Tabs } from 'radix-ui';
 import { toast } from 'sonner';
 import type {
   SessionSettings,
@@ -12,6 +13,7 @@ import {
   useTickableLeagues,
 } from '@/app/components/league-checkboxes';
 import { queryKeys } from '@/app/lib/query-keys';
+import { PowerUpsSettingsForm } from '@/app/components/power-ups-settings-form';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { SessionApiError, updateSessionSettings } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
@@ -66,7 +68,28 @@ export function SessionSettingsPanel({
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-foreground/15 bg-white p-4">
       <h2 className="font-display text-xl">Session Settings</h2>
-      <SessionSettingsForm value={value} onChange={setValue} />
+      <Tabs.Root defaultValue="settings" className="flex flex-col gap-3">
+        <Tabs.List className="flex gap-1 border-b border-foreground/15">
+          {[
+            ['settings', 'Settings'],
+            ['power-ups', 'Power-ups'],
+          ].map(([tab, label]) => (
+            <Tabs.Trigger
+              key={tab}
+              value={tab}
+              className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
+            >
+              {label}
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+        <Tabs.Content value="settings">
+          <SessionSettingsForm value={value} onChange={setValue} />
+        </Tabs.Content>
+        <Tabs.Content value="power-ups">
+          <PowerUpsSettingsForm value={value} onChange={setValue} />
+        </Tabs.Content>
+      </Tabs.Root>
       <LeagueCheckboxes
         leagues={leagues}
         selected={pickedLeagueIds ?? memberOf}

@@ -310,6 +310,28 @@ describe('describeLeaderboardBoard', () => {
       expect(result.jokerTeamIds).toEqual([3]);
     });
 
+    it('names a team whose bought extra joker is on a round of the block, not one on a later round', () => {
+      const extraJoker = (teamId: number, roundId: number) => ({
+        teamId,
+        roundId,
+        powerUp: 'extra_joker' as const,
+        questionId: null,
+        cost: 4,
+      });
+      const result = describeLeaderboardBoard(
+        withBoard(leaderboardOn, teams, {
+          priorStandings: onBlockOne,
+          funFactData: {
+            answers: [],
+            bonusAwards: [],
+            powerUps: [extraJoker(2, 1), extraJoker(3, 3)],
+          },
+        }),
+      );
+
+      expect(result.jokerTeamIds).toEqual([2]);
+    });
+
     it('names nobody while the leaderboard is not on air', () => {
       const result = describeLeaderboardBoard(
         withBoard({ ...leaderboardOn, isLeaderboardVisible: false }, teams, {

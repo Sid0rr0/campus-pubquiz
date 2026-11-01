@@ -6,6 +6,9 @@
     - link "Sessions"
     - link "Teams"
     - link "Stats"
+    - link "League"
+    - link "My Team"
+    - link "Manage leagues"
     - link "Users"
     - button "Log out"
 - main:
@@ -36,17 +39,21 @@
         - button "Kick"
         - button /Edit player count for Team B [0-9a-f]{6}/
   - heading "Session Settings" [level=2]
-  - spinbutton "Lock round after (seconds)"
-  - checkbox "Autoplay media" [checked]
-  - checkbox "Countdown sound" [checked]
-  - checkbox "Show round overview after rules"
-  - checkbox "Collect feedback" [checked]
-  - checkbox "Fun facts on the break screen" [checked]
-  - spinbutton "Max players per team": "6"
-  - spinbutton "Extra player penalty (points)": "2"
-  - list:
-    - listitem:
-      - textbox "Rule 1": No cheating.
-      - button "Remove rule 1"
-  - button "Add rule"
+  - tablist:
+    - tab "Settings" [selected]
+    - tab "Power-ups"
+  - tabpanel "Settings":
+    - spinbutton "Lock round after (seconds)"
+    - checkbox "Autoplay media" [checked]
+    - checkbox "Countdown sound" [checked]
+    - checkbox "Show round overview after rules"
+    - checkbox "Collect feedback" [checked]
+    - checkbox "Fun facts on the break screen" [checked]
+    - spinbutton "Max players per team": "6"
+    - spinbutton "Extra player penalty (points)": "2"
+    - list:
+      - listitem:
+        - textbox "Rule 1": No cheating.
+        - button "Remove rule 1"
+    - button "Add rule"
   - button "Save"

@@ -1,4 +1,9 @@
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
+import {
+  DEFAULT_STARTING_COINS,
+  defaultPowerUpSettings,
+  type PowerUpSettings,
+} from './power-ups';
 
 /** Discrete steps the admin can pick between for /display's text size — 1 is the original, unscaled size. */
 export const DISPLAY_TEXT_SCALE_STEPS = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
@@ -35,6 +40,12 @@ export interface SessionSettings {
   funFactsEnabled: boolean;
   /** Whether the session appears in the public game lists (/display picker, /play dropdown). Off makes it an unlisted session: joining by code is unchanged. */
   listed: boolean;
+  /** Whether teams spend coins on power-ups this session. */
+  powerUpsEnabled: boolean;
+  /** Coins every team starts the session with (only with power-ups on). */
+  startingCoins: number;
+  /** What each power-up costs and how often a team may use it; `maxUses` 0 means not offered. */
+  powerUps: PowerUpSettings;
 }
 
 /** What a refused jokers-without-overview settings change says. */
@@ -82,6 +93,9 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   collectFeedback: true,
   funFactsEnabled: true,
   listed: true,
+  powerUpsEnabled: false,
+  startingCoins: DEFAULT_STARTING_COINS,
+  powerUps: Object.freeze(defaultPowerUpSettings(false)) as PowerUpSettings,
   rules: Object.freeze([
     'No cheating.',
     'Please write your answers in English.',

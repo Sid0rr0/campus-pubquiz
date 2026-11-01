@@ -6,6 +6,7 @@
   - paragraph: /Playing as Team A [0-9a-f]{6}/
   - paragraph: 👀 Look at the screen
   - heading "Warm-up" [level=1]
+  - button "Answer history (0)"
   - button "Bonus points (0)"
 - region "Notifications alt+T"
 - alert

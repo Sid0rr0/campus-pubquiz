@@ -2,6 +2,7 @@ import type { EntityManager } from '@mikro-orm/postgresql';
 import type { GameStatus } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
+import { CoinAward } from '@/db/entities/coin-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { League } from '@/db/entities/league.entity';
@@ -17,6 +18,7 @@ import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
 import { Team } from '@/db/entities/team.entity';
 import type { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
+import type { CoinAwardRepository } from '@/db/repositories/coin-award.repository';
 import type { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
@@ -48,6 +50,7 @@ const TEAM_TABLES = [
   'game_session_teams',
   'answers',
   'bonus_awards',
+  'coin_awards',
   'round_ratings',
   'session_feedback',
   'session_team_jokers',
@@ -292,6 +295,7 @@ describe('TeamMergeService (Postgres integration)', () => {
 
     const bonuses = new BonusService(
       em.getRepository<BonusAward, BonusAwardRepository>(BonusAward),
+      em.getRepository<CoinAward, CoinAwardRepository>(CoinAward),
       em.getRepository(GameSessionTeam),
     );
     await expect(bonuses.listForTeam(night1.id, newer.id)).resolves.toEqual([

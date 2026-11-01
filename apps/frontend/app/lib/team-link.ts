@@ -12,13 +12,18 @@ import {
   type GameStatus,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
+  type CoinAwardedPayload,
+  type PurchaseView,
   type RateSessionPayload,
   type RoundRatingView,
   type SubmitAnswerPayload,
   type TeamAnswerView,
   type TeamBonusAwardView,
+  type TeamCoinsSyncedPayload,
   type TeamFeedbackView,
   type TeamJoker,
+  type TeamPurchasesSyncedPayload,
+  type TeamRoomReadySyncedPayload,
   type TeamSessionRatingsView,
   type Verdict,
 } from '@campus-pubquiz/types';
@@ -171,6 +176,10 @@ export interface TeamLinkState {
   myPlayerCount: number | null;
   /** The team's own joker as the server last said it (the join, a sync, or an acknowledged pick), or null while it has none. */
   myJoker: TeamJoker | null;
+  /** The team's own power-up purchases as the server last said them (the join, or a sync after a purchase); a 50/50's removed options stay hidden through them. */
+  myPurchases: PurchaseView[];
+  /** The questions on which the server says this team's Ask the room is ready (the join, then a sync as other teams answer). A flag only, never a count. */
+  roomReadyQuestionIds: number[];
   /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
   roundRatingsEpoch: number;
   /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
@@ -197,6 +206,10 @@ export type TeamLinkInput =
   | { type: 'answerReceived'; payload: AnswerReceivedPayload }
   | { type: 'teamAnswersSynced'; answers: TeamAnswerView[] }
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
+  // The quiz master gave (or took) coins: a toast and the new balance.
+  | { type: 'coinAwarded'; payload: CoinAwardedPayload }
+  // The team's coins changed without a new award (a bonus award went, the quiz left the lobby, the lobby settings changed).
+  | { type: 'coinsSynced'; payload: TeamCoinsSyncedPayload }
   | { type: 'bonusAwardsSynced'; bonusAwards: TeamBonusAwardView[] }
   | { type: 'answerResult'; attempt: number; result: AckResult }
   // The answer never left the socket (not connected, or no acknowledgement in time).
@@ -213,6 +226,10 @@ export type TeamLinkInput =
   | { type: 'jokerSynced'; joker: TeamJoker | null }
   // The server acknowledged a joker pick this phone sent.
   | { type: 'jokerSaved'; joker: TeamJoker }
+  // The server told the team's phones its purchases and coins after a purchase.
+  | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
+  // The server said whether Ask the room is ready on a question, after another team's answer.
+  | { type: 'roomReadySynced'; payload: TeamRoomReadySyncedPayload }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
@@ -309,6 +326,8 @@ const EMPTY_TEAM_DATA = {
   mySessionRatings: NO_SESSION_RATINGS,
   myPlayerCount: null,
   myJoker: null,
+  myPurchases: [],
+  roomReadyQuestionIds: [],
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
 
@@ -589,6 +608,8 @@ function acceptJoin(
     mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
     myPlayerCount: payload.playerCount ?? null,
     myJoker: payload.joker ?? null,
+    myPurchases: payload.purchases,
+    roomReadyQuestionIds: payload.roomReadyQuestionIds,
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -692,11 +713,37 @@ function awardBonus(
   };
 }
 
+/** The state with the team's coin balance replaced (the balance rides on the joined team). */
+function withCoins(state: TeamLinkState, balance: number): TeamLinkState {
+  return state.team
+    ? { ...state, team: { ...state.team, coins: balance } }
+    : state;
+}
+
+function awardCoins(
+  state: TeamLinkState,
+  { coins, reason, balance }: CoinAwardedPayload,
+): TeamLinkStep {
+  const amount = `${coins > 0 ? '+' : ''}${coins} ${Math.abs(coins) === 1 ? 'coin' : 'coins'}`;
+  const message = reason ? `${amount}: ${reason}` : amount;
+  return {
+    state: withCoins(state, balance),
+    commands: [
+      {
+        type: 'toast',
+        tone: coins > 0 ? 'success' : 'neutral',
+        message: coins > 0 ? `🪙 ${message}` : message,
+        durationMs: BONUS_AWARD_TOAST_DURATION_MS,
+      },
+    ],
+  };
+}
+
 /**
  * The server told the team's phones its joker. A joker the team did not pick
  * itself (the quiz master's change, a draw) that differs from the one held is
  * announced once; the team's own pick, and a joker already held (the pick
- * closing re-sends every joker), change the chip quietly.
+ * closing re-sends every joker), change the joker line quietly.
  */
 function syncJoker(
   state: TeamLinkState,
@@ -769,6 +816,21 @@ export function teamLink(
       return awardBonus(state, input.payload);
     case 'bonusAwardsSynced':
       return unchanged({ ...state, myBonusAwards: input.bonusAwards });
+    case 'coinAwarded':
+      return awardCoins(state, input.payload);
+    case 'coinsSynced':
+      return unchanged(
+        state.team
+          ? {
+              ...state,
+              team: {
+                ...state.team,
+                coins: input.payload.balance,
+                hasCarriedCoin: input.payload.hasCarriedCoin,
+              },
+            }
+          : state,
+      );
     case 'answerResult':
       return receiveAnswerResult(state, input.attempt, input.result);
     case 'answerNotDelivered':
@@ -804,6 +866,22 @@ export function teamLink(
       return syncJoker(state, input.joker);
     case 'jokerSaved':
       return unchanged({ ...state, myJoker: input.joker });
+    case 'purchasesSynced':
+      return unchanged({
+        ...state,
+        myPurchases: input.payload.purchases,
+        team: state.team && { ...state.team, coins: input.payload.coins },
+      });
+    case 'roomReadySynced': {
+      const { questionId, isReady } = input.payload;
+      const others = state.roomReadyQuestionIds.filter(
+        (id) => id !== questionId,
+      );
+      return unchanged({
+        ...state,
+        roomReadyQuestionIds: isReady ? [...others, questionId] : others,
+      });
+    }
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
       if (input.connectionId !== state.joinSentFor) return unchanged(state);

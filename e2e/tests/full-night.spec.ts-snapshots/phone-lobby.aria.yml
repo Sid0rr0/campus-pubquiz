@@ -15,6 +15,7 @@
     - button "Send"
   - link "Read the rules":
     - /url: /\/rules\?code=[A-Z]+(-[A-Z]+){2}/
+  - button "Answer history (0)"
   - button "Bonus points (0)"
 - region "Notifications alt+T"
 - alert

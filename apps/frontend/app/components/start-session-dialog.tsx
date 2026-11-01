@@ -20,6 +20,7 @@ import {
   useTickableLeagues,
 } from '@/app/components/league-checkboxes';
 import { RoundsList } from '@/app/components/rounds-list';
+import { PowerUpsSettingsForm } from '@/app/components/power-ups-settings-form';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 
 interface StartSessionDialogProps {
@@ -133,12 +134,21 @@ export function StartSessionDialog({
               >
                 Settings
               </Tabs.Trigger>
+              <Tabs.Trigger
+                value="power-ups"
+                className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
+              >
+                Power-ups
+              </Tabs.Trigger>
             </Tabs.List>
             <Tabs.Content value="overview">
               {quiz && <RoundsList rounds={quiz.rounds} />}
             </Tabs.Content>
             <Tabs.Content value="settings">
               <SessionSettingsForm value={settings} onChange={setSettings} />
+            </Tabs.Content>
+            <Tabs.Content value="power-ups">
+              <PowerUpsSettingsForm value={settings} onChange={setSettings} />
             </Tabs.Content>
           </Tabs.Root>
           <div className="flex justify-end gap-2">

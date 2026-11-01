@@ -220,6 +220,20 @@ export class GameGateway
     );
   }
 
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.buyPowerUp.event)
+  async handleBuyPowerUp(
+    @ConnectedSocket() client: GameSocket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.buyPowerUp,
+      rawPayload,
+      client,
+      ({ joinCode, payload, client }) =>
+        this.gameState.powerUpBought(joinCode, payload, client.id),
+    );
+  }
+
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setTeamJoker.event)
   async handleSetTeamJoker(
     @ConnectedSocket() client: GameSocket,

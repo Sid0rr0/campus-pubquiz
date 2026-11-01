@@ -3,17 +3,17 @@ import { isJokerRoundPlayed, jokerExtraPoints } from '@/app/play/joker-round';
 
 describe('jokerExtraPoints', () => {
   it('is the points the joker adds in the joker round', () => {
-    expect(jokerExtraPoints(3, 2, 2)).toBe(3);
+    expect(jokerExtraPoints(3, 2, [2])).toBe(3);
   });
 
   it('is null outside the joker round, or with no joker', () => {
-    expect(jokerExtraPoints(3, 1, 2)).toBeNull();
-    expect(jokerExtraPoints(3, 1, null)).toBeNull();
+    expect(jokerExtraPoints(3, 1, [2])).toBeNull();
+    expect(jokerExtraPoints(3, 1, [])).toBeNull();
   });
 
   it('is null when nothing was earned to double', () => {
-    expect(jokerExtraPoints(null, 2, 2)).toBeNull();
-    expect(jokerExtraPoints(0, 2, 2)).toBeNull();
+    expect(jokerExtraPoints(null, 2, [2])).toBeNull();
+    expect(jokerExtraPoints(0, 2, [2])).toBeNull();
   });
 });
 

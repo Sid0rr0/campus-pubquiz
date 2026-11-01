@@ -3,6 +3,7 @@ import type {
   DisplayScreen,
   LeaderboardEntry,
   LeagueTop,
+  PowerUpCount,
   QuizPreviewContext,
   TeamView,
   TeamsCorrect,
@@ -29,6 +30,7 @@ import { QuestionOpenScreen } from '@/app/display/question-open-screen';
 import { RevealEntranceConfig } from '@/app/display/reveal-entrance';
 import { RoundOverviewScreen } from '@/app/display/round-overview-screen';
 import { RoundTitleCard } from '@/app/display/round-title-card';
+import { PowerUpCounts } from '@/app/display/power-up-counts';
 import { TeamsCorrectCount } from '@/app/display/teams-correct-count';
 
 /** What only a running session knows. Left out, the live-only parts draw empty. */
@@ -38,6 +40,7 @@ export interface DisplayLiveContext {
   leaderboard: readonly LeaderboardEntry[];
   leagueTop: LeagueTop | null;
   teamsCorrect: TeamsCorrect | null;
+  powerUpCounts: PowerUpCount[];
   joinCode: string;
   isConnected: boolean;
   isMediaFullscreen?: boolean;
@@ -241,6 +244,7 @@ export function DisplayScreenView({
               {teamsCorrect && teamsCorrect.teamCount > 0 && (
                 <TeamsCorrectCount {...teamsCorrect} />
               )}
+              <PowerUpCounts counts={live?.powerUpCounts ?? []} />
             </div>
           );
         }

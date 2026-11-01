@@ -9,6 +9,7 @@ import {
 import {
   adminActionPayloadSchema,
   awardBonusPayloadSchema,
+  buyPowerUpPayloadSchema,
   createShowdownRoundPayloadSchema,
   gradeAnswerPayloadSchema,
   joinPlayersPayloadSchema,
@@ -135,6 +136,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.ADMIN,
     rejection: 'Only admin clients may set a team’s joker',
     logFields: ['teamId', 'roundId'],
+  }),
+  buyPowerUp: declareSocketEvent({
+    event: SOCKET_EVENTS.BUY_POWER_UP,
+    schema: buyPowerUpPayloadSchema,
+    allowedRoom: SOCKET_ROOMS.PLAYERS,
+    rejection: 'Only player clients may buy a power-up',
+    logFields: ['powerUp'],
   }),
   gradeAnswer: declareSocketEvent({
     event: SOCKET_EVENTS.GRADE_ANSWER,

@@ -11,6 +11,7 @@ import {
   settleSession,
   ShowdownGuessesPendingError,
 } from '@campus-pubquiz/types';
+import type { CarriedCoinService } from '@/coins/carried-coin.service';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import type {
   GameProgressRepository,
@@ -18,6 +19,7 @@ import type {
 } from '@/game/state/game-progress.repository';
 import {
   BROADCAST_STATE_OUTCOME,
+  coinSyncsFor,
   connectedTeamSyncs,
   isRevealEntry,
   type SessionOutcome,
@@ -56,6 +58,13 @@ export class MoveCommitter {
       JokerChanges,
       'closePick' | 'reopenPick' | 'loadAll'
     >,
+    private readonly carriedCoins: Pick<
+      CarriedCoinService,
+      'decide' | 'loadAll'
+    >,
+    private readonly readCoinAwards: (
+      gameSessionId: number,
+    ) => Promise<Record<number, number>>,
   ) {}
 
   /**
@@ -135,7 +144,14 @@ export class MoveCommitter {
     const leagueTop = await this.readLeagueTop(placed.seededGame.gameSessionId);
     // Jokers are stored, not derived: the placed session starts from them.
     const jokers = await this.jokers.loadAll(placed.seededGame.gameSessionId);
-    return { ...withResults, leagueTop, jokers };
+    const carriedCoins = await this.carriedCoins.loadAll(
+      placed.seededGame.gameSessionId,
+    );
+    // Coin awards are stored too: the cache starts from them.
+    const coinAwards = await this.readCoinAwards(
+      placed.seededGame.gameSessionId,
+    );
+    return { ...withResults, leagueTop, jokers, carriedCoins, coinAwards };
   }
 
   private async commitProgressMove(
@@ -157,8 +173,22 @@ export class MoveCommitter {
       closedPick = await this.jokers.reopenPick(session);
     }
 
+    // Leaving the lobby decides every rostered team's carried coin, once.
+    const base = closedPick?.session ?? session;
+    const isLeavingLobby =
+      session.progress.status === 'lobby' && progress.status !== 'lobby';
+    const started = isLeavingLobby
+      ? {
+          ...base,
+          carriedCoins: await this.carriedCoins.decide(
+            base.seededGame.gameSessionId,
+            base.teams.map((team) => team.teamId),
+          ),
+        }
+      : base;
+
     const { session: refreshed, staleAnswerListIds } =
-      await this.grading.gradeForMove(closedPick?.session ?? session, progress);
+      await this.grading.gradeForMove(started, progress);
     // settleMove carries a raw ADVANCE under the leaderboard out as the action
     // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
     // reveal count, the kahoot timer and everything else downstream treat it
@@ -183,6 +213,8 @@ export class MoveCommitter {
             )
           : [],
         jokerSyncs: closedPick?.jokerSyncs ?? [],
+        // A phone joined in the lobby knows its coins from before they were decided.
+        coinSyncs: isLeavingLobby ? coinSyncsFor(committed) : [],
       },
       touchedScores: true,
     };

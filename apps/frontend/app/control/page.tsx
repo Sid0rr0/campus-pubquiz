@@ -346,6 +346,13 @@ function AdminPageContent() {
                 roundTitles={roundTitles}
                 onAwardBonus={awardBonus}
                 enabledBonusCategories={settings.enabledBonusCategories}
+                coinsByTeamId={
+                  settings.powerUpsEnabled
+                    ? Object.fromEntries(
+                        teams.map((team) => [team.teamId, team.coins]),
+                      )
+                    : undefined
+                }
               />
             </section>
           </>

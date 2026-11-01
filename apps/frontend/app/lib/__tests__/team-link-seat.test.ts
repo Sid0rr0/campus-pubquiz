@@ -40,6 +40,10 @@ const ACCEPTED: JoinAcceptedPayload = {
   sessionRatings: { pacing: null, feltDifficulty: null },
   playerCount: null,
   joker: null,
+  coins: 0,
+  hasCarriedCoin: false,
+  purchases: [],
+  roomReadyQuestionIds: [],
 };
 
 const SEAT_TAKEN = `"The Quizzards" ${SEAT_TAKEN_REFUSAL_MARKER} — ask the quiz master to remove it, then try again.`;

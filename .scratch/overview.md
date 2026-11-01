@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| power-ups | [Power-ups and coins](power-ups/spec.md) | 9 | — |
 
 ## Won't do
 

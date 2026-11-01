@@ -1,4 +1,5 @@
 import {
+  defaultExtraJokerCost,
   hasJokersWithoutOverview,
   JOKERS_NEED_OVERVIEW_MESSAGE,
   type SessionSettings,
@@ -101,7 +102,23 @@ export class SessionSettingsChanges {
         `already started (status: "${session.progress.status}")`,
       );
     }
-    const settings = { ...session.seededGame.settings, ...partial };
+    const stored = session.seededGame.settings;
+    const settings = { ...stored, ...partial };
+    // The extra joker's cost follows the overview while it is still the default.
+    if (
+      partial.powerUps === undefined &&
+      partial.showRoundOverview !== undefined &&
+      stored.powerUps.extra_joker.cost ===
+        defaultExtraJokerCost(stored.showRoundOverview)
+    ) {
+      settings.powerUps = {
+        ...stored.powerUps,
+        extra_joker: {
+          ...stored.powerUps.extra_joker,
+          cost: defaultExtraJokerCost(settings.showRoundOverview),
+        },
+      };
+    }
     // A patch naming only one of the pair is checked against the other as stored.
     if (hasJokersWithoutOverview(settings)) {
       throw new SessionSettingsInvalidError(JOKERS_NEED_OVERVIEW_MESSAGE);

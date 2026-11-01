@@ -2,23 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   AnswerView,
+  PowerUpId,
   ScoredQuestion,
   TeamAnswerView,
   Verdict,
 } from '@campus-pubquiz/types';
-import { verdictForManualGrade } from '@campus-pubquiz/types';
+import { verdictForManualGrade, withWiderMargin } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
+import { PurchaseService } from '@/purchase/purchase.service';
 import {
   canGradeByHand,
+  gradeAtSubmit,
   gradeOnKeyFix,
   gradeOnSubmit,
   gradingStateOf,
   lockBatchWrites,
   speedScore,
   type GradeWrite,
+  type StoredAnswerRow,
 } from '@/answer/grading-policy';
 
 export interface SubmittedAnswer {
@@ -94,6 +98,7 @@ export class AnswerService {
   constructor(
     @InjectRepository(Answer) private readonly answers: AnswerRepository,
     @InjectRepository(Team) private readonly teams: TeamRepository,
+    private readonly purchases: PurchaseService,
   ) {}
 
   /** Stores a team's answer to `question` (the session's copy) and grades it as the Grading policy decides. */
@@ -113,7 +118,13 @@ export class AnswerService {
       { gameSession: gameSessionId, question: questionId, team: teamId },
       { fields: ['value', 'gradedAt'] },
     );
-    const write = gradeOnSubmit(question, value, existing);
+    const write = gradeOnSubmit(
+      (await this.widerMarginTeamIds(gameSessionId, questionId)).has(teamId)
+        ? withWiderMargin(question)
+        : question,
+      value,
+      existing,
+    );
 
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
@@ -150,12 +161,68 @@ export class AnswerService {
     };
   }
 
+  /** The teams that bought a wider margin on the question: graded against the widened one. */
+  private async widerMarginTeamIds(
+    gameSessionId: number,
+    questionId: number,
+  ): Promise<Set<number>> {
+    const bought = await this.purchases.listForQuestion(
+      gameSessionId,
+      questionId,
+    );
+    return new Set(
+      bought
+        .filter(({ powerUp }) => powerUp === 'wider_margin')
+        .map(({ teamId }) => teamId),
+    );
+  }
+
+  /** The rows as the policy reads them, each flagged when its team's margin is widened. */
+  private async policyRows(
+    gameSessionId: number,
+    questionId: number,
+    rows: readonly Answer[],
+  ): Promise<StoredAnswerRow[]> {
+    const wider = await this.widerMarginTeamIds(gameSessionId, questionId);
+    return rows.map((row) => ({
+      value: row.value,
+      gradedAt: row.gradedAt,
+      responseMs: row.responseMs,
+      verdict: row.verdict,
+      pointsAwarded: row.pointsAwarded,
+      hasWiderMargin: wider.has(row.team.id),
+    }));
+  }
+
   async listForQuestion(
     gameSessionId: number,
     questionId: number,
   ): Promise<AnswerView[]> {
-    const rows = await this.findForQuestion(gameSessionId, questionId);
-    return rows.map(toAnswerView);
+    return await this.viewsOf(
+      gameSessionId,
+      questionId,
+      await this.findForQuestion(gameSessionId, questionId),
+    );
+  }
+
+  /** `rows` (a question's answers) as admin answer views, each with the power-ups its team used on the question. */
+  private async viewsOf(
+    gameSessionId: number,
+    questionId: number,
+    rows: readonly Answer[],
+  ): Promise<AnswerView[]> {
+    const used = await this.purchases.listForQuestion(
+      gameSessionId,
+      questionId,
+    );
+    return rows.map((row) =>
+      toAnswerView(
+        row,
+        used
+          .filter(({ teamId }) => teamId === row.team.id)
+          .map((u) => u.powerUp),
+      ),
+    );
   }
 
   /**
@@ -250,12 +317,44 @@ export class AnswerService {
     const { rescored, writes } = gradeOnKeyFix({
       question,
       previous,
-      rows,
+      rows: await this.policyRows(gameSessionId, question.id, rows),
       kahootTimerSeconds,
       hasBatchRun,
     });
     await this.applyWrites(rows, writes);
-    return { rescored, answers: rows.map(toAnswerView) };
+    return {
+      rescored,
+      answers: await this.viewsOf(gameSessionId, question.id, rows),
+    };
+  }
+
+  /**
+   * A team just bought a wider margin on `question`: grades its answer already
+   * given against the widened margin. The widening only ever adds points, so a
+   * grade at or above the new score (a moderator's higher mark) is kept.
+   */
+  async regradeForWiderMargin(
+    gameSessionId: number,
+    question: GradableQuestion,
+    teamId: number,
+  ): Promise<void> {
+    const row = await this.answers.findOne({
+      gameSession: gameSessionId,
+      question: question.id,
+      team: teamId,
+    });
+    if (!row) return;
+    const score = gradeAtSubmit(withWiderMargin(question), row.value);
+    if (
+      score === null ||
+      (row.gradedAt !== null && row.pointsAwarded >= score.points)
+    ) {
+      return;
+    }
+    await this.applyWrites(
+      [row],
+      [{ kind: 'set', points: score.points, verdict: score.verdict }],
+    );
   }
 
   /** Applies the policy's grade writes (one per row), stamping one grading time per flush; keep is a no-op. */
@@ -295,7 +394,7 @@ export class AnswerService {
   ): Promise<AnswerView[]> {
     const rows = await this.findForQuestion(gameSessionId, question.id);
     await this.applyWrites(rows, lockBatchWrites(question, rows));
-    return rows.map(toAnswerView);
+    return await this.viewsOf(gameSessionId, question.id, rows);
   }
 
   /** Every answer to one question, with its team and the question (one extra query, not one per answer), ordered by team name. */
@@ -331,14 +430,19 @@ export class AnswerService {
     const rows = await this.findForQuestion(gameSessionId, question.id);
     await this.applyWrites(
       rows,
-      speedScore(question, rows, questionTimerSeconds),
+      speedScore(
+        question,
+        await this.policyRows(gameSessionId, question.id, rows),
+        questionTimerSeconds,
+      ),
     );
   }
 }
 
 /** An answer row as the admin's answer list shows it; the one place a stored answer becomes an admin answer view, its grading state asked of the Grading policy. */
-function toAnswerView(row: Answer): AnswerView {
+function toAnswerView(row: Answer, powerUps: PowerUpId[]): AnswerView {
   return {
+    powerUps,
     answerId: row.id,
     teamId: row.team.id,
     teamName: row.team.name,

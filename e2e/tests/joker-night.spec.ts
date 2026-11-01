@@ -4,7 +4,7 @@ import {
   expectControlJoker,
   expectDisplayStamp,
   expectJokerBorder,
-  expectJokerChipExplains,
+  expectJokerLineNames,
   expectPhoneStamp,
   expectPickedCount,
   expectStampedStandingsRow,
@@ -72,11 +72,7 @@ test('a joker night: one team picks, one is drawn, and the 2× stamp lands on th
   );
   const teamBJokerRound = await readJokerRound(phoneB);
   expect(await readJokerRound(phoneA)).toBe(TEAM_A_JOKER.number);
-  await expectJokerChipExplains(
-    phoneA,
-    TEAM_A_JOKER.number,
-    TEAM_A_JOKER.title,
-  );
+  await expectJokerLineNames(phoneA, TEAM_A_JOKER.number, TEAM_A_JOKER.title);
   const isTeamBStamped = JOKER_NIGHT.firstBlockRounds.some(
     (roundNumber) => roundNumber === teamBJokerRound,
   );

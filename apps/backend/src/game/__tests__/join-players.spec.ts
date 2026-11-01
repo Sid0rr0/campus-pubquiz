@@ -148,7 +148,12 @@ describe('GameGateway — join players', () => {
       // Only the quiz master's roster entries carry the player count.
       const adminOnly =
         room === SOCKET_ROOMS.ADMIN
-          ? { playerCount: null, isOverPlayerCap: false, joker: null }
+          ? {
+              playerCount: null,
+              isOverPlayerCap: false,
+              joker: null,
+              coins: 0,
+            }
           : {};
       expect(snapshots[snapshots.length - 1].teams).toEqual([
         {

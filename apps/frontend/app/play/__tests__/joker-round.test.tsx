@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { TeamJoker } from '@campus-pubquiz/types';
+import type { PurchaseView, TeamJoker } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import type { SessionDescription } from '@/test-utils/room-view';
 import { seenQuestionsOf, teamLinkResult } from './test-utils';
@@ -225,23 +225,23 @@ describe('PlayPage — the joker chip once played', () => {
     );
 
     expect(
-      screen.getByRole('button', { name: /🃏 R2.*played/ }),
+      screen.getByText(/^Round 2 — .* scored double$/),
     ).toBeInTheDocument();
   });
 
   it('does not read played while the joker round’s block is still in play', () => {
     renderPlay(JOKER_ON_ROUND_2, night());
 
-    expect(screen.getByRole('button', { name: /🃏 R2/ })).not.toHaveTextContent(
-      /played/,
-    );
+    expect(
+      screen.getByText(/^Round 2 — .* scores double$/),
+    ).toBeInTheDocument();
   });
 
   it('reads played when the quiz has ended', () => {
     renderPlay(JOKER_ON_ROUND_2, night({ progress: { status: 'ended' } }));
 
     expect(
-      screen.getByRole('button', { name: /🃏 R2.*played/ }),
+      screen.getByText(/^Round 2 — .* scored double$/),
     ).toBeInTheDocument();
   });
 });
@@ -288,5 +288,89 @@ describe('PlayPage — the joker’s extra points on the reveal', () => {
     renderReveal(null);
 
     expect(screen.getByText(/^1 \/ \d+ points/)).not.toHaveTextContent('🃏');
+  });
+});
+
+describe('PlayPage — the rounds doubled for the team', () => {
+  const extraJokerOn = (
+    roundId: number,
+    roundNumber: number,
+    title: string,
+  ): PurchaseView => ({
+    powerUp: 'extra_joker',
+    questionId: null,
+    roundId,
+    effect: { kind: 'extra_joker' },
+    round: { roundNumber, title },
+  });
+
+  function renderWithExtraJoker(
+    purchase: PurchaseView,
+    myJoker: TeamJoker | null = null,
+    session = night(),
+  ) {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session,
+        join: { team: JOINED_TEAM },
+        game: { myJoker, myPurchases: [purchase] },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    searchParamsRef.current = new URLSearchParams();
+  });
+
+  it('marks the joker round in the question picker’s heading, not the others', () => {
+    renderPlay(JOKER_ON_ROUND_2, night());
+
+    expect(screen.getByText('World Capitals · 2×')).toBeInTheDocument();
+    expect(screen.getByText('Pop Music')).toBeInTheDocument();
+    expect(screen.queryByText('Pop Music · 2×')).not.toBeInTheDocument();
+  });
+
+  it('marks the heading even when the doubled round is the block’s only one', () => {
+    renderPlay(
+      { roundId: 1, source: 'chosen' },
+      night({
+        rounds: [
+          { title: 'Pop Music', breakAfter: true, questions: [{}, {}] },
+          { title: 'Sport', questions: [{}] },
+        ],
+        progress: { status: 'question_open', roundIndex: 0, questionIndex: 0 },
+      }),
+    );
+
+    expect(screen.getByText('Pop Music · 2×')).toBeInTheDocument();
+  });
+
+  it('treats an extra joker’s round like a joker round: line, heading and border', () => {
+    renderWithExtraJoker(extraJokerOn(2, 2, 'World Capitals'));
+
+    expect(
+      screen.getByText('Round 2 — World Capitals scores double'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('World Capitals · 2×')).toBeInTheDocument();
+    expect(screen.getByTestId('joker-border')).toBeInTheDocument();
+  });
+
+  it('names both the joker round and the extra joker’s, in quiz order', () => {
+    renderWithExtraJoker(extraJokerOn(3, 3, 'Sport'), JOKER_ON_ROUND_2);
+
+    const lines = screen.getAllByText(/^Round \d — .* scores double$/);
+    expect(lines.map((line) => line.textContent)).toEqual([
+      '🃏 Round 2 — World Capitals scores double',
+      '🃏 Round 3 — Sport scores double',
+    ]);
+  });
+
+  it('names a round bought blind by its number alone', () => {
+    renderWithExtraJoker(extraJokerOn(3, 3, ''));
+
+    expect(screen.getByText('Round 3 scores double')).toBeInTheDocument();
   });
 });

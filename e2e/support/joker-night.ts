@@ -1,7 +1,7 @@
 /**
  * What the joker-night journey needs beyond the shared screen objects: the
  * fixture's rounds, a seeded session with Jokers on, and the readings of the
- * pick, the joker chip, the border and the 2× stamp on the three screens.
+ * pick, the joker line, the border and the 2× stamp on the three screens.
  */
 import path from 'node:path';
 import { expect, type APIRequestContext } from '@playwright/test';
@@ -48,9 +48,9 @@ export function seedJokerSession(
   });
 }
 
-/** The phone's joker chip, "🃏 R2" (with "· played" once the block was revealed). */
-function jokerChip(phone: PhoneScreen) {
-  return phone.page.getByRole('button', { name: /^🃏 R\d/ });
+/** The phone's joker line, "🃏 Round 2 — Music scores double" ("scored" once the block was revealed). */
+function jokerLine(phone: PhoneScreen) {
+  return phone.page.getByText(/Round \d+ — .+ (scores|scored) double/);
 }
 
 /** Taps the round's card in the picker and waits for the "Saved ✓" the server's acknowledgement raises. */
@@ -90,26 +90,24 @@ export async function expectControlJoker(
   ).toBeVisible();
 }
 
-/** The round number on the phone's joker chip, once the team has a joker. */
+/** The round number on the phone's joker line, once the team has a joker. */
 export async function readJokerRound(phone: PhoneScreen): Promise<number> {
-  const chip = jokerChip(phone);
-  await expect(chip).toBeVisible();
-  const match = /^🃏 R(\d+)/.exec(await chip.innerText());
-  if (!match) throw new Error('The joker chip does not name a round');
+  const line = jokerLine(phone);
+  await expect(line).toBeVisible();
+  const match = /Round (\d+)/.exec(await line.innerText());
+  if (!match) throw new Error('The joker line does not name a round');
   return Number(match[1]);
 }
 
-/** Opens the joker chip and reads the round it says scores double. */
-export async function expectJokerChipExplains(
+/** The joker line names the round that scores double, in full and without a tap. */
+export async function expectJokerLineNames(
   phone: PhoneScreen,
   roundNumber: number,
   roundTitle: string,
 ): Promise<void> {
-  await jokerChip(phone).click();
   await expect(
     phone.page.getByText(`Round ${roundNumber} — ${roundTitle} scores double`),
   ).toBeVisible();
-  await phone.page.getByRole('button', { name: 'Close joker' }).click();
 }
 
 /** The yellow joker border is on the question the phone shows (or is not). */
