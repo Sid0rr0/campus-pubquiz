@@ -6,22 +6,14 @@ import type {
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
+import { ApiError, errorMessageOf } from '@/app/lib/api-error';
 
-export class SessionApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
-    super(message);
-    this.name = 'SessionApiError';
-  }
-}
+export class SessionApiError extends ApiError {}
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const body = (await response.json()) as { message?: string };
     throw new SessionApiError(
-      body.message ?? 'Session request failed',
+      await errorMessageOf(response, 'Session request failed'),
       response.status,
     );
   }
@@ -77,9 +69,8 @@ export async function updateSessionSettings(
     },
   );
   if (!response.ok) {
-    const body = (await response.json()) as { message?: string };
     throw new SessionApiError(
-      body.message ?? 'Could not update session settings',
+      await errorMessageOf(response, 'Could not update session settings'),
       response.status,
     );
   }
@@ -92,9 +83,8 @@ export async function closeSession(joinCode: string): Promise<void> {
     headers: CSRF_HEADERS,
   });
   if (!response.ok) {
-    const body = (await response.json()) as { message?: string };
     throw new SessionApiError(
-      body.message ?? 'Could not close session',
+      await errorMessageOf(response, 'Could not close session'),
       response.status,
     );
   }

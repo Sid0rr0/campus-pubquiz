@@ -18,5 +18,5 @@ describeApiClient(
       okBody: { questionId: 12, answers: [] },
     },
   ],
-  { toleratesBadJson: false },
+  { toleratesBadJson: true },
 );

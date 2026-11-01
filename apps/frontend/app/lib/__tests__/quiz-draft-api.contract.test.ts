@@ -54,7 +54,7 @@ describeApiClient(
       okBody: { quizId: 6 },
     },
   ],
-  { toleratesBadJson: false },
+  { toleratesBadJson: true },
 );
 
 it('defaults to no issues when the reply lists none', async () => {

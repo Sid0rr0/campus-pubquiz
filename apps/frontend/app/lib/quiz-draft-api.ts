@@ -5,16 +5,16 @@ import type {
   QuizDraftSaveResult,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { ApiError, readErrorBody } from '@/app/lib/api-error';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
-export class QuizDraftApiError extends Error {
+export class QuizDraftApiError extends ApiError {
   constructor(
     message: string,
-    public readonly status: number,
+    status: number,
     public readonly issues: QuizDraftIssue[] = [],
   ) {
-    super(message);
-    this.name = 'QuizDraftApiError';
+    super(message, status);
   }
 }
 
@@ -24,7 +24,7 @@ interface ErrorBody {
 }
 
 async function throwApiError(response: Response): Promise<never> {
-  const body = (await response.json()) as ErrorBody;
+  const body = await readErrorBody<ErrorBody>(response);
   throw new QuizDraftApiError(
     body.message ?? 'Quiz request failed',
     response.status,

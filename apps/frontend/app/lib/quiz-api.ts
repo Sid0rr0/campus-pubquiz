@@ -1,16 +1,9 @@
 import type { QuizzesListedPayload } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
+import { ApiError, errorMessageOf } from '@/app/lib/api-error';
 
-export class QuizApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
-    super(message);
-    this.name = 'QuizApiError';
-  }
-}
+export class QuizApiError extends ApiError {}
 
 export async function fetchQuizzes(
   joinCode?: string,
@@ -21,9 +14,8 @@ export async function fetchQuizzes(
   });
 
   if (!response.ok) {
-    const body = (await response.json()) as { message?: string };
     throw new QuizApiError(
-      body.message ?? 'Could not load quizzes',
+      await errorMessageOf(response, 'Could not load quizzes'),
       response.status,
     );
   }
@@ -38,9 +30,8 @@ export async function deleteQuiz(quizId: number): Promise<void> {
     headers: CSRF_HEADERS,
   });
   if (!response.ok) {
-    const body = (await response.json()) as { message?: string };
     throw new QuizApiError(
-      body.message ?? 'Could not delete quiz',
+      await errorMessageOf(response, 'Could not delete quiz'),
       response.status,
     );
   }

@@ -35,5 +35,5 @@ describeApiClient(
       expected: undefined,
     },
   ],
-  { toleratesBadJson: false },
+  { toleratesBadJson: true },
 );

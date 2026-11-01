@@ -46,7 +46,7 @@ describeApiClient(
       okBody: { rounds: [] },
     },
   ],
-  { toleratesBadJson: false },
+  { toleratesBadJson: true },
 );
 
 it('defaults to no issues when the reply lists none', async () => {

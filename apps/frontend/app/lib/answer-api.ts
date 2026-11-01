@@ -1,15 +1,8 @@
 import type { AnswersUpdatedPayload } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { ApiError, errorMessageOf } from '@/app/lib/api-error';
 
-export class AnswerApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
-    super(message);
-    this.name = 'AnswerApiError';
-  }
-}
+export class AnswerApiError extends ApiError {}
 
 export async function fetchAnswers(
   joinCode: string,
@@ -21,9 +14,8 @@ export async function fetchAnswers(
   );
 
   if (!response.ok) {
-    const body = (await response.json()) as { message?: string };
     throw new AnswerApiError(
-      body.message ?? 'Could not load answers',
+      await errorMessageOf(response, 'Could not load answers'),
       response.status,
     );
   }

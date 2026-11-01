@@ -1,18 +1,11 @@
 import type { MediaUploadResult } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
+import { ApiError } from '@/app/lib/api-error';
 
 const UPLOAD_FAILED_MESSAGE = 'Image upload failed';
 
-export class MediaApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
-    super(message);
-    this.name = 'MediaApiError';
-  }
-}
+export class MediaApiError extends ApiError {}
 
 async function readErrorMessage(response: Response): Promise<string> {
   try {

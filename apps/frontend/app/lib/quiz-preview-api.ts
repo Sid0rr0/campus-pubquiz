@@ -3,20 +3,9 @@ import type {
   QuizPreviewPayload,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { ApiError, errorMessageOf } from '@/app/lib/api-error';
 
-export class QuizPreviewApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
-    super(message);
-    this.name = 'QuizPreviewApiError';
-  }
-}
-
-interface ErrorBody {
-  message?: string;
-}
+export class QuizPreviewApiError extends ApiError {}
 
 export async function fetchQuizPreview(
   quizId: number,
@@ -31,9 +20,8 @@ export async function fetchQuizPreview(
     { credentials: 'include', signal },
   );
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as ErrorBody;
     throw new QuizPreviewApiError(
-      body.message ?? 'Could not load the quiz preview',
+      await errorMessageOf(response, 'Could not load the quiz preview'),
       response.status,
     );
   }

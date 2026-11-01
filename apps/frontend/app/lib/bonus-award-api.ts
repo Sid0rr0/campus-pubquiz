@@ -4,24 +4,14 @@ import type {
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
+import { ApiError, errorMessageOf } from '@/app/lib/api-error';
 
-export class BonusAwardApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
-    super(message);
-    this.name = 'BonusAwardApiError';
-  }
-}
+export class BonusAwardApiError extends ApiError {}
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      message?: string;
-    };
     throw new BonusAwardApiError(
-      body.message ?? 'Bonus award request failed',
+      await errorMessageOf(response, 'Bonus award request failed'),
       response.status,
     );
   }
@@ -73,11 +63,8 @@ export async function deleteBonusAward(
     },
   );
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      message?: string;
-    };
     throw new BonusAwardApiError(
-      body.message ?? 'Could not delete bonus award',
+      await errorMessageOf(response, 'Could not delete bonus award'),
       response.status,
     );
   }

@@ -1,15 +1,15 @@
 import type { ImportPreview, ImportRowIssue } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { ApiError, readErrorBody } from '@/app/lib/api-error';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
-export class ImportApiError extends Error {
+export class ImportApiError extends ApiError {
   constructor(
     message: string,
-    public readonly status: number,
+    status: number,
     public readonly issues: ImportRowIssue[] = [],
   ) {
-    super(message);
-    this.name = 'ImportApiError';
+    super(message, status);
   }
 }
 
@@ -33,7 +33,7 @@ async function postImport<T>(
   });
 
   if (!response.ok) {
-    const errorBody = (await response.json()) as ErrorBody;
+    const errorBody = await readErrorBody<ErrorBody>(response);
     throw new ImportApiError(
       errorBody.message ?? 'Import request failed',
       response.status,
