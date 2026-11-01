@@ -70,3 +70,13 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ in mutation-testing-services the ticket 01 implementer's edit to the gitignored skill file was refused from its worktree, but its log entry landed anyway, so the log claimed an edit that wasn't made until the orchestrator fixed both at the end.
 - **implement-spec step 11 (2026-10-28)**: the first bullet fetches and rebases the integration branch onto `origin/main` before any check runs; small conflicts are resolved inline, logic conflicts abort and go to the user; the push uses `--force-with-lease`.
   _Why:_ PRs opened on a stale base quoted check results that didn't reflect the merged result.
+- **implement-spec step 7 (2026-11-01 retro)**: after `code-review`, run `ponytail:ponytail-review` on the same range and repeat it on the fixes until it reports no Must fix.
+  _Why:_ in power-ups, `code-review` passed, then four manual `ponytail-review` rounds found 20+ behaviour bugs (wrong coin counts, a power-up vanishing after the last coin, a useless Kahoot 50/50).
+- **implement-spec steps 8 and 10 (2026-11-01 retro)**: the spec moves to done on `main` after the PR merges, not on the integration branch.
+  _Why:_ every parallel spec edits the same `.scratch/done.md` and `overview.md` rows, so the user had to ask for conflict fixes on three PRs.
+- **implement-spec step 4 (2026-11-01 retro)**: the ticket branch's start sha is pasted in literally.
+  _Why:_ the worktree guard refused `git checkout -b … $(git rev-parse …)` at least four times.
+- **to-tickets step 3 (2026-11-01 retro)**: tickets that add to the same file count as overlapping; give each its own new file where possible.
+  _Why:_ e2e-power-ups hit 23 rebase conflicts in `power-ups.spec.ts`, `coverage.ts` and `power-ups.ts`; power-ups hit 17 in `power-ups.ts` and `purchase-changes.ts`.
+- **implement browser check (2026-11-01 retro)**: sign in with `node scripts/dev-admin.mjs`; `.mcp.json` runs chrome-devtools with `--isolated`.
+  _Why:_ six sessions found the shared Chrome profile locked, and two couldn't sign in, so changed screens went unchecked.

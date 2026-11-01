@@ -21,26 +21,6 @@
           }
         ],
         "description": "Stamp a marker so the PostToolUse Bash hook formats only files this command wrote"
-      },
-      {
-        "matcher": "Bash|Grep",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "GRAPHIFY_HOOK_NUDGE_CAP=1 graphify hook-guard search",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Read|Glob",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "GRAPHIFY_HOOK_NUDGE_CAP=1 graphify hook-guard read",
-            "timeout": 10
-          }
-        ]
       }
     ],
     "PostToolUse": [
