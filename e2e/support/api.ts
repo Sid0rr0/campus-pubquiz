@@ -21,6 +21,8 @@ export interface SessionSettingsInput {
   showRoundOverview?: boolean;
   /** Needs `showRoundOverview` on too (the backend refuses the pair otherwise). */
   jokersEnabled?: boolean;
+  powerUpsEnabled?: boolean;
+  startingCoins?: number;
 }
 
 export interface SeededSession {

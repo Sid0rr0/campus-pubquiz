@@ -1,0 +1,7 @@
+round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after,category,author
+Helps,multiple_choice,Which planet is known as the Red Planet?,Venus|Mars|Jupiter|Saturn,Mars,2,,,,,,
+Helps,free_text,What is the capital of France?,,Paris,2,,,,,,
+Helps,sort,Put these planets in order from the Sun,Venus|Mercury|Earth|Mars,Mercury|Venus|Earth|Mars,2,,,,,,
+Helps,match,Match each country to its capital,France|Spain|Italy+Madrid|Paris|Rome,France+Paris|Spain+Madrid|Italy+Rome,3,,,,,,
+Helps,number,How many pence are two pounds?,,200,2,,,"{margin: ""5%""}",1,,
+Doubles,free_text,Which sport uses a shuttlecock?,,Badminton,3,,,,1,,
