@@ -127,12 +127,11 @@ export function TeamSessionsTable({
     pageIndex: 0,
     pageSize: PAGE_SIZE,
   });
-  const data = useMemo(() => sessions, [sessions]);
 
   const table = useTable({
     features,
     columns,
-    data,
+    data: sessions,
     getRowId: (row) => String(row.gameSessionId),
     enableSortingRemoval: false,
     state: { sorting, pagination },

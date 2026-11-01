@@ -32,8 +32,6 @@ export function roundAnchorId(roundId: string): string {
   return `round-${roundId}`;
 }
 
-export type { MoveTargetRound };
-
 interface QuizRoundEditorProps {
   round: EditorRound;
   index: number;

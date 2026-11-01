@@ -214,9 +214,8 @@ function OutlineRoundRow({
  * Bird's-eye view of the quiz next to the round/question editors — shows
  * every round's title and each question's prompt (truncated), and lets the
  * admin drag rounds to reorder the quiz or drag questions to reorder within
- * their round. Questions only reorder within their own round here, matching
- * the round editor's own up/down controls (there's no move-between-rounds
- * anywhere yet).
+ * their round. Questions only reorder within their own round here; moving
+ * one to another round is the question editor's "Move to…" menu.
  */
 export function QuizOutline({
   rounds,
