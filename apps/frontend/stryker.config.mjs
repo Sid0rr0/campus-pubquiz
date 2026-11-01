@@ -6,7 +6,7 @@ process.env.SHARED_TYPES_ENTRY = fileURLToPath(
   new URL('../../shared/types/src/index.ts', import.meta.url),
 );
 
-export default {
+const config = {
   // Named explicitly: pnpm's isolated node_modules hides the plugins from Stryker's glob discovery.
   plugins: [
     '@stryker-mutator/vitest-runner',
@@ -32,3 +32,5 @@ export default {
   // Local audit tool, not a gate: colour the report, never fail the run.
   thresholds: { high: 80, low: 60, break: null },
 };
+
+export default config;
