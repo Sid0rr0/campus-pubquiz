@@ -52,7 +52,9 @@ const features = tableFeatures({
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
 });
-const helper = createColumnHelper<typeof features, LeaderboardEntry>();
+/** A standings row with the team's coins beside it (set only in a session with power-ups). */
+type TeamRow = LeaderboardEntry & { coins: number | undefined };
+const helper = createColumnHelper<typeof features, TeamRow>();
 
 /** `roundPoints` arrives in round order, so a round's points sit at its index. A stale list may be shorter than the rounds. */
 function pointsForRound(entry: LeaderboardEntry, roundIndex: number): number {
@@ -82,6 +84,14 @@ export function TeamsTable({
     leaderboard.find((entry) => entry.teamId === viewingAwardsTeamId) ?? null;
   const viewingCodeTeam =
     leaderboard.find((entry) => entry.teamId === viewingCodeTeamId) ?? null;
+  const roundCount = roundTitles.length;
+  const hasCoins = coinsByTeamId !== undefined;
+  // The column definitions must keep their identity across server updates: a new
+  // definition makes every cell a new component, which closes an open actions menu.
+  // Titles and coins arrive fresh in every snapshot, so only their shape counts here.
+  const rows = leaderboard.map(
+    (entry): TeamRow => ({ ...entry, coins: coinsByTeamId?.[entry.teamId] }),
+  );
   const columns = useMemo(
     () =>
       helper.columns([
@@ -91,7 +101,7 @@ export function TeamsTable({
           cell: (context) => formatRankLabel(context.row.original),
         }),
         helper.accessor('teamName', { header: 'Team', enableSorting: false }),
-        ...roundTitles.map((_title, index) =>
+        ...Array.from({ length: roundCount }, (_, index) =>
           helper.accessor((entry) => pointsForRound(entry, index), {
             id: `round-${index}`,
             header: `${index + 1}`,
@@ -114,12 +124,12 @@ export function TeamsTable({
           header: 'Total',
           enableSorting: false,
         }),
-        ...(coinsByTeamId
+        ...(hasCoins
           ? [
               helper.display({
                 id: 'coins',
                 header: 'Coins',
-                cell: (context) => coinsByTeamId[context.row.original.teamId],
+                cell: (context) => context.row.original.coins,
               }),
             ]
           : []),
@@ -173,12 +183,12 @@ export function TeamsTable({
           },
         }),
       ]),
-    [roundTitles, coinsByTeamId],
+    [roundCount, hasCoins],
   );
   const table = useTable({
     features,
     columns,
-    data: leaderboard,
+    data: rows,
     getRowId: (entry) => String(entry.teamId),
   });
 

@@ -386,6 +386,37 @@ describe('TeamsTable', () => {
     expect(within(quizzardsRowAfter).getByText('12')).toBeInTheDocument(); // total
   });
 
+  it("keeps a team's actions menu open when a server update brings the same round titles in a new array", async () => {
+    const table = (roundTitles: string[], leaderboard = LEADERBOARD) => (
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={leaderboard}
+        roundTitles={roundTitles}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />
+    );
+    const { rerender } = renderWithQuery(table([...ROUND_TITLES]));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Actions for The Quizzards' }),
+    );
+    expect(
+      await screen.findByRole('menuitem', { name: /award bonus/i }),
+    ).toBeInTheDocument();
+
+    // Every snapshot the server sends carries a fresh titles array.
+    rerender(
+      table(
+        [...ROUND_TITLES],
+        [{ ...LEADERBOARD[0] }, ...LEADERBOARD.slice(1)],
+      ),
+    );
+
+    expect(
+      screen.getByRole('menuitem', { name: /award bonus/i }),
+    ).toBeInTheDocument();
+  });
+
   it('opens a bonus award modal for a team from its actions menu and awards a predefined-category bonus', async () => {
     const onAwardBonus = vi.fn().mockResolvedValue({ success: true });
     renderWithQuery(
