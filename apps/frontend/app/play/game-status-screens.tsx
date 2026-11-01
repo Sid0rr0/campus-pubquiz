@@ -58,7 +58,7 @@ interface GameStatusScreensProps {
     showdownRoundId: number,
     teamId: number,
     value: string,
-  ) => void;
+  ) => Promise<AckResult>;
 }
 
 /** "My Team" — only on a phone that has a stored team code to open it with. */
