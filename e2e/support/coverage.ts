@@ -59,6 +59,18 @@ export const MOVES = [
   'media_fullscreen',
   /** `END_QUIZ`. */
   'end_quiz',
+  /** Buying Ask the room. */
+  'power_up_ask_the_room',
+  /** The quiz master gives or takes coins through the award form. */
+  'coin_award',
+  /** A team buys the question power-up on a phone. */
+  'power_up_fifty_fifty',
+  'power_up_first_letter',
+  'power_up_letter_count',
+  'power_up_pin_one',
+  'power_up_wider_margin',
+  /** Buying the extra joker for a round. */
+  'power_up_extra_joker',
 ] as const;
 export type Move = (typeof MOVES)[number];
 

@@ -1,0 +1,111 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - navigation:
+    - text: e2e-admin
+    - link "Guide":
+      - /url: /guide
+    - link "Sessions":
+      - /url: /sessions
+    - link "Teams":
+      - /url: /teams
+    - link "Stats":
+      - /url: /stats
+    - link "League":
+      - /url: /league
+    - link "My Team":
+      - /url: /team
+    - link "Manage leagues":
+      - /url: /leagues
+    - link "Users":
+      - /url: /users
+    - button "Log out"
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - text: /0:\d+/
+    - paragraph:
+      - text: /Quiz:\s+Question power-ups [0-9a-z]+ [A-Z]+(-[A-Z]+){2}/
+      - button "Copy code"
+    - paragraph: "Status: question_open"
+    - paragraph: "Display: R1Q5"
+    - link "Open display"
+    - button "Previous"
+    - button "Advance"
+    - button "Leaderboard"
+    - button "Fullscreen media"
+    - switch "Display sound" [checked]: "On"
+    - button "Join overlay"
+    - button "End Quiz"
+    - text: Break ends at
+    - paragraph: Sets the upcoming break
+    - textbox "Break ends at"
+    - button "Set"
+    - text: Display text size
+    - button "Decrease display text size": A−
+    - text: /\d+%/
+    - button "Increase display text size": A+
+    - link "Edit quiz"
+    - heading "Teams (1)" [level=2]
+    - list:
+      - listitem /Team A [0-9a-f]{6} has answered/:
+        - text: /Connected Team A [0-9a-f]{6}/
+        - button "Kick"
+        - text: "Players: —"
+        - button /Edit player count for Team A [0-9a-f]{6}/
+  - heading "Grade Questions" [level=2]
+  - img "Round 1"
+  - navigation "Helps questions":
+    - button "Show title card of Helps": T
+    - button "Grade question 1 of Helps"
+    - button "Grade question 2 of Helps"
+    - button "Grade question 3 of Helps"
+    - button "Grade question 4 of Helps"
+    - button "Grade question 5 of Helps (live on display)" [pressed]
+    - button "Show break after Helps": B
+  - paragraph: Helps
+  - img "Round 2"
+  - navigation "Doubles questions":
+    - button "Show title card of Doubles": T
+    - button "Grade question 1 of Doubles"
+    - button "Show break after Doubles": B
+  - paragraph: Doubles
+  - region "Question detail":
+    - paragraph: Round 1 (Helps) — Q5 of 5
+    - heading "How many pence are two pounds?" [level=2]
+    - paragraph: "/Correct answer: \\d+/"
+  - paragraph: 1/1 answered 1 correct
+  - list:
+    - listitem:
+      - text: /Team A [0-9a-f]{6} Wider margin \d+/
+      - button /Grade Team A [0-9a-f]{6} custom points/: Custom
+      - button /Grade Team A [0-9a-f]{6} 0 points/
+      - button /Grade Team A [0-9a-f]{6} half points/: Half (1)
+      - button /Grade Team A [0-9a-f]{6} full points/: ✓ Full (2)
+  - heading "Teams" [level=2]
+  - table:
+    - rowgroup:
+      - row "Position Team 1 2 Bonus Total Coins Actions":
+        - columnheader "Position"
+        - columnheader "Team"
+        - columnheader "1":
+          - button "1"
+        - columnheader "2":
+          - button "2"
+        - columnheader "Bonus"
+        - columnheader "Total"
+        - columnheader "Coins"
+        - columnheader "Actions"
+    - rowgroup:
+      - row /1\. Team A [0-9a-f]{6} \d+ 0 0 \d+ 0 Actions for Team A [0-9a-f]{6}/:
+        - cell "1."
+        - cell /Team A [0-9a-f]{6}/
+        - cell /\d+/
+        - cell "0"
+        - cell "0"
+        - cell /\d+/
+        - cell "0"
+        - cell /Actions for Team A [0-9a-f]{6}/:
+          - button /Actions for Team A [0-9a-f]{6}/
+- region "Notifications alt+T"
+- alert

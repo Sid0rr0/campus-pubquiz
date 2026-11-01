@@ -1,0 +1,47 @@
+- region "Notifications alt+T"
+- dialog "Power-ups":
+  - heading "Power-ups" [level=2]
+  - button "Close power-ups"
+  - paragraph: "/Balance: \\d+ coins/"
+  - heading "Available now" [level=3]
+  - list:
+    - listitem:
+      - paragraph: /\d+\/\d+/
+      - paragraph: Removes half the options, never the right one.
+      - paragraph: 2 coins
+      - paragraph: "Used: 0 / 1"
+      - button /Activate \d+\/\d+/: Activate for this question
+    - listitem:
+      - paragraph: Ask the room
+      - paragraph: Shows how the other teams' answers split, once three have answered.
+      - paragraph: 3 coins
+      - paragraph: "Used: 0 / 1"
+      - button "Activate Ask the room" [disabled]: Waiting for more answers
+    - listitem:
+      - paragraph: Extra joker
+      - paragraph: Doubles the next round, if bought before its intro.
+      - paragraph: 5 coins
+      - paragraph: "Used: 0 / 1"
+      - button "Activate Extra joker": "Activate for the next round: Round 2"
+  - heading "Not available now" [level=3]
+  - list:
+    - listitem:
+      - paragraph: First letter
+      - paragraph: Shows the answer's first letter.
+      - paragraph: 2 coins
+      - paragraph: "Used: 0 / 1"
+    - listitem:
+      - paragraph: Letter count
+      - paragraph: Shows the answer with its letters as blanks.
+      - paragraph: 1 coin
+      - paragraph: "Used: 0 / 1"
+    - listitem:
+      - paragraph: Pin one
+      - paragraph: Locks one item or pair in its right place.
+      - paragraph: 2 coins
+      - paragraph: "Used: 0 / 2"
+    - listitem:
+      - paragraph: Wider margin
+      - paragraph: Doubles a Number question's margin.
+      - paragraph: 2 coins
+      - paragraph: "Used: 0 / 1"

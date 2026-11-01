@@ -1,0 +1,32 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - heading "Rules" [level=1]
+  - paragraph: There will be 2 topics, 1 to 5 questions each, with a break after each round.
+  - list:
+    - listitem: Max 6 players per team, every additional player costs the team −2 points.
+    - listitem: No cheating.
+    - listitem: Please write your answers in English.
+    - listitem: In case of disagreements, the organizers have the final word.
+    - listitem: Want to contest something? Come with a credible source.
+    - listitem: In case of no correct answers, the moderator CAN award a bonus point to the team with the funniest answer.
+    - listitem:
+      - text: "Shot bonus: Order shots, at minimum more than half your player count. Must be checked by a moderator to get the points. ("
+      - strong: 1 point + 2 coins
+      - text: ", doable twice per quiz)"
+    - listitem:
+      - text: "Selfie bonus: Snap a group photo or selfie with your whole team, post it as an Instagram story, and tag @esn.ctu and @isc_hub.cz. Must be checked by a moderator to get the points. ("
+      - strong: 1 point + 2 coins
+      - text: )
+    - listitem:
+      - text: "Power-ups are on: you start with"
+      - strong: 2 coins
+      - text: . If your team rated all rounds of the last pub quiz, you get 2 bonus coins. Earn more with shots and selfies.
+  - button "Answer history (0)": History
+  - button "Power-ups (2 coins)": 2 coins Power-ups
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert
