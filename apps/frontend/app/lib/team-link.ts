@@ -453,10 +453,14 @@ function submitJoin(state: TeamLinkState): TeamLinkStep {
   const gameCode = normalizeJoinCode(state.codeInput);
   if (!teamName || !gameCode) return { state, commands: [] };
   const attempt = state.attempt + 1;
+  // The stored token belongs to the stored team: sent with another name, the server would let it win and seat the phone as the old team.
+  const isSameTeam =
+    state.teamName?.trim().toLowerCase() === teamName.toLowerCase();
   return {
     state: {
       ...state,
       teamName,
+      storedTeamToken: isSameTeam ? state.storedTeamToken : undefined,
       activeJoinCode: gameCode,
       attempt,
       isJoinInFlight: true,
@@ -594,6 +598,8 @@ function acceptJoin(
     joinError: null,
     joinRetries: 0,
     confirmedTeamId: payload.teamId,
+    // The server decides who the phone is (a stored token can name another team than the one typed).
+    teamName: payload.teamName,
     linkedSocketId: state.connection?.socketId ?? null,
     storedTeamToken: payload.teamToken,
     storedTeamCode: payload.teamCode,
@@ -614,7 +620,11 @@ function acceptJoin(
   };
   const storeIdentity: TeamLinkCommand = {
     type: 'writeIdentity',
-    identity: { teamToken: payload.teamToken, teamCode: payload.teamCode },
+    identity: {
+      teamName: payload.teamName,
+      teamToken: payload.teamToken,
+      teamCode: payload.teamCode,
+    },
   };
   const resend = accepted.pendingAnswer
     ? transmitAnswer(accepted, accepted.pendingAnswer)

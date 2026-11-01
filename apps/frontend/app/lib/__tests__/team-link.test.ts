@@ -204,7 +204,7 @@ describe('team link: joining', () => {
     expect(state.attempt).toBe(2);
   });
 
-  it('mirrors the assigned team code into the form and stores it with the token', () => {
+  it('mirrors the assigned team code into the form and stores it with the token and the accepted name', () => {
     const { state, commands } = run(typedPhone(), {
       type: 'joinAccepted',
       payload: ACCEPTED,
@@ -214,7 +214,11 @@ describe('team link: joining', () => {
     expect(commands).toEqual([
       {
         type: 'writeIdentity',
-        identity: { teamToken: 'token-2', teamCode: 'ASSIGNED-CODE' },
+        identity: {
+          teamName: 'The Quizzards',
+          teamToken: 'token-2',
+          teamCode: 'ASSIGNED-CODE',
+        },
       },
     ]);
   });
@@ -458,6 +462,40 @@ function expectNextSubmitLetThrough(state: TeamLinkState) {
     attempt: state.attempt + 1,
   });
 }
+
+describe('team link: a name typed over a stored identity', () => {
+  function submitAs(name: string) {
+    return run(
+      returningPhone(),
+      { type: 'nameTyped', value: name },
+      { type: 'joinSubmitted' },
+      connected(1),
+    );
+  }
+
+  it('does not send the stored team token for a different team name', () => {
+    const [join] = joinsIn(submitAs('Another Team').commands);
+
+    expect(join).toMatchObject({
+      payload: { teamName: 'Another Team', teamToken: undefined },
+    });
+  });
+
+  it('keeps the stored token when only the casing or spacing of the name changed', () => {
+    const [join] = joinsIn(submitAs('  the quizzards ').commands);
+
+    expect(join).toMatchObject({ payload: { teamToken: 'token-1' } });
+  });
+
+  it('shows the team name the server accepted, not the one that was typed', () => {
+    const { state } = run(returningPhone(), connected(1), {
+      type: 'joinAccepted',
+      payload: { ...ACCEPTED, teamName: 'Name From The Server' },
+    });
+
+    expect(state.teamName).toBe('Name From The Server');
+  });
+});
 
 describe('team link: being kicked', () => {
   it('clears all storage, empties the form, shows the notice and goes to the join screen', () => {
