@@ -25,6 +25,7 @@ describe('RulesPage', () => {
     mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: null,
+      connectionIssue: null,
     });
   });
 
@@ -76,10 +77,24 @@ describe('RulesPage', () => {
     mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
+      connectionIssue: 'refused',
     });
     render(<RulesPage />);
 
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
     expect(routerRef.replace).toHaveBeenCalledWith('/rules');
+  });
+
+  it('keeps the code in the URL while the connection is only reconnecting', () => {
+    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
+    mockUseGame.mockReturnValue({
+      snapshot: null,
+      connectionError: 'Reconnecting…',
+      connectionIssue: 'reconnecting',
+    });
+    render(<RulesPage />);
+
+    expect(routerRef.replace).not.toHaveBeenCalled();
+    expect(screen.getByText(/connecting/i)).toBeInTheDocument();
   });
 });

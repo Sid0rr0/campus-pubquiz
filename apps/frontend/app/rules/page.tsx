@@ -14,7 +14,7 @@ function RulesPageContent() {
   // connection to a session that may not exist.
   const codeFromUrl = searchParams.get('code') ?? undefined;
   // The rules page never joins a team, so it only needs the room's snapshot.
-  const { snapshot, connectionError } = useGameConnection(
+  const { snapshot, connectionIssue } = useGameConnection(
     'players',
     Boolean(codeFromUrl),
     codeFromUrl,
@@ -22,14 +22,16 @@ function RulesPageContent() {
 
   // An unknown/stale code still needs to fall back to the static rules
   // rather than get stuck, so this only strips the bad ?code= from the
-  // address bar rather than navigating away.
+  // address bar rather than navigating away. Only a refusal means the code
+  // is bad: a dropped connection retries, and keeps the code for it.
+  const isRefused = connectionIssue === 'refused';
   useEffect(() => {
-    if (codeFromUrl && connectionError) {
+    if (codeFromUrl && isRefused) {
       router.replace('/rules');
     }
-  }, [codeFromUrl, connectionError, router]);
+  }, [codeFromUrl, isRefused, router]);
 
-  if (codeFromUrl && !connectionError && !snapshot) {
+  if (codeFromUrl && !isRefused && !snapshot) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Connecting…</p>
