@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'motion/react';
+import { useSecondsLeft } from '@/app/lib/use-seconds-left';
 
 const LOCK_RING_RADIUS = 45;
 const LOCK_RING_CIRCUMFERENCE = 2 * Math.PI * LOCK_RING_RADIUS;
@@ -18,17 +19,7 @@ interface QuestionLockCountdownProps {
 // Companion to QuestionLockCountdown's ring — same deadline, same tick
 // cadence, just rendered as a heading instead of a ring+number.
 export function QuestionLockHeading({ lockAt }: QuestionLockCountdownProps) {
-  const [secondsRemaining, setSecondsRemaining] = useState(() =>
-    Math.max(0, Math.ceil((lockAt - Date.now()) / 1000)),
-  );
-
-  useEffect(() => {
-    const tick = () =>
-      setSecondsRemaining(Math.max(0, Math.ceil((lockAt - Date.now()) / 1000)));
-    tick();
-    const interval = setInterval(tick, 250);
-    return () => clearInterval(interval);
-  }, [lockAt]);
+  const secondsRemaining = useSecondsLeft(lockAt) ?? 0;
 
   return (
     <h1 className="font-display text-display-4xl">
@@ -43,21 +34,11 @@ export function QuestionLockHeading({ lockAt }: QuestionLockCountdownProps) {
 // 60s, so a display that reconnects mid-countdown resumes at the correct
 // fraction instead of restarting a full sweep.
 export function QuestionLockCountdown({ lockAt }: QuestionLockCountdownProps) {
-  const [secondsRemaining, setSecondsRemaining] = useState(() =>
-    Math.max(0, Math.ceil((lockAt - Date.now()) / 1000)),
-  );
+  const secondsRemaining = useSecondsLeft(lockAt) ?? 0;
   // Captured once at mount so the ring's animation duration reflects however
   // much time was actually left (e.g. after a reconnect mid-countdown),
   // rather than recomputing (and therefore restarting) on every re-render.
   const [remainingMs] = useState(() => Math.max(0, lockAt - Date.now()));
-
-  useEffect(() => {
-    const tick = () =>
-      setSecondsRemaining(Math.max(0, Math.ceil((lockAt - Date.now()) / 1000)));
-    tick();
-    const interval = setInterval(tick, 250);
-    return () => clearInterval(interval);
-  }, [lockAt]);
 
   return (
     <div

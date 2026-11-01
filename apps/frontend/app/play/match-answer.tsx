@@ -1,25 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
+import { DndContext } from '@dnd-kit/core';
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'motion/react';
 import { DragHandleDots2Icon } from '@radix-ui/react-icons';
-import { ANSWER_FORMATS, lockPin, type PinEffect } from '@campus-pubquiz/types';
-import { reorderOnDragEnd } from '@/app/lib/reorder-list';
+import { ANSWER_FORMATS, type PinEffect } from '@campus-pubquiz/types';
+import { useReorderableDraft } from '@/app/play/use-reorderable-draft';
 import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 
 interface MatchAnswerProps {
@@ -99,33 +90,14 @@ export function MatchAnswer({
   pin,
   onSubmit,
 }: MatchAnswerProps) {
-  const restored = initialValue
-    ? ANSWER_FORMATS.match.decode(initialValue)
-    : [];
-  const [draft, setOrder] = useState<string[]>(
-    restored.length === rightItems.length ? restored : rightItems,
+  const { order, isDragging, dragProps } = useReorderableDraft(
+    initialValue ? ANSWER_FORMATS.match.decode(initialValue) : [],
+    rightItems,
+    pin,
   );
-  // Derived, so a pin bought while the question is open snaps its pair into place at once.
-  const order = lockPin(draft, pin);
-  const [isDragging, setIsDragging] = useState(false);
   const isSubmitted =
     Boolean(initialValue) &&
     ANSWER_FORMATS.match.encode(order) === initialValue;
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
-  function handleDragEnd(event: DragEndEvent): void {
-    setIsDragging(false);
-    const { active, over } = event;
-    if (!over) return;
-    const next = reorderOnDragEnd(order, String(active.id), String(over.id));
-    if (!next) return;
-    setOrder(lockPin(next, pin));
-  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -142,13 +114,7 @@ export function MatchAnswer({
           ))}
         </ul>
         {/* A static id keeps dnd-kit's aria-describedby id deterministic across SSR/hydration — see the identical comment in sort-answer.tsx. */}
-        <DndContext
-          id="match-answer"
-          sensors={sensors}
-          onDragStart={() => setIsDragging(true)}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setIsDragging(false)}
-        >
+        <DndContext id="match-answer" {...dragProps}>
           <SortableContext items={order} strategy={verticalListSortingStrategy}>
             <ol className="contents">
               {order.map((value, index) => (

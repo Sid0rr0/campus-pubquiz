@@ -1,17 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
+import { DndContext } from '@dnd-kit/core';
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
@@ -22,10 +14,10 @@ import {
   ArrowUpIcon,
   DragHandleDots2Icon,
 } from '@radix-ui/react-icons';
-import { ANSWER_FORMATS, lockPin, type PinEffect } from '@campus-pubquiz/types';
+import { ANSWER_FORMATS, type PinEffect } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
-import { reorderOnDragEnd } from '@/app/lib/reorder-list';
 import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
+import { useReorderableDraft } from '@/app/play/use-reorderable-draft';
 
 interface SortAnswerProps {
   options: string[];
@@ -188,23 +180,13 @@ export function SortAnswer({
   pin,
   onSubmit,
 }: SortAnswerProps) {
-  const restoredOrder = initialValue
-    ? ANSWER_FORMATS.sort.decode(initialValue)
-    : [];
-  const [draft, setOrder] = useState<string[]>(
-    restoredOrder.length === options.length ? restoredOrder : options,
+  const { order, setOrder, isDragging, dragProps } = useReorderableDraft(
+    initialValue ? ANSWER_FORMATS.sort.decode(initialValue) : [],
+    options,
+    pin,
   );
-  // Derived, so a pin bought while the question is open snaps its item into place at once.
-  const order = lockPin(draft, pin);
-  const [isDragging, setIsDragging] = useState(false);
   const isSubmitted =
     Boolean(initialValue) && ANSWER_FORMATS.sort.encode(order) === initialValue;
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
 
   function move(itemIndex: number, direction: -1 | 1): void {
     let targetIndex = itemIndex + direction;
@@ -216,25 +198,10 @@ export function SortAnswer({
     setOrder(next);
   }
 
-  function handleDragEnd(event: DragEndEvent): void {
-    setIsDragging(false);
-    const { active, over } = event;
-    if (!over) return;
-    const next = reorderOnDragEnd(order, String(active.id), String(over.id));
-    if (!next) return;
-    setOrder(lockPin(next, pin));
-  }
-
   return (
     <div className="flex flex-col gap-3">
       {/* A static id keeps dnd-kit's aria-describedby id deterministic across SSR/hydration — without it dnd-kit falls back to a shared mutable module counter that drifts between the server and client render, causing a hydration mismatch. */}
-      <DndContext
-        id="sort-answer"
-        sensors={sensors}
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={handleDragEnd}
-        onDragCancel={() => setIsDragging(false)}
-      >
+      <DndContext id="sort-answer" {...dragProps}>
         <SortableContext items={order} strategy={verticalListSortingStrategy}>
           <ol className="flex flex-col gap-2.5">
             {order.map((item, itemIndex) => (
