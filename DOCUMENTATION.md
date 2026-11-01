@@ -650,7 +650,9 @@ power-ups on writes a linked +2 coin award (`SHOT_SELFIE_COINS`) in the same flu
 cascades, so deleting the bonus award deletes the coin award (and when the team
 has already spent those coins, an unlinked coin award covers them, so the
 balance never hides a debt), and editing its
-points leaves it alone. The bonus award form's optional **coins** field (any
+points leaves it alone. Because the coins depend on the sign, an edit that turns a
+shot or selfie bonus into a penalty, or the reverse, is refused (delete the award and
+give a new one); a custom bonus never carries coins and can change sign. The bonus award form's optional **coins** field (any
 non-zero integer, negative takes coins, up to 100 either way) is sent as `coins`
 on `AWARD_BONUS` and stored as its own unlinked coin award, with the form's
 reason if one was typed. With `points` 0 and `coins` set, only the coin award is

@@ -355,6 +355,45 @@ describe('BonusService', () => {
       expect(repo.flush).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ['a bonus into a penalty', 1, -1],
+      ['a penalty into a bonus', -1, 1],
+    ])(
+      'rejects turning %s on a shot award, whose coins depend on the sign',
+      async (_label, before, after) => {
+        const award = {
+          id: 9,
+          category: 'shot',
+          points: before,
+          reason: undefined,
+          createdAt: new Date(),
+        };
+        const { service, repo } = createServiceWithAward(award);
+
+        await expect(service.update(101, 9, after)).rejects.toThrow(
+          /delete it and give a new one/,
+        );
+        expect(award.points).toBe(before);
+        expect(repo.flush).not.toHaveBeenCalled();
+      },
+    );
+
+    it('still lets a custom award change sign, since it never carries coins', async () => {
+      const award = {
+        id: 10,
+        team: { id: 31 },
+        category: 'custom',
+        points: -2,
+        reason: 'Heckling',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      const { service } = createServiceWithAward(award);
+
+      await service.update(101, 10, 2, 'Heckling');
+
+      expect(award.points).toBe(2);
+    });
+
     it('rejects an update to a custom-category award with a blank reason', async () => {
       const award = {
         id: 10,

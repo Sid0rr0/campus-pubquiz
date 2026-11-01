@@ -246,6 +246,16 @@ export class BonusService {
     if (award.category === 'custom' && !trimmedReason) {
       throw new InvalidBonusAwardError('A custom bonus needs a reason');
     }
+    // A shot or selfie bonus brings coins and a penalty brings none, so the
+    // linked coin award would go stale if the sign flipped.
+    if (
+      award.category !== 'custom' &&
+      Math.sign(points) !== Math.sign(award.points)
+    ) {
+      throw new InvalidBonusAwardError(
+        'A shot or selfie award cannot change between a bonus and a penalty — delete it and give a new one',
+      );
+    }
 
     award.points = points;
     award.reason = award.category === 'custom' ? trimmedReason : undefined;
