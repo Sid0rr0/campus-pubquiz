@@ -66,15 +66,29 @@ export function newAdminApi(
   });
 }
 
-/** Creates a session on the quiz and returns its join code. */
+/** Creates a league whose dates surround today and returns its id. */
+export async function createLeague(
+  api: APIRequestContext,
+  name: string,
+): Promise<number> {
+  const year = new Date().getFullYear();
+  const response = await api.post('/leagues', {
+    data: { name, startsOn: `${year - 1}-01-01`, endsOn: `${year + 1}-12-31` },
+  });
+  expect(response.ok(), `create league: ${await response.text()}`).toBe(true);
+  return ((await response.json()) as { id: number }).id;
+}
+
+/** Creates a session on the quiz (in the given leagues) and returns its join code. */
 export async function createSession(
   api: APIRequestContext,
   quizId: number,
   name: string,
   settings: SessionSettingsInput,
+  leagueIds: number[] = [],
 ): Promise<string> {
   const response = await api.post('/sessions', {
-    data: { quizId, name, settings },
+    data: { quizId, name, settings, leagueIds },
   });
   expect(response.ok(), `create session: ${await response.text()}`).toBe(true);
   return ((await response.json()) as SessionCreatedResponse).joinCode;

@@ -1,16 +1,21 @@
 import { test as base, expect } from '../fixtures';
+import { endQuiz } from '../support/admin-pages';
+import { createLeague } from '../support/api';
 import { awardBonus, expectTeamsTablePoints } from '../support/bonus';
 import { recordMove } from '../support/coverage';
-import { E2E_LOCK_GRACE_SECONDS } from '../support/env';
+import { ADMIN_STORAGE_STATE, E2E_LOCK_GRACE_SECONDS } from '../support/env';
+import { rateRound } from '../support/feedback';
 import { expectStampedStandingsRow } from '../support/joker-night';
 import {
   awardCoins,
   buyExtraJoker,
   buyPowerUp,
   expectCoins,
+  expectNoShop,
   expectTeamsTableCoins,
   openShop,
   POWER_UP_NIGHT,
+  seedLeagueNight,
   seedPowerUpSession,
 } from '../support/power-ups';
 import {
@@ -22,6 +27,8 @@ import {
   peekAtShop,
   pinnedItem,
 } from '../support/question-power-ups';
+import { ControlScreen } from '../support/screens/control-screen';
+import { PhoneScreen } from '../support/screens/phone-screen';
 import { snap } from '../support/snapshots';
 
 const { helps } = POWER_UP_NIGHT;
@@ -283,6 +290,25 @@ const named = base.extend({
   },
 });
 
+// Carried coins need two nights in one league: the fixture's session is the first.
+const carried = base.extend<{ leagueId: number }>({
+  leagueId: async ({ adminApi }, use) => {
+    await use(
+      await createLeague(adminApi, `Carried ${Date.now().toString(36)}`),
+    );
+  },
+  session: async ({ adminApi, leagueId, sessionSettings }, use) => {
+    await use(
+      await seedLeagueNight(
+        adminApi,
+        `First night ${Date.now().toString(36)}`,
+        sessionSettings,
+        leagueId,
+      ),
+    );
+  },
+});
+
 named(
   'extra joker, named: the offer names the round and costs 6, and the round scores double',
   async ({ control, display, joinPhone }) => {
@@ -325,5 +351,77 @@ named(
       true,
     );
     await phone.expectOwnStanding(DOUBLED_TOTAL);
+  },
+);
+
+carried(
+  'carried coins: the team that rated every round spends two in a night with power-ups off, the other has no shop',
+  async ({
+    adminApi,
+    control,
+    joinPhone,
+    leagueId,
+    newContext,
+    newPhoneContext,
+  }) => {
+    const { doubles } = POWER_UP_NIGHT;
+    const raters = await joinPhone('Raters');
+    const skippers = await joinPhone('Skippers');
+
+    // 1. Both teams answer, so the night counts for them; the quiz ends at once and the final form offers every round.
+    await control.startQuiz();
+    await control.advance('round_intro');
+    await control.advance('question_open');
+    await raters.submitChoice(helps.multipleChoice.key);
+    await skippers.submitChoice(helps.multipleChoice.key);
+    const raterCode = await control.readTeamCode(raters.teamName);
+    const skipperCode = await control.readTeamCode(skippers.teamName);
+    await endQuiz(control);
+    await rateRound(raters, helps.title, 4);
+    await rateRound(raters, doubles.title, 5);
+    await rateRound(skippers, helps.title, 3);
+
+    // 2. A second night in the same league, with power-ups off.
+    const second = await seedLeagueNight(
+      adminApi,
+      `Second night ${Date.now().toString(36)}`,
+      { powerUpsEnabled: false },
+      leagueId,
+    );
+    const controlTwo = new ControlScreen(
+      await (
+        await newContext({
+          storageState: ADMIN_STORAGE_STATE,
+          viewport: { width: 1280, height: 800 },
+        })
+      ).newPage(),
+      second.joinCode,
+    );
+    await controlTwo.open();
+    const comeBack = async (previous: PhoneScreen, code: string) => {
+      const phone = new PhoneScreen(
+        await (await newPhoneContext()).newPage(),
+        previous.teamName,
+        second.joinCode,
+      );
+      await phone.joinWithTeamCode(code);
+      await phone.expectText("You're in!");
+      return phone;
+    };
+    const ratersTwo = await comeBack(raters, raterCode);
+    const skippersTwo = await comeBack(skippers, skipperCode);
+    await controlTwo.startQuiz();
+    await controlTwo.advance('round_intro');
+    await controlTwo.advance('question_open');
+
+    // 3. Only the team that rated every round brought coins, and it can buy.
+    await ratersTwo.expectQuestion(helps.multipleChoice.prompt);
+    await expectCoins(ratersTwo, 2);
+    await buyPowerUp(ratersTwo, '50/50');
+    recordMove('power_up_fifty_fifty');
+    // With power-ups off the shop only shows while there are coins: spending the last two closes it.
+    await expectNoShop(ratersTwo);
+    await skippersTwo.expectQuestion(helps.multipleChoice.prompt);
+    await expectNoShop(skippersTwo);
   },
 );

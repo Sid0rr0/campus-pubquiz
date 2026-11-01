@@ -5,9 +5,13 @@
  */
 import path from 'node:path';
 import { expect, type APIRequestContext, type Locator } from '@playwright/test';
-import type { SeededSession, SessionSettingsInput } from './api';
+import {
+  createSession,
+  type SeededSession,
+  type SessionSettingsInput,
+} from './api';
 import { recordMove } from './coverage';
-import { seedCsvSession } from './csv-session';
+import { importCsvQuiz, seedCsvSession } from './csv-session';
 import type { ControlScreen } from './screens/control-screen';
 import { PATHS } from './env';
 import type { PhoneScreen } from './screens/phone-screen';
@@ -47,6 +51,27 @@ export function seedPowerUpSession(
     powerUpsEnabled: true,
     ...settings,
   });
+}
+
+/** A night of the power-up quiz on its own copy, added to the league from the start. */
+export async function seedLeagueNight(
+  api: APIRequestContext,
+  quizTitle: string,
+  settings: SessionSettingsInput,
+  leagueId: number,
+): Promise<SeededSession> {
+  const quizId = await importCsvQuiz(api, POWER_UPS_CSV, quizTitle);
+  const joinCode = await createSession(api, quizId, quizTitle, settings, [
+    leagueId,
+  ]);
+  return { joinCode, quizId, quizTitle };
+}
+
+/** The phone has no shop: no coins to spend and power-ups off. */
+export async function expectNoShop(phone: PhoneScreen): Promise<void> {
+  await expect(
+    phone.page.getByRole('button', { name: /^Power-ups/ }),
+  ).toHaveCount(0);
 }
 
 /** The trigger of the phone's shop drawer, whose name carries the balance ("Power-ups (2 coins)"). */
