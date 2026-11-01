@@ -4,8 +4,7 @@
  */
 import { expect } from '@playwright/test';
 import type { Move } from './coverage';
-import { recordMove } from './coverage';
-import { buyPowerUp, openShop } from './power-ups';
+import { buyPowerUp, closeShop, openShop } from './power-ups';
 import type { PhoneScreen } from './screens/phone-screen';
 
 /** The question power-ups, by the label the shop shows and the move they record. */
@@ -35,8 +34,7 @@ export async function buyQuestionPowerUp(
   phone: PhoneScreen,
   powerUp: (typeof QUESTION_POWER_UPS)[keyof typeof QUESTION_POWER_UPS],
 ): Promise<void> {
-  await buyPowerUp(phone, powerUp.label);
-  recordMove(powerUp.move);
+  await buyPowerUp(phone, powerUp.label, powerUp.move);
 }
 
 /** Opens the shop for a snapshot and closes it again. */
@@ -46,8 +44,7 @@ export async function peekAtShop(
 ): Promise<void> {
   const drawer = await openShop(phone);
   await whileOpen();
-  await phone.page.keyboard.press('Escape');
-  await expect(drawer).toHaveCount(0);
+  await closeShop(phone, drawer);
 }
 
 /** Which of the multiple-choice options the phone greys out. */

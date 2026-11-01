@@ -2,7 +2,6 @@ import { test as base, expect } from '../fixtures';
 import { endQuiz } from '../support/admin-pages';
 import { createLeague } from '../support/api';
 import { awardBonus, expectTeamsTablePoints } from '../support/bonus';
-import { recordMove } from '../support/coverage';
 import { ADMIN_STORAGE_STATE, E2E_LOCK_GRACE_SECONDS } from '../support/env';
 import { rateRound } from '../support/feedback';
 import { expectStampedStandingsRow } from '../support/joker-night';
@@ -10,9 +9,11 @@ import {
   awardCoins,
   buyExtraJoker,
   buyPowerUp,
+  closeShop,
   expectCoins,
   expectNoShop,
   expectTeamsTableCoins,
+  extraJokerCard,
   openShop,
   POWER_UP_NIGHT,
   seedLeagueNight,
@@ -94,8 +95,7 @@ ask(
       });
       await expect(button).toBeDisabled();
       await expect(button).toHaveText('Waiting for more answers');
-      await buyer.page.keyboard.press('Escape');
-      await expect(drawer).toHaveCount(0);
+      await closeShop(buyer, drawer);
     };
 
     // Two other answers are not enough; the split is Mars twice, Venus once.
@@ -109,11 +109,9 @@ ask(
     await expect(
       drawer.getByRole('button', { name: 'Activate Ask the room' }),
     ).toBeEnabled();
-    await buyer.page.keyboard.press('Escape');
-    await expect(drawer).toHaveCount(0);
+    await closeShop(buyer, drawer);
 
-    await buyPowerUp(buyer, 'Ask the room');
-    recordMove('power_up_ask_the_room');
+    await buyPowerUp(buyer, 'Ask the room', 'power_up_ask_the_room');
     await expectCoins(buyer, 0);
 
     const split = buyer.page.getByTestId('room-split');
@@ -334,11 +332,9 @@ named(
     const offer = drawer.getByRole('button', { name: 'Activate Extra joker' });
     await expect(offer).toContainText(`the next round: ${helps.title}`);
     // The balance line also reads "6 coins", so look in the offer's own card.
-    await expect(
-      drawer.getByRole('listitem').filter({
-        has: phone.page.getByRole('button', { name: 'Activate Extra joker' }),
-      }),
-    ).toContainText(`${EXTRA_JOKER_COST} coins`);
+    await expect(extraJokerCard(phone, drawer)).toContainText(
+      `${EXTRA_JOKER_COST} coins`,
+    );
     await buyExtraJoker(drawer);
     await expectCoins(phone, 0);
 
@@ -429,8 +425,7 @@ carried(
     // 3. Only the team that rated every round brought coins, and it can buy.
     await ratersTwo.expectQuestion(helps.multipleChoice.prompt);
     await expectCoins(ratersTwo, 2);
-    await buyPowerUp(ratersTwo, '50/50');
-    recordMove('power_up_fifty_fifty');
+    await buyPowerUp(ratersTwo, '50/50', 'power_up_fifty_fifty');
     // With power-ups off the shop only shows while there are coins: spending the last two closes it.
     await expectNoShop(ratersTwo);
     await skippersTwo.expectQuestion(helps.multipleChoice.prompt);
@@ -471,14 +466,12 @@ limitsTest(
     const button = drawer.getByRole('button', { name: 'Activate 50/50' });
     await expect(button).toBeDisabled();
     await expect(button).toHaveText('Not enough coins');
-    await phone.page.keyboard.press('Escape');
-    await expect(drawer).toHaveCount(0);
+    await closeShop(phone, drawer);
 
     // 2. One more coin from the quiz master pays for it.
     await awardCoins(control, phone.teamName, 1);
     await expectCoins(phone, 3);
-    await buyPowerUp(phone, '50/50');
-    recordMove('power_up_fifty_fifty');
+    await buyPowerUp(phone, '50/50', 'power_up_fifty_fifty');
     await expectCoins(phone, 0);
 
     // 3. Used up: the row is listed with 1 / 1 and has no button.
@@ -517,11 +510,9 @@ blind(
     const offer = drawer.getByRole('button', { name: 'Activate Extra joker' });
     await expect(offer).toContainText(`the next round: Round ${helps.number}`);
     await expect(offer).not.toContainText(helps.title);
-    await expect(
-      drawer.getByRole('listitem').filter({
-        has: phone.page.getByRole('button', { name: 'Activate Extra joker' }),
-      }),
-    ).toContainText(`${BLIND_JOKER_COST} coins`);
+    await expect(extraJokerCard(phone, drawer)).toContainText(
+      `${BLIND_JOKER_COST} coins`,
+    );
     await buyExtraJoker(drawer);
     await expectCoins(phone, 0);
   },

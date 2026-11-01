@@ -10,7 +10,7 @@ import {
   type SeededSession,
   type SessionSettingsInput,
 } from './api';
-import { recordMove } from './coverage';
+import { recordMove, type Move } from './coverage';
 import { importCsvQuiz, seedCsvSession } from './csv-session';
 import type { ControlScreen } from './screens/control-screen';
 import { PATHS } from './env';
@@ -146,12 +146,30 @@ export async function buyExtraJoker(drawer: Locator): Promise<void> {
   recordMove('power_up_extra_joker');
 }
 
-/** Buys the power-up (by its label, "50/50") from the shop; the drawer closes once the server has accepted it. */
+/** Buys the power-up (by its label, "50/50") from the shop and records its move; the drawer closes once the server has accepted it. */
 export async function buyPowerUp(
   phone: PhoneScreen,
   label: string,
+  move: Move,
 ): Promise<void> {
   const drawer = await openShop(phone);
   await drawer.getByRole('button', { name: `Activate ${label}` }).click();
   await expect(drawer).toHaveCount(0);
+  recordMove(move);
+}
+
+/** Closes the open shop drawer with Escape and waits for it to be gone. */
+export async function closeShop(
+  phone: PhoneScreen,
+  drawer: Locator,
+): Promise<void> {
+  await phone.page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+}
+
+/** The extra joker's own card in the shop drawer (the balance line elsewhere also reads "6 coins"). */
+export function extraJokerCard(phone: PhoneScreen, drawer: Locator): Locator {
+  return drawer.getByRole('listitem').filter({
+    has: phone.page.getByRole('button', { name: 'Activate Extra joker' }),
+  });
 }
