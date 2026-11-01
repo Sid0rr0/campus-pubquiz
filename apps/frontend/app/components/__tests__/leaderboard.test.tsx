@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LeaderboardBoard, LeaderboardEntry } from '@campus-pubquiz/types';
 import { Leaderboard as ConnectionAwareLeaderboard } from '@/app/components/leaderboard';
@@ -222,6 +222,23 @@ describe('Leaderboard', () => {
       expect(negativeBadge).toHaveClass('text-magenta');
     });
 
+    it('shows a half-point bonus as a number, not as no stars', () => {
+      render(
+        <Leaderboard
+          board={described([
+            ranked(1, 'First Place', 30.5, 1, {
+              bonusPoints: 0.5,
+              positiveBonusPoints: 0.5,
+            }),
+          ])}
+        />,
+      );
+
+      expect(screen.getByLabelText('0.5 bonus points')).toHaveTextContent(
+        '0.5★',
+      );
+    });
+
     it('shows no badge for a team with no bonus points', () => {
       render(<Leaderboard board={described(ENTRIES)} />);
 
@@ -273,6 +290,28 @@ describe('Leaderboard', () => {
       expect(settledRows[1]).toHaveTextContent('2.Runner Up');
       expect(within(settledRows[0]).getByLabelText('moved up')).toHaveClass(
         'text-green',
+      );
+    });
+  });
+
+  describe('half-point totals', () => {
+    it('counts up to a half-point total instead of rounding it to a whole point', async () => {
+      // Real timers: the count-up runs on animation frames, which fake timers do not drive (an earlier test leaves them on).
+      vi.useRealTimers();
+      render(
+        <Leaderboard
+          board={described([ranked(1, 'Challenger', 10.5, 1)], {
+            countUpBoard: [ranked(1, 'Challenger', 10, 1)],
+          })}
+        />,
+      );
+
+      await waitFor(
+        () =>
+          expect(screen.getByRole('listitem')).toHaveTextContent(
+            'Challenger10.5',
+          ),
+        { timeout: 4000 },
       );
     });
   });

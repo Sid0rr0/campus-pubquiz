@@ -6,7 +6,7 @@ import {
   useReducedMotion,
   type AnimationPlaybackControls,
 } from 'motion/react';
-import type { RankTrend } from '@campus-pubquiz/types';
+import { nearestHalfPoint, type RankTrend } from '@campus-pubquiz/types';
 import {
   selectLeaderboardRows,
   type LeaderboardPhase,
@@ -71,7 +71,8 @@ const RANK_ACCENT_CLASSES = ['text-magenta', 'text-cyan', 'text-green'];
 const BONUS_STAR_THRESHOLD = 9;
 
 function bonusStarLabel(magnitude: number): string {
-  return magnitude > BONUS_STAR_THRESHOLD
+  // A half point has no star to repeat, so it reads as a number too.
+  return magnitude > BONUS_STAR_THRESHOLD || !Number.isInteger(magnitude)
     ? `${magnitude}★`
     : '★'.repeat(magnitude);
 }
@@ -158,7 +159,7 @@ function AnimatedTotal({
     const controls = animate(from, value, {
       duration: SCORE_COUNT_UP_MS / 1000,
       ease: 'easeOut',
-      onUpdate: (latest) => setDisplayValue(Math.round(latest)),
+      onUpdate: (latest) => setDisplayValue(nearestHalfPoint(latest)),
     });
     return () => controls.stop();
   }, [value]);
