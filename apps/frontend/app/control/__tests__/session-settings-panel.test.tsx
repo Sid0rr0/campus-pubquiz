@@ -188,6 +188,28 @@ describe('SessionSettingsPanel', () => {
     expect(screen.getByLabelText(/lock round after/i)).toHaveValue(30);
   });
 
+  it('keeps unsaved edits when a new snapshot carries equal settings (e.g. a team joined)', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithQuery(
+      <SessionSettingsPanel
+        joinCode="ABCDEF"
+        settings={DEFAULT_SESSION_SETTINGS}
+      />,
+    );
+    const input = screen.getByLabelText(/lock round after/i);
+    await user.clear(input);
+    await user.type(input, '77');
+
+    rerender(
+      <SessionSettingsPanel
+        joinCode="ABCDEF"
+        settings={structuredClone(DEFAULT_SESSION_SETTINGS)}
+      />,
+    );
+
+    expect(screen.getByLabelText(/lock round after/i)).toHaveValue(77);
+  });
+
   it('shows an error toast when saving fails', async () => {
     const { SessionApiError } = await import('@/app/lib/sessions-api');
     mockUpdateSessionSettings.mockRejectedValue(

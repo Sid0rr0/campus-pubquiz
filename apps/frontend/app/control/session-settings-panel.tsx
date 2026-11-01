@@ -37,17 +37,20 @@ export function SessionSettingsPanel({
   const { leagues, memberOf } = useTickableLeagues(joinCode);
 
   // Re-seeds local edits from the live settings whenever the admin switches
-  // sessions, or whenever the settings reference itself changes (e.g. saved
-  // from another open admin tab) — adjusted during render rather than in an
+  // sessions, or whenever the settings' contents change (e.g. saved from
+  // another open admin tab) — adjusted during render rather than in an
   // Effect, the same idiom AdminPageContent already uses for its own
-  // session-switch resets. Safe against unrelated snapshot broadcasts (a
-  // team joining, etc.) because GameStateService only reassigns
-  // seededGame.settings when settings actually change.
+  // session-switch resets. Compared by content: every snapshot broadcast (a
+  // team joining, etc.) arrives as a fresh object, so a reference check
+  // would wipe unsaved edits.
   const [prevJoinCode, setPrevJoinCode] = useState(joinCode);
-  const [prevSettings, setPrevSettings] = useState(settings);
-  if (joinCode !== prevJoinCode || settings !== prevSettings) {
+  const [prevSettingsJson, setPrevSettingsJson] = useState(() =>
+    JSON.stringify(settings),
+  );
+  const settingsJson = JSON.stringify(settings);
+  if (joinCode !== prevJoinCode || settingsJson !== prevSettingsJson) {
     setPrevJoinCode(joinCode);
-    setPrevSettings(settings);
+    setPrevSettingsJson(settingsJson);
     setValue(settings);
     if (joinCode !== prevJoinCode) setPickedLeagueIds(null);
   }
