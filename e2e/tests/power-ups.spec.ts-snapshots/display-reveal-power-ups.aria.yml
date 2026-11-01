@@ -1,0 +1,13 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Helps
+  - paragraph: ROUND 1
+  - paragraph: REVEALING ANSWERS · QUESTION 5
+  - heading "How many pence are two pounds?" [level=1]
+  - paragraph: "/Answer: \\d+ \\(anything from \\d+ to \\d+ counts\\)/"
+  - paragraph: 1 of 1 teams
+  - paragraph: "Power-ups used: Wider margin ×1"
+- region "Notifications alt+T"
+- alert
