@@ -198,6 +198,48 @@ export function findDroppedAnsweredQuestions(
   );
 }
 
+const MOVED_ANSWERED_MESSAGE =
+  'Cannot move a question teams have already answered to another round, or reorder the rounds around it — it would move the jokers and scores of every session played on this quiz. Start a new quiz instead.';
+
+/**
+ * Issues for answered questions a save would put in a different round. A
+ * joker or extra joker is stored against a round row, and a round row is kept
+ * by its position, so the round now holding an answered question decides
+ * whether its answers count double: moving it rewrites past scores. Dropped
+ * questions are `findDroppedAnsweredQuestions`' concern.
+ */
+export function findMovedAnsweredQuestions(
+  current: readonly ImportRoundPreview[],
+  incoming: readonly ImportRoundPreview[],
+  answeredIds: ReadonlySet<number>,
+): QuizDraftIssue[] {
+  const roundIndexById = new Map<number, number>();
+  incoming.forEach((round, roundIndex) => {
+    for (const { questionId } of round.questions) {
+      if (questionId !== undefined) roundIndexById.set(questionId, roundIndex);
+    }
+  });
+  return current.flatMap((round, roundIndex) =>
+    round.questions.flatMap(({ questionId }, questionIndex) => {
+      const movedTo =
+        questionId === undefined ? undefined : roundIndexById.get(questionId);
+      return questionId !== undefined &&
+        answeredIds.has(questionId) &&
+        movedTo !== undefined &&
+        movedTo !== roundIndex
+        ? [
+            {
+              roundIndex,
+              questionIndex,
+              field: 'questionId',
+              message: MOVED_ANSWERED_MESSAGE,
+            },
+          ]
+        : [];
+    }),
+  );
+}
+
 /**
  * Diffs a quiz draft about to be saved against its currently-persisted
  * rounds while a session is live on this quiz. Game progress is positional,

@@ -1680,10 +1680,13 @@ answers of every session played on it, into this one.
 **Played quizzes.** A save (editor or CSV re-import) that would delete a
 question with stored answers from any session, running or ended, is refused with
 the same `409`, because deleting a question deletes its answers and so rewrites
-past scores, league tables and team pages. Rewording an answered question is
-allowed. A re-import matches rows to stored questions by position, so inserting
-a row shifts later questions onto other stored ones and their answers follow
-the position, not the prompt; start a new quiz for a restructured night.
+past scores, league tables and team pages. Moving an answered question to a
+different round, or reordering the rounds around it, is refused the same way:
+a joker is stored against a round row, and rows are kept by position, so the
+move would carry its doubling onto other questions. Rewording an answered
+question is allowed, and so is adding rounds after the played ones. A CSV
+re-import in the editor replaces every question, so on a played quiz it is
+refused too; start a new quiz for a restructured night.
 
 **Editing a live quiz**: a quiz can be edited at any time, including while a
 session on it is running (any status other than `lobby`/`ended`). Five rules

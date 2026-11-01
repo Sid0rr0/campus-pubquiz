@@ -28,6 +28,7 @@ import {
   findDroppedAnsweredQuestions,
   findForeignQuestionIds,
   findLiveEditViolations,
+  findMovedAnsweredQuestions,
   findRegradeQuestionIds,
   QuizLiveEditBlockedError,
 } from '@/quiz/live-edit-guard';
@@ -183,15 +184,24 @@ export class LiveEditService {
             : requestedRounds;
           const foreign = findForeignQuestionIds(currentDraft.rounds, rounds);
           if (foreign.length > 0) throw new QuizDraftInvalidError(foreign);
-          const droppedAnswered = findDroppedAnsweredQuestions(
-            currentDraft.rounds,
-            rounds,
-            await this.quizService.answeredQuestionIds(quizId),
-          );
-          if (droppedAnswered.length > 0) {
+          const answeredIds =
+            await this.quizService.answeredQuestionIds(quizId);
+          const answeredIssues = [
+            ...findDroppedAnsweredQuestions(
+              currentDraft.rounds,
+              rounds,
+              answeredIds,
+            ),
+            ...findMovedAnsweredQuestions(
+              currentDraft.rounds,
+              rounds,
+              answeredIds,
+            ),
+          ];
+          if (answeredIssues.length > 0) {
             throw new QuizLiveEditBlockedError(
-              droppedAnswered,
-              droppedAnswered[0].message,
+              answeredIssues,
+              answeredIssues[0].message,
             );
           }
 

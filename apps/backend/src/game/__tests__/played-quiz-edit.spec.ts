@@ -57,6 +57,59 @@ describe('Editing a quiz whose ended session has stored answers', () => {
     await expect(game.saveQuizEdit(withoutQuestion(1))).resolves.toBeDefined();
   });
 
+  it('refuses a save that moves an answered question to another round, which would move its jokers and scores with it', async () => {
+    const error: unknown = await game
+      .saveQuizEdit((rounds) => [
+        {
+          ...rounds[0],
+          questions: [
+            { type: 'free_text', prompt: 'New', answer: 'N', points: 1 },
+          ],
+        },
+        {
+          title: 'Round B',
+          breakAfter: true,
+          questions: rounds[0].questions,
+        },
+      ])
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(QuizLiveEditBlockedError);
+    expect((error as Error).message).toMatch(/another round/);
+  });
+
+  it('refuses a save that swaps the order of rounds when one holds an answered question', async () => {
+    const error: unknown = await game
+      .saveQuizEdit((rounds) => [
+        {
+          title: 'Round B',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'New', answer: 'N', points: 1 },
+          ],
+        },
+        rounds[0],
+      ])
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(QuizLiveEditBlockedError);
+  });
+
+  it('still lets a round be added after the played ones', async () => {
+    await expect(
+      game.saveQuizEdit((rounds) => [
+        ...rounds,
+        {
+          title: 'Round B',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'New', answer: 'N', points: 1 },
+          ],
+        },
+      ]),
+    ).resolves.toBeDefined();
+  });
+
   it('still lets an answered question be reworded', async () => {
     await expect(
       game.saveQuizEdit((rounds) =>
