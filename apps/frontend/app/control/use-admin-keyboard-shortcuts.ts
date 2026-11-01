@@ -40,9 +40,9 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-/** Browser/OS chords (Cmd+F, Ctrl+J, Alt+Left…) are not ours, and typing in a form field mustn't be hijacked; Shift stays allowed so uppercase letters still match. */
+/** Browser/OS chords (Cmd+F, Ctrl+J, Alt+Left…) are not ours, and typing in a form field mustn't be hijacked; Shift stays allowed so uppercase letters still match. A held key repeats, and each repeat would press Advance again, so only the first press counts. */
 function isShortcutCandidate(event: KeyboardEvent): boolean {
-  if (event.ctrlKey || event.metaKey || event.altKey) {
+  if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
     return false;
   }
   return !isEditableTarget(event.target);

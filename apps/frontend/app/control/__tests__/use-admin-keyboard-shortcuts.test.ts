@@ -33,9 +33,10 @@ function renderShortcuts(
   return { sendAction, setDisplaySoundMuted, rerender };
 }
 
-function pressKey(key: string): KeyboardEvent {
+function pressKey(key: string, init: KeyboardEventInit = {}): KeyboardEvent {
   const event = new KeyboardEvent('keydown', {
     key,
+    ...init,
     cancelable: true,
     bubbles: true,
   });
@@ -417,5 +418,15 @@ describe('useAdminKeyboardShortcuts', () => {
     await userEvent.keyboard('{ArrowRight}');
 
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
+
+  it('ignores a held key: only the first press of an arrow key moves the quiz', () => {
+    const { sendAction } = renderShortcuts({ advanceStep: 'advance' });
+
+    pressKey('ArrowRight');
+    const repeated = pressKey('ArrowRight', { repeat: true });
+
+    expect(sendAction).toHaveBeenCalledTimes(1);
+    expect(repeated.defaultPrevented).toBe(false);
   });
 });
