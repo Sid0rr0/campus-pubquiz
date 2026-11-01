@@ -71,6 +71,37 @@ describe('useGameConnection', () => {
     );
   });
 
+  it('shows the reason the server gave when it refuses the socket', () => {
+    const { result } = renderHook(() =>
+      useGameConnection('players', true, 'NOPE'),
+    );
+    const socket = latestSocket();
+    act(() => socket.serverConnects());
+
+    act(() => socket.trigger('exception', 'Unknown game session code'));
+    act(() => socket.serverDisconnects('io server disconnect'));
+
+    expect(result.current.connectionIssue).toBe('refused');
+    expect(result.current.connectionError).toBe('Unknown game session code');
+  });
+
+  it('does not mistake a failed handler for a refusal', () => {
+    const { result } = renderHook(() =>
+      useGameConnection('players', true, 'TESTCODE'),
+    );
+    const socket = latestSocket();
+    act(() => socket.serverConnects());
+
+    act(() =>
+      socket.trigger('exception', { status: 'error', message: 'Boom' }),
+    );
+    act(() => socket.serverDisconnects('io server disconnect'));
+
+    expect(result.current.connectionError).toBe(
+      'Disconnected: io server disconnect',
+    );
+  });
+
   it('reports nothing when the client itself disconnects, but drops the live connection', () => {
     const { result } = renderHook(() =>
       useGameConnection('display', true, 'TESTCODE'),

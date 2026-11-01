@@ -114,6 +114,11 @@ export function useGameConnection<Role extends SocketRoomName>(
       withCredentials: true,
     });
     socketRef.current = socket;
+    // The server explains a refusal (unknown game code, expired login) with a bare message just before it disconnects; a handler's failure arrives as an object and is not a refusal.
+    let refusalReason: string | null = null;
+    socket.on('exception', (payload) => {
+      if (typeof payload === 'string') refusalReason = payload;
+    });
 
     socket.on('connect', () => {
       setReconnectedAt(Date.now());
@@ -138,7 +143,7 @@ export function useGameConnection<Role extends SocketRoomName>(
       if (reason === 'io client disconnect') return;
       if (reason === 'io server disconnect') {
         // The server refused this socket — socket.io won't retry on its own.
-        reportConnection('refused', `Disconnected: ${reason}`);
+        reportConnection('refused', refusalReason ?? `Disconnected: ${reason}`);
         return;
       }
       reportConnection('reconnecting', RECONNECTING_MESSAGE);
