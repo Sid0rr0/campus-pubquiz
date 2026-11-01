@@ -295,18 +295,21 @@ export function QuestionBrowser({
                 )}
             </AnimatePresence>
           </MotionConfig>
-          {mode === 'answering' && isAnswerable && team && (
-            <AnswerForm
-              key={selectedQuestion.id}
-              question={selectedQuestion}
-              removedOptions={removedOptions}
-              initialValue={myAnswers[selectedQuestion.id] ?? ''}
-              isKahootMode={isKahootMode}
-              pin={pin}
-              onSubmit={(value) =>
-                onSubmitAnswer(selectedQuestion.id, team.teamId, value)
-              }
-            />
+          {mode === 'answering' && team && (
+            // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
+            <div hidden={!isAnswerable}>
+              <AnswerForm
+                key={selectedQuestion.id}
+                question={selectedQuestion}
+                removedOptions={removedOptions}
+                initialValue={myAnswers[selectedQuestion.id] ?? ''}
+                isKahootMode={isKahootMode}
+                pin={pin}
+                onSubmit={(value) =>
+                  onSubmitAnswer(selectedQuestion.id, team.teamId, value)
+                }
+              />
+            </div>
           )}
           {mode === 'locked' && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
