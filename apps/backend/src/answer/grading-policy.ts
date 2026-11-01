@@ -62,9 +62,9 @@ const SUBMIT_GRADE: Record<
 > = {
   // Every submission is scored.
   auto: (question, value) => scoreSubmission(question, value),
-  // Graded when it matches the key or is "I don't know" (0 points); the rest waits for the quiz master.
+  // Graded when it matches the key, is "I don't know" or is blank (the phone sends blank to take "I don't know" back): 0 points; the rest waits for the quiz master.
   'match-or-human': (question, value) =>
-    matchesKey(question, value) || value === IDK_ANSWER_VALUE
+    matchesKey(question, value) || value === IDK_ANSWER_VALUE || value === ''
       ? scoreSubmission(question, value)
       : null,
   // Never graded at submit: the lock-time batch grades it.

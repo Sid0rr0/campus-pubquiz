@@ -70,6 +70,12 @@ describe('Grading policy: grade at submit', () => {
     ).toEqual({ points: 0, verdict: 'incorrect' });
   });
 
+  it('free_text: a blank answer (what un-pressing "I don\'t know" sends) is graded incorrect, not left for the quiz master', () => {
+    expect(
+      gradeAtSubmit({ type: 'free_text', answer: 'Queen', points: 10 }, ''),
+    ).toEqual({ points: 0, verdict: 'incorrect' });
+  });
+
   it('grades an auto type either way', () => {
     expect(gradeAtSubmit(AUTO, 'Rome')).toEqual({
       points: 0,
