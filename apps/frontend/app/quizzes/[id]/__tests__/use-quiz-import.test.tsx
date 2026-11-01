@@ -2,9 +2,10 @@ import { type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ImportPreview } from '@campus-pubquiz/types';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ImportApiError } from '@/app/lib/import-api';
 import {
+  makeQuestion,
   makeRound,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
@@ -209,6 +210,64 @@ describe('adding to the quiz instead of replacing it', () => {
 
   it('replaces when the editor is not showing yet, even if "add to quiz" is checked', async () => {
     expect(await importedRoundTitles(true, false)).toEqual(['A']);
+  });
+});
+
+describe('replacing a draft that holds questions', () => {
+  const withQuestion: EditorRound[] = [
+    { ...makeRound('old', 'Old'), questions: [makeQuestion('q1')] },
+  ];
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('asks before reading a CSV, and imports nothing if declined', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { result, onApply } = renderImport({ rounds: withQuestion });
+    const { event, target } = csvEvent(csvFile());
+
+    await act(() => result.current.handleCsvFile(event));
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(target.value).toBe('');
+    expect(mockPreviewImport).not.toHaveBeenCalled();
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('asks before fetching a Google Sheet, and imports nothing if declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { result, onApply } = renderImport({ rounds: withQuestion });
+    act(() => result.current.setSheetUrlInput('https://sheet/1'));
+
+    await act(async () =>
+      result.current.handleSheetUrlSubmit(formEvent().event),
+    );
+
+    expect(mockPreviewImportFromUrl).not.toHaveBeenCalled();
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('imports once the prompt is accepted', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    mockPreviewImport.mockResolvedValue(preview());
+    const { result, onApply } = renderImport({ rounds: withQuestion });
+
+    await act(() => result.current.handleCsvFile(csvEvent(csvFile()).event));
+
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not ask when adding to the quiz, since nothing is lost', async () => {
+    const confirm = vi.spyOn(window, 'confirm');
+    mockPreviewImport.mockResolvedValue(preview());
+    const { result, onApply } = renderImport({ rounds: withQuestion });
+    act(() => result.current.setAppendImport(true));
+
+    await act(() => result.current.handleCsvFile(csvEvent(csvFile()).event));
+
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+    expect(confirm).not.toHaveBeenCalled();
   });
 });
 

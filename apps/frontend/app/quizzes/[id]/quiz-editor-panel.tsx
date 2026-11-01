@@ -43,6 +43,9 @@ function issueLabel(issue: QuizDraftIssue): string {
   return `Round ${issue.roundIndex + 1}${questionLabel} (${issue.field}): ${issue.message}`;
 }
 
+const DELETE_ROUND_PROMPT =
+  'Delete this round and all its questions? This cannot be undone.';
+
 const UNSAVED_PREVIEW_PROMPT =
   'You have unsaved changes. The preview shows the saved quiz, without them. Open it anyway?';
 
@@ -278,9 +281,14 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                       updateRound(current, round.id, patch),
                     )
                   }
-                  onDelete={() =>
-                    editRounds((current) => deleteRound(current, round.id))
-                  }
+                  onDelete={() => {
+                    if (
+                      round.questions.length > 0 &&
+                      !window.confirm(DELETE_ROUND_PROMPT)
+                    )
+                      return;
+                    editRounds((current) => deleteRound(current, round.id));
+                  }}
                   onMoveUp={() =>
                     editRounds((current) => moveRound(current, round.id, -1))
                   }

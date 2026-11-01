@@ -35,6 +35,9 @@ export interface QuizImport {
   importError: string | null;
 }
 
+const REPLACE_PROMPT =
+  'Importing replaces every round and question in the editor, including unsaved changes. Replace them?';
+
 /** The CSV and Google Sheets import: reads the file or link, applies the outcome through `onApply` and toasts the summary. */
 export function useQuizImport({
   rounds,
@@ -45,6 +48,15 @@ export function useQuizImport({
   const [importError, setImportError] = useState<string | null>(null);
   const [sheetUrlInput, setSheetUrlInput] = useState('');
   const [appendImport, setAppendImport] = useState(false);
+
+  // Replacing (not adding) throws away every question in the draft, so ask first.
+  function isReplaceDeclined(): boolean {
+    const wouldReplaceQuestions =
+      isEditorShowing &&
+      !appendImport &&
+      rounds.some((round) => round.questions.length > 0);
+    return wouldReplaceQuestions && !window.confirm(REPLACE_PROMPT);
+  }
 
   function handleImportPreview(preview: ImportPreview): void {
     const outcome = importOutcome({
@@ -88,7 +100,7 @@ export function useQuizImport({
   ): Promise<void> {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file) return;
+    if (!file || isReplaceDeclined()) return;
 
     setImportError(null);
     const text = await file.text();
@@ -101,7 +113,7 @@ export function useQuizImport({
   function handleSheetUrlSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const sheetUrl = sheetUrlInput.trim();
-    if (!sheetUrl) return;
+    if (!sheetUrl || isReplaceDeclined()) return;
 
     setImportError(null);
     previewFromUrlMutation.mutate(sheetUrl);

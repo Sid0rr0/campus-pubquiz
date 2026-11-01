@@ -126,6 +126,76 @@ describe('QuizEditorPanel', () => {
     );
   });
 
+  describe('deleting a round', () => {
+    const draftWithQuestion = {
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'History',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Largest planet?',
+              answer: 'Jupiter',
+              points: 2,
+            },
+          ],
+        },
+        { title: 'Science', breakAfter: true, questions: [] },
+      ],
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('asks first when the round holds questions, and keeps it if declined', async () => {
+      const user = userEvent.setup();
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      mockFetchQuizDraft.mockResolvedValue(draftWithQuestion);
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('History');
+
+      await user.click(
+        screen.getAllByRole('button', { name: /delete round/i })[0],
+      );
+
+      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(screen.getByDisplayValue('History')).toBeInTheDocument();
+    });
+
+    it('removes the round once the prompt is accepted', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      mockFetchQuizDraft.mockResolvedValue(draftWithQuestion);
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('History');
+
+      await user.click(
+        screen.getAllByRole('button', { name: /delete round/i })[0],
+      );
+
+      expect(screen.queryByDisplayValue('History')).not.toBeInTheDocument();
+    });
+
+    it('removes an empty round without asking', async () => {
+      const user = userEvent.setup();
+      const confirm = vi.spyOn(window, 'confirm');
+      mockFetchQuizDraft.mockResolvedValue(draftWithQuestion);
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Science');
+
+      await user.click(
+        screen.getAllByRole('button', { name: /delete round/i })[1],
+      );
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(screen.queryByDisplayValue('Science')).not.toBeInTheDocument();
+    });
+  });
+
   it('exports the editor draft, including unsaved edits, as a csv download', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({
