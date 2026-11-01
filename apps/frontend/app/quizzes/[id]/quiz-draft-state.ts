@@ -6,6 +6,7 @@ import {
   parseFiniteNumber,
   parseTimecode,
   hasNumericAnswerKey,
+  resolveAnswerKind,
   type ClipFields,
   type MarginUnit,
   type ImportPreview,
@@ -516,13 +517,29 @@ export function moveQuestionToRound(
   });
 }
 
+/** The display order the server stored for a sort question's `options` or a match question's `matchTargets`. */
+function storedDisplayOrder(
+  question: ImportQuestionPreview,
+): string[] | undefined {
+  switch (resolveAnswerKind(question)) {
+    case 'sort':
+      return question.options;
+    case 'match':
+      return question.matchTargets;
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Backfills server-assigned `dbId`s onto whichever questions were brand-new
  * as of the last save, matching `freshRounds` (the draft as reloaded right
- * after that save) to `rounds` by position. Deliberately touches nothing
- * else — a wholesale state replace here would discard whatever the admin
- * typed in the moment between clicking Save and this reload landing, which
- * is what previously made a second save look like it silently did nothing.
+ * after that save) to `rounds` by position, and keeps the display order the
+ * server stored for sort and match questions so the next save sends the same
+ * order instead of shuffling again. Deliberately touches nothing else — a
+ * wholesale state replace here would discard whatever the admin typed in the
+ * moment between clicking Save and this reload landing, which is what
+ * previously made a second save look like it silently did nothing.
  */
 export function withSyncedQuestionIds(
   rounds: EditorRound[],
@@ -534,11 +551,15 @@ export function withSyncedQuestionIds(
     return {
       ...round,
       questions: round.questions.map((question, questionIndex) => {
-        if (question.dbId !== undefined) return question;
-        const freshId = freshQuestions[questionIndex]?.questionId;
-        return freshId === undefined
-          ? question
-          : { ...question, dbId: freshId };
+        const fresh = freshQuestions[questionIndex];
+        const dbId = question.dbId ?? fresh?.questionId;
+        if (dbId === undefined || fresh?.questionId !== dbId) return question;
+        const savedDisplayOrder = storedDisplayOrder(fresh);
+        return {
+          ...question,
+          dbId,
+          ...(savedDisplayOrder ? { savedDisplayOrder } : {}),
+        };
       }),
     };
   });

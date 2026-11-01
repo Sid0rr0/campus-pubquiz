@@ -1019,6 +1019,71 @@ describe('withSyncedQuestionIds', () => {
     expect(synced[0].questions[0].dbId).toBe(7);
   });
 
+  it('keeps the display order the server stored for a newly saved sort question, so the next save does not reshuffle it', () => {
+    const sort = {
+      ...makeQuestion('q1'),
+      type: 'sort' as const,
+      prompt: 'Order these',
+      sortItems: ['a', 'b', 'c'],
+    };
+    const rounds = [{ ...makeRound('r1', 'History'), questions: [sort] }];
+    const freshRounds: ImportRoundPreview[] = [
+      {
+        title: 'History',
+        breakAfter: true,
+        questions: [
+          {
+            questionId: 42,
+            type: 'sort',
+            prompt: 'Order these',
+            answer: 'a|b|c',
+            options: ['c', 'a', 'b'],
+            points: 1,
+          },
+        ],
+      },
+    ];
+
+    const [saved] = withSyncedQuestionIds(rounds, freshRounds)[0].questions;
+
+    expect(questionToPreview(saved).options).toEqual(['c', 'a', 'b']);
+  });
+
+  it('keeps the stored right-hand order of a newly saved match question', () => {
+    const match = {
+      ...makeQuestion('q1'),
+      type: 'match' as const,
+      prompt: 'Pair these',
+      matchPairs: [
+        { left: 'x', right: '1' },
+        { left: 'y', right: '2' },
+        { left: 'z', right: '3' },
+      ],
+    };
+    const rounds = [{ ...makeRound('r1', 'History'), questions: [match] }];
+    const freshRounds: ImportRoundPreview[] = [
+      {
+        title: 'History',
+        breakAfter: true,
+        questions: [
+          {
+            questionId: 43,
+            type: 'match',
+            prompt: 'Pair these',
+            answer: '1|2|3',
+            options: ['x', 'y', 'z'],
+            matchTargets: ['3', '1', '2'],
+            points: 1,
+          },
+        ],
+      },
+    ];
+
+    const [saved] = withSyncedQuestionIds(rounds, freshRounds)[0].questions;
+
+    expect(questionToPreview(saved).matchTargets).toEqual(['3', '1', '2']);
+  });
+
   it('is a no-op when there is no matching fresh round (e.g. a round added locally after the last save)', () => {
     const question = { ...makeQuestion('q1'), type: 'free_text' as const };
     const rounds = [{ ...makeRound('r1', 'New round'), questions: [question] }];
