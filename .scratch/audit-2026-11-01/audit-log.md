@@ -80,9 +80,9 @@ Implemented one by one, test-first where a seam was agreed, on `main`. Reviewed 
 
 - `wrongCodes` is never pruned for a team that stops guessing without a success (tiny: one entry per team that was ever guessed at).
 - The lockout is a fixed window, so a script can still make about 10 guesses per 10 minutes per team. A longer lock after repeat windows has not been tried.
-- `DROPPED_ANSWERED_MESSAGE` now mentions re-imports, which reads oddly on a plain editor delete of an answered question.
+- ~~`DROPPED_ANSWERED_MESSAGE` reads oddly on an editor delete~~ Fixed: reworded (`42c9a89c`).
 - `findMovedAnsweredQuestions` also refuses deleting an earlier unanswered round (it shifts later round positions). Stricter than the finding's wording, safe.
-- The `5mb` in `main.ts` is a separate literal from `MAX_SHEET_RESPONSE_BYTES`; the two can drift.
+- ~~The `5mb` in `main.ts` can drift from `MAX_SHEET_RESPONSE_BYTES`~~ Fixed: `main.ts` uses the constant (`42c9a89c`).
 - Style notes from the review: the `{ gameSessionId, teamId, roundId }` row shape is written three times in `doubledRounds`, and the moved and dropped guards walk the same shape.
 - The 2026-10-28 open items are unchanged: no per-IP join limit, saves without `loadedUpdatedAt` are unchecked, `parseOrThrow` imported from `league-http`.
 
