@@ -1199,6 +1199,12 @@ table (`GameSessionTeam`).
   can't hold up a room's answers or guess team codes. A seat-taken refusal isn't
   counted: it only comes once the join proved which team it is, and the phone
   retries it on its own while its old socket dies.
+- **Wrong team codes** — a script can open more sockets, so the server also
+  counts wrong team codes per team (not per IP address, which is the proxy's
+  behind Azure). After 10 wrong codes for one team within 10 minutes of the
+  first, every code for that team is refused, the right one included, until the
+  window has passed. A missing code is not a guess, and a phone joining with its
+  team token is not affected. The count is in memory, so a restart clears it.
 - **Waking a phone** — mobile OSes freeze a backgrounded socket, so `/play`
   opens a fresh connection (`forceReconnect`) when the page turns visible after
   being hidden for at least `HIDDEN_RECONNECT_THRESHOLD_MS` (5 s), when it is

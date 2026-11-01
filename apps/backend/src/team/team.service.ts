@@ -37,6 +37,19 @@ export class TeamCodeRequiredError extends Error {
   }
 }
 
+export class TeamCodeAttemptsError extends Error {
+  constructor() {
+    super(
+      'Too many wrong team codes for that name — wait ten minutes, or ask the moderator for the team code',
+    );
+    this.name = 'TeamCodeAttemptsError';
+  }
+}
+
+/** Wrong team codes allowed per team within one lockout window. */
+const MAX_WRONG_TEAM_CODES = 10;
+const TEAM_CODE_LOCKOUT_MS = 10 * 60 * 1000;
+
 export class InvalidJoinCodeError extends Error {
   constructor() {
     super('Invalid game code — check the code on the screen and try again');
@@ -81,6 +94,12 @@ export interface JoinOptions {
 
 @Injectable()
 export class TeamService {
+  /** Wrong team codes by team id, in the window that opened with the first one. In memory like every session (one backend), so a restart clears it. */
+  private readonly wrongCodes = new Map<
+    number,
+    { count: number; since: number }
+  >();
+
   constructor(
     @InjectRepository(Team) private readonly teams: TeamRepository,
     @InjectRepository(GameSession)
@@ -125,9 +144,12 @@ export class TeamService {
 
     if (existingByName) {
       const normalizedCode = options.teamCode?.trim().toUpperCase();
+      if (normalizedCode) this.assertCodeAttemptsLeft(existingByName.id);
       if (!normalizedCode || normalizedCode !== existingByName.code) {
+        if (normalizedCode) this.noteWrongCode(existingByName.id);
         throw new TeamCodeRequiredError(trimmedName);
       }
+      this.wrongCodes.delete(existingByName.id);
       await this.addToRoster(gameSessionId, existingByName.id);
       return this.toIdentity(existingByName);
     }
@@ -256,6 +278,25 @@ export class TeamService {
       team: teamId,
     });
     return Boolean(row);
+  }
+
+  /** Refuses a code guess for a team that already had its wrong ones this window, even a right guess: otherwise the lockout would still let a script keep trying. */
+  private assertCodeAttemptsLeft(teamId: number): void {
+    const entry = this.wrongCodes.get(teamId);
+    if (!entry) return;
+    if (Date.now() - entry.since >= TEAM_CODE_LOCKOUT_MS) {
+      this.wrongCodes.delete(teamId);
+    } else if (entry.count >= MAX_WRONG_TEAM_CODES) {
+      throw new TeamCodeAttemptsError();
+    }
+  }
+
+  private noteWrongCode(teamId: number): void {
+    const entry = this.wrongCodes.get(teamId);
+    this.wrongCodes.set(teamId, {
+      count: (entry?.count ?? 0) + 1,
+      since: entry?.since ?? Date.now(),
+    });
   }
 
   private async addToRoster(

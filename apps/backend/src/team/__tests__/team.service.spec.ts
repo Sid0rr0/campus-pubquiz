@@ -19,6 +19,7 @@ import { TeamRepository } from '@/db/repositories/team.repository';
 import {
   InvalidJoinCodeError,
   TeamCodeRequiredError,
+  TeamCodeAttemptsError,
   TeamService,
 } from '@/team/team.service';
 import { useTestDatabase } from '@/test-db/test-database';
@@ -147,6 +148,90 @@ describe('TeamService (Postgres integration)', () => {
 
     const rows = await em.find(Team, {});
     expect(rows).toHaveLength(1);
+  });
+
+  describe('guessing a team code', () => {
+    const MAX_WRONG_CODES = 10;
+    const LOCKOUT_MS = 10 * 60 * 1000;
+
+    async function guessWrong(name: string, times: number): Promise<void> {
+      for (let i = 0; i < times; i += 1) {
+        await expect(
+          teamService.join(sessionId, name, {
+            joinCode: 'ABCDEF',
+            teamCode: `WRONG-${i}`,
+          }),
+        ).rejects.toThrow(TeamCodeRequiredError);
+      }
+    }
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('refuses further codes for a team after ten wrong ones, even the right one', async () => {
+      const created = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+      });
+      await guessWrong('The Quizzards', MAX_WRONG_CODES);
+
+      await expect(
+        teamService.join(sessionId, 'The Quizzards', {
+          joinCode: 'ABCDEF',
+          teamCode: created.code,
+        }),
+      ).rejects.toThrow(TeamCodeAttemptsError);
+    });
+
+    it('allows codes again once the lockout window has passed', async () => {
+      const start = Date.now();
+      const now = jest.spyOn(Date, 'now').mockReturnValue(start);
+      const created = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+      });
+      await guessWrong('The Quizzards', MAX_WRONG_CODES);
+
+      now.mockReturnValue(start + LOCKOUT_MS + 1000);
+
+      const rejoined = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+        teamCode: created.code,
+      });
+      expect(rejoined.id).toBe(created.id);
+    });
+
+    it('does not count a missing code, nor a wrong code for another team', async () => {
+      await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+      });
+      const other = await teamService.join(sessionId, 'Saturn Fans', {
+        joinCode: 'ABCDEF',
+      });
+      for (let i = 0; i < MAX_WRONG_CODES + 1; i += 1) {
+        await expect(
+          teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' }),
+        ).rejects.toThrow(TeamCodeRequiredError);
+      }
+      await guessWrong('The Quizzards', MAX_WRONG_CODES - 1);
+
+      const rejoined = await teamService.join(sessionId, 'Saturn Fans', {
+        joinCode: 'ABCDEF',
+        teamCode: other.code,
+      });
+      expect(rejoined.id).toBe(other.id);
+    });
+
+    it('lets a phone with its team token in whatever the lockout', async () => {
+      const created = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+      });
+      await guessWrong('The Quizzards', MAX_WRONG_CODES);
+
+      const rejoined = await teamService.join(sessionId, 'The Quizzards', {
+        teamToken: created.token,
+      });
+      expect(rejoined.id).toBe(created.id);
+    });
   });
 
   it('treats a name that differs only in letter case as the existing team', async () => {
