@@ -13,7 +13,7 @@ import {
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock('sonner', () => ({ toast: { error: toastError } }));
 
-// 3 coins
+// 6 coins
 const settings = defaultPowerUpSettings(true);
 
 function list(overrides: Partial<PowerUpsListProps> = {}) {
@@ -22,7 +22,7 @@ function list(overrides: Partial<PowerUpsListProps> = {}) {
     <PowerUpsList
       settings={settings}
       purchases={[]}
-      coins={5}
+      coins={7}
       question={null}
       roomReadyQuestionIds={[]}
       onBuy={vi.fn()}

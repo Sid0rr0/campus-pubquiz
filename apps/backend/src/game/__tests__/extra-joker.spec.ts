@@ -318,16 +318,16 @@ describe('GameGateway — buying an extra joker', () => {
     };
 
     it('follows a settings patch that changes only the round overview', async () => {
-      expect(await costAfter({}, { showRoundOverview: true })).toBe(4);
+      expect(await costAfter({}, { showRoundOverview: true })).toBe(6);
     });
 
     it('stays where the quiz master put it', async () => {
       const powerUps = {
         ...DEFAULT_SESSION_SETTINGS.powerUps,
-        extra_joker: { cost: 5, maxUses: 1 },
+        extra_joker: { cost: 9, maxUses: 1 },
       };
       expect(await costAfter({ powerUps }, { showRoundOverview: true })).toBe(
-        5,
+        9,
       );
     });
   });

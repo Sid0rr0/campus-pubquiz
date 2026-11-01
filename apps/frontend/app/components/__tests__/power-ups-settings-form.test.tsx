@@ -101,9 +101,9 @@ describe('withShowRoundOverview', () => {
     const next = withShowRoundOverview(DEFAULT_SESSION_SETTINGS, true);
 
     expect(next.showRoundOverview).toBe(true);
-    expect(next.powerUps.extra_joker.cost).toBe(4);
+    expect(next.powerUps.extra_joker.cost).toBe(6);
     expect(withShowRoundOverview(next, false).powerUps.extra_joker.cost).toBe(
-      3,
+      5,
     );
   });
 
@@ -112,12 +112,12 @@ describe('withShowRoundOverview', () => {
       ...DEFAULT_SESSION_SETTINGS,
       powerUps: {
         ...DEFAULT_SESSION_SETTINGS.powerUps,
-        extra_joker: { cost: 5, maxUses: 1 },
+        extra_joker: { cost: 9, maxUses: 1 },
       },
     };
 
     expect(withShowRoundOverview(edited, true).powerUps.extra_joker.cost).toBe(
-      5,
+      9,
     );
   });
 });

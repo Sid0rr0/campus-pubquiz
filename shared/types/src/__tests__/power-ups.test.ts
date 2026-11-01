@@ -22,13 +22,13 @@ import {
 } from '../index';
 
 describe('defaultPowerUpSettings', () => {
-  it('costs letter count 1, ask the room 3, the rest 2, extra joker 4 with the overview and 3 without', () => {
+  it('costs letter count 1, ask the room 3, the rest 2, extra joker 6 with the overview and 5 without', () => {
     const withOverview = defaultPowerUpSettings(true);
     expect(withOverview.fifty_fifty).toEqual({ cost: 2, maxUses: 1 });
     expect(withOverview.letter_count.cost).toBe(1);
     expect(withOverview.ask_the_room.cost).toBe(3);
-    expect(withOverview.extra_joker.cost).toBe(4);
-    expect(defaultPowerUpSettings(false).extra_joker.cost).toBe(3);
+    expect(withOverview.extra_joker.cost).toBe(6);
+    expect(defaultPowerUpSettings(false).extra_joker.cost).toBe(5);
   });
 
   it('is what a session starts with, power-ups off and 2 starting coins', () => {

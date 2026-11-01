@@ -56,9 +56,9 @@ export const SHOT_SELFIE_COINS = 2;
 /** The coins a team brings for rating every round of its last league night. */
 export const CARRIED_COINS = 2;
 
-/** The extra joker's default cost: 4 when the round overview names the round, 3 when the team buys it blind. */
+/** The extra joker's default cost: 6 when the round overview names the round, 5 when the team buys it blind. */
 export function defaultExtraJokerCost(showRoundOverview: boolean): number {
-  return showRoundOverview ? 4 : 3;
+  return showRoundOverview ? 6 : 5;
 }
 
 /** The default power-up table for a session with the given round overview setting. */

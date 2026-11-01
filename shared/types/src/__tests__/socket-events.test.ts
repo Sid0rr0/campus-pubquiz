@@ -312,7 +312,7 @@ describe('SessionSettings defaults', () => {
         pin_one: { cost: 2, maxUses: 1 },
         wider_margin: { cost: 2, maxUses: 1 },
         ask_the_room: { cost: 3, maxUses: 1 },
-        extra_joker: { cost: 3, maxUses: 1 },
+        extra_joker: { cost: 5, maxUses: 1 },
       },
       rules: [
         'No cheating.',

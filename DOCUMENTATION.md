@@ -613,7 +613,7 @@ settings JSON without them reads as off with the default table.
 `fifty_fifty`, `first_letter`, `letter_count`, `pin_one`, `wider_margin`,
 `ask_the_room` and `extra_joker`, where `maxUses: 0` means not offered. Defaults:
 every power-up costs 2 and may be used once, except letter count (1), ask the room
-(3) and the extra joker (4 with `showRoundOverview` on, 3 off; a session created without a table
+(3) and the extra joker (6 with `showRoundOverview` on, 5 off; a session created without a table
 gets the one matching its overview, and the settings form and a lobby settings
 patch that changes only `showRoundOverview` move the cost with the overview while
 it is still the default). The start dialog and the `/control` lobby settings
