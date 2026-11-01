@@ -6,9 +6,9 @@ Parent spec: `.scratch/e2e-power-ups/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The offer names the round and costs 6.
-- [ ] The leaderboard total has that round's points doubled.
-- [ ] `power_up_extra_joker` is in `MOVES` and recorded.
-- [ ] Passes `--repeat-each=5`.
+- [x] The offer names the round and costs 6.
+- [x] The leaderboard total has that round's points doubled.
+- [x] `power_up_extra_joker` is in `MOVES` and recorded.
+- [x] Passes `--repeat-each=5`.

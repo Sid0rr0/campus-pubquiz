@@ -295,7 +295,12 @@ named(
     const drawer = await openShop(phone);
     const offer = drawer.getByRole('button', { name: 'Activate Extra joker' });
     await expect(offer).toContainText(`the next round: ${helps.title}`);
-    await expect(offer).toContainText('6 coins');
+    // The balance line also reads "6 coins", so look in the offer's own card.
+    await expect(
+      drawer.getByRole('listitem').filter({
+        has: phone.page.getByRole('button', { name: 'Activate Extra joker' }),
+      }),
+    ).toContainText(`${EXTRA_JOKER_COST} coins`);
     await buyExtraJoker(drawer);
     await expectCoins(phone, 0);
 
