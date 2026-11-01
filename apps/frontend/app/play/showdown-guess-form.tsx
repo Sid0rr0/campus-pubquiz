@@ -28,10 +28,13 @@ export function ShowdownGuessForm({
     const trimmed = value.trim();
     if (!trimmed || isSending) return;
     setIsSending(true);
-    const result = await onSubmit(trimmed);
-    setIsSending(false);
-    // A refusal (offline, turn over) keeps the form so the team can send it again.
-    if (result.success) setSubmittedGuess(trimmed);
+    try {
+      const result = await onSubmit(trimmed);
+      // A refusal (offline, turn over) keeps the form so the team can send it again.
+      if (result.success) setSubmittedGuess(trimmed);
+    } finally {
+      setIsSending(false);
+    }
   }
 
   const isSubmitted = hasGuessed || submittedGuess !== null;

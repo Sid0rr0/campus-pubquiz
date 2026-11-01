@@ -7,19 +7,11 @@ import type {
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
-import { ApiError, errorMessageOf } from '@/app/lib/api-error';
+import { ApiError, apiErrorThrower } from '@/app/lib/api-error';
 
 export class StatsApiError extends ApiError {}
 
-async function throwApiError(
-  response: Response,
-  fallback: string,
-): Promise<never> {
-  throw new StatsApiError(
-    await errorMessageOf(response, fallback),
-    response.status,
-  );
-}
+const throwApiError = apiErrorThrower(StatsApiError);
 
 interface FetchPlayedSessionsParams {
   page: number;

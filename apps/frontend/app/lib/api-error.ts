@@ -23,3 +23,15 @@ export async function errorMessageOf(
 ): Promise<string> {
   return (await readErrorBody(response)).message ?? fallback;
 }
+
+/** A `throwApiError(response, fallback)` for one client: throws that client's error class with the reply's message and status. */
+export function apiErrorThrower(
+  ErrorClass: new (message: string, status: number) => ApiError,
+) {
+  return async (response: Response, fallback: string): Promise<never> => {
+    throw new ErrorClass(
+      await errorMessageOf(response, fallback),
+      response.status,
+    );
+  };
+}
