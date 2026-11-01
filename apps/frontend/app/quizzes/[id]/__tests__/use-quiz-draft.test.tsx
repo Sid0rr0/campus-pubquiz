@@ -462,3 +462,54 @@ describe('editing the draft', () => {
     expect(result.current.phase).toBe('editor');
   });
 });
+
+describe('leaving the page with unsaved changes', () => {
+  /** Whether the browser would be asked to confirm closing or reloading the tab. */
+  function isAskedBeforeLeaving(): boolean {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  }
+
+  it('asks once the editor holds edits that were not saved', async () => {
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [emptyRound],
+    });
+    const { result } = renderDraft('5');
+    await waitFor(() => expect(result.current.phase).toBe('editor'));
+    expect(isAskedBeforeLeaving()).toBe(false);
+
+    act(() => result.current.setTitle('Pub night'));
+
+    expect(isAskedBeforeLeaving()).toBe(true);
+  });
+
+  it('stops asking once the edits are saved', async () => {
+    mockCreateQuiz.mockResolvedValue(SAVED);
+    const { result } = await renderStartedNewQuiz();
+    act(() => result.current.setTitle('Pub night'));
+    expect(isAskedBeforeLeaving()).toBe(true);
+
+    act(() => result.current.save());
+
+    await waitFor(() => expect(isAskedBeforeLeaving()).toBe(false));
+  });
+
+  it('does not ask on the empty state, where nothing has been started', () => {
+    renderDraft('new');
+
+    expect(isAskedBeforeLeaving()).toBe(false);
+  });
+
+  it('stops asking once the page is left inside the app', async () => {
+    mockCreateQuiz.mockResolvedValue(SAVED);
+    const { result, unmount } = await renderStartedNewQuiz();
+    act(() => result.current.setTitle('Pub night'));
+
+    unmount();
+
+    expect(isAskedBeforeLeaving()).toBe(false);
+  });
+});

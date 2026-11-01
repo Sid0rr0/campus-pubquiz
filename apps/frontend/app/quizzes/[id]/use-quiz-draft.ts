@@ -211,6 +211,20 @@ export function useQuizDraft(quizId: string): QuizDraft {
     },
   });
 
+  const isDirty =
+    fingerprintOf(toSaveRequest(title, rounds)) !== savedFingerprint;
+  const hasUnsavedEdits = phase === 'editor' && isDirty;
+
+  // Closing or reloading the tab with edits that were not saved asks first; there is no autosave.
+  useEffect(() => {
+    if (!hasUnsavedEdits) return;
+    function askBeforeLeaving(event: BeforeUnloadEvent): void {
+      event.preventDefault();
+    }
+    window.addEventListener('beforeunload', askBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', askBeforeLeaving);
+  }, [hasUnsavedEdits]);
+
   // Exports what's in the editor right now (unsaved edits included), not the
   // last-saved copy — the CSV is a snapshot of the draft the admin is looking at.
   function exportCsv(): void {
@@ -245,7 +259,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
     save: () => saveMutation.mutate(toSaveRequest(title, rounds)),
     isSaving: saveMutation.isPending,
     savedQuizId,
-    isDirty: fingerprintOf(toSaveRequest(title, rounds)) !== savedFingerprint,
+    isDirty,
     savedFlash,
     exportCsv,
     saveError: saveMutation.error ? saveErrorMessage(saveMutation.error) : null,
