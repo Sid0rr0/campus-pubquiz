@@ -6,10 +6,10 @@ Parent spec: `.scratch/e2e-power-ups/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A cost changed in the lobby shows on the phone.
-- [ ] A power-up the team can't afford shows a disabled "Not enough coins".
-- [ ] A used-up power-up can't be bought again.
-- [ ] Snapshot: phone `rules` with power-ups on.
-- [ ] Passes `--repeat-each=5`.
+- [x] A cost changed in the lobby shows on the phone.
+- [x] A power-up the team can't afford shows a disabled "Not enough coins".
+- [x] A used-up power-up can't be bought again.
+- [x] Snapshot: phone `rules` with power-ups on.
+- [x] Passes `--repeat-each=5`.

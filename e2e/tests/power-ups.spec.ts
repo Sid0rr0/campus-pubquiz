@@ -309,6 +309,18 @@ const carried = base.extend<{ leagueId: number }>({
   },
 });
 
+const limitsTest = base.extend({
+  session: async ({ adminApi }, use) => {
+    await use(
+      await seedPowerUpSession(
+        adminApi,
+        `Shop limits ${Date.now().toString(36)}`,
+        { startingCoins: 2 },
+      ),
+    );
+  },
+});
+
 named(
   'extra joker, named: the offer names the round and costs 6, and the round scores double',
   async ({ control, display, joinPhone }) => {
@@ -423,5 +435,57 @@ carried(
     await expectNoShop(ratersTwo);
     await skippersTwo.expectQuestion(helps.multipleChoice.prompt);
     await expectNoShop(skippersTwo);
+  },
+);
+
+limitsTest(
+  'lobby settings and shop limits: a cost set in the lobby reaches the phone, which can neither overspend nor buy twice',
+  async ({ control, joinPhone }) => {
+    const phone = await joinPhone('Team A');
+    await control.expectTeams([phone.teamName]);
+
+    // 50/50 costs 2 by default; the quiz master makes it 3 in the lobby.
+    await control.page.getByRole('tab', { name: 'Power-ups' }).click();
+    await control.page.getByLabel('50/50 cost').fill('3');
+    const saved = control.page.waitForResponse(
+      (response) =>
+        response.request().method() !== 'GET' &&
+        response.url().includes('settings'),
+    );
+    await control.page
+      .getByRole('button', { name: 'Save', exact: true })
+      .click();
+    expect((await saved).ok()).toBe(true);
+
+    await control.startQuiz();
+    await snap(phone, 'rules');
+    await control.advance('round_intro');
+    await control.advance('question_open');
+    await phone.expectQuestion(multipleChoice.prompt);
+    await expectCoins(phone, 2);
+
+    // 1. The new cost shows, and 2 coins cannot pay it.
+    const drawer = await openShop(phone);
+    const row = drawer.getByRole('listitem').filter({ hasText: '50/50' });
+    await expect(row.getByText('3 coins')).toBeVisible();
+    const button = drawer.getByRole('button', { name: 'Activate 50/50' });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveText('Not enough coins');
+    await phone.page.keyboard.press('Escape');
+    await expect(drawer).toHaveCount(0);
+
+    // 2. One more coin from the quiz master pays for it.
+    await awardCoins(control, phone.teamName, 1);
+    await expectCoins(phone, 3);
+    await buyPowerUp(phone, '50/50');
+    recordMove('power_up_fifty_fifty');
+    await expectCoins(phone, 0);
+
+    // 3. Used up: the row is listed with 1 / 1 and has no button.
+    const again = await openShop(phone);
+    await expect(
+      again.getByRole('button', { name: 'Activate 50/50' }),
+    ).toHaveCount(0);
+    await expect(again.getByText('Used: 1 / 1').first()).toBeVisible();
   },
 );
