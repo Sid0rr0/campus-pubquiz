@@ -407,6 +407,69 @@ describe('saving', () => {
       expect(result.current.saveIssues).toEqual(issues);
     });
 
+    describe('after it listed issues by position', () => {
+      const issues = [
+        {
+          roundIndex: 0,
+          questionIndex: 1,
+          field: 'prompt',
+          message: 'Missing',
+        },
+      ];
+
+      async function renderRejectedWithTwoQuestions() {
+        mockCreateQuiz.mockRejectedValue(
+          new QuizDraftApiError('Validation failed', 422, issues),
+        );
+        const view = await renderStartedNewQuiz();
+        act(() =>
+          view.result.current.editRounds((rounds) => [
+            {
+              ...rounds[0],
+              questions: [makeQuestion('q1'), makeQuestion('q2')],
+            },
+          ]),
+        );
+        act(() => view.result.current.save());
+        await waitFor(() =>
+          expect(view.result.current.saveIssues).toEqual(issues),
+        );
+        return view;
+      }
+
+      it('keeps them while the admin only types, since every position still holds', async () => {
+        const { result } = await renderRejectedWithTwoQuestions();
+
+        act(() =>
+          result.current.editRounds((rounds) => [
+            {
+              ...rounds[0],
+              questions: rounds[0].questions.map((question) => ({
+                ...question,
+                prompt: 'Typed',
+              })),
+            },
+          ]),
+        );
+
+        expect(result.current.saveIssues).toEqual(issues);
+        expect(result.current.saveError).toBe('Validation failed');
+      });
+
+      it('drops them once a question is deleted, since the positions no longer match', async () => {
+        const { result } = await renderRejectedWithTwoQuestions();
+
+        act(() =>
+          result.current.editRounds((rounds) => [
+            { ...rounds[0], questions: [rounds[0].questions[1]] },
+          ]),
+        );
+
+        expect(result.current.saveIssues).toEqual([]);
+        expect(result.current.saveError).toBeNull();
+      });
+    });
+
     it('falls back to a generic message for a failure that is not an API error', async () => {
       mockCreateQuiz.mockRejectedValue(new Error('network down'));
       const { result } = await renderStartedNewQuiz();

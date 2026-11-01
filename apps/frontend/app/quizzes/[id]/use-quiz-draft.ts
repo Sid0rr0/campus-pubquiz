@@ -37,6 +37,13 @@ function fingerprintOf(request: ReturnType<typeof toSaveRequest>): string {
 }
 
 const EMPTY_ISSUES: QuizDraftIssue[] = [];
+
+/** Which rounds and questions the draft holds, in order: the issues a rejected save lists point at positions in this. */
+function structureKeyOf(rounds: readonly EditorRound[]): string {
+  return rounds
+    .map((round) => `${round.id}:${round.questions.map((q) => q.id).join(',')}`)
+    .join('|');
+}
 const SAVED_FLASH_MS = 1600;
 const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
 const LIVE_EDIT_CONFLICT_MESSAGE =
@@ -127,6 +134,9 @@ export function useQuizDraft(quizId: string): QuizDraft {
   );
   const [savedFlash, setSavedFlash] = useState(false);
   const [savedFlashRun, setSavedFlashRun] = useState(0);
+  // The draft's structure when the last save was sent, to tell whether the
+  // issues it came back with still point at the right rounds and questions.
+  const [savedStructureKey, setSavedStructureKey] = useState('');
   const [liveEdit, setLiveEdit] = useState<LiveEditFrontier | undefined>(
     undefined,
   );
@@ -211,6 +221,17 @@ export function useQuizDraft(quizId: string): QuizDraft {
     },
   });
 
+  const structureKey = structureKeyOf(rounds);
+  const saveIssueList =
+    saveMutation.error instanceof QuizDraftApiError
+      ? saveMutation.error.issues
+      : EMPTY_ISSUES;
+  // Adding, deleting or moving a round or question shifts the positions the
+  // issues name, so they would flag the wrong card: drop them until the next
+  // save. Typing leaves the structure alone, so they stay while being fixed.
+  const areIssuesStale =
+    saveIssueList.length > 0 && savedStructureKey !== structureKey;
+
   const isDirty =
     fingerprintOf(toSaveRequest(title, rounds)) !== savedFingerprint;
   const hasUnsavedEdits = phase === 'editor' && isDirty;
@@ -256,17 +277,20 @@ export function useQuizDraft(quizId: string): QuizDraft {
     liveEdit,
     refreshLockState: () => refreshLockStateMutation.mutate(),
     isRefreshingLockState: refreshLockStateMutation.isPending,
-    save: () => saveMutation.mutate(toSaveRequest(title, rounds)),
+    save: () => {
+      setSavedStructureKey(structureKey);
+      saveMutation.mutate(toSaveRequest(title, rounds));
+    },
     isSaving: saveMutation.isPending,
     savedQuizId,
     isDirty,
     savedFlash,
     exportCsv,
-    saveError: saveMutation.error ? saveErrorMessage(saveMutation.error) : null,
-    saveIssues:
-      saveMutation.error instanceof QuizDraftApiError
-        ? saveMutation.error.issues
-        : EMPTY_ISSUES,
+    saveError:
+      saveMutation.error && !areIssuesStale
+        ? saveErrorMessage(saveMutation.error)
+        : null,
+    saveIssues: areIssuesStale ? EMPTY_ISSUES : saveIssueList,
     isLiveEditConflict:
       saveMutation.error instanceof QuizDraftApiError &&
       saveMutation.error.status === 409,
