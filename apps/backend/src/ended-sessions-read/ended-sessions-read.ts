@@ -325,27 +325,10 @@ export class EndedSessionsRead {
     )) as NightAnswerRow[];
 
     // Which round each team doubled: an answer to a question of it is a joker answer.
-    let jokersQuery = knex('session_team_jokers').where(
-      'game_session_id',
-      gameSessionId,
-    );
-    if (teamId !== undefined) {
-      jokersQuery = jokersQuery.where('team_id', teamId);
-    }
-    const jokerRows = (await jokersQuery.select(
-      'team_id as teamId',
-      'round_id as roundId',
-    )) as { teamId: number; roundId: number }[];
-    let extraQuery = knex('purchases')
-      .where('game_session_id', gameSessionId)
-      .where('power_up', 'extra_joker');
-    if (teamId !== undefined) extraQuery = extraQuery.where('team_id', teamId);
-    const extraRows = (await extraQuery.select(
-      'team_id as teamId',
-      'round_id as roundId',
-    )) as { teamId: number; roundId: number }[];
     const doubledRounds = new Set(
-      [...jokerRows, ...extraRows].map((row) => `${row.teamId}:${row.roundId}`),
+      (await this.doubledRounds([gameSessionId], { teamId })).map(
+        (row) => `${row.teamId}:${row.roundId}`,
+      ),
     );
     const roundIdByQuestion = new Map(
       questionRows.map((row) => [row.questionId, row.roundId]),
@@ -401,6 +384,40 @@ export class EndedSessionsRead {
       }),
     );
     return { questions, answers };
+  }
+
+  /**
+   * The rounds teams doubled in the given sessions (only `teamId`'s with one):
+   * a joker round, and every round a team bought an extra joker for. The one
+   * place that says which rounds count double, for the marks on the screens;
+   * the points already carry the doubling (see Standings' round points).
+   */
+  async doubledRounds(
+    gameSessionIds: readonly number[],
+    { teamId }: { teamId?: number } = {},
+  ): Promise<{ gameSessionId: number; teamId: number; roundId: number }[]> {
+    if (gameSessionIds.length === 0) return [];
+    const knex: Knex = this.gameSessionTeams.getKnex();
+    const narrowed = <Q extends { where(column: string, value: number): Q }>(
+      query: Q,
+    ): Q => (teamId === undefined ? query : query.where('team_id', teamId));
+    const columns = [
+      'game_session_id as gameSessionId',
+      'team_id as teamId',
+      'round_id as roundId',
+    ];
+    type Row = { gameSessionId: number; teamId: number; roundId: number };
+    const jokers = (await narrowed(
+      knex('session_team_jokers').whereIn('game_session_id', [
+        ...gameSessionIds,
+      ]),
+    ).select(columns)) as Row[];
+    const extra = (await narrowed(
+      knex('purchases')
+        .whereIn('game_session_id', [...gameSessionIds])
+        .where('power_up', 'extra_joker'),
+    ).select(columns)) as Row[];
+    return [...jokers, ...extra];
   }
 
   /** Every team that took part in the given sessions, or in any session for the given teams. */

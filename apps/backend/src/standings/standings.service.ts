@@ -50,12 +50,6 @@ interface RoundTotalRow {
   total: string | number;
 }
 
-interface JokerRoundRow {
-  gameSessionId: number;
-  teamId: number;
-  roundId: number;
-}
-
 /** SQL: the team bought an extra joker for the round of `q` in the session of `a`. */
 const EXTRA_JOKER_ON_ROUND = `select 1 from purchases ex where ex.game_session_id = a.game_session_id and ex.team_id = a.team_id and ex.round_id = q.round_id and ex.power_up = 'extra_joker'`;
 
@@ -225,7 +219,7 @@ export class StandingsService {
       this.loadTeamTotals(gameSessionIds),
       this.loadRounds(gameSessionIds),
       this.loadRoundTotals(gameSessionIds),
-      this.loadJokerRounds(gameSessionIds),
+      this.endedSessionsRead.doubledRounds(gameSessionIds),
     ]);
     const doubledRounds = new Set(
       jokers.map((row) => `${row.gameSessionId}:${row.teamId}:${row.roundId}`),
@@ -447,24 +441,6 @@ export class StandingsService {
       .orderBy('r.order_index', 'asc')
       .select('gs.id as gameSessionId')
       .select('r.id as roundId', 'r.title as roundTitle')) as RoundRow[];
-  }
-
-  /** Each team's joker round per session, for the mark on its round cell. The points already carry the doubling. */
-  private async loadJokerRounds(
-    gameSessionIds: readonly number[],
-  ): Promise<JokerRoundRow[]> {
-    if (gameSessionIds.length === 0) return [];
-    const knex = this.gameSessionTeams.getKnex();
-    const doubled = (await knex('session_team_jokers')
-      .whereIn('game_session_id', [...gameSessionIds])
-      .select('game_session_id as gameSessionId')
-      .select('team_id as teamId', 'round_id as roundId')) as JokerRoundRow[];
-    const extra = (await knex('purchases')
-      .whereIn('game_session_id', [...gameSessionIds])
-      .where('power_up', 'extra_joker')
-      .select('game_session_id as gameSessionId')
-      .select('team_id as teamId', 'round_id as roundId')) as JokerRoundRow[];
-    return [...doubled, ...extra];
   }
 
   private async loadRoundTotals(
