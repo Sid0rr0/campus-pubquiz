@@ -2158,7 +2158,8 @@ the brief is data only.
   (none for `closest_guess`).
 - **Session level:** player totals ("7 (2 of 3 teams reported)") and a score
   spread line (top, median and bottom share of max points, across every team
-  that took part). With feedback on, three more lines follow: the Session
+  that took part; a share is capped at 100%, since a joker can take a total past
+  the quiz's raw maximum). With feedback on, three more lines follow: the Session
   rating ("Session rating: 4.3 stars (3 ratings)", or "no ratings"), then
   Pacing and Felt difficulty as counts in scale order ("Pacing: too slow 0,
   just right 2, too fast 1", or "no answers"). With `collectFeedback` off the

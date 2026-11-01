@@ -526,6 +526,22 @@ describe('computeSessionBrief', () => {
       expect(standings.indexOf('1st')).toBeLessThan(standings.indexOf('2nd'));
     });
 
+    it('caps a share at 100% when a joker takes a total past the quiz maximum', () => {
+      // Max points 7; team 1 totals 6 + 6 (a doubled round) = 12.
+      const brief = computeSessionBrief(
+        buildInput({
+          answers: [
+            answer(10, 1, 'correct', 4),
+            answer(11, 1, 'correct', 2),
+            answer(12, 1, 'correct', 6),
+          ],
+        }),
+      );
+
+      expect(section(brief, 'Standings')).toContain('- 1st: 12 pts (100%)');
+      expect(brief).toContain('Score spread: top 100%');
+    });
+
     it('counts bonus awards in the points without itemising them', () => {
       const answers = [
         answer(10, 1, 'correct', 2),

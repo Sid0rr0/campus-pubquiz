@@ -64,6 +64,11 @@ export function briefMediaKind(
   return kind === 'youtube' || kind === 'video-file' ? 'video' : kind;
 }
 
+/** A team's total as a share of the quiz's max points, capped at 1: a joker can take a doubled total past the maximum (as on the team pages). */
+function shareOf(total: number, maxPoints: number): number {
+  return maxPoints > 0 ? Math.min(total / maxPoints, 1) : 0;
+}
+
 function percent(rate: number): string {
   return `${Math.round(rate * 100)}%`;
 }
@@ -134,7 +139,7 @@ function sessionSection(
   const { session } = input;
   const { playerCount, maxPoints } = detail;
   const shares = detail.standings
-    .map((s) => (maxPoints > 0 ? s.total / maxPoints : 0))
+    .map((s) => shareOf(s.total, maxPoints))
     .sort((a, b) => a - b);
   return [
     `# ${session.name}`,
@@ -157,8 +162,7 @@ function standingsSection(detail: SessionDetailStats): string[] {
     const placing = s.hasLeft
       ? 'left'
       : `${s.rankTo !== s.rank ? 'Joint ' : ''}${ordinal(s.rank ?? 0)}`;
-    const share =
-      detail.maxPoints > 0 ? percent(s.total / detail.maxPoints) : '0%';
+    const share = percent(shareOf(s.total, detail.maxPoints));
     const players =
       s.playerCount === null ? '' : `, ${plural(s.playerCount, 'player')}`;
     return `- ${placing}: ${s.total} pts (${share})${players}`;
