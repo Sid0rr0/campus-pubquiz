@@ -75,6 +75,7 @@ describe('AdminPage — session routing', () => {
     mockUseAdminGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
+      connectionIssue: 'refused',
       sendAction: vi.fn(),
     });
     renderWithQuery(<AdminPage />);

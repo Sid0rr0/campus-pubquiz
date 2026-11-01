@@ -53,6 +53,7 @@ export function adminGameResult(
   return {
     snapshot: session ? roomView(SOCKET_ROOMS.ADMIN, session) : null,
     connectionError: null,
+    connectionIssue: null,
     reconnectedAt: null,
     liveAnswers: null,
     setLiveAnswers: vi.fn(),

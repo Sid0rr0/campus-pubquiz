@@ -26,6 +26,7 @@ import {
 } from '@campus-pubquiz/types';
 import {
   useGameConnection,
+  type ConnectionIssue,
   type RoomSocket,
 } from '@/app/lib/use-game-connection';
 
@@ -33,6 +34,8 @@ export interface UseAdminGameResult {
   snapshot: StateViewByRoom['admin'] | null;
   /** Only ever a connection problem (refused, lost, reconnecting) — a rejected action is a toast and the action's own result. */
   connectionError: string | null;
+  /** Why the socket isn't connected: `reconnecting` while socket.io retries, `refused` when the server turned it away. Null while connected. */
+  connectionIssue: ConnectionIssue | null;
   /** Timestamp of the most recent successful (re)connection; add it to an effect's dependencies to re-fetch REST data after a drop. */
   reconnectedAt: number | null;
   liveAnswers: AnswersUpdatedPayload | null;
@@ -113,8 +116,14 @@ export function useAdminGame(
   }, []);
   // Stryker restore ArrayDeclaration
 
-  const { identityKey, emitWithAck, snapshot, connectionError, reconnectedAt } =
-    useGameConnection('admin', enabled, joinCode, bindSocket);
+  const {
+    identityKey,
+    emitWithAck,
+    snapshot,
+    connectionError,
+    connectionIssue,
+    reconnectedAt,
+  } = useGameConnection('admin', enabled, joinCode, bindSocket);
 
   const [prevIdentityKey, setPrevIdentityKey] = useState(identityKey);
   if (identityKey !== prevIdentityKey) {
@@ -252,6 +261,7 @@ export function useAdminGame(
   return {
     snapshot,
     connectionError,
+    connectionIssue,
     reconnectedAt,
     liveAnswers,
     setLiveAnswers,

@@ -83,6 +83,7 @@ describe('RemotePage — session routing', () => {
     mockUseAdminGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
+      connectionIssue: 'refused',
       sendAction: vi.fn(),
       presenterContext: null,
     });

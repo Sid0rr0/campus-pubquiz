@@ -116,13 +116,29 @@ describe.each(['/control', '/remote'] as const)(
     it('redirects to /sessions when the socket was refused before any snapshot', async () => {
       setUrl('code=BADCODE');
       mockUseAdminGame.mockReturnValue(
-        adminGameResult({ connectionError: 'Unknown game session code' }),
+        adminGameResult({
+          connectionError: 'Disconnected: io server disconnect',
+          connectionIssue: 'refused',
+        }),
       );
       renderHook(() => useAdminSession(route));
 
       await waitFor(() =>
         expect(routerRef.replace).toHaveBeenCalledWith('/sessions'),
       );
+    });
+
+    it('stays put while the first connection is still retrying', () => {
+      setUrl('code=ABCDEF');
+      mockUseAdminGame.mockReturnValue(
+        adminGameResult({
+          connectionError: 'Reconnecting…',
+          connectionIssue: 'reconnecting',
+        }),
+      );
+      renderHook(() => useAdminSession(route));
+
+      expect(routerRef.replace).not.toHaveBeenCalled();
     });
 
     it('stays put when a live session reports a connection error', () => {

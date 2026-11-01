@@ -47,7 +47,7 @@ export function useAdminSession(
     isAuthenticated && Boolean(connectJoinCode),
     connectJoinCode ?? undefined,
   );
-  const { snapshot, connectionError } = game;
+  const { snapshot, connectionIssue } = game;
   const connectedJoinCode = snapshot?.joinCode;
 
   // Adjusted during render rather than in an Effect, keyed off sessionCode.
@@ -81,15 +81,16 @@ export function useAdminSession(
   }, [isAuthenticated, sessionCode, router]);
 
   useEffect(() => {
-    // Only bounces back to the picker for a session that never connected in
-    // the first place (e.g. an unknown/invalid ?code=) — handleConnection
-    // disconnects before ever sending STATE_SYNC in that case, so snapshot
-    // stays null. Once a snapshot exists, a later connection problem renders
-    // inline via the connectionError banner instead of redirecting away.
-    if (sessionCode && connectionError && !snapshot) {
+    // Only bounces back to the picker for a session the server turned away
+    // (an unknown/invalid ?code=): handleConnection disconnects before ever
+    // sending STATE_SYNC, so snapshot stays null. A network failure that
+    // socket.io is still retrying (`reconnecting`) is not a refusal, and
+    // neither is a drop once a snapshot exists: both render inline via the
+    // connectionError banner instead of redirecting away.
+    if (sessionCode && connectionIssue === 'refused' && !snapshot) {
       router.replace('/sessions');
     }
-  }, [sessionCode, connectionError, snapshot, router]);
+  }, [sessionCode, connectionIssue, snapshot, router]);
 
   useEffect(() => {
     // Login/register/pending-approval live at /login and /register —
