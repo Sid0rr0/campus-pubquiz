@@ -6,7 +6,7 @@ Parent spec: `.scratch/e2e-power-ups/spec.md`
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The offer says "Round N", without the round's title, and costs 5.
-- [ ] Passes `--repeat-each=5`.
+- [x] The offer says "Round N", without the round's title, and costs 5.
+- [x] Passes `--repeat-each=5`.

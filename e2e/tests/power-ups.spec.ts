@@ -489,3 +489,40 @@ limitsTest(
     await expect(again.getByText('Used: 1 / 1').first()).toBeVisible();
   },
 );
+
+// Blind: with the round overview off the extra joker costs 5, and the team starts with exactly that.
+const BLIND_JOKER_COST = 5;
+
+const blind = base.extend({
+  session: async ({ adminApi }, use) => {
+    const quizTitle = `Power-ups blind ${Date.now().toString(36)}`;
+    await use(
+      await seedPowerUpSession(adminApi, quizTitle, {
+        lockGraceSeconds: E2E_LOCK_GRACE_SECONDS,
+        showRoundOverview: false,
+        startingCoins: BLIND_JOKER_COST,
+      }),
+    );
+  },
+});
+
+blind(
+  'extra joker, blind: the offer shows only the round number and costs 5',
+  async ({ control, joinPhone }) => {
+    const phone = await joinPhone('Team A');
+    await control.startQuiz();
+
+    await expectCoins(phone, BLIND_JOKER_COST);
+    const drawer = await openShop(phone);
+    const offer = drawer.getByRole('button', { name: 'Activate Extra joker' });
+    await expect(offer).toContainText(`the next round: Round ${helps.number}`);
+    await expect(offer).not.toContainText(helps.title);
+    await expect(
+      drawer.getByRole('listitem').filter({
+        has: phone.page.getByRole('button', { name: 'Activate Extra joker' }),
+      }),
+    ).toContainText(`${BLIND_JOKER_COST} coins`);
+    await buyExtraJoker(drawer);
+    await expectCoins(phone, 0);
+  },
+);
