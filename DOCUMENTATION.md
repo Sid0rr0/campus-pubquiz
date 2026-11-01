@@ -1836,7 +1836,9 @@ has no column, so it isn't exported. A `sort` or `match` question's scoring mode
 (`file.text()`) and POSTs it to `POST /import/preview`. The parsed
 rounds/questions load straight into the in-page editable draft; saving goes
 through the normal quiz endpoints above. There is no server-side import that
-writes a quiz: the flow is preview → edit → save.
+writes a quiz: the flow is preview → edit → save. JSON request bodies may be up
+to 5 MB (`main.ts`), the same cap as a fetched sheet, so a long quiz saves and a
+large CSV previews; a bigger body gets a `413`.
 
 **Google Sheets URL import mechanics**: `POST /import/preview-from-url` accepts
 a pasted `sheetUrl` instead of `csvText`. An earlier version of this rejected doing this server-side
