@@ -25,7 +25,8 @@ async function connectToPostgres(): Promise<Client> {
   } catch (error) {
     throw new Error(
       `Postgres is not reachable at ${POSTGRES_ADMIN_URL} (${getErrorMessage(error)}).\n` +
-        `E2E needs the docker-compose Postgres: run \`docker compose up -d postgres\` and try again.`,
+        `E2E needs the docker-compose Postgres: run \`docker compose up -d postgres\` and try again.\n` +
+        `If it is already running, another Postgres (e.g. Homebrew's) may hold this port: check \`lsof -nP -iTCP:5432 -sTCP:LISTEN\`.`,
     );
   }
   return client;

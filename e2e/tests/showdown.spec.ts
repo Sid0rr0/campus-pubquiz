@@ -99,7 +99,10 @@ test('two tied teams play a showdown, taking their turns in seat order, until on
   await expectGuessForm(secondPhone);
   await snap(secondPhone, 'ended', 'showdown-guess-form-waiting-turn');
   await control.pressAdvanceSlot();
-  await expect(display.page.getByText(WINNER_GUESS.toString())).toHaveCount(0);
+  // Exact: a random team name like "Team A df0640" must not match the guess "40".
+  await expect(
+    display.page.getByText(WINNER_GUESS.toString(), { exact: true }),
+  ).toHaveCount(0);
 
   await submitShowdownGuess(secondPhone, LOSER_GUESS);
   await expectGuessed(control, secondPhone.teamName);
