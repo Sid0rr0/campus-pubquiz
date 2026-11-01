@@ -160,7 +160,7 @@ export function findForeignQuestionIds(
 }
 
 const DROPPED_ANSWERED_MESSAGE =
-  'Cannot delete a question teams have already answered in a played session — it would delete those answers and change past scores. Start a new quiz instead.';
+  'Cannot delete or replace a question teams have already answered in a played session — it would delete those answers and change past scores. A CSV or Sheets re-import replaces every question, so edit the questions by hand, or start a new quiz.';
 
 /**
  * Issues for answered questions a save would drop. Deleting a question deletes

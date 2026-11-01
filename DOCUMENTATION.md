@@ -1691,8 +1691,9 @@ different round, or reordering the rounds around it, is refused the same way:
 a joker is stored against a round row, and rows are kept by position, so the
 move would carry its doubling onto other questions. Rewording an answered
 question is allowed, and so is adding rounds after the played ones. A CSV
-re-import in the editor replaces every question, so on a played quiz it is
-refused too; start a new quiz for a restructured night.
+or Sheets re-import in the editor replaces every question (it carries no
+question ids), so on a played quiz the save is refused with a message saying
+so; edit the questions by hand, or start a new quiz for a restructured night.
 
 **Editing a live quiz**: a quiz can be edited at any time, including while a
 session on it is running (any status other than `lobby`/`ended`). Five rules

@@ -53,6 +53,23 @@ describe('Editing a quiz whose ended session has stored answers', () => {
     expect((error as Error).message).toMatch(/already answered/);
   });
 
+  it('tells the editor a re-imported sheet replaces every question, when it carries no question ids', async () => {
+    const error: unknown = await game
+      .saveQuizEdit((rounds) =>
+        rounds.map((round) => ({
+          ...round,
+          questions: round.questions.map((question) => ({
+            ...question,
+            questionId: undefined,
+          })),
+        })),
+      )
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(QuizLiveEditBlockedError);
+    expect((error as Error).message).toMatch(/re-import/);
+  });
+
   it('still lets a question nobody answered be deleted', async () => {
     await expect(game.saveQuizEdit(withoutQuestion(1))).resolves.toBeDefined();
   });
