@@ -34,7 +34,8 @@ interface UseLockCountdownSoundResult {
 // currentTime once from however much time is actually left (at mount or on
 // reconnect) keeps the track's ending in sync with lockAt with no further
 // resyncing needed — the same reconnect-resilience trick QuestionLockCountdown
-// uses for its ring animation.
+// uses for its ring animation. With more than 60s left the track waits until
+// 60s remain and then starts from its beginning.
 export function useLockCountdownSound({
   lockAt,
   enabled,
