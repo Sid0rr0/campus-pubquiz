@@ -153,6 +153,8 @@ export function useGameConnection<Role extends SocketRoomName>(
 
     return () => {
       socket.disconnect();
+      // A wake must not reconnect this shut socket: it would stay open beside the next one.
+      socketRef.current = null;
     };
   }, [enabled, role, joinCode, retryKey, reportConnection]);
 

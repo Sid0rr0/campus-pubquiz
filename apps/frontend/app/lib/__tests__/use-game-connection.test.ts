@@ -133,6 +133,23 @@ describe('useGameConnection', () => {
     },
   );
 
+  it('does not revive a socket that was shut when the hook was disabled', () => {
+    const { rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useGameConnection('players', enabled, 'TESTCODE'),
+      { initialProps: { enabled: true } },
+    );
+    const socket = latestSocket();
+    act(() => socket.serverConnects());
+    rerender({ enabled: false });
+
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    expect(socket.connect).not.toHaveBeenCalled();
+  });
+
   it('connects with credentials, sending the role and the join code', () => {
     renderHook(() => useGameConnection('players', true, 'TESTCODE'));
 
