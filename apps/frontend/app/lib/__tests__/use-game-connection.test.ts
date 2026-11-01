@@ -117,6 +117,22 @@ describe('useGameConnection', () => {
     expect(result.current.socketConnection).toBeNull();
   });
 
+  it.each(['admin', 'display', 'players'] as const)(
+    'reconnects a %s socket when the network comes back',
+    (role) => {
+      renderHook(() => useGameConnection(role, true, 'TESTCODE'));
+      const socket = latestSocket();
+      act(() => socket.serverConnects());
+
+      act(() => {
+        window.dispatchEvent(new Event('online'));
+      });
+
+      expect(socket.disconnect).toHaveBeenCalled();
+      expect(socket.connect).toHaveBeenCalled();
+    },
+  );
+
   it('connects with credentials, sending the role and the join code', () => {
     renderHook(() => useGameConnection('players', true, 'TESTCODE'));
 

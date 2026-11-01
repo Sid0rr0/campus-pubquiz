@@ -14,6 +14,7 @@ import {
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { useReconnectOnWake } from '@/app/lib/use-reconnect-on-wake';
 import {
   NOT_CONNECTED_MESSAGE,
   RECONNECTING_MESSAGE,
@@ -200,6 +201,9 @@ export function useGameConnection<Role extends SocketRoomName>(
     socket.connect();
   }, [reportConnection]);
   // Stryker restore ArrayDeclaration
+
+  // A phone, laptop or TV that was asleep holds a socket that still looks connected for tens of seconds; every page needs the fresh one, not only /play.
+  useReconnectOnWake(forceReconnect);
 
   return {
     snapshot,

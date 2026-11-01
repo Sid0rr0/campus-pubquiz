@@ -52,7 +52,6 @@ import {
   clearStoredSession,
   readStoredIdentity,
 } from '@/app/lib/team-storage';
-import { useReconnectOnWake } from '@/app/lib/use-reconnect-on-wake';
 import {
   useGameConnection,
   type RoomSocket,
@@ -417,8 +416,6 @@ export function useTeamLink(
     goToJoinScreenRef.current = () => router.push('/play');
   }, [emitWithAck, forceReconnect, router]);
   // Stryker restore ArrayDeclaration
-
-  useReconnectOnWake(forceReconnect);
 
   useEffect(
     () => () => {
