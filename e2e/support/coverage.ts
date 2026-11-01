@@ -59,6 +59,8 @@ export const MOVES = [
   'media_fullscreen',
   /** `END_QUIZ`. */
   'end_quiz',
+  /** Buying Ask the room. */
+  'power_up_ask_the_room',
 ] as const;
 export type Move = (typeof MOVES)[number];
 
