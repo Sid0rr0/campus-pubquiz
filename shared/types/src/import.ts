@@ -68,36 +68,23 @@ export interface ImportPreview {
 }
 
 /**
- * Request body shared by POST /import/preview and POST /import/confirm.
- * `csvText` is the content of an uploaded CSV file (e.g. a Google Sheets
- * "File → Download → CSV" export), read client-side and sent as text.
- * `joinCode` identifies which session's active quiz to check/reload against
- * — required by /import/confirm, ignored by /import/preview (which never
- * touches game state).
+ * Request body of POST /import/preview. `csvText` is the content of an
+ * uploaded CSV file (e.g. a Google Sheets "File → Download → CSV" export),
+ * read client-side and sent as text.
  */
 export interface ImportRequest {
   csvText: string;
   quizTitle?: string;
-  joinCode?: string;
 }
 
 /**
- * Request body shared by POST /import/preview-from-url and
- * POST /import/confirm-from-url. `sheetUrl` is a pasted Google Sheets link
- * (e.g. `https://docs.google.com/spreadsheets/d/{id}/edit`) fetched
- * server-side — see `sheet-url-fetcher.ts` for the SSRF-safe fetch. `joinCode`
- * is required by confirm-from-url, ignored by preview-from-url.
+ * Request body of POST /import/preview-from-url. `sheetUrl` is a pasted
+ * Google Sheets link (e.g. `https://docs.google.com/spreadsheets/d/{id}/edit`)
+ * fetched server-side — see `sheet-url-fetcher.ts` for the SSRF-safe fetch.
  */
 export interface ImportFromUrlRequest {
   sheetUrl: string;
   quizTitle?: string;
-  joinCode?: string;
-}
-
-export interface ImportConfirmResult {
-  quizId: number;
-  roundCount: number;
-  questionCount: number;
 }
 
 export function createImportPreview(

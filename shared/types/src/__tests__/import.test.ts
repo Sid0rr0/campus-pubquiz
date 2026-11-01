@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   createImportPreview,
-  type ImportConfirmResult,
   type ImportRequest,
   type ImportRoundPreview,
   type ImportRowIssue,
@@ -91,18 +90,11 @@ describe('import payload contracts', () => {
     expect(issue.rowNumber).toBe(row.rowNumber);
   });
 
-  it('carries the uploaded csv text and optional quiz title through the REST DTOs', () => {
+  it('carries the uploaded csv text and optional quiz title through the REST DTO', () => {
     const request: ImportRequest = {
       csvText: 'round,type,question,options,answer,points,media_url,notes\n',
       quizTitle: 'Trivia Night #4',
     };
-    const result: ImportConfirmResult = {
-      quizId: 1,
-      roundCount: 2,
-      questionCount: 10,
-    };
-
     expect(request.csvText).toContain('round,type,question');
-    expect(result.questionCount).toBeGreaterThan(0);
   });
 });

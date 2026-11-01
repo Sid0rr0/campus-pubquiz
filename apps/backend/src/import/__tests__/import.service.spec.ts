@@ -1,27 +1,5 @@
-import type { EntityManager } from '@mikro-orm/postgresql';
-import type { QuizDraftSaveRequest } from '@campus-pubquiz/types';
-import { SeedService } from '@/db/seed.service';
-import { GameSession } from '@/db/entities/game-session.entity';
-import { Question } from '@/db/entities/question.entity';
-import { Quiz } from '@/db/entities/quiz.entity';
-import { Round } from '@/db/entities/round.entity';
-import { GameSessionRepository } from '@/db/repositories/game-session.repository';
-import { QuestionRepository } from '@/db/repositories/question.repository';
-import { QuizRepository } from '@/db/repositories/quiz.repository';
-import { RoundRepository } from '@/db/repositories/round.repository';
-import type {
-  LiveEditSaveOptions,
-  LiveEditService,
-} from '@/game/live-edit/live-edit.service';
-import type { GameStateService } from '@/game/state/game-state.service';
-import {
-  ImportBlockedError,
-  ImportLockedError,
-  ImportService,
-} from '@/import/import.service';
+import { ImportService } from '@/import/import.service';
 import { fetchSheetCsv, SheetFetchError } from '@/import/sheet-url-fetcher';
-import { QuizService } from '@/quiz/quiz.service';
-import { useTestDatabase } from '@/test-db/test-database';
 
 jest.mock('@/import/sheet-url-fetcher', () => ({
   ...jest.requireActual<typeof import('@/import/sheet-url-fetcher')>(
@@ -46,73 +24,17 @@ const VALID_CSV = [
   'Music,free_text,Name this song.,,Bohemian Rhapsody,2,https://example.com/song.mp3,https://example.com/song-answer.jpg,,1',
 ].join('\n');
 
-const EDITED_CSV = [
-  HEADER,
-  'History,free_text,Largest planet in our solar system?,,Jupiter,2,,,,1',
-].join('\n');
-
-const BROKEN_CSV = [HEADER, 'History,karaoke,Sing it!,,,,,,,0'].join('\n');
-
-interface GameStateStub {
-  status: string;
-}
-
-function makeGameStateStub(overrides: Partial<GameStateStub> = {}): {
-  stub: GameStateStub;
-  asService: GameStateService;
-} {
-  const stub: GameStateStub = { status: 'lobby', ...overrides };
-  const asService = {
-    getSnapshot: () => ({ progress: { status: stub.status } }),
-  } as unknown as GameStateService;
-  return { stub, asService };
-}
-
-describe('ImportService (Postgres integration)', () => {
-  const db = useTestDatabase();
-  let em: EntityManager;
-
+describe('ImportService', () => {
   beforeEach(() => {
-    em = db.orm.em.fork();
     mockedFetchSheetCsv.mockReset();
   });
 
-  function findQuestionsInOrder(): Promise<Question[]> {
-    return em.find(Question, {}, { orderBy: { orderIndex: 'asc' } });
-  }
-
-  function makeService(overrides: Partial<GameStateStub> = {}) {
-    const { stub, asService } = makeGameStateStub(overrides);
-    const quizService = new QuizService(
-      em.getRepository<Quiz, QuizRepository>(Quiz),
-      em.getRepository<Round, RoundRepository>(Round),
-      em.getRepository<Question, QuestionRepository>(Question),
-    );
-    // The Live edit module's checks are covered against real sessions in
-    // quiz-reimported.spec.ts; here it just saves.
-    const liveEdit = {
-      save: jest.fn(
-        (
-          quizId: number,
-          { title, rounds }: QuizDraftSaveRequest,
-          options?: LiveEditSaveOptions,
-        ) =>
-          options?.strategy
-            ? options.strategy.persist(rounds)
-            : quizService.update(quizId, title, rounds),
-      ),
-    };
-    const importService = new ImportService(
-      em.getRepository<Quiz, QuizRepository>(Quiz),
-      asService,
-      quizService,
-      liveEdit as unknown as LiveEditService,
-    );
-    return { importService, stub, liveEdit };
+  function makeService() {
+    return { importService: new ImportService() };
   }
 
   describe('preview', () => {
-    it('parses and validates the csv without writing anything', async () => {
+    it('parses and validates the csv without writing anything', () => {
       // Arrange
       const { importService } = makeService();
 
@@ -126,8 +48,6 @@ describe('ImportService (Postgres integration)', () => {
         'History',
         'Music',
       ]);
-      const quizzes = await em.find(Quiz, {});
-      expect(quizzes).toHaveLength(0);
     });
 
     it('reports a file-level problem as an issue instead of throwing', () => {
@@ -146,253 +66,6 @@ describe('ImportService (Postgres integration)', () => {
       const preview = importService.preview(VALID_CSV);
 
       expect(preview.quizTitle).toBe('Imported Quiz');
-    });
-  });
-
-  describe('confirm', () => {
-    it('creates the quiz with rounds and questions in sheet order', async () => {
-      // Arrange
-      const { importService } = makeService();
-
-      // Act
-      const result = await importService.confirm(
-        VALID_CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-
-      // Assert
-      expect(result.roundCount).toBe(2);
-      expect(result.questionCount).toBe(3);
-
-      const roundRows = await em.find(
-        Round,
-        { quiz: result.quizId },
-        { orderBy: { orderIndex: 'asc' } },
-      );
-      expect(roundRows.map((round) => round.title)).toEqual([
-        'History',
-        'Music',
-      ]);
-      expect(
-        roundRows.find((round) => round.title === 'History')?.breakAfter,
-      ).toBe(false);
-      expect(
-        roundRows.find((round) => round.title === 'Music')?.breakAfter,
-      ).toBe(true);
-
-      const questionRows = await em.find(Question, {
-        round: roundRows[1].id,
-      });
-      expect(questionRows).toHaveLength(1);
-      expect(questionRows[0].type).toBe('free_text');
-      expect(questionRows[0].points).toBe(2);
-      expect(questionRows[0].answer).toBe('Bohemian Rhapsody');
-      expect(questionRows[0].payload).toEqual({
-        mediaUrl: 'https://example.com/song.mp3',
-        answerMediaUrl: 'https://example.com/song-answer.jpg',
-      });
-    });
-
-    it('stores a Number question with no margin, leaving the default to the Answer key', async () => {
-      const { importService } = makeService();
-
-      await importService.confirm(
-        [
-          HEADER,
-          'History,number,In what year did the Berlin Wall fall?,,1989,2,,,,1',
-        ].join('\n'),
-        'ABCDEF',
-        'Trivia Night',
-      );
-
-      const [question] = await findQuestionsInOrder();
-      expect(question.type).toBe('number');
-      expect(question.payload).not.toHaveProperty('margin');
-    });
-
-    it('re-imports idempotently, updating questions in place with stable ids', async () => {
-      const { importService } = makeService();
-      const first = await importService.confirm(
-        VALID_CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-      const before = await findQuestionsInOrder();
-
-      const second = await importService.confirm(
-        VALID_CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-
-      expect(second.quizId).toBe(first.quizId);
-      const quizzes = await em.find(Quiz, {});
-      expect(quizzes).toHaveLength(1);
-      const after = await findQuestionsInOrder();
-      expect(after.map((question) => question.id).sort()).toEqual(
-        before.map((question) => question.id).sort(),
-      );
-    });
-
-    it('matches a shrunk round by position, keeping the leading rows and dropping the trailing one', async () => {
-      const { importService } = makeService();
-      const threeQuestions = [
-        HEADER,
-        'History,free_text,Q1,,A1,1,,,,1',
-        'History,free_text,Q2,,A2,1,,,,1',
-        'History,free_text,Q3,,A3,1,,,,1',
-      ].join('\n');
-      const twoQuestions = [
-        HEADER,
-        'History,free_text,Q1 edited,,A1,1,,,,1',
-        'History,free_text,Q2,,A2,1,,,,1',
-      ].join('\n');
-      await importService.confirm(threeQuestions, 'ABCDEF', 'Trivia Night');
-      const before = await findQuestionsInOrder();
-
-      await importService.confirm(twoQuestions, 'ABCDEF', 'Trivia Night');
-
-      const after = await findQuestionsInOrder();
-      expect(after.map((question) => question.prompt)).toEqual([
-        'Q1 edited',
-        'Q2',
-      ]);
-      expect(after.map((question) => question.id)).toEqual([
-        before[0].id,
-        before[1].id,
-      ]);
-    });
-
-    it('updates edited questions and deletes rounds and questions removed from the sheet', async () => {
-      const { importService } = makeService();
-      const first = await importService.confirm(
-        VALID_CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-      const [historyRound] = await em.find(
-        Round,
-        { quiz: first.quizId },
-        { orderBy: { orderIndex: 'asc' } },
-      );
-      const [keptQuestion] = await em.find(
-        Question,
-        { round: historyRound.id },
-        { orderBy: { orderIndex: 'asc' } },
-      );
-
-      const second = await importService.confirm(
-        EDITED_CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-
-      expect(second.quizId).toBe(first.quizId);
-      expect(second.roundCount).toBe(1);
-      expect(second.questionCount).toBe(1);
-
-      const roundRows = await em.find(Round, { quiz: first.quizId });
-      expect(roundRows).toHaveLength(1);
-
-      const questionRows = await em.find(Question, {
-        round: historyRound.id,
-      });
-      expect(questionRows).toHaveLength(1);
-      expect(questionRows[0].id).toBe(keptQuestion.id);
-      expect(questionRows[0].prompt).toBe(
-        'Largest planet in our solar system?',
-      );
-    });
-
-    it('rejects a csv with validation issues without writing anything', async () => {
-      const { importService } = makeService();
-
-      await expect(
-        importService.confirm(BROKEN_CSV, 'ABCDEF', 'Trivia Night'),
-      ).rejects.toThrow(ImportBlockedError);
-
-      const quizzes = await em.find(Quiz, {});
-      expect(quizzes).toHaveLength(0);
-    });
-
-    it('rejects importing while a quiz is running', async () => {
-      const { importService } = makeService({ status: 'question_open' });
-
-      await expect(
-        importService.confirm(VALID_CSV, 'ABCDEF', 'Trivia Night'),
-      ).rejects.toThrow(ImportLockedError);
-    });
-
-    it('allows importing after the quiz has ended', async () => {
-      const { importService } = makeService({ status: 'ended' });
-
-      const result = await importService.confirm(
-        VALID_CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-
-      expect(result.questionCount).toBe(3);
-    });
-
-    it("saves through the Live edit module, reloading the importing session's screens", async () => {
-      const { importService, liveEdit } = makeService();
-
-      const result = await importService.confirm(
-        VALID_CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-
-      expect(liveEdit.save).toHaveBeenCalledWith(
-        result.quizId,
-        expect.objectContaining({ title: 'Trivia Night' }),
-        expect.objectContaining({ reloadJoinCode: 'ABCDEF' }),
-      );
-    });
-
-    it("carries each question's correct answer through the loaded game, alongside its safe payload fields", async () => {
-      // SeedService is the internal layer that must know the answer (so
-      // GameStateService can reveal it after grading); the answer-free
-      // projection sent to clients is GameStateService's responsibility,
-      // covered separately in game-state.service.spec.ts.
-      const { importService } = makeService();
-      const result = await importService.confirm(
-        VALID_CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-      const seedService = new SeedService(
-        em.getRepository<Quiz, QuizRepository>(Quiz),
-        em.getRepository<Round, RoundRepository>(Round),
-        em.getRepository<Question, QuestionRepository>(Question),
-        em.getRepository<GameSession, GameSessionRepository>(GameSession),
-      );
-      const session = em.create(GameSession, {
-        quiz: result.quizId,
-        joinCode: 'ABC234',
-      });
-      await em.flush();
-
-      const game = await seedService.loadGame(
-        result.quizId,
-        session.id,
-        session.joinCode,
-      );
-
-      const questions = game.rounds.flatMap((round) => round.questions);
-      expect(questions).toHaveLength(3);
-      expect(questions.map((question) => question.answer)).toEqual(
-        expect.arrayContaining(['Jupiter', 'Paris', 'Bohemian Rhapsody']),
-      );
-      const audioQuestion = questions.find(
-        (question) => question.mediaUrl === 'https://example.com/song.mp3',
-      );
-      expect(audioQuestion?.mediaUrl).toBe('https://example.com/song.mp3');
-      expect(audioQuestion?.answerMediaUrl).toBe(
-        'https://example.com/song-answer.jpg',
-      );
     });
   });
 
@@ -415,8 +88,6 @@ describe('ImportService (Postgres integration)', () => {
         'Music',
       ]);
       expect(mockedFetchSheetCsv).toHaveBeenCalledWith('abc123', undefined);
-      const quizzes = await em.find(Quiz, {});
-      expect(quizzes).toHaveLength(0);
     });
 
     it('names the quiz after the sheet when no title was given', async () => {
@@ -473,59 +144,6 @@ describe('ImportService (Postgres integration)', () => {
 
       expect(preview.isImportable).toBe(false);
       expect(preview.issues[0].field).toBe('sheetUrl');
-      expect(mockedFetchSheetCsv).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('confirmFromUrl', () => {
-    it('fetches the sheet then imports it like confirm()', async () => {
-      const { importService } = makeService();
-      mockedFetchSheetCsv.mockResolvedValue({ csvText: VALID_CSV });
-
-      const result = await importService.confirmFromUrl(
-        SHEET_URL,
-        'ABCDEF',
-        'Trivia Night',
-      );
-
-      expect(result.roundCount).toBe(2);
-      expect(result.questionCount).toBe(3);
-      const quizzes = await em.find(Quiz, {});
-      expect(quizzes).toHaveLength(1);
-    });
-
-    it('names the quiz after the sheet when no title was given', async () => {
-      const { importService } = makeService();
-      mockedFetchSheetCsv.mockResolvedValue({
-        csvText: VALID_CSV,
-        sheetName: 'Trivia Night',
-      });
-
-      const result = await importService.confirmFromUrl(SHEET_URL, 'ABCDEF');
-
-      const quiz = await em.findOneOrFail(Quiz, { id: result.quizId });
-      expect(quiz.title).toBe('Trivia Night');
-    });
-
-    it('propagates a sheet fetch failure without writing anything', async () => {
-      const { importService } = makeService();
-      mockedFetchSheetCsv.mockRejectedValue(
-        new SheetFetchError('Could not fetch that sheet'),
-      );
-
-      await expect(
-        importService.confirmFromUrl(SHEET_URL, 'ABCDEF', 'Trivia Night'),
-      ).rejects.toThrow(SheetFetchError);
-      const quizzes = await em.find(Quiz, {});
-      expect(quizzes).toHaveLength(0);
-    });
-
-    it('rejects importing while a quiz is running, without fetching the sheet', async () => {
-      const { importService } = makeService({ status: 'question_open' });
-
-      await expect(
-        importService.confirmFromUrl(SHEET_URL, 'ABCDEF', 'Trivia Night'),
-      ).rejects.toThrow(ImportLockedError);
       expect(mockedFetchSheetCsv).not.toHaveBeenCalled();
     });
   });

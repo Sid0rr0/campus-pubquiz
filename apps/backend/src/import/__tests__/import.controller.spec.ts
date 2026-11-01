@@ -1,21 +1,9 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
-import { createImportPreview, type ImportPreview } from '@campus-pubquiz/types';
+import { BadRequestException } from '@nestjs/common';
+import { createImportPreview } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { ImportController } from '@/import/import.controller';
-import {
-  ImportBlockedError,
-  ImportLockedError,
-  type ImportService,
-} from '@/import/import.service';
-import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
-import { QuizDraftInvalidError, QuizNotFoundError } from '@/quiz/quiz.service';
-import { SheetFetchError } from '@/import/sheet-url-fetcher';
+import type { ImportService } from '@/import/import.service';
 
 const CSV = 'round,type,question,options,answer,points,media_url,notes\n';
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/abc123/edit';
@@ -23,22 +11,12 @@ const SHEET_URL = 'https://docs.google.com/spreadsheets/d/abc123/edit';
 function makeController() {
   const importService = {
     preview: jest.fn(),
-    confirm: jest.fn(),
     previewFromUrl: jest.fn(),
-    confirmFromUrl: jest.fn(),
   };
   const controller = new ImportController(
     importService as unknown as ImportService,
   );
   return { controller, importService };
-}
-
-function blockedPreview(): ImportPreview {
-  return createImportPreview(
-    'Imported Quiz',
-    [],
-    [{ rowNumber: 2, field: 'answer', message: 'Missing answer' }],
-  );
 }
 
 describe('ImportController', () => {
@@ -83,98 +61,6 @@ describe('ImportController', () => {
     });
   });
 
-  describe('confirm', () => {
-    it('returns the confirm result for a valid body', async () => {
-      const { controller, importService } = makeController();
-      const result = { quizId: 'quiz-1', roundCount: 1, questionCount: 2 };
-      importService.confirm.mockResolvedValue(result);
-
-      await expect(
-        controller.confirm({
-          csvText: CSV,
-          quizTitle: 'Trivia Night',
-          joinCode: 'ABCDEF',
-        }),
-      ).resolves.toBe(result);
-      expect(importService.confirm).toHaveBeenCalledWith(
-        CSV,
-        'ABCDEF',
-        'Trivia Night',
-      );
-    });
-
-    it('rejects a body without joinCode', async () => {
-      const { controller } = makeController();
-
-      await expect(controller.confirm({ csvText: CSV })).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('maps a live-edit refusal to 409 with the issues attached', async () => {
-      const { controller, importService } = makeController();
-      const issues = [{ message: 'moved' }] as never;
-      importService.confirm.mockRejectedValue(
-        new QuizLiveEditBlockedError(issues),
-      );
-
-      const promise = controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' });
-
-      await expect(promise).rejects.toThrow(ConflictException);
-      await promise.catch((error: ConflictException) => {
-        expect(error.getResponse()).toMatchObject({ issues });
-      });
-    });
-
-    it('maps an invalid saved draft to 422 and an unknown quiz to 404', async () => {
-      const { controller, importService } = makeController();
-      importService.confirm.mockRejectedValueOnce(
-        new QuizDraftInvalidError([{ message: 'bad' }] as never),
-      );
-      importService.confirm.mockRejectedValueOnce(new QuizNotFoundError(9));
-
-      await expect(
-        controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' }),
-      ).rejects.toThrow(UnprocessableEntityException);
-      await expect(
-        controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' }),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('maps a blocked import to 422 with the issues attached', async () => {
-      const { controller, importService } = makeController();
-      const preview = blockedPreview();
-      importService.confirm.mockRejectedValue(new ImportBlockedError(preview));
-
-      const promise = controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' });
-
-      await expect(promise).rejects.toThrow(UnprocessableEntityException);
-      await promise.catch((error: UnprocessableEntityException) => {
-        expect(error.getResponse()).toMatchObject({ issues: preview.issues });
-      });
-    });
-
-    it('maps a locked import to 409 conflict', async () => {
-      const { controller, importService } = makeController();
-      importService.confirm.mockRejectedValue(
-        new ImportLockedError('question_open'),
-      );
-
-      await expect(
-        controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' }),
-      ).rejects.toThrow(ConflictException);
-    });
-
-    it('lets unexpected errors bubble up unchanged', async () => {
-      const { controller, importService } = makeController();
-      importService.confirm.mockRejectedValue(new Error('db down'));
-
-      await expect(
-        controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' }),
-      ).rejects.toThrow('db down');
-    });
-  });
-
   describe('previewFromUrl', () => {
     it('returns the service preview for a valid body', async () => {
       const { controller, importService } = makeController();
@@ -207,92 +93,6 @@ describe('ImportController', () => {
       expect(() => controller.previewFromUrl({ sheetUrl: '' })).toThrow(
         BadRequestException,
       );
-    });
-  });
-
-  describe('confirmFromUrl', () => {
-    it('returns the confirm result for a valid body', async () => {
-      const { controller, importService } = makeController();
-      const result = { quizId: 1, roundCount: 1, questionCount: 2 };
-      importService.confirmFromUrl.mockResolvedValue(result);
-
-      await expect(
-        controller.confirmFromUrl({
-          sheetUrl: SHEET_URL,
-          quizTitle: 'Trivia Night',
-          joinCode: 'ABCDEF',
-        }),
-      ).resolves.toBe(result);
-      expect(importService.confirmFromUrl).toHaveBeenCalledWith(
-        SHEET_URL,
-        'ABCDEF',
-        'Trivia Night',
-      );
-    });
-
-    it('rejects a body without joinCode', async () => {
-      const { controller } = makeController();
-
-      await expect(
-        controller.confirmFromUrl({ sheetUrl: SHEET_URL }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('maps a sheet fetch failure to 422 with just the message', async () => {
-      const { controller, importService } = makeController();
-      importService.confirmFromUrl.mockRejectedValue(
-        new SheetFetchError('Could not fetch that sheet'),
-      );
-
-      const promise = controller.confirmFromUrl({
-        sheetUrl: SHEET_URL,
-        joinCode: 'ABCDEF',
-      });
-
-      await expect(promise).rejects.toThrow(UnprocessableEntityException);
-      await promise.catch((error: UnprocessableEntityException) => {
-        expect(error.getResponse()).toEqual({
-          message: 'Could not fetch that sheet',
-        });
-      });
-    });
-
-    it('maps a blocked import to 422 with the issues attached', async () => {
-      const { controller, importService } = makeController();
-      const preview = blockedPreview();
-      importService.confirmFromUrl.mockRejectedValue(
-        new ImportBlockedError(preview),
-      );
-
-      const promise = controller.confirmFromUrl({
-        sheetUrl: SHEET_URL,
-        joinCode: 'ABCDEF',
-      });
-
-      await expect(promise).rejects.toThrow(UnprocessableEntityException);
-      await promise.catch((error: UnprocessableEntityException) => {
-        expect(error.getResponse()).toMatchObject({ issues: preview.issues });
-      });
-    });
-
-    it('maps a locked import to 409 conflict', async () => {
-      const { controller, importService } = makeController();
-      importService.confirmFromUrl.mockRejectedValue(
-        new ImportLockedError('question_open'),
-      );
-
-      await expect(
-        controller.confirmFromUrl({ sheetUrl: SHEET_URL, joinCode: 'ABCDEF' }),
-      ).rejects.toThrow(ConflictException);
-    });
-
-    it('lets unexpected errors bubble up unchanged', async () => {
-      const { controller, importService } = makeController();
-      importService.confirmFromUrl.mockRejectedValue(new Error('db down'));
-
-      await expect(
-        controller.confirmFromUrl({ sheetUrl: SHEET_URL, joinCode: 'ABCDEF' }),
-      ).rejects.toThrow('db down');
     });
   });
 });

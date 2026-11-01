@@ -39,31 +39,6 @@ import {
   QuizStaleSaveError,
 } from '@/quiz/quiz.service';
 
-/** How a save differs from the editor's plain one — a re-import sheet's. */
-export interface LiveEditSaveStrategy {
-  /**
-   * The rounds the live-edit check compares with the stored ones: a sheet
-   * carries no question ids, so each question is taken to be the stored one
-   * at the same round and position.
-   */
-  identifyQuestions(
-    stored: readonly ImportRoundPreview[],
-    incoming: readonly ImportRoundPreview[],
-  ): ImportRoundPreview[];
-  /** Writes the rounds, in place of the editor's validating `QuizService.update`. */
-  persist(rounds: ImportRoundPreview[]): Promise<QuizDraftSaveResult>;
-}
-
-export interface LiveEditSaveOptions {
-  /**
-   * A session a re-import wants reloaded and broadcast after the save has
-   * landed. A lobby session is already reloaded by every save, so this only
-   * adds an ended session; a join code already reloaded is skipped.
-   */
-  reloadJoinCode?: string;
-  strategy?: LiveEditSaveStrategy;
-}
-
 interface PendingDelivery {
   joinCode: string;
   outcome: SessionOutcome;
@@ -157,14 +132,9 @@ export class LiveEditService {
    */
   async save(
     quizId: number,
-    { title, rounds: requestedRounds, loadedUpdatedAt }: QuizDraftSaveRequest,
-    { reloadJoinCode, strategy }: LiveEditSaveOptions = {},
+    { title, rounds, loadedUpdatedAt }: QuizDraftSaveRequest,
   ): Promise<QuizDraftSaveResult> {
     const deliveries: PendingDelivery[] = [];
-    const persist = (rounds: ImportRoundPreview[]) =>
-      strategy
-        ? strategy.persist(rounds)
-        : this.quizService.update(quizId, title, rounds);
     let result: QuizDraftSaveResult;
     try {
       result = await this.sessionWrite.hold(
@@ -179,9 +149,6 @@ export class LiveEditService {
           ) {
             throw new QuizStaleSaveError(quizId);
           }
-          const rounds = strategy
-            ? strategy.identifyQuestions(currentDraft.rounds, requestedRounds)
-            : requestedRounds;
           const foreign = findForeignQuestionIds(currentDraft.rounds, rounds);
           if (foreign.length > 0) throw new QuizDraftInvalidError(foreign);
           const answeredIds =
@@ -207,7 +174,7 @@ export class LiveEditService {
 
           const liveSessions = this.listLiveSessions(quizId);
           if (liveSessions.length === 0) {
-            const saved = await persist(requestedRounds);
+            const saved = await this.quizService.update(quizId, title, rounds);
             await this.reloadLobbySessions(quizId, held, deliveries);
             return saved;
           }
@@ -227,7 +194,7 @@ export class LiveEditService {
             frontier.openedQuestionIds,
           );
 
-          const result = await persist(rounds);
+          const result = await this.quizService.update(quizId, title, rounds);
           for (const { seededGame } of liveSessions) {
             deliveries.push({
               joinCode: seededGame.joinCode,
@@ -247,25 +214,6 @@ export class LiveEditService {
           return result;
         },
       );
-      if (
-        reloadJoinCode !== undefined &&
-        !deliveries.some((delivery) => delivery.joinCode === reloadJoinCode) &&
-        this.sessionWrite.read(reloadJoinCode).seededGame.quizId === quizId
-      ) {
-        deliveries.push({
-          joinCode: reloadJoinCode,
-          outcome: await this.sessionWrite.write(
-            reloadJoinCode,
-            quizEditChange(
-              this.seedService,
-              this.grading,
-              this.jokerChanges,
-              this.purchaseChanges,
-              [],
-            ),
-          ),
-        });
-      }
     } catch (error) {
       // Sessions reloaded before the failure still need their broadcast, but
       // a delivery problem must not hide the error that failed the save.

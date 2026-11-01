@@ -1832,16 +1832,11 @@ has no column, so it isn't exported. A `sort` or `match` question's scoring mode
 **CSV import mechanics**: the browser reads the uploaded file's text directly
 (`file.text()`) and POSTs it to `POST /import/preview`. The parsed
 rounds/questions load straight into the in-page editable draft; saving goes
-through the normal quiz endpoints above. The backend also exposes
-`POST /import/confirm` (upserts a quiz directly, keyed by title, only while a
-session is `lobby`/`ended`; when it overwrites that session's active quiz,
-the session reloads and rebroadcasts through the same `notifyQuizEdited` path
-as an editor save), but the current frontend doesn't call it — the shipped
-flow is preview → edit → save.
+through the normal quiz endpoints above. There is no server-side import that
+writes a quiz: the flow is preview → edit → save.
 
-**Google Sheets URL import mechanics**: `POST /import/preview-from-url` and
-`POST /import/confirm-from-url` accept a pasted `sheetUrl` instead of
-`csvText`. An earlier version of this rejected doing this server-side
+**Google Sheets URL import mechanics**: `POST /import/preview-from-url` accepts
+a pasted `sheetUrl` instead of `csvText`. An earlier version of this rejected doing this server-side
 entirely, over the SSRF risk of fetching a user-supplied URL from the
 backend. The mitigation actually shipped: `sheet-url-fetcher.ts` never
 fetches the pasted string — it validates the URL is `https://docs.google.com`

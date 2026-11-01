@@ -1,15 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@mikro-orm/nestjs';
-import {
-  createImportPreview,
-  type ImportConfirmResult,
-  type ImportPreview,
-  type ImportRoundPreview,
-} from '@campus-pubquiz/types';
-import { Quiz } from '@/db/entities/quiz.entity';
-import { QuizRepository } from '@/db/repositories/quiz.repository';
-import { LiveEditService } from '@/game/live-edit/live-edit.service';
-import { GameStateService } from '@/game/state/game-state.service';
+import { createImportPreview, type ImportPreview } from '@campus-pubquiz/types';
 import { assembleImportPreview } from '@/import/question-row.schema';
 import { parseSheetCsv, SheetFormatError } from '@/import/sheet-csv.parser';
 import {
@@ -18,55 +8,11 @@ import {
   SheetFetchError,
   type SheetCsvResult,
 } from '@/import/sheet-url-fetcher';
-import { QuizService, toSaveResult } from '@/quiz/quiz.service';
 
 const DEFAULT_QUIZ_TITLE = 'Imported Quiz';
 
-/** Statuses during which importing cannot corrupt a running game. */
-const IMPORTABLE_STATUSES = ['lobby', 'ended'];
-
-export class ImportBlockedError extends Error {
-  constructor(public readonly preview: ImportPreview) {
-    super(
-      `The sheet has ${preview.issues.length} validation issue(s) — fix them and re-upload`,
-    );
-    this.name = 'ImportBlockedError';
-  }
-}
-
-export class ImportLockedError extends Error {
-  constructor(status: string) {
-    super(
-      `Importing is only allowed in the lobby or after the quiz has ended (current status: "${status}")`,
-    );
-    this.name = 'ImportLockedError';
-  }
-}
-
-/** A sheet carries no question ids: each question is the stored question at the same round and position, as the plain sync of a sheet treats it, so the live-edit check compares like with like. */
-function withQuestionIdsBySlot(
-  stored: readonly ImportRoundPreview[],
-  incoming: readonly ImportRoundPreview[],
-): ImportRoundPreview[] {
-  return incoming.map((round, roundIndex) => ({
-    ...round,
-    questions: round.questions.map((question, questionIndex) => {
-      const questionId =
-        stored[roundIndex]?.questions[questionIndex]?.questionId;
-      return questionId === undefined ? question : { ...question, questionId };
-    }),
-  }));
-}
-
 @Injectable()
 export class ImportService {
-  constructor(
-    @InjectRepository(Quiz) private readonly quizzes: QuizRepository,
-    private readonly gameState: GameStateService,
-    private readonly quizService: QuizService,
-    private readonly liveEdit: LiveEditService,
-  ) {}
-
   /** Validates the uploaded CSV into a preview. Never writes, never throws. */
   preview(csvText: string, quizTitle?: string): ImportPreview {
     const title = quizTitle?.trim() || DEFAULT_QUIZ_TITLE;
@@ -113,96 +59,8 @@ export class ImportService {
     }
   }
 
-  /**
-   * Re-validates and saves the quiz. Idempotent keyed by quiz title: rounds
-   * and questions are upserted on their (parent, orderIndex) unique indexes
-   * so re-importing an edited sheet updates rows in place, and anything that
-   * vanished from the sheet is deleted.
-   */
-  async confirm(
-    csvText: string,
-    joinCode: string,
-    quizTitle?: string,
-  ): Promise<ImportConfirmResult> {
-    return this.confirmCsv(csvText, joinCode, quizTitle);
-  }
-
-  /**
-   * Same as `confirm`, but fetches the CSV from a pasted Google Sheets URL
-   * first. A fetch failure (`SheetFetchError`) propagates to the caller —
-   * unlike `previewFromUrl`, `confirm`-style methods already throw on
-   * failure (`ImportBlockedError`/`ImportLockedError`), so this fits that
-   * contract rather than the preview one.
-   */
-  async confirmFromUrl(
-    sheetUrl: string,
-    joinCode: string,
-    quizTitle?: string,
-  ): Promise<ImportConfirmResult> {
-    // Check the lock before fetching, so a locked game never triggers an
-    // outbound request to Google for a sheet that can't be imported anyway.
-    this.assertImportable(joinCode);
-    const { csvText, sheetName } = await this.fetchSheetCsvText(sheetUrl);
-    return this.confirmCsv(csvText, joinCode, quizTitle ?? sheetName);
-  }
-
-  private assertImportable(joinCode: string): void {
-    const status = this.gameState.getSnapshot(joinCode).progress.status;
-    if (!IMPORTABLE_STATUSES.includes(status)) {
-      throw new ImportLockedError(status);
-    }
-  }
-
   private async fetchSheetCsvText(sheetUrl: string): Promise<SheetCsvResult> {
     const { spreadsheetId, gid } = parseGoogleSheetUrl(sheetUrl);
     return fetchSheetCsv(spreadsheetId, gid);
-  }
-
-  private async confirmCsv(
-    csvText: string,
-    joinCode: string,
-    quizTitle?: string,
-  ): Promise<ImportConfirmResult> {
-    this.assertImportable(joinCode);
-
-    const preview = this.preview(csvText, quizTitle);
-    if (!preview.isImportable) {
-      throw new ImportBlockedError(preview);
-    }
-
-    const quizId = await this.upsertQuiz(preview.quizTitle);
-    // Checked against any session playing the quiz and applied under their
-    // held writes, like an editor save. The importing session's lobby/ended
-    // screens get the new rounds broadcast too, instead of keeping the old
-    // ones until the next press. With no live session it writes exactly as
-    // a re-import always has (the sheet is already validated), not through
-    // the editor's validating update.
-    return this.liveEdit.save(
-      quizId,
-      { title: preview.quizTitle, rounds: preview.rounds },
-      {
-        reloadJoinCode: joinCode,
-        strategy: {
-          identifyQuestions: withQuestionIdsBySlot,
-          persist: async (rounds) => {
-            const updatedAt = await this.quizService.syncRoundsAndQuestions(
-              quizId,
-              rounds,
-            );
-            return toSaveResult(quizId, rounds, updatedAt);
-          },
-        },
-      },
-    );
-  }
-
-  private async upsertQuiz(title: string): Promise<number> {
-    const existing = await this.quizzes.findOne({ title }, { fields: ['id'] });
-    if (existing) {
-      return existing.id;
-    }
-    const created = this.quizzes.create({ title });
-    await this.quizzes.getEntityManager().persistAndFlush(created);
-    return created.id;
   }
 }
