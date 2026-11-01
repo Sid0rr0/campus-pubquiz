@@ -6,10 +6,10 @@ Parent spec: `.scratch/e2e-power-ups/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] A shot award brings +2 coins, with a toast on the phone.
 - [x] A manual give and a manual take change the phone's balance, and no points move.
 - [x] The Coins column in the Teams table follows each change.
 - [x] `coin_award` is in `MOVES` and recorded.
-- [ ] Passes `--repeat-each=5`.
+- [x] Passes `--repeat-each=5`.
