@@ -1,6 +1,7 @@
 import { test as base, expect } from '../fixtures';
 import { awardBonus, expectTeamsTablePoints } from '../support/bonus';
 import { recordMove } from '../support/coverage';
+import { E2E_LOCK_GRACE_SECONDS } from '../support/env';
 import {
   awardCoins,
   buyPowerUp,
@@ -10,8 +11,20 @@ import {
   POWER_UP_NIGHT,
   seedPowerUpSession,
 } from '../support/power-ups';
+import {
+  POWER_UP_TABLE_WITH_TWO_PINS,
+  QUESTION_POWER_UPS,
+  QUESTION_POWER_UPS_COINS,
+  buyQuestionPowerUp,
+  disabledOptions,
+  peekAtShop,
+  pinnedItem,
+} from '../support/question-power-ups';
+import { snap } from '../support/snapshots';
 
-const { multipleChoice } = POWER_UP_NIGHT.helps;
+const { helps } = POWER_UP_NIGHT;
+const { multipleChoice } = helps;
+const MC_OPTIONS = ['Venus', 'Mars', 'Jupiter', 'Saturn'];
 
 // Ask the room costs 3 coins by default: one purchase empties the balance.
 const ask = base.extend({
@@ -34,6 +47,19 @@ const coinAwardTest = base.extend({
         `Coin awards ${Date.now().toString(36)}`,
         { startingCoins: 0 },
       ),
+    );
+  },
+});
+
+const questionPowerUpsTest = base.extend({
+  session: async ({ adminApi }, use) => {
+    const quizTitle = `Question power-ups ${Date.now().toString(36)}`;
+    await use(
+      await seedPowerUpSession(adminApi, quizTitle, {
+        lockGraceSeconds: E2E_LOCK_GRACE_SECONDS,
+        startingCoins: QUESTION_POWER_UPS_COINS,
+        powerUps: POWER_UP_TABLE_WITH_TWO_PINS,
+      }),
     );
   },
 });
@@ -123,5 +149,116 @@ coinAwardTest(
     await expectCoins(phone, 4);
     await expectTeamsTableCoins(control, phone.teamName, 4);
     await expectTeamsTablePoints(control, phone.teamName, 1, 1);
+  },
+);
+
+questionPowerUpsTest(
+  'question power-ups: a team buys each help in round 1 and the effects show on the phone, /control and /display',
+  async ({ control, display, joinPhone }) => {
+    const phone = await joinPhone('Team A');
+    await control.startQuiz();
+    await control.advance('round_intro');
+
+    // 1. 50/50 removes two options and never the right one.
+    await control.advance('question_open');
+    await phone.expectQuestion(helps.multipleChoice.prompt);
+    await expectCoins(phone, QUESTION_POWER_UPS_COINS);
+    await peekAtShop(phone, () => snap(phone, 'question_open', 'shop'));
+    await buyQuestionPowerUp(phone, QUESTION_POWER_UPS.fiftyFifty);
+    await expectCoins(phone, QUESTION_POWER_UPS_COINS - 2);
+    await expect.poll(() => disabledOptions(phone, MC_OPTIONS)).toHaveLength(2);
+    expect(await disabledOptions(phone, MC_OPTIONS)).not.toContain(
+      helps.multipleChoice.key,
+    );
+    await phone.submitChoice(helps.multipleChoice.key);
+
+    // 2. The two hints for the free text's key.
+    await control.advance('question_open');
+    await phone.expectQuestion(helps.freeText.prompt);
+    await buyQuestionPowerUp(phone, QUESTION_POWER_UPS.firstLetter);
+    await expect(phone.page.getByText('First letter: P')).toBeVisible();
+    await buyQuestionPowerUp(phone, QUESTION_POWER_UPS.letterCount);
+    await expect(phone.page.getByText('Letter count: _____')).toBeVisible();
+    await expectCoins(phone, QUESTION_POWER_UPS_COINS - 2 - 2 - 1);
+    await phone.submitText(helps.freeText.key);
+
+    // 3. Pin one on the sort and on the match: one 📌 and one disabled handle each.
+    await control.advance('question_open');
+    await phone.expectQuestion(helps.sort.prompt);
+    await buyQuestionPowerUp(phone, QUESTION_POWER_UPS.pinOne);
+    await pinnedItem(phone);
+    await phone.page
+      .getByRole('button', { name: 'Submit', exact: true })
+      .click();
+    await expect(phone.page.getByText(/Submitted:/)).toBeVisible();
+
+    await control.advance('question_open');
+    await phone.expectQuestion(helps.match.prompt);
+    await buyQuestionPowerUp(phone, QUESTION_POWER_UPS.pinOne);
+    const pinnedMatchItem = await pinnedItem(phone);
+    await phone.page
+      .getByRole('button', { name: 'Submit', exact: true })
+      .click();
+    await expect(phone.page.getByText(/Submitted:/)).toBeVisible();
+
+    // 4. Wider margin after submitting 215 (key 200, 5%): no second submit.
+    await control.advance('question_open');
+    await phone.expectQuestion(helps.numeric.prompt);
+    await phone.submitText('215');
+    await buyQuestionPowerUp(phone, QUESTION_POWER_UPS.widerMargin);
+    await expectCoins(phone, 0);
+
+    // 5. A reload keeps the removed options and the pinned item.
+    await phone.reload();
+    await phone.openQuestion(1, 1);
+    await phone.expectQuestion(helps.multipleChoice.prompt);
+    await expect.poll(() => disabledOptions(phone, MC_OPTIONS)).toHaveLength(2);
+    expect(await disabledOptions(phone, MC_OPTIONS)).not.toContain(
+      helps.multipleChoice.key,
+    );
+    await phone.openQuestion(1, 4);
+    await phone.expectQuestion(helps.match.prompt);
+    expect(await pinnedItem(phone)).toBe(pinnedMatchItem);
+
+    // 6. /control labels the answers with the power-ups used.
+    await control.selectQuestion(helps.title, 5);
+    await expect(control.answerRow(phone.teamName)).toContainText(
+      'Wider margin',
+    );
+    await snap(control, 'question_open', 'power-ups');
+
+    await control.advance('locking');
+    await control.expectStatus('break_intro');
+    const labelsByQuestion: [number, string[]][] = [
+      [1, ['50/50']],
+      [2, ['First letter', 'Letter count']],
+      [3, ['Pin one']],
+      [4, ['Pin one']],
+      [5, ['Wider margin']],
+    ];
+    for (const [questionNumber, labels] of labelsByQuestion) {
+      await control.selectQuestion(helps.title, questionNumber);
+      for (const label of labels) {
+        await expect(control.answerRow(phone.teamName)).toContainText(label);
+      }
+    }
+
+    // 7. /display counts the power-ups at each reveal; the late wider margin made 215 right.
+    await control.advance('reveal_intro');
+    await control.advance('reveal');
+    await display.expectText('Power-ups used: 50/50 ×1');
+    await control.advance('reveal');
+    await display.expectText(
+      'Power-ups used: First letter ×1 · Letter count ×1',
+    );
+    await control.advance('reveal');
+    await display.expectText('Power-ups used: Pin one ×1');
+    await control.advance('reveal');
+    await display.expectText('Power-ups used: Pin one ×1');
+    await control.advance('reveal');
+    await display.expectText('Power-ups used: Wider margin ×1');
+    await snap(display, 'reveal', 'power-ups');
+    await phone.expectRevealedAnswer('215');
+    await phone.expectRevealedPoints(2, 2);
   },
 );

@@ -23,6 +23,8 @@ export interface SessionSettingsInput {
   jokersEnabled?: boolean;
   powerUpsEnabled?: boolean;
   startingCoins?: number;
+  /** The whole power-up table (the backend takes it complete or not at all). */
+  powerUps?: Record<string, { cost: number; maxUses: number }>;
 }
 
 export interface SeededSession {

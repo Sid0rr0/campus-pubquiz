@@ -63,6 +63,12 @@ export const MOVES = [
   'power_up_ask_the_room',
   /** The quiz master gives or takes coins through the award form. */
   'coin_award',
+  /** A team buys the question power-up on a phone. */
+  'power_up_fifty_fifty',
+  'power_up_first_letter',
+  'power_up_letter_count',
+  'power_up_pin_one',
+  'power_up_wider_margin',
 ] as const;
 export type Move = (typeof MOVES)[number];
 
