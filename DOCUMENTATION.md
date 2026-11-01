@@ -60,7 +60,10 @@ the data model live in [`docs/architecture.md`](docs/architecture.md).
 The big screen survives a dropped connection. While socket.io retries it keeps
 the last frame and shows a small "Reconnecting…" badge in the corner, then
 resyncs on its own; it goes back to the picker only when the server refuses the
-code (`io server disconnect`, e.g. "Unknown game session code"). `useGameConnection`
+code (`io server disconnect`). A refusal shows the reason the server sent just
+before disconnecting ("Unknown game session code", "Invalid or expired
+session"), and `/control` and `/remote` leave for the session picker only on a
+refusal, never while socket.io is still retrying. `useGameConnection`
 reports this as `connectionIssue`: `reconnecting` or `refused`. The screen
 remembers the last code it showed in localStorage (every access wrapped in
 try/catch), so a reload or a bare `/display` resumes that session, falling back
@@ -224,8 +227,8 @@ answer step, so neither button is offered until the walk reaches it. The admin v
 (`canReplayMedia`, `canPauseMedia`, plus start/end/close, the join overlay
 toggle, answer status and the teams tied for first) is read from the Display
 screen on air, so the buttons and `/display` can't disagree. On `/remote`, Space pauses/resumes while the
-button is shown, under the same rules as on `/control` (ignored in form fields
-and with modifier keys); it is `/remote`'s only shortcut. Browsers may refuse the
+button is shown, under the same rules as on `/control` (ignored in form fields,
+with modifier keys and for a held key's repeats); it is `/remote`'s only shortcut. Browsers may refuse the
 display's `play()` on resume if it has had no user interaction (autoplay
 policy); a rejection is ignored and the moderator can press Resume again. A
 standing pause is re-applied to a video file once it has loaded. "Play again"
@@ -255,7 +258,10 @@ the raw `Cookie` header sent with the socket handshake (the browser attaches
 it automatically since the `withCredentials: true` client option is set) —
 there is no separate shared handshake password. Every connection immediately
 receives a full state snapshot (`STATE_SYNC`) — reconnection is a first-class
-feature, since phones sleep and venue Wi-Fi drops. If a session expires or is
+feature, since phones sleep and venue Wi-Fi drops: every page that holds a socket
+(`/play`, `/display`, `/control`, `/remote`) opens a fresh one when the device
+wakes after 5 seconds or more hidden, comes back from the back/forward cache, or
+regains its network. If a session expires or is
 revoked mid-event, only that one admin socket drops — live game state lives
 server-side independent of any admin connection, so `display`/`players`
 clients are unaffected; the admin just reconnects with a fresh token.
@@ -423,7 +429,7 @@ fanfare.
 
 The **Countdown sound** setting (`playLockCountdownSound`, on by default; the
 field keeps its name) governs both countdowns: the lock-countdown track, which
-plays on `/display` from `questionLockAt` and ends as the block locks, and the
+plays on `/display` from `questionLockAt` and ends as the block locks (with a lock grace over 60 seconds it waits until 60 seconds remain), and the
 same 60-second track from the joker pick's deadline (`jokerPickEndsAt` on the
 display view), which plays from the moment the pick opens, ends as it closes,
 stops if it closes early and keeps playing under the join overlay. Time-up on
@@ -1502,7 +1508,8 @@ without the field reads as not hidden.
 submits, and the admin can still override any of them per answer;
 `free_text` (grading mode `match-or-human`) is graded
 correct at submit when the answer matches the key, incorrect (0 points) when
-the team answered "I don't know", and otherwise left ungraded
+the team answered "I don't know" or sent a blank answer (what taking "I don't
+know" back sends), and otherwise left ungraded
 for the admin, who can override any of them too. A revision that matches is
 graded correct (replacing any earlier grade); a revision that doesn't match
 and differs from the previous value goes back to ungraded, even if the admin
@@ -1597,6 +1604,8 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   `loadedUpdatedAt` (a re-import, an API client) is not checked. With no
   session on the quiz the check and the write are not locked together, so two
   saves in the same instant could both pass.
+- Closing or reloading the tab with unsaved changes asks first; there is no
+  autosave.
 - Export the quiz's questions with **Export CSV** in the header bar.
 - **Preview** in the header bar (once the quiz is saved) opens the saved quiz's
   [Quiz preview](#quiz-preview) in a new tab. With unsaved changes the editor
@@ -1976,7 +1985,8 @@ on an older schema version keep working without a data migration.
   send it automatically (`credentials: 'include'`); the Socket.IO handshake
   reads it from the raw `Cookie` header (`extractSessionCookie`), since
   `cookie-parser`'s Express middleware doesn't run on the WS upgrade.
-  Deactivating a user revokes all of its sessions immediately. The first
+  Deactivating a user revokes all of its sessions immediately (the users page asks
+to confirm Deactivate and Deny). The first
   admin account is bootstrapped at startup from
   `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` env vars, since
   self-registration alone can't produce the first approver.
