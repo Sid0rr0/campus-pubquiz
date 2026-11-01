@@ -6,7 +6,9 @@
 import path from 'node:path';
 import { expect, type APIRequestContext } from '@playwright/test';
 import type { SeededSession, SessionSettingsInput } from './api';
+import { recordMove } from './coverage';
 import { seedCsvSession } from './csv-session';
+import type { ControlScreen } from './screens/control-screen';
 import { PATHS } from './env';
 import type { PhoneScreen } from './screens/phone-screen';
 
@@ -68,6 +70,48 @@ export async function openShop(phone: PhoneScreen) {
   const drawer = phone.page.getByRole('dialog', { name: 'Power-ups' });
   await expect(drawer).toBeVisible();
   return drawer;
+}
+
+/** Gives (or, negative, takes) `coins` from `teamName` through the award form on /control, with no points, and waits for the form to close. */
+export async function awardCoins(
+  control: ControlScreen,
+  teamName: string,
+  coins: number,
+): Promise<void> {
+  const { page } = control;
+  await page.getByRole('button', { name: `Actions for ${teamName}` }).click();
+  await page.getByRole('menuitem', { name: 'Award bonus' }).click();
+  const dialog = page.getByRole('dialog', {
+    name: `Award bonus — ${teamName}`,
+  });
+  await dialog.getByLabel('Coin award').fill(String(coins));
+  await dialog.getByRole('button', { name: 'Award' }).click();
+  await expect(dialog).toHaveCount(0);
+  recordMove('coin_award');
+}
+
+/** The Coins column of the Teams table shows `coins` on the team's row. */
+export async function expectTeamsTableCoins(
+  control: ControlScreen,
+  teamName: string,
+  coins: number,
+): Promise<void> {
+  const { page } = control;
+  const table = page.getByRole('table').filter({
+    has: page.getByRole('columnheader', { name: 'Coins', exact: true }),
+  });
+  const headers = (await table.getByRole('columnheader').allTextContents()).map(
+    (header) => header.trim(),
+  );
+  const index = headers.indexOf('Coins');
+  expect(index, `Coins column in [${headers}]`).toBeGreaterThanOrEqual(0);
+  await expect(
+    table
+      .getByRole('row')
+      .filter({ hasText: teamName })
+      .getByRole('cell')
+      .nth(index),
+  ).toHaveText(String(coins));
 }
 
 /** Buys the power-up (by its label, "50/50") from the shop; the drawer closes once the server has accepted it. */

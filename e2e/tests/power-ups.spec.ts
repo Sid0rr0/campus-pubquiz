@@ -1,8 +1,11 @@
 import { test as base, expect } from '../fixtures';
+import { awardBonus, expectTeamsTablePoints } from '../support/bonus';
 import { recordMove } from '../support/coverage';
 import {
+  awardCoins,
   buyPowerUp,
   expectCoins,
+  expectTeamsTableCoins,
   openShop,
   POWER_UP_NIGHT,
   seedPowerUpSession,
@@ -18,6 +21,18 @@ const ask = base.extend({
         adminApi,
         `Ask the room ${Date.now().toString(36)}`,
         { ...sessionSettings, startingCoins: 3 },
+      ),
+    );
+  },
+});
+
+const coinAwardTest = base.extend({
+  session: async ({ adminApi }, use) => {
+    await use(
+      await seedPowerUpSession(
+        adminApi,
+        `Coin awards ${Date.now().toString(36)}`,
+        { startingCoins: 0 },
       ),
     );
   },
@@ -74,5 +89,39 @@ ask(
     for (const phone of [...answerers, buyer]) {
       await expect(split).not.toContainText(phone.teamName);
     }
+  },
+);
+
+coinAwardTest(
+  'coin awards: a shot brings 2 coins, a manual give and take move the balance and no points',
+  async ({ control, joinPhone }) => {
+    const phone = await joinPhone('Team A');
+    await control.expectTeams([phone.teamName]);
+    await control.startQuiz();
+    await control.advance('round_intro');
+    await control.advance('question_open');
+    await expectCoins(phone, 0);
+    await expectTeamsTableCoins(control, phone.teamName, 0);
+
+    // 1. A shot award is 1 point and +2 coins, with a toast on the phone.
+    await awardBonus(control, phone.teamName, 'shot', 1);
+    await expect(phone.page.getByText('+2 coins')).toBeVisible();
+    await expectCoins(phone, 2);
+    await expectTeamsTableCoins(control, phone.teamName, 2);
+    await expectTeamsTablePoints(control, phone.teamName, 1, 1);
+
+    // 2. A manual give changes the balance only.
+    await awardCoins(control, phone.teamName, 5);
+    await expect(phone.page.getByText('+5 coins')).toBeVisible();
+    await expectCoins(phone, 7);
+    await expectTeamsTableCoins(control, phone.teamName, 7);
+    await expectTeamsTablePoints(control, phone.teamName, 1, 1);
+
+    // 3. A manual take does too.
+    await awardCoins(control, phone.teamName, -3);
+    await expect(phone.page.getByText('-3 coins')).toBeVisible();
+    await expectCoins(phone, 4);
+    await expectTeamsTableCoins(control, phone.teamName, 4);
+    await expectTeamsTablePoints(control, phone.teamName, 1, 1);
   },
 );
