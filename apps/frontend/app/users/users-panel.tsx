@@ -14,6 +14,7 @@ import {
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
+import { ConfirmDialog } from '@/app/components/confirm-dialog';
 
 export function UsersPanel() {
   const queryClient = useQueryClient();
@@ -141,15 +142,22 @@ export function UsersPanel() {
                 <CheckIcon aria-hidden="true" />
                 Approve
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => handleDeny(pendingUser.id)}
-                className="rounded-lg border-2 border-magenta font-extrabold text-magenta"
-              >
-                <Cross2Icon aria-hidden="true" />
-                Deny
-              </Button>
+              <ConfirmDialog
+                trigger={
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-lg border-2 border-magenta font-extrabold text-magenta"
+                  >
+                    <Cross2Icon aria-hidden="true" />
+                    Deny
+                  </Button>
+                }
+                title={`Deny ${pendingUser.username}?`}
+                description="This deletes the pending account. They would have to register again."
+                confirmLabel="Deny"
+                onConfirm={() => handleDeny(pendingUser.id)}
+              />
             </li>
           ))}
         </ul>
@@ -167,15 +175,22 @@ export function UsersPanel() {
               <span className="text-sm text-foreground/60">
                 {activeUser.role}
               </span>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => handleDeactivate(activeUser.id)}
-                className="ml-auto rounded-lg border-2 border-magenta font-extrabold text-magenta"
-              >
-                <LockClosedIcon aria-hidden="true" />
-                Deactivate
-              </Button>
+              <ConfirmDialog
+                trigger={
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="ml-auto rounded-lg border-2 border-magenta font-extrabold text-magenta"
+                  >
+                    <LockClosedIcon aria-hidden="true" />
+                    Deactivate
+                  </Button>
+                }
+                title={`Deactivate ${activeUser.username}?`}
+                description="They are signed out at once and cannot sign in again. This page has no way to undo it."
+                confirmLabel="Deactivate"
+                onConfirm={() => handleDeactivate(activeUser.id)}
+              />
             </li>
           ))}
         </ul>

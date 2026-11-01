@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UsersPanel } from '@/app/users/users-panel';
@@ -76,26 +76,48 @@ describe('UsersPanel', () => {
     expect(mockFetchUsers).toHaveBeenCalledTimes(2);
   });
 
-  it('denies a pending user', async () => {
+  it('denies a pending user only after the admin confirms', async () => {
     const user = userEvent.setup();
     mockDenyUser.mockResolvedValue(undefined);
     renderWithQuery(<UsersPanel />);
     await waitFor(() => screen.getByText('bob'));
 
     await user.click(screen.getByRole('button', { name: /deny/i }));
+    expect(mockDenyUser).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent(/bob/);
+    await user.click(within(dialog).getByRole('button', { name: /^deny$/i }));
 
     await waitFor(() => expect(mockDenyUser).toHaveBeenCalledWith(5));
   });
 
-  it('deactivates an active user', async () => {
+  it('deactivates an active user only after the admin confirms', async () => {
     const user = userEvent.setup();
     mockDeactivateUser.mockResolvedValue(undefined);
     renderWithQuery(<UsersPanel />);
     await waitFor(() => screen.getByText('alice'));
 
     await user.click(screen.getByRole('button', { name: /deactivate/i }));
+    expect(mockDeactivateUser).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent(/alice/);
+    await user.click(
+      within(dialog).getByRole('button', { name: /^deactivate$/i }),
+    );
 
     await waitFor(() => expect(mockDeactivateUser).toHaveBeenCalledWith(1));
+  });
+
+  it('leaves the user alone when the admin cancels the confirmation', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<UsersPanel />);
+    await waitFor(() => screen.getByText('alice'));
+
+    await user.click(screen.getByRole('button', { name: /deactivate/i }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: /cancel/i }));
+
+    expect(mockDeactivateUser).not.toHaveBeenCalled();
   });
 
   it('shows an error alert when the initial fetch fails', async () => {
