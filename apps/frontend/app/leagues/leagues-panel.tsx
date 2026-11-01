@@ -312,10 +312,14 @@ export function LeaguesPanel() {
         signal,
       ),
   });
+  // Bumped after a create so the form remounts empty; a second click would otherwise duplicate the league.
+  const [newFormRun, setNewFormRun] = useState(0);
   const createMutation = useMutation({
     mutationFn: (fields: LeagueFields) => createLeague(fields),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all }),
+    onSuccess: () => {
+      setNewFormRun((run) => run + 1);
+      return queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
+    },
     onError: toastError('Could not create league'),
   });
 
@@ -352,6 +356,7 @@ export function LeaguesPanel() {
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-lg">New league</h2>
         <LeagueForm
+          key={newFormRun}
           label="New league"
           initial={{ name: '', startsOn: '', endsOn: '' }}
           submitLabel="Create league"

@@ -113,6 +113,42 @@ describe('LeaguesPanel', () => {
     );
   });
 
+  it('clears the new-league form once the league is created, so a second click cannot duplicate it', async () => {
+    const user = userEvent.setup();
+    api.createLeague.mockResolvedValue({ ...LEAGUE, id: 2 });
+    renderWithQuery(<LeaguesPanel />);
+    await screen.findByText('Autumn 2026');
+
+    const form = screen.getByRole('form', { name: /new league/i });
+    await user.type(within(form).getByLabelText(/name/i), 'Spring 2027');
+    await user.type(within(form).getByLabelText(/starts/i), '2027-02-01');
+    await user.type(within(form).getByLabelText(/ends/i), '2027-06-01');
+    await user.click(within(form).getByRole('button', { name: /create/i }));
+
+    // The form remounts, so look it up again rather than reading the old one.
+    await waitFor(() => {
+      const fresh = screen.getByRole('form', { name: /new league/i });
+      expect(within(fresh).getByLabelText(/name/i)).toHaveValue('');
+      expect(within(fresh).getByLabelText(/starts/i)).toHaveValue('');
+    });
+  });
+
+  it('keeps what was typed when creating the league fails', async () => {
+    const user = userEvent.setup();
+    api.createLeague.mockRejectedValue(new Error('nope'));
+    renderWithQuery(<LeaguesPanel />);
+    await screen.findByText('Autumn 2026');
+
+    const form = screen.getByRole('form', { name: /new league/i });
+    await user.type(within(form).getByLabelText(/name/i), 'Spring 2027');
+    await user.type(within(form).getByLabelText(/starts/i), '2027-02-01');
+    await user.type(within(form).getByLabelText(/ends/i), '2027-06-01');
+    await user.click(within(form).getByRole('button', { name: /create/i }));
+
+    await waitFor(() => expect(api.createLeague).toHaveBeenCalled());
+    expect(within(form).getByLabelText(/name/i)).toHaveValue('Spring 2027');
+  });
+
   it('edits a league name and dates', async () => {
     const user = userEvent.setup();
     api.updateLeague.mockResolvedValue(LEAGUE);
