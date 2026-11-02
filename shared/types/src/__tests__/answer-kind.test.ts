@@ -128,3 +128,24 @@ describe('every question type scores through its answer format', () => {
     }
   });
 });
+
+describe('sort one_off scoring', () => {
+  const sort = (answer: string) =>
+    scoreSubmission(
+      { type: 'sort', answer: 'a|b|c|d', points: 10, scoringMode: 'one_off' },
+      answer,
+    );
+
+  it('gives half points for exactly two items swapped', () => {
+    expect(sort('b|a|c|d')).toEqual({ points: 5, verdict: 'partial' });
+  });
+
+  it('gives nothing for two wrong slots that are not a swap', () => {
+    expect(sort('c|d|a|b').verdict).toBe('incorrect');
+    expect(sort('b|c|a|d').verdict).toBe('incorrect');
+  });
+
+  it('gives nothing for a wrong item count, even with a matching prefix', () => {
+    expect(sort('b|a').verdict).toBe('incorrect');
+  });
+});

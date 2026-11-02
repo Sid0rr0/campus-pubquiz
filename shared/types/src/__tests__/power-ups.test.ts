@@ -15,6 +15,7 @@ import {
   powerUpApplies,
   purchaseEffectSchema,
   purchaseRefusal,
+  removedOptionsOf,
   teamCoins,
   textHint,
   visibleRoundTitle,
@@ -247,6 +248,19 @@ describe('askTheRoomSplit', () => {
       A: 34,
       B: 33,
       C: 33,
+    });
+  });
+
+  it('hands equal-remainder leftovers to the earliest options in order', () => {
+    const seven = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    expect(askTheRoomSplit(seven, seven)).toEqual({
+      A: 15,
+      B: 15,
+      C: 14,
+      D: 14,
+      E: 14,
+      F: 14,
+      G: 14,
     });
   });
 
@@ -514,8 +528,19 @@ describe('isPinOffPlace', () => {
     expect(isPinOffPlace('match', 'A|B|C', pin)).toBe(false);
   });
 
+  it('is false for an answer that is no list', () => {
+    expect(isPinOffPlace('number', 'A', pin)).toBe(false);
+    expect(isPinOffPlace('text', 'B|A', pin)).toBe(false);
+  });
+
   it('is false without a pin, and for an answer the pin is not in', () => {
     expect(isPinOffPlace('sort', 'B|A|C', undefined)).toBe(false);
     expect(isPinOffPlace('sort', "I don't know", pin)).toBe(false);
+  });
+});
+
+describe('removedOptionsOf', () => {
+  it('is empty when no 50/50 was bought for the question', () => {
+    expect(removedOptionsOf(1, [])).toEqual([]);
   });
 });
