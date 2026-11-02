@@ -630,6 +630,22 @@ describe('buildQuizPreview, host-only text', () => {
     });
   });
 
+  it('moves notes shown at the reveal from the host-only panel onto the reveal screen', () => {
+    const rounds = [
+      round(1, [question(1)], {
+        questionNotesById: { 1: 'The story' },
+        questionIdsWithNotesAtReveal: [1],
+      }),
+    ];
+    const { steps } = buildQuizPreview(rounds, 'night');
+    const stepOf = (kind: string) =>
+      steps.find((step) => step.screen.kind === kind);
+
+    expect(stepOf('reveal')?.screen).toMatchObject({ notes: 'The story' });
+    expect(stepOf('reveal')?.hostOnly.questionNote).toBeNull();
+    expect(stepOf('question')?.hostOnly.questionNote).toBe('The story');
+  });
+
   it('keeps a round note shown on screen on the reveal intro but off the round intro', () => {
     const rounds = [
       round(1, [question(1)], {

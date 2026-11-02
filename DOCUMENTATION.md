@@ -130,7 +130,7 @@ behaviour of each status.
 | `break`             | One locked question under break review (prompt + media, no answer)                                                                                                                                                                                                                                                            | Block browser, read-only                                                                                                                                                                                                                                             | `PREVIOUS` from `break_intro` (lands on the block's last question) or from a later question                                                          | The next question in the block; from the block's last question, `reveal_intro` (same ungraded check)                   |
 | `break_round_intro` | Round title card: "ROUND N", title — no answers implied                                                                                                                                                                                                                                                                       | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | `PREVIOUS` across the start of a round during break review                                                                                           | Back into `break` on the same question                                                                                 |
 | `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                                                                                                                                                                                                                                                                        | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                                        | `reveal` on that round's first question                                                                                |
-| `reveal`            | One question with its correct answer (and `answer_media_url`)                                                                                                                                                                                                                                                                 | Block browser with the team's answer ("Your answer", coloured by its Verdict: green correct, cyan partial, magenta incorrect or no answer), the correct answer and points; a sort answer is listed item by item, each marked ✓ or ✗ for sitting in its correct slot (not for no answer or "I don't know", and still shown when the moderator overrode the points)                                                                                            | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                                           | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
+| `reveal`            | One question with its correct answer (and `answer_media_url`), and its Question notes when set to show                                                                                                                                                                                                                                                                 | Block browser with the team's answer ("Your answer", coloured by its Verdict: green correct, cyan partial, magenta incorrect or no answer), the correct answer and points; a sort answer is listed item by item, each marked ✓ or ✗ for sitting in its correct slot (not for no answer or "I don't know", and still shown when the moderator overrode the points)                                                                                            | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                                           | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
 | `ended`             | Final screen (a podium of the top three in three colours at the top, "Quiz complete!", the other teams with their places in a scrolling row like the lobby roster, and a thank-you — with "Tell us how it went on your phone ★" when feedback is collected), or an active showdown; confetti and a fanfare when the quiz ends live | "Quiz complete!", the team's final placing ("You finished 4th of 12", "Joint 2nd" for a tie; confetti for ranks 1–3), then the final feedback form (pacing and felt difficulty, then every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                                        | —                                                                                                                      |
 
 `joker_pick` belongs to no status group (it is pre-quiz like `round_overview`).
@@ -304,7 +304,8 @@ what it draws:
 | `round_title`                                      | `roundNumber`, `title`, `category`, `author`, `note` ('' when the round has none or hides its note)                                                                                                                                                                                       |
 | `break_round_title`                                | `roundNumber`, `title`, `note`                                                                                                                                                                                                                                                            |
 | `reveal_intro`                                     | `roundNumber`, `title`                                                                                                                                                                                                                                                                    |
-| `question`, `break_review`, `reveal`               | The question being drawn                                                                                                                                                                                                                                                                  |
+| `question`, `break_review` | The question being drawn |
+| `reveal` | The question being drawn, `notes` (the Question notes; `''` unless shown at the reveal and the answer is on air) |
 | `locking`                                          | `lockAt`                                                                                                                                                                                                                                                                                  |
 | `break_intro`                                      | `roundNumber`, `breakNumber`, `isFinalBreak` (hides the bonus list), `isFeedbackPromptShown`, `funFacts`, `breakEndsAt`                                                                                                                                                                   |
 | `leaderboard`                                      | `board`, `revealCount`, `isFinal` (the quiz has ended, or this is the last break, which crowns the winners)                                                                                                                                                                               |
@@ -1578,7 +1579,17 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   any round while live — `findLiveEditViolations` ignores it, and the live edit
   re-seeds running sessions.
 - **Question notes** (`Question.notes`) are what the quiz master reads about a
-  question, never on a broadcast view. `/remote` gets them in the presenter
+  question, and stay off every broadcast view unless the question's **Show on
+  screen at reveal** checkbox (`Question.showNotesAtReveal`, off by default,
+  disabled while the notes are blank, saved as off with no notes) is ticked. Then
+  the Display screen's `notes` on the `reveal` kind carries them, drawn under the
+  answer (line breaks kept, display text scale applied): straight away on a
+  normal reveal, and on a closest-guess reveal only once its answer step is on
+  air, so never on `closest_guess_pending`. `checkQuestion` caps ticked notes at
+  `REVEAL_NOTES_MAX_LENGTH` (500), and a longer ticked note is rejected like any
+  invalid draft. Phones never get them, and the setting and the notes stay
+  editable while live. The Quiz preview draws them on the reveal step and drops
+  them from its host-only panel there. `/remote` gets them in the presenter
   context for whichever question the on-air screen shows; `/control` reads
   `QuizSummaryQuestion.notes` from `GET /quizzes` (login required) and shows the
   selected question's as one line under its correct answer. Both go through
@@ -1635,7 +1646,8 @@ or counted. It is a read of the quiz.
   order is switched; a position the order doesn't have opens the first step.
 - **Host-only panel and fullscreen**: a panel labelled "Host only" beside the
   frame shows the current step's text the room never sees: the question's
-  notes (on its question and answer screens) and the round note on a round's
+  notes (on its question and answer screens, except an answer screen that draws
+  them) and the round note on a round's
   title card when the round doesn't show it on the big screen (a note shown on
   screen is on the card and isn't repeated) and on its reveal intro (in the
   "like the night" order), where the big screen never draws it. The text
@@ -1833,10 +1845,11 @@ whatever the order of its fields.
 
 **CSV export mechanics**: purely client-side — `quizToCsv`
 (`apps/frontend/app/lib/quiz-csv-export.ts`) serializes the editor's current
-draft (unsaved edits included) into the same 14-column format the importer
+draft (unsaved edits included) into the same 15-column format the importer
 reads, so an exported file re-imports as-is. `break_after`, `category`,
 `author`, `round_note`, and `show_round_note` all land on each round's last
-row (`show_round_note` is blank when the setting is off); `match` answers are rebuilt as
+row (`show_round_note` is blank when the setting is off); `show_note` stays on
+its question's own row, blank when off; `match` answers are rebuilt as
 `left+right` pairs. Rounds with no questions are omitted, and `kahootMode`
 has no column, so it isn't exported. A `sort` or `match` question's scoring mode and a
 `number` question's margin are exported in the notes cell.
@@ -1898,7 +1911,7 @@ plain links.
 Sheet row format (one row per question):
 
 ```
-round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author | round_note | show_round_note
+round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author | round_note | show_round_note | show_note
 ```
 
 `type` is one of the six [Question Types](#question-types) above — see
@@ -1934,6 +1947,13 @@ the first non-blank cell seen for a round wins. `round_note` is the round's
 cell and blocks the import. `show_round_note` is `''`/`0`/`1` (anything else is
 an issue on its cell) and turns on the round's "show on screen" setting;
 `1` with an empty note is accepted and has no effect.
+
+`show_note` is an optional cell for the question on that row, `''`/`0`/`1`
+(anything else is an issue on its cell). `1` turns on the question's "Show on
+screen at reveal" setting; with no notes left once the `{…}` group is taken out
+it is accepted and saves as off. Notes shown this way over
+`REVEAL_NOTES_MAX_LENGTH` (500 characters) are an issue on the `notes` cell;
+longer notes that stay host-only are fine.
 
 ## Persistence and Restart Resilience
 

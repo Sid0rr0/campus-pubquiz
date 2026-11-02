@@ -175,6 +175,9 @@ export class SeedService {
         questionNotesById: Object.fromEntries(
           questionRows.map((row) => [row.id, questionNotesOf(row.notes)]),
         ),
+        questionIdsWithNotesAtReveal: questionRows
+          .filter((row) => row.showNotesAtReveal)
+          .map((row) => row.id),
       });
     }
 
@@ -232,6 +235,7 @@ export class SeedService {
         questionNotesById: Object.fromEntries(
           questions.map((question) => [question.id, null]),
         ),
+        questionIdsWithNotesAtReveal: [],
       });
     }
 

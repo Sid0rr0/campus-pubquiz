@@ -32,6 +32,8 @@ const baseQuestionFields = {
   prompt: z.string().min(1, 'Missing question text'),
   answer: z.string().min(1, 'Missing answer'),
   notes: z.string().optional(),
+  // Shows the notes on the big screen at the reveal, not only to the quiz master. Absent means off.
+  showNotesAtReveal: z.boolean().optional(),
   points: z
     .number('Points must be a positive whole number')
     .int('Points must be a positive whole number')

@@ -33,6 +33,7 @@ describe('parseSheetCsv', () => {
         author: '',
         roundNote: '',
         showRoundNote: '',
+        showNote: '',
       },
       {
         rowNumber: 3,
@@ -50,8 +51,17 @@ describe('parseSheetCsv', () => {
         author: '',
         roundNote: '',
         showRoundNote: '',
+        showNote: '',
       },
     ]);
+  });
+
+  it('reads the show_note column', () => {
+    const [row] = parseSheetCsv(
+      [`${HEADER},show_note`, 'R,free_text,Q,,A,1,,The story,,1'].join('\n'),
+    );
+
+    expect(row.showNote).toBe('1');
   });
 
   it('reads the round_note and show_round_note columns, keeping line breaks in the note', () => {
@@ -237,7 +247,7 @@ describe('parseSheetCsv', () => {
 
     expect(() => parseSheetCsv(csv)).toThrow(
       'Missing required column(s): type, question, answer. ' +
-        'Expected headers: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after, category, author, round_note, show_round_note.',
+        'Expected headers: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after, category, author, round_note, show_round_note, show_note.',
     );
   });
 

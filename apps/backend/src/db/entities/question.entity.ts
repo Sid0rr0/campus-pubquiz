@@ -13,7 +13,12 @@ import { QuestionRepository } from '@/db/repositories/question.repository';
 @Entity({ tableName: 'questions', repository: () => QuestionRepository })
 @Unique({ properties: ['round', 'orderIndex'] })
 export class Question extends BaseEntity {
-  [OptionalProps]?: 'createdAt' | 'updatedAt' | 'payload' | 'points';
+  [OptionalProps]?:
+    | 'createdAt'
+    | 'updatedAt'
+    | 'payload'
+    | 'points'
+    | 'showNotesAtReveal';
 
   @ManyToOne(() => Round, { deleteRule: 'cascade' })
   round!: Round;
@@ -32,6 +37,10 @@ export class Question extends BaseEntity {
 
   @Property({ type: 'text', nullable: true })
   notes?: string;
+
+  /** Also show the notes on the big screen at this question's reveal; off keeps them host-only. */
+  @Property({ default: false })
+  showNotesAtReveal: boolean = false;
 
   @Property({ type: 'jsonb' })
   payload: Record<string, unknown> = {};

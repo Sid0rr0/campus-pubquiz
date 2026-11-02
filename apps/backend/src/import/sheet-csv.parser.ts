@@ -28,6 +28,7 @@ const HEADER_ALIASES: Record<string, SheetColumn> = {
   author: 'author',
   round_note: 'roundNote',
   show_round_note: 'showRoundNote',
+  show_note: 'showNote',
 };
 
 const REQUIRED_COLUMNS: SheetColumn[] = ['round', 'type', 'question', 'answer'];
@@ -82,7 +83,7 @@ export function parseSheetCsv(csvText: string): SheetRow[] {
   if (missingColumns.length > 0) {
     throw new SheetFormatError(
       `Missing required column(s): ${missingColumns.join(', ')}. ` +
-        'Expected headers: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after, category, author, round_note, show_round_note.',
+        'Expected headers: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after, category, author, round_note, show_round_note, show_note.',
     );
   }
 
@@ -112,6 +113,7 @@ export function parseSheetCsv(csvText: string): SheetRow[] {
         author: cellFor('author'),
         roundNote: cellFor('roundNote'),
         showRoundNote: cellFor('showRoundNote'),
+        showNote: cellFor('showNote'),
       },
     ];
   });

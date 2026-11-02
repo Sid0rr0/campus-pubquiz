@@ -173,11 +173,12 @@ const GUIDE_SECTIONS: GuideSection[] = [
     ],
     bullets: [
       'Round note: up to 500 characters, for Remote and the title card on Control. "Show on screen" adds the big screen; phones never see it.',
+      'Question notes: tick "Show on screen at reveal" to add them under the answer on the big screen (up to 500 characters). Leave it off for grading hints.',
       'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL).',
       `Number: the margin row has a number field and % / absolute switch. CSV: {margin: "5%"}; {scoring: …} sets ${SCORING_NOTE}.`,
       'Video: tick "Hide video (sound only)" to cover it until the reveal. In a CSV: hideVideo: true in the {…} notes group.',
       'Clip and Reveal start and end take seconds, M:SS or H:MM:SS. In a CSV: {start: "1:22", end: "2:20", revealStart: "2:30"}.',
-      `CSV: one row per question; a round ends a block once any row has break_after = 1. By hand, fill category, author, round_note, show_round_note (1 shows it on screen) and notes. The type column takes ${CSV_TYPE_IDENTIFIERS}.`,
+      `CSV: one row per question; a round ends a block once any row has break_after = 1. By hand, fill category, author, round_note, show_round_note (1 shows it on screen), notes and show_note (1 shows them at the reveal). The type column takes ${CSV_TYPE_IDENTIFIERS}.`,
     ],
     link: {
       href: '/sample-quiz-import.csv',

@@ -370,7 +370,8 @@ export interface AdminQuestionContext {
  * question): only ever sent over PRESENTER_CONTEXT_UPDATED, emitted to the
  * admin room alone. Must NEVER be folded into StateSnapshotPayload/
  * broadcastGameState's tri-room emit — players and the display must never
- * receive next-question content or host notes.
+ * receive next-question content, nor notes this way (a question set to show
+ * its notes reaches the display through the Display screen's `reveal` kind).
  */
 /** A short description of one /display screen, as shown on /remote. */
 export interface ScreenPreview {

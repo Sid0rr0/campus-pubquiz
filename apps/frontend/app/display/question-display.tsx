@@ -12,6 +12,7 @@ import {
   QUESTION_BODIES,
   REVEAL_BODIES,
 } from '@/app/display/answer-kind-bodies';
+import { EntranceLine } from '@/app/display/reveal-entrance';
 import { useMediaPause } from '@/app/display/use-media-pause';
 import { useVideoLoadFailure, VideoFile } from '@/app/display/video-file';
 
@@ -183,6 +184,30 @@ interface QuestionDisplayProps {
   isDisplaySoundMuted?: boolean;
   /** The big screen's reveal: the answer comes in with its own entrance. Left off on the phone. */
   hasRevealEntrance?: boolean;
+  /** The Question notes the big screen shows under the answer; '' or left off shows none. */
+  revealNotes?: string;
+}
+
+/** Question notes under a revealed answer on the big screen; nothing for ''. `sizeClass` keeps them no larger than the answer they follow. */
+export function RevealNotes({
+  notes,
+  hasEntrance,
+  sizeClass = 'text-display-2xl',
+}: {
+  notes?: string;
+  hasEntrance?: boolean;
+  sizeClass?: string;
+}) {
+  if (!notes) return null;
+  return (
+    <EntranceLine
+      hasEntrance={hasEntrance}
+      kind="arrive"
+      className={`max-w-5xl whitespace-pre-line font-bold text-foreground/70 ${sizeClass}`}
+    >
+      {notes}
+    </EntranceLine>
+  );
 }
 
 // Shared by question_open and reveal so the big screen shows each question
@@ -199,6 +224,7 @@ export function QuestionDisplay({
   isMediaPaused = false,
   isDisplaySoundMuted = false,
   hasRevealEntrance = false,
+  revealNotes,
 }: QuestionDisplayProps) {
   const {
     prompt,
@@ -321,6 +347,7 @@ export function QuestionDisplay({
           <h1 className={promptClassName}>{prompt}</h1>
           {reveal?.lead}
           {reveal ? reveal.body : <QuestionBody question={question} />}
+          <RevealNotes notes={revealNotes} hasEntrance={hasRevealEntrance} />
         </div>
         {showTwoColumnLayout && (
           // Stretched (by the row's items-stretch) to a definite height, so the image's max-h-full caps against it.

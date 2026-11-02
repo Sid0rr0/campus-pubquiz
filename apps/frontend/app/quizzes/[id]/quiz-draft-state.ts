@@ -53,6 +53,8 @@ export interface EditorQuestion {
   prompt: string;
   points: number;
   notes: string;
+  /** Whether the notes also show on the big screen at the reveal — has no effect while the notes are blank. */
+  showNotesAtReveal: boolean;
   options: EditorOption[];
   sortItems: string[];
   matchPairs: EditorMatchPair[];
@@ -110,6 +112,7 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
     prompt: '',
     points: isKahoot ? 1000 : 1,
     notes: '',
+    showNotesAtReveal: false,
     options: [makeOption(), makeOption()],
     sortItems: ['', ''],
     matchPairs: [makeMatchPair(), makeMatchPair()],
@@ -215,6 +218,7 @@ export function questionFromPreview(
     prompt: question.prompt,
     points: question.points,
     notes: question.notes ?? '',
+    showNotesAtReveal: question.showNotesAtReveal ?? false,
     options: [makeOption(), makeOption()],
     sortItems: ['', ''],
     matchPairs: [makeMatchPair(), makeMatchPair()],
@@ -382,6 +386,7 @@ export function questionToPreview(
     prompt: question.prompt.trim(),
     points: question.points,
     ...(notes ? { notes } : {}),
+    ...(notes && question.showNotesAtReveal ? { showNotesAtReveal: true } : {}),
     ...saveAnswerDraft(question),
     ...saveGradingDrafts(question),
     ...(mediaUrl ? { mediaUrl } : {}),

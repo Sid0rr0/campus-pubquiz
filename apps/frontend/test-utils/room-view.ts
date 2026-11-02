@@ -40,8 +40,10 @@ import {
 export interface QuestionDescription extends Partial<SeededQuestion> {
   /** The closest-guess stats the reveal of a closest_guess question walks through; the session caches them as that question's summary. */
   closestGuess?: ClosestGuessRevealData;
-  /** Host-only note for this question (never reaches a view). */
+  /** This question's notes (reach a view only on the display's reveal, with showNotesAtReveal). */
   note?: string | null;
+  /** Also shows the note on the big screen at this question's reveal. */
+  showNotesAtReveal?: boolean;
 }
 
 export interface RoundDescription {
@@ -110,19 +112,28 @@ export interface SessionDescription {
 
 const DEFAULT_ROUNDS: RoundDescription[] = [{ questions: [{}, {}] }];
 
-function describeQuestions(
-  rounds: RoundDescription[],
-): { questions: SeededQuestion[]; notes: Record<number, string | null> }[] {
+function describeQuestions(rounds: RoundDescription[]): {
+  questions: SeededQuestion[];
+  notes: Record<number, string | null>;
+  notesAtReveal: number[];
+}[] {
   let nextId = 1;
   return rounds.map((round) => {
     const notes: Record<number, string | null> = {};
+    const notesAtReveal: number[] = [];
     const questions = (round.questions ?? []).map((description) => {
-      // The stats become the session's summary (closestGuessSummariesOf), not a seeded field.
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { note, closestGuess: _stats, ...view } = description;
+      const {
+        note,
+        showNotesAtReveal,
+        // The stats become the session's summary (closestGuessSummariesOf), not a seeded field.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        closestGuess: _stats,
+        ...view
+      } = description;
       const id = view.id ?? nextId;
       nextId = Math.max(nextId, id) + 1;
       if (note !== undefined) notes[id] = note;
+      if (showNotesAtReveal) notesAtReveal.push(id);
       return {
         type: 'free_text',
         prompt: `Question ${id}`,
@@ -132,7 +143,7 @@ function describeQuestions(
         id,
       } satisfies SeededQuestion;
     });
-    return { questions, notes };
+    return { questions, notes, notesAtReveal };
   });
 }
 
@@ -158,6 +169,7 @@ function buildRounds(descriptions: RoundDescription[]): SeededRound[] {
     }),
     questions: built[index].questions,
     questionNotesById: built[index].notes,
+    questionIdsWithNotesAtReveal: built[index].notesAtReveal,
   }));
 }
 

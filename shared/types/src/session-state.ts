@@ -32,7 +32,7 @@ export interface SeededRound {
   // Carries the correct answer internally so reveal can show it; only
   // answer-free QuestionView projections leave the server.
   questions: SeededQuestion[];
-  // Host-only notes, keyed by question id — deliberately a sibling of
+  // Question notes, keyed by question id — deliberately a sibling of
   // `questions` rather than a field on each question object. Every
   // SeededQuestion is spread whole into the reveal views built by
   // toRevealQuestionViews, which go into the broadcast snapshot; notes must
@@ -41,6 +41,8 @@ export interface SeededRound {
   // needn't set it; undefined behaves as "no notes for any question in this
   // round".
   questionNotesById?: Record<number, string | null>;
+  /** The questions of this round whose notes also show on the big screen at their reveal — see Question.showNotesAtReveal. */
+  questionIdsWithNotesAtReveal?: number[];
 }
 
 export interface SeededGame {

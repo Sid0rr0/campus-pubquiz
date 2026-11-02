@@ -13,6 +13,7 @@ import {
   isVideoUrl,
   type QuestionType,
   type QuizDraftIssue,
+  questionNotesOf,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
@@ -22,6 +23,11 @@ import {
   isFixedOnOpened,
 } from '@/app/quizzes/[id]/answer-kind-fields';
 import { type EditorQuestion } from '@/app/quizzes/[id]/quiz-draft-state';
+
+/** Whether notes hold anything to show: the same reading the save makes. */
+function hasNotesToShow(notes: string): boolean {
+  return questionNotesOf(notes) !== null;
+}
 
 /** DOM id for the question's card, so the outline can scroll it into view — see quiz-outline.tsx's jump-to-question button. */
 export function questionAnchorId(questionId: string): string {
@@ -336,10 +342,29 @@ export function QuizQuestionEditor({
         Notes
         <textarea
           value={question.notes}
-          onChange={(event) => onChange({ notes: event.target.value })}
+          onChange={(event) =>
+            onChange({
+              notes: event.target.value,
+              // Unticks with the notes gone, so notes typed later never reach the big screen unasked.
+              ...(hasNotesToShow(event.target.value)
+                ? {}
+                : { showNotesAtReveal: false }),
+            })
+          }
           rows={1}
           className="resize-y rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
         />
+      </label>
+      <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
+        <input
+          type="checkbox"
+          checked={question.showNotesAtReveal}
+          disabled={!hasNotesToShow(question.notes)}
+          onChange={(event) =>
+            onChange({ showNotesAtReveal: event.target.checked })
+          }
+        />
+        Show on screen at reveal
       </label>
       <FieldErrors issues={otherIssues} />
     </div>

@@ -219,6 +219,7 @@ export function DisplayScreenView({
                   autoplayMedia={settings.autoplayMedia}
                   isDisplaySoundMuted={live?.isDisplaySoundMuted}
                   hasEntrance
+                  revealNotes={screen.notes}
                   {...closestGuessAnswerProps(revealQuestion)}
                 />
               </RevealEntranceConfig>
@@ -239,6 +240,7 @@ export function DisplayScreenView({
                   isMediaPaused={live?.isMediaPaused}
                   isDisplaySoundMuted={live?.isDisplaySoundMuted}
                   hasRevealEntrance
+                  revealNotes={screen.notes}
                 />
               </RevealEntranceConfig>
               {teamsCorrect && teamsCorrect.teamCount > 0 && (

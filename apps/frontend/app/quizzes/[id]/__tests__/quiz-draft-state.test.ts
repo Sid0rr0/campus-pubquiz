@@ -50,6 +50,7 @@ describe('makeQuestion / makeRound', () => {
       sortItems: ['', ''],
       matchPairs: [makeMatchPair(), makeMatchPair()],
       scoringMode: undefined,
+      showNotesAtReveal: false,
       marginValue: '10',
       marginUnit: 'percent',
       correctText: '',
@@ -1957,5 +1958,36 @@ describe('draft edits that the earlier specs left open', () => {
     ]);
 
     expect(synced[0].questions[0]).toStrictEqual(question);
+  });
+});
+
+describe('questionToPreview, notes at reveal', () => {
+  const draft = (notes: string, showNotesAtReveal: boolean) => ({
+    ...makeQuestion('q'),
+    prompt: 'Q?',
+    notes,
+    showNotesAtReveal,
+  });
+
+  it('carries the setting when ticked', () => {
+    expect(questionToPreview(draft('The story', true)).showNotesAtReveal).toBe(
+      true,
+    );
+  });
+
+  it('leaves it out when off, or when the notes were blanked after ticking', () => {
+    expect(questionToPreview(draft('The story', false))).not.toHaveProperty(
+      'showNotesAtReveal',
+    );
+    expect(questionToPreview(draft('  ', true))).not.toHaveProperty(
+      'showNotesAtReveal',
+    );
+  });
+
+  it('loads the setting back', () => {
+    expect(
+      questionFromPreview('q', questionToPreview(draft('The story', true)))
+        .showNotesAtReveal,
+    ).toBe(true);
   });
 });

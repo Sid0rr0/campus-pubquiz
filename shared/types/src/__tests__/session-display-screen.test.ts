@@ -8,7 +8,9 @@ import {
   trimOnAirQuestion,
 } from '../session-display-screen';
 import type { SessionState } from '../session-state';
+import { projectScreen } from '../screen-projection';
 import { buildSnapshot } from '../session-snapshot';
+import { SOCKET_ROOMS } from '../socket-events';
 import {
   closestGuessQuestion,
   round,
@@ -162,6 +164,69 @@ describe('describeSessionDisplayScreen', () => {
       kind: 'reveal',
       question: { id: 10, answer: 'Answer 10' },
     });
+  });
+});
+
+describe('Question notes on the reveal screen', () => {
+  const NOTES = 'Named after a Dutch explorer.';
+  const REVEAL = {
+    status: 'reveal',
+    roundIndex: 0,
+    questionIndex: 0,
+    furthestOpenIndex: 0,
+  } as const;
+  const noted = (questionIdsWithNotesAtReveal: number[]) => ({
+    questionNotesById: { 10: NOTES },
+    questionIdsWithNotesAtReveal,
+  });
+
+  it('shows the notes of a question set to show them', () => {
+    const session = sessionWith([round(1, [10], noted([10]))], REVEAL);
+
+    expect(describeSessionDisplayScreen(session)).toMatchObject({
+      kind: 'reveal',
+      notes: NOTES,
+    });
+  });
+
+  it('keeps the notes off screen for a question not set to show them', () => {
+    const session = sessionWith([round(1, [10], noted([]))], REVEAL);
+
+    expect(describeSessionDisplayScreen(session)).toMatchObject({
+      kind: 'reveal',
+      notes: '',
+    });
+  });
+
+  it('holds the notes back until a closest-guess answer is on air', () => {
+    const closestGuess = (revealStep: number) =>
+      sessionWith(
+        [
+          round(1, [10], {
+            ...noted([10]),
+            questions: [closestGuessQuestion(10)],
+          }),
+        ],
+        REVEAL,
+        { revealStep, closestGuessSummaries: { 10: SUMMARY } },
+      );
+
+    expect(describeSessionDisplayScreen(closestGuess(2))).toMatchObject({
+      question: { revealKind: 'closest_guess_pending' },
+      notes: '',
+    });
+    expect(describeSessionDisplayScreen(closestGuess(3))).toMatchObject({
+      question: { revealKind: 'closest_guess' },
+      notes: NOTES,
+    });
+  });
+
+  it('never sends the notes to phones', () => {
+    const session = sessionWith([round(1, [10], noted([10]))], REVEAL);
+
+    expect(
+      JSON.stringify(projectScreen(session, SOCKET_ROOMS.PLAYERS)),
+    ).not.toContain(NOTES);
   });
 });
 

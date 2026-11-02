@@ -18,6 +18,7 @@ import {
   MARGIN_NOTES_KEY,
   SCORING_NOTES_KEY,
   parseNotesGroup,
+  questionNotesOf,
   writeNotesGroup,
   type NotesGroupFields,
 } from './notes-group';
@@ -69,6 +70,9 @@ export const sheetRowMetaSchema = z.object({
     .optional(),
   show_round_note: z.enum(['', '0', '1'], {
     error: 'show_round_note must be "1", "0", or blank',
+  }),
+  show_note: z.enum(['', '0', '1'], {
+    error: 'show_note must be "1", "0", or blank',
   }),
 });
 
@@ -139,12 +143,16 @@ export function decodeSheetRow(
       author: blankToUndefined(row.author),
       round_note: blankToUndefined(row.roundNote),
       show_round_note: row.showRoundNote.trim(),
+      show_note: row.showNote.trim(),
     },
     question: {
       type,
       prompt: row.question.trim(),
       ...choices,
       notes: blankToUndefined(freeNotes),
+      ...(row.showNote.trim() === '1' && questionNotesOf(freeNotes) !== null
+        ? { showNotesAtReveal: true }
+        : {}),
       points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
       mediaUrl,
       answerMediaUrl,
@@ -203,6 +211,7 @@ export function encodeSheetRow(
     author: isLastInRound ? (round.author ?? '') : '',
     roundNote: isLastInRound ? (round.note ?? '') : '',
     showRoundNote: isLastInRound && round.showNoteOnScreen ? '1' : '',
+    showNote: question.showNotesAtReveal ? '1' : '',
   };
 }
 

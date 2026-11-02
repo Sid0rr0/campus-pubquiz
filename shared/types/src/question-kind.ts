@@ -1,5 +1,7 @@
 import type { z } from 'zod';
+import { questionNotesOf } from './notes-group';
 import type { PowerUpId } from './power-ups';
+import { REVEAL_NOTES_MAX_LENGTH } from './round-note';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
 import {
   closestGuessPreviewSchema,
@@ -8,6 +10,7 @@ import {
   multipleChoicePreviewSchema,
   numberPreviewSchema,
   sortPreviewSchema,
+  type ImportQuestionPreview,
 } from './question-preview-schema';
 import {
   closestGuessPayloadSchema,
@@ -233,16 +236,35 @@ export function checkQuestion(candidate: { type?: unknown }): QuestionCheck {
   }
   const parsed =
     QUESTION_KINDS[type as QuestionType].schema.safeParse(candidate);
-  return parsed.success
-    ? { success: true, data: parsed.data }
-    : {
-        success: false,
-        issues: parsed.error.issues.map(({ path, code, message }) => ({
-          path,
-          code,
-          message,
-        })),
-      };
+  if (parsed.success) {
+    const { showNotesAtReveal, notes } = parsed.data as Pick<
+      ImportQuestionPreview,
+      'showNotesAtReveal' | 'notes'
+    >;
+    const shownLength = showNotesAtReveal
+      ? (questionNotesOf(notes)?.length ?? 0)
+      : 0;
+    return shownLength > REVEAL_NOTES_MAX_LENGTH
+      ? {
+          success: false,
+          issues: [
+            {
+              path: ['notes'],
+              code: 'custom',
+              message: `Notes shown at the reveal must be at most ${REVEAL_NOTES_MAX_LENGTH} characters`,
+            },
+          ],
+        }
+      : { success: true, data: parsed.data };
+  }
+  return {
+    success: false,
+    issues: parsed.error.issues.map(({ path, code, message }) => ({
+      path,
+      code,
+      message,
+    })),
+  };
 }
 
 /**

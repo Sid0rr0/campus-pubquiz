@@ -138,7 +138,41 @@ describe('CSV round-trip through the question kinds', () => {
       category: 'Music',
       author: 'Sam',
       show_round_note: '',
+      show_note: '',
     });
+  });
+
+  it("carries the notes-at-reveal setting on the question's own row", () => {
+    const shown = roundTrip(
+      {
+        ...QUESTION_BY_TYPE.free_text,
+        notes: 'The story',
+        showNotesAtReveal: true,
+      },
+      ROUND,
+      false,
+    );
+
+    expect(shown.row.showNote).toBe('1');
+    expect(shown.meta.show_note).toBe('1');
+    expect(shown.checked).toMatchObject({
+      success: true,
+      data: { showNotesAtReveal: true },
+    });
+  });
+
+  it('leaves the setting off when the show_note cell is ticked but the notes are blank', () => {
+    const { question } = decodeSheetRow(
+      {
+        ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.free_text, true),
+        rowNumber: 2,
+        notes: ' ',
+        showNote: '1',
+      },
+      'free_text',
+    );
+
+    expect(question).not.toHaveProperty('showNotesAtReveal');
   });
 
   it('carries the round note and its show-on-screen setting on the last row of a round', () => {
@@ -183,6 +217,7 @@ describe('CSV round-trip through the question kinds', () => {
       break_after: '',
       category: '',
       show_round_note: '',
+      show_note: '',
     });
     expect(noBreak.break_after).toBe('');
   });

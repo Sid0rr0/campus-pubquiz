@@ -315,6 +315,7 @@ describe('sheet row meta', () => {
     break_after: '',
     category: '',
     show_round_note: '',
+    show_note: '',
   };
 
   function messagesOf(candidate: unknown) {
@@ -343,6 +344,12 @@ describe('sheet row meta', () => {
       {
         path: ['break_after'],
         message: 'break_after must be "1", "0", or blank',
+      },
+    ]);
+    expect(messagesOf({ ...meta, show_note: 'yes' })).toEqual([
+      {
+        path: ['show_note'],
+        message: 'show_note must be "1", "0", or blank',
       },
     ]);
     expect(messagesOf({ ...meta, show_round_note: 'yes' })).toEqual([
@@ -378,6 +385,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
     author: '',
     roundNote: '',
     showRoundNote: '',
+    showNote: '',
   };
 
   it('reads a tidy row as it is, leaving blank optional cells unset', () => {
@@ -390,6 +398,8 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
       author: undefined,
       round_note: undefined,
       show_round_note: '',
+      show_note: '',
+      show_note: '',
     });
     expect(question).toMatchObject({
       type: 'free_text',
@@ -426,6 +436,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
       author: 'Sam',
       round_note: 'Read slowly',
       show_round_note: '1',
+      show_note: '',
     });
     expect(question).toMatchObject({
       prompt: 'Q?',
@@ -500,6 +511,7 @@ describe('encodeSheetRow: round-level cells', () => {
       roundNote: '',
       breakAfter: '',
       showRoundNote: '',
+      showNote: '',
     });
   });
 
@@ -526,6 +538,7 @@ describe('encodeSheetRow: round-level cells', () => {
       roundNote: '',
       breakAfter: '',
       showRoundNote: '',
+      showNote: '',
     });
   });
 });

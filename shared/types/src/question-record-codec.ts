@@ -5,7 +5,11 @@ import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
 import type { SeededQuestion } from './question-views';
 import { hasVideoMedia, isVideoUrl } from './media';
-import { parseNotesGroup, type NotesGroupFields } from './notes-group';
+import {
+  parseNotesGroup,
+  questionNotesOf,
+  type NotesGroupFields,
+} from './notes-group';
 
 /**
  * The question record codec: a question's stored row (columns plus a payload
@@ -25,6 +29,7 @@ export interface StoredQuestionRow {
   answer: string;
   points: number;
   notes?: string | null;
+  showNotesAtReveal?: boolean;
 }
 
 /** The columns and payload a quiz save writes for one question. */
@@ -34,6 +39,7 @@ export interface StoredQuestionFields {
   answer: string;
   points: number;
   notes: string | null;
+  showNotesAtReveal: boolean;
   payload: QuestionPayload;
 }
 
@@ -235,6 +241,7 @@ export function rowToPreview(
     answer: row.answer,
     points: row.points,
     ...(freeNotes ? { notes: freeNotes } : {}),
+    ...(row.showNotesAtReveal ? { showNotesAtReveal: true } : {}),
     ...carriedFields(row.type, {
       ...payload,
       mediaStartSeconds: payload.mediaStartSeconds ?? clip.startSeconds,
@@ -277,6 +284,9 @@ export function previewToStoredFields(
     answer: preview.answer,
     points: preview.points,
     notes: preview.notes ?? null,
+    showNotesAtReveal:
+      preview.showNotesAtReveal === true &&
+      questionNotesOf(preview.notes) !== null,
     payload: carriedFields(preview.type, preview),
   };
 }

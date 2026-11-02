@@ -96,11 +96,15 @@ function withHostOnly(
     const text = getHostOnlyText(rounds, onAir);
     const isNoteDrawn =
       step.screen.kind === 'round_title' && nonEmpty(step.screen.note) !== null;
+    const areQuestionNotesDrawn =
+      step.screen.kind === 'reveal' && nonEmpty(step.screen.notes) !== null;
     return {
       ...step,
       hostOnly: {
         roundNote: isNoteDrawn ? null : nonEmpty(text.roundNote),
-        questionNote: nonEmpty(text.questionNotes),
+        questionNote: areQuestionNotesDrawn
+          ? null
+          : nonEmpty(text.questionNotes),
       },
     };
   });

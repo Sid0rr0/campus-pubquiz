@@ -1,8 +1,12 @@
 import type { OnAirScreen } from './on-air-screen';
+import type { PlayersRevealQuestionView } from './question-views';
 import type { SeededRound, SessionState } from './session-state';
 
 /** Longest round note, in characters, after trimming — enforced at the quiz-draft save boundary and shown as the editor's character count. */
 export const ROUND_NOTE_MAX_LENGTH = 500;
+
+/** Longest Question notes, in characters, that can show on the big screen at a reveal. */
+export const REVEAL_NOTES_MAX_LENGTH = 500;
 
 /** Whether the screen is a round's intro or break round intro (the reveal intro is not). */
 export function isRoundIntroScreen(
@@ -85,4 +89,16 @@ export function getDisplayRoundNote(
 ): string {
   const round = roundWithIntroOnAir(session, screen);
   return round?.showNoteOnScreen ? (round.note ?? '') : '';
+}
+
+/** The Question notes the big screen draws at a reveal: the notes when the question shows them on screen and its answer is on air, else ''. */
+export function getDisplayRevealNotes(
+  rounds: readonly SeededRound[],
+  question: Pick<PlayersRevealQuestionView, 'id' | 'revealKind'>,
+): string {
+  if (question.revealKind === 'closest_guess_pending') return '';
+  const round = rounds.find((candidate) =>
+    candidate.questionIdsWithNotesAtReveal?.includes(question.id),
+  );
+  return round?.questionNotesById?.[question.id] ?? '';
 }

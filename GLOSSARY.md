@@ -120,11 +120,11 @@ Stepping back through a block's locked questions during its break, with answers 
 A screen showing a round's name before its content: the round intro before its questions, the break round intro when break review steps across it, and the reveal intro before its answers are revealed.
 
 **Round note**:
-What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro, the break round intro or the reveal intro is on air, and on the admin console with the round's title card; on the big screen too when the round is set to show it, though never on the reveal intro; never on phones. The Quiz preview's host-only panel shows it on the round intro (when the round doesn't show it on screen) and on the reveal intro. Not the same as **Question notes**, which are host-only and never on screen.
+What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro, the break round intro or the reveal intro is on air, and on the admin console with the round's title card; on the big screen too when the round is set to show it, though never on the reveal intro; never on phones. The Quiz preview's host-only panel shows it on the round intro (when the round doesn't show it on screen) and on the reveal intro. Not the same as **Question notes**, which are written on a question and reach the big screen only during its reveal.
 _Avoid_: title card note, intro text, round description
 
 **Question notes**:
-What the quiz master needs to know about a question, written on the question: grading hints, pronunciation, the story behind the answer. Only the quiz master sees them: on the presenter remote whenever that question is on the big screen (asked, reviewed in the break or revealed), and on the admin console with the question. Never on the big screen or on phones. Settings written into the notes in braces (a video's start and end, a margin, a scoring mode) are settings, not notes, and are never shown as notes.
+What the quiz master needs to know about a question, written on the question: grading hints, pronunciation, the story behind the answer. The quiz master sees them on the presenter remote whenever that question is on the big screen (asked, reviewed in the break or revealed), and on the admin console with the question. The big screen shows them only during that question's reveal, once its answer is on air, and only when the question is set to; phones never do. Settings written into the notes in braces (a video's start and end, a margin, a scoring mode) are settings, not notes, and are never shown as notes.
 _Avoid_: host notes, question note
 
 **Display screen**:

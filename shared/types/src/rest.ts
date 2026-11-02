@@ -9,7 +9,7 @@ export interface QuizSummaryQuestion {
   options?: string[];
   matchTargets?: string[];
   answer: string;
-  /** See Question notes: the host-only notes without the settings group; absent when there are none. */
+  /** See Question notes: the notes without the settings group; absent when there are none. */
   notes?: string;
 }
 

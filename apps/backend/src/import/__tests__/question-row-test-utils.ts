@@ -17,6 +17,7 @@ export function makeRow(overrides: Partial<SheetRow> = {}): SheetRow {
     author: '',
     roundNote: '',
     showRoundNote: '',
+    showNote: '',
     ...overrides,
   };
 }

@@ -305,6 +305,83 @@ describe('DisplayScreenView — without a live context', () => {
     });
   });
 
+  it('draws the notes under a revealed answer when the question shows them', () => {
+    drawWithoutLiveContext({
+      rounds: [
+        {
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Largest planet?',
+              answer: 'Jupiter',
+              note: 'Named after the king of the gods.',
+              showNotesAtReveal: true,
+            },
+          ],
+        },
+      ],
+      progress: { status: 'reveal', revealIndex: 0 },
+    });
+
+    expect(
+      screen.getByText('Named after the king of the gods.'),
+    ).toBeInTheDocument();
+  });
+
+  it('draws no notes on a reveal of a question that keeps them host-only', () => {
+    drawWithoutLiveContext({
+      rounds: [
+        {
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Largest planet?',
+              answer: 'Jupiter',
+              note: 'Accept Zeus.',
+            },
+          ],
+        },
+      ],
+      progress: { status: 'reveal', revealIndex: 0 },
+    });
+
+    expect(screen.queryByText('Accept Zeus.')).not.toBeInTheDocument();
+  });
+
+  it('draws the notes of a closest-guess reveal only once its answer is on air', () => {
+    const atStep = (closestGuessRevealStep: number) =>
+      drawWithoutLiveContext({
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'closest_guess',
+                prompt: 'How tall is the tower?',
+                answer: '55',
+                note: 'It grows in summer.',
+                showNotesAtReveal: true,
+                closestGuess: {
+                  hasSubmissions: true,
+                  minGuess: '10',
+                  maxGuess: '90',
+                  closestGuesses: [{ teamName: 'Team A', value: '50' }],
+                },
+              },
+            ],
+          },
+        ],
+        progress: { status: 'reveal', revealIndex: 0 },
+        closestGuessRevealStep,
+      });
+
+    const { unmount } = atStep(2);
+    expect(screen.queryByText('It grows in summer.')).not.toBeInTheDocument();
+    unmount();
+
+    atStep(3);
+    expect(screen.getByText('It grows in summer.')).toBeInTheDocument();
+  });
+
   it('draws a closest-guess reveal', () => {
     drawWithoutLiveContext({
       rounds: [

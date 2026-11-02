@@ -58,6 +58,7 @@ describe('question record codec', () => {
         answer: 'A',
         points: 3,
         notes: null,
+        showNotesAtReveal: false,
         payload: {},
       });
     },
@@ -192,6 +193,44 @@ describe('question record codec', () => {
 
     expect(preview.isVideoHidden).toBe(true);
   });
+});
+
+describe('question record codec, notes at reveal', () => {
+  const preview = (notes: string | undefined) => ({
+    type: 'free_text' as const,
+    prompt: 'Q?',
+    answer: 'A',
+    points: 1,
+    notes,
+    showNotesAtReveal: true,
+  });
+
+  it('stores the setting and loads it back', () => {
+    const fields = previewToStoredFields(preview('The story'));
+
+    expect(fields.showNotesAtReveal).toBe(true);
+    expect(
+      rowToPreview({ id: 7, ...fields }, fields.payload).showNotesAtReveal,
+    ).toBe(true);
+  });
+
+  it('leaves the setting out of the preview when it is off', () => {
+    expect(
+      rowToPreview(
+        { ...rowOf('free_text', 'Hint'), showNotesAtReveal: false },
+        {},
+      ),
+    ).not.toHaveProperty('showNotesAtReveal');
+  });
+
+  it.each([undefined, '   ', '{start: "0:05"}'])(
+    'saves as off when there are no notes to show (%j)',
+    (notes) => {
+      expect(previewToStoredFields(preview(notes)).showNotesAtReveal).toBe(
+        false,
+      );
+    },
+  );
 });
 
 describe('clipNotesFieldsFor', () => {

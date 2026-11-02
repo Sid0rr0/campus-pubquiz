@@ -62,6 +62,7 @@ function toSheetRow(question: ImportQuestionPreview): SheetRow {
     author: '',
     roundNote: '',
     showRoundNote: '',
+    showNote: '',
   };
 }
 

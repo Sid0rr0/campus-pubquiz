@@ -311,6 +311,7 @@ describe('QuizEditorPanel', () => {
         author: '',
         roundNote: '',
         showRoundNote: '',
+        showNote: '',
       },
       'free_text',
     );
@@ -534,6 +535,93 @@ describe('QuizEditorPanel', () => {
         }),
       ),
     );
+  });
+
+  it('has a Show on screen at reveal checkbox, disabled until the question has notes, and saves it', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'Music',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'Band?', answer: 'ABBA', points: 1 },
+          ],
+        },
+      ],
+    });
+    mockUpdateQuiz.mockResolvedValue({
+      quizId: 5,
+      roundCount: 1,
+      questionCount: 1,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+
+    const checkbox = screen.getByLabelText(/show on screen at reveal/i);
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/^notes$/i), 'The story');
+    await user.click(checkbox);
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuiz).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({
+          rounds: [
+            expect.objectContaining({
+              questions: [
+                expect.objectContaining({
+                  notes: 'The story',
+                  showNotesAtReveal: true,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ),
+    );
+  });
+
+  it('unticks Show on screen at reveal when the notes are cleared, so new notes stay host-only', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'Music',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Band?',
+              answer: 'ABBA',
+              points: 1,
+              notes: 'The story',
+              showNotesAtReveal: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+    const checkbox = screen.getByLabelText(/show on screen at reveal/i);
+    expect(checkbox).toBeChecked();
+
+    const notes = screen.getByLabelText(/^notes$/i);
+    await user.clear(notes);
+    await user.type(notes, 'Accept Sweden too');
+
+    expect(checkbox).toBeEnabled();
+    expect(checkbox).not.toBeChecked();
   });
 
   it('shows the hide-video checkbox only for YouTube media and saves it as a field', async () => {
@@ -878,7 +966,9 @@ describe('QuizEditorPanel', () => {
       screen.getByRole('button', { name: /start from scratch/i }),
     );
 
-    const checkbox = screen.getByRole('checkbox', { name: /show on screen/i });
+    const checkbox = screen.getByRole('checkbox', {
+      name: /^show on screen$/i,
+    });
     expect(checkbox).not.toBeChecked();
     expect(checkbox).toBeDisabled();
 

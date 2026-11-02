@@ -13,7 +13,7 @@ import type {
   QuestionView,
 } from './question-views';
 import type { LeaderboardBoard, StateSnapshotPayload } from './room-views';
-import { getDisplayRoundNote } from './round-note';
+import { getDisplayRevealNotes, getDisplayRoundNote } from './round-note';
 import type { SessionState } from './session-state';
 import type { ActiveShowdownView } from './showdown';
 
@@ -66,7 +66,12 @@ export type DisplayScreen =
       note: string;
     }
   | { kind: 'reveal_intro'; roundNumber: number; title: string }
-  | { kind: 'reveal'; question: PlayersRevealQuestionView }
+  | {
+      kind: 'reveal';
+      question: PlayersRevealQuestionView;
+      /** '' unless the question shows its notes on screen and its answer is on air. */
+      notes: string;
+    }
   | {
       kind: 'leaderboard';
       board: LeaderboardBoard;
@@ -195,7 +200,13 @@ export function describeDisplayScreen({
     }
     case 'reveal': {
       const question = questionById(revealQuestions, onAir.questionId);
-      return question ? { kind: 'reveal', question } : BLANK;
+      return question
+        ? {
+            kind: 'reveal',
+            question,
+            notes: getDisplayRevealNotes(rounds, question),
+          }
+        : BLANK;
     }
     case 'leaderboard':
       return {

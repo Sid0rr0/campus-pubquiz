@@ -1,4 +1,8 @@
-import { SOCKET_ROOMS, type ImportRoundPreview } from '@campus-pubquiz/types';
+import {
+  SOCKET_ROOMS,
+  type ImportQuestionPreview,
+  type ImportRoundPreview,
+} from '@campus-pubquiz/types';
 import {
   setupRealStoreGatewayTest,
   type QuizRoundSpec,
@@ -265,5 +269,96 @@ describe('Round note — host-only context for a round intro', () => {
         issues: [expect.objectContaining({ field: 'note' })],
       });
     });
+  });
+});
+
+describe('Question notes at the reveal', () => {
+  const harness = setupRealStoreGatewayTest();
+  const STORY = 'Named after a Dutch explorer.';
+  let game: RealStoreGateway;
+
+  /** A one-question quiz, walked to its reveal. */
+  async function walkToReveal(): Promise<void> {
+    await game.act('START_QUIZ');
+    for (let i = 0; i < 6; i += 1) await game.act('ADVANCE');
+    expect(game.gameState.getSnapshot(game.joinCode).progress.status).toBe(
+      'reveal',
+    );
+  }
+
+  const displayScreen = () =>
+    game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY).screen;
+
+  async function saveQuestion(fields: Partial<ImportQuestionPreview>) {
+    const draft = await game.inRequestContext(() =>
+      game.quizService.findDraftById(game.quizId),
+    );
+    const rounds: ImportRoundPreview[] = draft!.rounds.map((round) => ({
+      ...round,
+      questions: round.questions.map((question) => ({
+        ...question,
+        ...fields,
+      })),
+    }));
+    await game.inRequestContext(() =>
+      game.liveEdit.save(game.quizId, { title: draft!.title, rounds }),
+    );
+  }
+
+  beforeEach(async () => {
+    game = await harness.createGateway({
+      rounds: [
+        {
+          title: 'Music',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Band?',
+              answer: 'ABBA',
+              points: 1,
+              notes: STORY,
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('stays off the big screen until the question is set to show it', async () => {
+    await walkToReveal();
+
+    expect(displayScreen()).toMatchObject({ kind: 'reveal', notes: '' });
+  });
+
+  it('shows on the display view, not the players view, when ticked while the reveal is on air', async () => {
+    await walkToReveal();
+
+    await saveQuestion({ showNotesAtReveal: true });
+
+    expect(displayScreen()).toMatchObject({ kind: 'reveal', notes: STORY });
+    expect(
+      JSON.stringify(
+        game.gameState.getView(game.joinCode, SOCKET_ROOMS.PLAYERS),
+      ),
+    ).not.toContain(STORY);
+  });
+
+  it('picks up a notes edit made while the reveal is on air', async () => {
+    await saveQuestion({ showNotesAtReveal: true });
+    await walkToReveal();
+
+    await saveQuestion({ notes: 'Fixed typo.' });
+
+    expect(displayScreen()).toMatchObject({ notes: 'Fixed typo.' });
+  });
+
+  it('round-trips the setting through a saved draft', async () => {
+    await saveQuestion({ showNotesAtReveal: true });
+
+    const draft = await game.inRequestContext(() =>
+      game.quizService.findDraftById(game.quizId),
+    );
+    expect(draft!.rounds[0].questions[0].showNotesAtReveal).toBe(true);
   });
 });

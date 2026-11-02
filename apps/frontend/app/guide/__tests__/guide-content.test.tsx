@@ -25,7 +25,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1490;
+const MAX_GUIDE_WORDS = 1530;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -242,6 +242,7 @@ describe('GuideContent', () => {
     for (const column of [
       'round_note',
       'show_round_note',
+      'show_note',
       'category',
       'author',
       'notes',

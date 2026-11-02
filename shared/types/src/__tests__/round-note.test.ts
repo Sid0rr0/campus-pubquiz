@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getDisplayRoundNote, getHostOnlyText } from '../round-note';
+import {
+  getDisplayRevealNotes,
+  getDisplayRoundNote,
+  getHostOnlyText,
+} from '../round-note';
 import type { SeededRound, SessionState } from '../session-state';
 
 const session = {
@@ -72,5 +76,34 @@ describe('getHostOnlyText', () => {
     expect(
       getHostOnlyText(rounds, { kind: 'round_title', roundIndex: 5 }),
     ).toEqual({ roundNote: '', questionNotes: '' });
+  });
+});
+
+describe('getDisplayRevealNotes', () => {
+  const rounds = [
+    { questionNotesById: { 1: 'Hint' } },
+    {
+      questionNotesById: { 2: 'The story', 3: null },
+      questionIdsWithNotesAtReveal: [2, 3],
+    },
+  ] as unknown as SeededRound[];
+  const answer = (id: number) => ({ id, revealKind: 'answer' as const });
+
+  it("finds a shown question's notes in any round", () => {
+    expect(getDisplayRevealNotes(rounds, answer(2))).toBe('The story');
+  });
+
+  it('gives nothing for notes not set to show, or a shown question with none', () => {
+    expect(getDisplayRevealNotes(rounds, answer(1))).toBe('');
+    expect(getDisplayRevealNotes(rounds, answer(3))).toBe('');
+  });
+
+  it('gives nothing before a closest-guess answer is on air', () => {
+    expect(
+      getDisplayRevealNotes(rounds, {
+        id: 2,
+        revealKind: 'closest_guess_pending',
+      }),
+    ).toBe('');
   });
 });

@@ -3,7 +3,7 @@ import type {
   ClosestGuessRevealView,
   PendingClosestGuessRevealView,
 } from '@campus-pubquiz/types';
-import { AnswerMedia } from '@/app/display/question-display';
+import { AnswerMedia, RevealNotes } from '@/app/display/question-display';
 import { EntranceItem, EntranceLine } from '@/app/display/reveal-entrance';
 
 interface ClosestGuessRevealScreenProps {
@@ -21,6 +21,8 @@ interface ClosestGuessRevealScreenProps {
   isDisplaySoundMuted?: boolean;
   /** The big screen's reveal: each step line slides in as it arrives. Left off on the phone. */
   hasEntrance?: boolean;
+  /** The Question notes the big screen shows under the answer; '' or left off shows none. */
+  revealNotes?: string;
 }
 
 /** The answer props for a closest-guess reveal question: only the `closest_guess` kind carries the answer; `closest_guess_pending` has none yet. */
@@ -54,6 +56,7 @@ export function ClosestGuessRevealScreen({
   autoplayMedia,
   isDisplaySoundMuted,
   hasEntrance,
+  revealNotes,
 }: ClosestGuessRevealScreenProps) {
   const { minGuess, maxGuess, closestGuesses } = closestGuess;
   const showCorrect = correctAnswer !== undefined;
@@ -106,6 +109,11 @@ export function ClosestGuessRevealScreen({
             startSeconds={revealStartSeconds}
             endSeconds={revealEndSeconds}
             isDisplaySoundMuted={isDisplaySoundMuted}
+          />
+          <RevealNotes
+            notes={revealNotes}
+            hasEntrance={hasEntrance}
+            sizeClass="text-display-lg"
           />
         </>
       )}

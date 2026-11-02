@@ -21,6 +21,8 @@ export interface SheetRow {
   roundNote: string;
   /** Round-level: the `show_round_note` cell, '' / '0' / '1'. */
   showRoundNote: string;
+  /** The `show_note` cell, '' / '0' / '1': whether this question's notes show on the big screen at its reveal. */
+  showNote: string;
 }
 
 export interface ImportRowIssue {
