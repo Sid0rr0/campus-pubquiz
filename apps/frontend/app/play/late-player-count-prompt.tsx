@@ -18,6 +18,7 @@ interface LatePlayerCountPromptProps {
   isLobby: boolean;
   savedCount: number | null;
   onSend: (playerCount: number) => Promise<AckResult>;
+  bottomSlot: HTMLElement | null;
 }
 
 /**
@@ -26,7 +27,8 @@ interface LatePlayerCountPromptProps {
  * this phone remembers. Whether to ask is decided once per session, when the
  * join first lands, and remembered on this phone, so a reconnect with a count
  * never asks, a lobby joiner is not asked after a mid-quiz reload, and a saved
- * count folds the card instead of removing it.
+ * count folds the card instead of removing it. Stepping back to the lobby hands
+ * over to the lobby's own card.
  */
 export function LatePlayerCountPrompt({
   joinCode,
@@ -34,6 +36,7 @@ export function LatePlayerCountPrompt({
   isLobby,
   savedCount,
   onSend,
+  bottomSlot,
 }: LatePlayerCountPromptProps) {
   const [shouldAsk, setShouldAsk] = useState<boolean | null>(() =>
     readPlayerCountPromptDecision(joinCode),
@@ -46,13 +49,14 @@ export function LatePlayerCountPrompt({
     writePlayerCountPromptDecision(joinCode, decision);
     setShouldAsk(decision);
   }
-  if (!shouldAsk || isDismissed) return null;
+  if (!shouldAsk || isDismissed || isLobby) return null;
 
   return (
-    <div className="mb-4">
+    <div className="mb-4 empty:hidden">
       <PlayerCountCard
         savedCount={savedCount}
         onSend={onSend}
+        bottomSlot={bottomSlot}
         onDismiss={() => {
           writePlayerCountPromptDismissed(joinCode);
           setIsDismissed(true);

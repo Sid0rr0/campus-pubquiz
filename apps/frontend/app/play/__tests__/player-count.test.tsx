@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
+import { PlayerCountCard } from '@/app/play/player-count-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { teamLinkResult } from './test-utils';
 
@@ -233,6 +234,114 @@ describe('PlayPage — a team that joins after the lobby', () => {
     ).not.toBeInTheDocument();
     setItem.mockRestore();
     getItem.mockRestore();
+  });
+});
+
+describe('PlayPage — where the answered card lives', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    searchParamsRef.current = new URLSearchParams();
+  });
+
+  it('sits below the rest of the lobby screen', () => {
+    renderPhone({ status: 'lobby', myPlayerCount: 4 });
+
+    const rules = screen.getByRole('link', { name: /read the rules/i });
+    const line = screen.getByRole('button', { name: /4 players · edit/i });
+    expect(
+      rules.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('asks a late joiner above its screen, and folds below it once answered', async () => {
+    renderPhone({ status: 'rules', myPlayerCount: null });
+    expect(
+      screen.getByRole('heading', { name: /how many players/i }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+
+    const line = await screen.findByRole(
+      'button',
+      { name: /4 players · edit/i },
+      { timeout: 3000 },
+    );
+    expect(line.parentElement).toHaveClass('order-5');
+  });
+
+  it('shows one card when a late joiner is stepped back to the lobby', () => {
+    renderPhone({ status: 'rules', myPlayerCount: null });
+    cleanup();
+
+    renderPhone({ status: 'lobby', myPlayerCount: null });
+
+    expect(
+      screen.getAllByRole('heading', { name: /how many players/i }),
+    ).toHaveLength(1);
+  });
+});
+
+describe('PlayerCountCard — a count saved while the card is open', () => {
+  function renderCard(onSend = vi.fn().mockResolvedValue(OK)) {
+    const bottomSlot = document.body.appendChild(document.createElement('div'));
+    const props = { onSend, bottomSlot };
+    const view = render(<PlayerCountCard savedCount={null} {...props} />);
+    return {
+      bottomSlot,
+      setSavedCount: (savedCount: number) =>
+        view.rerender(<PlayerCountCard savedCount={savedCount} {...props} />),
+    };
+  }
+
+  it('folds to the bottom slot when the count comes from elsewhere', () => {
+    const { bottomSlot, setSavedCount } = renderCard();
+
+    setSavedCount(6);
+
+    expect(bottomSlot).toHaveTextContent('6 players · edit');
+    expect(screen.queryByRole('button', { name: /send/i })).toBeNull();
+  });
+
+  it('stays open while this phone is editing, in the bottom slot', async () => {
+    const { bottomSlot, setSavedCount } = renderCard();
+    setSavedCount(6);
+    await userEvent.click(screen.getByRole('button', { name: /6 players/i }));
+
+    setSavedCount(7);
+
+    expect(bottomSlot).toContainElement(
+      screen.getByRole('button', { name: /send/i }),
+    );
+    expect(shown()).toHaveTextContent('6');
+  });
+
+  it('still shows "Saved ✓" when the server sync beats the acknowledgement', async () => {
+    let acknowledge: (result: typeof OK) => void = () => undefined;
+    const { setSavedCount } = renderCard(
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            acknowledge = resolve;
+          }),
+      ),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+    setSavedCount(4);
+    acknowledge(OK);
+
+    expect(await screen.findByText('Saved ✓')).toBeInTheDocument();
+  });
+
+  it('goes back to asking when the send is refused', async () => {
+    renderCard(vi.fn().mockResolvedValue({ success: false, error: 'Nope' }));
+
+    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/not saved/i);
+    expect(
+      screen.getByRole('heading', { name: /how many players/i }),
+    ).toBeInTheDocument();
   });
 });
 

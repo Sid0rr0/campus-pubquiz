@@ -1174,14 +1174,16 @@ too (`playerCount`, `number | null`, null until it reported one), so a reconnect
 second phone or a rejoin after a kick (with the team code) shows it again.
 
 On the phone, the lobby screen keeps "You're in!", "Look for (team name) on the big
-screen", the waiting line and the rules link, and adds a **player count card**: "How
-many players are you?" with a − / + stepper limited to 1–20 and a Send button. Send
-shows "Saved ✓" once the server acknowledges it, or a "Not saved — try again" retry
-when it was refused or failed. Once a count is saved the card folds into "(n) players ·
-edit", which reopens it. Answering is optional and never blocks the phone. The count can
-be changed at any status from the "Players in your team" field of the settings modal
+screen", the waiting line and the rules link, and adds a **player count card**: "How many players does your team have?" with a − / + stepper
+limited to 1–20 and a Send button. Send shows "Saved ✓" once the server acknowledges it, or a
+"Not saved — try again" retry when it was refused or failed. Once a count is saved, on this
+phone or elsewhere (a teammate's phone, the quiz master), the card slides to the bottom of the
+page and folds into "(n) players · edit"; a card this phone is editing stays open. Edit reopens
+the card at the bottom of the page. Answering is optional and never blocks the phone. The count
+can be changed at any status from the "Players in your team" field of the settings modal
 (same stepper and feedback). A team that joins after the lobby with no count gets the
-same card once, over whatever screen it lands on, with a Dismiss control; dismissing is
+same card once, over whatever screen it lands on, with a Dismiss control; once answered it
+stays folded at the bottom of the page for the rest of the session. Dismissing is
 remembered on that phone and session in `localStorage` (the card still works when
 storage is blocked). A team that already has a count never sees the prompt.
 

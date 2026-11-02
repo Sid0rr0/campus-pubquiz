@@ -63,6 +63,9 @@ function PlayPageContent() {
     handleLogOut,
   } = join;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [playerCountSlot, setPlayerCountSlot] = useState<HTMLElement | null>(
+    null,
+  );
   // Stable reference (like handleLogOut) so the publish effect below doesn't
   // re-fire on every unrelated re-render.
   const openSettings = useCallback(
@@ -377,6 +380,7 @@ function PlayPageContent() {
           isLobby={phoneScreen.kind === 'lobby'}
           savedCount={myPlayerCount}
           onSend={setPlayerCount}
+          bottomSlot={playerCountSlot}
         />
         <GameStatusScreens
           phoneScreen={phoneScreen}
@@ -398,6 +402,7 @@ function PlayPageContent() {
             <PlayerCountCard
               savedCount={myPlayerCount}
               onSend={setPlayerCount}
+              bottomSlot={playerCountSlot}
             />
           }
           jokerPick={view.jokerPick}
@@ -466,6 +471,10 @@ function PlayPageContent() {
           )}
         </div>
       </div>
+      <div
+        ref={setPlayerCountSlot}
+        className="order-5 mt-auto pt-4 empty:hidden"
+      />
       <MobileQuizActionsBar
         historyEntries={openedQuestions}
         jumpableHistoryIds={jumpableQuestionIds}
