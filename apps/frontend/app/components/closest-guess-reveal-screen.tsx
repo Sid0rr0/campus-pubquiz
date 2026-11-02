@@ -1,7 +1,8 @@
-import type {
-  ClosestGuessRevealData,
-  ClosestGuessRevealView,
-  PendingClosestGuessRevealView,
+import {
+  resolveRevealClip,
+  type ClosestGuessRevealData,
+  type ClosestGuessRevealView,
+  type PendingClosestGuessRevealView,
 } from '@campus-pubquiz/types';
 import { AnswerMedia, RevealNotes } from '@/app/display/question-display';
 import { EntranceItem, EntranceLine } from '@/app/display/reveal-entrance';
@@ -11,9 +12,11 @@ interface ClosestGuessRevealScreenProps {
   /** Present once the answer step is on air (the `closest_guess` Reveal kind). */
   correctAnswer?: string;
   answerMediaUrl?: string;
-  /** The reveal clip of a YouTube `answerMediaUrl`. */
+  /** The part of a video `answerMediaUrl` to play: see `resolveRevealClip`. */
   revealStartSeconds?: number;
   revealEndSeconds?: number;
+  /** GameProgress.isMediaFullscreen — raises a video answer to the full viewport. Left off on the phone. */
+  isFullscreen?: boolean;
   closestGuess: ClosestGuessRevealData;
   mediaTestIdPrefix: string;
   autoplayMedia?: boolean;
@@ -32,14 +35,14 @@ export function closestGuessAnswerProps(
   ClosestGuessRevealScreenProps,
   'correctAnswer' | 'answerMediaUrl' | 'revealStartSeconds' | 'revealEndSeconds'
 > {
-  return question.revealKind === 'closest_guess'
-    ? {
-        correctAnswer: question.answer,
-        answerMediaUrl: question.answerMediaUrl,
-        revealStartSeconds: question.revealStartSeconds,
-        revealEndSeconds: question.revealEndSeconds,
-      }
-    : {};
+  if (question.revealKind !== 'closest_guess') return {};
+  const clip = resolveRevealClip(question);
+  return {
+    correctAnswer: question.answer,
+    answerMediaUrl: question.answerMediaUrl,
+    revealStartSeconds: clip.start,
+    revealEndSeconds: clip.end,
+  };
 }
 
 // Shared by /display and /play. Draws exactly the lines it is sent: the
@@ -51,6 +54,7 @@ export function ClosestGuessRevealScreen({
   answerMediaUrl,
   revealStartSeconds,
   revealEndSeconds,
+  isFullscreen,
   closestGuess,
   mediaTestIdPrefix,
   autoplayMedia,
@@ -108,6 +112,7 @@ export function ClosestGuessRevealScreen({
             autoplayMedia={autoplayMedia}
             startSeconds={revealStartSeconds}
             endSeconds={revealEndSeconds}
+            isFullscreen={isFullscreen}
             isDisplaySoundMuted={isDisplaySoundMuted}
           />
           <RevealNotes

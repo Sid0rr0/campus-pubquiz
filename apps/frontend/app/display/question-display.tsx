@@ -1,10 +1,11 @@
-import { useState, type SyntheticEvent } from 'react';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import {
   classifyMediaUrl,
   extractYoutubeVideoId,
   isHttpUrl,
   isVideoUrl,
   resolveAnswerKind,
+  resolveRevealClip,
   type QuestionView,
   type SeededQuestion,
 } from '@campus-pubquiz/types';
@@ -44,12 +45,43 @@ interface AnswerMediaProps {
   /** The reveal clip, applied when `url` is a video (YouTube or file). */
   startSeconds?: number;
   endSeconds?: number;
+  /** GameProgress.isMediaFullscreen — raises an answer video to the full viewport, without remounting it. */
+  isFullscreen?: boolean;
   /** GameProgress.isMediaPaused — pauses and resumes a video-file answer in place. */
   isMediaPaused?: boolean;
   /** GameProgress.mediaReplayToken — a change seeks a video-file answer to the reveal clip start and plays it. */
   mediaReplayToken?: number;
   /** The snapshot's isDisplaySoundMuted — silences the answer media (video file, YouTube, audio) without pausing it. */
   isDisplaySoundMuted?: boolean;
+}
+
+// Same nesting in both states, so toggling fullscreen never remounts the player.
+function AnswerVideoFrame({
+  isFullscreen,
+  children,
+}: {
+  isFullscreen: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={
+        isFullscreen
+          ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
+          : 'w-full max-w-2xl'
+      }
+    >
+      <div
+        className={
+          isFullscreen
+            ? 'relative aspect-video max-h-full w-full overflow-hidden bg-black'
+            : 'relative aspect-video w-full overflow-hidden rounded-xl bg-black'
+        }
+      >
+        {children}
+      </div>
+    </div>
+  );
 }
 
 // Shared by QuestionDisplay's reveal step and ClosestGuessRevealScreen's
@@ -63,6 +95,7 @@ export function AnswerMedia({
   imageClassName = 'max-h-64 rounded-xl',
   startSeconds,
   endSeconds,
+  isFullscreen = false,
   isMediaPaused = false,
   mediaReplayToken = 0,
   isDisplaySoundMuted = false,
@@ -83,7 +116,7 @@ export function AnswerMedia({
   if (kind === 'video-file') {
     if (videoFailure.isFailed) return null;
     return (
-      <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl bg-black">
+      <AnswerVideoFrame isFullscreen={isFullscreen}>
         <VideoFile
           videoRef={videoRef}
           testId={`${mediaTestIdPrefix}-answer-video`}
@@ -95,12 +128,12 @@ export function AnswerMedia({
           onError={videoFailure.onError}
           className="absolute inset-0 h-full w-full object-contain"
         />
-      </div>
+      </AnswerVideoFrame>
     );
   }
   if (youtubeId) {
     return (
-      <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
+      <AnswerVideoFrame isFullscreen={isFullscreen}>
         <iframe
           ref={youtubeRef}
           onLoad={onYoutubeLoad}
@@ -118,7 +151,7 @@ export function AnswerMedia({
           allow="autoplay; encrypted-media"
           allowFullScreen
         />
-      </div>
+      </AnswerVideoFrame>
     );
   }
   if (kind === 'audio') {
@@ -164,7 +197,7 @@ export type QuestionDisplayQuestion = Pick<
   >;
 
 interface QuestionDisplayProps {
-  /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a video `mediaUrl` (YouTube or file) — ignored for other media and for `answerMediaUrl`. */
+  /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a video `mediaUrl` (YouTube or file) — ignored for other media, and for an `answerMediaUrl` that is a different video. */
   question: QuestionDisplayQuestion;
   /** Renders the question with no media at all (neither its own nor the answer's) — the phone's question browser, which leaves the big screen's audio and video to the big screen. */
   isMediaHidden?: boolean;
@@ -174,7 +207,7 @@ interface QuestionDisplayProps {
   autoplayMedia?: boolean;
   /** Overrides the prompt heading's className — defaults to the big-screen size used by /display; the /play reveal step passes its question_open size to keep both states visually consistent. */
   promptClassName?: string;
-  /** Admin-toggled (spacebar in /control) full-viewport overlay of the question's own image/YouTube media — see GameProgress.isMediaFullscreen. No-op when there's no question media to enlarge. */
+  /** Admin-toggled (spacebar in /control) full-viewport overlay of the question's own image/video, or a video answer media at reveal — see GameProgress.isMediaFullscreen. No-op when there's no question media to enlarge. */
   isFullscreen?: boolean;
   /** GameProgress.mediaReplayToken — bumped by REPLAY_MEDIA. Folded into the YouTube iframe's `key` so incrementing it remounts the iframe and restarts playback; left out of the key the rest of the time so fullscreen toggling (which doesn't change this) keeps the same iframe per the comment below. */
   mediaReplayToken?: number;
@@ -226,12 +259,7 @@ export function QuestionDisplay({
   hasRevealEntrance = false,
   revealNotes,
 }: QuestionDisplayProps) {
-  const {
-    prompt,
-    revealStartSeconds,
-    revealEndSeconds,
-    answer: correctAnswer,
-  } = question;
+  const { prompt, answer: correctAnswer } = question;
   const mediaUrl = isMediaHidden ? undefined : question.mediaUrl;
   const answerMediaUrl = isMediaHidden ? undefined : question.answerMediaUrl;
   // On reveal, answer_media_url (when set) normally replaces the question's
@@ -241,9 +269,10 @@ export function QuestionDisplay({
   // showSideBySideReveal below.
   const isRevealing = correctAnswer !== undefined;
   // While asked the question video plays its clip; at reveal it plays the
-  // reveal clip instead (empty means the whole video).
+  // reveal clip, which falls back to that clip when left blank.
+  const revealClip = resolveRevealClip(question);
   const questionClip = isRevealing
-    ? { start: revealStartSeconds, end: revealEndSeconds }
+    ? revealClip
     : { start: question.mediaStartSeconds, end: question.mediaEndSeconds };
   const { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady } =
     useMediaPause(
@@ -309,14 +338,17 @@ export function QuestionDisplay({
   const questionMediaKind = classifyMediaUrl(questionMediaUrl);
   const isQuestionVideo = isVideoUrl(questionMediaUrl);
   const questionVideoFailure = useVideoLoadFailure(questionMediaUrl);
-  const videoKey =
-    isRevealing && question.isVideoHidden !== true
-      ? `${mediaReplayToken}-reveal`
-      : mediaReplayToken;
+  const restartsAtReveal =
+    isRevealing &&
+    (question.isVideoHidden !== true ||
+      revealClip.start !== undefined ||
+      revealClip.end !== undefined);
+  const videoKey = restartsAtReveal
+    ? `${mediaReplayToken}-reveal`
+    : mediaReplayToken;
   // A video file replays by seeking in place (see useMediaPause), so its key
   // leaves out the replay token; it still remounts at reveal for the reveal clip.
-  const videoFileKey =
-    isRevealing && question.isVideoHidden !== true ? 'reveal' : 'question';
+  const videoFileKey = restartsAtReveal ? 'reveal' : 'question';
   // A portrait image also wins over the side-by-side reveal: the answer image
   // then takes the image column in place of the question image.
   const showTwoColumnLayout =
@@ -358,8 +390,9 @@ export function QuestionDisplay({
                 mediaTestIdPrefix={mediaTestIdPrefix}
                 autoplayMedia={autoplayMedia}
                 imageClassName="max-h-full max-w-full rounded-xl object-contain"
-                startSeconds={revealStartSeconds}
-                endSeconds={revealEndSeconds}
+                startSeconds={revealClip.start}
+                endSeconds={revealClip.end}
+                isFullscreen={isFullscreen}
                 isMediaPaused={isMediaPaused}
                 mediaReplayToken={mediaReplayToken}
                 isDisplaySoundMuted={isDisplaySoundMuted}
@@ -387,8 +420,9 @@ export function QuestionDisplay({
                 : 'w-full max-w-2xl'
             }
           >
-            {/* A visible video is keyed on the reveal so it plays again even when
-              the reveal clip's src equals the question's; a hidden video is
+            {/* A visible video, or a hidden one with a clip to play at reveal,
+              is keyed on the reveal so it plays again even when the reveal
+              clip's src equals the question's; a hidden video with no clip is
               not, so lifting its cover must not remount the player.
               Same nesting (and the same iframe element) in both states —
               changing the tree shape between fullscreen and inline would
@@ -444,8 +478,8 @@ export function QuestionDisplay({
               )}
               {/* Hidden video: the player keeps playing at full size under an
                 opaque panel (a hidden or zero-size player may not autoplay).
-                Same tree as the iframe, so lifting it at reveal never
-                remounts the player. */}
+                Same tree as the iframe, so lifting it never remounts the
+                player by itself; see restartsAtReveal. */}
               {isVideoCovered && (
                 <div
                   data-testid={`${mediaTestIdPrefix}-video-cover`}
@@ -478,8 +512,9 @@ export function QuestionDisplay({
                 mediaTestIdPrefix={mediaTestIdPrefix}
                 autoplayMedia={autoplayMedia}
                 imageClassName="max-h-full max-w-full rounded-xl object-contain"
-                startSeconds={revealStartSeconds}
-                endSeconds={revealEndSeconds}
+                startSeconds={revealClip.start}
+                endSeconds={revealClip.end}
+                isFullscreen={isFullscreen}
                 isMediaPaused={isMediaPaused}
                 mediaReplayToken={mediaReplayToken}
                 isDisplaySoundMuted={isDisplaySoundMuted}
@@ -520,8 +555,9 @@ export function QuestionDisplay({
             mediaTestIdPrefix={mediaTestIdPrefix}
             autoplayMedia={autoplayMedia}
             imageClassName="max-h-full max-w-full rounded-xl object-contain"
-            startSeconds={revealStartSeconds}
-            endSeconds={revealEndSeconds}
+            startSeconds={revealClip.start}
+            endSeconds={revealClip.end}
+            isFullscreen={isFullscreen}
             isMediaPaused={isMediaPaused}
             mediaReplayToken={mediaReplayToken}
             isDisplaySoundMuted={isDisplaySoundMuted}

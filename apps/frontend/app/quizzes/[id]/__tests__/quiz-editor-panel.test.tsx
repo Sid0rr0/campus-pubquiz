@@ -412,6 +412,40 @@ describe('QuizEditorPanel', () => {
       expect(screen.getByLabelText(/reveal end/i)).toHaveValue('2:45');
     });
 
+    it('shows the question clip as the reveal placeholders when the reveal plays the same video', async () => {
+      loadQuestion({
+        mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        mediaStartSeconds: 82,
+        mediaEndSeconds: 140,
+      });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.getByLabelText(/reveal start/i)).toHaveValue('');
+      expect(screen.getByLabelText(/reveal start/i)).toHaveAttribute(
+        'placeholder',
+        '1:22',
+      );
+      expect(screen.getByLabelText(/reveal end/i)).toHaveAttribute(
+        'placeholder',
+        '2:20',
+      );
+    });
+
+    it('keeps the generic reveal placeholders for a different answer video', async () => {
+      loadQuestion({
+        mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        answerMediaUrl: 'https://youtu.be/9bZkp7q19f0',
+        mediaStartSeconds: 10,
+        mediaEndSeconds: 20,
+      });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.getByLabelText(/reveal start/i)).toHaveAttribute(
+        'placeholder',
+        '1:22',
+      );
+    });
+
     it('labels them as the answer video clip when the answer media is YouTube', async () => {
       loadQuestion({
         mediaUrl: 'https://example.com/a.jpg',

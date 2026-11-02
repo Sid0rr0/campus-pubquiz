@@ -91,6 +91,26 @@ describe('hidden video on the big screen', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('restarts a hidden video with a clip when the answer comes in', () => {
+    const clipped = { ...HIDDEN, mediaStartSeconds: 10, mediaEndSeconds: 20 };
+    const { rerender } = render(
+      <QuestionDisplay question={clipped} mediaTestIdPrefix="question" />,
+    );
+    const iframe = screen.getByTestId('question-youtube');
+
+    rerender(
+      <QuestionDisplay
+        question={{ ...clipped, answer: 'Never Gonna Give You Up' }}
+        mediaTestIdPrefix="question"
+      />,
+    );
+
+    expect(screen.getByTestId('question-youtube')).not.toBe(iframe);
+    expect(screen.getByTestId('question-youtube').getAttribute('src')).toBe(
+      iframe.getAttribute('src'),
+    );
+  });
+
   it('restarts a video that is not hidden when the answer comes in, even with the same src', () => {
     const { rerender } = render(
       <QuestionDisplay question={QUESTION} mediaTestIdPrefix="question" />,

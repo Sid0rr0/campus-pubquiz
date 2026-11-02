@@ -47,7 +47,7 @@ _Avoid_: audio question, video question, YouTube question, picture question (no 
 The part of a question's video that plays while the question is asked, set by a start and end time.
 
 **Reveal clip**:
-The part of a video that plays when a question's answer is revealed: either the question's own video or a separate answer video, each with its own start and end.
+The part of a video that plays when a question's answer is revealed: either the question's own video or a separate answer video, set by a start and end time. With neither time set, the question's own video plays the same part as its Clip (also when the answer video is a link to that same video), and a different answer video plays whole.
 _Avoid_: answer clip (could be read as a team's answer)
 
 **Hidden video**:

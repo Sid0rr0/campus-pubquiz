@@ -56,6 +56,37 @@ export function hasVideoMedia(media: {
   return isVideoUrl(media.mediaUrl) || isVideoUrl(media.answerMediaUrl);
 }
 
+/** Whether a reveal plays the question's own video: no answer media, or an answer link to that same video (same YouTube id, or same file link). */
+export function revealPlaysQuestionVideo(media: {
+  mediaUrl?: string;
+  answerMediaUrl?: string;
+}): boolean {
+  const { mediaUrl, answerMediaUrl } = media;
+  if (mediaUrl === undefined || !isVideoUrl(mediaUrl)) return false;
+  if (!answerMediaUrl) return true;
+  return (
+    (extractYoutubeVideoId(answerMediaUrl) ?? answerMediaUrl) ===
+    (extractYoutubeVideoId(mediaUrl) ?? mediaUrl)
+  );
+}
+
+/** The part of the video to play at reveal: the reveal clip when either time is set, else the question clip when the reveal plays that same video. An empty result means the whole video. */
+export function resolveRevealClip(question: {
+  mediaUrl?: string;
+  answerMediaUrl?: string;
+  mediaStartSeconds?: number;
+  mediaEndSeconds?: number;
+  revealStartSeconds?: number;
+  revealEndSeconds?: number;
+}): { start?: number; end?: number } {
+  const { revealStartSeconds: start, revealEndSeconds: end } = question;
+  return start === undefined &&
+    end === undefined &&
+    revealPlaysQuestionVideo(question)
+    ? { start: question.mediaStartSeconds, end: question.mediaEndSeconds }
+    : { start, end };
+}
+
 export interface MediaUploadResult {
   /** Public, direct link to the stored image — safe to drop into `mediaUrl`/`answerMediaUrl`. */
   url: string;

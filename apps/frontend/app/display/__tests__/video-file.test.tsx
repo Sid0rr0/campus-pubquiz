@@ -343,9 +343,25 @@ describe('video file on the big screen', () => {
       expect(play).toHaveBeenCalledTimes(1);
     });
 
+    it('seeks the question video to its clip start on play again at reveal when the reveal clip is blank', () => {
+      vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+      const clipped = {
+        mediaUrl: CLIP_URL,
+        mediaStartSeconds: 82,
+        answer: 'A',
+      };
+      const { rerender } = render(renderWith(clipped, { mediaReplayToken: 1 }));
+      const video = screen.getByTestId('reveal-video') as HTMLVideoElement;
+      video.currentTime = 30;
+
+      rerender(renderWith(clipped, { mediaReplayToken: 2 }));
+
+      expect(video.currentTime).toBe(82);
+    });
+
     it('seeks the question video to 0 on play again at reveal when no clip is set', () => {
       vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
-      const plain = { mediaUrl: CLIP_URL, mediaStartSeconds: 82, answer: 'A' };
+      const plain = { mediaUrl: CLIP_URL, answer: 'A' };
       const { rerender } = render(renderWith(plain, { mediaReplayToken: 1 }));
       const video = screen.getByTestId('reveal-video') as HTMLVideoElement;
       video.currentTime = 30;

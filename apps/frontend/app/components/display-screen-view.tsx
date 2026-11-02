@@ -217,6 +217,7 @@ export function DisplayScreenView({
                   closestGuess={revealQuestion.closestGuess}
                   mediaTestIdPrefix="reveal"
                   autoplayMedia={settings.autoplayMedia}
+                  isFullscreen={live?.isMediaFullscreen}
                   isDisplaySoundMuted={live?.isDisplaySoundMuted}
                   hasEntrance
                   revealNotes={screen.notes}

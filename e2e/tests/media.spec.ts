@@ -166,4 +166,8 @@ test('each kind of media gets its player, the controls drive it, and the reveal 
   const revealAnswer = player(display, 'reveal-answer-video');
   await expect(revealAnswer).toHaveAttribute('src', answerVideo.answerSrc);
   await expectPlaying(revealAnswer);
+  await enterFullscreenMedia(control);
+  await expect(fullscreenPlayer(display, 'reveal-answer-video')).toBeVisible();
+  await exitFullscreenMedia(control);
+  await expect(fullscreenPlayer(display, 'reveal-answer-video')).toHaveCount(0);
 });

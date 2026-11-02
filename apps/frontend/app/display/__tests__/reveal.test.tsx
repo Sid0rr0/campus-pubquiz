@@ -467,6 +467,20 @@ describe('DisplayPage — reveal', () => {
         | { status: 'reveal'; revealIndex: number },
       fields: Record<string, unknown>,
     ) {
+      mockQuestion(progress, fields);
+      return render(<DisplayPage />);
+    }
+
+    function mockQuestion(
+      progress:
+        | { status: 'question_open' }
+        | {
+            status: 'reveal';
+            revealIndex: number;
+            isMediaFullscreen?: boolean;
+          },
+      fields: Record<string, unknown>,
+    ) {
       mockUseGame.mockReturnValue({
         snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
           rounds: [
@@ -490,7 +504,6 @@ describe('DisplayPage — reveal', () => {
         connectionError: null,
         sendAction: vi.fn(),
       });
-      render(<DisplayPage />);
     }
 
     it('leaves exactly one iframe at reveal with a YouTube answer media, clipped by the reveal clip', () => {
@@ -535,13 +548,68 @@ describe('DisplayPage — reveal', () => {
       );
     });
 
-    it('plays the whole question video at reveal when the reveal clip is empty', () => {
+    it('plays the question clip again at reveal when the reveal clip is empty', () => {
       renderQuestion({ status: 'reveal', revealIndex: 0 }, {});
 
       expect(screen.getByTestId('reveal-youtube')).toHaveAttribute(
         'src',
-        embed('dQw4w9WgXcQ', ''),
+        embed('dQw4w9WgXcQ', '&start=10&end=20'),
       );
+    });
+
+    it('plays the question clip when the answer media links the same YouTube video', () => {
+      renderQuestion(
+        { status: 'reveal', revealIndex: 0 },
+        { answerMediaUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+      );
+
+      expect(screen.getByTestId('reveal-answer-youtube')).toHaveAttribute(
+        'src',
+        embed('dQw4w9WgXcQ', '&start=10&end=20'),
+      );
+    });
+
+    it('follows typed reveal times on the same video', () => {
+      renderQuestion(
+        { status: 'reveal', revealIndex: 0 },
+        { answerMediaUrl: QUESTION_VIDEO, revealStartSeconds: 150 },
+      );
+
+      expect(screen.getByTestId('reveal-answer-youtube')).toHaveAttribute(
+        'src',
+        embed('dQw4w9WgXcQ', '&start=150'),
+      );
+    });
+
+    it('plays the whole question video when the reveal start is 0', () => {
+      renderQuestion(
+        { status: 'reveal', revealIndex: 0 },
+        { revealStartSeconds: 0 },
+      );
+
+      expect(screen.getByTestId('reveal-youtube')).toHaveAttribute(
+        'src',
+        embed('dQw4w9WgXcQ', '&start=0'),
+      );
+    });
+
+    it('keeps the same answer iframe when fullscreen raises it to the full viewport', () => {
+      const fields = { answerMediaUrl: ANSWER_VIDEO };
+      const { rerender } = renderQuestion(
+        { status: 'reveal', revealIndex: 0 },
+        fields,
+      );
+      const iframe = screen.getByTestId('reveal-answer-youtube');
+      expect(iframe.closest('.fixed.inset-0')).toBeNull();
+
+      mockQuestion(
+        { status: 'reveal', revealIndex: 0, isMediaFullscreen: true },
+        fields,
+      );
+      rerender(<DisplayPage />);
+
+      expect(screen.getByTestId('reveal-answer-youtube')).toBe(iframe);
+      expect(iframe.closest('.fixed.inset-0')).not.toBeNull();
     });
 
     it('still applies the question clip while the question is asked', () => {

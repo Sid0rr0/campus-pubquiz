@@ -11,6 +11,7 @@ import {
   QUESTION_TYPES,
   isKahootAllowedType,
   isVideoUrl,
+  revealPlaysQuestionVideo,
   type QuestionType,
   type QuizDraftIssue,
   questionNotesOf,
@@ -123,6 +124,12 @@ export function QuizQuestionEditor({
   );
   const isVideoMedia = isVideoUrl(question.mediaUrl);
   const isVideoAnswerMedia = isVideoUrl(question.answerMediaUrl);
+  // Blank reveal times fall back to the question clip: show that, not the generic example.
+  const revealPlaceholder =
+    revealPlaysQuestionVideo(question) &&
+    (question.clipStart.trim() !== '' || question.clipEnd.trim() !== '')
+      ? { start: question.clipStart, end: question.clipEnd }
+      : { start: '1:22', end: '2:20' };
 
   return (
     <div
@@ -319,7 +326,7 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   onChange({ revealStart: event.target.value })
                 }
-                placeholder="1:22"
+                placeholder={revealPlaceholder.start}
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
             </label>
@@ -330,7 +337,7 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   onChange({ revealEnd: event.target.value })
                 }
-                placeholder="2:20"
+                placeholder={revealPlaceholder.end}
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
             </label>

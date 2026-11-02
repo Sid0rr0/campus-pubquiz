@@ -1434,8 +1434,8 @@ direct files and are not recognised. On `/display` it is a `<video>` with no
 controls, `playsInline` and `autoPlay` from `autoplayMedia`, in the same 16:9
 box as YouTube (and the same fullscreen overlay, without remounting). The
 reveal rule is worded over video: a video `answer_media_url` (YouTube or file,
-either source) replaces the question media at reveal; otherwise the question
-video plays again. The side-by-side image reveal is unchanged. If the file
+either source) replaces the question media at reveal, in the same fullscreen
+overlay; otherwise the question video plays again. The side-by-side image reveal is unchanged. If the file
 fails to load (`error` event) the display hides the video area for that media
 and leaves the prompt and answers; there is no retry and no message. Venue
 internet carries the video, so link short, compressed clips. Uploading video
@@ -1493,17 +1493,23 @@ inputs "Answer video clip" when `answer_media_url` is a video, otherwise
 "Reveal clip (question video)"). At reveal exactly one video plays: a
 video `answer_media_url` replaces the question video, clipped by the
 reveal clip; otherwise the question video plays again (restarted, unless it
-is a hidden video, which just lifts its cover), clipped by the reveal clip,
-not the question clip. An empty reveal start/end means the whole video. The
-question clip (`start`/`end`) still applies only while the question is
-asked. Reveal views carry the reveal clip (it is on `SeededQuestion`, like
+is a hidden video with no clip to play, which just lifts its cover), clipped by the reveal clip,
+not the question clip. When reveal start and end are both blank and the reveal
+plays the question's own video (no `answer_media_url`, or one linking that same
+video: same YouTube id or same file link), it plays the question clip again
+(`resolveRevealClip` in `shared/types/src/media.ts`, worked out at reveal, never
+stored; the editor shows those times as placeholders); a different answer video
+plays whole. A reveal start of `0` plays the question video whole, and either
+typed bound stops the fallback, a blank bound then meaning that end of the
+video. Reveal views carry the reveal clip (it is on `SeededQuestion`, like
 `answerMediaUrl`, never on the pre-reveal `QuestionView`). **Hidden video:**
 the "Hide video (sound only)" checkbox (`isVideoHidden` on the draft,
 preview, payload and question views; `hideVideo: true` in the CSV notes
 group) shows for any video `media_url` (YouTube or file). The big screen keeps
 the player (iframe or `<video>`) mounted at full size (a hidden or zero-size player may not autoplay) under an
 opaque panel with a 🎵 label, while the question is asked and in break
-review; the panel comes off at reveal without remounting the player. Phones
+review; the panel comes off at reveal, and the player restarts only if a clip applies at
+reveal (a question or reveal clip), otherwise it carries on. Phones
 show "🎧 Listen" in place of "👀 Look at the screen". A stored payload
 without the field reads as not hidden.
 
