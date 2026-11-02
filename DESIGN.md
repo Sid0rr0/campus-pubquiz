@@ -215,8 +215,8 @@ A small ink-filled pill with cream text, used in the big-screen header for round
 ### Round title card (ink stage)
 The between-rounds peak on `/display` (round title, break round title, reveal intro). It fills the whole area under the header with solid ink, like the landing hero. The round name is in cream at `text-display-8xl` (max 18ch, balanced), the author and note are in cream at 70–85%, and the round label (e.g. "ROUND 2 — History", "REVEALING ANSWERS · ROUND 1") is an accent-1 pill below the title, not an eyebrow above it. The label comes in first, then the title (`round-title-entrance.tsx`). It is the only full-bleed ink screen on `/display`; keep it that way so it still reads as a change of pace.
 
-### Join ticket (landing)
-The landing page's join card is a ticket (`join-panel.tsx`): an accent-1 header strip reading "Admit one team" in display type, the join form, then a dashed perforation with cream notch discs at both edges and a tear-off stub. Collapsed, the stub reads "Played before? Keep this stub." with a tracked uppercase TEAM CODE control. Revealed, it holds the returning team's code field. It uses the card-lift shadow and overlaps the ink band by 56–80px.
+### Join ticket
+The join card on the landing page and `/play` is a ticket (`JoinTicket` in `join-form.tsx`): an accent-1 header strip reading "Join live game" in display type, the join form, then a dashed perforation with cream notch discs at both edges and a tear-off stub. Collapsed, the stub reads "Played before? Keep this stub." with a tracked uppercase TEAM CODE control. Revealed, it holds the returning team's code field. It uses the card-lift shadow. On the landing page it overlaps the ink band by 56–80px; on `/play` it is centred on the cream page.
 
 ### Leaderboard & podium (signature)
 The ranked leaderboard and podium on `/display` reveal one rank at a time, using staged entrance animations (`leaderboard-entrance.ts`, `podium.tsx`) and a fanfare sound. They are the climax of the night and the most expressive moment in the system.

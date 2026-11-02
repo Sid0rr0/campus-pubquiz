@@ -31,8 +31,17 @@ export class PhoneScreen {
   async joinWithTeamCode(teamCode: string): Promise<void> {
     await this.page.goto(`/play?code=${this.joinCode}`);
     await this.page.getByLabel('Team name').fill(this.teamName);
-    await this.page.getByLabel(TEAM_CODE_LABEL).fill(teamCode);
+    await this.fillTeamCode(teamCode);
     await this.pressJoin();
+  }
+
+  /** The field stays behind the ticket's stub until opened, unless a refusal or kick notice already opened it. */
+  private async fillTeamCode(teamCode: string): Promise<void> {
+    const field = this.page.getByLabel(TEAM_CODE_LABEL);
+    const stub = this.page.getByRole('button', { name: /^Played before/ });
+    await expect(field.or(stub)).toBeVisible();
+    if (await stub.isVisible()) await stub.click();
+    await field.fill(teamCode);
   }
 
   async pressJoin(): Promise<void> {
@@ -67,7 +76,7 @@ export class PhoneScreen {
   /** Types the team name (and the recovery code, when given) into the join form and presses Join. */
   async rejoin(teamCode?: string): Promise<void> {
     await this.page.getByLabel('Team name').fill(this.teamName);
-    if (teamCode) await this.page.getByLabel(TEAM_CODE_LABEL).fill(teamCode);
+    if (teamCode) await this.fillTeamCode(teamCode);
     await this.pressJoin();
   }
 

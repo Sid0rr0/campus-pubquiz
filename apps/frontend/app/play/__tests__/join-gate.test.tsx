@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { JoinPanel } from '@/app/components/join-panel';
@@ -46,6 +47,25 @@ describe('the join gate on /play and the home page join panel', () => {
     window.localStorage.clear();
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
+  });
+
+  it('keeps a fresh team code field behind the stub on /play, as on the home page', async () => {
+    mockUseTeamLink.mockReturnValue(teamLinkResult({ session: {} }));
+
+    renderWithQuery(<PlayPage />);
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Join live game' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /team code/i }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: /played before/i }),
+    );
+    expect(
+      screen.getByRole('textbox', { name: /team code/i }),
+    ).toBeInTheDocument();
   });
 
   const cases: ReadonlyArray<{

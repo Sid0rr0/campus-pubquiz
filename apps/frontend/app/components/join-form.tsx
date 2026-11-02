@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, type SubmitEvent } from 'react';
+import {
+  useState,
+  type ElementType,
+  type ReactNode,
+  type SubmitEvent,
+} from 'react';
 import { ChevronRightIcon, EnterIcon } from '@radix-ui/react-icons';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPublicSessions } from '@/app/lib/sessions-api';
 import { queryKeys } from '@/app/lib/query-keys';
+import type { TeamLinkJoin } from '@/app/lib/use-team-link';
 import { Button } from '@/app/components/button';
 import { LiveSessionSelect } from '@/app/components/live-session-select';
 
@@ -13,42 +19,30 @@ interface JoinFormProps {
   onNameInputChange: (value: string) => void;
   codeInput: string;
   onCodeInputChange: (value: string) => void;
-  teamCodeInput: string;
-  onTeamCodeInputChange: (value: string) => void;
   connectionError: string | null;
   onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
-  /** /play shows the team code field from the start — it's the reconnect/direct-visit fallback, where "played before?" is the common case rather than the exception the home page's collapsed toggle assumes. */
-  alwaysShowTeamCode?: boolean;
-  /** The home page renders `TeamCodeField` itself, on the ticket's stub below the Join button. */
-  omitTeamCode?: boolean;
 }
 
-/** The form's id, for a `TeamCodeField` rendered outside it so Enter there still submits the join. */
-export const JOIN_FORM_ID = 'join-form';
+/** The form's id, so `TeamCodeField` on the ticket's stub still submits the join on Enter. */
+const JOIN_FORM_ID = 'join-form';
 
 interface TeamCodeFieldProps {
   value: string;
   onChange: (value: string) => void;
   connectionError: string | null;
-  alwaysShow?: boolean;
-  /** Collapsed, reads as the home page ticket's tear-off stub instead of a quiet link. */
-  onStub?: boolean;
 }
 
 /** The returning team's code: collapsed behind a "Played before?" toggle on a fresh join. */
-export function TeamCodeField({
+function TeamCodeField({
   value,
   onChange,
   connectionError,
-  alwaysShow = false,
-  onStub = false,
 }: TeamCodeFieldProps) {
   const [revealed, setRevealed] = useState(false);
   // A stored team code (returning team) or a connection error asking for one
   // (name collision) both mean the field should just be there already —
   // only a fresh join with nothing to say yet starts it collapsed.
-  const show =
-    alwaysShow || revealed || Boolean(value) || Boolean(connectionError);
+  const show = revealed || Boolean(value) || Boolean(connectionError);
 
   return show ? (
     <>
@@ -70,7 +64,7 @@ export function TeamCodeField({
         className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
       />
     </>
-  ) : onStub ? (
+  ) : (
     <Button
       type="button"
       onClick={() => setRevealed(true)}
@@ -84,35 +78,16 @@ export function TeamCodeField({
         <ChevronRightIcon aria-hidden="true" />
       </span>
     </Button>
-  ) : (
-    <Button
-      type="button"
-      onClick={() => setRevealed(true)}
-      className="mt-2 self-start text-[13px] font-extrabold text-foreground/55 underline"
-    >
-      Played before? Enter your team code
-    </Button>
   );
 }
 
-/**
- * The team-join form fields shared by the home page and /play (a returning
- * team's reconnect fallback, or anyone landing on /play directly) — the two
- * pages differ only in the chrome around this (heading/subtitle, a
- * connecting/joined state on the home page, a "log out" link on /play), not
- * in how a team actually gets in.
- */
-export function JoinForm({
+function JoinForm({
   nameInput,
   onNameInputChange,
   codeInput,
   onCodeInputChange,
-  teamCodeInput,
-  onTeamCodeInputChange,
   connectionError,
   onSubmit,
-  alwaysShowTeamCode = false,
-  omitTeamCode = false,
 }: JoinFormProps) {
   const [gameCodeRevealed, setGameCodeRevealed] = useState(false);
   // Same query (and cache) as the select below.
@@ -193,14 +168,6 @@ export function JoinForm({
             Have a game code?
           </Button>
         )}
-        {!omitTeamCode && (
-          <TeamCodeField
-            value={teamCodeInput}
-            onChange={onTeamCodeInputChange}
-            connectionError={connectionError}
-            alwaysShow={alwaysShowTeamCode}
-          />
-        )}
         <Button
           type="submit"
           variant="solid"
@@ -211,5 +178,77 @@ export function JoinForm({
         </Button>
       </form>
     </>
+  );
+}
+
+interface JoinTicketProps {
+  join: Pick<
+    TeamLinkJoin,
+    | 'nameInput'
+    | 'setNameInput'
+    | 'codeInput'
+    | 'setCodeInput'
+    | 'teamCodeInput'
+    | 'setTeamCodeInput'
+    | 'connectionError'
+    | 'needsJoinForm'
+    | 'handleJoin'
+  >;
+  /** The heading's level: /play has no other heading, so its ticket is the page's h1. */
+  headingTag?: ElementType;
+  /** Replaces the form once a team no longer needs it (the home page's connecting and joined states). */
+  children?: ReactNode;
+}
+
+/**
+ * The join card shared by the home page and /play: the header strip, the join
+ * form, and a returning team's code on the tear-off stub below the Join button.
+ */
+export function JoinTicket({
+  join,
+  headingTag: Heading = 'h2',
+  children,
+}: JoinTicketProps) {
+  return (
+    <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-foreground/15 bg-white shadow-[0_16px_36px_rgba(46,49,146,0.1)]">
+      <div className="bg-magenta px-6 py-4 text-white sm:py-5">
+        <Heading className="font-display text-3xl leading-tight sm:text-4xl">
+          Join live game
+        </Heading>
+      </div>
+
+      <div className="px-6 pb-6 pt-4 sm:pt-5">
+        {join.needsJoinForm ? (
+          <JoinForm
+            nameInput={join.nameInput}
+            onNameInputChange={join.setNameInput}
+            codeInput={join.codeInput}
+            onCodeInputChange={join.setCodeInput}
+            connectionError={join.connectionError}
+            onSubmit={join.handleJoin}
+          />
+        ) : (
+          children
+        )}
+      </div>
+
+      {join.needsJoinForm && (
+        <div className="relative flex flex-col gap-2 border-t-2 border-dashed border-foreground/25 px-6 pb-3 pt-2">
+          <span
+            aria-hidden="true"
+            className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-foreground/25 bg-background"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-foreground/25 bg-background"
+          />
+          <TeamCodeField
+            value={join.teamCodeInput}
+            onChange={join.setTeamCodeInput}
+            connectionError={join.connectionError}
+          />
+        </div>
+      )}
+    </div>
   );
 }

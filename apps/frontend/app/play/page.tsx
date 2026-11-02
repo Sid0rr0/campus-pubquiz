@@ -6,7 +6,7 @@ import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
 import { isShowingLastBreak, type PowerUpId } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
-import { JoinForm } from '@/app/components/join-form';
+import { JoinTicket } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
 import { FinalFeedbackForm } from '@/app/play/final-feedback-form';
@@ -47,19 +47,12 @@ function PlayPageContent() {
   const { join, game } = useTeamLink(codeFromUrl, teamCodeFromUrl, nameFromUrl);
   const {
     teamName,
-    nameInput,
-    setNameInput,
-    codeInput,
-    setCodeInput,
-    teamCodeInput,
-    setTeamCodeInput,
     hasStoredIdentity,
     connectionError,
     isReconnecting,
     forceReconnect,
     team,
     needsJoinForm,
-    handleJoin,
     handleLogOut,
   } = join;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -108,30 +101,14 @@ function PlayPageContent() {
 
   if (needsJoinForm) {
     return (
-      <main className="flex min-h-screen flex-col justify-center gap-4 bg-background px-7 py-10 text-foreground">
-        <h1 className="text-center font-display text-3xl text-magenta">
-          🍺 Join the quiz
-        </h1>
-        <p className="-mt-2 text-center text-sm text-foreground/65">
-          Grab a table, pick a name
-        </p>
-        <JoinForm
-          nameInput={nameInput}
-          onNameInputChange={setNameInput}
-          codeInput={codeInput}
-          onCodeInputChange={setCodeInput}
-          teamCodeInput={teamCodeInput}
-          onTeamCodeInputChange={setTeamCodeInput}
-          connectionError={connectionError}
-          onSubmit={handleJoin}
-          alwaysShowTeamCode
-        />
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 py-10 text-foreground">
+        <JoinTicket join={join} headingTag="h1" />
         {hasStoredIdentity && (
           <Button
             type="button"
             variant="text-quiet"
             onClick={handleLogOut}
-            className="mx-auto flex"
+            className="flex"
           >
             <ExitIcon aria-hidden="true" />
             Log out

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { JoinForm } from '@/app/components/join-form';
+import { JoinTicket } from '@/app/components/join-form';
 import { renderWithQuery } from '@/test-utils/query';
 
 const { mockFetchPublicSessions } = vi.hoisted(() => ({
@@ -28,23 +28,26 @@ function ControlledJoinForm({
   const [codeInput, setCodeInput] = useState(initialCode);
   const [teamCodeInput, setTeamCodeInput] = useState('');
   return (
-    <JoinForm
-      nameInput={nameInput}
-      onNameInputChange={setNameInput}
-      codeInput={codeInput}
-      onCodeInputChange={setCodeInput}
-      teamCodeInput={teamCodeInput}
-      onTeamCodeInputChange={setTeamCodeInput}
-      connectionError={connectionError}
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit();
+    <JoinTicket
+      join={{
+        nameInput,
+        setNameInput,
+        codeInput,
+        setCodeInput,
+        teamCodeInput,
+        setTeamCodeInput,
+        connectionError,
+        needsJoinForm: true,
+        handleJoin: (event) => {
+          event.preventDefault();
+          onSubmit();
+        },
       }}
     />
   );
 }
 
-describe('JoinForm', () => {
+describe('JoinTicket', () => {
   beforeEach(() => {
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
