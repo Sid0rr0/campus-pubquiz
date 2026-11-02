@@ -66,6 +66,24 @@ describe('formatBonusAwardConfirmation', () => {
       '+1 Selfie → The Quizzly Bears',
     );
   });
+
+  it('adds coins after the points, singular for one', () => {
+    expect(
+      formatBonusAwardConfirmation('selfie', 1, 'The Quizzly Bears', 2),
+    ).toBe('+1 Selfie, +2 coins → The Quizzly Bears');
+    expect(formatBonusAwardConfirmation('selfie', 1, 'Bears', 1)).toBe(
+      '+1 Selfie, +1 coin → Bears',
+    );
+  });
+
+  it('reads coins alone, given or taken, without a points part', () => {
+    expect(formatBonusAwardConfirmation('selfie', 0, 'Bears', 2)).toBe(
+      '+2 coins → Bears',
+    );
+    expect(formatBonusAwardConfirmation('selfie', 0, 'Bears', -1)).toBe(
+      '−1 coin → Bears',
+    );
+  });
 });
 
 describe('getBonusEarnDeadlineText', () => {

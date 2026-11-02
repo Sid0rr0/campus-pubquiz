@@ -258,6 +258,17 @@ describe('replacing a draft that holds questions', () => {
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
   });
 
+  it('asks when only one of several rounds holds questions', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { result } = renderImport({
+      rounds: [makeRound('empty', 'Empty'), ...withQuestion],
+    });
+
+    await act(() => result.current.handleCsvFile(csvEvent(csvFile()).event));
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
   it('does not ask when adding to the quiz, since nothing is lost', async () => {
     const confirm = vi.spyOn(window, 'confirm');
     mockPreviewImport.mockResolvedValue(preview());

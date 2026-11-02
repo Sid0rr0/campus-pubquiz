@@ -277,3 +277,18 @@ describe('selectPhoneQuestion: purity', () => {
     expect(scenario).toEqual(snapshot);
   });
 });
+
+describe('selectPhoneQuestion: stepping', () => {
+  it('has no next question when the shown one is not among the opened ones', () => {
+    const result = selectPhoneQuestion(
+      input({ openedQuestions: [q(1), q(2)], currentQuestion: q(9) }),
+    );
+    // The last opened question wins over currentQuestion, so step from there.
+    expect(result.selectedQuestion).toEqual(q(2));
+    expect(result.nextQuestion).toBeNull();
+    const detached = selectPhoneQuestion(input({ currentQuestion: q(9) }));
+    expect(detached.selectedQuestion).toEqual(q(9));
+    expect(detached.previousQuestion).toBeNull();
+    expect(detached.nextQuestion).toBeNull();
+  });
+});

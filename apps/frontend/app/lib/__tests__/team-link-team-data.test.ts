@@ -227,6 +227,30 @@ describe('team link: the team data', () => {
       expect(ofType(taken.commands, 'toast')[0].message).toContain('-2 coins');
     });
 
+    it('toasts a zero award plainly: no plus sign, no coin emoji, neutral', () => {
+      const none = run(linkedPhone(), {
+        type: 'coinAwarded',
+        payload: { coins: 0, balance: 3 },
+      });
+      expect(ofType(none.commands, 'toast')[0]).toMatchObject({
+        tone: 'neutral',
+        message: '0 coins',
+      });
+    });
+
+    it('marks only a gain with the coin emoji', () => {
+      const gained = run(linkedPhone(), {
+        type: 'coinAwarded',
+        payload: { coins: 2, balance: 2 },
+      });
+      const taken = run(linkedPhone(), {
+        type: 'coinAwarded',
+        payload: { coins: -2, balance: 0 },
+      });
+      expect(ofType(gained.commands, 'toast')[0].message).toBe('🪙 +2 coins');
+      expect(ofType(taken.commands, 'toast')[0].message).toBe('-2 coins');
+    });
+
     it('updates the balance quietly when a sync says it changed', () => {
       const synced = run(linkedPhone(), {
         type: 'coinsSynced',

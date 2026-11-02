@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { clearStoredSession, normalizeJoinCode } from '@/app/lib/team-storage';
+import {
+  clearStoredSession,
+  normalizeJoinCode,
+  saveTeamCode,
+} from '@/app/lib/team-storage';
 
 function seedIdentity() {
   window.localStorage.setItem('campus-pubquiz-team-name', 'Quizzy');
@@ -42,5 +46,33 @@ describe('normalizeJoinCode', () => {
 
   it('returns an empty string when given only whitespace', () => {
     expect(normalizeJoinCode('   ')).toBe('');
+  });
+});
+
+describe('saveTeamCode', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it('stores the code and keeps the name when it is the same code, in any case', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Quizzy');
+    window.localStorage.setItem('campus-pubquiz-team-code', 'AbC');
+    saveTeamCode('aBc');
+    expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBe('aBc');
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe(
+      'Quizzy',
+    );
+  });
+
+  it('drops the stored name when the code is a different team', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Quizzy');
+    window.localStorage.setItem('campus-pubquiz-team-code', 'abc');
+    saveTeamCode('xyz');
+    expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBe('xyz');
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBeNull();
+  });
+
+  it('drops the stored name when no code was stored before', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Quizzy');
+    saveTeamCode('abc');
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBeNull();
   });
 });

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isJokerRoundPlayed, jokerExtraPoints } from '@/app/play/joker-round';
+import {
+  doubledRoundsOf,
+  isJokerRoundPlayed,
+  jokerExtraPoints,
+} from '@/app/play/joker-round';
 
 describe('jokerExtraPoints', () => {
   it('is the points the joker adds in the joker round', () => {
@@ -31,5 +35,18 @@ describe('isJokerRoundPlayed', () => {
 
   it('is true once the quiz has ended', () => {
     expect(isJokerRoundPlayed(3, 'ended', [])).toBe(true);
+  });
+});
+
+describe('doubledRoundsOf', () => {
+  it('lists the joker round and the extra-joker rounds in quiz order', () => {
+    const round = (roundNumber: number) => ({
+      roundNumber,
+      title: `R${roundNumber}`,
+    });
+    const purchases = [{ round: round(1) }, { round: round(4) }, {}] as never;
+    expect(
+      doubledRoundsOf(round(3), purchases).map((r) => r.roundNumber),
+    ).toEqual([1, 3, 4]);
   });
 });
