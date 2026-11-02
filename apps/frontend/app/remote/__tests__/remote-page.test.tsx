@@ -648,7 +648,7 @@ describe('RemotePage — content', () => {
     });
     renderWithQuery(<RemotePage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /play video again/i }));
+    fireEvent.click(screen.getByRole('button', { name: /play media again/i }));
 
     expect(sendAction).toHaveBeenCalledWith('REPLAY_MEDIA');
   });
@@ -690,7 +690,7 @@ describe('RemotePage — content', () => {
       renderWithQuery(<RemotePage />);
 
       expect(
-        screen.queryByRole('button', { name: /play video again/i }) !== null,
+        screen.queryByRole('button', { name: /play media again/i }) !== null,
       ).toBe(isOffered);
       expect(screen.queryByRole('button', { name: 'Pause' }) !== null).toBe(
         isOffered,
@@ -729,8 +729,8 @@ describe('RemotePage — content', () => {
 
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_PAUSE');
     expect(
-      screen.queryByRole('button', { name: /play video again/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: /play media again/i }),
+    ).toBeInTheDocument();
   });
 
   it('shows Resume while the media is paused', () => {
@@ -822,7 +822,7 @@ describe('RemotePage — content', () => {
     });
     renderWithQuery(<RemotePage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /play video again/i }));
+    fireEvent.click(screen.getByRole('button', { name: /play media again/i }));
     fireEvent.keyDown(window, { key: ' ' });
 
     expect(sendAction).toHaveBeenCalledWith('REPLAY_MEDIA');
@@ -862,7 +862,7 @@ describe('RemotePage — content', () => {
     renderWithQuery(<RemotePage />);
 
     expect(
-      screen.queryByRole('button', { name: /play video again/i }),
+      screen.queryByRole('button', { name: /play media again/i }),
     ).not.toBeInTheDocument();
   });
 

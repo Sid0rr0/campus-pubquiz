@@ -5,13 +5,13 @@ import type { GameAction } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
 interface ReplayMediaButtonProps {
-  /** Whether the currently open question has a video (YouTube or file) showing on /display — see isVideoUrl. Renders nothing otherwise, since there'd be nothing for REPLAY_MEDIA to act on. */
+  /** Whether video (YouTube or file) or audio is playing on /display — see isPausableMediaUrl. Renders nothing otherwise, since there'd be nothing for REPLAY_MEDIA to act on. */
   canReplay: boolean;
   onAction: (action: GameAction) => void;
   className?: string;
 }
 
-/** Restarts the current question's YouTube video from the beginning on /display (dispatches REPLAY_MEDIA) — for /control and /remote, the two places the admin watches playback without being able to scrub the embed themselves. */
+/** Restarts the video or audio playing on /display, from its clip start or the beginning, (dispatches REPLAY_MEDIA) — for /control and /remote, the two places the admin watches playback without being able to scrub the embed themselves. */
 export function ReplayMediaButton({
   canReplay,
   onAction,
@@ -24,7 +24,7 @@ export function ReplayMediaButton({
       type="button"
       variant="outline"
       size="lg"
-      aria-label="Play video again"
+      aria-label="Play media again"
       onClick={() => onAction('REPLAY_MEDIA')}
       className={`flex-1 ${className}`}
     >

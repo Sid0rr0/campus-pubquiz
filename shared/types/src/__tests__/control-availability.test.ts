@@ -69,9 +69,9 @@ describe('describeMediaControls', () => {
     });
   });
 
-  it('allows pause but not replay for audio', () => {
+  it('allows replay and pause for audio', () => {
     expect(describeMediaControls(AUDIO_FILE)).toEqual({
-      canReplayMedia: false,
+      canReplayMedia: true,
       canPauseMedia: true,
     });
   });

@@ -218,6 +218,8 @@ export function DisplayScreenView({
                   mediaTestIdPrefix="reveal"
                   autoplayMedia={settings.autoplayMedia}
                   isFullscreen={live?.isMediaFullscreen}
+                  isMediaPaused={live?.isMediaPaused}
+                  mediaReplayToken={live?.mediaReplayToken}
                   isDisplaySoundMuted={live?.isDisplaySoundMuted}
                   hasEntrance
                   revealNotes={screen.notes}

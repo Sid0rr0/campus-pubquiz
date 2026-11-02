@@ -34,7 +34,7 @@ describe('AdminActions — media playback row', () => {
     renderActions();
 
     expect(
-      screen.queryByRole('button', { name: /play video again/i }),
+      screen.queryByRole('button', { name: /play media again/i }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /^(pause|resume)$/i }),
@@ -47,12 +47,12 @@ describe('AdminActions — media playback row', () => {
     const leaderboardRow = screen.getByRole('button', {
       name: /leaderboard/i,
     }).parentElement!;
-    const replay = screen.getByRole('button', { name: /play video again/i });
+    const replay = screen.getByRole('button', { name: /play media again/i });
     const pause = screen.getByRole('button', { name: 'Pause' });
 
     expect(
       within(leaderboardRow).queryByRole('button', {
-        name: /play video again/i,
+        name: /play media again/i,
       }),
     ).toBeNull();
     expect(replay.parentElement).toBe(pause.parentElement);
@@ -98,12 +98,12 @@ describe('AdminActions — media playback row', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows Pause for audio even though Play again is unavailable', () => {
+  it('shows Pause alone when Play again is unavailable', () => {
     renderActions({ canPauseMedia: true, canReplayMedia: false });
 
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /play video again/i }),
+      screen.queryByRole('button', { name: /play media again/i }),
     ).not.toBeInTheDocument();
   });
 });

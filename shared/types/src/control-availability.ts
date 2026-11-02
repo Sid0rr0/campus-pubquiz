@@ -5,7 +5,7 @@ import {
 } from './game-state-groups';
 import type { GameProgress } from './game-state-types';
 import { getTiedForFirst } from './leaderboard-tiebreak';
-import { isPausableMediaUrl, isVideoUrl } from './media';
+import { isPausableMediaUrl } from './media';
 import type { LeaderboardEntry } from './room-views';
 
 /** What the quiz master can do right now, decided by the server for /control and /remote. */
@@ -37,7 +37,7 @@ export function describeMediaControls(
   playingMediaUrl: string | undefined,
 ): Pick<ControlAvailability, 'canReplayMedia' | 'canPauseMedia'> {
   return {
-    canReplayMedia: isVideoUrl(playingMediaUrl),
+    canReplayMedia: isPausableMediaUrl(playingMediaUrl),
     canPauseMedia: isPausableMediaUrl(playingMediaUrl),
   };
 }

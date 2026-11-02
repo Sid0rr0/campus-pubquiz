@@ -15,11 +15,15 @@ interface ClosestGuessRevealScreenProps {
   /** The part of a video `answerMediaUrl` to play: see `resolveRevealClip`. */
   revealStartSeconds?: number;
   revealEndSeconds?: number;
-  /** GameProgress.isMediaFullscreen — raises a video answer to the full viewport. Left off on the phone. */
+  /** GameProgress.isMediaFullscreen — raises an image or video answer to the full viewport. Left off on the phone. */
   isFullscreen?: boolean;
   closestGuess: ClosestGuessRevealData;
   mediaTestIdPrefix: string;
   autoplayMedia?: boolean;
+  /** GameProgress.isMediaPaused — pauses the answer media. Left off on the phone. */
+  isMediaPaused?: boolean;
+  /** GameProgress.mediaReplayToken — replays the answer media. Left off on the phone. */
+  mediaReplayToken?: number;
   /** The big-screen mute — silences the answer media. Left off on the phone. */
   isDisplaySoundMuted?: boolean;
   /** The big screen's reveal: each step line slides in as it arrives. Left off on the phone. */
@@ -55,6 +59,8 @@ export function ClosestGuessRevealScreen({
   revealStartSeconds,
   revealEndSeconds,
   isFullscreen,
+  isMediaPaused,
+  mediaReplayToken,
   closestGuess,
   mediaTestIdPrefix,
   autoplayMedia,
@@ -113,6 +119,8 @@ export function ClosestGuessRevealScreen({
             startSeconds={revealStartSeconds}
             endSeconds={revealEndSeconds}
             isFullscreen={isFullscreen}
+            isMediaPaused={isMediaPaused}
+            mediaReplayToken={mediaReplayToken}
             isDisplaySoundMuted={isDisplaySoundMuted}
           />
           <RevealNotes

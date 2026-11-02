@@ -120,7 +120,7 @@ describe('planMove', () => {
   describe('media actions', () => {
     it.each([
       ['REPLAY_MEDIA', YOUTUBE, 'transition'],
-      ['REPLAY_MEDIA', AUDIO_FILE, 'blocked'],
+      ['REPLAY_MEDIA', AUDIO_FILE, 'transition'],
       ['REPLAY_MEDIA', IMAGE, 'blocked'],
       ['REPLAY_MEDIA', undefined, 'blocked'],
       ['TOGGLE_MEDIA_PAUSE', YOUTUBE, 'transition'],

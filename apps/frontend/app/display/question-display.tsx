@@ -45,7 +45,7 @@ interface AnswerMediaProps {
   /** The reveal clip, applied when `url` is a video (YouTube or file). */
   startSeconds?: number;
   endSeconds?: number;
-  /** GameProgress.isMediaFullscreen — raises an answer video to the full viewport, without remounting it. */
+  /** GameProgress.isMediaFullscreen — raises an answer image or video to the full viewport, without remounting it. */
   isFullscreen?: boolean;
   /** GameProgress.isMediaPaused — pauses and resumes a video-file answer in place. */
   isMediaPaused?: boolean;
@@ -54,6 +54,9 @@ interface AnswerMediaProps {
   /** The snapshot's isDisplaySoundMuted — silences the answer media (video file, YouTube, audio) without pausing it. */
   isDisplaySoundMuted?: boolean;
 }
+
+const FULLSCREEN_OVERLAY =
+  'fixed inset-0 z-50 flex items-center justify-center bg-black';
 
 // Same nesting in both states, so toggling fullscreen never remounts the player.
 function AnswerVideoFrame({
@@ -64,13 +67,7 @@ function AnswerVideoFrame({
   children: ReactNode;
 }) {
   return (
-    <div
-      className={
-        isFullscreen
-          ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
-          : 'w-full max-w-2xl'
-      }
-    >
+    <div className={isFullscreen ? FULLSCREEN_OVERLAY : 'w-full max-w-2xl'}>
       <div
         className={
           isFullscreen
@@ -166,13 +163,17 @@ export function AnswerMedia({
     );
   }
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
-    <img
-      data-testid={`${mediaTestIdPrefix}-answer-image`}
-      src={safeUrl}
-      alt="Answer image"
-      className={imageClassName}
-    />
+    <div className={isFullscreen ? FULLSCREEN_OVERLAY : 'contents'}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
+      <img
+        data-testid={`${mediaTestIdPrefix}-answer-image`}
+        src={safeUrl}
+        alt="Answer image"
+        className={
+          isFullscreen ? 'max-h-full max-w-full object-contain' : imageClassName
+        }
+      />
+    </div>
   );
 }
 
@@ -207,7 +208,7 @@ interface QuestionDisplayProps {
   autoplayMedia?: boolean;
   /** Overrides the prompt heading's className — defaults to the big-screen size used by /display; the /play reveal step passes its question_open size to keep both states visually consistent. */
   promptClassName?: string;
-  /** Admin-toggled (spacebar in /control) full-viewport overlay of the question's own image/video, or a video answer media at reveal — see GameProgress.isMediaFullscreen. No-op when there's no question media to enlarge. */
+  /** Admin-toggled (spacebar in /control) full-viewport overlay of the question's own image/video, or at reveal the answer's image/video when it has one — see GameProgress.isMediaFullscreen. No-op when there's no question media to enlarge. */
   isFullscreen?: boolean;
   /** GameProgress.mediaReplayToken — bumped by REPLAY_MEDIA. Folded into the YouTube iframe's `key` so incrementing it remounts the iframe and restarts playback; left out of the key the rest of the time so fullscreen toggling (which doesn't change this) keeps the same iframe per the comment below. */
   mediaReplayToken?: number;
@@ -351,9 +352,11 @@ export function QuestionDisplay({
   const videoFileKey = restartsAtReveal ? 'reveal' : 'question';
   // A portrait image also wins over the side-by-side reveal: the answer image
   // then takes the image column in place of the question image.
+  // An answer video keeps this layout in fullscreen: leaving it would remount the player.
   const showTwoColumnLayout =
     questionMediaKind === 'image' &&
-    !isFullscreen &&
+    (!isFullscreen ||
+      (isRevealingWithAnswerMedia && isVideoUrl(answerMediaUrl))) &&
     questionImageOrientation === 'portrait';
 
   return (
@@ -414,11 +417,7 @@ export function QuestionDisplay({
         isQuestionVideo &&
         !questionVideoFailure.isFailed && (
           <div
-            className={
-              isFullscreen
-                ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
-                : 'w-full max-w-2xl'
-            }
+            className={isFullscreen ? FULLSCREEN_OVERLAY : 'w-full max-w-2xl'}
           >
             {/* A visible video, or a hidden one with a clip to play at reveal,
               is keyed on the reveal so it plays again even when the reveal
@@ -496,7 +495,14 @@ export function QuestionDisplay({
         !showTwoColumnLayout &&
         (showSideBySideReveal ? (
           <div className="flex w-full min-h-0 flex-1 items-stretch justify-center gap-6">
-            <div className="flex min-h-0 min-w-0 flex-2 items-center justify-center">
+            {/* A sound answer has no picture to enlarge, so fullscreen takes the question image. */}
+            <div
+              className={
+                isFullscreen && classifyMediaUrl(answerMediaUrl) === 'audio'
+                  ? FULLSCREEN_OVERLAY
+                  : 'flex min-h-0 min-w-0 flex-2 items-center justify-center'
+              }
+            >
               {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
               <img
                 data-testid={`${mediaTestIdPrefix}-image`}
@@ -525,7 +531,7 @@ export function QuestionDisplay({
           <div
             className={
               isFullscreen
-                ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
+                ? FULLSCREEN_OVERLAY
                 : 'flex w-full min-h-0 items-center justify-center'
             }
           >

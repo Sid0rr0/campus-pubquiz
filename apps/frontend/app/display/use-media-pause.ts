@@ -36,8 +36,9 @@ interface MediaPauseHandles {
  * Playback keeps going, so unmuting resumes the sound where the clip has got
  * to. It is independent of pause.
  *
- * A change of `replayToken` (Play again) on a <video> file seeks it to
- * `clipStart` and plays, in place. YouTube replays by remounting instead.
+ * A change of `replayToken` (Play again) seeks a <video> file to `clipStart`
+ * and an <audio> to its beginning (a sound has no clip), then plays, in place.
+ * YouTube replays by remounting instead.
  */
 export function useMediaPause(
   isPaused: boolean,
@@ -56,9 +57,10 @@ export function useMediaPause(
     if (replayToken === lastReplayTokenRef.current) return;
     lastReplayTokenRef.current = replayToken;
     const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = clipStart;
-    video.play()?.catch(() => undefined);
+    const element = video ?? audioRef.current;
+    if (!element) return;
+    element.currentTime = video ? clipStart : 0;
+    element.play()?.catch(() => undefined);
   }, [replayToken, clipStart]);
 
   useEffect(() => {

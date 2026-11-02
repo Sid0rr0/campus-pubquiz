@@ -36,13 +36,13 @@ export function classifyMediaUrl(
   return 'image';
 }
 
-/** Whether the link is a video — a YouTube link or a video file. Clip, reveal clip, hidden video, pause, replay and fullscreen apply to exactly these. */
+/** Whether the link is a video — a YouTube link or a video file. Clip, reveal clip and hidden video apply to exactly these. */
 export function isVideoUrl(url: string | undefined): boolean {
   const kind = classifyMediaUrl(url);
   return kind === 'youtube' || kind === 'video-file';
 }
 
-/** Whether `url` is media /display can pause and resume (video or audio) — what the pause button gates on. Images have no playback to pause. */
+/** Whether `url` is media /display can pause and replay (video or audio) — what those buttons gate on. Images have no playback. */
 export function isPausableMediaUrl(url: string | undefined): boolean {
   const kind = classifyMediaUrl(url);
   return kind !== undefined && kind !== 'image';

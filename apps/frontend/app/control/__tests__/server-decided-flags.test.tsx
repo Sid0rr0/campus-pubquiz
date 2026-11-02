@@ -151,7 +151,7 @@ describe('AdminPage — server-decided break and showdown controls', () => {
       renderWithQuery(<AdminPage />);
 
       expect(
-        screen.getAllByRole('button', { name: /play video again/i }).length,
+        screen.getAllByRole('button', { name: /play media again/i }).length,
       ).toBeGreaterThan(0);
       expect(
         screen.getAllByRole('button', { name: 'Pause' }).length,
@@ -162,7 +162,7 @@ describe('AdminPage — server-decided break and showdown controls', () => {
       renderClosestGuessReveal(2);
 
       expect(
-        screen.queryByRole('button', { name: /play video again/i }),
+        screen.queryByRole('button', { name: /play media again/i }),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: 'Pause' }),
@@ -173,7 +173,7 @@ describe('AdminPage — server-decided break and showdown controls', () => {
       renderClosestGuessReveal(3);
 
       expect(
-        screen.getAllByRole('button', { name: /play video again/i }).length,
+        screen.getAllByRole('button', { name: /play media again/i }).length,
       ).toBeGreaterThan(0);
       expect(
         screen.getAllByRole('button', { name: 'Pause' }).length,

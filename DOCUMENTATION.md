@@ -208,7 +208,7 @@ be refused); the press after that moves the quiz.
 | `TOGGLE_LEADERBOARD`      | any                                     | Flips `isLeaderboardVisible`, status untouched                                                                                                                                                                                 |
 | `TOGGLE_JOIN_OVERLAY`     | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere                                                                                                                                     |
 | `TOGGLE_MEDIA_FULLSCREEN` | any                                     | Flips `isMediaFullscreen`; any other action clears it                                                                                                                                                                          |
-| `REPLAY_MEDIA`            | only while a video is playing           | Bumps `mediaReplayToken` (the display remounts the YouTube iframe; a video file seeks to its clip start and plays, no remount) and clears `isMediaPaused`; refused as an illegal transition when no video is on the big screen |
+| `REPLAY_MEDIA`            | only while video or audio is playing    | Bumps `mediaReplayToken` (the display remounts the YouTube iframe; a video file seeks to its clip start and an audio to its beginning, then plays, no remount) and clears `isMediaPaused`; refused as an illegal transition when no video or audio is on the big screen |
 | `TOGGLE_MEDIA_PAUSE`      | only while video or audio is playing    | Flips `isMediaPaused`; status untouched; refused as an illegal transition when no video or audio is on the big screen                                                                                                          |
 
 **Pausing media.** `isMediaPaused` is server-owned game state in `progress`
@@ -233,9 +233,15 @@ display's `play()` on resume if it has had no user interaction (autoplay
 policy); a rejection is ignored and the moderator can press Resume again. A
 standing pause is re-applied to a video file once it has loaded. "Play again"
 (`REPLAY_MEDIA`) is offered whenever the media shown is a video (YouTube or
-file), at reveal too, not for audio; a YouTube answer replays by remounting its
+file) or audio, at reveal too; a YouTube answer replays by remounting its
 embed. It seeks a video file to the start of the clip it is showing (the
-reveal clip at reveal, a video-file answer included).
+reveal clip at reveal, a video-file answer included) and an audio to its
+beginning.
+
+**Fullscreen at reveal.** `TOGGLE_MEDIA_FULLSCREEN` raises the answer's image or
+video when it has one, even when the question image is side by side with it,
+and otherwise the question's own. A sound answer beside a question image leaves
+fullscreen to the question image, with the sound still playing.
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
@@ -1434,8 +1440,7 @@ direct files and are not recognised. On `/display` it is a `<video>` with no
 controls, `playsInline` and `autoPlay` from `autoplayMedia`, in the same 16:9
 box as YouTube (and the same fullscreen overlay, without remounting). The
 reveal rule is worded over video: a video `answer_media_url` (YouTube or file,
-either source) replaces the question media at reveal, in the same fullscreen
-overlay; otherwise the question video plays again. The side-by-side image reveal is unchanged. If the file
+either source) replaces the question media at reveal; otherwise the question video plays again. The side-by-side image reveal is unchanged. If the file
 fails to load (`error` event) the display hides the video area for that media
 and leaves the prompt and answers; there is no retry and no message. Venue
 internet carries the video, so link short, compressed clips. Uploading video

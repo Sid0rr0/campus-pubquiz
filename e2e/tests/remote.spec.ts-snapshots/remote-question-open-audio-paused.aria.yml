@@ -25,6 +25,7 @@
   - button "Decrease display text size": A−
   - text: /\d+%/
   - button "Increase display text size": A+
+  - button "Play media again": Play again
   - button "Resume"
   - button "Previous"
   - button "Fullscreen media"

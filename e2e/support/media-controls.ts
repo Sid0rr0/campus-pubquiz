@@ -64,7 +64,7 @@ export async function resumeMedia(control: ControlScreen): Promise<void> {
 }
 
 export async function replayMedia(control: ControlScreen): Promise<void> {
-  await mediaButton(control, 'Play video again').click();
+  await mediaButton(control, 'Play media again').click();
   recordMove('media_replay');
 }
 

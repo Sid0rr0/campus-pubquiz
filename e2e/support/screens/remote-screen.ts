@@ -80,7 +80,7 @@ export class RemoteScreen {
   }
 
   async replay(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Play video again' }).click();
+    await this.page.getByRole('button', { name: 'Play media again' }).click();
     recordMove('media_replay');
   }
 

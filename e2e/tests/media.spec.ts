@@ -68,6 +68,8 @@ test('each kind of media gets its player, the controls drive it, and the reveal 
   await expectPaused(player(display, 'question-audio'));
   await resumeMedia(control);
   await expectPlaying(player(display, 'question-audio'));
+  await replayMedia(control);
+  await expectPlaying(player(display, 'question-audio'));
 
   // 3. A video file: carries its clip as a fragment; pause, replay and fullscreen change the display.
   await control.advance('question_open');

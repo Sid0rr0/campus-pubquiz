@@ -66,6 +66,21 @@ describe('useMediaPause', () => {
     expect(audio.play).toHaveBeenCalledTimes(1);
   });
 
+  it('replays an audio from its beginning, whatever the clip start', () => {
+    const { result, rerender } = renderHook(
+      ({ token }) => useMediaPause(false, token, 12),
+      { initialProps: { token: 0 } },
+    );
+    const audio = fakeMedia();
+    audio.currentTime = 30;
+    result.current.audioRef.current = asAudio(audio);
+
+    rerender({ token: 1 });
+
+    expect(audio.currentTime).toBe(0);
+    expect(audio.play).toHaveBeenCalledTimes(1);
+  });
+
   it('tolerates play() returning nothing on a replay', () => {
     const { result, rerender } = renderHook(
       ({ token }) => useMediaPause(false, token, 12),

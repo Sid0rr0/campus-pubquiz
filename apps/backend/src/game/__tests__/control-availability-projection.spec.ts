@@ -73,8 +73,7 @@ function media(state: SessionState) {
 }
 
 const NO_MEDIA = { canReplayMedia: false, canPauseMedia: false };
-const VIDEO = { canReplayMedia: true, canPauseMedia: true };
-const AUDIO_ONLY = { canReplayMedia: false, canPauseMedia: true };
+const PLAYING = { canReplayMedia: true, canPauseMedia: true };
 
 describe('Screen projection — control availability: status-based fields', () => {
   const q = [question(1)];
@@ -139,9 +138,9 @@ describe('Screen projection — control availability: status-based fields', () =
 
 describe('Screen projection — control availability: open question media', () => {
   it.each([
-    ['YouTube', YOUTUBE, VIDEO],
-    ['an uploaded video', VIDEO_FILE, VIDEO],
-    ['audio', AUDIO, AUDIO_ONLY],
+    ['YouTube', YOUTUBE, PLAYING],
+    ['an uploaded video', VIDEO_FILE, PLAYING],
+    ['audio', AUDIO, PLAYING],
     ['an image', IMAGE, NO_MEDIA],
     ['no media', undefined, NO_MEDIA],
   ])('with %s', (_label, mediaUrl, expected) => {
@@ -157,7 +156,7 @@ describe('Screen projection — control availability: reveal media', () => {
       [question(1, { mediaUrl: IMAGE, answerMediaUrl: VIDEO_FILE })],
       reveal,
     );
-    expect(media(state)).toEqual(VIDEO);
+    expect(media(state)).toEqual(PLAYING);
   });
 
   it('does not offer controls for the question video once the answer media is an image', () => {
@@ -170,7 +169,7 @@ describe('Screen projection — control availability: reveal media', () => {
 
   it("follows the question's own media without answer media", () => {
     const state = session([question(1, { mediaUrl: AUDIO })], reveal);
-    expect(media(state)).toEqual(AUDIO_ONLY);
+    expect(media(state)).toEqual(PLAYING);
   });
 
   it('offers nothing when the media is an image', () => {
@@ -203,7 +202,7 @@ describe('Screen projection — control availability: closest_guess reveal', () 
   );
 
   it.each([3, 4])('offers the answer video at step %s', (step) => {
-    expect(media(closestGuessReveal(step))).toEqual(VIDEO);
+    expect(media(closestGuessReveal(step))).toEqual(PLAYING);
   });
 });
 
