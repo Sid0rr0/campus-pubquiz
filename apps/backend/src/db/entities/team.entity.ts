@@ -18,6 +18,6 @@ export class Team extends BaseEntity {
   // Human-enterable recovery code, shown to the team once. Lets a second
   // device join under this team's existing name without its localStorage
   // token (e.g. a teammate's phone, or the original device lost state).
-  @Property({ type: 'text' })
+  @Property({ type: 'text', unique: true })
   code!: string;
 }

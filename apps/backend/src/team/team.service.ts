@@ -46,6 +46,8 @@ export class TeamCodeAttemptsError extends Error {
   }
 }
 
+const MAX_TEAM_CODE_ATTEMPTS = 5;
+
 /** Wrong team codes allowed per team within one lockout window. */
 const MAX_WRONG_TEAM_CODES = 10;
 const TEAM_CODE_LOCKOUT_MS = 10 * 60 * 1000;
@@ -162,7 +164,7 @@ export class TeamService {
       const team = this.teams.create({
         name: trimmedName,
         token: randomUUID(),
-        code: generateJoinCode(),
+        code: await this.unusedTeamCode(),
       });
       await this.teams.getEntityManager().persistAndFlush(team);
       await this.addToRoster(gameSessionId, team.id);
@@ -304,6 +306,15 @@ export class TeamService {
       count: (entry?.count ?? 0) + 1,
       since: entry?.since ?? Date.now(),
     });
+  }
+
+  /** A team code no team holds yet; the codes are random, so a repeat is rare and one retry is plenty. */
+  private async unusedTeamCode(): Promise<string> {
+    for (let attempt = 0; attempt < MAX_TEAM_CODE_ATTEMPTS; attempt += 1) {
+      const code = generateJoinCode();
+      if (!(await this.teams.findOne({ code }))) return code;
+    }
+    throw new Error('Could not find an unused team code');
   }
 
   private async addToRoster(

@@ -23,7 +23,14 @@ import {
   TeamCodeAttemptsError,
   TeamService,
 } from '@/team/team.service';
+import { generateJoinCode } from '@/db/join-code.util';
 import { useTestDatabase } from '@/test-db/test-database';
+
+// Real codes unless a test queues one.
+jest.mock('@/db/join-code.util', () => {
+  const actual = jest.requireActual('@/db/join-code.util');
+  return { ...actual, generateJoinCode: jest.fn(actual.generateJoinCode) };
+});
 
 describe('TeamService (Postgres integration)', () => {
   const db = useTestDatabase();
@@ -100,6 +107,22 @@ describe('TeamService (Postgres integration)', () => {
     expect(team.token).toEqual(expect.any(String));
     expect(team.token.length).toBeGreaterThan(10);
     expect(team.code).toMatch(/^[A-Z]+-[A-Z]+-[A-Z]+$/);
+  });
+
+  it('gives a new team a team code no other team holds', async () => {
+    const first = await teamService.join(sessionId, 'First', {
+      joinCode: 'ABCDEF',
+    });
+    jest
+      .mocked(generateJoinCode)
+      .mockReturnValueOnce(first.code)
+      .mockReturnValueOnce('FRESH-CODE-FOX');
+
+    const second = await teamService.join(sessionId, 'Second', {
+      joinCode: 'ABCDEF',
+    });
+
+    expect(second.code).toBe('FRESH-CODE-FOX');
   });
 
   it('accepts a join code regardless of casing and surrounding whitespace', async () => {

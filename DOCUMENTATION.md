@@ -1198,7 +1198,8 @@ storage is blocked). A team that already has a count never sees the prompt.
 A `Team` is a **persistent entity independent of any single game session** —
 it has a unique name, an opaque `token` (the reconnect credential held in
 `localStorage`), and a human-enterable `code` (a recovery code letting a
-second device join as the same team without the token). A team's membership
+second device join as the same team without the token); no two teams share a
+code (a unique index, and a new team's code is drawn again if it is taken). A team's membership
 in one particular game session is tracked separately, in a pure roster join
 table (`GameSessionTeam`).
 
