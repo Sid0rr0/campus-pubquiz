@@ -98,8 +98,8 @@ export class LeagueTableService {
   }
 
   /**
-   * The team's standing in every current league where it has points, newest
-   * league first. Positions are the public table's own, so the two never differ.
+   * The team's standing in every current league where it has points, in the
+   * admin's league order. Positions are the public table's own, so the two never differ.
    */
   async positionsOf(
     teamId: number,

@@ -2333,7 +2333,7 @@ code and no login. The page calls `POST /team-page` with `{ teamCode }`
 `TeamHistoryService.detail` gives staff, without the team `id`. It never carries
 feedback or the team code. It also carries `leagues`: the team's position in each
 **current** league where it has league points (`LeagueTableService.positionsOf`, built
-on the public table so the positions always agree), newest league first, each with
+on the public table so the positions always agree), in the admin's league order, each with
 `leagueId`, `leagueName`, `position`, `shared`, `teamCount` and `leaguePoints`. A league
 that is not current, or where the team has no points, is left out; the array is empty
 when there are none. The page lists them under "Leagues" as "3rd of 18 · 14 pts", or
