@@ -2393,6 +2393,9 @@ session is not counted until it ends. It is computed in SQL
 query. Because
 placings are not SQL ranks, this sort loads every team's results and orders and
 pages them in memory; the other sorts only compute the figure for the visible page.
+The page opens on most sessions played first. An optional `search` narrows the
+list and its `total` to teams whose name contains it, ignoring case, under every
+sort.
 
 ## Leagues
 

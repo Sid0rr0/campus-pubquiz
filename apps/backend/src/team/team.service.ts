@@ -65,6 +65,10 @@ interface TeamListRow {
   sessionsJoined: string | number;
 }
 
+function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/g, '\\$&');
+}
+
 /** Orders by average placing in the given direction, teams without one last either way (ties keep their id order). */
 function sortByAveragePlacing(
   items: readonly TeamListItem[],
@@ -139,7 +143,7 @@ export class TeamService {
     const existingByName =
       (await this.teams.findOne({ name: trimmedName })) ??
       (await this.teams.findOne({
-        name: { $ilike: trimmedName.replace(/[\\%_]/g, '\\$&') },
+        name: { $ilike: escapeLike(trimmedName) },
       }));
 
     if (existingByName) {
@@ -188,14 +192,17 @@ export class TeamService {
     pageSize,
     sortBy,
     sortOrder,
+    search,
   }: TeamsQuery): Promise<TeamsListedPayload> {
     const knex = this.gameSessionTeams.getKnex();
     const offset = (page - 1) * pageSize;
+    const namePattern = `%${escapeLike(search ?? '')}%`;
 
     const sessionsPlayed = this.endedSessions.sessionsPlayedQuery();
 
     const teamRows = knex('teams as t')
       .leftJoin(sessionsPlayed.as('sp'), 'sp.team_id', 't.id')
+      .where('t.name', 'ilike', namePattern)
       .select('t.id', 't.name', 't.code', 't.created_at as joinedAt')
       .select(knex.raw('coalesce(sp.sessions_played, 0) as "sessionsJoined"'));
 
@@ -227,7 +234,7 @@ export class TeamService {
         .orderBy('t.id', 'asc')
         .limit(pageSize)
         .offset(offset) as Promise<TeamListRow[]>,
-      knex('teams').count({ count: '*' }),
+      knex('teams').where('name', 'ilike', namePattern).count({ count: '*' }),
     ]);
 
     return {

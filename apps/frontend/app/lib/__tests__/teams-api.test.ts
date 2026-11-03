@@ -36,6 +36,27 @@ describe('teams-api', () => {
       );
     });
 
+    it('sends the search when there is one', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ items: [] }),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await fetchTeams({
+        page: 1,
+        pageSize: 20,
+        sortBy: 'joinedAt',
+        sortOrder: 'desc',
+        search: 'the quiz',
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/teams?page=1&pageSize=20&sortBy=joinedAt&sortOrder=desc&search=the+quiz',
+        expect.objectContaining({ credentials: 'include' }),
+      );
+    });
+
     it('throws TeamsApiError with the server message on a non-ok response', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,

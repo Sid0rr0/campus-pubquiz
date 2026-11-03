@@ -1,4 +1,5 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
+import type { TeamsSortColumn } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
@@ -760,6 +761,46 @@ describe('TeamService (Postgres integration)', () => {
         'Older Team',
         'Newer Team',
       ]);
+    });
+
+    describe('with a search', () => {
+      const search = (term: string, sortBy: TeamsSortColumn = 'joinedAt') =>
+        teamService.listAll({
+          page: 1,
+          pageSize: 1,
+          sortBy,
+          sortOrder: 'asc',
+          search: term,
+        });
+
+      beforeEach(async () => {
+        await createBareTeam('The Quizzards');
+        await createBareTeam('quiz_masters');
+        await createBareTeam('Trivia Newtons');
+      });
+
+      it('matches part of the name in any case and counts only the matches', async () => {
+        const result = await search('QUIZ');
+
+        expect(result.total).toBe(2);
+        expect(result.items.map((item) => item.name)).toEqual([
+          'The Quizzards',
+        ]);
+      });
+
+      it('takes % and _ literally', async () => {
+        expect((await search('quiz_')).total).toBe(1);
+        expect((await search('%')).total).toBe(0);
+      });
+
+      it('filters the average-placing sort too', async () => {
+        const result = await search('trivia', 'averagePlacing');
+
+        expect(result.total).toBe(1);
+        expect(result.items.map((item) => item.name)).toEqual([
+          'Trivia Newtons',
+        ]);
+      });
     });
   });
 });

@@ -117,6 +117,30 @@ describe('TeamsController', () => {
       );
     });
 
+    it('passes on a trimmed search', async () => {
+      const { controller, teamService } = makeController();
+      teamService.listAll.mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      });
+
+      await controller.list({ search: '  quiz ' });
+
+      expect(teamService.listAll).toHaveBeenCalledWith(
+        expect.objectContaining({ search: 'quiz' }),
+      );
+    });
+
+    it('rejects a repeated search param', async () => {
+      const { controller } = makeController();
+
+      await expect(controller.list({ search: ['a', 'b'] })).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
     it('rejects an unknown sortBy column', async () => {
       const { controller } = makeController();
 

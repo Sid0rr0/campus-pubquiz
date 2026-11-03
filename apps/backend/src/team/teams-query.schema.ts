@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { TEAMS_SORT_COLUMNS } from '@campus-pubquiz/types';
+import {
+  MAX_TEAMS_SEARCH_LENGTH,
+  TEAMS_SORT_COLUMNS,
+} from '@campus-pubquiz/types';
 
 const DEFAULT_TEAMS_PAGE_SIZE = 20;
 const MAX_TEAMS_PAGE_SIZE = 100;
@@ -14,6 +17,7 @@ export const teamsQuerySchema = z.object({
     .default(DEFAULT_TEAMS_PAGE_SIZE),
   sortBy: z.enum(TEAMS_SORT_COLUMNS).default('joinedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  search: z.string().trim().max(MAX_TEAMS_SEARCH_LENGTH).optional(),
 });
 
 export type TeamsQuery = z.infer<typeof teamsQuerySchema>;

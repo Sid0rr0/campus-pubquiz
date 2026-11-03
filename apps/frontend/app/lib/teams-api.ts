@@ -24,6 +24,7 @@ interface FetchTeamsParams {
   pageSize: number;
   sortBy: TeamsSortColumn;
   sortOrder: TeamsSortOrder;
+  search?: string;
 }
 
 export async function fetchTeams(
@@ -36,6 +37,7 @@ export async function fetchTeams(
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
   });
+  if (params.search) query.set('search', params.search);
   const response = await fetch(`${getBackendUrl()}/teams?${query}`, {
     credentials: 'include',
     signal,

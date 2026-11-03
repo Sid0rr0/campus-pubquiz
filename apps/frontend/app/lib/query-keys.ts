@@ -32,6 +32,7 @@ export const queryKeys = {
       pageSize: number;
       sortBy: string;
       sortOrder: string;
+      search: string;
     }) => ['teams', 'list', params] as const,
     code: (teamId: number) => ['teams', 'code', teamId] as const,
     detail: (teamId: number) => ['teams', 'detail', teamId] as const,

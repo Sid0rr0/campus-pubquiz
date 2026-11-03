@@ -17,6 +17,7 @@ import type {
 import Link from 'next/link';
 import { DotsVerticalIcon, EyeOpenIcon } from '@radix-ui/react-icons';
 import { DropdownMenu } from 'radix-ui';
+import { MAX_TEAMS_SEARCH_LENGTH } from '@campus-pubquiz/types';
 import type {
   TeamListItem,
   TeamsSortColumn,
@@ -34,8 +35,9 @@ const helper = createColumnHelper<typeof features, TeamListItem>();
 
 export function TeamsDirectoryPanel() {
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'joinedAt', desc: true },
+    { id: 'sessionsJoined', desc: true },
   ]);
+  const [search, setSearch] = useState('');
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 20,
@@ -107,17 +109,20 @@ export function TeamsDirectoryPanel() {
     [],
   );
 
-  const sortBy = (sorting[0]?.id ?? 'joinedAt') as TeamsSortColumn;
+  const sortBy = (sorting[0]?.id ?? 'sessionsJoined') as TeamsSortColumn;
   const sortOrder: TeamsSortOrder = sorting[0]
     ? sorting[0].desc
       ? 'desc'
       : 'asc'
     : 'desc';
+  // shortcut: one request per keystroke, debounce if /teams ever gets slow.
+  const trimmedSearch = search.trim();
   const params = {
     page: pagination.pageIndex + 1,
     pageSize: pagination.pageSize,
     sortBy,
     sortOrder,
+    search: trimmedSearch,
   };
 
   const teamsQuery = useQuery({
@@ -150,7 +155,7 @@ export function TeamsDirectoryPanel() {
     enableMultiSort: false,
     // Without this, the toggle cycle is desc -> unsorted -> asc: on the
     // "unsorted" click, sorting[0] becomes undefined and this component
-    // falls back to the joinedAt/desc default — identical to the very first
+    // falls back to the sessionsJoined/desc default — identical to the very first
     // fetch's params, so React Query serves the cached page instead of
     // refetching. Locking the cycle to asc <-> desc keeps every click a
     // real, distinct sort.
@@ -184,7 +189,27 @@ export function TeamsDirectoryPanel() {
         </p>
       )}
 
-      <SortableTable table={table} emptyMessage="No teams have joined yet." />
+      <label className="flex max-w-sm flex-col gap-1 text-sm font-bold">
+        Search teams
+        <input
+          type="search"
+          value={search}
+          maxLength={MAX_TEAMS_SEARCH_LENGTH}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            // The match count changes, so the current page may no longer exist.
+            setPagination((old) => ({ ...old, pageIndex: 0 }));
+          }}
+          className="rounded-lg border-2 border-foreground/30 bg-transparent px-3 py-2 font-normal"
+        />
+      </label>
+
+      <SortableTable
+        table={table}
+        emptyMessage={
+          trimmedSearch ? 'No teams match.' : 'No teams have joined yet.'
+        }
+      />
 
       <div className="flex items-center gap-3">
         <Button
@@ -197,7 +222,7 @@ export function TeamsDirectoryPanel() {
           Prev
         </Button>
         <span className="text-sm text-foreground/60">
-          Page {pagination.pageIndex + 1} of {table.getPageCount()}
+          Page {pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
         </span>
         <Button
           type="button"

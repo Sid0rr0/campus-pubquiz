@@ -52,6 +52,54 @@ describe('TeamsDirectoryPanel', () => {
     expect(screen.getByText('Second Place')).toBeInTheDocument();
   });
 
+  it('sorts by most sessions played by default', async () => {
+    renderWithQuery(<TeamsDirectoryPanel />);
+
+    await waitFor(() =>
+      expect(mockFetchTeams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sortBy: 'sessionsJoined',
+          sortOrder: 'desc',
+        }),
+        expect.anything(),
+      ),
+    );
+  });
+
+  it('searches by the trimmed name from page 1', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<TeamsDirectoryPanel />);
+    await waitFor(() => screen.getByText('The Quizzards'));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await waitFor(() =>
+      expect(mockFetchTeams).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2 }),
+        expect.anything(),
+      ),
+    );
+
+    await user.type(screen.getByRole('searchbox'), ' quiz ');
+
+    await waitFor(() =>
+      expect(mockFetchTeams).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1, search: 'quiz' }),
+        expect.anything(),
+      ),
+    );
+  });
+
+  it('says so when no team matches the search', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<TeamsDirectoryPanel />);
+    await waitFor(() => screen.getByText('The Quizzards'));
+    mockFetchTeams.mockResolvedValue({ ...PAYLOAD, items: [], total: 0 });
+
+    await user.type(screen.getByRole('searchbox'), 'nobody');
+
+    expect(await screen.findByText('No teams match.')).toBeInTheDocument();
+    expect(screen.getByText(/page 1 of 1/i)).toBeInTheDocument();
+  });
+
   it('links each team name to its team page', async () => {
     renderWithQuery(<TeamsDirectoryPanel />);
     await waitFor(() => screen.getByText('The Quizzards'));

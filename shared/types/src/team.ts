@@ -158,6 +158,8 @@ export interface TeamMergedPayload {
   keptTeamId: number;
 }
 
+export const MAX_TEAMS_SEARCH_LENGTH = 100;
+
 export const TEAMS_SORT_COLUMNS = [
   'joinedAt',
   'sessionsJoined',
