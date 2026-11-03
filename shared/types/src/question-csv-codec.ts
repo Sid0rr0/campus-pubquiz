@@ -28,8 +28,8 @@ export interface DecodedChoices {
   answerIssue?: QuestionIssue;
 }
 
-const LIST_SEPARATOR = '|';
-const PAIR_SEPARATOR = '+';
+export const LIST_SEPARATOR = '|';
+export const PAIR_SEPARATOR = '+';
 
 function splitOptions(rawOptions: string): string[] {
   return rawOptions

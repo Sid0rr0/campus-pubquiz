@@ -46,6 +46,7 @@ export class TeamCodeAttemptsError extends Error {
   }
 }
 
+/** Draws of a new team code before giving up on finding an unused one. */
 const MAX_TEAM_CODE_ATTEMPTS = 5;
 
 /** Wrong team codes allowed per team within one lockout window. */
@@ -308,7 +309,7 @@ export class TeamService {
     });
   }
 
-  /** A team code no team holds yet; the codes are random, so a repeat is rare and one retry is plenty. */
+  /** A team code no team holds yet; the codes are random, so a repeat is rare and a few draws are plenty. */
   private async unusedTeamCode(): Promise<string> {
     for (let attempt = 0; attempt < MAX_TEAM_CODE_ATTEMPTS; attempt += 1) {
       const code = generateJoinCode();

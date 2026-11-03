@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { MARGIN_UNITS, parseFiniteNumber } from './margin';
 import { SCORING_MODES_BY_TYPE } from './scoring-mode';
 import type { MergedOptional } from './merged-shape';
+import { LIST_SEPARATOR, PAIR_SEPARATOR } from './question-csv-codec';
 import { isSameMultiset, isSameOrder, splitPipeList } from './sort-match';
 
 /**
@@ -77,7 +78,9 @@ export const multipleChoicePreviewSchema = z
   .object({
     type: z.literal('multiple_choice'),
     ...baseQuestionFields,
-    options: z.array(listItem('|')).min(2, 'Provide at least two options'),
+    options: z
+      .array(listItem(LIST_SEPARATOR))
+      .min(2, 'Provide at least two options'),
     mediaUrl: httpUrl.optional(),
   })
   .refine((question) => question.options.includes(question.answer), {
@@ -129,7 +132,9 @@ export const sortPreviewSchema = z
   .object({
     type: z.literal('sort'),
     ...baseQuestionFields,
-    options: z.array(listItem('|')).min(2, 'Provide at least two items'),
+    options: z
+      .array(listItem(LIST_SEPARATOR))
+      .min(2, 'Provide at least two items'),
     scoringMode: z.enum(SCORING_MODES_BY_TYPE.sort).optional(),
     mediaUrl: httpUrl.optional(),
   })
@@ -156,10 +161,10 @@ export const matchPreviewSchema = z
     type: z.literal('match'),
     ...baseQuestionFields,
     options: z
-      .array(listItem('|', '+'))
+      .array(listItem(LIST_SEPARATOR, PAIR_SEPARATOR))
       .min(2, 'Provide at least two left items'),
     matchTargets: z
-      .array(listItem('|', '+'))
+      .array(listItem(LIST_SEPARATOR, PAIR_SEPARATOR))
       .min(2, 'Provide at least two right items'),
     scoringMode: z.enum(SCORING_MODES_BY_TYPE.match).optional(),
     mediaUrl: httpUrl.optional(),
