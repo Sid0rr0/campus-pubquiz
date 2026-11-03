@@ -17,6 +17,25 @@ const hasNoRepeats = (items: string[]) => {
   return new Set(normalized).size === normalized.length;
 };
 
+/**
+ * One item of an options list. The sheet joins items with `|` (and a match
+ * row's two lists with `+`), and a sort or match answer is stored `|`-joined,
+ * so an item holding a separator would be read back as two.
+ */
+const listItem = (...separators: string[]) =>
+  z
+    .string()
+    .min(1)
+    .superRefine((item, context) => {
+      const found = separators.find((separator) => item.includes(separator));
+      if (found !== undefined) {
+        context.addIssue({
+          code: 'custom',
+          message: `Items must not contain "${found}"`,
+        });
+      }
+    });
+
 const httpUrl = z.url({
   protocol: /^https?$/,
   error: 'Media URL must be a valid http(s) URL',
@@ -58,7 +77,7 @@ export const multipleChoicePreviewSchema = z
   .object({
     type: z.literal('multiple_choice'),
     ...baseQuestionFields,
-    options: z.array(z.string().min(1)).min(2, 'Provide at least two options'),
+    options: z.array(listItem('|')).min(2, 'Provide at least two options'),
     mediaUrl: httpUrl.optional(),
   })
   .refine((question) => question.options.includes(question.answer), {
@@ -110,7 +129,7 @@ export const sortPreviewSchema = z
   .object({
     type: z.literal('sort'),
     ...baseQuestionFields,
-    options: z.array(z.string().min(1)).min(2, 'Provide at least two items'),
+    options: z.array(listItem('|')).min(2, 'Provide at least two items'),
     scoringMode: z.enum(SCORING_MODES_BY_TYPE.sort).optional(),
     mediaUrl: httpUrl.optional(),
   })
@@ -137,10 +156,10 @@ export const matchPreviewSchema = z
     type: z.literal('match'),
     ...baseQuestionFields,
     options: z
-      .array(z.string().min(1))
+      .array(listItem('|', '+'))
       .min(2, 'Provide at least two left items'),
     matchTargets: z
-      .array(z.string().min(1))
+      .array(listItem('|', '+'))
       .min(2, 'Provide at least two right items'),
     scoringMode: z.enum(SCORING_MODES_BY_TYPE.match).optional(),
     mediaUrl: httpUrl.optional(),

@@ -124,6 +124,14 @@ describe('question schemas: multiple choice', () => {
     expect(issuesOf({ ...choice, options: ['A', 'A'] })).toEqual([repeated]);
     expect(issuesOf({ ...choice, options: ['A', ' A'] })).toEqual([repeated]);
   });
+
+  it('refuses a "|" inside an option, which the sheet would read as two options', () => {
+    expect(
+      issuesOf({ ...choice, options: ['AC|DC', 'B'], answer: 'B' }),
+    ).toEqual([
+      { path: ['options', 0], message: 'Items must not contain "|"' },
+    ]);
+  });
 });
 
 describe('question schemas: number and closest guess', () => {
@@ -184,6 +192,15 @@ describe('question schemas: sort', () => {
     ]);
   });
 
+  it('refuses a "|" inside an item, which the stored order could not keep apart', () => {
+    expect(
+      issuesOf({ ...sort, options: ['A|B', 'C', 'D'], answer: 'D|C|A|B' }),
+    ).toContainEqual({
+      path: ['options', 0],
+      message: 'Items must not contain "|"',
+    });
+  });
+
   it('needs two items', () => {
     expect(issuesOf({ ...sort, options: ['A'], answer: 'A' })).toContainEqual({
       path: ['options'],
@@ -227,6 +244,23 @@ describe('question schemas: match', () => {
     ).toContainEqual({
       path: ['matchTargets'],
       message: 'Provide at least two right items',
+    });
+  });
+
+  it.each([
+    ['|', 'options', 'A|1'],
+    ['|', 'matchTargets', 'X|1'],
+    ['+', 'options', 'C++'],
+    ['+', 'matchTargets', 'C++'],
+  ])('refuses a "%s" inside an item of %s', (character, field, item) => {
+    const change =
+      field === 'options'
+        ? { options: [item, 'B'] }
+        : { matchTargets: [item, 'Y'], answer: `Y|${item}` };
+
+    expect(issuesOf({ ...match, ...change })).toContainEqual({
+      path: [field, 0],
+      message: `Items must not contain "${character}"`,
     });
   });
 

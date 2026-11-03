@@ -1314,6 +1314,11 @@ grading behavior. Media is not a type: any question can carry a
   miss. The admin can override any answer, matching or not.
 - **`multiple_choice`** — players pick one of `options`. Auto-graded at
   submit time by exact match against the stored `answer`.
+
+  An option, and any item of a `sort` or `match` list, may not contain `|` (the
+  sheet's list separator, and what a stored sort or match answer is joined
+  with); a `match` item may not contain `+` either. Both the editor save and
+  the import refuse it as "Items must not contain …".
 - **`sort`** — players drag `options` into what they think is the correct
   order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
   submitted value is the reordered pipe-list. The CSV `answer` cell must
