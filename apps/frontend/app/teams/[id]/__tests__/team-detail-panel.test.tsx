@@ -6,13 +6,18 @@ import { TeamsApiError } from '@/app/lib/teams-api';
 import { TeamDetailPanel } from '@/app/teams/[id]/team-detail-panel';
 import { renderWithQuery } from '@/test-utils/query';
 
-const { mockFetchTeamDetail } = vi.hoisted(() => ({
+const { mockFetchTeamDetail, mockFetchTeamCode } = vi.hoisted(() => ({
   mockFetchTeamDetail: vi.fn(),
+  mockFetchTeamCode: vi.fn(),
 }));
 
 vi.mock('@/app/lib/teams-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/teams-api')>();
-  return { ...actual, fetchTeamDetail: mockFetchTeamDetail };
+  return {
+    ...actual,
+    fetchTeamDetail: mockFetchTeamDetail,
+    fetchTeamCode: mockFetchTeamCode,
+  };
 });
 
 function sessionRow(overrides: Partial<TeamSessionRow>): TeamSessionRow {
@@ -78,6 +83,7 @@ describe('TeamDetailPanel', () => {
   beforeEach(() => {
     mockFetchTeamDetail.mockReset();
     mockFetchTeamDetail.mockResolvedValue(DETAIL);
+    mockFetchTeamCode.mockReset();
   });
 
   it('shows the summary tiles', async () => {
@@ -100,6 +106,30 @@ describe('TeamDetailPanel', () => {
       within(tile('Avg. total points')).getByText('28.5'),
     ).toBeInTheDocument();
     expect(within(tile('Avg. players')).getByText('4.5')).toBeInTheDocument();
+  });
+
+  it('fetches and shows the team code only when asked', async () => {
+    const user = userEvent.setup();
+    mockFetchTeamCode.mockResolvedValue({
+      teamId: 7,
+      teamName: 'The Quizzards',
+      code: 'QUICK-JADE-FOX',
+    });
+    renderWithQuery(<TeamDetailPanel teamId={7} />);
+
+    const showCode = await screen.findByRole('button', {
+      name: 'Show team code',
+    });
+    expect(mockFetchTeamCode).not.toHaveBeenCalled();
+
+    await user.click(showCode);
+
+    const dialog = await screen.findByRole('dialog', {
+      name: /team code.*the quizzards/i,
+    });
+    expect(await within(dialog).findByText('QUICK-JADE-FOX')).toBeVisible();
+    expect(mockFetchTeamCode).toHaveBeenCalledTimes(1);
+    expect(mockFetchTeamCode.mock.calls[0]?.[0]).toBe(7);
   });
 
   it('shows a dash for averages the server could not work out', async () => {

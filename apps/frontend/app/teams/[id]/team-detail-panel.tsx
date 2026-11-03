@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/app/components/button';
+import { TeamCodeModal } from '@/app/control/team-code-modal';
 import { fetchTeamDetail, TeamsApiError } from '@/app/lib/teams-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
@@ -36,6 +39,7 @@ interface TeamDetailPanelProps {
 }
 
 export function TeamDetailPanel({ teamId }: TeamDetailPanelProps) {
+  const [isCodeOpen, setIsCodeOpen] = useState(false);
   const detailQuery = useQuery({
     queryKey: queryKeys.teams.detail(teamId),
     queryFn: ({ signal }) => fetchTeamDetail(teamId, signal),
@@ -74,7 +78,23 @@ export function TeamDetailPanel({ teamId }: TeamDetailPanelProps) {
         <h1 className="font-display text-2xl">{data.name}</h1>
       </div>
 
-      <TeamMergePanel teamId={teamId} />
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() => setIsCodeOpen(true)}
+        >
+          Show team code
+        </Button>
+        <TeamMergePanel teamId={teamId} />
+      </div>
+      <TeamCodeModal
+        teamId={isCodeOpen ? teamId : null}
+        teamName={data.name}
+        onOpenChange={setIsCodeOpen}
+      />
 
       {data.sessions.length === 0 ? (
         <p className="text-foreground/60">

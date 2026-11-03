@@ -2316,7 +2316,8 @@ competition rank ("Joint 2nd"). A **win** is placing 1, ties included: every
 team tied for first wins the night, matching the league's nights won. A session the team was kicked from or left is listed
 with `hasLeft: true` and no placing: it counts in `sessionsPlayed` but not in
 wins, podiums, best or average placing. The response never carries feedback or
-the team code.
+the team code; the page's "Show team code" button fetches it on demand from
+`GET /teams/:id/code`.
 
 ### Team page
 
