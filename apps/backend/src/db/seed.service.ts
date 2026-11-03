@@ -52,7 +52,9 @@ export class SeedService {
       { orderBy: { createdAt: 'asc' } },
     );
     if (open.length === 0) {
-      return (await this.gameSessions.count()) === 0 ? [await this.seed()] : [];
+      return (await this.gameSessions.count()) === 0
+        ? [await this.createSeededGame()]
+        : [];
     }
     const games: SeededGame[] = [];
     for (const row of open) {
@@ -67,21 +69,6 @@ export class SeedService {
       { id: gameSessionId },
       { closedAt: new Date() },
     );
-  }
-
-  async seed(): Promise<SeededGame> {
-    const [existingSession] = await this.gameSessions.find(
-      {},
-      { orderBy: { createdAt: 'desc' }, limit: 1 },
-    );
-    if (existingSession) {
-      return this.loadGame(
-        existingSession.quiz.id,
-        existingSession.id,
-        existingSession.joinCode,
-      );
-    }
-    return this.createSeededGame();
   }
 
   async createSession(

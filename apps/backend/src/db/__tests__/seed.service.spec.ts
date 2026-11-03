@@ -25,13 +25,19 @@ describe('SeedService (Postgres integration)', () => {
     );
   }
 
+  /** The demo game a boot creates on an empty database. */
+  async function seedFirstGame(service = seedService) {
+    const [game] = await service.seedOpenGames();
+    return game;
+  }
+
   beforeEach(() => {
     em = db.orm.em.fork();
     seedService = makeSeedService(em);
   });
 
   it('creates the quiz/rounds/questions/session from the hardcoded fixture on first seed', async () => {
-    const result = await seedService.seed();
+    const result = await seedFirstGame();
 
     expect(result.rounds).toHaveLength(HARDCODED_QUIZ.rounds.length);
     result.rounds.forEach((round, roundIndex) => {
@@ -49,7 +55,7 @@ describe('SeedService (Postgres integration)', () => {
   });
 
   it('assigns sequential integer ids to every seeded round and question', async () => {
-    const result = await seedService.seed();
+    const result = await seedFirstGame();
 
     expect(Number.isInteger(result.quizId)).toBe(true);
     for (const round of result.rounds) {
@@ -61,8 +67,8 @@ describe('SeedService (Postgres integration)', () => {
   });
 
   it('is idempotent: seeding twice does not duplicate rows and returns the same ids', async () => {
-    const first = await seedService.seed();
-    const second = await seedService.seed();
+    const first = await seedFirstGame();
+    const second = await seedFirstGame();
 
     expect(second).toEqual(first);
 
@@ -73,7 +79,7 @@ describe('SeedService (Postgres integration)', () => {
   });
 
   it('creates a fresh game session with a new join code for a quiz', async () => {
-    const first = await seedService.seed();
+    const first = await seedFirstGame();
 
     const session = await seedService.createSession(first.quizId);
 
@@ -86,7 +92,7 @@ describe('SeedService (Postgres integration)', () => {
   });
 
   it('persists a trimmed custom name when creating a session with one', async () => {
-    const first = await seedService.seed();
+    const first = await seedFirstGame();
 
     const session = await seedService.createSession(
       first.quizId,
@@ -101,7 +107,7 @@ describe('SeedService (Postgres integration)', () => {
   });
 
   it('stores a null name when none is given, or when it is blank', async () => {
-    const first = await seedService.seed();
+    const first = await seedFirstGame();
 
     const noName = await seedService.createSession(first.quizId);
     const blankName = await seedService.createSession(
@@ -120,23 +126,42 @@ describe('SeedService (Postgres integration)', () => {
     expect(blankNameRow.name).toBeNull();
   });
 
-  it('resumes the most recently created game session on seed after a restart', async () => {
-    const first = await seedService.seed();
-    const newerSession = em.create(GameSession, {
-      quiz: first.quizId,
-      joinCode: 'ZZZZZZ',
-      createdAt: new Date(Date.now() + 60_000),
+  describe('seedOpenGames', () => {
+    it('creates the demo game only when the database has no session at all', async () => {
+      const first = await seedService.seedOpenGames();
+      expect(first).toHaveLength(1);
+
+      await em.nativeUpdate(
+        GameSession,
+        { id: first[0].gameSessionId },
+        { closedAt: new Date() },
+      );
+
+      expect(await seedService.seedOpenGames()).toEqual([]);
+      expect(await em.count(GameSession, {})).toBe(1);
     });
-    await em.flush();
 
-    const resumed = await makeSeedService(db.orm.em.fork()).seed();
+    it('resumes every open session after a restart, oldest first, and skips closed ones', async () => {
+      const first = await seedFirstGame();
+      const second = await seedService.createSession(first.quizId);
+      const closed = await seedService.createSession(first.quizId);
+      await em.nativeUpdate(
+        GameSession,
+        { id: closed.gameSessionId },
+        { closedAt: new Date() },
+      );
 
-    expect(resumed.gameSessionId).toBe(newerSession.id);
-    expect(resumed.joinCode).toBe('ZZZZZZ');
+      const resumed = await makeSeedService(db.orm.em.fork()).seedOpenGames();
+
+      expect(resumed.map((game) => game.gameSessionId)).toEqual([
+        first.gameSessionId,
+        second.gameSessionId,
+      ]);
+    });
   });
 
   it('preserves question content (prompt, type, options, points) from the fixture', async () => {
-    const result = await seedService.seed();
+    const result = await seedFirstGame();
     const firstQuestion = result.rounds[0].questions[0];
     const fixtureQuestion = HARDCODED_QUIZ.rounds[0].questions[0];
 
@@ -147,7 +172,7 @@ describe('SeedService (Postgres integration)', () => {
   });
 
   it('carries the correct answer on every seeded question, including on a reload from the database', async () => {
-    const seeded = await seedService.seed();
+    const seeded = await seedFirstGame();
     const fixtureQuestion = HARDCODED_QUIZ.rounds[0].questions[0];
     expect(seeded.rounds[0].questions[0].answer).toBe(fixtureQuestion.answer);
 
@@ -254,7 +279,7 @@ describe('SeedService (Postgres integration)', () => {
 
   describe('summary facts on the loaded game', () => {
     it('carries the quiz title, custom name and session start time', async () => {
-      const first = await seedService.seed();
+      const first = await seedFirstGame();
       const named = await seedService.createSession(
         first.quizId,
         undefined,
@@ -276,15 +301,15 @@ describe('SeedService (Postgres integration)', () => {
     });
 
     it('has a null custom name when none was set', async () => {
-      const first = await seedService.seed();
+      const first = await seedFirstGame();
 
       expect(first.customName).toBeNull();
     });
 
     it('gives the same facts whether seed created the boot game or resumed it', async () => {
-      const created = await seedService.seed();
+      const created = await seedFirstGame();
 
-      const resumed = await makeSeedService(db.orm.em.fork()).seed();
+      const resumed = await seedFirstGame(makeSeedService(db.orm.em.fork()));
 
       expect(resumed.quizTitle).toBe(created.quizTitle);
       expect(resumed.customName).toBe(created.customName);
