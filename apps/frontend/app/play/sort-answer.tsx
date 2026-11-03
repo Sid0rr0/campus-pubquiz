@@ -31,7 +31,7 @@ interface SortItemProps {
   item: string;
   isPinned: boolean;
   itemIndex: number;
-  itemCount: number;
+  canMove: (itemIndex: number, direction: -1 | 1) => boolean;
   onMove: (itemIndex: number, direction: -1 | 1) => void;
   animatePositionChange: boolean;
 }
@@ -80,7 +80,7 @@ function SortItem({
   item,
   isPinned,
   itemIndex,
-  itemCount,
+  canMove,
   onMove,
   animatePositionChange,
 }: SortItemProps) {
@@ -93,7 +93,7 @@ function SortItem({
       type="button"
       aria-label={`Move ${item} up`}
       onClick={() => onMove(itemIndex, -1)}
-      disabled={isPinned || itemIndex === 0}
+      disabled={isPinned || !canMove(itemIndex, -1)}
       variant="icon"
       size="icon-lg"
     >
@@ -105,7 +105,7 @@ function SortItem({
       type="button"
       aria-label={`Move ${item} down`}
       onClick={() => onMove(itemIndex, 1)}
-      disabled={isPinned || itemIndex === itemCount - 1}
+      disabled={isPinned || !canMove(itemIndex, 1)}
       variant="icon"
       size="icon-lg"
     >
@@ -188,11 +188,17 @@ export function SortAnswer({
   const isSubmitted =
     Boolean(initialValue) && ANSWER_FORMATS.sort.encode(order) === initialValue;
 
-  function move(itemIndex: number, direction: -1 | 1): void {
+  // The index an item swaps with, or null at the end of the list.
+  function targetOf(itemIndex: number, direction: -1 | 1): number | null {
     let targetIndex = itemIndex + direction;
     // Hop over the pinned item: it never moves.
     if (order[targetIndex] === pin?.item) targetIndex += direction;
-    if (targetIndex < 0 || targetIndex >= order.length) return;
+    return targetIndex < 0 || targetIndex >= order.length ? null : targetIndex;
+  }
+
+  function move(itemIndex: number, direction: -1 | 1): void {
+    const targetIndex = targetOf(itemIndex, direction);
+    if (targetIndex === null) return;
     const next = [...order];
     [next[itemIndex], next[targetIndex]] = [next[targetIndex], next[itemIndex]];
     setOrder(next);
@@ -209,7 +215,9 @@ export function SortAnswer({
                 key={item}
                 item={item}
                 itemIndex={itemIndex}
-                itemCount={order.length}
+                canMove={(index, direction) =>
+                  targetOf(index, direction) !== null
+                }
                 onMove={move}
                 isPinned={item === pin?.item}
                 animatePositionChange={!isDragging}

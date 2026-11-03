@@ -26,6 +26,30 @@ describe('SortAnswer with a pin', () => {
     expect(onSubmit).toHaveBeenCalledWith('Cat|Mouse|Horse');
   });
 
+  it('disables the move that would only run into a pin at the end of the list', () => {
+    const { rerender } = render(
+      <SortAnswer
+        options={['Horse', 'Mouse', 'Cat']}
+        pin={pin}
+        onSubmit={vi.fn()}
+      />,
+    );
+    // Cat is pinned first, so nothing can go above Horse.
+    expect(screen.getByLabelText('Move Horse up')).toBeDisabled();
+    expect(screen.getByLabelText('Move Horse down')).toBeEnabled();
+    expect(screen.getByLabelText('Move Mouse up')).toBeEnabled();
+
+    rerender(
+      <SortAnswer
+        options={['Horse', 'Mouse', 'Cat']}
+        pin={{ kind: 'pin_one', item: 'Cat', position: 2 }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Move Mouse down')).toBeDisabled();
+    expect(screen.getByLabelText('Move Mouse up')).toBeEnabled();
+  });
+
   it('moves a neighbour past the pinned item without moving the pin', async () => {
     const onSubmit = vi.fn();
     render(
