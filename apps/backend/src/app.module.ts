@@ -22,6 +22,7 @@ import { createMediaStorage } from '@/media/create-media-storage';
 import { MEDIA_STORAGE } from '@/media/media-storage';
 import { MediaController } from '@/media/media.controller';
 import { MediaService } from '@/media/media.service';
+import { clientIpOf } from '@/config/client-ip';
 import { LeaguesController } from '@/league/leagues.controller';
 import { PublicLeaguesController } from '@/league/public-leagues.controller';
 import { SessionsController } from '@/session/sessions.controller';
@@ -36,7 +37,9 @@ import { StatsService } from '@/stats/stats.service';
     // Only applied where routes opt in via @UseGuards(ThrottlerGuard) — the
     // login/register endpoints, which are now real password-based auth
     // targets rather than a single shared secret.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }]),
+    ThrottlerModule.forRoot([
+      { ttl: 60_000, limit: 5, getTracker: clientIpOf },
+    ]),
     DbModule,
     AuthModule,
     GameModule,

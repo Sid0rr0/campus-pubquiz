@@ -2341,7 +2341,9 @@ when there are none. The page lists them under "Leagues" as "3rd of 18 · 14 pts
 - **The route is public** (no session cookie, no CSRF header) and uses the
   `ThrottlerGuard` (5 requests per minute per client IP) so team codes can't be
   guessed. The limit is per IP only, with no per-code or per-team counter, so
-  phones behind one venue NAT share it; that is accepted at this scale.
+  phones behind one venue NAT share it; that is accepted at this scale. The
+  client IP is `req.ip` with any `:port` a proxy appended removed
+  (`config/client-ip.ts`), so a reconnecting script keeps one count.
 - On a device that stores a team code (`team-storage.ts`) the page opens
   directly; otherwise it shows a code form. A typed code is saved under the same
   key `/play` uses once the server accepts it, so a laptop or a second phone
