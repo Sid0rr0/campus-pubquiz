@@ -234,7 +234,8 @@ policy); a rejection is ignored and the moderator can press Resume again. A
 standing pause is re-applied to a video file once it has loaded. "Play again"
 (`REPLAY_MEDIA`) is offered whenever the media shown is a video (YouTube or
 file) or audio, at reveal too; a YouTube answer replays by remounting its
-embed. It seeks a video file to the start of the clip it is showing (the
+embed, then sends it `playVideo` once loaded, so it starts even with
+`autoplayMedia` off. It seeks a video file to the start of the clip it is showing (the
 reveal clip at reveal, a video-file answer included) and an audio to its
 beginning.
 

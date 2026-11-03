@@ -115,6 +115,32 @@ describe('useMediaPause', () => {
       expect(commandsSent(postMessage)).toEqual(['pauseVideo']);
     });
 
+    it('starts the reloaded player after Play again, whatever the autoplay setting', () => {
+      const { result, rerender } = renderHook(
+        ({ token }) => useMediaPause(false, token),
+        { initialProps: { token: 0 } },
+      );
+      const { iframe, postMessage } = fakeIframe();
+      result.current.youtubeRef.current = iframe;
+      rerender({ token: 1 });
+      postMessage.mockClear();
+      result.current.onYoutubeLoad();
+      expect(commandsSent(postMessage)).toEqual(['playVideo']);
+    });
+
+    it('leaves a player paused after Play again to the standing pause', () => {
+      const { result, rerender } = renderHook(
+        ({ token, paused }) => useMediaPause(paused, token),
+        { initialProps: { token: 0, paused: true } },
+      );
+      const { iframe, postMessage } = fakeIframe();
+      result.current.youtubeRef.current = iframe;
+      rerender({ token: 1, paused: true });
+      postMessage.mockClear();
+      result.current.onYoutubeLoad();
+      expect(commandsSent(postMessage)).toEqual(['pauseVideo']);
+    });
+
     it('re-sends a mute that began after the first render', () => {
       const { result, rerender } = renderHook(
         ({ muted }) => useMediaPause(false, 0, 0, muted),

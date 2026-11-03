@@ -16,7 +16,7 @@ function postYoutubeCommand(
 
 interface MediaPauseHandles {
   youtubeRef: RefObject<HTMLIFrameElement | null>;
-  /** Re-applies a standing pause once the embed has loaded — commands sent before then are dropped. */
+  /** Re-applies a standing pause or mute once the embed has loaded — commands sent before then are dropped — and starts a player remounted by Play again. */
   onYoutubeLoad: () => void;
   audioRef: RefObject<HTMLAudioElement | null>;
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -52,6 +52,7 @@ export function useMediaPause(
   const wasPausedRef = useRef(false);
   const wasMutedRef = useRef(false);
   const lastReplayTokenRef = useRef(replayToken);
+  const mountedReplayToken = useRef(replayToken).current;
 
   useEffect(() => {
     if (replayToken === lastReplayTokenRef.current) return;
@@ -99,8 +100,12 @@ export function useMediaPause(
 
   const onYoutubeLoad = useCallback(() => {
     if (isPaused) postYoutubeCommand(youtubeRef.current, 'pauseVideo');
+    // Play again remounted the embed, whose autoplay param follows the setting: the press itself must start it.
+    else if (replayToken !== mountedReplayToken) {
+      postYoutubeCommand(youtubeRef.current, 'playVideo');
+    }
     if (isMuted) postYoutubeCommand(youtubeRef.current, 'mute');
-  }, [isPaused, isMuted]);
+  }, [isPaused, isMuted, replayToken, mountedReplayToken]);
 
   const onVideoReady = useCallback(() => {
     if (isPaused) videoRef.current?.pause();
