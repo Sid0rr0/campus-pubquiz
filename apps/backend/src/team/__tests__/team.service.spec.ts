@@ -28,7 +28,9 @@ import { useTestDatabase } from '@/test-db/test-database';
 
 // Real codes unless a test queues one.
 jest.mock('@/db/join-code.util', () => {
-  const actual = jest.requireActual('@/db/join-code.util');
+  const actual = jest.requireActual<typeof import('@/db/join-code.util')>(
+    '@/db/join-code.util',
+  );
   return { ...actual, generateJoinCode: jest.fn(actual.generateJoinCode) };
 });
 
