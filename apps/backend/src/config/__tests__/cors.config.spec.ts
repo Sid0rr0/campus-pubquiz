@@ -1,3 +1,5 @@
+import { ForbiddenException } from '@nestjs/common';
+
 import { corsOriginValidator } from '@/config/cors.config';
 
 function validate(origin: string | undefined): Promise<boolean> {
@@ -48,7 +50,9 @@ describe('corsOriginValidator', () => {
   });
 
   it('rejects an unrelated public origin', async () => {
-    await expect(validate('http://evil.example.com:8888')).rejects.toThrow();
+    await expect(validate('http://evil.example.com:8888')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('allows FRONTEND_ORIGIN from the environment', async () => {

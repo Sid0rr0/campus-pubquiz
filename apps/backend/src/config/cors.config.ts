@@ -1,3 +1,5 @@
+import { ForbiddenException } from '@nestjs/common';
+
 const LOCAL_ORIGINS = ['http://localhost:8888'];
 
 const FRONTEND_PORT = '8888';
@@ -36,5 +38,6 @@ export function corsOriginValidator(
   }
 
   // Stryker disable next-line StringLiteral: copy; the message only reaches the server log, and callers branch on the error being set, not its text.
-  callback(new Error(`Origin ${origin} not allowed by CORS`));
+  // A 403, not a plain Error: Nest would answer 500 and Sentry would report every stray origin (e.g. a Vercel preview build).
+  callback(new ForbiddenException(`Origin ${origin} not allowed by CORS`));
 }
