@@ -313,6 +313,26 @@ describe('getQuizStructureSummary', () => {
     });
   });
 
+  it('never counts a break after a kahoot round, which has none, even with breakAfter set', () => {
+    const kahootRoundWithBreakAfter: GameContext = {
+      rounds: [
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 1, breakAfter: true, kahootMode: true },
+        { questionCount: 1, breakAfter: true },
+      ],
+    };
+    const summary = getQuizStructureSummary(kahootRoundWithBreakAfter);
+    expect(summary).toEqual({
+      blockCount: 2,
+      topicsPerBlock: null,
+      breakRoundNumbers: [1, 3],
+      minQuestionsPerTopic: 1,
+      maxQuestionsPerTopic: 1,
+    });
+    // The second break the room sees is announced as break 2.
+    expect(getBreakNumber(2, summary)).toBe(2);
+  });
+
   it('reports differing min/max question counts when rounds are not uniform', () => {
     const unevenQuestionCounts: GameContext = {
       rounds: [

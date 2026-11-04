@@ -124,6 +124,7 @@ export class QuizService {
         rounds: rounds.map((round) => ({
           questionCount: round.questions.length,
           breakAfter: round.breakAfter,
+          kahootMode: round.kahootMode,
         })),
       });
       return {

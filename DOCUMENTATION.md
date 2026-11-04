@@ -1586,7 +1586,9 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   `author` (absent when unset) for that card, and `breakNumber` and
   `isFinalBreak` on block-ending rounds, built with `getQuizStructureSummary`
   / `getBreakNumber`: the last round always ends a block, so it carries them
-  even when its stored `breakAfter` is false. The browser shows a B marker
+  even when its stored `breakAfter` is false. A kahoot round before the last
+  never has a break, so it gets no number even with `breakAfter` set, and the
+  breaks, the rules screen and the bonus deadline count only real breaks. The browser shows a B marker
   wherever they are present, and `/control` shows "Break N" ("(final)" on the
   final break) when that break is on air. The round's **Show on
   screen** checkbox (`Round.showNoteOnScreen`, off by default, disabled while the

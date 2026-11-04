@@ -188,6 +188,23 @@ describe('QuizService (Postgres integration)', () => {
     });
   });
 
+  it('numbers no break after a kahoot round, which has none, even with breakAfter set', async () => {
+    const quiz = await insertQuiz('Campus Pub Quiz Night');
+    await insertRound(quiz, 'Round 1', 0, true);
+    const kahoot = await insertRound(quiz, 'Round 2', 1, true);
+    kahoot.kahootMode = true;
+    await insertRound(quiz, 'Round 3', 2);
+    await em.flush();
+
+    const [listed] = await quizService.list();
+
+    expect(listed.rounds[1]).not.toHaveProperty('breakNumber');
+    expect(listed.rounds[2]).toMatchObject({
+      breakNumber: 2,
+      isFinalBreak: true,
+    });
+  });
+
   it("includes each question's options and correct answer", async () => {
     const quiz = await insertQuiz('Campus Pub Quiz Night');
     const round = await insertRound(quiz, 'Round 1', 0);
