@@ -54,7 +54,13 @@ export function isShowingLastBreak(
   return breakNumber > 0 && breakNumber === quizStructure.blockCount;
 }
 
-/** Sizes (round counts) of every block, in order — a block ends at each breakAfter round. A kahoot round never has a break, so it ends none (but a quiz ending on one still closes its last block). */
+/**
+ * Sizes (round counts) of every block, in order — a block ends at each
+ * breakAfter round. A kahoot round never has a break, so it ends none. A quiz
+ * ending on kahoot rounds still closes them as a last block: the last break
+ * stands for "nothing left to play" (isShowingLastBreak crowns the winners and
+ * hides the bonus list), which must not come while those rounds are ahead.
+ */
 function getBlockSizes(context: GameContext): number[] {
   const sizes: number[] = [];
   let currentSize = 0;
