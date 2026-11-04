@@ -2029,7 +2029,9 @@ on an older schema version keep working without a data migration.
 to confirm Deactivate and Deny). The first
   admin account is bootstrapped at startup from
   `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` env vars, since
-  self-registration alone can't produce the first approver.
+  self-registration alone can't produce the first approver. An account that
+  already holds that username is promoted and gets the env password, so a
+  stranger who registered the name first can't sign in to it.
 - **Teams**: join with a team name + the session's join code (picked from the
   "Pick the quiz" list, scanned from the QR code on the display, or typed into
   the "Game code" field behind the join form's "Have a game code?" toggle,

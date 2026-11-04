@@ -118,6 +118,7 @@ describe('AuthBootstrapService', () => {
     const existing: Partial<User> = {
       id: 3,
       username: 'root',
+      passwordHash: await bcrypt.hash('registrant-pw', 4),
       role: 'moderator',
       status: 'pending',
     };
@@ -132,6 +133,11 @@ describe('AuthBootstrapService', () => {
     expect(repo.create).not.toHaveBeenCalled();
     expect(existing.role).toBe('admin');
     expect(existing.status).toBe('active');
+    // Anyone can self-register the bootstrap username first: the env password, not theirs, must open it.
+    expect(await bcrypt.compare('plain-pw', existing.passwordHash!)).toBe(true);
+    expect(await bcrypt.compare('registrant-pw', existing.passwordHash!)).toBe(
+      false,
+    );
     expect(repo.flush).toHaveBeenCalled();
   });
 });

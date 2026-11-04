@@ -39,6 +39,8 @@ export class AuthBootstrapService implements OnModuleInit {
     const existingUser = await this.users.findOne({ username });
 
     if (existingUser) {
+      // Anyone can self-register this username first, so the env password replaces theirs.
+      existingUser.passwordHash = passwordHash;
       existingUser.role = 'admin';
       existingUser.status = 'active';
       await this.users.getEntityManager().flush();
