@@ -82,3 +82,5 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ six sessions found the shared Chrome profile locked, and two couldn't sign in, so changed screens went unchecked.
 - **tdd, rules of the loop (2026-11-05)**: once the last slice is green, run `pnpm crap:changed`; a function above 30 goes to review as a refactor target.
   _Why:_ the CRAP gate is local only, so without a trigger in the dev loop nobody runs it; tdd has no refactor step, so the check hands its findings to review.
+- **tdd, rules of the loop (2026-11-05, later)**: the refactor-target cutoff dropped from 30 to 10, matching the new `scripts/crap.mjs` threshold.
+  _Why:_ the CRAP gate now fails above 10.

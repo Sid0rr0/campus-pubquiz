@@ -261,8 +261,8 @@ are gitignored.
 CRAP (Change Risk Anti-Patterns) scores each function by its complexity and
 how much of it the tests leave uncovered: `CC² × (1 − coverage)³ + CC`. A
 fully covered function still scores its complexity, so a high score means
-"add tests" or, past 30 at full coverage, "split it". 1–5 is low risk, 5–30
-worth a look, above 30 too complex for its tests.
+"add tests" or, past 10 at full coverage, "split it". This repo holds every
+function to 10 or below.
 [crapper](https://github.com/unclebob/crapper) does the scoring. It's a local
 check: not in `pnpm test`, the pre-commit hook or CI.
 
@@ -271,7 +271,7 @@ pnpm crap           # rerun coverage in every workspace, rank every function (ab
 pnpm crap:changed   # only the uncommitted source files; coverage reruns only where they live
 ```
 
-Both exit 2 when a scored function is above 30. With `crap:changed` that's
+Both exit 2 when a scored function is above 10. With `crap:changed` that's
 every function in a touched file, not just the lines you edited: touching a
 file with an offender means fixing it first. Backend coverage needs Docker
 (Testcontainers). A failing test stops the run with exit 1, since a

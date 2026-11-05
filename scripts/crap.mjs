@@ -12,7 +12,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CRAPPER_SHA = '6fd92c4c9bcc56efb64a2f8743d5a2993bcfd42d';
 // crapper's own launcher installs these unpinned; a new parser release could shift scores.
 const PY_DEPS = ['tree-sitter==0.26.0', 'tree-sitter-language-pack==1.23.1'];
-const THRESHOLD = '30';
+const THRESHOLD = '10';
 const TOOL = join(ROOT, '.tools', 'crapper');
 const VENV_OK = join(TOOL, '.venv', '.installed');
 
