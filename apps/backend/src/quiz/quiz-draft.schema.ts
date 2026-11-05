@@ -41,104 +41,109 @@ export function validateQuizDraft(
   }
 
   request.rounds.forEach((round, roundIndex) => {
-    if (round.title.trim() === '') {
-      issues.push({
-        roundIndex,
-        questionIndex: null,
-        field: 'title',
-        message: 'Missing round title',
-      });
-    }
-    if (round.questions.length === 0) {
-      issues.push({
-        roundIndex,
-        questionIndex: null,
-        field: 'questions',
-        message: 'Round needs at least one question',
-      });
-    }
-    if (
-      round.kahootMode !== undefined &&
-      typeof round.kahootMode !== 'boolean'
-    ) {
-      issues.push({
-        roundIndex,
-        questionIndex: null,
-        field: 'kahootMode',
-        message: 'Kahoot mode must be true or false',
-      });
-    }
-    if (
-      round.category !== undefined &&
-      !(ROUND_CATEGORIES as readonly string[]).includes(round.category)
-    ) {
-      issues.push({
-        roundIndex,
-        questionIndex: null,
-        field: 'category',
-        message: `Category must be one of: ${ROUND_CATEGORIES.join(', ')}`,
-      });
-    }
-    if (round.author !== undefined && typeof round.author !== 'string') {
-      issues.push({
-        roundIndex,
-        questionIndex: null,
-        field: 'author',
-        message: 'Author must be text',
-      });
-    }
-    if (
-      round.showNoteOnScreen !== undefined &&
-      typeof round.showNoteOnScreen !== 'boolean'
-    ) {
-      issues.push({
-        roundIndex,
-        questionIndex: null,
-        field: 'showNoteOnScreen',
-        message: 'Show on screen must be true or false',
-      });
-    }
-    if (round.note !== undefined) {
-      if (typeof round.note !== 'string') {
-        issues.push({
-          roundIndex,
-          questionIndex: null,
-          field: 'note',
-          message: 'Round note must be text',
-        });
-      } else if (round.note.trim().length > ROUND_NOTE_MAX_LENGTH) {
-        issues.push({
-          roundIndex,
-          questionIndex: null,
-          field: 'note',
-          message: `Round note must be at most ${ROUND_NOTE_MAX_LENGTH} characters`,
-        });
-      }
-    }
-
-    round.questions.forEach((question, questionIndex) => {
-      const checked = checkQuestion(question);
-      if (checked.success) {
-        if (round.kahootMode && !isKahootAllowedType(question.type)) {
-          issues.push({
-            roundIndex,
-            questionIndex,
-            field: 'type',
-            message: KAHOOT_TYPES_MESSAGE,
-          });
-        }
-        return;
-      }
-      for (const issue of checked.issues) {
-        issues.push({
-          roundIndex,
-          questionIndex,
-          field: String(issue.path[0] ?? 'question'),
-          message: issue.message,
-        });
-      }
-    });
+    issues.push(
+      ...roundShapeIssues(round, roundIndex),
+      ...roundTextIssues(round, roundIndex),
+      ...round.questions.flatMap((question, questionIndex) =>
+        questionIssues(round, question, { roundIndex, questionIndex }),
+      ),
+    );
   });
 
   return issues;
+}
+
+type DraftRound = QuizDraftSaveRequest['rounds'][number];
+
+function roundIssue(
+  roundIndex: number,
+  field: string,
+  message: string,
+): QuizDraftIssue {
+  return { roundIndex, questionIndex: null, field, message };
+}
+
+function roundShapeIssues(
+  round: DraftRound,
+  roundIndex: number,
+): QuizDraftIssue[] {
+  const issues: QuizDraftIssue[] = [];
+  if (round.title.trim() === '') {
+    issues.push(roundIssue(roundIndex, 'title', 'Missing round title'));
+  }
+  if (round.questions.length === 0) {
+    issues.push(
+      roundIssue(roundIndex, 'questions', 'Round needs at least one question'),
+    );
+  }
+  if (round.kahootMode !== undefined && typeof round.kahootMode !== 'boolean') {
+    issues.push(
+      roundIssue(roundIndex, 'kahootMode', 'Kahoot mode must be true or false'),
+    );
+  }
+  if (
+    round.category !== undefined &&
+    !(ROUND_CATEGORIES as readonly string[]).includes(round.category)
+  ) {
+    issues.push(
+      roundIssue(
+        roundIndex,
+        'category',
+        `Category must be one of: ${ROUND_CATEGORIES.join(', ')}`,
+      ),
+    );
+  }
+  return issues;
+}
+
+function roundTextIssues(
+  round: DraftRound,
+  roundIndex: number,
+): QuizDraftIssue[] {
+  const issues: QuizDraftIssue[] = [];
+  if (round.author !== undefined && typeof round.author !== 'string') {
+    issues.push(roundIssue(roundIndex, 'author', 'Author must be text'));
+  }
+  if (
+    round.showNoteOnScreen !== undefined &&
+    typeof round.showNoteOnScreen !== 'boolean'
+  ) {
+    issues.push(
+      roundIssue(
+        roundIndex,
+        'showNoteOnScreen',
+        'Show on screen must be true or false',
+      ),
+    );
+  }
+  if (round.note !== undefined && typeof round.note !== 'string') {
+    issues.push(roundIssue(roundIndex, 'note', 'Round note must be text'));
+  } else if (round.note && round.note.trim().length > ROUND_NOTE_MAX_LENGTH) {
+    issues.push(
+      roundIssue(
+        roundIndex,
+        'note',
+        `Round note must be at most ${ROUND_NOTE_MAX_LENGTH} characters`,
+      ),
+    );
+  }
+  return issues;
+}
+
+function questionIssues(
+  round: DraftRound,
+  question: DraftRound['questions'][number],
+  position: { roundIndex: number; questionIndex: number },
+): QuizDraftIssue[] {
+  const checked = checkQuestion(question);
+  if (!checked.success) {
+    return checked.issues.map((issue) => ({
+      ...position,
+      field: String(issue.path[0] ?? 'question'),
+      message: issue.message,
+    }));
+  }
+  return round.kahootMode && !isKahootAllowedType(question.type)
+    ? [{ ...position, field: 'type', message: KAHOOT_TYPES_MESSAGE }]
+    : [];
 }

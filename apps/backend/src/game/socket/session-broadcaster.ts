@@ -128,15 +128,12 @@ export class SessionBroadcaster
         } catch (error) {
           this.logger.error(
             `League top broadcast failed for session ${code}`,
-            error instanceof Error ? error.stack : String(error),
+            stackOf(error),
           );
         }
       }
     } catch (error) {
-      this.logger.error(
-        'League top refresh failed',
-        error instanceof Error ? error.stack : String(error),
-      );
+      this.logger.error('League top refresh failed', stackOf(error));
     }
   }
 
@@ -177,4 +174,8 @@ export class SessionBroadcaster
     }
     return this.server;
   }
+}
+
+function stackOf(error: unknown): string | undefined {
+  return error instanceof Error ? error.stack : String(error);
 }

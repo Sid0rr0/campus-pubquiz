@@ -66,15 +66,8 @@ function compareAverages(a: number | null, b: number | null): number {
   return a - b;
 }
 
-/**
- * The league table from every team's nights across the league's sessions
- * (one entry per team per session). Ranked by league points, then more nights
- * won, then better average placing; teams level on all three share the
- * position (competition ranking: 1, 1, 3) and list by name.
- */
-export function buildLeagueTable(
-  nights: readonly TeamNight[],
-): LeagueTableRow[] {
+/** Each team's tally over the nights it answered in. */
+function tallyNights(nights: readonly TeamNight[]): Map<number, Tally> {
   const tallies = new Map<number, Tally>();
   for (const night of nights) {
     if (!night.answered) continue;
@@ -92,8 +85,32 @@ export function buildLeagueTable(
     if (night.placing !== null) tally.placings.push(night.placing);
     tallies.set(night.teamId, tally);
   }
+  return tallies;
+}
 
-  const ordered = [...tallies.values()]
+/** The index of the first team in `ordered` level with the one at `index`. */
+function levelGroupStart<Team>(
+  ordered: readonly Team[],
+  index: number,
+  level: (a: Team, b: Team) => boolean,
+): number {
+  let groupStart = index;
+  while (groupStart > 0 && level(ordered[groupStart - 1], ordered[index])) {
+    groupStart--;
+  }
+  return groupStart;
+}
+
+/**
+ * The league table from every team's nights across the league's sessions
+ * (one entry per team per session). Ranked by league points, then more nights
+ * won, then better average placing; teams level on all three share the
+ * position (competition ranking: 1, 1, 3) and list by name.
+ */
+export function buildLeagueTable(
+  nights: readonly TeamNight[],
+): LeagueTableRow[] {
+  const ordered = [...tallyNights(nights).values()]
     .map((tally) => ({
       teamId: tally.teamId,
       teamName: tally.teamName,
@@ -118,10 +135,7 @@ export function buildLeagueTable(
     a.mean === b.mean;
 
   return ordered.map((team, index) => {
-    let groupStart = index;
-    while (groupStart > 0 && level(ordered[groupStart - 1], team)) {
-      groupStart--;
-    }
+    const groupStart = levelGroupStart(ordered, index, level);
     return {
       teamId: team.teamId,
       teamName: team.teamName,

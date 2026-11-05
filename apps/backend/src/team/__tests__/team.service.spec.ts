@@ -100,6 +100,31 @@ describe('TeamService (Postgres integration)', () => {
     return session.id;
   }
 
+  describe('creating a team', () => {
+    it('refuses a name another phone registered between the lookup and the insert', async () => {
+      await teamService.join(sessionId, 'Racers', { joinCode: 'ABCDEF' });
+      const lookup = jest
+        .spyOn(em.getRepository<Team, TeamRepository>(Team), 'findOne')
+        .mockResolvedValue(null);
+
+      await expect(
+        teamService.join(sessionId, 'Racers', { joinCode: 'ABCDEF' }),
+      ).rejects.toMatchObject({ name: 'TeamNameTakenError' });
+      lookup.mockRestore();
+    });
+
+    it('passes on a failed insert that is not a taken name', async () => {
+      const flush = jest
+        .spyOn(em, 'persistAndFlush')
+        .mockRejectedValue(new Error('connection lost'));
+
+      await expect(
+        teamService.join(sessionId, 'Unlucky', { joinCode: 'ABCDEF' }),
+      ).rejects.toThrow('connection lost');
+      flush.mockRestore();
+    });
+  });
+
   it('creates a new team with a generated token and code when the join code matches', async () => {
     const team = await teamService.join(sessionId, 'The Quizzards', {
       joinCode: 'ABCDEF',

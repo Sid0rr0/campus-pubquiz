@@ -81,6 +81,49 @@ export interface SessionResult {
   maxPoints: number;
 }
 
+function countCorrectByTeam(
+  answers: readonly SessionResultAnswer[],
+): Map<number, number> {
+  const correctByTeam = new Map<number, number>();
+  for (const a of answers) {
+    if (a.verdict === 'correct') {
+      correctByTeam.set(a.teamId, (correctByTeam.get(a.teamId) ?? 0) + 1);
+    }
+  }
+  return correctByTeam;
+}
+
+function groupByQuestion(
+  answers: readonly SessionResultAnswer[],
+): Map<number, SessionResultAnswer[]> {
+  const answersByQuestion = new Map<number, SessionResultAnswer[]>();
+  for (const a of answers) {
+    const list = answersByQuestion.get(a.questionId) ?? [];
+    list.push(a);
+    answersByQuestion.set(a.questionId, list);
+  }
+  return answersByQuestion;
+}
+
+function toTeamResult(
+  entry: SessionStandings['departed'][number],
+  place: { rank: number; rankTo: number } | null,
+  facts: Pick<TeamResult, 'answered' | 'correctCount' | 'isSessionWinner'>,
+): TeamResult {
+  return {
+    teamId: entry.teamId,
+    teamName: entry.teamName,
+    placing: place?.rank ?? null,
+    placingTo: place?.rankTo ?? null,
+    hasLeft: place === null,
+    totalPoints: entry.totalPoints,
+    bonusPoints: entry.bonusPoints,
+    answerPoints: entry.totalPoints - entry.bonusPoints,
+    ...facts,
+    wonNight: place?.rank === 1,
+  };
+}
+
 /**
  * What one ended session's results mean. Pure: placing, ties, the winner and
  * who took part come from Standings unchanged; this module never ranks, sorts
@@ -91,37 +134,17 @@ export function sessionResult(input: SessionResultInput): SessionResult {
   const { participantCount } = standings;
 
   const answeredTeams = new Set(answers.map((a) => a.teamId));
-  const correctByTeam = new Map<number, number>();
-  for (const a of answers) {
-    if (a.verdict === 'correct') {
-      correctByTeam.set(a.teamId, (correctByTeam.get(a.teamId) ?? 0) + 1);
-    }
-  }
-
+  const correctByTeam = countCorrectByTeam(answers);
+  const answersByQuestion = groupByQuestion(answers);
   const teamResult = (
     entry: SessionStandings['departed'][number],
     place: { rank: number; rankTo: number } | null,
-  ): TeamResult => ({
-    teamId: entry.teamId,
-    teamName: entry.teamName,
-    placing: place?.rank ?? null,
-    placingTo: place?.rankTo ?? null,
-    hasLeft: place === null,
-    totalPoints: entry.totalPoints,
-    bonusPoints: entry.bonusPoints,
-    answerPoints: entry.totalPoints - entry.bonusPoints,
-    answered: answeredTeams.has(entry.teamId),
-    correctCount: correctByTeam.get(entry.teamId) ?? 0,
-    wonNight: place?.rank === 1,
-    isSessionWinner: standings.winner?.teamId === entry.teamId,
-  });
-
-  const answersByQuestion = new Map<number, SessionResultAnswer[]>();
-  for (const a of answers) {
-    const list = answersByQuestion.get(a.questionId) ?? [];
-    list.push(a);
-    answersByQuestion.set(a.questionId, list);
-  }
+  ): TeamResult =>
+    toTeamResult(entry, place, {
+      answered: answeredTeams.has(entry.teamId),
+      correctCount: correctByTeam.get(entry.teamId) ?? 0,
+      isSessionWinner: standings.winner?.teamId === entry.teamId,
+    });
 
   return {
     teams: [
@@ -129,10 +152,9 @@ export function sessionResult(input: SessionResultInput): SessionResult {
       ...standings.departed.map((entry) => teamResult(entry, null)),
     ],
     questions: questions.map((question) => {
-      const given = answersByQuestion.get(question.id) ?? [];
       const { answeredCount, correctCount, correctRate } = questionOutcome(
         question,
-        given,
+        answersByQuestion.get(question.id) ?? [],
         participantCount,
       );
       return {

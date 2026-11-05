@@ -26,11 +26,11 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 function runStryker(extraArgs: string[]): Promise<number> {
+  return interrupted ? Promise.resolve(1) : spawnStryker(extraArgs);
+}
+
+function spawnStryker(extraArgs: string[]): Promise<number> {
   return new Promise((resolve, reject) => {
-    if (interrupted) {
-      resolve(1);
-      return;
-    }
     const child = spawn(
       'pnpm',
       ['exec', 'stryker', ...STRYKER_ARGS, ...extraArgs],

@@ -140,59 +140,75 @@ export function assembleImportPreview(
   rows: SheetRow[],
 ): ImportPreview {
   const issues: ImportRowIssue[] = [];
-  const questionsByRound = new Map<string, ImportQuestionPreview[]>();
-  const breakAfterByRound = new Map<string, boolean>();
-  const categoryByRound = new Map<string, string>();
-  const authorByRound = new Map<string, string>();
-  const noteByRound = new Map<string, string>();
-  const showNoteByRound = new Map<string, boolean>();
-
+  const roundsByTitle = new Map<string, RoundCells>();
   for (const row of rows) {
     const result = parseQuestionRow(row);
-    if (!result.ok) {
+    if (result.ok) {
+      addRowToRound(roundsByTitle, result);
+    } else {
       issues.push(...result.issues);
-      continue;
-    }
-    const questions = questionsByRound.get(result.roundTitle) ?? [];
-    questionsByRound.set(result.roundTitle, [...questions, result.question]);
-    breakAfterByRound.set(
-      result.roundTitle,
-      (breakAfterByRound.get(result.roundTitle) ?? false) ||
-        result.roundBreakAfter,
-    );
-    if (result.roundCategory && !categoryByRound.has(result.roundTitle)) {
-      categoryByRound.set(result.roundTitle, result.roundCategory);
-    }
-    if (result.roundAuthor && !authorByRound.has(result.roundTitle)) {
-      authorByRound.set(result.roundTitle, result.roundAuthor);
-    }
-    if (result.roundNote && !noteByRound.has(result.roundTitle)) {
-      noteByRound.set(result.roundTitle, result.roundNote);
-    }
-    if (result.showRoundNote && !showNoteByRound.has(result.roundTitle)) {
-      showNoteByRound.set(result.roundTitle, result.showRoundNote === '1');
     }
   }
+  const titles = [...roundsByTitle.keys()];
+  const rounds = titles.map((title, index) =>
+    toRoundPreview(
+      title,
+      roundsByTitle.get(title)!,
+      index === titles.length - 1,
+    ),
+  );
+  return createImportPreview(quizTitle, rounds, issues);
+}
 
-  const roundTitles = [...questionsByRound.keys()];
-  const rounds = roundTitles.map((title, index) => ({
+/** One round's questions and round-level cells, each cell the first non-blank one seen. */
+interface RoundCells {
+  questions: ImportQuestionPreview[];
+  breakAfter: boolean;
+  category: string;
+  author: string;
+  note: string;
+  showRoundNote: '' | '0' | '1';
+}
+
+function addRowToRound(
+  roundsByTitle: Map<string, RoundCells>,
+  row: Extract<ParsedQuestionRow, { ok: true }>,
+): void {
+  const round = roundsByTitle.get(row.roundTitle);
+  if (!round) {
+    roundsByTitle.set(row.roundTitle, {
+      questions: [row.question],
+      breakAfter: row.roundBreakAfter,
+      category: row.roundCategory,
+      author: row.roundAuthor,
+      note: row.roundNote,
+      showRoundNote: row.showRoundNote,
+    });
+    return;
+  }
+  round.questions.push(row.question);
+  round.breakAfter ||= row.roundBreakAfter;
+  round.category ||= row.roundCategory;
+  round.author ||= row.roundAuthor;
+  round.note ||= row.roundNote;
+  round.showRoundNote ||= row.showRoundNote;
+}
+
+function toRoundPreview(
+  title: string,
+  round: RoundCells,
+  isLastRound: boolean,
+): ImportPreview['rounds'][number] {
+  return {
     title,
-    breakAfter:
-      index === roundTitles.length - 1
-        ? true
-        : // Stryker disable next-line BooleanLiteral: equivalent, every round title in questionsByRound has a breakAfterByRound entry, so the fallback is never read
-          (breakAfterByRound.get(title) ?? false),
-    ...(categoryByRound.has(title)
-      ? { category: categoryByRound.get(title) }
-      : {}),
-    ...(authorByRound.has(title) ? { author: authorByRound.get(title) } : {}),
-    ...(noteByRound.has(title) ? { note: noteByRound.get(title) } : {}),
+    breakAfter: isLastRound || round.breakAfter,
+    ...(round.category ? { category: round.category } : {}),
+    ...(round.author ? { author: round.author } : {}),
+    ...(round.note ? { note: round.note } : {}),
     // The setting means nothing without a note, so an empty note drops it.
-    ...(noteByRound.has(title) && showNoteByRound.get(title)
+    ...(round.note && round.showRoundNote === '1'
       ? { showNoteOnScreen: true }
       : {}),
-    questions: questionsByRound.get(title) ?? [],
-  }));
-
-  return createImportPreview(quizTitle, rounds, issues);
+    questions: round.questions,
+  };
 }

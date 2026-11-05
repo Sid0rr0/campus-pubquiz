@@ -1,6 +1,7 @@
 import {
   type ActiveShowdownRoundState,
   type GameAction,
+  type GameProgress,
   type LeagueTop,
   LOBBY_PROGRESS,
   type MoveStep,
@@ -160,32 +161,12 @@ export class MoveCommitter {
     step: ProgressMoveStep,
   ): Promise<CommittedMove> {
     const { progress } = step;
-
-    // Leaving the joker pick by any route closes it: teams without a joker
-    // are given a drawn one before the quiz moves on. Entering it (again)
-    // reopens it: drawn jokers are cleared so those teams can really choose.
-    const wasPicking = session.progress.status === 'joker_pick';
-    const isPicking = progress.status === 'joker_pick';
-    let closedPick: ClosedJokerPick | null = null;
-    if (wasPicking && !isPicking) {
-      closedPick = await this.jokers.closePick(session);
-    } else if (!wasPicking && isPicking) {
-      closedPick = await this.jokers.reopenPick(session);
-    }
-
+    const closedPick = await this.crossJokerPick(session, progress);
     // Leaving the lobby decides every rostered team's carried coin, once.
-    const base = closedPick?.session ?? session;
     const isLeavingLobby =
       session.progress.status === 'lobby' && progress.status !== 'lobby';
-    const started = isLeavingLobby
-      ? {
-          ...base,
-          carriedCoins: await this.carriedCoins.decide(
-            base.seededGame.gameSessionId,
-            base.teams.map((team) => team.teamId),
-          ),
-        }
-      : base;
+    const base = closedPick?.session ?? session;
+    const started = isLeavingLobby ? await this.decideCarriedCoins(base) : base;
 
     const { session: refreshed, staleAnswerListIds } =
       await this.grading.gradeForMove(started, progress);
@@ -217,6 +198,36 @@ export class MoveCommitter {
         coinSyncs: isLeavingLobby ? coinSyncsFor(committed) : [],
       },
       touchedScores: true,
+    };
+  }
+
+  /**
+   * Leaving the joker pick by any route closes it: teams without a joker
+   * are given a drawn one before the quiz moves on. Entering it (again)
+   * reopens it: drawn jokers are cleared so those teams can really choose.
+   * Null when the move neither leaves nor enters the pick.
+   */
+  private async crossJokerPick(
+    session: SessionState,
+    progress: GameProgress,
+  ): Promise<ClosedJokerPick | null> {
+    const wasPicking = session.progress.status === 'joker_pick';
+    const isPicking = progress.status === 'joker_pick';
+    if (wasPicking === isPicking) return null;
+    return wasPicking
+      ? this.jokers.closePick(session)
+      : this.jokers.reopenPick(session);
+  }
+
+  private async decideCarriedCoins(
+    session: SessionState,
+  ): Promise<SessionState> {
+    return {
+      ...session,
+      carriedCoins: await this.carriedCoins.decide(
+        session.seededGame.gameSessionId,
+        session.teams.map((team) => team.teamId),
+      ),
     };
   }
 

@@ -123,20 +123,10 @@ export class TeamService {
     options: JoinOptions = {},
   ): Promise<TeamIdentity> {
     const trimmedName = teamName.trim();
-
-    if (options.teamToken) {
-      const existing = await this.teams.findOne({ token: options.teamToken });
-      if (existing) {
-        if (await this.isOnRoster(gameSessionId, existing.id)) {
-          return this.toIdentity(existing);
-        }
-        // The token proves who they are, but entering a *new* event still
-        // requires that event's own join code.
-        await this.assertJoinCodeMatches(gameSessionId, options.joinCode);
-        await this.addToRoster(gameSessionId, existing.id);
-        return this.toIdentity(existing);
-      }
-    }
+    const byToken = options.teamToken
+      ? await this.teams.findOne({ token: options.teamToken })
+      : null;
+    if (byToken) return this.rejoinByToken(gameSessionId, byToken, options);
 
     await this.assertJoinCodeMatches(gameSessionId, options.joinCode);
 
@@ -148,19 +138,46 @@ export class TeamService {
       (await this.teams.findOne({
         name: { $ilike: escapeLike(trimmedName) },
       }));
+    return existingByName
+      ? this.joinByName(gameSessionId, existingByName, trimmedName, options)
+      : this.createAndJoin(gameSessionId, trimmedName);
+  }
 
-    if (existingByName) {
-      const normalizedCode = options.teamCode?.trim().toUpperCase();
-      if (normalizedCode) this.assertCodeAttemptsLeft(existingByName.id);
-      if (!normalizedCode || normalizedCode !== existingByName.code) {
-        if (normalizedCode) this.noteWrongCode(existingByName.id);
-        throw new TeamCodeRequiredError(trimmedName);
-      }
-      this.wrongCodes.delete(existingByName.id);
-      await this.addToRoster(gameSessionId, existingByName.id);
-      return this.toIdentity(existingByName);
+  private async rejoinByToken(
+    gameSessionId: number,
+    existing: Team,
+    options: JoinOptions,
+  ): Promise<TeamIdentity> {
+    if (!(await this.isOnRoster(gameSessionId, existing.id))) {
+      // The token proves who they are, but entering a *new* event still
+      // requires that event's own join code.
+      await this.assertJoinCodeMatches(gameSessionId, options.joinCode);
+      await this.addToRoster(gameSessionId, existing.id);
     }
+    return this.toIdentity(existing);
+  }
 
+  private async joinByName(
+    gameSessionId: number,
+    existing: Team,
+    trimmedName: string,
+    options: JoinOptions,
+  ): Promise<TeamIdentity> {
+    const normalizedCode = options.teamCode?.trim().toUpperCase();
+    if (normalizedCode) this.assertCodeAttemptsLeft(existing.id);
+    if (!normalizedCode || normalizedCode !== existing.code) {
+      if (normalizedCode) this.noteWrongCode(existing.id);
+      throw new TeamCodeRequiredError(trimmedName);
+    }
+    this.wrongCodes.delete(existing.id);
+    await this.addToRoster(gameSessionId, existing.id);
+    return this.toIdentity(existing);
+  }
+
+  private async createAndJoin(
+    gameSessionId: number,
+    trimmedName: string,
+  ): Promise<TeamIdentity> {
     try {
       const team = this.teams.create({
         name: trimmedName,

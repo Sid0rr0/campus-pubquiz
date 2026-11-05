@@ -34,91 +34,125 @@ function findBlockQuestion(session: SessionState, questionId: number | null) {
   );
 }
 
+type OnAirOf<Kind extends OnAirScreen['kind']> = Extract<
+  OnAirScreen,
+  { kind: Kind }
+>;
+type ScreenTexts = {
+  [Kind in OnAirScreen['kind']]: (
+    session: SessionState,
+    screen: OnAirOf<Kind>,
+  ) => ScreenPreview;
+};
+
+function questionText(
+  { seededGame }: SessionState,
+  screen: OnAirOf<'question'>,
+): ScreenPreview {
+  const question =
+    seededGame.rounds[screen.roundIndex]?.questions[screen.questionIndex];
+  return {
+    heading: `R${screen.roundIndex + 1} Q${screen.questionIndex + 1}`,
+    ...(question ? { question } : {}),
+  };
+}
+
+function breakReviewText(
+  session: SessionState,
+  screen: OnAirOf<'break_review'>,
+): ScreenPreview {
+  const question = findBlockQuestion(session, screen.questionId);
+  return question
+    ? {
+        heading: `Break · Reviewing R${question.roundNumber} Q${question.questionNumberInRound}`,
+        body: question.prompt,
+      }
+    : describeBreakIntro(session);
+}
+
+function breakRoundTitleText(
+  session: SessionState,
+  screen: OnAirOf<'break_round_title'>,
+): ScreenPreview {
+  const question = findBlockQuestion(session, screen.questionId);
+  return question
+    ? {
+        heading: `Break · Round ${question.roundNumber} title`,
+        body: question.roundTitle,
+      }
+    : describeBreakIntro(session);
+}
+
+function revealIntroText(
+  session: SessionState,
+  screen: OnAirOf<'reveal_intro'>,
+): ScreenPreview {
+  const question = findBlockQuestion(session, screen.questionId);
+  return question
+    ? {
+        heading: `Revealing · Round ${question.roundNumber} title`,
+        body: question.roundTitle,
+      }
+    : { heading: 'Revealing answers' };
+}
+
+function revealText(
+  session: SessionState,
+  screen: OnAirOf<'reveal'>,
+): ScreenPreview {
+  const question = findBlockQuestion(session, screen.questionId);
+  return question
+    ? {
+        heading: `Revealing R${question.roundNumber} Q${question.questionNumberInRound}`,
+        body: `${question.prompt} — Answer: ${question.answer}`,
+      }
+    : { heading: 'Revealing answers' };
+}
+
+const SCREEN_TEXTS: ScreenTexts = {
+  lobby: () => ({ heading: 'Lobby', body: 'Teams joining' }),
+  rules: () => ({ heading: 'Rules' }),
+  round_overview: ({ seededGame }) => ({
+    heading: 'Round overview',
+    body: seededGame.rounds.map((round) => round.title).join(' · '),
+  }),
+  joker_pick: () => ({
+    heading: 'Joker pick',
+    body: 'Teams choose their joker round',
+  }),
+  round_title: ({ seededGame }, screen) => ({
+    heading: `Round ${screen.roundIndex + 1} title`,
+    body: seededGame.rounds[screen.roundIndex]?.title,
+  }),
+  question: questionText,
+  locking: (_session, screen) => ({
+    heading: 'Locking answers',
+    body: `R${screen.roundIndex + 1} Q${screen.questionIndex + 1} countdown`,
+  }),
+  break_intro: describeBreakIntro,
+  break_review: breakReviewText,
+  break_round_title: breakRoundTitleText,
+  reveal_intro: revealIntroText,
+  reveal: revealText,
+  leaderboard: (session) =>
+    session.progress.status === 'ended'
+      ? { heading: 'Leaderboard', body: 'Final standings' }
+      : { heading: 'Leaderboard' },
+  join_overlay: () => ({ heading: 'Join overlay' }),
+  ended: () => ({ heading: 'Quiz complete!' }),
+  showdown: () => ({ heading: 'Showdown' }),
+};
+
 /** Words for the screen the projection names as on air — the text is here, what is on air is decided by the projection alone. */
 function describeOnAirScreenText(
   session: SessionState,
   screen: OnAirScreen,
 ): ScreenPreview {
-  const { seededGame } = session;
-  switch (screen.kind) {
-    case 'lobby':
-      return { heading: 'Lobby', body: 'Teams joining' };
-    case 'rules':
-      return { heading: 'Rules' };
-    case 'round_overview':
-      return {
-        heading: 'Round overview',
-        body: seededGame.rounds.map((round) => round.title).join(' · '),
-      };
-    case 'joker_pick':
-      return { heading: 'Joker pick', body: 'Teams choose their joker round' };
-    case 'round_title':
-      return {
-        heading: `Round ${screen.roundIndex + 1} title`,
-        body: seededGame.rounds[screen.roundIndex]?.title,
-      };
-    case 'question': {
-      const question =
-        seededGame.rounds[screen.roundIndex]?.questions[screen.questionIndex];
-      return {
-        heading: `R${screen.roundIndex + 1} Q${screen.questionIndex + 1}`,
-        ...(question ? { question } : {}),
-      };
-    }
-    case 'locking':
-      return {
-        heading: 'Locking answers',
-        body: `R${screen.roundIndex + 1} Q${screen.questionIndex + 1} countdown`,
-      };
-    case 'break_intro':
-      return describeBreakIntro(session);
-    case 'break_review': {
-      const question = findBlockQuestion(session, screen.questionId);
-      return question
-        ? {
-            heading: `Break · Reviewing R${question.roundNumber} Q${question.questionNumberInRound}`,
-            body: question.prompt,
-          }
-        : describeBreakIntro(session);
-    }
-    case 'break_round_title': {
-      const question = findBlockQuestion(session, screen.questionId);
-      return question
-        ? {
-            heading: `Break · Round ${question.roundNumber} title`,
-            body: question.roundTitle,
-          }
-        : describeBreakIntro(session);
-    }
-    case 'reveal_intro': {
-      const question = findBlockQuestion(session, screen.questionId);
-      return question
-        ? {
-            heading: `Revealing · Round ${question.roundNumber} title`,
-            body: question.roundTitle,
-          }
-        : { heading: 'Revealing answers' };
-    }
-    case 'reveal': {
-      const question = findBlockQuestion(session, screen.questionId);
-      return question
-        ? {
-            heading: `Revealing R${question.roundNumber} Q${question.questionNumberInRound}`,
-            body: `${question.prompt} — Answer: ${question.answer}`,
-          }
-        : { heading: 'Revealing answers' };
-    }
-    case 'leaderboard':
-      return session.progress.status === 'ended'
-        ? { heading: 'Leaderboard', body: 'Final standings' }
-        : { heading: 'Leaderboard' };
-    case 'join_overlay':
-      return { heading: 'Join overlay' };
-    case 'ended':
-      return { heading: 'Quiz complete!' };
-    case 'showdown':
-      return { heading: 'Showdown' };
-  }
+  const describe = SCREEN_TEXTS[screen.kind] as (
+    session: SessionState,
+    screen: OnAirScreen,
+  ) => ScreenPreview;
+  return describe(session, screen);
 }
 
 /** Describes the screen /display renders for `session`'s progress — the words for the screen the Screen projection names as on air. */
@@ -143,12 +177,7 @@ function describePreviewedMove(
         body: `Next place (${step.place} of ${step.placeCount})`,
       };
     case 'reveal_step':
-      if (step.reveal === 'closest_guess') {
-        return { ...describeScreen(session), body: 'Next closest-guess step' };
-      }
-      return after.revealStep === session.revealStep
-        ? null
-        : { heading: 'Showdown', body: `Reveal step ${after.revealStep}` };
+      return describeRevealStep(session, step.reveal, after);
     case 'join_overlay_hide':
       return { ...describeScreen(after), body: 'Hides the join overlay' };
     case 'leaderboard_hide':
@@ -157,6 +186,19 @@ function describePreviewedMove(
     case 'blocked':
       return null;
   }
+}
+
+function describeRevealStep(
+  session: SessionState,
+  reveal: Extract<PreviewedMove['step'], { kind: 'reveal_step' }>['reveal'],
+  after: SessionState,
+): ScreenPreview | null {
+  if (reveal === 'closest_guess') {
+    return { ...describeScreen(session), body: 'Next closest-guess step' };
+  }
+  return after.revealStep === session.revealStep
+    ? null
+    : { heading: 'Showdown', body: `Reveal step ${after.revealStep}` };
 }
 
 /** The screen /display will show after /remote's Advance slot is pressed: the next press, as a dry-run commit leaves it. */

@@ -254,49 +254,66 @@ function groupedAnswers(
     : groups.map((g) => `${g.topic} (${g.count})`).join(', ');
 }
 
+type BriefAnswer = SessionBriefInput['answers'][number];
+
 /** What went wrong on one question, by type; sort and match add nothing. */
 function wrongAnswerLines(
   question: SessionBriefQuestionInputRow,
-  given: readonly SessionBriefInput['answers'][number][],
+  given: readonly BriefAnswer[],
 ): string[] {
   switch (QUESTION_KINDS[question.type].briefWrongAnswers) {
-    case 'typed': {
-      const wrong = groupedAnswers(
-        question,
-        given.filter((a) => a.verdict === 'incorrect'),
-        WRONG_ANSWERS_SHOWN,
-      );
-      const ungraded = groupedAnswers(
-        question,
-        given.filter((a) => a.verdict === null),
-      );
-      return [
-        ...(wrong ? [`- Wrong answers: ${wrong}`] : []),
-        ...(ungraded ? [`- Ungraded answers: ${ungraded}`] : []),
-      ];
-    }
-    case 'options': {
-      const options = question.options ?? [];
-      if (options.length === 0) return [];
-      const picks = options.map((option) => {
-        const count = given.filter((a) => a.answer === option).length;
-        return `${option} (${count})${option === question.answer ? ' [correct]' : ''}`;
-      });
-      return [`- Options: ${picks.join(', ')}`];
-    }
-    case 'spread': {
-      const guesses = given
-        .map((a) => parseFiniteNumber(a.answer))
-        .filter((n): n is number => n !== null)
-        .sort((a, b) => a - b);
-      if (guesses.length === 0) return [];
-      return [
-        `- Guesses: lowest ${guesses[0]}, median ${median(guesses)}, highest ${guesses[guesses.length - 1]}`,
-      ];
-    }
+    case 'typed':
+      return typedAnswerLines(question, given);
+    case 'options':
+      return optionPickLines(question, given);
+    case 'spread':
+      return guessSpreadLines(given);
     case 'none':
       return [];
   }
+}
+
+function typedAnswerLines(
+  question: SessionBriefQuestionInputRow,
+  given: readonly BriefAnswer[],
+): string[] {
+  const wrong = groupedAnswers(
+    question,
+    given.filter((a) => a.verdict === 'incorrect'),
+    WRONG_ANSWERS_SHOWN,
+  );
+  const ungraded = groupedAnswers(
+    question,
+    given.filter((a) => a.verdict === null),
+  );
+  return [
+    ...(wrong ? [`- Wrong answers: ${wrong}`] : []),
+    ...(ungraded ? [`- Ungraded answers: ${ungraded}`] : []),
+  ];
+}
+
+function optionPickLines(
+  question: SessionBriefQuestionInputRow,
+  given: readonly BriefAnswer[],
+): string[] {
+  const options = question.options ?? [];
+  if (options.length === 0) return [];
+  const picks = options.map((option) => {
+    const count = given.filter((a) => a.answer === option).length;
+    return `${option} (${count})${option === question.answer ? ' [correct]' : ''}`;
+  });
+  return [`- Options: ${picks.join(', ')}`];
+}
+
+function guessSpreadLines(given: readonly BriefAnswer[]): string[] {
+  const guesses = given
+    .map((a) => parseFiniteNumber(a.answer))
+    .filter((n): n is number => n !== null)
+    .sort((a, b) => a - b);
+  if (guesses.length === 0) return [];
+  return [
+    `- Guesses: lowest ${guesses[0]}, median ${median(guesses)}, highest ${guesses[guesses.length - 1]}`,
+  ];
 }
 
 function questionSection(

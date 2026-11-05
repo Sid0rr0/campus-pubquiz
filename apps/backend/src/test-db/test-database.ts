@@ -73,25 +73,34 @@ async function ensureWorkerDatabase(baseUri: string, name: string) {
       'SELECT 1 FROM pg_database WHERE datname = ?',
       [name],
     );
-    if (existing.length > 0) return;
-    for (let attempt = 1; ; attempt++) {
-      try {
-        await connection.execute(
-          `CREATE DATABASE ${name} TEMPLATE ${TEMPLATE_DATABASE}`,
-        );
-        return;
-      } catch (error) {
-        const isTemplateBusy =
-          (error as { code?: string }).code === TEMPLATE_IN_USE_CODE;
-        if (!isTemplateBusy || attempt >= CLONE_RETRY_LIMIT) throw error;
-        await new Promise((resolve) =>
-          setTimeout(resolve, CLONE_RETRY_DELAY_MS),
-        );
-      }
-    }
+    if (existing.length === 0) await cloneTemplate(connection, name);
   } finally {
     await admin.close(true);
   }
+}
+
+/** Clones the template into `name`, retrying while another worker's clone holds the template. */
+async function cloneTemplate(
+  connection: ReturnType<MikroORM['em']['getConnection']>,
+  name: string,
+  attempt = 1,
+): Promise<void> {
+  try {
+    await connection.execute(
+      `CREATE DATABASE ${name} TEMPLATE ${TEMPLATE_DATABASE}`,
+    );
+  } catch (error) {
+    if (!isRetryableClone(error, attempt)) throw error;
+    await new Promise((resolve) => setTimeout(resolve, CLONE_RETRY_DELAY_MS));
+    await cloneTemplate(connection, name, attempt + 1);
+  }
+}
+
+function isRetryableClone(error: unknown, attempt: number): boolean {
+  return (
+    (error as { code?: string }).code === TEMPLATE_IN_USE_CODE &&
+    attempt < CLONE_RETRY_LIMIT
+  );
 }
 
 /**

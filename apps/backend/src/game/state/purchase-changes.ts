@@ -48,6 +48,29 @@ export function balanceAfter(
   );
 }
 
+function fiftyFiftyEffect(
+  question: SeededQuestion,
+  random: RandomSource,
+): PurchaseEffect {
+  return {
+    kind: 'fifty_fifty',
+    removedOptions: drawRemovedOptions(
+      question.options ?? [],
+      question.answer,
+      random,
+    ),
+  };
+}
+
+function askTheRoomEffect(
+  question: SeededQuestion,
+  otherAnswers: readonly string[],
+): PurchaseEffect {
+  const split = askTheRoomSplit(question.options ?? [], otherAnswers);
+  if (split === null) throw new SessionRefusal('Waiting for more answers');
+  return { kind: 'ask_the_room', split };
+}
+
 /**
  * What a power-up stores when bought on `question`: drawn once here and kept,
  * so every later read shows the same effect. A new power-up adds its case; the
@@ -62,14 +85,7 @@ function effectOf(
 ): PurchaseEffect {
   switch (powerUp) {
     case 'fifty_fifty':
-      return {
-        kind: 'fifty_fifty',
-        removedOptions: drawRemovedOptions(
-          question.options ?? [],
-          question.answer,
-          random,
-        ),
-      };
+      return fiftyFiftyEffect(question, random);
     case 'first_letter':
     case 'letter_count':
       return {
@@ -78,11 +94,8 @@ function effectOf(
       };
     case 'wider_margin':
       return { kind: 'wider_margin' };
-    case 'ask_the_room': {
-      const split = askTheRoomSplit(question.options ?? [], otherAnswers);
-      if (split === null) throw new SessionRefusal('Waiting for more answers');
-      return { kind: 'ask_the_room', split };
-    }
+    case 'ask_the_room':
+      return askTheRoomEffect(question, otherAnswers);
     case 'pin_one':
       return drawPin(question.answer, random);
     default:
@@ -132,27 +145,12 @@ export class PurchaseChanges {
       teamId,
     );
     const setting = settings.powerUps[powerUp];
-    const refusal = purchaseRefusal({
-      setting,
-      usesInSession: records.filter((record) => record.powerUp === powerUp)
-        .length,
-      isUsedOnQuestion: records.some(
-        (record) =>
-          record.powerUp === powerUp && record.questionId === questionId,
-      ),
-      balance: balanceAfter(session, teamId, records),
-      isAnswerable: question !== undefined,
-      // A kahootMode tap locks the pick, so no question power-up can help there.
-      applies:
-        question !== undefined &&
-        !isCurrentRoundKahoot(session) &&
-        powerUpApplies(powerUp, question),
-    });
-    if (refusal !== null || question === undefined) {
-      throw new SessionRefusal(
-        refusal ?? 'Answers are locked for this question',
-      );
-    }
+    assertQuestionPurchaseAllowed(
+      session,
+      request,
+      { teamId, records },
+      question,
+    );
 
     const bought: PurchaseRecord = {
       powerUp,
@@ -164,14 +162,7 @@ export class PurchaseChanges {
         question,
         this.random,
         powerUp === 'ask_the_room'
-          ? (
-              await this.answerService.listForQuestion(
-                gameSessionId,
-                questionId,
-              )
-            )
-              .filter((answer) => answer.teamId !== teamId)
-              .map((answer) => answer.value)
+          ? await this.otherTeamsAnswers(gameSessionId, questionId, teamId)
           : [],
       ),
     };
@@ -189,6 +180,45 @@ export class PurchaseChanges {
       answerListQuestionIds: [questionId],
       ...(isWider && { teamSyncs: connectedTeamSyncs(session, [teamId]) }),
     });
+  }
+
+  /** Every connected team's purchases and coins, as a refund may have moved them. */
+  private async connectedPurchaseSyncs(
+    reloaded: SessionState,
+  ): Promise<PurchaseSync[]> {
+    const { gameSessionId } = reloaded.seededGame;
+    const purchaseSyncs: PurchaseSync[] = [];
+    for (const sync of connectedTeamSyncs(
+      reloaded,
+      Object.keys(reloaded.connectedTeamSockets).map(Number),
+    )) {
+      const records = await this.purchaseService.listForTeam(
+        gameSessionId,
+        sync.teamId,
+      );
+      purchaseSyncs.push({
+        ...sync,
+        payload: {
+          purchases: toPurchaseViews(
+            records,
+            reloaded.seededGame,
+            reloaded.progress.status,
+          ),
+          coins: balanceAfter(reloaded, sync.teamId, records),
+        },
+      });
+    }
+    return purchaseSyncs;
+  }
+
+  private async otherTeamsAnswers(
+    gameSessionId: number,
+    questionId: number,
+    teamId: number,
+  ): Promise<string[]> {
+    return (await this.answerService.listForQuestion(gameSessionId, questionId))
+      .filter((answer) => answer.teamId !== teamId)
+      .map((answer) => answer.value);
   }
 
   /** Stores `bought`, then tells the team's own phones its purchases and coins and refreshes the admin room. */
@@ -302,57 +332,77 @@ export class PurchaseChanges {
     if (settings.powerUps.extra_joker.maxUses === 0) {
       return { session: reloaded, purchaseSyncs: [] };
     }
-    // The rows come from the session's cache, not the database: a deleted round
-    // row has taken its purchases with it (cascade), even for a round that
-    // lives on in another row.
-    const kept = new Set<string>();
-    const rebuilt: NewPurchase[] = [];
-    for (const bought of started.funFactData.powerUps) {
-      if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
-      const next = roundNowHolding(started, reloaded, bought.roundId);
-      const key = `${bought.teamId}:${next}`;
-      const isKahoot =
-        reloaded.seededGame.rounds.find((round) => round.id === next)
-          ?.kahootMode ?? false;
-      // A round the edit made a kahootMode round is no longer doubled: refunded.
-      if (next === null || isKahoot || kept.has(key)) continue;
-      kept.add(key);
-      rebuilt.push({
-        gameSessionId,
-        teamId: bought.teamId,
-        powerUp: 'extra_joker',
-        questionId: null,
-        roundId: next,
-        cost: bought.cost,
-        effect: { kind: 'extra_joker' },
-      });
-    }
+    const rebuilt = rebuiltExtraJokers(started, reloaded);
     // Added before the old rows go, so a failure in between never loses one.
     const old = await this.purchaseService.extraJokerRows(gameSessionId);
     for (const purchase of rebuilt) await this.purchaseService.add(purchase);
     await this.purchaseService.remove(old.map((row) => row.id));
 
-    const purchaseSyncs: PurchaseSync[] = [];
-    for (const sync of connectedTeamSyncs(
-      reloaded,
-      Object.keys(reloaded.connectedTeamSockets).map(Number),
-    )) {
-      const records = await this.purchaseService.listForTeam(
-        gameSessionId,
-        sync.teamId,
-      );
-      purchaseSyncs.push({
-        ...sync,
-        payload: {
-          purchases: toPurchaseViews(
-            records,
-            reloaded.seededGame,
-            reloaded.progress.status,
-          ),
-          coins: balanceAfter(reloaded, sync.teamId, records),
-        },
-      });
-    }
-    return { session: reloaded, purchaseSyncs };
+    return {
+      session: reloaded,
+      purchaseSyncs: await this.connectedPurchaseSyncs(reloaded),
+    };
   }
+}
+
+/** Throws the shared rule's refusal (`purchaseRefusal`) for a question power-up; narrows `question` to one open for answering. */
+function assertQuestionPurchaseAllowed(
+  session: SessionState,
+  { powerUp, questionId }: { powerUp: PowerUpId; questionId: number },
+  { teamId, records }: { teamId: number; records: readonly PurchaseRecord[] },
+  question: SeededQuestion | undefined,
+): asserts question is SeededQuestion {
+  const refusal = purchaseRefusal({
+    setting: session.seededGame.settings.powerUps[powerUp],
+    usesInSession: records.filter((record) => record.powerUp === powerUp)
+      .length,
+    isUsedOnQuestion: records.some(
+      (record) =>
+        record.powerUp === powerUp && record.questionId === questionId,
+    ),
+    balance: balanceAfter(session, teamId, records),
+    isAnswerable: question !== undefined,
+    // A kahootMode tap locks the pick, so no question power-up can help there.
+    applies:
+      question !== undefined &&
+      !isCurrentRoundKahoot(session) &&
+      powerUpApplies(powerUp, question),
+  });
+  if (refusal !== null || question === undefined) {
+    throw new SessionRefusal(refusal ?? 'Answers are locked for this question');
+  }
+}
+
+/** The extra jokers that still stand after a live edit, each moved to the round now holding its questions. */
+function rebuiltExtraJokers(
+  started: SessionState,
+  reloaded: SessionState,
+): NewPurchase[] {
+  const { gameSessionId } = reloaded.seededGame;
+  // The rows come from the session's cache, not the database: a deleted round
+  // row has taken its purchases with it (cascade), even for a round that
+  // lives on in another row.
+  const kept = new Set<string>();
+  const rebuilt: NewPurchase[] = [];
+  for (const bought of started.funFactData.powerUps) {
+    if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
+    const next = roundNowHolding(started, reloaded, bought.roundId);
+    const key = `${bought.teamId}:${next}`;
+    const isKahoot =
+      reloaded.seededGame.rounds.find((round) => round.id === next)
+        ?.kahootMode ?? false;
+    // A round the edit made a kahootMode round is no longer doubled: refunded.
+    if (next === null || isKahoot || kept.has(key)) continue;
+    kept.add(key);
+    rebuilt.push({
+      gameSessionId,
+      teamId: bought.teamId,
+      powerUp: 'extra_joker',
+      questionId: null,
+      roundId: next,
+      cost: bought.cost,
+      effect: { kind: 'extra_joker' },
+    });
+  }
+  return rebuilt;
 }

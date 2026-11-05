@@ -251,24 +251,15 @@ export class StatsService {
 
     return computeSessionBrief({
       ...rows,
-      rounds: rows.rounds.map((round) => {
-        const extras = roundExtrasById.get(round.roundId);
-        return {
-          ...round,
-          author: extras?.author ?? null,
-          note: extras?.note ?? null,
-          isKahoot: extras?.isKahoot ?? false,
-        };
-      }),
-      questions: rows.questions.map((question) => {
-        const extras = questionExtrasById.get(question.questionId);
-        return {
-          ...question,
-          notes: extras?.notes ?? null,
-          options: extras?.options,
-          media: extras?.media ?? {},
-        };
-      }),
+      rounds: rows.rounds.map((round) =>
+        withRoundExtras(round, roundExtrasById.get(round.roundId)),
+      ),
+      questions: rows.questions.map((question) =>
+        withQuestionExtras(
+          question,
+          questionExtrasById.get(question.questionId),
+        ),
+      ),
       timeZone,
     });
   }
@@ -388,12 +379,7 @@ export class StatsService {
   async getFeedbackTrends(query: FeedbackTrendsQuery): Promise<FeedbackTrends> {
     const knex = this.gameSessions.getKnex();
     if (query.leagueId !== undefined) {
-      const leagues = (await knex('leagues')
-        .where('id', query.leagueId)
-        .select('id')) as { id: number }[];
-      if (leagues.length === 0) {
-        throw new NotFoundException(`League ${query.leagueId} does not exist`);
-      }
+      await this.assertLeagueExists(query.leagueId);
     }
     const sessionsInRange = () => this.feedbackSessionsInRange(query);
 
@@ -410,29 +396,26 @@ export class StatsService {
     const scaleCounts = await this.scaleCountsBySession(sessionsInRange());
 
     return {
-      sessions: rows.map((row) => {
-        const { average, count } = this.ratingOf(row);
-        const counts = scaleCounts.get(row.game_session_id);
-        return {
-          id: row.game_session_id,
-          name: row.display_name,
-          date: new Date(row.played_at).toISOString(),
-          rating: count === 0 ? null : { average, count },
-          pacing: {
-            too_slow: counts?.too_slow ?? 0,
-            just_right: counts?.pacing_just_right ?? 0,
-            too_fast: counts?.too_fast ?? 0,
-          },
-          feltDifficulty: {
-            too_easy: counts?.too_easy ?? 0,
-            just_right: counts?.difficulty_just_right ?? 0,
-            too_hard: counts?.too_hard ?? 0,
-          },
-        };
-      }),
+      sessions: rows.map((row) =>
+        toFeedbackTrendsSession(
+          row,
+          this.ratingOf(row),
+          scaleCounts.get(row.game_session_id) ?? NO_SCALE_COUNTS,
+        ),
+      ),
       topics: await this.topicsAcross(sessionsInRange()),
       ...(await this.rankRounds(query)),
     };
+  }
+
+  private async assertLeagueExists(leagueId: number): Promise<void> {
+    const leagues = (await this.gameSessions
+      .getKnex()('leagues')
+      .where('id', leagueId)
+      .select('id')) as { id: number }[];
+    if (leagues.length === 0) {
+      throw new NotFoundException(`League ${leagueId} does not exist`);
+    }
   }
 
   /** Pacing and felt-difficulty answer counts per session, aggregated in SQL so no row carries a team. Sessions with no feedback rows are absent. */
@@ -591,4 +574,66 @@ export class StatsService {
     await this.gameSessions.getEntityManager().flush();
     return session.name;
   }
+}
+
+/** A session with no feedback rows: every answer counted zero times. */
+const NO_SCALE_COUNTS: Record<ScaleCountColumn, number> = {
+  too_slow: 0,
+  pacing_just_right: 0,
+  too_fast: 0,
+  too_easy: 0,
+  difficulty_just_right: 0,
+  too_hard: 0,
+};
+
+function toFeedbackTrendsSession(
+  row: FeedbackTrendsRow,
+  { average, count }: { average: number; count: number },
+  counts: Record<ScaleCountColumn, number>,
+): FeedbackTrends['sessions'][number] {
+  return {
+    id: row.game_session_id,
+    name: row.display_name,
+    date: new Date(row.played_at).toISOString(),
+    rating: count === 0 ? null : { average, count },
+    pacing: {
+      too_slow: counts.too_slow,
+      just_right: counts.pacing_just_right,
+      too_fast: counts.too_fast,
+    },
+    feltDifficulty: {
+      too_easy: counts.too_easy,
+      just_right: counts.difficulty_just_right,
+      too_hard: counts.too_hard,
+    },
+  };
+}
+
+function withRoundExtras<Round>(
+  round: Round,
+  extras:
+    | Pick<SessionBriefRoundInputRow, 'author' | 'note' | 'isKahoot'>
+    | undefined,
+): Round & Pick<SessionBriefRoundInputRow, 'author' | 'note' | 'isKahoot'> {
+  return {
+    ...round,
+    author: extras?.author ?? null,
+    note: extras?.note ?? null,
+    isKahoot: extras?.isKahoot ?? false,
+  };
+}
+
+function withQuestionExtras<Question>(
+  question: Question,
+  extras:
+    | Pick<SessionBriefQuestionInputRow, 'notes' | 'options' | 'media'>
+    | undefined,
+): Question &
+  Pick<SessionBriefQuestionInputRow, 'notes' | 'options' | 'media'> {
+  return {
+    ...question,
+    notes: extras?.notes ?? null,
+    options: extras?.options,
+    media: extras?.media ?? {},
+  };
 }

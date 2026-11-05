@@ -39,11 +39,15 @@ async function startContainer() {
       .withStartupTimeout(CONTAINER_START_TIMEOUT_MS)
       .start();
   } catch (error) {
-    const isDockerMissing =
-      error instanceof Error && error.message.includes(NO_RUNTIME_ERROR);
-    if (!isDockerMissing) throw error;
-    throw new Error(DOCKER_REQUIRED_MESSAGE, { cause: error });
+    throw explainDockerMissing(error);
   }
+}
+
+function explainDockerMissing(error: unknown): unknown {
+  // String() of an Error carries its message.
+  return String(error).includes(NO_RUNTIME_ERROR)
+    ? new Error(DOCKER_REQUIRED_MESSAGE, { cause: error })
+    : error;
 }
 
 async function createTemplateDatabase(adminUri: string): Promise<void> {

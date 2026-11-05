@@ -79,74 +79,30 @@ export class BonusService {
     const manualCoins = coins.manual ?? 0;
     // Points of 0 give coins alone: no bonus award is stored.
     const givesPoints = points !== 0;
-    if (!Number.isFinite(points) || (!givesPoints && manualCoins === 0)) {
-      throw new InvalidBonusAwardError(
-        'Bonus points must be a non-zero number',
-      );
-    }
-    if (manualCoins !== 0 && !coins.powerUpsEnabled) {
-      throw new InvalidBonusAwardError(
-        'Coins can only be awarded in a session with power-ups',
-      );
-    }
-
-    if (givesPoints && !enabledCategories.includes(category)) {
-      throw new InvalidBonusAwardError(
-        `"${category}" is not enabled for this session`,
-      );
-    }
-
+    assertAwardAmounts(points, manualCoins, coins.powerUpsEnabled);
     const trimmedReason = reason?.trim();
-    if (givesPoints && category === 'custom' && !trimmedReason) {
-      throw new InvalidBonusAwardError('A custom bonus needs a reason');
+    if (givesPoints) {
+      assertAwardCategory(category, trimmedReason, enabledCategories);
     }
-
-    const isOnRoster = await this.gameSessionTeams.findOne({
-      gameSession: gameSessionId,
-      team: teamId,
-    });
-    if (!isOnRoster) {
-      throw new InvalidBonusAwardError('Team is not part of this game session');
-    }
-
-    const cap = maxAwardsPerCategory[category];
-    if (givesPoints && cap !== undefined) {
-      const awardedCount = await this.bonusAwards.countAwards(
+    await this.assertOnRoster(gameSessionId, teamId);
+    if (givesPoints) {
+      await this.assertUnderCap(
         gameSessionId,
         teamId,
         category,
+        maxAwardsPerCategory[category],
       );
-      if (awardedCount >= cap) {
-        throw new InvalidBonusAwardError(
-          `This team has already been awarded the "${category}" bonus the maximum ${cap} time(s)`,
-        );
-      }
     }
 
     const em = this.bonusAwards.getEntityManager();
-    let coinsGiven = 0;
-    if (givesPoints) {
-      const bonusAward = this.bonusAwards.create({
-        gameSession: gameSessionId,
-        team: teamId,
-        category,
-        reason: category === 'custom' ? trimmedReason : undefined,
-        points,
-      });
-      em.persist(bonusAward);
-      // A shot or selfie earns coins of its own, which go with the award; a penalty earns none.
-      if (coins.powerUpsEnabled && category !== 'custom' && points > 0) {
-        em.persist(
-          this.coinAwards.create({
-            gameSession: gameSessionId,
-            team: teamId,
-            coins: SHOT_SELFIE_COINS,
-            bonusAward,
-          }),
-        );
-        coinsGiven += SHOT_SELFIE_COINS;
-      }
-    }
+    let coinsGiven = givesPoints
+      ? this.persistBonusAward(gameSessionId, teamId, {
+          category,
+          points,
+          trimmedReason,
+          powerUpsEnabled: coins.powerUpsEnabled,
+        })
+      : 0;
     if (manualCoins !== 0) {
       em.persist(
         this.coinAwards.create({
@@ -165,6 +121,76 @@ export class BonusService {
       coinsGiven,
       coinTotal: await this.coinAwardTotal(gameSessionId, teamId),
     };
+  }
+
+  private async assertOnRoster(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<void> {
+    const isOnRoster = await this.gameSessionTeams.findOne({
+      gameSession: gameSessionId,
+      team: teamId,
+    });
+    if (!isOnRoster) {
+      throw new InvalidBonusAwardError('Team is not part of this game session');
+    }
+  }
+
+  private async assertUnderCap(
+    gameSessionId: number,
+    teamId: number,
+    category: BonusCategory,
+    cap: number | undefined,
+  ): Promise<void> {
+    if (cap === undefined) return;
+    const awardedCount = await this.bonusAwards.countAwards(
+      gameSessionId,
+      teamId,
+      category,
+    );
+    if (awardedCount >= cap) {
+      throw new InvalidBonusAwardError(
+        `This team has already been awarded the "${category}" bonus the maximum ${cap} time(s)`,
+      );
+    }
+  }
+
+  /** Persists (unflushed) the bonus award and any coins it earns; returns those coins. */
+  private persistBonusAward(
+    gameSessionId: number,
+    teamId: number,
+    {
+      category,
+      points,
+      trimmedReason,
+      powerUpsEnabled,
+    }: {
+      category: BonusCategory;
+      points: number;
+      trimmedReason: string | undefined;
+      powerUpsEnabled: boolean;
+    },
+  ): number {
+    const em = this.bonusAwards.getEntityManager();
+    const bonusAward = this.bonusAwards.create({
+      gameSession: gameSessionId,
+      team: teamId,
+      category,
+      reason: category === 'custom' ? trimmedReason : undefined,
+      points,
+    });
+    em.persist(bonusAward);
+    // A shot or selfie earns coins of its own, which go with the award; a penalty earns none.
+    if (!powerUpsEnabled || category === 'custom' || points <= 0) return 0;
+    em.persist(
+      this.coinAwards.create({
+        gameSession: gameSessionId,
+        team: teamId,
+        coins: SHOT_SELFIE_COINS,
+        bonusAward,
+      }),
+    );
+    return SHOT_SELFIE_COINS;
   }
 
   /** The sum of each team's coin awards in the session, by team id (teams with none are absent). */
@@ -276,5 +302,35 @@ export class BonusService {
       teamId,
       coinTotal: await this.coinAwardTotal(gameSessionId, teamId),
     };
+  }
+}
+
+function assertAwardAmounts(
+  points: number,
+  manualCoins: number,
+  powerUpsEnabled: boolean,
+): void {
+  if (!Number.isFinite(points) || (points === 0 && manualCoins === 0)) {
+    throw new InvalidBonusAwardError('Bonus points must be a non-zero number');
+  }
+  if (manualCoins !== 0 && !powerUpsEnabled) {
+    throw new InvalidBonusAwardError(
+      'Coins can only be awarded in a session with power-ups',
+    );
+  }
+}
+
+function assertAwardCategory(
+  category: BonusCategory,
+  trimmedReason: string | undefined,
+  enabledCategories: readonly BonusCategory[],
+): void {
+  if (!enabledCategories.includes(category)) {
+    throw new InvalidBonusAwardError(
+      `"${category}" is not enabled for this session`,
+    );
+  }
+  if (category === 'custom' && !trimmedReason) {
+    throw new InvalidBonusAwardError('A custom bonus needs a reason');
   }
 }

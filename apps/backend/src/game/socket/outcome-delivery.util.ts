@@ -73,7 +73,7 @@ async function deliverEmits(
   outcome: SessionOutcome,
   sender: Pick<GameSocket, 'emit'> | undefined,
 ): Promise<void> {
-  const { gameState, answerService, bonusService, server } = deps;
+  const { gameState, server } = deps;
   for (const reply of outcome.replies) {
     if (sender) emitReply(sender, reply);
   }
@@ -87,7 +87,16 @@ async function deliverEmits(
       broadcastDisplayState(server, joinCode, gameState);
     }
   }
+  await emitStoredLists(deps, joinCode, outcome);
+  emitTeamSyncs(server, outcome);
+}
 
+/** The syncs that read stored answers or bonus awards before they go out. */
+async function emitStoredLists(
+  { gameState, answerService, bonusService, server }: OutcomeDeliveryDeps,
+  joinCode: string,
+  outcome: SessionOutcome,
+): Promise<void> {
   for (const questionId of outcome.answerListQuestionIds) {
     const answers = await answerService.listForQuestion(
       gameState.getGameSessionId(joinCode),
@@ -109,6 +118,22 @@ async function deliverEmits(
     server.to(socketId).emit(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers });
   }
 
+  for (const { teamId, socketId } of outcome.bonusSyncs) {
+    const bonusAwards = await bonusService.listForTeam(
+      gameState.getGameSessionId(joinCode),
+      teamId,
+    );
+    server
+      .to(socketId)
+      .emit(SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED, { bonusAwards });
+  }
+}
+
+/** The syncs whose payload the outcome already carries. */
+function emitTeamSyncs(
+  server: OutcomeDeliveryDeps['server'],
+  outcome: SessionOutcome,
+): void {
   for (const { socketId, playerCount } of outcome.playerCountSyncs) {
     server
       .to(socketId)
@@ -125,16 +150,6 @@ async function deliverEmits(
 
   for (const { socketId, payload } of outcome.roomReadySyncs) {
     server.to(socketId).emit(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, payload);
-  }
-
-  for (const { teamId, socketId } of outcome.bonusSyncs) {
-    const bonusAwards = await bonusService.listForTeam(
-      gameState.getGameSessionId(joinCode),
-      teamId,
-    );
-    server
-      .to(socketId)
-      .emit(SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED, { bonusAwards });
   }
 
   for (const { socketId, payload } of outcome.coinSyncs) {

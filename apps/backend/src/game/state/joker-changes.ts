@@ -303,17 +303,10 @@ export class JokerChanges {
       const teamId = Number(key);
       const followed = roundNowHolding(started, reloaded, joker.roundId);
       const extra = await this.extraJokerRoundIds(gameSessionId, teamId);
-      let next: TeamJoker | null = joker;
-      if (followed === null || extra.includes(followed)) {
-        // Gone, or moved onto a round the team doubles with an extra joker: draw anew.
-        const roundId = drawJoker(
-          pickableRoundIds.filter((id) => !extra.includes(id)),
-          this.random,
-        );
-        next = roundId === null ? null : { roundId, source: 'drawn' };
-      } else if (followed !== joker.roundId) {
-        next = { ...joker, roundId: followed };
-      }
+      const next = this.jokerAfterEdit(joker, followed, {
+        extra,
+        pickableRoundIds,
+      });
       if (next !== null) jokers[teamId] = next;
       if (next === joker) continue;
       if (next !== null) {
@@ -325,6 +318,26 @@ export class JokerChanges {
       session: { ...reloaded, jokers },
       jokerSyncs: jokerSyncsFor(reloaded, changedTeamIds, jokers),
     };
+  }
+
+  /** The same joker when its round stayed put; a moved one when it followed; a fresh draw (or none) when it can't stay. */
+  private jokerAfterEdit(
+    joker: TeamJoker,
+    followed: number | null,
+    {
+      extra,
+      pickableRoundIds,
+    }: { extra: number[]; pickableRoundIds: number[] },
+  ): TeamJoker | null {
+    if (followed === null || extra.includes(followed)) {
+      // Gone, or moved onto a round the team doubles with an extra joker: draw anew.
+      const roundId = drawJoker(
+        pickableRoundIds.filter((id) => !extra.includes(id)),
+        this.random,
+      );
+      return roundId === null ? null : { roundId, source: 'drawn' };
+    }
+    return followed === joker.roundId ? joker : { ...joker, roundId: followed };
   }
 
   /** Every stored joker of the session by team id, for a session being placed. */
