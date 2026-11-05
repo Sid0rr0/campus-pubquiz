@@ -166,28 +166,7 @@ export function QuestionBrowser({
         isJokerQuestion ? 'rounded-2xl border-4 border-yellow p-4' : ''
       }`}
     >
-      {navigation && (
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            type="button"
-            variant="outline-muted"
-            size="sm"
-            disabled={!navigation.canGoBack}
-            onClick={navigation.onBack}
-          >
-            ← Prev
-          </Button>
-          <Button
-            type="button"
-            variant="outline-muted"
-            size="sm"
-            disabled={!navigation.canGoForward}
-            onClick={navigation.onForward}
-          >
-            Next →
-          </Button>
-        </div>
-      )}
+      {navigation && <PrevNextNav navigation={navigation} />}
       {totalPickerSlots > 1 && (
         <div className="order-last md:order-0">
           <QuestionPicker
@@ -200,35 +179,13 @@ export function QuestionBrowser({
         </div>
       )}
       {mode === 'revealing' && revealQuestion ? (
-        <div className="flex flex-col items-center gap-6 text-center">
-          <RevealBody
-            revealQuestion={revealQuestion}
-            myAnswer={myAnswer ?? ''}
-          />
-          <p className={`font-display text-2xl ${verdictTextClass}`}>
-            <span className="font-body text-base font-extrabold text-foreground/55">
-              Your answer{': '}
-            </span>
-            {myAnswer
-              ? formatAnswer(myAnswer, {
-                  type: revealQuestion.type,
-                  options: revealQuestion.options,
-                })
-              : 'No answer submitted'}
-          </p>
-          {myAnswerPoints !== null && (
-            <p
-              className={`font-body text-3xl font-extrabold tabular-nums ${verdictTextClass}`}
-            >
-              {myAnswerPoints} / {revealQuestion.points} points
-              {myAnswerJokerExtra !== null && (
-                <span className="ml-2 whitespace-nowrap text-foreground">
-                  {`🃏 +${myAnswerJokerExtra}`}
-                </span>
-              )}
-            </p>
-          )}
-        </div>
+        <RevealedAnswer
+          revealQuestion={revealQuestion}
+          myAnswer={myAnswer}
+          myAnswerPoints={myAnswerPoints}
+          myAnswerJokerExtra={myAnswerJokerExtra}
+          verdictTextClass={verdictTextClass}
+        />
       ) : (
         <>
           <h1 className="text-balance font-display text-2xl leading-tight">
@@ -263,39 +220,13 @@ export function QuestionBrowser({
               })}
             </p>
           )}
-          <MotionConfig reducedMotion="user">
-            {/* Keyed by question and initial={false}: only an effect bought here and now eases in, never one already there on a load or when moving between questions. */}
-            <AnimatePresence key={selectedQuestion.id} initial={false}>
-              {purchases.map(
-                ({ questionId, effect }) =>
-                  questionId === selectedQuestion.id &&
-                  'hint' in effect && (
-                    <motion.p
-                      key={effect.kind}
-                      {...POWER_UP_EFFECT_ARRIVAL}
-                      className="text-center font-mono text-lg font-extrabold tracking-widest"
-                    >
-                      {POWER_UP_LABELS[effect.kind]}: {effect.hint}
-                    </motion.p>
-                  ),
-              )}
-              {mode === 'answering' &&
-                isAnswerable &&
-                team &&
-                purchases.some(
-                  (p) =>
-                    p.questionId === selectedQuestion.id &&
-                    p.effect.kind === 'ask_the_room',
-                ) && (
-                  <motion.div key="room-split" {...POWER_UP_EFFECT_ARRIVAL}>
-                    <RoomSplit
-                      question={selectedQuestion}
-                      purchases={purchases}
-                    />
-                  </motion.div>
-                )}
-            </AnimatePresence>
-          </MotionConfig>
+          <PowerUpEffects
+            question={selectedQuestion}
+            purchases={purchases}
+            isRoomSplitShown={
+              mode === 'answering' && isAnswerable && team !== null
+            }
+          />
           {mode === 'answering' && team && (
             // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
             <div hidden={!isAnswerable}>
@@ -325,5 +256,118 @@ export function QuestionBrowser({
         </>
       )}
     </div>
+  );
+}
+
+function PrevNextNav({
+  navigation,
+}: {
+  navigation: NonNullable<QuestionBrowserProps['navigation']>;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <Button
+        type="button"
+        variant="outline-muted"
+        size="sm"
+        disabled={!navigation.canGoBack}
+        onClick={navigation.onBack}
+      >
+        ← Prev
+      </Button>
+      <Button
+        type="button"
+        variant="outline-muted"
+        size="sm"
+        disabled={!navigation.canGoForward}
+        onClick={navigation.onForward}
+      >
+        Next →
+      </Button>
+    </div>
+  );
+}
+
+function RevealedAnswer({
+  revealQuestion,
+  myAnswer,
+  myAnswerPoints,
+  myAnswerJokerExtra,
+  verdictTextClass,
+}: {
+  revealQuestion: NonNullable<QuestionBrowserProps['revealQuestion']>;
+  myAnswer: string | undefined;
+  myAnswerPoints: QuestionBrowserProps['myAnswerPoints'];
+  myAnswerJokerExtra: QuestionBrowserProps['myAnswerJokerExtra'];
+  verdictTextClass: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-6 text-center">
+      <RevealBody revealQuestion={revealQuestion} myAnswer={myAnswer ?? ''} />
+      <p className={`font-display text-2xl ${verdictTextClass}`}>
+        <span className="font-body text-base font-extrabold text-foreground/55">
+          Your answer{': '}
+        </span>
+        {myAnswer
+          ? formatAnswer(myAnswer, {
+              type: revealQuestion.type,
+              options: revealQuestion.options,
+            })
+          : 'No answer submitted'}
+      </p>
+      {myAnswerPoints !== null && (
+        <p
+          className={`font-body text-3xl font-extrabold tabular-nums ${verdictTextClass}`}
+        >
+          {myAnswerPoints} / {revealQuestion.points} points
+          {myAnswerJokerExtra !== null && (
+            <span className="ml-2 whitespace-nowrap text-foreground">
+              {`🃏 +${myAnswerJokerExtra}`}
+            </span>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** The hints a bought power-up shows on this question, and the Ask the room split. */
+function PowerUpEffects({
+  question,
+  purchases,
+  isRoomSplitShown,
+}: {
+  question: QuestionBrowserProps['selectedQuestion'];
+  purchases: NonNullable<QuestionBrowserProps['purchases']>;
+  isRoomSplitShown: boolean;
+}) {
+  return (
+    <MotionConfig reducedMotion="user">
+      {/* Keyed by question and initial={false}: only an effect bought here and now eases in, never one already there on a load or when moving between questions. */}
+      <AnimatePresence key={question.id} initial={false}>
+        {purchases.map(
+          ({ questionId, effect }) =>
+            questionId === question.id &&
+            'hint' in effect && (
+              <motion.p
+                key={effect.kind}
+                {...POWER_UP_EFFECT_ARRIVAL}
+                className="text-center font-mono text-lg font-extrabold tracking-widest"
+              >
+                {POWER_UP_LABELS[effect.kind]}: {effect.hint}
+              </motion.p>
+            ),
+        )}
+        {isRoomSplitShown &&
+          purchases.some(
+            (p) =>
+              p.questionId === question.id && p.effect.kind === 'ask_the_room',
+          ) && (
+            <motion.div key="room-split" {...POWER_UP_EFFECT_ARRIVAL}>
+              <RoomSplit question={question} purchases={purchases} />
+            </motion.div>
+          )}
+      </AnimatePresence>
+    </MotionConfig>
   );
 }

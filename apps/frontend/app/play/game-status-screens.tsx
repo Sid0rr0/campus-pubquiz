@@ -230,35 +230,51 @@ export function GameStatusScreens({
           />
         </div>
       ) : null;
-    case 'showdown_guessing': {
-      // The players room is one broadcast for every team, so which of the
-      // two screens to draw comes from this phone's own team id.
-      const participant =
-        activeShowdown && myTeamId !== null
-          ? activeShowdown.participants.find(
-              (candidate) => candidate.teamId === myTeamId,
-            )
-          : undefined;
-      if (!activeShowdown || myTeamId === null || !participant) {
-        return (
-          <LookAtTheScreen className="animate-pulse motion-reduce:animate-none">
-            Tiebreaker in progress
-          </LookAtTheScreen>
-        );
-      }
+    case 'showdown_guessing':
       return (
-        <ShowdownGuessForm
-          question={activeShowdown.question}
-          hasGuessed={participant.hasGuessed}
-          onSubmit={(value) =>
-            onSubmitShowdownGuess(activeShowdown.id, myTeamId, value)
-          }
+        <ShowdownGuessingScreen
+          activeShowdown={activeShowdown}
+          myTeamId={myTeamId}
+          onSubmitShowdownGuess={onSubmitShowdownGuess}
         />
       );
-    }
     default: {
       const unhandled: never = phoneScreen;
       return unhandled;
     }
   }
+}
+
+function ShowdownGuessingScreen({
+  activeShowdown,
+  myTeamId,
+  onSubmitShowdownGuess,
+}: Pick<
+  GameStatusScreensProps,
+  'activeShowdown' | 'myTeamId' | 'onSubmitShowdownGuess'
+>) {
+  // The players room is one broadcast for every team, so which of the
+  // two screens to draw comes from this phone's own team id.
+  const participant =
+    activeShowdown && myTeamId !== null
+      ? activeShowdown.participants.find(
+          (candidate) => candidate.teamId === myTeamId,
+        )
+      : undefined;
+  if (!activeShowdown || myTeamId === null || !participant) {
+    return (
+      <LookAtTheScreen className="animate-pulse motion-reduce:animate-none">
+        Tiebreaker in progress
+      </LookAtTheScreen>
+    );
+  }
+  return (
+    <ShowdownGuessForm
+      question={activeShowdown.question}
+      hasGuessed={participant.hasGuessed}
+      onSubmit={(value) =>
+        onSubmitShowdownGuess(activeShowdown.id, myTeamId, value)
+      }
+    />
+  );
 }
