@@ -95,7 +95,7 @@ describe('SessionBroadcaster', () => {
 
     it('keeps broadcasting the other lobbies when one broadcast fails', async () => {
       const game = await harness.createGateway();
-      jest
+      const refreshLeagueTops = jest
         .spyOn(game.gameState, 'refreshLeagueTops')
         .mockResolvedValue(['BROKEN', 'HEALTH']);
       const broadcastState = jest
@@ -107,7 +107,7 @@ describe('SessionBroadcaster', () => {
         game.broadcaster.refreshLeagueLobbies('SKIPME'),
       ).resolves.toBeUndefined();
 
-      expect(game.gameState.refreshLeagueTops).toHaveBeenCalledWith('SKIPME');
+      expect(refreshLeagueTops).toHaveBeenCalledWith('SKIPME');
       expect(broadcastState.mock.calls).toEqual([['BROKEN'], ['HEALTH']]);
     });
   });
