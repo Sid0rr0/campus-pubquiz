@@ -124,12 +124,7 @@ export function QuizQuestionEditor({
   );
   const isVideoMedia = isVideoUrl(question.mediaUrl);
   const isVideoAnswerMedia = isVideoUrl(question.answerMediaUrl);
-  // Blank reveal times fall back to the question clip: show that, not the generic example.
-  const revealPlaceholder =
-    revealPlaysQuestionVideo(question) &&
-    (question.clipStart.trim() !== '' || question.clipEnd.trim() !== '')
-      ? { start: question.clipStart, end: question.clipEnd }
-      : { start: '1:22', end: '2:20' };
+  const revealPlaceholder = revealPlaceholderOf(question);
 
   return (
     <div
@@ -147,70 +142,17 @@ export function QuizQuestionEditor({
           rows={2}
           className="min-w-0 flex-1 resize-y rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-bold text-foreground disabled:opacity-50"
         />
-        <Button
-          type="button"
-          onClick={onMoveUp}
-          disabled={isFirstMovable || isPinned}
-          variant="icon"
-          size="icon-sm"
-          aria-label="Move question up"
-          className="mt-1"
-        >
-          <ArrowUpIcon aria-hidden="true" />
-        </Button>
-        <Button
-          type="button"
-          onClick={onMoveDown}
-          disabled={isLast || isPinned}
-          variant="icon"
-          size="icon-sm"
-          aria-label="Move question down"
-          className="mt-1"
-        >
-          <ArrowDownIcon aria-hidden="true" />
-        </Button>
-        {moveTargets.length > 0 && (
-          <select
-            value=""
-            onChange={(event) => onMoveToRound(event.target.value)}
-            disabled={isPinned}
-            aria-label="Move question to round"
-            className="mt-1 h-8 max-w-32 rounded-lg border-2 border-foreground/15 px-2 text-xs font-bold text-foreground disabled:opacity-50"
-          >
-            <option value="" disabled>
-              Move to…
-            </option>
-            {moveTargets.map((target) => (
-              <option key={target.roundId} value={target.roundId}>
-                {target.label}
-              </option>
-            ))}
-          </select>
-        )}
-        {onPreviewFromHere && (
-          <Button
-            type="button"
-            onClick={onPreviewFromHere}
-            variant="icon"
-            size="icon-sm"
-            aria-label="Preview from here"
-            title="Preview from here"
-            className="mt-1"
-          >
-            <EyeOpenIcon aria-hidden="true" />
-          </Button>
-        )}
-        <Button
-          type="button"
-          onClick={onDelete}
-          disabled={isPinned}
-          variant="icon-danger"
-          size="icon-sm"
-          aria-label="Delete question"
-          className="mt-1"
-        >
-          <TrashIcon aria-hidden="true" />
-        </Button>
+        <QuestionMoveControls
+          isFirstMovable={isFirstMovable}
+          isLast={isLast}
+          isPinned={isPinned}
+          moveTargets={moveTargets}
+          onMoveUp={onMoveUp}
+          onMoveDown={onMoveDown}
+          onMoveToRound={onMoveToRound}
+          onPreviewFromHere={onPreviewFromHere}
+          onDelete={onDelete}
+        />
       </div>
       <FieldErrors issues={fieldIssues(issues, 'prompt')} />
 
@@ -375,5 +317,105 @@ export function QuizQuestionEditor({
       </label>
       <FieldErrors issues={otherIssues} />
     </div>
+  );
+}
+
+/** Blank reveal times fall back to the question clip: show that, not the generic example. */
+function revealPlaceholderOf(question: QuizQuestionEditorProps['question']) {
+  return revealPlaysQuestionVideo(question) &&
+    (question.clipStart.trim() !== '' || question.clipEnd.trim() !== '')
+    ? { start: question.clipStart, end: question.clipEnd }
+    : { start: '1:22', end: '2:20' };
+}
+
+function QuestionMoveControls({
+  isFirstMovable,
+  isLast,
+  isPinned,
+  moveTargets,
+  onMoveUp,
+  onMoveDown,
+  onMoveToRound,
+  onPreviewFromHere,
+  onDelete,
+}: Pick<
+  QuizQuestionEditorProps,
+  | 'isFirstMovable'
+  | 'isLast'
+  | 'isPinned'
+  | 'moveTargets'
+  | 'onMoveUp'
+  | 'onMoveDown'
+  | 'onMoveToRound'
+  | 'onPreviewFromHere'
+  | 'onDelete'
+>) {
+  return (
+    <>
+      <Button
+        type="button"
+        onClick={onMoveUp}
+        disabled={isFirstMovable || isPinned}
+        variant="icon"
+        size="icon-sm"
+        aria-label="Move question up"
+        className="mt-1"
+      >
+        <ArrowUpIcon aria-hidden="true" />
+      </Button>
+      <Button
+        type="button"
+        onClick={onMoveDown}
+        disabled={isLast || isPinned}
+        variant="icon"
+        size="icon-sm"
+        aria-label="Move question down"
+        className="mt-1"
+      >
+        <ArrowDownIcon aria-hidden="true" />
+      </Button>
+      {moveTargets.length > 0 && (
+        <select
+          value=""
+          onChange={(event) => onMoveToRound(event.target.value)}
+          disabled={isPinned}
+          aria-label="Move question to round"
+          className="mt-1 h-8 max-w-32 rounded-lg border-2 border-foreground/15 px-2 text-xs font-bold text-foreground disabled:opacity-50"
+        >
+          <option value="" disabled>
+            Move to…
+          </option>
+          {moveTargets.map((target) => (
+            <option key={target.roundId} value={target.roundId}>
+              {target.label}
+            </option>
+          ))}
+        </select>
+      )}
+      {onPreviewFromHere && (
+        <Button
+          type="button"
+          onClick={onPreviewFromHere}
+          variant="icon"
+          size="icon-sm"
+          aria-label="Preview from here"
+          title="Preview from here"
+          className="mt-1"
+        >
+          <EyeOpenIcon aria-hidden="true" />
+        </Button>
+      )}
+      <Button
+        type="button"
+        onClick={onDelete}
+        disabled={isPinned}
+        variant="icon-danger"
+        size="icon-sm"
+        aria-label="Delete question"
+        className="mt-1"
+      >
+        <TrashIcon aria-hidden="true" />
+      </Button>
+    </>
   );
 }

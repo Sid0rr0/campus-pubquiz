@@ -51,11 +51,10 @@ export function useQuizImport({
 
   // Replacing (not adding) throws away every question in the draft, so ask first.
   function isReplaceDeclined(): boolean {
-    const wouldReplaceQuestions =
-      isEditorShowing &&
-      !appendImport &&
-      rounds.some((round) => round.questions.length > 0);
-    return wouldReplaceQuestions && !window.confirm(REPLACE_PROMPT);
+    return (
+      wouldReplaceQuestions(rounds, isEditorShowing && !appendImport) &&
+      !window.confirm(REPLACE_PROMPT)
+    );
   }
 
   function handleImportPreview(preview: ImportPreview): void {
@@ -67,11 +66,7 @@ export function useQuizImport({
       makeId: () => crypto.randomUUID(),
     });
     onApply(outcome);
-    if (outcome.result.kind === 'issues') {
-      setImportError(outcome.result.message);
-    } else {
-      toast.success(outcome.result.message);
-    }
+    reportImportResult(outcome.result, setImportError);
   }
 
   function handleImportError(error: unknown, fallback: string): void {
@@ -82,14 +77,14 @@ export function useQuizImport({
 
   const previewMutation = useMutation({
     mutationFn: ({ csvText, title }: { csvText: string; title: string }) =>
-      previewImport(csvText, title || undefined),
+      previewImport(csvText, blankToUndefined(title)),
     onSuccess: handleImportPreview,
     onError: (error) => handleImportError(error, 'Could not read that CSV.'),
   });
 
   const previewFromUrlMutation = useMutation({
     mutationFn: (sheetUrl: string) =>
-      previewImportFromUrl(sheetUrl, title.trim() || undefined),
+      previewImportFromUrl(sheetUrl, blankToUndefined(title.trim())),
     onSuccess: handleImportPreview,
     onError: (error) =>
       handleImportError(error, 'Could not fetch that Google Sheet.'),
@@ -129,4 +124,27 @@ export function useQuizImport({
     isSheetPending: previewFromUrlMutation.isPending,
     importError,
   };
+}
+
+function wouldReplaceQuestions(
+  rounds: UseQuizImportOptions['rounds'],
+  isReplacing: boolean,
+): boolean {
+  return isReplacing && rounds.some((round) => round.questions.length > 0);
+}
+
+/** Issues stay on the page until the next import; a clean import is toasted. */
+function reportImportResult(
+  result: ReturnType<typeof importOutcome>['result'],
+  setImportError: (message: string) => void,
+): void {
+  if (result.kind === 'issues') {
+    setImportError(result.message);
+  } else {
+    toast.success(result.message);
+  }
+}
+
+function blankToUndefined(text: string): string | undefined {
+  return text || undefined;
 }

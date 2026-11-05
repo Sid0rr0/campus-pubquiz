@@ -57,30 +57,30 @@ function openPreview(quizId: number, isDirty: boolean, at?: string): void {
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const draft = useQuizDraft(quizId);
-  const {
-    rounds,
-    editRounds,
-    liveEdit,
-    phase,
-    saveIssues,
-    saveError,
-    savedFlash,
-  } = draft;
   const quizImport = useQuizImport({
-    rounds,
+    rounds: draft.rounds,
     title: draft.title,
-    isEditorShowing: phase === 'editor',
+    isEditorShowing: draft.phase === 'editor',
     onApply: draft.applyImport,
   });
+  if (draft.isLoading || draft.loadError || draft.phase === 'empty') {
+    return <EditorStartScreen draft={draft} quizImport={quizImport} />;
+  }
+  return <QuizEditor draft={draft} quizImport={quizImport} />;
+}
+
+type QuizDraft = ReturnType<typeof useQuizDraft>;
+type QuizImport = ReturnType<typeof useQuizImport>;
+
+/** Loading, a failed load, or the empty quiz's start screen. */
+function EditorStartScreen({
+  draft,
+  quizImport,
+}: {
+  draft: QuizDraft;
+  quizImport: QuizImport;
+}) {
   const { importError } = quizImport;
-
-  const isLive = liveEdit !== undefined;
-  const described = describeEditorRounds(rounds, liveEdit);
-  const openedQuestionIds = liveEdit
-    ? new Set(liveEdit.openedQuestionIds)
-    : EMPTY_OPENED_QUESTION_IDS;
-  const quizLevelIssues = saveIssues.filter((issue) => issue.roundIndex === -1);
-
   if (draft.isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
@@ -99,94 +99,60 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     );
   }
 
-  if (phase === 'empty') {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-7 bg-background p-6 text-center text-foreground">
-        <div>
-          <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-magenta">
-            Quiz editor
-          </p>
-          <h1 className="font-display text-3xl">Build a new quiz</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm font-bold text-foreground/60">
-            Start from a blank round, import a CSV of questions, or paste a
-            Google Sheets link to edit from there.
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-4">
-          <Button
-            type="button"
-            onClick={draft.startFromScratch}
-            className="flex min-h-16 min-w-56 items-center justify-center gap-2 px-6 text-lg rounded-2xl bg-magenta font-display text-white"
-          >
-            <FilePlusIcon aria-hidden="true" />
-            Start from scratch
-          </Button>
-          <QuizImportControls variant="empty" quizImport={quizImport} />
-        </div>
-        {importError && (
-          <p role="alert" className="font-extrabold text-magenta">
-            {importError}
-          </p>
-        )}
-      </main>
-    );
-  }
-
-  const questionCount = rounds.reduce(
-    (total, round) => total + round.questions.length,
-    0,
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-7 bg-background p-6 text-center text-foreground">
+      <div>
+        <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-magenta">
+          Quiz editor
+        </p>
+        <h1 className="font-display text-3xl">Build a new quiz</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm font-bold text-foreground/60">
+          Start from a blank round, import a CSV of questions, or paste a Google
+          Sheets link to edit from there.
+        </p>
+      </div>
+      <div className="flex flex-wrap justify-center gap-4">
+        <Button
+          type="button"
+          onClick={draft.startFromScratch}
+          className="flex min-h-16 min-w-56 items-center justify-center gap-2 px-6 text-lg rounded-2xl bg-magenta font-display text-white"
+        >
+          <FilePlusIcon aria-hidden="true" />
+          Start from scratch
+        </Button>
+        <QuizImportControls variant="empty" quizImport={quizImport} />
+      </div>
+      {importError && (
+        <p role="alert" className="font-extrabold text-magenta">
+          {importError}
+        </p>
+      )}
+    </main>
   );
+}
+
+function QuizEditor({
+  draft,
+  quizImport,
+}: {
+  draft: QuizDraft;
+  quizImport: QuizImport;
+}) {
+  const { rounds, editRounds, liveEdit, saveIssues, saveError } = draft;
+  const { importError } = quizImport;
+  const described = describeEditorRounds(rounds, liveEdit);
+  const openedQuestionIds = liveEdit
+    ? new Set(liveEdit.openedQuestionIds)
+    : EMPTY_OPENED_QUESTION_IDS;
+  const quizLevelIssues = saveIssues.filter((issue) => issue.roundIndex === -1);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 bg-foreground px-5 py-4 text-background">
-        <div className="flex min-w-48 flex-1 flex-col gap-0.5">
-          <input
-            value={draft.title}
-            onChange={(event) => draft.setTitle(event.target.value)}
-            placeholder="Untitled quiz"
-            className="w-full border-b-2 border-background/40 bg-transparent px-1 py-1 font-display text-xl text-background outline-none"
-          />
-          <FieldErrors issues={fieldIssues(quizLevelIssues, 'title')} />
-        </div>
-        <span className="whitespace-nowrap text-xs font-bold text-background/60">
-          {rounds.length} round{rounds.length === 1 ? '' : 's'} ·{' '}
-          {questionCount} question
-          {questionCount === 1 ? '' : 's'}
-        </span>
-        <QuizImportControls variant="toolbar" quizImport={quizImport} />
-        <Button
-          type="button"
-          onClick={draft.exportCsv}
-          disabled={questionCount === 0}
-          size="md"
-          className="rounded-xl border-2 border-background/50 text-xs font-extrabold text-background whitespace-nowrap disabled:opacity-50"
-        >
-          <DownloadIcon aria-hidden="true" />
-          Export CSV
-        </Button>
-        {draft.savedQuizId !== null && (
-          <Button
-            type="button"
-            onClick={() => openPreview(draft.savedQuizId!, draft.isDirty)}
-            size="md"
-            className="rounded-xl border-2 border-background/50 text-xs font-extrabold text-background whitespace-nowrap"
-          >
-            <EyeOpenIcon aria-hidden="true" />
-            Preview
-          </Button>
-        )}
-        <Button
-          type="button"
-          onClick={draft.save}
-          disabled={draft.isSaving}
-          size="md"
-          className="rounded-xl bg-green text-xs font-extrabold text-white whitespace-nowrap disabled:opacity-50"
-        >
-          <CheckIcon aria-hidden="true" />
-          {savedFlash ? 'Saved ✓' : draft.isSaving ? 'Saving…' : 'Save quiz'}
-        </Button>
-      </div>
+      <EditorToolbar
+        draft={draft}
+        quizImport={quizImport}
+        titleIssues={fieldIssues(quizLevelIssues, 'title')}
+      />
 
       {importError && (
         <p
@@ -197,87 +163,20 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         </p>
       )}
       {saveError && <SaveErrorBanner draft={draft} />}
-
-      {isLive && (
-        <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
-          A session is live on this quiz — questions can still be edited, but
-          opened ones keep their type and choices. The current round and the
-          rounds before it keep their place, break-after and kahoot setting; the
-          rounds after it can be added, deleted, reordered and changed.
-          Questions can be added, deleted, reordered and moved after the current
-          round&apos;s last opened question (until its block starts locking) and
-          in the rounds after it. Correcting an opened question&apos;s answer or
-          points re-scores its auto-graded answers.
-        </p>
-      )}
+      {liveEdit !== undefined && <LiveEditNotice />}
 
       <div className="mx-auto flex max-w-6xl gap-6 px-5 py-6">
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          {rounds.map((round, index) => {
-            const isLast = index === rounds.length - 1;
-            const roundEditing = described?.[index];
-            const isReached = roundEditing?.isReached ?? false;
-            const isPreviousReached =
-              index > 0 && !!described?.[index - 1].isReached;
-            const isStructureFrozen =
-              roundEditing?.structureEditing === 'frozen';
-            const pinnedQuestionCount = roundEditing?.pinnedQuestionCount ?? 0;
-            return (
-              <div key={round.id} className="flex flex-col gap-4">
-                <QuizRoundEditor
-                  round={round}
-                  index={index}
-                  isFirst={index === 0}
-                  isLast={isLast}
-                  isReached={isReached}
-                  isPreviousReached={isPreviousReached}
-                  isStructureFrozen={isStructureFrozen}
-                  pinnedQuestionCount={pinnedQuestionCount}
-                  structureNote={roundEditing && structureNoteFor(roundEditing)}
-                  moveTargetRounds={moveTargetRounds(rounds, index, described)}
-                  onPreviewQuestion={
-                    draft.savedQuizId === null
-                      ? undefined
-                      : (questionIndex) =>
-                          openPreview(
-                            draft.savedQuizId!,
-                            draft.isDirty,
-                            previewPosition(index, questionIndex),
-                          )
-                  }
-                  openedQuestionIds={openedQuestionIds}
-                  issues={saveIssues.filter(
-                    (issue) => issue.roundIndex === index,
-                  )}
-                  onChange={(patch) =>
-                    editRounds((current) =>
-                      updateRound(current, round.id, patch),
-                    )
-                  }
-                  onDelete={() => {
-                    if (
-                      round.questions.length > 0 &&
-                      !window.confirm(DELETE_ROUND_PROMPT)
-                    )
-                      return;
-                    editRounds((current) => deleteRound(current, round.id));
-                  }}
-                  onMoveUp={() =>
-                    editRounds((current) => moveRound(current, round.id, -1))
-                  }
-                  onMoveDown={() =>
-                    editRounds((current) => moveRound(current, round.id, 1))
-                  }
-                  onMoveQuestionToRound={(questionId, targetRoundId) =>
-                    editRounds((current) =>
-                      moveQuestionToRound(current, questionId, targetRoundId),
-                    )
-                  }
-                />
-                {!isLast && <RoundSeparator isBreak={round.breakAfter} />}
-              </div>
-            );
-          })}
+          {rounds.map((round, index) => (
+            <RoundEditorItem
+              key={round.id}
+              draft={draft}
+              round={round}
+              index={index}
+              described={described}
+              openedQuestionIds={openedQuestionIds}
+            />
+          ))}
           <FieldErrors issues={fieldIssues(quizLevelIssues, 'rounds')} />
           <Button
             type="button"
@@ -303,6 +202,176 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       </div>
     </main>
   );
+}
+
+function EditorToolbar({
+  draft,
+  quizImport,
+  titleIssues,
+}: {
+  draft: QuizDraft;
+  quizImport: QuizImport;
+  titleIssues: ReturnType<typeof fieldIssues>;
+}) {
+  const { rounds, savedFlash } = draft;
+  const questionCount = rounds.reduce(
+    (total, round) => total + round.questions.length,
+    0,
+  );
+  return (
+    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 bg-foreground px-5 py-4 text-background">
+      <div className="flex min-w-48 flex-1 flex-col gap-0.5">
+        <input
+          value={draft.title}
+          onChange={(event) => draft.setTitle(event.target.value)}
+          placeholder="Untitled quiz"
+          className="w-full border-b-2 border-background/40 bg-transparent px-1 py-1 font-display text-xl text-background outline-none"
+        />
+        <FieldErrors issues={titleIssues} />
+      </div>
+      <span className="whitespace-nowrap text-xs font-bold text-background/60">
+        {rounds.length} round{rounds.length === 1 ? '' : 's'} · {questionCount}{' '}
+        question
+        {questionCount === 1 ? '' : 's'}
+      </span>
+      <QuizImportControls variant="toolbar" quizImport={quizImport} />
+      <Button
+        type="button"
+        onClick={draft.exportCsv}
+        disabled={questionCount === 0}
+        size="md"
+        className="rounded-xl border-2 border-background/50 text-xs font-extrabold text-background whitespace-nowrap disabled:opacity-50"
+      >
+        <DownloadIcon aria-hidden="true" />
+        Export CSV
+      </Button>
+      {draft.savedQuizId !== null && (
+        <Button
+          type="button"
+          onClick={() => openPreview(draft.savedQuizId!, draft.isDirty)}
+          size="md"
+          className="rounded-xl border-2 border-background/50 text-xs font-extrabold text-background whitespace-nowrap"
+        >
+          <EyeOpenIcon aria-hidden="true" />
+          Preview
+        </Button>
+      )}
+      <Button
+        type="button"
+        onClick={draft.save}
+        disabled={draft.isSaving}
+        size="md"
+        className="rounded-xl bg-green text-xs font-extrabold text-white whitespace-nowrap disabled:opacity-50"
+      >
+        <CheckIcon aria-hidden="true" />
+        {saveButtonLabel(savedFlash, draft.isSaving)}
+      </Button>
+    </div>
+  );
+}
+
+function saveButtonLabel(savedFlash: boolean, isSaving: boolean): string {
+  if (savedFlash) return 'Saved ✓';
+  return isSaving ? 'Saving…' : 'Save quiz';
+}
+
+function LiveEditNotice() {
+  return (
+    <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
+      A session is live on this quiz — questions can still be edited, but opened
+      ones keep their type and choices. The current round and the rounds before
+      it keep their place, break-after and kahoot setting; the rounds after it
+      can be added, deleted, reordered and changed. Questions can be added,
+      deleted, reordered and moved after the current round&apos;s last opened
+      question (until its block starts locking) and in the rounds after it.
+      Correcting an opened question&apos;s answer or points re-scores its
+      auto-graded answers.
+    </p>
+  );
+}
+
+function RoundEditorItem({
+  draft,
+  round,
+  index,
+  described,
+  openedQuestionIds,
+}: {
+  draft: QuizDraft;
+  round: QuizDraft['rounds'][number];
+  index: number;
+  described: ReturnType<typeof describeEditorRounds>;
+  openedQuestionIds: ReadonlySet<number>;
+}) {
+  const { rounds, editRounds, saveIssues } = draft;
+  const isLast = index === rounds.length - 1;
+  return (
+    <div className="flex flex-col gap-4">
+      <QuizRoundEditor
+        round={round}
+        index={index}
+        isFirst={index === 0}
+        isLast={isLast}
+        {...liveEditFlagsOf(described, index)}
+        moveTargetRounds={moveTargetRounds(rounds, index, described)}
+        onPreviewQuestion={questionPreviewOpener(draft, index)}
+        openedQuestionIds={openedQuestionIds}
+        issues={saveIssues.filter((issue) => issue.roundIndex === index)}
+        onChange={(patch) =>
+          editRounds((current) => updateRound(current, round.id, patch))
+        }
+        onDelete={() => {
+          if (isRoundDeleteConfirmed(round)) {
+            editRounds((current) => deleteRound(current, round.id));
+          }
+        }}
+        onMoveUp={() =>
+          editRounds((current) => moveRound(current, round.id, -1))
+        }
+        onMoveDown={() =>
+          editRounds((current) => moveRound(current, round.id, 1))
+        }
+        onMoveQuestionToRound={(questionId, targetRoundId) =>
+          editRounds((current) =>
+            moveQuestionToRound(current, questionId, targetRoundId),
+          )
+        }
+      />
+      {!isLast && <RoundSeparator isBreak={round.breakAfter} />}
+    </div>
+  );
+}
+
+/** What a live session lets the editor change about the round at `index`; all open with no live session. */
+function liveEditFlagsOf(
+  described: ReturnType<typeof describeEditorRounds>,
+  index: number,
+) {
+  const roundEditing = described?.[index];
+  return {
+    isReached: roundEditing?.isReached ?? false,
+    isPreviousReached: index > 0 && !!described?.[index - 1].isReached,
+    isStructureFrozen: roundEditing?.structureEditing === 'frozen',
+    pinnedQuestionCount: roundEditing?.pinnedQuestionCount ?? 0,
+    structureNote: roundEditing && structureNoteFor(roundEditing),
+  };
+}
+
+/** Opens a question of the saved quiz in the preview; none before the first save. */
+function questionPreviewOpener(draft: QuizDraft, roundIndex: number) {
+  const { savedQuizId, isDirty } = draft;
+  if (savedQuizId === null) return undefined;
+  return (questionIndex: number) =>
+    openPreview(
+      savedQuizId,
+      isDirty,
+      previewPosition(roundIndex, questionIndex),
+    );
+}
+
+/** An empty round goes without asking. */
+function isRoundDeleteConfirmed(round: QuizDraft['rounds'][number]): boolean {
+  return round.questions.length === 0 || window.confirm(DELETE_ROUND_PROMPT);
 }
 
 function SaveErrorBanner({

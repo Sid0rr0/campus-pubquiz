@@ -109,12 +109,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
     staleTime: Infinity,
     gcTime: 0,
   });
-  const loadError =
-    apiErrorMessage(
-      draftQuery.error,
-      QuizDraftApiError,
-      'Could not load that quiz.',
-    ) ?? null;
+  const loadError = loadErrorOf(draftQuery.error);
 
   // For an existing quiz, the loading state blocks every render until the
   // adjustment below flips this to 'editor', so this initial value is inert
@@ -132,8 +127,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
   const [loadedUpdatedAt, setLoadedUpdatedAt] = useState<string | undefined>(
     undefined,
   );
-  const [savedFlash, setSavedFlash] = useState(false);
-  const [savedFlashRun, setSavedFlashRun] = useState(0);
+  const { savedFlash, flashSaved } = useSavedFlash();
   // The draft's structure when the last save was sent, to tell whether the
   // issues it came back with still point at the right rounds and questions.
   const [savedStructureKey, setSavedStructureKey] = useState('');
@@ -178,15 +172,6 @@ export function useQuizDraft(quizId: string): QuizDraft {
     );
   }
 
-  // Hides the flash after a moment; re-saving restarts the timer and
-  // unmounting cancels it.
-  useEffect(() => {
-    // Stryker disable next-line ConditionalExpression: with the flash already off, the timer it starts only sets it off again
-    if (!savedFlash) return;
-    const timer = setTimeout(() => setSavedFlash(false), SAVED_FLASH_MS);
-    return () => clearTimeout(timer);
-  }, [savedFlash, savedFlashRun]);
-
   const refreshLockStateMutation = useMutation({
     mutationFn: () => fetchQuizDraft(numericQuizId as number),
     onSuccess: (draft) => setLiveEdit(draft.liveEdit),
@@ -194,9 +179,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
 
   const saveMutation = useMutation({
     mutationFn: (request: ReturnType<typeof toSaveRequest>) =>
-      savedQuizId === null
-        ? createQuiz(request)
-        : updateQuiz(savedQuizId, { ...request, loadedUpdatedAt }),
+      saveQuiz(request, savedQuizId, loadedUpdatedAt),
     onSuccess: (result, request) => {
       setSavedFingerprint(fingerprintOf(request));
       setLoadedUpdatedAt(result.updatedAt);
@@ -204,47 +187,19 @@ export function useQuizDraft(quizId: string): QuizDraft {
         setSavedQuizId(result.quizId);
         router.replace(`/quizzes/${result.quizId}`);
       }
-      setSavedFlash(true);
-      // Stryker disable next-line ArithmeticOperator: the counter only has to change to restart the flash timer, either direction does
-      setSavedFlashRun((run) => run + 1);
+      flashSaved();
       toast.success('Quiz saved');
       void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });
     },
-    onError: (error) => {
-      const issueCount =
-        error instanceof QuizDraftApiError ? error.issues.length : 0;
-      toast.error(
-        issueCount > 0
-          ? `${saveErrorMessage(error)} (${plural(issueCount, 'issue')} — see below)`
-          : saveErrorMessage(error),
-      );
-    },
+    onError: (error) => toast.error(saveFailureToast(error)),
   });
 
   const structureKey = structureKeyOf(rounds);
-  const saveIssueList =
-    saveMutation.error instanceof QuizDraftApiError
-      ? saveMutation.error.issues
-      : EMPTY_ISSUES;
-  // Adding, deleting or moving a round or question shifts the positions the
-  // issues name, so they would flag the wrong card: drop them until the next
-  // save. Typing leaves the structure alone, so they stay while being fixed.
-  const areIssuesStale =
-    saveIssueList.length > 0 && savedStructureKey !== structureKey;
-
   const isDirty =
     fingerprintOf(toSaveRequest(title, rounds)) !== savedFingerprint;
   const hasUnsavedEdits = phase === 'editor' && isDirty;
 
-  // Closing or reloading the tab with edits that were not saved asks first; there is no autosave.
-  useEffect(() => {
-    if (!hasUnsavedEdits) return;
-    function askBeforeLeaving(event: BeforeUnloadEvent): void {
-      event.preventDefault();
-    }
-    window.addEventListener('beforeunload', askBeforeLeaving);
-    return () => window.removeEventListener('beforeunload', askBeforeLeaving);
-  }, [hasUnsavedEdits]);
+  useLeaveGuard(hasUnsavedEdits);
 
   // Exports what's in the editor right now (unsaved edits included), not the
   // last-saved copy — the CSV is a snapshot of the draft the admin is looking at.
@@ -286,13 +241,82 @@ export function useQuizDraft(quizId: string): QuizDraft {
     isDirty,
     savedFlash,
     exportCsv,
-    saveError:
-      saveMutation.error && !areIssuesStale
-        ? saveErrorMessage(saveMutation.error)
-        : null,
-    saveIssues: areIssuesStale ? EMPTY_ISSUES : saveIssueList,
+    ...saveOutcomeOf(saveMutation.error, savedStructureKey !== structureKey),
+  };
+}
+
+/** A first save creates the quiz; later ones update it, refused when made from an out-of-date copy. */
+function saveQuiz(
+  request: ReturnType<typeof toSaveRequest>,
+  savedQuizId: number | null,
+  loadedUpdatedAt: string | undefined,
+) {
+  return savedQuizId === null
+    ? createQuiz(request)
+    : updateQuiz(savedQuizId, { ...request, loadedUpdatedAt });
+}
+
+/** "Saved ✓" for a moment after each save; re-saving restarts the timer and unmounting cancels it. */
+function useSavedFlash() {
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [savedFlashRun, setSavedFlashRun] = useState(0);
+  useEffect(() => {
+    // Stryker disable next-line ConditionalExpression: with the flash already off, the timer it starts only sets it off again
+    if (!savedFlash) return;
+    const timer = setTimeout(() => setSavedFlash(false), SAVED_FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [savedFlash, savedFlashRun]);
+  return {
+    savedFlash,
+    flashSaved: () => {
+      setSavedFlash(true);
+      // Stryker disable next-line ArithmeticOperator: the counter only has to change to restart the flash timer, either direction does
+      setSavedFlashRun((run) => run + 1);
+    },
+  };
+}
+
+/** Closing or reloading the tab with edits that were not saved asks first; there is no autosave. */
+function useLeaveGuard(hasUnsavedEdits: boolean) {
+  useEffect(() => {
+    if (!hasUnsavedEdits) return;
+    function askBeforeLeaving(event: BeforeUnloadEvent): void {
+      event.preventDefault();
+    }
+    window.addEventListener('beforeunload', askBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', askBeforeLeaving);
+  }, [hasUnsavedEdits]);
+}
+
+function loadErrorOf(error: Error | null): string | null {
+  return (
+    apiErrorMessage(error, QuizDraftApiError, 'Could not load that quiz.') ??
+    null
+  );
+}
+
+function saveFailureToast(error: Error): string {
+  const issueCount =
+    error instanceof QuizDraftApiError ? error.issues.length : 0;
+  return issueCount > 0
+    ? `${saveErrorMessage(error)} (${plural(issueCount, 'issue')} — see below)`
+    : saveErrorMessage(error);
+}
+
+/**
+ * What the last failed save left to show. Adding, deleting or moving a round
+ * or question shifts the positions the issues name, so they would flag the
+ * wrong card: they are dropped until the next save. Typing leaves the
+ * structure alone, so they stay while being fixed.
+ */
+function saveOutcomeOf(error: Error | null, hasStructureChanged: boolean) {
+  const issues =
+    error instanceof QuizDraftApiError ? error.issues : EMPTY_ISSUES;
+  const areIssuesStale = issues.length > 0 && hasStructureChanged;
+  return {
+    saveError: error && !areIssuesStale ? saveErrorMessage(error) : null,
+    saveIssues: areIssuesStale ? EMPTY_ISSUES : issues,
     isLiveEditConflict:
-      saveMutation.error instanceof QuizDraftApiError &&
-      saveMutation.error.status === 409,
+      error instanceof QuizDraftApiError && error.status === 409,
   };
 }

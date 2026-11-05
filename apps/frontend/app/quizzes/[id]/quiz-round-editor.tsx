@@ -110,12 +110,6 @@ export function QuizRoundEditor({
   const roundLevelIssues = issues.filter(
     (issue) => issue.questionIndex === null,
   );
-  // Switching kahoot mode on is blocked while a disallowed question remains;
-  // switching it off is always allowed. Types are never changed for the user.
-  const blockingPositions = kahootBlockingPositions(round);
-  const isKahootBlocked = !round.kahootMode && blockingPositions.length > 0;
-  const kahootHintId = `kahoot-mode-hint-${round.id}`;
-  const kahootBlockedHintId = `kahoot-mode-blocked-${round.id}`;
   function updateQuestion(
     questionId: string,
     patch: Partial<EditorQuestion>,
@@ -145,22 +139,8 @@ export function QuizRoundEditor({
   }
 
   function moveQuestion(questionId: string, direction: -1 | 1): void {
-    const index = round.questions.findIndex(
-      (question) => question.id === questionId,
-    );
-    const targetIndex = index + direction;
-    if (
-      index === -1 ||
-      targetIndex < 0 ||
-      targetIndex >= round.questions.length
-    )
-      return;
-    const questions = round.questions.slice();
-    [questions[index], questions[targetIndex]] = [
-      questions[targetIndex],
-      questions[index],
-    ];
-    onChange({ questions });
+    const questions = swapQuestion(round.questions, questionId, direction);
+    if (questions) onChange({ questions });
   }
 
   return (
@@ -198,37 +178,11 @@ export function QuizRoundEditor({
           />
           Break after
         </label>
-        <label
-          className="flex items-center gap-2 text-xs font-extrabold text-foreground/60"
-          title="Speed-based scoring, answer then reveal, leaderboard shows only the top teams"
-        >
-          <input
-            type="checkbox"
-            checked={round.kahootMode}
-            onChange={(event) => onChange({ kahootMode: event.target.checked })}
-            disabled={isKahootBlocked || isReached}
-            className="h-4 w-4"
-            aria-describedby={
-              isKahootBlocked
-                ? `${kahootHintId} ${kahootBlockedHintId}`
-                : kahootHintId
-            }
-          />
-          Kahoot mode
-        </label>
-        <span id={kahootHintId} className="sr-only">
-          Speed-based scoring, answer then reveal, leaderboard shows only the
-          top teams
-        </span>
-        {isKahootBlocked && (
-          <span
-            id={kahootBlockedHintId}
-            className="text-xs font-bold text-foreground/60"
-          >
-            Kahoot rounds only hold {kahootTypeNames()} questions — change or
-            remove {formatPositions(blockingPositions)} first.
-          </span>
-        )}
+        <KahootModeToggle
+          round={round}
+          isReached={isReached}
+          onChange={onChange}
+        />
         <FieldErrors issues={fieldIssues(roundLevelIssues, 'kahootMode')} />
         <Button
           type="button"
@@ -290,34 +244,11 @@ export function QuizRoundEditor({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <textarea
-          value={round.note}
-          onChange={(event) => onChange({ note: event.target.value })}
-          aria-label="Round note — what you say before this round"
-          placeholder="Round note — what you say before this round (optional)"
-          rows={2}
-          className="w-full rounded-lg border-2 border-foreground/15 px-3 py-2 text-sm font-bold text-foreground"
-        />
-        <div className="flex items-center justify-between gap-3">
-          <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
-            <input
-              type="checkbox"
-              checked={round.showNoteOnScreen}
-              disabled={!round.note.trim()}
-              onChange={(event) =>
-                onChange({ showNoteOnScreen: event.target.checked })
-              }
-              className="h-4 w-4"
-            />
-            Show on screen
-          </label>
-          <span className="text-xs font-bold text-foreground/60">
-            {round.note.trim().length} / {ROUND_NOTE_MAX_LENGTH}
-          </span>
-        </div>
-        <FieldErrors issues={fieldIssues(roundLevelIssues, 'note')} />
-      </div>
+      <RoundNoteField
+        round={round}
+        issues={roundLevelIssues}
+        onChange={onChange}
+      />
 
       {structureNote && (
         <p className="rounded-lg bg-cyan/20 px-3 py-2 text-xs font-extrabold text-foreground">
@@ -326,35 +257,18 @@ export function QuizRoundEditor({
       )}
       <FieldErrors issues={fieldIssues(roundLevelIssues, 'questions')} />
 
-      <div className="flex flex-col gap-3">
-        {round.questions.map((question, index) => (
-          <QuizQuestionEditor
-            key={question.id}
-            question={question}
-            index={index}
-            isFirstMovable={index <= pinnedQuestionCount}
-            isLast={index === round.questions.length - 1}
-            isPinned={index < pinnedQuestionCount}
-            moveTargets={moveTargetsFor(question, moveTargetRounds)}
-            isKahootRound={round.kahootMode}
-            isOpened={
-              question.dbId !== undefined &&
-              openedQuestionIds.has(question.dbId)
-            }
-            issues={issues.filter((issue) => issue.questionIndex === index)}
-            onChange={(patch) => updateQuestion(question.id, patch)}
-            onDelete={() => deleteQuestion(question.id)}
-            onMoveUp={() => moveQuestion(question.id, -1)}
-            onMoveDown={() => moveQuestion(question.id, 1)}
-            onPreviewFromHere={
-              onPreviewQuestion && (() => onPreviewQuestion(index))
-            }
-            onMoveToRound={(roundId) =>
-              onMoveQuestionToRound(question.id, roundId)
-            }
-          />
-        ))}
-      </div>
+      <RoundQuestions
+        round={round}
+        pinnedQuestionCount={pinnedQuestionCount}
+        moveTargetRounds={moveTargetRounds}
+        openedQuestionIds={openedQuestionIds}
+        issues={issues}
+        onUpdate={updateQuestion}
+        onDelete={deleteQuestion}
+        onMove={moveQuestion}
+        onPreviewQuestion={onPreviewQuestion}
+        onMoveQuestionToRound={onMoveQuestionToRound}
+      />
 
       <Button
         type="button"
@@ -367,6 +281,169 @@ export function QuizRoundEditor({
         <PlusIcon aria-hidden="true" />
         Add question
       </Button>
+    </div>
+  );
+}
+
+/** The questions with the one at `questionId` swapped one place up or down; null when it can't move that way. */
+function swapQuestion<Question extends { id: string }>(
+  questions: readonly Question[],
+  questionId: string,
+  direction: -1 | 1,
+): Question[] | null {
+  const index = questions.findIndex((question) => question.id === questionId);
+  const targetIndex = index + direction;
+  if (index === -1 || targetIndex < 0 || targetIndex >= questions.length) {
+    return null;
+  }
+  const swapped = questions.slice();
+  [swapped[index], swapped[targetIndex]] = [
+    swapped[targetIndex],
+    swapped[index],
+  ];
+  return swapped;
+}
+
+/**
+ * Switching kahoot mode on is blocked while a disallowed question remains;
+ * switching it off is always allowed. Types are never changed for the user.
+ */
+function KahootModeToggle({
+  round,
+  isReached,
+  onChange,
+}: Pick<QuizRoundEditorProps, 'round' | 'isReached' | 'onChange'>) {
+  const blockingPositions = kahootBlockingPositions(round);
+  const isKahootBlocked = !round.kahootMode && blockingPositions.length > 0;
+  const kahootHintId = `kahoot-mode-hint-${round.id}`;
+  const kahootBlockedHintId = `kahoot-mode-blocked-${round.id}`;
+  return (
+    <>
+      <label
+        className="flex items-center gap-2 text-xs font-extrabold text-foreground/60"
+        title="Speed-based scoring, answer then reveal, leaderboard shows only the top teams"
+      >
+        <input
+          type="checkbox"
+          checked={round.kahootMode}
+          onChange={(event) => onChange({ kahootMode: event.target.checked })}
+          disabled={isKahootBlocked || isReached}
+          className="h-4 w-4"
+          aria-describedby={
+            isKahootBlocked
+              ? `${kahootHintId} ${kahootBlockedHintId}`
+              : kahootHintId
+          }
+        />
+        Kahoot mode
+      </label>
+      <span id={kahootHintId} className="sr-only">
+        Speed-based scoring, answer then reveal, leaderboard shows only the top
+        teams
+      </span>
+      {isKahootBlocked && (
+        <span
+          id={kahootBlockedHintId}
+          className="text-xs font-bold text-foreground/60"
+        >
+          Kahoot rounds only hold {kahootTypeNames()} questions — change or
+          remove {formatPositions(blockingPositions)} first.
+        </span>
+      )}
+    </>
+  );
+}
+
+function RoundNoteField({
+  round,
+  issues,
+  onChange,
+}: Pick<QuizRoundEditorProps, 'round' | 'issues' | 'onChange'>) {
+  return (
+    <div className="flex flex-col gap-1">
+      <textarea
+        value={round.note}
+        onChange={(event) => onChange({ note: event.target.value })}
+        aria-label="Round note — what you say before this round"
+        placeholder="Round note — what you say before this round (optional)"
+        rows={2}
+        className="w-full rounded-lg border-2 border-foreground/15 px-3 py-2 text-sm font-bold text-foreground"
+      />
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
+          <input
+            type="checkbox"
+            checked={round.showNoteOnScreen}
+            disabled={!round.note.trim()}
+            onChange={(event) =>
+              onChange({ showNoteOnScreen: event.target.checked })
+            }
+            className="h-4 w-4"
+          />
+          Show on screen
+        </label>
+        <span className="text-xs font-bold text-foreground/60">
+          {round.note.trim().length} / {ROUND_NOTE_MAX_LENGTH}
+        </span>
+      </div>
+      <FieldErrors issues={fieldIssues(issues, 'note')} />
+    </div>
+  );
+}
+
+function RoundQuestions({
+  round,
+  pinnedQuestionCount,
+  moveTargetRounds,
+  openedQuestionIds,
+  issues,
+  onUpdate,
+  onDelete,
+  onMove,
+  onPreviewQuestion,
+  onMoveQuestionToRound,
+}: Pick<
+  QuizRoundEditorProps,
+  | 'round'
+  | 'pinnedQuestionCount'
+  | 'moveTargetRounds'
+  | 'openedQuestionIds'
+  | 'issues'
+  | 'onPreviewQuestion'
+  | 'onMoveQuestionToRound'
+> & {
+  onUpdate: (questionId: string, patch: Partial<EditorQuestion>) => void;
+  onDelete: (questionId: string) => void;
+  onMove: (questionId: string, direction: -1 | 1) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {round.questions.map((question, index) => (
+        <QuizQuestionEditor
+          key={question.id}
+          question={question}
+          index={index}
+          isFirstMovable={index <= pinnedQuestionCount}
+          isLast={index === round.questions.length - 1}
+          isPinned={index < pinnedQuestionCount}
+          moveTargets={moveTargetsFor(question, moveTargetRounds)}
+          isKahootRound={round.kahootMode}
+          isOpened={
+            question.dbId !== undefined && openedQuestionIds.has(question.dbId)
+          }
+          issues={issues.filter((issue) => issue.questionIndex === index)}
+          onChange={(patch) => onUpdate(question.id, patch)}
+          onDelete={() => onDelete(question.id)}
+          onMoveUp={() => onMove(question.id, -1)}
+          onMoveDown={() => onMove(question.id, 1)}
+          onPreviewFromHere={
+            onPreviewQuestion && (() => onPreviewQuestion(index))
+          }
+          onMoveToRound={(roundId) =>
+            onMoveQuestionToRound(question.id, roundId)
+          }
+        />
+      ))}
     </div>
   );
 }

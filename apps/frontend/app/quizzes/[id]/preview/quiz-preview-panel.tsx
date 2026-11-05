@@ -298,15 +298,7 @@ function PreviewStepper({
     onPositionChange(positionAt(next));
   }
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'ArrowRight') goTo(index + 1);
-      else if (event.key === 'ArrowLeft') goTo(index - 1);
-      else if (event.key === 'Escape') setIsFullscreen(false);
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  });
+  useStepperKeys(index, goTo, () => setIsFullscreen(false));
 
   if (steps.length === 0) {
     return (
@@ -327,60 +319,19 @@ function PreviewStepper({
       }`}
     >
       {!isFullscreen && (
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            size="md"
-            onClick={() => goTo(index - 1)}
-            disabled={index === 0}
-            className="rounded-xl border-2 border-background/50 text-xs font-extrabold disabled:opacity-50"
-          >
-            Prev
-          </Button>
-          <Button
-            type="button"
-            size="md"
-            onClick={() => goTo(index + 1)}
-            disabled={index === lastIndex}
-            className="rounded-xl bg-magenta text-xs font-extrabold text-white disabled:opacity-50"
-          >
-            Next
-          </Button>
-          <span className="text-xs font-bold text-background/70">
-            Step {index + 1} of {steps.length}
-          </span>
-          {step.isBlockEnd && (
-            <span className="rounded-full bg-cyan px-4 py-1 text-xs font-extrabold uppercase tracking-wide text-foreground">
-              Block ends here
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-4">
-            {mode === 'night' && (
-              <label className="flex items-center gap-2 text-xs font-extrabold">
-                <input
-                  type="checkbox"
-                  checked={withJokers}
-                  onChange={(event) =>
-                    onJokersChange(event.target.checked, positionAt(index))
-                  }
-                />
-                With jokers
-              </label>
-            )}
-            <ModeToggle
-              mode={mode}
-              onModeChange={(next) => onModeChange(next, positionAt(index))}
-            />
-          </div>
-          <Button
-            type="button"
-            size="md"
-            onClick={() => setIsFullscreen(true)}
-            className="rounded-xl border-2 border-background/50 text-xs font-extrabold"
-          >
-            Fullscreen
-          </Button>
-        </div>
+        <StepperToolbar
+          index={index}
+          stepCount={steps.length}
+          isBlockEnd={step.isBlockEnd}
+          mode={mode}
+          withJokers={withJokers}
+          onGoTo={goTo}
+          onJokersChange={(checked) =>
+            onJokersChange(checked, positionAt(index))
+          }
+          onModeChange={(next) => onModeChange(next, positionAt(index))}
+          onFullscreen={() => setIsFullscreen(true)}
+        />
       )}
       <div className={`flex min-h-0 flex-1 ${isFullscreen ? '' : 'gap-3'}`}>
         <div className="flex min-w-0 flex-1 items-center justify-center">
@@ -406,5 +357,96 @@ function PreviewStepper({
         )}
       </div>
     </main>
+  );
+}
+
+/** Arrow keys step through the night; Escape leaves fullscreen. */
+function useStepperKeys(
+  index: number,
+  goTo: (target: number) => void,
+  exitFullscreen: () => void,
+) {
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'ArrowRight') goTo(index + 1);
+      else if (event.key === 'ArrowLeft') goTo(index - 1);
+      else if (event.key === 'Escape') exitFullscreen();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+}
+
+function StepperToolbar({
+  index,
+  stepCount,
+  isBlockEnd,
+  mode,
+  withJokers,
+  onGoTo,
+  onJokersChange,
+  onModeChange,
+  onFullscreen,
+}: {
+  index: number;
+  stepCount: number;
+  isBlockEnd: boolean;
+  mode: QuizPreviewMode;
+  withJokers: boolean;
+  onGoTo: (target: number) => void;
+  onJokersChange: (withJokers: boolean) => void;
+  onModeChange: (mode: QuizPreviewMode) => void;
+  onFullscreen: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <Button
+        type="button"
+        size="md"
+        onClick={() => onGoTo(index - 1)}
+        disabled={index === 0}
+        className="rounded-xl border-2 border-background/50 text-xs font-extrabold disabled:opacity-50"
+      >
+        Prev
+      </Button>
+      <Button
+        type="button"
+        size="md"
+        onClick={() => onGoTo(index + 1)}
+        disabled={index === stepCount - 1}
+        className="rounded-xl bg-magenta text-xs font-extrabold text-white disabled:opacity-50"
+      >
+        Next
+      </Button>
+      <span className="text-xs font-bold text-background/70">
+        Step {index + 1} of {stepCount}
+      </span>
+      {isBlockEnd && (
+        <span className="rounded-full bg-cyan px-4 py-1 text-xs font-extrabold uppercase tracking-wide text-foreground">
+          Block ends here
+        </span>
+      )}
+      <div className="ml-auto flex items-center gap-4">
+        {mode === 'night' && (
+          <label className="flex items-center gap-2 text-xs font-extrabold">
+            <input
+              type="checkbox"
+              checked={withJokers}
+              onChange={(event) => onJokersChange(event.target.checked)}
+            />
+            With jokers
+          </label>
+        )}
+        <ModeToggle mode={mode} onModeChange={onModeChange} />
+      </div>
+      <Button
+        type="button"
+        size="md"
+        onClick={onFullscreen}
+        className="rounded-xl border-2 border-background/50 text-xs font-extrabold"
+      >
+        Fullscreen
+      </Button>
+    </div>
   );
 }

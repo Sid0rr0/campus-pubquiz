@@ -128,22 +128,14 @@ function OutlineRoundRow({
   const sensors = useOutlineSensors();
 
   function handleQuestionDragEnd(event: DragEndEvent): void {
-    const { active, over } = event;
-    if (!over) return;
-    const isDroppedAmongPinned = [active.id, over.id].some(
-      (id) =>
-        round.questions.findIndex((question) => question.id === id) <
-        pinnedQuestionCount,
-    );
-    if (isDroppedAmongPinned) return;
-    const reordered = reorderById(
+    const reordered = questionsAfterDrop(
       round.questions,
-      String(active.id),
-      String(over.id),
+      pinnedQuestionCount,
+      event,
     );
-    if (!reordered) return;
-    onReorderQuestions(round.id, reordered);
+    if (reordered) onReorderQuestions(round.id, reordered);
   }
+  const label = roundLabelOf(round);
 
   function handleJumpToRound(): void {
     document
@@ -160,7 +152,7 @@ function OutlineRoundRow({
       <div className="flex items-center gap-1">
         <button
           type="button"
-          aria-label={`Drag to reorder round ${index + 1}, ${round.title.trim() || 'Untitled round'}`}
+          aria-label={`Drag to reorder round ${index + 1}, ${label}`}
           className="flex h-6 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/30 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
           disabled={isReached}
           {...attributes}
@@ -171,10 +163,10 @@ function OutlineRoundRow({
         <button
           type="button"
           onClick={handleJumpToRound}
-          aria-label={`Jump to round ${index + 1}, ${round.title.trim() || 'Untitled round'}`}
+          aria-label={`Jump to round ${index + 1}, ${label}`}
           className="min-w-0 flex-1 truncate text-left font-display text-xs text-foreground hover:text-magenta hover:underline"
         >
-          {index + 1}. {round.title.trim() || 'Untitled round'}
+          {index + 1}. {label}
         </button>
       </div>
       {round.questions.length > 0 && (
@@ -227,18 +219,8 @@ export function QuizOutline({
   const described = describeEditorRounds(rounds, liveEdit);
 
   function handleRoundDragEnd(event: DragEndEvent): void {
-    const { active, over } = event;
-    if (!over) return;
-    const isDroppedOnReachedRound =
-      described !== undefined &&
-      [active.id, over.id].some(
-        (id) =>
-          described[rounds.findIndex((round) => round.id === id)]?.isReached,
-      );
-    if (isDroppedOnReachedRound) return;
-    const reordered = reorderById(rounds, String(active.id), String(over.id));
-    if (!reordered) return;
-    onReorderRounds(reordered);
+    const reordered = roundsAfterDrop(rounds, described, event);
+    if (reordered) onReorderRounds(reordered);
   }
 
   if (rounds.length === 0) return null;
@@ -265,10 +247,7 @@ export function QuizOutline({
                   round={round}
                   index={index}
                   isLast={index === rounds.length - 1}
-                  isReached={described?.[index].isReached ?? false}
-                  pinnedQuestionCount={
-                    described?.[index].pinnedQuestionCount ?? 0
-                  }
+                  {...outlineFlagsOf(described, index)}
                   onReorderQuestions={onReorderQuestions}
                 />
               ))}
@@ -278,4 +257,51 @@ export function QuizOutline({
       </div>
     </nav>
   );
+}
+
+type Described = ReturnType<typeof describeEditorRounds>;
+
+/** What a live session pins in the round at `index`; nothing with no live session. */
+function outlineFlagsOf(described: Described, index: number) {
+  return {
+    isReached: described?.[index].isReached ?? false,
+    pinnedQuestionCount: described?.[index].pinnedQuestionCount ?? 0,
+  };
+}
+
+/** The rounds after a drag, or null when it was dropped nowhere or touches a round a live session has reached. */
+function roundsAfterDrop<Round extends { id: string }>(
+  rounds: Round[],
+  described: Described,
+  { active, over }: DragEndEvent,
+): Round[] | null {
+  if (!over) return null;
+  const isDroppedOnReachedRound =
+    described !== undefined &&
+    [active.id, over.id].some(
+      (id) =>
+        described[rounds.findIndex((round) => round.id === id)]?.isReached,
+    );
+  if (isDroppedOnReachedRound) return null;
+  return reorderById(rounds, String(active.id), String(over.id)) ?? null;
+}
+
+/** The questions after a drag, or null when it was dropped nowhere or touches a pinned question. */
+function questionsAfterDrop<Question extends { id: string }>(
+  questions: Question[],
+  pinnedQuestionCount: number,
+  { active, over }: DragEndEvent,
+): Question[] | null {
+  if (!over) return null;
+  const isDroppedAmongPinned = [active.id, over.id].some(
+    (id) =>
+      questions.findIndex((question) => question.id === id) <
+      pinnedQuestionCount,
+  );
+  if (isDroppedAmongPinned) return null;
+  return reorderById(questions, String(active.id), String(over.id)) ?? null;
+}
+
+function roundLabelOf(round: { title: string }): string {
+  return round.title.trim() || 'Untitled round';
 }
