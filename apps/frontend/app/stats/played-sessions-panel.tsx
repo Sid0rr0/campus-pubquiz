@@ -128,95 +128,13 @@ export function PlayedSessionsPanel() {
 
   const columns = useMemo(
     () =>
-      helper.columns([
-        // Sorted server-side on the resolved display name (custom name if
-        // set, else the quiz title) — see StatsService.listPlayedSessions'
-        // orderColumn.quizTitle.
-        helper.accessor('quizTitle', {
-          header: 'Session',
-          cell: (context) => (
-            <Link
-              href={`/stats/${context.row.original.gameSessionId}`}
-              className="underline-offset-2 hover:underline"
-            >
-              {context.row.original.name}
-            </Link>
-          ),
-        }),
-        helper.accessor('playedAt', {
-          header: 'Date',
-          cell: (context) => new Date(context.getValue()).toLocaleDateString(),
-        }),
-        helper.accessor('teamCount', { header: 'Teams' }),
-        helper.accessor('totalPlayers', {
-          header: 'Players',
-          enableSorting: false,
-          cell: (context) => context.getValue() ?? '—',
-        }),
-        helper.accessor('maxPoints', { header: 'Max points' }),
-        // Sorted server-side on the winner's total points (nulls — no teams
-        // on the roster — last); see PlayedSessionsSortColumn 'winner'.
-        helper.accessor((session) => session.winnerPoints ?? -1, {
-          id: 'winner',
-          header: 'Winner points',
-          cell: (context) => {
-            const session = context.row.original;
-            return session.winnerTeamName === null ||
-              session.winnerPoints === null
-              ? '—'
-              : `${session.winnerPoints} — ${session.winnerTeamName}`;
-          },
-        }),
-        ...(isAdmin
-          ? [
-              helper.display({
-                id: 'actions',
-                header: 'Actions',
-                cell: (context) => {
-                  const session = context.row.original;
-                  return (
-                    <DropdownMenu.Root>
-                      <DropdownMenu.Trigger asChild>
-                        <Button
-                          type="button"
-                          size="icon-md"
-                          aria-label={`Actions for ${session.name}`}
-                          className="rounded-lg border-2 border-foreground/15 text-foreground/70"
-                        >
-                          <DotsVerticalIcon aria-hidden="true" />
-                        </Button>
-                      </DropdownMenu.Trigger>
-                      <DropdownMenu.Portal>
-                        <DropdownMenu.Content
-                          align="end"
-                          className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
-                        >
-                          <DropdownMenu.Item
-                            onSelect={() => {
-                              setRenamingSession(session);
-                              setRenameValue(session.name);
-                            }}
-                            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
-                          >
-                            <Pencil1Icon aria-hidden="true" />
-                            Edit
-                          </DropdownMenu.Item>
-                          <DropdownMenu.Item
-                            onSelect={() => setDeletingSession(session)}
-                            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-magenta outline-none data-highlighted:bg-magenta/10"
-                          >
-                            <TrashIcon aria-hidden="true" />
-                            Delete
-                          </DropdownMenu.Item>
-                        </DropdownMenu.Content>
-                      </DropdownMenu.Portal>
-                    </DropdownMenu.Root>
-                  );
-                },
-              }),
-            ]
-          : []),
-      ]),
+      sessionColumns(isAdmin, {
+        onEdit: (session) => {
+          setRenamingSession(session);
+          setRenameValue(session.name);
+        },
+        onDelete: setDeletingSession,
+      }),
     [isAdmin],
   );
 
@@ -318,59 +236,185 @@ export function PlayedSessionsPanel() {
           });
         }}
       />
-      <Dialog.Root
-        open={renamingSession !== null}
-        onOpenChange={(open) => {
-          if (!open && !renameMutation.isPending) setRenamingSession(null);
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-3 rounded-xl bg-white p-5">
-            <Dialog.Title className="font-display text-lg">
-              Rename session
-            </Dialog.Title>
-            <label className="flex flex-col gap-1 text-sm font-extrabold">
-              Session name
-              <input
-                type="text"
-                value={renameValue}
-                onChange={(event) => setRenameValue(event.target.value)}
-                placeholder={renamingSession?.quizTitle}
-                className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
-              />
-            </label>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                disabled={renameMutation.isPending}
-                variant="outline-muted"
-                size="sm"
-                onClick={() => setRenamingSession(null)}
-              >
-                <Cross2Icon aria-hidden="true" />
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={renameMutation.isPending}
-                variant="solid-flat"
-                size="sm"
-                onClick={() => {
-                  if (!renamingSession) return;
-                  renameMutation.mutate({
-                    gameSessionId: renamingSession.gameSessionId,
-                    name: renameValue,
-                  });
-                }}
-              >
-                <CheckIcon aria-hidden="true" />
-                {renameMutation.isPending ? 'Saving…' : 'Save'}
-              </Button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <RenameSessionDialog
+        session={renamingSession}
+        name={renameValue}
+        onNameChange={setRenameValue}
+        isSaving={renameMutation.isPending}
+        onClose={() => setRenamingSession(null)}
+        onSave={(session) =>
+          renameMutation.mutate({
+            gameSessionId: session.gameSessionId,
+            name: renameValue,
+          })
+        }
+      />
     </main>
+  );
+}
+
+/** The table's columns; the actions menu only for an admin. */
+function sessionColumns(
+  isAdmin: boolean,
+  {
+    onEdit,
+    onDelete,
+  }: {
+    onEdit: (session: PlayedSessionStats) => void;
+    onDelete: (session: PlayedSessionStats) => void;
+  },
+) {
+  return helper.columns([
+    // Sorted server-side on the resolved display name (custom name if
+    // set, else the quiz title) — see StatsService.listPlayedSessions'
+    // orderColumn.quizTitle.
+    helper.accessor('quizTitle', {
+      header: 'Session',
+      cell: (context) => (
+        <Link
+          href={`/stats/${context.row.original.gameSessionId}`}
+          className="underline-offset-2 hover:underline"
+        >
+          {context.row.original.name}
+        </Link>
+      ),
+    }),
+    helper.accessor('playedAt', {
+      header: 'Date',
+      cell: (context) => new Date(context.getValue()).toLocaleDateString(),
+    }),
+    helper.accessor('teamCount', { header: 'Teams' }),
+    helper.accessor('totalPlayers', {
+      header: 'Players',
+      enableSorting: false,
+      cell: (context) => context.getValue() ?? '—',
+    }),
+    helper.accessor('maxPoints', { header: 'Max points' }),
+    // Sorted server-side on the winner's total points (nulls — no teams
+    // on the roster — last); see PlayedSessionsSortColumn 'winner'.
+    helper.accessor((session) => session.winnerPoints ?? -1, {
+      id: 'winner',
+      header: 'Winner points',
+      cell: (context) => {
+        const session = context.row.original;
+        return session.winnerTeamName === null || session.winnerPoints === null
+          ? '—'
+          : `${session.winnerPoints} — ${session.winnerTeamName}`;
+      },
+    }),
+    ...(isAdmin
+      ? [
+          helper.display({
+            id: 'actions',
+            header: 'Actions',
+            cell: (context) => {
+              const session = context.row.original;
+              return (
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-md"
+                      aria-label={`Actions for ${session.name}`}
+                      className="rounded-lg border-2 border-foreground/15 text-foreground/70"
+                    >
+                      <DotsVerticalIcon aria-hidden="true" />
+                    </Button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      align="end"
+                      className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
+                    >
+                      <DropdownMenu.Item
+                        onSelect={() => onEdit(session)}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
+                      >
+                        <Pencil1Icon aria-hidden="true" />
+                        Edit
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        onSelect={() => onDelete(session)}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-magenta outline-none data-highlighted:bg-magenta/10"
+                      >
+                        <TrashIcon aria-hidden="true" />
+                        Delete
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+              );
+            },
+          }),
+        ]
+      : []),
+  ]);
+}
+
+function RenameSessionDialog({
+  session,
+  name,
+  onNameChange,
+  isSaving,
+  onClose,
+  onSave,
+}: {
+  session: PlayedSessionStats | null;
+  name: string;
+  onNameChange: (name: string) => void;
+  isSaving: boolean;
+  onClose: () => void;
+  onSave: (session: PlayedSessionStats) => void;
+}) {
+  return (
+    <Dialog.Root
+      open={session !== null}
+      onOpenChange={(open) => {
+        if (!open && !isSaving) onClose();
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-3 rounded-xl bg-white p-5">
+          <Dialog.Title className="font-display text-lg">
+            Rename session
+          </Dialog.Title>
+          <label className="flex flex-col gap-1 text-sm font-extrabold">
+            Session name
+            <input
+              type="text"
+              value={name}
+              onChange={(event) => onNameChange(event.target.value)}
+              placeholder={session?.quizTitle}
+              className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
+            />
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              disabled={isSaving}
+              variant="outline-muted"
+              size="sm"
+              onClick={onClose}
+            >
+              <Cross2Icon aria-hidden="true" />
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isSaving}
+              variant="solid-flat"
+              size="sm"
+              onClick={() => {
+                if (session) onSave(session);
+              }}
+            >
+              <CheckIcon aria-hidden="true" />
+              {isSaving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
