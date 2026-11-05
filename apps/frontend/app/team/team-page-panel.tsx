@@ -192,12 +192,60 @@ function NightDetail({
  * code is never put in a URL.
  */
 export function TeamPagePanel() {
+  const [openSessionId, setOpenSessionId] = useState<number | null>(null);
+  const team = useTeamPage();
+  const { storedCode, code, pageQuery } = team;
+
+  function handleSwitchTeam(): void {
+    team.forget();
+    setOpenSessionId(null);
+  }
+
+  if (storedCode === undefined)
+    return <CenteredMessage>Loading…</CenteredMessage>;
+
+  const data = pageQuery.data ?? null;
+  if (!data) {
+    const error = team.storedCodeIsStale
+      ? null
+      : apiErrorMessage(
+          pageQuery.error,
+          TeamsApiError,
+          'Could not load team page',
+        );
+    if (code === null || error) {
+      return <CodeForm error={error} onSubmit={team.setEnteredCode} />;
+    }
+    return <CenteredMessage>Loading…</CenteredMessage>;
+  }
+
+  if (openSessionId !== null && code !== null) {
+    return (
+      <NightDetail
+        code={code}
+        gameSessionId={openSessionId}
+        onBack={() => setOpenSessionId(null)}
+        onChangeCode={handleSwitchTeam}
+      />
+    );
+  }
+
+  return (
+    <TeamOverview
+      data={data}
+      onSwitchTeam={handleSwitchTeam}
+      onOpenSession={setOpenSessionId}
+    />
+  );
+}
+
+/** The team code to show (one just typed, else the one this phone saved) and its page. */
+function useTeamPage() {
   // undefined until localStorage has been read after mount.
   const [storedCode, setStoredCode] = useState<string | null | undefined>(
     undefined,
   );
   const [enteredCode, setEnteredCode] = useState<string | null>(null);
-  const [openSessionId, setOpenSessionId] = useState<number | null>(null);
 
   useEffect(() => {
     // Reading localStorage is only possible in the browser, after mount.
@@ -232,42 +280,33 @@ export function TeamPagePanel() {
     if (enteredCodeWorked) saveTeamCode(enteredCode);
   }, [enteredCodeWorked, enteredCode]);
 
-  function handleSwitchTeam(): void {
-    forgetSavedTeam();
-    setOpenSessionId(null);
-    setEnteredCode(null);
-    setStoredCode(null);
-  }
+  return {
+    storedCode,
+    code,
+    pageQuery,
+    storedCodeIsStale,
+    setEnteredCode,
+    forget: () => {
+      forgetSavedTeam();
+      setEnteredCode(null);
+      setStoredCode(null);
+    },
+  };
+}
 
-  if (storedCode === undefined)
-    return <CenteredMessage>Loading…</CenteredMessage>;
+type TeamPageData = NonNullable<
+  ReturnType<typeof useTeamPage>['pageQuery']['data']
+>;
 
-  const data = pageQuery.data ?? null;
-  if (!data) {
-    const error = storedCodeIsStale
-      ? null
-      : apiErrorMessage(
-          pageQuery.error,
-          TeamsApiError,
-          'Could not load team page',
-        );
-    if (code === null || error) {
-      return <CodeForm error={error} onSubmit={setEnteredCode} />;
-    }
-    return <CenteredMessage>Loading…</CenteredMessage>;
-  }
-
-  if (openSessionId !== null && code !== null) {
-    return (
-      <NightDetail
-        code={code}
-        gameSessionId={openSessionId}
-        onBack={() => setOpenSessionId(null)}
-        onChangeCode={handleSwitchTeam}
-      />
-    );
-  }
-
+function TeamOverview({
+  data,
+  onSwitchTeam,
+  onOpenSession,
+}: {
+  data: TeamPageData;
+  onSwitchTeam: () => void;
+  onOpenSession: (gameSessionId: number) => void;
+}) {
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
       <div className="flex flex-col gap-1">
@@ -280,50 +319,67 @@ export function TeamPagePanel() {
         <h1 className="font-display text-2xl">{data.name}</h1>
         <button
           type="button"
-          onClick={handleSwitchTeam}
+          onClick={onSwitchTeam}
           className="self-start text-sm text-foreground/60 underline underline-offset-2"
         >
           Not your team? Switch
         </button>
       </div>
 
-      {data.leagues.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-display text-lg">Leagues</h2>
-          <ul className="flex flex-col gap-2">
-            {data.leagues.map((league) => (
-              <li
-                key={league.leagueId}
-                className="flex flex-col rounded-2xl border-2 border-foreground/15 bg-white p-4"
-              >
-                <span className="font-bold">{league.leagueName}</span>
-                <span>
-                  {league.shared ? 'Joint ' : ''}
-                  {ordinal(league.position)} of {league.teamCount} ·{' '}
-                  {league.leaguePoints} pts
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {data.sessions.length === 0 ? (
-        <p className="text-foreground/60">
-          This team hasn&apos;t played an ended session yet.
-        </p>
-      ) : (
-        <>
-          <SummaryTiles summary={data.summary} />
-          <section className="flex flex-col gap-2">
-            <h2 className="font-display text-lg">Sessions</h2>
-            <TeamSessionsTable
-              sessions={data.sessions}
-              onOpenSession={setOpenSessionId}
-            />
-          </section>
-        </>
-      )}
+      <TeamLeagues leagues={data.leagues} />
+      <TeamSessions data={data} onOpenSession={onOpenSession} />
     </main>
+  );
+}
+
+function TeamLeagues({ leagues }: { leagues: TeamPageData['leagues'] }) {
+  if (leagues.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="font-display text-lg">Leagues</h2>
+      <ul className="flex flex-col gap-2">
+        {leagues.map((league) => (
+          <li
+            key={league.leagueId}
+            className="flex flex-col rounded-2xl border-2 border-foreground/15 bg-white p-4"
+          >
+            <span className="font-bold">{league.leagueName}</span>
+            <span>
+              {league.shared ? 'Joint ' : ''}
+              {ordinal(league.position)} of {league.teamCount} ·{' '}
+              {league.leaguePoints} pts
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function TeamSessions({
+  data,
+  onOpenSession,
+}: {
+  data: TeamPageData;
+  onOpenSession: (gameSessionId: number) => void;
+}) {
+  if (data.sessions.length === 0) {
+    return (
+      <p className="text-foreground/60">
+        This team hasn&apos;t played an ended session yet.
+      </p>
+    );
+  }
+  return (
+    <>
+      <SummaryTiles summary={data.summary} />
+      <section className="flex flex-col gap-2">
+        <h2 className="font-display text-lg">Sessions</h2>
+        <TeamSessionsTable
+          sessions={data.sessions}
+          onOpenSession={onOpenSession}
+        />
+      </section>
+    </>
   );
 }

@@ -139,7 +139,7 @@ function SortableHeaderCell<
   );
 }
 
-function ariaSortOf(
+export function ariaSortOf(
   sorted: false | 'asc' | 'desc',
   isSortable: boolean,
 ): 'ascending' | 'descending' | 'none' | undefined {

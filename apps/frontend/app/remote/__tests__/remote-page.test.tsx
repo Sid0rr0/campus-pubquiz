@@ -320,6 +320,34 @@ describe('RemotePage — content', () => {
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
   });
 
+  it("lists a previewed question's choices and media link", () => {
+    mockUseAdminGame.mockReturnValue({
+      session: { progress: { status: 'question_open' } },
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({
+        nextScreen: {
+          heading: 'R1 Q3',
+          question: {
+            id: 23,
+            type: 'multiple_choice',
+            prompt: 'Which planet has rings?',
+            points: 1,
+            answer: 'Saturn',
+            options: ['Mars', 'Saturn'],
+            mediaUrl: 'https://example.com/rings.jpg',
+          },
+        },
+      }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('Mars')).toBeInTheDocument();
+    expect(
+      screen.getByText('Media: https://example.com/rings.jpg'),
+    ).toBeInTheDocument();
+  });
+
   it('shows an empty state when nothing is queued next', () => {
     mockUseAdminGame.mockReturnValue({
       session: { progress: { status: 'question_open' } },

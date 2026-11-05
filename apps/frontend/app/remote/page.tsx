@@ -105,44 +105,16 @@ function RemotePageContent() {
   const canPauseMedia = snapshot?.controlAvailability.canPauseMedia ?? false;
   useAdminMediaPauseShortcut({ canPauseMedia, sendAction });
 
-  if (isLoading) {
+  if (isLoading || !snapshot) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <p className="font-display text-xl">Loading…</p>
-      </main>
+      <RemoteNotReady isLoading={isLoading} connectionError={connectionError} />
     );
   }
 
-  if (!snapshot) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
-        {connectionError && (
-          <p role="alert" className="font-extrabold text-magenta">
-            {connectionError}
-          </p>
-        )}
-        <p className="font-display text-xl">Connecting…</p>
-      </main>
-    );
-  }
-
-  const {
-    progress,
-    onAirScreen,
-    teams = [],
-    answeredTeamIds = [],
-    displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
-    phaseStartedAt = null,
-    phaseElapsedMs = null,
-  } = snapshot;
-  const isMediaFullscreen = progress.isMediaFullscreen ?? false;
-  const gameStatus = progress.status;
-  const isMediaPaused = progress.isMediaPaused ?? false;
-  const { canReplayMedia, showAnswerStatus } = snapshot.controlAvailability;
+  const { onAirScreen, displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE } =
+    snapshot;
+  const { canReplayMedia } = snapshot.controlAvailability;
   const hasMediaRow = canReplayMedia || canPauseMedia;
-  // What Advance and Previous do is announced by the server (the admin view),
-  // so the presenter's phone shows the buttons exactly as the admin console.
-  const { advanceStep, previousState } = snapshot;
 
   return (
     <main
@@ -155,46 +127,8 @@ function RemotePageContent() {
           {connectionError}
         </p>
       )}
-      <div className="flex flex-col gap-2">
-        <div className="flex gap-4 items-center justify-between">
-          {showAnswerStatus && (
-            <p className="text-sm font-bold text-cyan">
-              {answeredTeamIds.length}/{teams.length} teams answered
-            </p>
-          )}
-          {liveAnswers && (
-            <p className="text-sm font-bold text-cyan">
-              {countCorrectAnswers(liveAnswers)} correct
-            </p>
-          )}
-          <PhaseTimer
-            phaseStartedAt={phaseStartedAt}
-            phaseElapsedMs={phaseElapsedMs}
-          />
-        </div>
-      </div>
-
-      <section
-        aria-labelledby="remote-on-display"
-        className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3"
-      >
-        <div className="flex items-center justify-between gap-4">
-          <h2
-            id="remote-on-display"
-            className="text-xs font-extrabold tracking-wide text-magenta uppercase"
-          >
-            On display
-          </h2>
-          {presenterContext && (
-            <ScreenSummaryLine screen={presenterContext.currentScreen} />
-          )}
-        </div>
-        {presenterContext ? (
-          <ScreenPreviewCard screen={presenterContext.currentScreen} />
-        ) : (
-          <p className="text-sm text-foreground/50">Loading…</p>
-        )}
-      </section>
+      <RemoteStatusBar snapshot={snapshot} liveAnswers={liveAnswers} />
+      <OnDisplaySection presenterContext={presenterContext} />
 
       <section
         aria-labelledby="remote-notes"
@@ -212,60 +146,190 @@ function RemotePageContent() {
         />
       </section>
 
-      <section
-        aria-labelledby="remote-up-next"
-        className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3"
-      >
-        <div className="flex items-center justify-between gap-4">
-          <h2
-            id="remote-up-next"
-            className="text-xs font-extrabold tracking-wide text-magenta uppercase"
-          >
-            Up next
-          </h2>
-          {presenterContext?.nextScreen && (
-            <ScreenSummaryLine screen={presenterContext.nextScreen} />
-          )}
-        </div>
-        {presenterContext?.nextScreen ? (
-          <ScreenPreviewCard screen={presenterContext.nextScreen} />
-        ) : (
-          <p className="text-sm text-foreground/50">Nothing queued yet.</p>
-        )}
-      </section>
+      <UpNextSection presenterContext={presenterContext} />
 
       <DisplayTextScaleControl
         displayTextScale={displayTextScale}
         onSetDisplayTextScale={setDisplayTextScale}
       />
 
-      <div className="fixed inset-x-0 bottom-0 flex flex-col gap-2 border-t-2 border-foreground/10 bg-background p-3">
-        {hasMediaRow && (
-          <div className="flex gap-2">
-            <ReplayMediaButton
-              canReplay={canReplayMedia}
-              onAction={sendAction}
-            />
-            <MediaPauseButton
-              canPause={canPauseMedia}
-              isPaused={isMediaPaused}
-              onAction={sendAction}
-            />
-          </div>
+      <RemoteControls
+        snapshot={snapshot}
+        hasMediaRow={hasMediaRow}
+        canPauseMedia={canPauseMedia}
+        sendAction={sendAction}
+      />
+    </main>
+  );
+}
+
+type RemoteSession = ReturnType<typeof useAdminSession>;
+type RemoteSnapshot = NonNullable<RemoteSession['snapshot']>;
+type PresenterContext = RemoteSession['presenterContext'];
+
+function RemoteNotReady({
+  isLoading,
+  connectionError,
+}: {
+  isLoading: boolean;
+  connectionError: string | null;
+}) {
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <p className="font-display text-xl">Loading…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
+      {connectionError && (
+        <p role="alert" className="font-extrabold text-magenta">
+          {connectionError}
+        </p>
+      )}
+      <p className="font-display text-xl">Connecting…</p>
+    </main>
+  );
+}
+
+function RemoteStatusBar({
+  snapshot,
+  liveAnswers,
+}: {
+  snapshot: RemoteSnapshot;
+  liveAnswers: RemoteSession['liveAnswers'];
+}) {
+  const {
+    teams = [],
+    answeredTeamIds = [],
+    phaseStartedAt = null,
+    phaseElapsedMs = null,
+  } = snapshot;
+  const { showAnswerStatus } = snapshot.controlAvailability;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-4 items-center justify-between">
+        {showAnswerStatus && (
+          <p className="text-sm font-bold text-cyan">
+            {answeredTeamIds.length}/{teams.length} teams answered
+          </p>
         )}
-        <NavigationButtons
-          progressStatus={gameStatus}
-          advanceStep={advanceStep}
-          previousState={previousState}
-          onAction={sendAction}
+        {liveAnswers && (
+          <p className="text-sm font-bold text-cyan">
+            {countCorrectAnswers(liveAnswers)} correct
+          </p>
+        )}
+        <PhaseTimer
+          phaseStartedAt={phaseStartedAt}
+          phaseElapsedMs={phaseElapsedMs}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OnDisplaySection({
+  presenterContext,
+}: {
+  presenterContext: PresenterContext;
+}) {
+  return (
+    <section
+      aria-labelledby="remote-on-display"
+      className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <h2
+          id="remote-on-display"
+          className="text-xs font-extrabold tracking-wide text-magenta uppercase"
         >
-          <MediaFullscreenToggle
-            isMediaFullscreen={isMediaFullscreen}
+          On display
+        </h2>
+        {presenterContext && (
+          <ScreenSummaryLine screen={presenterContext.currentScreen} />
+        )}
+      </div>
+      {presenterContext ? (
+        <ScreenPreviewCard screen={presenterContext.currentScreen} />
+      ) : (
+        <p className="text-sm text-foreground/50">Loading…</p>
+      )}
+    </section>
+  );
+}
+
+function UpNextSection({
+  presenterContext,
+}: {
+  presenterContext: PresenterContext;
+}) {
+  const nextScreen = presenterContext?.nextScreen;
+  return (
+    <section
+      aria-labelledby="remote-up-next"
+      className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <h2
+          id="remote-up-next"
+          className="text-xs font-extrabold tracking-wide text-magenta uppercase"
+        >
+          Up next
+        </h2>
+        {nextScreen && <ScreenSummaryLine screen={nextScreen} />}
+      </div>
+      {nextScreen ? (
+        <ScreenPreviewCard screen={nextScreen} />
+      ) : (
+        <p className="text-sm text-foreground/50">Nothing queued yet.</p>
+      )}
+    </section>
+  );
+}
+
+/** The fixed bar: media replay and pause when there is media, then Previous / Advance and fullscreen. */
+function RemoteControls({
+  snapshot,
+  hasMediaRow,
+  canPauseMedia,
+  sendAction,
+}: {
+  snapshot: RemoteSnapshot;
+  hasMediaRow: boolean;
+  canPauseMedia: boolean;
+  sendAction: RemoteSession['sendAction'];
+}) {
+  const { progress } = snapshot;
+  const { canReplayMedia } = snapshot.controlAvailability;
+  // What Advance and Previous do is announced by the server (the admin view),
+  // so the presenter's phone shows the buttons exactly as the admin console.
+  const { advanceStep, previousState } = snapshot;
+  return (
+    <div className="fixed inset-x-0 bottom-0 flex flex-col gap-2 border-t-2 border-foreground/10 bg-background p-3">
+      {hasMediaRow && (
+        <div className="flex gap-2">
+          <ReplayMediaButton canReplay={canReplayMedia} onAction={sendAction} />
+          <MediaPauseButton
+            canPause={canPauseMedia}
+            isPaused={progress.isMediaPaused ?? false}
             onAction={sendAction}
           />
-        </NavigationButtons>
-      </div>
-    </main>
+        </div>
+      )}
+      <NavigationButtons
+        progressStatus={progress.status}
+        advanceStep={advanceStep}
+        previousState={previousState}
+        onAction={sendAction}
+      >
+        <MediaFullscreenToggle
+          isMediaFullscreen={progress.isMediaFullscreen ?? false}
+          onAction={sendAction}
+        />
+      </NavigationButtons>
+    </div>
   );
 }
 

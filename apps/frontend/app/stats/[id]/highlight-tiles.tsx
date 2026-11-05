@@ -98,18 +98,8 @@ export function HighlightTiles({ data }: HighlightTilesProps) {
   const hardestRound = data.rounds.find(
     (r) => r.roundId === highlights.hardestRoundId,
   );
-  const averageTeamTotal =
-    data.standings.length > 0
-      ? data.standings.reduce((sum, s) => sum + s.total, 0) /
-        data.standings.length
-      : 0;
-  const bonusBreakdown = Object.entries(highlights.bonus.byCategory)
-    .filter(([, points]) => points !== 0)
-    .map(
-      ([category, points]) =>
-        `${BONUS_CATEGORY_LABELS[category] ?? category} ${points}`,
-    )
-    .join(', ');
+  const averageTeamTotal = averageTotalOf(data.standings);
+  const bonusBreakdown = bonusBreakdownOf(highlights.bonus.byCategory);
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -124,16 +114,14 @@ export function HighlightTiles({ data }: HighlightTilesProps) {
       />
       <StatTile
         label="Total players"
-        value={reportedTeams > 0 ? String(playerCount.total) : '—'}
+        value={reportedTeams > 0 ? String(playerCount.total) : DASH}
         detail={`${reportedTeams} of ${data.teamCount} teams reported`}
       />
       <StatTile
         label="Avg. team size"
-        value={
-          playerCount.average === null
-            ? '—'
-            : String(Math.round(playerCount.average * 10) / 10)
-        }
+        value={orDash(playerCount.average, (average) =>
+          String(Math.round(average * 10) / 10),
+        )}
       />
       <FeedbackTiles feedback={data.feedback} />
       <StatTile
@@ -164,12 +152,35 @@ export function HighlightTiles({ data }: HighlightTilesProps) {
       />
       <StatTile
         label="Winning margin"
-        value={
-          highlights.winningMargin === null
-            ? '—'
-            : `${highlights.winningMargin} pts`
-        }
+        value={orDash(highlights.winningMargin, (margin) => `${margin} pts`)}
       />
     </div>
   );
+}
+
+const DASH = '—';
+
+/** A dash for a figure the session doesn't have. */
+function orDash(
+  value: number | null,
+  format: (value: number) => string,
+): string {
+  return value === null ? DASH : format(value);
+}
+
+function averageTotalOf(standings: readonly { total: number }[]): number {
+  return standings.length > 0
+    ? standings.reduce((sum, s) => sum + s.total, 0) / standings.length
+    : 0;
+}
+
+/** The non-zero bonus categories, as "Shot 4, Selfie 2"; empty when none. */
+function bonusBreakdownOf(byCategory: Record<string, number>): string {
+  return Object.entries(byCategory)
+    .filter(([, points]) => points !== 0)
+    .map(
+      ([category, points]) =>
+        `${BONUS_CATEGORY_LABELS[category] ?? category} ${points}`,
+    )
+    .join(', ');
 }

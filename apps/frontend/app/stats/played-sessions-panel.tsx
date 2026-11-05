@@ -51,10 +51,7 @@ const features = tableFeatures({ rowSortingFeature, rowPaginationFeature });
 const helper = createColumnHelper<typeof features, PlayedSessionStats>();
 
 export function PlayedSessionsPanel() {
-  const auth = useAuth();
-  const isAdmin =
-    auth.status === 'authenticated' && auth.user?.role === 'admin';
-  const queryClient = useQueryClient();
+  const isAdmin = isAdminAuth(useAuth());
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'playedAt', desc: true },
   ]);
@@ -68,17 +65,10 @@ export function PlayedSessionsPanel() {
     useState<PlayedSessionStats | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
-  const sortBy = (sorting[0]?.id ?? 'playedAt') as PlayedSessionsSortColumn;
-  const sortOrder: PlayedSessionsSortOrder = sorting[0]
-    ? sorting[0].desc
-      ? 'desc'
-      : 'asc'
-    : 'desc';
   const params = {
     page: pagination.pageIndex + 1,
     pageSize: pagination.pageSize,
-    sortBy,
-    sortOrder,
+    ...sortParamsOf(sorting),
   };
 
   const statsQuery = useQuery({
@@ -93,37 +83,9 @@ export function PlayedSessionsPanel() {
     'Could not load session stats',
   );
 
-  const deleteMutation = useMutation({
-    mutationFn: (gameSessionId: number) => deleteSession(gameSessionId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
-      setDeletingSession(null);
-    },
-    onError: (deleteError) =>
-      toast.error(
-        apiErrorMessage(
-          deleteError,
-          StatsApiError,
-          'Could not delete session',
-        ) ?? 'Could not delete session',
-      ),
-  });
-
-  const renameMutation = useMutation({
-    mutationFn: (variables: { gameSessionId: number; name: string }) =>
-      renameSession(variables.gameSessionId, variables.name),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
-      setRenamingSession(null);
-    },
-    onError: (renameError) =>
-      toast.error(
-        apiErrorMessage(
-          renameError,
-          StatsApiError,
-          'Could not rename session',
-        ) ?? 'Could not rename session',
-      ),
+  const { deleteMutation, renameMutation } = useSessionMutations({
+    onDeleted: () => setDeletingSession(null),
+    onRenamed: () => setRenamingSession(null),
   });
 
   const columns = useMemo(
@@ -165,19 +127,7 @@ export function PlayedSessionsPanel() {
     rowCount: payload?.total ?? 0,
   });
 
-  if (!payload) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        {error ? (
-          <p role="alert" className="font-extrabold text-magenta">
-            {error}
-          </p>
-        ) : (
-          <p className="font-display text-xl">Loading…</p>
-        )}
-      </main>
-    );
-  }
+  if (!payload) return <PanelLoading error={error} />;
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
@@ -198,43 +148,11 @@ export function PlayedSessionsPanel() {
 
       <SortableTable table={table} emptyMessage="No finished sessions yet." />
 
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          variant="outline-muted"
-          size="sm"
-          disabled={!table.getCanPreviousPage()}
-          onClick={() => table.previousPage()}
-        >
-          Prev
-        </Button>
-        <span className="text-sm text-foreground/60">
-          Page {pagination.pageIndex + 1} of {table.getPageCount()}
-        </span>
-        <Button
-          type="button"
-          variant="outline-muted"
-          size="sm"
-          disabled={!table.getCanNextPage()}
-          onClick={() => table.nextPage()}
-        >
-          Next
-        </Button>
-      </div>
-      <ConfirmDialog
-        open={deletingSession !== null}
-        onOpenChange={(open) => {
-          if (!open && !deleteMutation.isPending) setDeletingSession(null);
-        }}
-        title={`Delete "${deletingSession?.name}"?`}
-        description="This permanently deletes this session's stats, including every answer and bonus award recorded for it. This can't be undone."
-        confirmLabel={deleteMutation.isPending ? 'Deleting…' : 'Delete'}
-        onConfirm={() => {
-          if (!deletingSession) return;
-          deleteMutation.mutate(deletingSession.gameSessionId, {
-            onSuccess: () => toast.success(`Deleted "${deletingSession.name}"`),
-          });
-        }}
+      <TablePager table={table} pageIndex={pagination.pageIndex} />
+      <DeleteSessionDialog
+        session={deletingSession}
+        mutation={deleteMutation}
+        onClose={() => setDeletingSession(null)}
       />
       <RenameSessionDialog
         session={renamingSession}
@@ -416,5 +334,147 @@ function RenameSessionDialog({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function isAdminAuth(auth: ReturnType<typeof useAuth>): boolean {
+  return auth.status === 'authenticated' && auth.user?.role === 'admin';
+}
+
+/** The query's sort, most recent first until a column is picked. */
+function sortParamsOf(sorting: SortingState): {
+  sortBy: PlayedSessionsSortColumn;
+  sortOrder: PlayedSessionsSortOrder;
+} {
+  const [first] = sorting;
+  if (!first) return { sortBy: 'playedAt', sortOrder: 'desc' };
+  return {
+    sortBy: first.id as PlayedSessionsSortColumn,
+    sortOrder: first.desc ? 'desc' : 'asc',
+  };
+}
+
+function useSessionMutations({
+  onDeleted,
+  onRenamed,
+}: {
+  onDeleted: () => void;
+  onRenamed: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: (gameSessionId: number) => deleteSession(gameSessionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
+      onDeleted();
+    },
+    onError: (deleteError) =>
+      toast.error(
+        apiErrorMessage(
+          deleteError,
+          StatsApiError,
+          'Could not delete session',
+        ) ?? 'Could not delete session',
+      ),
+  });
+
+  const renameMutation = useMutation({
+    mutationFn: (variables: { gameSessionId: number; name: string }) =>
+      renameSession(variables.gameSessionId, variables.name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
+      onRenamed();
+    },
+    onError: (renameError) =>
+      toast.error(
+        apiErrorMessage(
+          renameError,
+          StatsApiError,
+          'Could not rename session',
+        ) ?? 'Could not rename session',
+      ),
+  });
+  return { deleteMutation, renameMutation };
+}
+
+function PanelLoading({ error }: { error: string | null | undefined }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+      {error ? (
+        <p role="alert" className="font-extrabold text-magenta">
+          {error}
+        </p>
+      ) : (
+        <p className="font-display text-xl">Loading…</p>
+      )}
+    </main>
+  );
+}
+
+function TablePager({
+  table,
+  pageIndex,
+}: {
+  table: {
+    getCanPreviousPage: () => boolean;
+    getCanNextPage: () => boolean;
+    previousPage: () => void;
+    nextPage: () => void;
+    getPageCount: () => number;
+  };
+  pageIndex: number;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <Button
+        type="button"
+        variant="outline-muted"
+        size="sm"
+        disabled={!table.getCanPreviousPage()}
+        onClick={() => table.previousPage()}
+      >
+        Prev
+      </Button>
+      <span className="text-sm text-foreground/60">
+        Page {pageIndex + 1} of {table.getPageCount()}
+      </span>
+      <Button
+        type="button"
+        variant="outline-muted"
+        size="sm"
+        disabled={!table.getCanNextPage()}
+        onClick={() => table.nextPage()}
+      >
+        Next
+      </Button>
+    </div>
+  );
+}
+
+function DeleteSessionDialog({
+  session,
+  mutation,
+  onClose,
+}: {
+  session: PlayedSessionStats | null;
+  mutation: ReturnType<typeof useSessionMutations>['deleteMutation'];
+  onClose: () => void;
+}) {
+  return (
+    <ConfirmDialog
+      open={session !== null}
+      onOpenChange={(open) => {
+        if (!open && !mutation.isPending) onClose();
+      }}
+      title={`Delete "${session?.name}"?`}
+      description="This permanently deletes this session's stats, including every answer and bonus award recorded for it. This can't be undone."
+      confirmLabel={mutation.isPending ? 'Deleting…' : 'Delete'}
+      onConfirm={() => {
+        if (!session) return;
+        mutation.mutate(session.gameSessionId, {
+          onSuccess: () => toast.success(`Deleted "${session.name}"`),
+        });
+      }}
+    />
   );
 }

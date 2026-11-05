@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createColumnHelper,
@@ -63,47 +63,12 @@ interface SessionPickerPanelProps {
 
 /** Landing screen shown when the admin hasn't pinned a specific session via `?code=` yet — lists every session currently running in the process and offers to start a new one. */
 export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
-  const auth = useAuth();
-  const isAdmin =
-    auth.status === 'authenticated' && auth.user?.role === 'admin';
-  const queryClient = useQueryClient();
-  const sessionsQuery = useQuery({
-    queryKey: queryKeys.sessions.list(),
-    queryFn: fetchSessions,
-  });
-  const quizzesQuery = useQuery({
-    queryKey: queryKeys.quizzes.list(),
-    queryFn: () => fetchQuizzes(),
-  });
-  const sessions = sessionsQuery.data ?? EMPTY_SESSIONS;
-  const quizzes = quizzesQuery.data?.quizzes ?? EMPTY_QUIZZES;
-  // Single alert slot, sessions first — matches the old shared `error` state,
-  // where whichever fetch rejected last won it and the sessions fetch
-  // cleared it on success.
-  const error =
-    apiErrorMessage(
-      sessionsQuery.error,
-      SessionApiError,
-      'Could not load sessions',
-    ) ??
-    apiErrorMessage(quizzesQuery.error, QuizApiError, 'Could not load quizzes');
-
+  const isAdmin = isAdminAuth(useAuth());
+  const { sessions, quizzes, error } = usePickerLists();
   const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
   const pendingQuiz = quizzes.find((quiz) => quiz.id === pendingQuizId) ?? null;
 
-  const closeMutation = useMutation({
-    mutationFn: (joinCode: string) => closeSession(joinCode),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all }),
-    onError: (closeError) =>
-      toast.error(
-        apiErrorMessage(
-          closeError,
-          SessionApiError,
-          'Could not close session',
-        ) ?? 'Could not close session',
-      ),
-  });
+  const closeMutation = useCloseSessionMutation();
 
   // Most-recently-edited quiz on top by default — the quiz an admin just
   // saved is the one they're about to start a session from.
@@ -112,124 +77,24 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
   ]);
 
   const [deletingQuiz, setDeletingQuiz] = useState<QuizSummary | null>(null);
-  const deleteMutation = useMutation({
-    mutationFn: (quizId: number) => deleteQuiz(quizId),
-    onSuccess: () => {
-      // Deleting a quiz cascades (at the DB level) to every game_session
-      // ever run from it, including ended ones the Running Sessions list
-      // still shows — refresh both lists, not just quizzes.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
-      setDeletingQuiz(null);
-    },
-    onError: (deleteError) =>
-      toast.error(
-        apiErrorMessage(deleteError, QuizApiError, 'Could not delete quiz') ??
-          'Could not delete quiz',
-      ),
-  });
+  const deleteMutation = useDeleteQuizMutation(() => setDeletingQuiz(null));
 
   function handleClose(joinCode: string): void {
     closeMutation.mutate(joinCode);
   }
 
-  const quizColumns = useMemo(
+  const columns = useMemo(
     () =>
-      quizColumnHelper.columns([
-        quizColumnHelper.accessor('title', {
-          header: 'Quiz',
-          sortFn: sortFn_alphanumeric,
-          cell: (context) => {
-            const quiz = context.row.original;
-            const questionCount = quiz.rounds.reduce(
-              (sum, round) => sum + round.questions.length,
-              0,
-            );
-            return (
-              <span className="font-extrabold">
-                {quiz.title} ({quiz.rounds.length} rounds | {questionCount}{' '}
-                total questions)
-              </span>
-            );
-          },
-        }),
-        quizColumnHelper.accessor('updatedAt', {
-          header: 'Edited',
-          sortFn: sortFn_datetime,
-          cell: (context) => new Date(context.getValue()).toLocaleString(),
-        }),
-        quizColumnHelper.display({
-          id: 'actions',
-          header: 'Actions',
-          cell: (context) => {
-            const quiz = context.row.original;
-            return (
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  variant="solid-flat"
-                  onClick={() => setPendingQuizId(quiz.id)}
-                  className="flex min-h-8 items-center gap-1.5 px-4"
-                >
-                  <PlayIcon aria-hidden="true" />
-                  Start
-                </Button>
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger asChild>
-                    <Button
-                      type="button"
-                      size="icon-md"
-                      aria-label={`Actions for ${quiz.title}`}
-                      className="rounded-lg border-2 border-foreground/15 text-foreground/70"
-                    >
-                      <DotsVerticalIcon aria-hidden="true" />
-                    </Button>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content
-                      align="end"
-                      className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
-                    >
-                      <DropdownMenu.Item asChild>
-                        <Link
-                          href={`/quizzes/${quiz.id}`}
-                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
-                        >
-                          <Pencil1Icon aria-hidden="true" />
-                          Edit
-                        </Link>
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item asChild>
-                        <Link
-                          href={quizPreviewHref(quiz.id)}
-                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
-                        >
-                          <EyeOpenIcon aria-hidden="true" />
-                          Preview
-                        </Link>
-                      </DropdownMenu.Item>
-                      {isAdmin && (
-                        <DropdownMenu.Item
-                          onSelect={() => setDeletingQuiz(quiz)}
-                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-magenta outline-none data-highlighted:bg-magenta/10"
-                        >
-                          <TrashIcon aria-hidden="true" />
-                          Delete
-                        </DropdownMenu.Item>
-                      )}
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Root>
-              </div>
-            );
-          },
-        }),
-      ]),
+      quizColumns(isAdmin, {
+        onStart: setPendingQuizId,
+        onDelete: setDeletingQuiz,
+      }),
     [isAdmin],
   );
 
   const quizTable = useTable({
     features: quizTableFeatures,
-    columns: quizColumns,
+    columns,
     data: quizzes,
     getRowId: (quiz) => String(quiz.id),
     // Without this, the toggle cycle is desc -> unsorted -> asc: on the
@@ -270,11 +135,9 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
               New Quiz
             </Link>
           </div>
-          {quizzes.length === 0 ? (
-            <p className="text-sm text-foreground/55">No quizzes yet.</p>
-          ) : (
+          <QuizzesTable isEmpty={quizzes.length === 0}>
             <SortableTable table={quizTable} />
-          )}
+          </QuizzesTable>
         </section>
       </div>
       <StartSessionDialog
@@ -282,22 +145,240 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
         onClose={() => setPendingQuizId(null)}
         onCreated={onOpenSession}
       />
-      <ConfirmDialog
-        open={deletingQuiz !== null}
-        onOpenChange={(open) => {
-          if (!open && !deleteMutation.isPending) setDeletingQuiz(null);
-        }}
-        title={`Delete "${deletingQuiz?.title}"?`}
-        description="This permanently deletes the quiz, including every session ever run from it. This can't be undone."
-        confirmLabel={deleteMutation.isPending ? 'Deleting…' : 'Delete'}
-        onConfirm={() => {
-          if (!deletingQuiz) return;
-          const { title } = deletingQuiz;
-          deleteMutation.mutate(deletingQuiz.id, {
-            onSuccess: () => toast.success(`Deleted "${title}"`),
-          });
-        }}
+      <DeleteQuizDialog
+        quiz={deletingQuiz}
+        mutation={deleteMutation}
+        onClose={() => setDeletingQuiz(null)}
       />
     </main>
+  );
+}
+
+function isAdminAuth(auth: ReturnType<typeof useAuth>): boolean {
+  return auth.status === 'authenticated' && auth.user?.role === 'admin';
+}
+
+function usePickerLists() {
+  const sessionsQuery = useQuery({
+    queryKey: queryKeys.sessions.list(),
+    queryFn: fetchSessions,
+  });
+  const quizzesQuery = useQuery({
+    queryKey: queryKeys.quizzes.list(),
+    queryFn: () => fetchQuizzes(),
+  });
+  const sessions = sessionsQuery.data ?? EMPTY_SESSIONS;
+  const quizzes = quizzesQuery.data?.quizzes ?? EMPTY_QUIZZES;
+  // Single alert slot, sessions first — matches the old shared `error` state,
+  // where whichever fetch rejected last won it and the sessions fetch
+  // cleared it on success.
+  const error =
+    apiErrorMessage(
+      sessionsQuery.error,
+      SessionApiError,
+      'Could not load sessions',
+    ) ??
+    apiErrorMessage(quizzesQuery.error, QuizApiError, 'Could not load quizzes');
+
+  return { sessions, quizzes, error };
+}
+
+function useCloseSessionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (joinCode: string) => closeSession(joinCode),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all }),
+    onError: (closeError) =>
+      toast.error(
+        apiErrorMessage(
+          closeError,
+          SessionApiError,
+          'Could not close session',
+        ) ?? 'Could not close session',
+      ),
+  });
+}
+
+function useDeleteQuizMutation(onDeleted: () => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (quizId: number) => deleteQuiz(quizId),
+    onSuccess: () => {
+      // Deleting a quiz cascades (at the DB level) to every game_session
+      // ever run from it, including ended ones the Running Sessions list
+      // still shows — refresh both lists, not just quizzes.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
+      onDeleted();
+    },
+    onError: (deleteError) =>
+      toast.error(
+        apiErrorMessage(deleteError, QuizApiError, 'Could not delete quiz') ??
+          'Could not delete quiz',
+      ),
+  });
+}
+
+function quizColumns(
+  isAdmin: boolean,
+  {
+    onStart,
+    onDelete,
+  }: {
+    onStart: (quizId: number) => void;
+    onDelete: (quiz: QuizSummary) => void;
+  },
+) {
+  return quizColumnHelper.columns([
+    quizColumnHelper.accessor('title', {
+      header: 'Quiz',
+      sortFn: sortFn_alphanumeric,
+      cell: (context) => <QuizTitleCell quiz={context.row.original} />,
+    }),
+    quizColumnHelper.accessor('updatedAt', {
+      header: 'Edited',
+      sortFn: sortFn_datetime,
+      cell: (context) => new Date(context.getValue()).toLocaleString(),
+    }),
+    quizColumnHelper.display({
+      id: 'actions',
+      header: 'Actions',
+      cell: (context) => (
+        <QuizActions
+          quiz={context.row.original}
+          isAdmin={isAdmin}
+          onStart={onStart}
+          onDelete={onDelete}
+        />
+      ),
+    }),
+  ]);
+}
+
+function QuizTitleCell({ quiz }: { quiz: QuizSummary }) {
+  const questionCount = quiz.rounds.reduce(
+    (sum, round) => sum + round.questions.length,
+    0,
+  );
+  return (
+    <span className="font-extrabold">
+      {quiz.title} ({quiz.rounds.length} rounds | {questionCount} total
+      questions)
+    </span>
+  );
+}
+
+function QuizActions({
+  quiz,
+  isAdmin,
+  onStart,
+  onDelete,
+}: {
+  quiz: QuizSummary;
+  isAdmin: boolean;
+  onStart: (quizId: number) => void;
+  onDelete: (quiz: QuizSummary) => void;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <Button
+        variant="solid-flat"
+        onClick={() => onStart(quiz.id)}
+        className="flex min-h-8 items-center gap-1.5 px-4"
+      >
+        <PlayIcon aria-hidden="true" />
+        Start
+      </Button>
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <Button
+            type="button"
+            size="icon-md"
+            aria-label={`Actions for ${quiz.title}`}
+            className="rounded-lg border-2 border-foreground/15 text-foreground/70"
+          >
+            <DotsVerticalIcon aria-hidden="true" />
+          </Button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            align="end"
+            className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
+          >
+            <DropdownMenu.Item asChild>
+              <Link
+                href={`/quizzes/${quiz.id}`}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
+              >
+                <Pencil1Icon aria-hidden="true" />
+                Edit
+              </Link>
+            </DropdownMenu.Item>
+            <DropdownMenu.Item asChild>
+              <Link
+                href={quizPreviewHref(quiz.id)}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
+              >
+                <EyeOpenIcon aria-hidden="true" />
+                Preview
+              </Link>
+            </DropdownMenu.Item>
+            {isAdmin && (
+              <DropdownMenu.Item
+                onSelect={() => onDelete(quiz)}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-magenta outline-none data-highlighted:bg-magenta/10"
+              >
+                <TrashIcon aria-hidden="true" />
+                Delete
+              </DropdownMenu.Item>
+            )}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+    </div>
+  );
+}
+
+function QuizzesTable({
+  isEmpty,
+  children,
+}: {
+  isEmpty: boolean;
+  children: ReactNode;
+}) {
+  return isEmpty ? (
+    <p className="text-sm text-foreground/55">No quizzes yet.</p>
+  ) : (
+    children
+  );
+}
+
+function DeleteQuizDialog({
+  quiz,
+  mutation,
+  onClose,
+}: {
+  quiz: QuizSummary | null;
+  mutation: ReturnType<typeof useDeleteQuizMutation>;
+  onClose: () => void;
+}) {
+  return (
+    <ConfirmDialog
+      open={quiz !== null}
+      onOpenChange={(open) => {
+        if (!open && !mutation.isPending) onClose();
+      }}
+      title={`Delete "${quiz?.title}"?`}
+      description="This permanently deletes the quiz, including every session ever run from it. This can't be undone."
+      confirmLabel={mutation.isPending ? 'Deleting…' : 'Delete'}
+      onConfirm={() => {
+        if (!quiz) return;
+        const { title } = quiz;
+        mutation.mutate(quiz.id, {
+          onSuccess: () => toast.success(`Deleted "${title}"`),
+        });
+      }}
+    />
   );
 }

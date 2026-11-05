@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import Link from 'next/link';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { fetchLeagues } from '@/app/lib/leagues-api';
@@ -24,14 +24,6 @@ export function FeedbackTrendsPanel() {
     from: '',
     to: '',
   });
-  const inLeague = range.leagueId !== undefined;
-
-  const leaguesQuery = useQuery({
-    queryKey: queryKeys.leagues.list(),
-    queryFn: ({ signal }) => fetchLeagues({}, signal),
-  });
-  const leagues = leaguesQuery.data?.items ?? [];
-
   const trendsQuery = useQuery({
     queryKey: queryKeys.stats.feedbackTrends(range),
     queryFn: ({ signal }) => fetchFeedbackTrends(range, signal),
@@ -56,64 +48,100 @@ export function FeedbackTrendsPanel() {
         <h1 className="font-display text-2xl">Feedback trends</h1>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm font-extrabold">
-          League
-          <select
-            value={range.leagueId ?? ''}
-            onChange={(event) => {
-              const { value } = event.target;
-              setRange(({ from, to }) =>
-                value ? { from, to, leagueId: Number(value) } : { from, to },
-              );
-            }}
-            className={DATE_INPUT_CLASS}
-          >
-            <option value="">Date range</option>
-            {leagues.map((league) => (
-              <option key={league.id} value={league.id}>
-                {league.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-extrabold">
-          From
-          <input
-            type="date"
-            value={range.from}
-            disabled={inLeague}
-            max={range.to || undefined}
-            onChange={(event) =>
-              setRange((old) => ({ ...old, from: event.target.value }))
-            }
-            className={DATE_INPUT_CLASS}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-extrabold">
-          To
-          <input
-            type="date"
-            value={range.to}
-            disabled={inLeague}
-            min={range.from || undefined}
-            onChange={(event) =>
-              setRange((old) => ({ ...old, to: event.target.value }))
-            }
-            className={DATE_INPUT_CLASS}
-          />
-        </label>
-        {!inLeague && (range.from || range.to) && (
-          <button
-            type="button"
-            onClick={() => setRange({ from: '', to: '' })}
-            className="min-h-10 text-sm underline-offset-2 hover:underline"
-          >
-            All time
-          </button>
-        )}
-      </div>
+      <RangeFilters range={range} onRangeChange={setRange} />
 
+      <TrendsBody data={data} error={error} />
+    </main>
+  );
+}
+
+function RangeFilters({
+  range,
+  onRangeChange: setRange,
+}: {
+  range: FeedbackTrendsRange;
+  onRangeChange: Dispatch<SetStateAction<FeedbackTrendsRange>>;
+}) {
+  const inLeague = range.leagueId !== undefined;
+  const leaguesQuery = useQuery({
+    queryKey: queryKeys.leagues.list(),
+    queryFn: ({ signal }) => fetchLeagues({}, signal),
+  });
+  const leagues = leaguesQuery.data?.items ?? [];
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <label className="flex flex-col gap-1 text-sm font-extrabold">
+        League
+        <select
+          value={range.leagueId ?? ''}
+          onChange={(event) => {
+            const { value } = event.target;
+            setRange(({ from, to }) =>
+              value ? { from, to, leagueId: Number(value) } : { from, to },
+            );
+          }}
+          className={DATE_INPUT_CLASS}
+        >
+          <option value="">Date range</option>
+          {leagues.map((league) => (
+            <option key={league.id} value={league.id}>
+              {league.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-extrabold">
+        From
+        <input
+          type="date"
+          value={range.from}
+          disabled={inLeague}
+          max={range.to || undefined}
+          onChange={(event) =>
+            setRange((old) => ({ ...old, from: event.target.value }))
+          }
+          className={DATE_INPUT_CLASS}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-extrabold">
+        To
+        <input
+          type="date"
+          value={range.to}
+          disabled={inLeague}
+          min={range.from || undefined}
+          onChange={(event) =>
+            setRange((old) => ({ ...old, to: event.target.value }))
+          }
+          className={DATE_INPUT_CLASS}
+        />
+      </label>
+      {!inLeague && hasDates(range) && (
+        <button
+          type="button"
+          onClick={() => setRange({ from: '', to: '' })}
+          className="min-h-10 text-sm underline-offset-2 hover:underline"
+        >
+          All time
+        </button>
+      )}
+    </div>
+  );
+}
+
+function hasDates(range: FeedbackTrendsRange): boolean {
+  return Boolean(range.from || range.to);
+}
+
+function TrendsBody({
+  data,
+  error,
+}: {
+  data: Awaited<ReturnType<typeof fetchFeedbackTrends>> | null;
+  error: string | null | undefined;
+}) {
+  return (
+    <>
       {error && (
         <p role="alert" className="font-extrabold text-magenta">
           {error}
@@ -141,6 +169,6 @@ export function FeedbackTrendsPanel() {
           <TopicSuggestionsList topics={data.topics} />
         </section>
       )}
-    </main>
+    </>
   );
 }

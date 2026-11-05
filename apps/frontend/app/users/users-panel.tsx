@@ -17,7 +17,6 @@ import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 
 export function UsersPanel() {
-  const queryClient = useQueryClient();
   const usersQuery = useQuery({
     queryKey: queryKeys.users.list(),
     queryFn: ({ signal }) => fetchUsers(signal),
@@ -36,6 +35,94 @@ export function UsersPanel() {
     Record<number, UserRole>
   >({});
 
+  const { approveMutation, deactivateMutation, denyMutation } =
+    useUserMutations();
+
+  function handleApprove(userId: number): void {
+    const role = roleSelections[userId] ?? 'moderator';
+    approveMutation.mutate({ userId, role });
+  }
+
+  function handleDeactivate(userId: number): void {
+    deactivateMutation.mutate(userId);
+  }
+
+  function handleDeny(userId: number): void {
+    denyMutation.mutate(userId);
+  }
+
+  if (!users) return <UsersLoading error={error} />;
+
+  return (
+    <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
+      <h1 className="font-display text-2xl">Users</h1>
+      {error && (
+        <p role="alert" className="font-extrabold text-magenta">
+          {error}
+        </p>
+      )}
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-display text-lg">Pending approval</h2>
+        {users.pending.length === 0 && (
+          <p className="text-sm text-foreground/60">No pending accounts.</p>
+        )}
+        <ul className="flex flex-col gap-2">
+          {users.pending.map((pendingUser) => (
+            <PendingUserRow
+              key={pendingUser.id}
+              user={pendingUser}
+              role={roleSelections[pendingUser.id] ?? 'moderator'}
+              onRoleChange={(role) =>
+                setRoleSelections((current) => ({
+                  ...current,
+                  [pendingUser.id]: role,
+                }))
+              }
+              onApprove={() => handleApprove(pendingUser.id)}
+              onDeny={() => handleDeny(pendingUser.id)}
+            />
+          ))}
+        </ul>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-display text-lg">Active</h2>
+        <ul className="flex flex-col gap-2">
+          {users.active.map((activeUser) => (
+            <ActiveUserRow
+              key={activeUser.id}
+              user={activeUser}
+              onDeactivate={() => handleDeactivate(activeUser.id)}
+            />
+          ))}
+        </ul>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-display text-lg">Deactivated</h2>
+        <ul className="flex flex-col gap-2">
+          {users.deactivated.map((deactivatedUser) => (
+            <li
+              key={deactivatedUser.id}
+              className="flex items-center gap-3 rounded-lg border border-foreground/15 p-3 opacity-60"
+            >
+              <span className="font-bold">{deactivatedUser.username}</span>
+              <span className="text-sm text-foreground/60">
+                {deactivatedUser.role}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  );
+}
+
+type UsersList = NonNullable<Awaited<ReturnType<typeof fetchUsers>>>;
+
+function useUserMutations() {
+  const queryClient = useQueryClient();
   const invalidateUsers = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.users.list() });
 
@@ -69,149 +156,105 @@ export function UsersPanel() {
           'Could not deny user',
       ),
   });
+  return { approveMutation, deactivateMutation, denyMutation };
+}
 
-  function handleApprove(userId: number): void {
-    const role = roleSelections[userId] ?? 'moderator';
-    approveMutation.mutate({ userId, role });
-  }
-
-  function handleDeactivate(userId: number): void {
-    deactivateMutation.mutate(userId);
-  }
-
-  function handleDeny(userId: number): void {
-    denyMutation.mutate(userId);
-  }
-
-  if (!users) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        {error ? (
-          <p role="alert" className="font-extrabold text-magenta">
-            {error}
-          </p>
-        ) : (
-          <p className="font-display text-xl">Loading…</p>
-        )}
-      </main>
-    );
-  }
-
+function UsersLoading({ error }: { error: string | null | undefined }) {
   return (
-    <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
-      <h1 className="font-display text-2xl">Users</h1>
-      {error && (
+    <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+      {error ? (
         <p role="alert" className="font-extrabold text-magenta">
           {error}
         </p>
+      ) : (
+        <p className="font-display text-xl">Loading…</p>
       )}
-
-      <section className="flex flex-col gap-2">
-        <h2 className="font-display text-lg">Pending approval</h2>
-        {users.pending.length === 0 && (
-          <p className="text-sm text-foreground/60">No pending accounts.</p>
-        )}
-        <ul className="flex flex-col gap-2">
-          {users.pending.map((pendingUser) => (
-            <li
-              key={pendingUser.id}
-              className="flex items-center gap-3 rounded-lg border border-foreground/15 p-3"
-            >
-              <span className="font-bold">{pendingUser.username}</span>
-              <select
-                aria-label={`Role for ${pendingUser.username}`}
-                value={roleSelections[pendingUser.id] ?? 'moderator'}
-                onChange={(event) =>
-                  setRoleSelections((current) => ({
-                    ...current,
-                    [pendingUser.id]: event.target.value as UserRole,
-                  }))
-                }
-                className="rounded border border-foreground/35 px-2 py-1 text-sm"
-              >
-                <option value="moderator">Moderator</option>
-                <option value="admin">Admin</option>
-              </select>
-              <Button
-                type="button"
-                variant="solid-flat"
-                size="sm"
-                onClick={() => handleApprove(pendingUser.id)}
-                className="ml-auto"
-              >
-                <CheckIcon aria-hidden="true" />
-                Approve
-              </Button>
-              <ConfirmDialog
-                trigger={
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="rounded-lg border-2 border-magenta font-extrabold text-magenta"
-                  >
-                    <Cross2Icon aria-hidden="true" />
-                    Deny
-                  </Button>
-                }
-                title={`Deny ${pendingUser.username}?`}
-                description="This deletes the pending account. They would have to register again."
-                confirmLabel="Deny"
-                onConfirm={() => handleDeny(pendingUser.id)}
-              />
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="font-display text-lg">Active</h2>
-        <ul className="flex flex-col gap-2">
-          {users.active.map((activeUser) => (
-            <li
-              key={activeUser.id}
-              className="flex items-center gap-3 rounded-lg border border-foreground/15 p-3"
-            >
-              <span className="font-bold">{activeUser.username}</span>
-              <span className="text-sm text-foreground/60">
-                {activeUser.role}
-              </span>
-              <ConfirmDialog
-                trigger={
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="ml-auto rounded-lg border-2 border-magenta font-extrabold text-magenta"
-                  >
-                    <LockClosedIcon aria-hidden="true" />
-                    Deactivate
-                  </Button>
-                }
-                title={`Deactivate ${activeUser.username}?`}
-                description="They are signed out at once and cannot sign in again. This page has no way to undo it."
-                confirmLabel="Deactivate"
-                onConfirm={() => handleDeactivate(activeUser.id)}
-              />
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="font-display text-lg">Deactivated</h2>
-        <ul className="flex flex-col gap-2">
-          {users.deactivated.map((deactivatedUser) => (
-            <li
-              key={deactivatedUser.id}
-              className="flex items-center gap-3 rounded-lg border border-foreground/15 p-3 opacity-60"
-            >
-              <span className="font-bold">{deactivatedUser.username}</span>
-              <span className="text-sm text-foreground/60">
-                {deactivatedUser.role}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
     </main>
+  );
+}
+
+function PendingUserRow({
+  user,
+  role,
+  onRoleChange,
+  onApprove,
+  onDeny,
+}: {
+  user: UsersList['pending'][number];
+  role: UserRole;
+  onRoleChange: (role: UserRole) => void;
+  onApprove: () => void;
+  onDeny: () => void;
+}) {
+  return (
+    <li className="flex items-center gap-3 rounded-lg border border-foreground/15 p-3">
+      <span className="font-bold">{user.username}</span>
+      <select
+        aria-label={`Role for ${user.username}`}
+        value={role}
+        onChange={(event) => onRoleChange(event.target.value as UserRole)}
+        className="rounded border border-foreground/35 px-2 py-1 text-sm"
+      >
+        <option value="moderator">Moderator</option>
+        <option value="admin">Admin</option>
+      </select>
+      <Button
+        type="button"
+        variant="solid-flat"
+        size="sm"
+        onClick={onApprove}
+        className="ml-auto"
+      >
+        <CheckIcon aria-hidden="true" />
+        Approve
+      </Button>
+      <ConfirmDialog
+        trigger={
+          <Button
+            type="button"
+            size="sm"
+            className="rounded-lg border-2 border-magenta font-extrabold text-magenta"
+          >
+            <Cross2Icon aria-hidden="true" />
+            Deny
+          </Button>
+        }
+        title={`Deny ${user.username}?`}
+        description="This deletes the pending account. They would have to register again."
+        confirmLabel="Deny"
+        onConfirm={onDeny}
+      />
+    </li>
+  );
+}
+
+function ActiveUserRow({
+  user,
+  onDeactivate,
+}: {
+  user: UsersList['active'][number];
+  onDeactivate: () => void;
+}) {
+  return (
+    <li className="flex items-center gap-3 rounded-lg border border-foreground/15 p-3">
+      <span className="font-bold">{user.username}</span>
+      <span className="text-sm text-foreground/60">{user.role}</span>
+      <ConfirmDialog
+        trigger={
+          <Button
+            type="button"
+            size="sm"
+            className="ml-auto rounded-lg border-2 border-magenta font-extrabold text-magenta"
+          >
+            <LockClosedIcon aria-hidden="true" />
+            Deactivate
+          </Button>
+        }
+        title={`Deactivate ${user.username}?`}
+        description="They are signed out at once and cannot sign in again. This page has no way to undo it."
+        confirmLabel="Deactivate"
+        onConfirm={onDeactivate}
+      />
+    </li>
   );
 }

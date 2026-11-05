@@ -46,82 +46,14 @@ export function TeamsDirectoryPanel() {
     null,
   );
 
-  const columns = useMemo(
-    () =>
-      helper.columns([
-        helper.accessor('name', {
-          header: 'Team',
-          enableSorting: false,
-          cell: (ctx) => (
-            <Link
-              href={`/teams/${ctx.row.original.id}`}
-              className="underline-offset-2 hover:underline"
-            >
-              {ctx.getValue()}
-            </Link>
-          ),
-        }),
-        helper.accessor('joinedAt', {
-          header: 'Joined',
-          cell: (ctx) => new Date(ctx.getValue()).toLocaleDateString(),
-        }),
-        helper.accessor('sessionsJoined', { header: 'Sessions played' }),
-        helper.accessor('averagePlacing', {
-          header: 'Avg. placing',
-          cell: (ctx) => ctx.getValue()?.toFixed(1) ?? '—',
-        }),
-        helper.display({
-          id: 'actions',
-          header: 'Actions',
-          cell: (context) => {
-            const team = context.row.original;
-            return (
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <Button
-                    type="button"
-                    size="icon-md"
-                    aria-label={`Actions for ${team.name}`}
-                    className="rounded-lg border-2 border-foreground/15 text-foreground/70"
-                  >
-                    <DotsVerticalIcon aria-hidden="true" />
-                  </Button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content
-                    align="end"
-                    className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
-                  >
-                    <DropdownMenu.Item
-                      onSelect={() => setViewingCodeTeam(team)}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
-                    >
-                      <EyeOpenIcon aria-hidden="true" />
-                      Show team code
-                    </DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
-            );
-          },
-        }),
-      ]),
-    [],
-  );
+  const columns = useMemo(() => teamsColumns(setViewingCodeTeam), []);
 
-  const sortBy = (sorting[0]?.id ?? 'sessionsJoined') as TeamsSortColumn;
-  const sortOrder: TeamsSortOrder = sorting[0]
-    ? sorting[0].desc
-      ? 'desc'
-      : 'asc'
-    : 'desc';
   // shortcut: one request per keystroke, debounce if /teams ever gets slow.
   const trimmedSearch = search.trim();
   const params = {
     page: pagination.pageIndex + 1,
     pageSize: pagination.pageSize,
-    sortBy,
-    sortOrder,
+    ...sortParamsOf(sorting),
     search: trimmedSearch,
   };
 
@@ -166,19 +98,7 @@ export function TeamsDirectoryPanel() {
     rowCount: payload?.total ?? 0,
   });
 
-  if (!payload) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        {error ? (
-          <p role="alert" className="font-extrabold text-magenta">
-            {error}
-          </p>
-        ) : (
-          <p className="font-display text-xl">Loading…</p>
-        )}
-      </main>
-    );
-  }
+  if (!payload) return <DirectoryLoading error={error} />;
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
@@ -211,37 +131,155 @@ export function TeamsDirectoryPanel() {
         }
       />
 
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          variant="outline-muted"
-          size="sm"
-          disabled={!table.getCanPreviousPage()}
-          onClick={() => table.previousPage()}
-        >
-          Prev
-        </Button>
-        <span className="text-sm text-foreground/60">
-          Page {pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
-        </span>
-        <Button
-          type="button"
-          variant="outline-muted"
-          size="sm"
-          disabled={!table.getCanNextPage()}
-          onClick={() => table.nextPage()}
-        >
-          Next
-        </Button>
-      </div>
+      <DirectoryPager table={table} pageIndex={pagination.pageIndex} />
       <TeamCodeDialog
         open={viewingCodeTeam !== null}
-        teamName={viewingCodeTeam?.name ?? ''}
-        code={viewingCodeTeam?.code ?? null}
+        {...teamCodeOf(viewingCodeTeam)}
         onOpenChange={(open) => {
           if (!open) setViewingCodeTeam(null);
         }}
       />
     </main>
+  );
+}
+
+function teamsColumns(onViewCode: (team: TeamListItem) => void) {
+  return helper.columns([
+    helper.accessor('name', {
+      header: 'Team',
+      enableSorting: false,
+      cell: (ctx) => (
+        <Link
+          href={`/teams/${ctx.row.original.id}`}
+          className="underline-offset-2 hover:underline"
+        >
+          {ctx.getValue()}
+        </Link>
+      ),
+    }),
+    helper.accessor('joinedAt', {
+      header: 'Joined',
+      cell: (ctx) => new Date(ctx.getValue()).toLocaleDateString(),
+    }),
+    helper.accessor('sessionsJoined', { header: 'Sessions played' }),
+    helper.accessor('averagePlacing', {
+      header: 'Avg. placing',
+      cell: (ctx) => ctx.getValue()?.toFixed(1) ?? '—',
+    }),
+    helper.display({
+      id: 'actions',
+      header: 'Actions',
+      cell: (context) => (
+        <TeamActionsMenu team={context.row.original} onViewCode={onViewCode} />
+      ),
+    }),
+  ]);
+}
+
+function TeamActionsMenu({
+  team,
+  onViewCode,
+}: {
+  team: TeamListItem;
+  onViewCode: (team: TeamListItem) => void;
+}) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <Button
+          type="button"
+          size="icon-md"
+          aria-label={`Actions for ${team.name}`}
+          className="rounded-lg border-2 border-foreground/15 text-foreground/70"
+        >
+          <DotsVerticalIcon aria-hidden="true" />
+        </Button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
+        >
+          <DropdownMenu.Item
+            onSelect={() => onViewCode(team)}
+            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
+          >
+            <EyeOpenIcon aria-hidden="true" />
+            Show team code
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+/** The query's sort, most sessions first until a column is picked. */
+function sortParamsOf(sorting: SortingState): {
+  sortBy: TeamsSortColumn;
+  sortOrder: TeamsSortOrder;
+} {
+  const [first] = sorting;
+  if (!first) return { sortBy: 'sessionsJoined', sortOrder: 'desc' };
+  return {
+    sortBy: first.id as TeamsSortColumn,
+    sortOrder: first.desc ? 'desc' : 'asc',
+  };
+}
+
+function teamCodeOf(team: TeamListItem | null) {
+  return { teamName: team?.name ?? '', code: team?.code ?? null };
+}
+
+function DirectoryLoading({ error }: { error: string | null | undefined }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+      {error ? (
+        <p role="alert" className="font-extrabold text-magenta">
+          {error}
+        </p>
+      ) : (
+        <p className="font-display text-xl">Loading…</p>
+      )}
+    </main>
+  );
+}
+
+function DirectoryPager({
+  table,
+  pageIndex,
+}: {
+  table: {
+    getCanPreviousPage: () => boolean;
+    getCanNextPage: () => boolean;
+    previousPage: () => void;
+    nextPage: () => void;
+    getPageCount: () => number;
+  };
+  pageIndex: number;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <Button
+        type="button"
+        variant="outline-muted"
+        size="sm"
+        disabled={!table.getCanPreviousPage()}
+        onClick={() => table.previousPage()}
+      >
+        Prev
+      </Button>
+      <span className="text-sm text-foreground/60">
+        Page {pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+      </span>
+      <Button
+        type="button"
+        variant="outline-muted"
+        size="sm"
+        disabled={!table.getCanNextPage()}
+        onClick={() => table.nextPage()}
+      >
+        Next
+      </Button>
+    </div>
   );
 }

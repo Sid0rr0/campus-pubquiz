@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { ariaSortOf } from '@/app/components/sortable-table';
 import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
 import {
   createColumnHelper,
@@ -103,107 +104,14 @@ export function ScoresheetTable({
     [scoresheet],
   );
 
-  // The columns a border separates from the round before them: each later
-  // round (its header and first question) and the totals. The first round
-  // already sits against Team's border.
-  const roundBorderColumnIds = useMemo(() => {
-    const roundsWithQuestions = rounds.flatMap((round) => {
-      const first = questions.find(
-        (question) => question.roundId === round.roundId,
-      );
-      return first ? [{ roundId: round.roundId, first }] : [];
-    });
-    return new Set([
-      ...roundsWithQuestions
-        .slice(1)
-        .flatMap(({ roundId, first }) => [
-          `round-${roundId}`,
-          `${QUESTION_COLUMN_PREFIX}${first.questionId}`,
-        ]),
-      'totals',
-      'bonusPoints',
-    ]);
-  }, [rounds, questions]);
-
-  const columns = useMemo(() => {
-    const roundGroups = rounds.flatMap((round, roundIndex) => {
-      const roundQuestions = questions.filter(
-        (question) => question.roundId === round.roundId,
-      );
-      if (roundQuestions.length === 0) return [];
-      return [
-        helper.group({
-          id: `round-${round.roundId}`,
-          header: () => <span title={round.title}>Round {roundIndex + 1}</span>,
-          columns: helper.columns(
-            roundQuestions.map((question, questionIndex) =>
-              // A missing answer sorts below every scored one.
-              helper.accessor(
-                (entry) =>
-                  cellsByKey.get(cellKey(entry.teamId, question.questionId))
-                    ?.pointsAwarded ?? -1,
-                {
-                  id: `${QUESTION_COLUMN_PREFIX}${question.questionId}`,
-                  header: () => (
-                    <span
-                      title={`${question.prompt}\nAnswer: ${question.answer}`}
-                    >
-                      Q{questionIndex + 1}
-                    </span>
-                  ),
-                  sortFn: sortFn_basic,
-                  cell: (context) => (
-                    <ScoresheetCellContent
-                      cell={cellsByKey.get(
-                        cellKey(
-                          context.row.original.teamId,
-                          question.questionId,
-                        ),
-                      )}
-                    />
-                  ),
-                },
-              ),
-            ),
-          ),
-        }),
-      ];
-    });
-    return helper.columns([
-      helper.group({
-        id: 'team',
-        header: '',
-        columns: helper.columns([
-          helper.display({
-            id: 'rank',
-            header: 'Rank',
-            cell: (context) => {
-              const { rank, rankTo } = context.row.original;
-              return rank === null || rankTo === null
-                ? 'left'
-                : formatRankLabel({ rank, rankTo });
-            },
-          }),
-          helper.accessor('teamName', {
-            header: 'Team',
-            enableSorting: false,
-          }),
-        ]),
-      }),
-      ...roundGroups,
-      helper.group({
-        id: 'totals',
-        header: '',
-        columns: helper.columns([
-          helper.accessor('bonusPoints', {
-            header: 'Bonus',
-            enableSorting: false,
-          }),
-          helper.accessor('total', { header: 'Total', sortFn: sortFn_basic }),
-        ]),
-      }),
-    ]);
-  }, [rounds, questions, cellsByKey]);
+  const roundBorderColumnIds = useMemo(
+    () => roundBorderColumnIdsOf(rounds, questions),
+    [rounds, questions],
+  );
+  const columns = useMemo(
+    () => scoresheetColumns(rounds, questions, cellsByKey),
+    [rounds, questions, cellsByKey],
+  );
 
   const table = useTable({
     features,
@@ -212,13 +120,6 @@ export function ScoresheetTable({
     getRowId: (entry) => String(entry.teamId),
   });
 
-  const verdictClass = (columnId: string, teamId: number): string => {
-    if (!columnId.startsWith(QUESTION_COLUMN_PREFIX)) return '';
-    const questionId = Number(columnId.slice(QUESTION_COLUMN_PREFIX.length));
-    const verdict = cellsByKey.get(cellKey(teamId, questionId))?.verdict;
-    return verdict ? VERDICT_CELL_CLASS[verdict] : '';
-  };
-
   return (
     <div className="overflow-x-auto rounded-xl border border-foreground/15">
       {/* border-separate: collapsed borders stay behind when sticky cells move. */}
@@ -226,45 +127,14 @@ export function ScoresheetTable({
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                const column = header.column;
-                const isSortable = column.getCanSort();
-                const sorted = column.getIsSorted();
-                return (
-                  <th
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    aria-sort={
-                      sorted === 'asc'
-                        ? 'ascending'
-                        : sorted === 'desc'
-                          ? 'descending'
-                          : isSortable
-                            ? 'none'
-                            : undefined
-                    }
-                    className={`whitespace-nowrap border-b border-foreground/15 px-3 py-2 font-display text-sm text-foreground/70 ${HEADER_BG} ${STICKY_CLASS[column.id] ?? ''} ${roundBorderColumnIds.has(column.id) ? ROUND_BORDER_CLASS : ''}`}
-                  >
-                    {header.isPlaceholder ? null : isSortable ? (
-                      <button
-                        type="button"
-                        onClick={column.getToggleSortingHandler()}
-                        className="flex items-center gap-1"
-                      >
-                        <table.FlexRender header={header} />
-                        {sorted === 'asc' && (
-                          <ChevronUpIcon aria-hidden="true" />
-                        )}
-                        {sorted === 'desc' && (
-                          <ChevronDownIcon aria-hidden="true" />
-                        )}
-                      </button>
-                    ) : (
-                      <table.FlexRender header={header} />
-                    )}
-                  </th>
-                );
-              })}
+              {headerGroup.headers.map((header) => (
+                <ScoresheetHeaderCell
+                  key={header.id}
+                  table={table}
+                  header={header}
+                  hasRoundBorder={roundBorderColumnIds.has(header.column.id)}
+                />
+              ))}
             </tr>
           ))}
         </thead>
@@ -287,7 +157,7 @@ export function ScoresheetTable({
                 {row.getAllCells().map((cell) => (
                   <td
                     key={cell.id}
-                    className={`whitespace-nowrap border-b border-foreground/10 px-3 py-2 ${cell.column.id in STICKY_CLASS ? `bg-background ${STICKY_CLASS[cell.column.id]}` : verdictClass(cell.column.id, row.original.teamId)} ${roundBorderColumnIds.has(cell.column.id) ? ROUND_BORDER_CLASS : ''}`}
+                    className={`whitespace-nowrap border-b border-foreground/10 px-3 py-2 ${bodyCellClass(cell.column.id, row.original.teamId, cellsByKey)} ${roundBorderColumnIds.has(cell.column.id) ? ROUND_BORDER_CLASS : ''}`}
                   >
                     <table.FlexRender cell={cell} />
                   </td>
@@ -298,5 +168,170 @@ export function ScoresheetTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+type CellsByKey = Map<string, ScoresheetTableProps['scoresheet'][number]>;
+
+/**
+ * The columns a border separates from the round before them: each later
+ * round (its header and first question) and the totals. The first round
+ * already sits against Team's border.
+ */
+function roundBorderColumnIdsOf(
+  rounds: ScoresheetTableProps['rounds'],
+  questions: ScoresheetTableProps['questions'],
+): Set<string> {
+  const roundsWithQuestions = rounds.flatMap((round) => {
+    const first = questions.find(
+      (question) => question.roundId === round.roundId,
+    );
+    return first ? [{ roundId: round.roundId, first }] : [];
+  });
+  return new Set([
+    ...roundsWithQuestions
+      .slice(1)
+      .flatMap(({ roundId, first }) => [
+        `round-${roundId}`,
+        `${QUESTION_COLUMN_PREFIX}${first.questionId}`,
+      ]),
+    'totals',
+    'bonusPoints',
+  ]);
+}
+
+function scoresheetColumns(
+  rounds: ScoresheetTableProps['rounds'],
+  questions: ScoresheetTableProps['questions'],
+  cellsByKey: CellsByKey,
+) {
+  const roundGroups = rounds.flatMap((round, roundIndex) => {
+    const roundQuestions = questions.filter(
+      (question) => question.roundId === round.roundId,
+    );
+    if (roundQuestions.length === 0) return [];
+    return [
+      helper.group({
+        id: `round-${round.roundId}`,
+        header: () => <span title={round.title}>Round {roundIndex + 1}</span>,
+        columns: helper.columns(
+          roundQuestions.map((question, questionIndex) =>
+            // A missing answer sorts below every scored one.
+            helper.accessor(
+              (entry) =>
+                cellsByKey.get(cellKey(entry.teamId, question.questionId))
+                  ?.pointsAwarded ?? -1,
+              {
+                id: `${QUESTION_COLUMN_PREFIX}${question.questionId}`,
+                header: () => (
+                  <span
+                    title={`${question.prompt}\nAnswer: ${question.answer}`}
+                  >
+                    Q{questionIndex + 1}
+                  </span>
+                ),
+                sortFn: sortFn_basic,
+                cell: (context) => (
+                  <ScoresheetCellContent
+                    cell={cellsByKey.get(
+                      cellKey(context.row.original.teamId, question.questionId),
+                    )}
+                  />
+                ),
+              },
+            ),
+          ),
+        ),
+      }),
+    ];
+  });
+  return helper.columns([
+    helper.group({
+      id: 'team',
+      header: '',
+      columns: helper.columns([
+        helper.display({
+          id: 'rank',
+          header: 'Rank',
+          cell: (context) => {
+            const { rank, rankTo } = context.row.original;
+            return rank === null || rankTo === null
+              ? 'left'
+              : formatRankLabel({ rank, rankTo });
+          },
+        }),
+        helper.accessor('teamName', {
+          header: 'Team',
+          enableSorting: false,
+        }),
+      ]),
+    }),
+    ...roundGroups,
+    helper.group({
+      id: 'totals',
+      header: '',
+      columns: helper.columns([
+        helper.accessor('bonusPoints', {
+          header: 'Bonus',
+          enableSorting: false,
+        }),
+        helper.accessor('total', { header: 'Total', sortFn: sortFn_basic }),
+      ]),
+    }),
+  ]);
+}
+
+/** A sticky column's background and position, else the cell's verdict colour. */
+function bodyCellClass(
+  columnId: string,
+  teamId: number,
+  cellsByKey: CellsByKey,
+): string {
+  if (columnId in STICKY_CLASS)
+    return `bg-background ${STICKY_CLASS[columnId]}`;
+  if (!columnId.startsWith(QUESTION_COLUMN_PREFIX)) return '';
+  const questionId = Number(columnId.slice(QUESTION_COLUMN_PREFIX.length));
+  const verdict = cellsByKey.get(cellKey(teamId, questionId))?.verdict;
+  return verdict ? VERDICT_CELL_CLASS[verdict] : '';
+}
+
+type ScoresheetTable = ReturnType<
+  typeof useTable<typeof features, ScoresheetTableProps['standings'][number]>
+>;
+
+function ScoresheetHeaderCell({
+  table,
+  header,
+  hasRoundBorder,
+}: {
+  table: ScoresheetTable;
+  header: ReturnType<
+    ScoresheetTable['getHeaderGroups']
+  >[number]['headers'][number];
+  hasRoundBorder: boolean;
+}) {
+  const column = header.column;
+  const isSortable = column.getCanSort();
+  const sorted = column.getIsSorted();
+  return (
+    <th
+      colSpan={header.colSpan}
+      aria-sort={ariaSortOf(sorted, isSortable)}
+      className={`whitespace-nowrap border-b border-foreground/15 px-3 py-2 font-display text-sm text-foreground/70 ${HEADER_BG} ${STICKY_CLASS[column.id] ?? ''} ${hasRoundBorder ? ROUND_BORDER_CLASS : ''}`}
+    >
+      {header.isPlaceholder ? null : isSortable ? (
+        <button
+          type="button"
+          onClick={column.getToggleSortingHandler()}
+          className="flex items-center gap-1"
+        >
+          <table.FlexRender header={header} />
+          {sorted === 'asc' && <ChevronUpIcon aria-hidden="true" />}
+          {sorted === 'desc' && <ChevronDownIcon aria-hidden="true" />}
+        </button>
+      ) : (
+        <table.FlexRender header={header} />
+      )}
+    </th>
   );
 }
