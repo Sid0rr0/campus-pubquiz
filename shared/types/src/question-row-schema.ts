@@ -206,12 +206,32 @@ export function encodeSheetRow(
       ...clipNotesFieldsFor(question),
       ...gradingSettingsFor(question.type, question),
     }),
-    breakAfter: isLastInRound && round.breakAfter ? '1' : '',
-    category: isLastInRound ? (round.category ?? '') : '',
-    author: isLastInRound ? (round.author ?? '') : '',
-    roundNote: isLastInRound ? (round.note ?? '') : '',
-    showRoundNote: isLastInRound && round.showNoteOnScreen ? '1' : '',
+    ...(isLastInRound ? roundCells(round) : NO_ROUND_CELLS),
     showNote: question.showNotesAtReveal ? '1' : '',
+  };
+}
+
+const NO_ROUND_CELLS = {
+  breakAfter: '',
+  category: '',
+  author: '',
+  roundNote: '',
+  showRoundNote: '',
+};
+
+/** The round's own cells, written on its last question's row only. */
+function roundCells(
+  round: Pick<
+    ImportRoundPreview,
+    'breakAfter' | 'category' | 'author' | 'note' | 'showNoteOnScreen'
+  >,
+): typeof NO_ROUND_CELLS {
+  return {
+    breakAfter: round.breakAfter ? '1' : '',
+    category: round.category ?? '',
+    author: round.author ?? '',
+    roundNote: round.note ?? '',
+    showRoundNote: round.showNoteOnScreen ? '1' : '',
   };
 }
 

@@ -288,10 +288,34 @@ function jokerFacts(
     roundTitle: round.title,
     questionIds: round.questions.map((question) => question.id),
   }));
+  const holders = jokerHolders(session, rounds);
+  if (holders.length === 0) return [];
+  return [
+    ...jokerCountFacts(rounds, holders),
+    ...revealedJokerFacts(answers, rounds, holders, pastIds),
+  ];
+}
+
+interface QuizJokerRound extends JokerRound {
+  questionIds: number[];
+}
+
+interface JokerHolder {
+  team: SessionState['leaderboard'][number];
+  joker: { roundId: number; source: string };
+  round: QuizJokerRound;
+}
+
+/**
+ * Only teams on the roster (the leaderboard) with a joker, or a bought extra
+ * joker, on a round that exists. A team may hold several.
+ */
+function jokerHolders(
+  session: SessionState,
+  rounds: readonly QuizJokerRound[],
+): JokerHolder[] {
   const roundById = new Map(rounds.map((round) => [round.roundId, round]));
-  // Only teams on the roster (the leaderboard) with a joker, or a bought extra
-  // joker, on a round that exists. A team may hold several.
-  const holders = [...session.leaderboard]
+  return [...session.leaderboard]
     .sort((a, b) => compareTeamNames(a.teamName, b.teamName))
     .flatMap((team) => {
       const joker = session.jokers[team.teamId];
@@ -311,8 +335,21 @@ function jokerFacts(
         return round ? [{ team, joker: pick, round }] : [];
       });
     });
-  if (holders.length === 0) return [];
+}
 
+const toJokerRound = ({
+  roundNumber,
+  roundTitle,
+}: JokerRound): Pick<JokerRound, 'roundNumber' | 'roundTitle'> => ({
+  roundNumber,
+  roundTitle,
+});
+
+/** The three facts that count jokers and name no team. */
+function jokerCountFacts(
+  rounds: readonly QuizJokerRound[],
+  holders: readonly JokerHolder[],
+): (FunFact | null)[] {
   const teamsPerRound = new Map<number, number>();
   for (const { round } of holders) {
     teamsPerRound.set(
@@ -320,21 +357,14 @@ function jokerFacts(
       (teamsPerRound.get(round.roundId) ?? 0) + 1,
     );
   }
-  const toJokerRound = ({
-    roundNumber,
-    roundTitle,
-  }: JokerRound): Pick<JokerRound, 'roundNumber' | 'roundTitle'> => ({
-    roundNumber,
-    roundTitle,
-  });
-
-  const facts: (FunFact | null)[] = [];
   // Rounds are in quiz order, so a tie goes to the earlier round.
   const favourite = pickLowest(
     rounds,
     (r) => -(teamsPerRound.get(r.roundId) ?? 0),
   );
-  facts.push(
+  const snubbed = rounds.find((r) => !teamsPerRound.has(r.roundId));
+  const drawn = holders.filter(({ joker }) => joker.source === 'drawn').length;
+  return [
     favourite && teamsPerRound.has(favourite.roundId)
       ? {
           kind: 'joker_favourite_round',
@@ -343,9 +373,6 @@ function jokerFacts(
           teamCount: teamsPerRound.get(favourite.roundId)!,
         }
       : null,
-  );
-  const snubbed = rounds.find((r) => !teamsPerRound.has(r.roundId));
-  facts.push(
     snubbed
       ? {
           kind: 'joker_snubbed_round',
@@ -353,12 +380,17 @@ function jokerFacts(
           roundTitle: snubbed.roundTitle,
         }
       : null,
-  );
-  const drawn = holders.filter(({ joker }) => joker.source === 'drawn').length;
-  facts.push(
     drawn > 0 ? { kind: 'joker_drawn_count', teamCount: drawn } : null,
-  );
+  ];
+}
 
+/** The two facts that name a team, read only from fully revealed joker rounds. */
+function revealedJokerFacts(
+  answers: readonly FunFactAnswer[],
+  rounds: readonly QuizJokerRound[],
+  holders: readonly JokerHolder[],
+  pastIds: ReadonlySet<number>,
+): (FunFact | null)[] {
   const revealedRounds = rounds.filter((r) =>
     r.questionIds.every((id) => pastIds.has(id)),
   );
@@ -380,17 +412,6 @@ function jokerFacts(
     })),
     ({ extra }) => -extra,
   );
-  facts.push(
-    best && best.extra > 0
-      ? {
-          kind: 'best_joker',
-          teamName: best.team.teamName,
-          ...toJokerRound(best.round),
-          extraPoints: best.extra,
-        }
-      : null,
-  );
-
   // Backfired: the joker round, as it counts, scored less than every other revealed round.
   const backfired = revealedJokers.find(({ team, round }) => {
     const others = revealedRounds.filter((r) => r !== round);
@@ -404,7 +425,15 @@ function jokerFacts(
       )
     );
   });
-  facts.push(
+  return [
+    best && best.extra > 0
+      ? {
+          kind: 'best_joker',
+          teamName: best.team.teamName,
+          ...toJokerRound(best.round),
+          extraPoints: best.extra,
+        }
+      : null,
     backfired
       ? {
           kind: 'joker_backfired',
@@ -412,8 +441,7 @@ function jokerFacts(
           ...toJokerRound(backfired.round),
         }
       : null,
-  );
-  return facts;
+  ];
 }
 
 /**

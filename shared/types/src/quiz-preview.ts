@@ -4,7 +4,7 @@ import {
   isBreakPointQuestion,
 } from './game-state-block-position';
 import { previewMove } from './dry-run-press';
-import { nextPressAction } from './move-plan';
+import { type MoveStep, nextPressAction } from './move-plan';
 import type { OnAirScreen } from './on-air-screen';
 import { getHostOnlyText } from './round-note';
 import type { QuizStructureSummary } from './game-state-structure';
@@ -248,33 +248,9 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
   const placed = rounds.flatMap((round, index) =>
     round.questions.length > 0 ? [index] : [],
   );
-  const emptyRounds = rounds.flatMap((round, index) =>
-    round.questions.length === 0 ? [index] : [],
-  );
-  const walked: BareStep[] =
+  const walked =
     placed.length === 0
-      ? [
-          {
-            screen: { kind: 'round_overview' },
-            onAir: { kind: 'round_overview' },
-            roundIndex: 0,
-            questionIndex: null,
-            // Stryker disable next-line BooleanLiteral: the block-end pass below overwrites every night step's flag
-            isBlockEnd: false,
-          },
-          ...(fullSession.seededGame.settings.jokersEnabled
-            ? [
-                {
-                  screen: jokerPickScreen,
-                  onAir: { kind: 'joker_pick' } as const,
-                  roundIndex: 0,
-                  questionIndex: null,
-                  // Stryker disable next-line BooleanLiteral: the block-end pass below overwrites every night step's flag
-                  isBlockEnd: false,
-                },
-              ]
-            : []),
-        ]
+      ? openingSteps(fullSession, jokerPickScreen)
       : walkNightSteps(
           freshSessionState({
             ...fullSession.seededGame,
@@ -283,7 +259,50 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
           placed,
           questionPositions(rounds),
         );
+  return markBlockEnds(
+    withEmptyRoundTitles(fullSession, walked, jokerPickScreen),
+  );
+}
 
+/** A quiz whose rounds are all empty walks only its overview and joker pick. */
+function openingSteps(
+  fullSession: SessionState,
+  jokerPickScreen: DisplayScreen,
+): BareStep[] {
+  return [
+    {
+      screen: { kind: 'round_overview' },
+      onAir: { kind: 'round_overview' },
+      roundIndex: 0,
+      questionIndex: null,
+      // Stryker disable next-line BooleanLiteral: the block-end pass overwrites every night step's flag
+      isBlockEnd: false,
+    },
+    ...(fullSession.seededGame.settings.jokersEnabled
+      ? [
+          {
+            screen: jokerPickScreen,
+            onAir: { kind: 'joker_pick' } as const,
+            roundIndex: 0,
+            questionIndex: null,
+            // Stryker disable next-line BooleanLiteral: the block-end pass overwrites every night step's flag
+            isBlockEnd: false,
+          },
+        ]
+      : []),
+  ];
+}
+
+/** The walked steps with each empty round's title card put back in front of the next round's, and the full quiz's joker pick. */
+function withEmptyRoundTitles(
+  fullSession: SessionState,
+  walked: readonly BareStep[],
+  jokerPickScreen: DisplayScreen,
+): BareStep[] {
+  const { rounds } = fullSession.seededGame;
+  const emptyRounds = rounds.flatMap((round, index) =>
+    round.questions.length === 0 ? [index] : [],
+  );
   const steps: BareStep[] = [];
   let nextEmpty = 0;
   const pushEmptyTitlesBefore = (roundIndex: number) => {
@@ -307,7 +326,10 @@ function buildNightSteps(fullSession: SessionState): BareStep[] {
     );
   }
   pushEmptyTitlesBefore(rounds.length);
+  return steps;
+}
 
+function markBlockEnds(steps: readonly BareStep[]): BareStep[] {
   // A block ends at its last reveal: the next screen is neither another
   // reveal nor the next round's reveal title card.
   const continuesReveals = (step: BareStep | undefined) =>
@@ -334,7 +356,7 @@ function emptyRoundTitle(
     onAir: onAirScreenAt(fullSession, progress),
     roundIndex,
     questionIndex: null,
-    // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
+    // Stryker disable next-line BooleanLiteral: the block-end pass in markBlockEnds overwrites every night step's flag
     isBlockEnd: false,
   };
 }
@@ -398,23 +420,20 @@ function pressNext(session: SessionState): SessionState | null {
     nextPressAction(session),
     PREVIEW_PRESS_TIME,
   );
-  switch (step.kind) {
-    case 'showdown_waiting':
-    case 'grading_pending':
-    case 'blocked':
-      return null;
-    case 'transition':
-    case 'leaderboard_reveal':
-    case 'leaderboard_hide':
-    case 'join_overlay_hide':
-    case 'reveal_step':
-      return next;
-    default: {
-      const unhandled: never = step;
-      return unhandled;
-    }
-  }
+  return PRESS_MOVES[step.kind] ? next : null;
 }
+
+/** Whether a press planning each step moves the walk on; the others stop it. */
+const PRESS_MOVES: Record<MoveStep['kind'], boolean> = {
+  showdown_waiting: false,
+  grading_pending: false,
+  blocked: false,
+  transition: true,
+  leaderboard_reveal: true,
+  leaderboard_hide: true,
+  join_overlay_hide: true,
+  reveal_step: true,
+};
 
 function nightStep(
   screen: DisplayScreen,
@@ -428,7 +447,7 @@ function nightStep(
         roundIndex,
         questionIndex: null,
       };
-      // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
+      // Stryker disable next-line BooleanLiteral: the block-end pass in markBlockEnds overwrites every night step's flag
       return { screen, ...position, isBlockEnd: false };
     }
     case 'reveal_intro':
@@ -436,7 +455,7 @@ function nightStep(
         screen,
         roundIndex: screen.roundNumber - 1,
         questionIndex: null,
-        // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
+        // Stryker disable next-line BooleanLiteral: the block-end pass in markBlockEnds overwrites every night step's flag
         isBlockEnd: false,
       };
     case 'break_intro':
@@ -445,11 +464,11 @@ function nightStep(
         screen: { ...screen, isFeedbackPromptShown: false },
         roundIndex,
         questionIndex: null,
-        // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
+        // Stryker disable next-line BooleanLiteral: the block-end pass in markBlockEnds overwrites every night step's flag
         isBlockEnd: false,
       };
     default:
-      // Stryker disable next-line BooleanLiteral: the block-end pass in buildNightSteps overwrites every night step's flag
+      // Stryker disable next-line BooleanLiteral: the block-end pass in markBlockEnds overwrites every night step's flag
       return { screen, roundIndex, questionIndex: null, isBlockEnd: false };
   }
 }

@@ -112,95 +112,135 @@ export function projectScreen(
   // The closest-guess step stays server-side: it only keys the reveal screen
   // and trims the reveal questions; no view carries it.
   const closestGuessRevealStep = revealStepOf(session, 'closest_guess');
-  const { screen, screenKey, header } = describeOnAirScreen({
-    ...snapshot,
+  const onAir = describeOnAirScreen({ ...snapshot, closestGuessRevealStep });
+  const projection: Projection = {
+    session,
+    snapshot,
+    onAir,
     closestGuessRevealStep,
-  });
-  // The Display screen /display is sent. The admin view reads the media the big
-  // screen is playing from it, so the two can't disagree.
-  const buildDisplayScreen = (): DisplayScreen =>
-    assembleDisplayScreen(session, snapshot, screen, closestGuessRevealStep);
-
+    // The Display screen /display is sent. The admin view reads the media the big
+    // screen is playing from it, so the two can't disagree.
+    buildDisplayScreen: () =>
+      assembleDisplayScreen(
+        session,
+        snapshot,
+        onAir.screen,
+        closestGuessRevealStep,
+      ),
+  };
   switch (audience) {
-    case SOCKET_ROOMS.DISPLAY: {
-      const displayScreen = buildDisplayScreen();
-      if (displayScreen.kind === 'blank') options?.onBlankScreen?.(screen);
-      // The content the Display screen carries is not sent a second time.
-      /* eslint-disable @typescript-eslint/no-unused-vars */
-      const {
-        currentQuestion: _currentQuestion,
-        blockQuestions: _blockQuestions,
-        revealQuestions: _revealQuestions,
-        activeShowdown: _activeShowdown,
-        showdownRevealStep: _showdownRevealStep,
-        roundTitle: _roundTitle,
-        ...shared
-      } = snapshot;
-      const { breakEndsAt: _breakEndsAt, ...operatorFields } =
-        buildScreenOperatorFields(session);
-      /* eslint-enable @typescript-eslint/no-unused-vars */
-      return {
-        ...shared,
-        ...operatorFields,
-        ...buildDisplayFields(session),
-        screen: displayScreen,
-        screenKey,
-        screenPosition: screenPositionOf(snapshot.progress),
-        header,
-        leagueTop: session.leagueTop,
-      };
-    }
+    case SOCKET_ROOMS.DISPLAY:
+      return projectDisplay(projection, options);
     case SOCKET_ROOMS.ADMIN:
-      return {
-        ...snapshot,
-        ...buildScreenOperatorFields(session),
-        ...buildAdminFields(session),
-        onAirScreen: screen,
-        ...describeAdminIndicators(snapshot),
-        controlAvailability: describeControlAvailability({
-          progress: snapshot.progress,
-          leaderboard: snapshot.leaderboard,
-          displayScreen: buildDisplayScreen(),
-        }),
-        advanceStep: describeAdvanceStep(session),
-        previousState: describePreviousState(session),
-        activeBlockStartIndex: getActiveBlockStartIndex(session),
-        isShowdownEligible: isShowdownEligible(session),
-        isLastQuestionBeforeBreak: isLastQuestionBeforeBreak(session),
-      };
-    case SOCKET_ROOMS.PLAYERS: {
-      // The screen fields read the untrimmed block (the reveal_intro card
-      // needs the upcoming question's round title); only what leaves the
-      // server is trimmed.
-      const isAnswerable = isBlockAnswerable(session);
-      const view = {
-        ...snapshot,
-        ...buildPlayersFields(session),
-        phoneLeaderboard: {
-          board: describeLeaderboardBoard(session),
-          revealCount: session.leaderboardRevealCount,
-        },
-        ...describePlayersScreen({
-          ...snapshot,
-          isAnswerable,
-          // Stryker disable next-line BooleanLiteral: the phone only reads it on a showdown screen, which needs an active round, so the fallback is never read
-          isShowdownResolved: session.activeShowdownRound?.resolved ?? false,
-          isJokerPickOpen: isJokerPickOpen(session),
-        }),
-        isAnswerable,
-        feedback: getFeedbackField(session),
-        revealQuestions:
-          snapshot.progress.status === 'ended'
-            ? endedRevealWalk(session)
-            : trimToRevealWalk(
-                snapshot.revealQuestions,
-                snapshot.progress,
-                closestGuessRevealStep,
-              ),
-      };
-      return isQuestionHiddenBehindKahootLeaderboard(session)
-        ? { ...view, currentQuestion: null, blockQuestions: [] }
-        : view;
-    }
+      return projectAdmin(projection);
+    case SOCKET_ROOMS.PLAYERS:
+      return projectPlayers(projection);
   }
+}
+
+/** What every audience's view is projected from. */
+interface Projection {
+  session: SessionState;
+  snapshot: ReturnType<typeof buildSnapshot>;
+  onAir: ReturnType<typeof describeOnAirScreen>;
+  closestGuessRevealStep: number;
+  buildDisplayScreen: () => DisplayScreen;
+}
+
+function projectDisplay(
+  { session, snapshot, onAir, buildDisplayScreen }: Projection,
+  options: ProjectScreenOptions | undefined,
+): StateViewByRoom[typeof SOCKET_ROOMS.DISPLAY] {
+  const { screen, screenKey, header } = onAir;
+  const displayScreen = buildDisplayScreen();
+  if (displayScreen.kind === 'blank') options?.onBlankScreen?.(screen);
+  // The content the Display screen carries is not sent a second time.
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  const {
+    currentQuestion: _currentQuestion,
+    blockQuestions: _blockQuestions,
+    revealQuestions: _revealQuestions,
+    activeShowdown: _activeShowdown,
+    showdownRevealStep: _showdownRevealStep,
+    roundTitle: _roundTitle,
+    ...shared
+  } = snapshot;
+  const { breakEndsAt: _breakEndsAt, ...operatorFields } =
+    buildScreenOperatorFields(session);
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  return {
+    ...shared,
+    ...operatorFields,
+    ...buildDisplayFields(session),
+    screen: displayScreen,
+    screenKey,
+    screenPosition: screenPositionOf(snapshot.progress),
+    header,
+    leagueTop: session.leagueTop,
+  };
+}
+
+function projectAdmin({
+  session,
+  snapshot,
+  onAir,
+  buildDisplayScreen,
+}: Projection): StateViewByRoom[typeof SOCKET_ROOMS.ADMIN] {
+  const { screen } = onAir;
+  return {
+    ...snapshot,
+    ...buildScreenOperatorFields(session),
+    ...buildAdminFields(session),
+    onAirScreen: screen,
+    ...describeAdminIndicators(snapshot),
+    controlAvailability: describeControlAvailability({
+      progress: snapshot.progress,
+      leaderboard: snapshot.leaderboard,
+      displayScreen: buildDisplayScreen(),
+    }),
+    advanceStep: describeAdvanceStep(session),
+    previousState: describePreviousState(session),
+    activeBlockStartIndex: getActiveBlockStartIndex(session),
+    isShowdownEligible: isShowdownEligible(session),
+    isLastQuestionBeforeBreak: isLastQuestionBeforeBreak(session),
+  };
+}
+
+function projectPlayers({
+  session,
+  snapshot,
+  closestGuessRevealStep,
+}: Projection): StateViewByRoom[typeof SOCKET_ROOMS.PLAYERS] {
+  // The screen fields read the untrimmed block (the reveal_intro card
+  // needs the upcoming question's round title); only what leaves the
+  // server is trimmed.
+  const isAnswerable = isBlockAnswerable(session);
+  const view = {
+    ...snapshot,
+    ...buildPlayersFields(session),
+    phoneLeaderboard: {
+      board: describeLeaderboardBoard(session),
+      revealCount: session.leaderboardRevealCount,
+    },
+    ...describePlayersScreen({
+      ...snapshot,
+      isAnswerable,
+      // Stryker disable next-line BooleanLiteral: the phone only reads it on a showdown screen, which needs an active round, so the fallback is never read
+      isShowdownResolved: session.activeShowdownRound?.resolved ?? false,
+      isJokerPickOpen: isJokerPickOpen(session),
+    }),
+    isAnswerable,
+    feedback: getFeedbackField(session),
+    revealQuestions:
+      snapshot.progress.status === 'ended'
+        ? endedRevealWalk(session)
+        : trimToRevealWalk(
+            snapshot.revealQuestions,
+            snapshot.progress,
+            closestGuessRevealStep,
+          ),
+  };
+  return isQuestionHiddenBehindKahootLeaderboard(session)
+    ? { ...view, currentQuestion: null, blockQuestions: [] }
+    : view;
 }

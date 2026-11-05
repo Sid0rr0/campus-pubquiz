@@ -50,7 +50,10 @@ export function isQuestionOnAirStatus(status: GameStatus): boolean {
   return QUESTION_ON_AIR_STATUSES.has(status);
 }
 
-export function isBreakStatus(status: GameStatus): boolean {
+export type BreakStatus = 'break_intro' | 'break' | 'break_round_intro';
+export type RevealingStatus = 'reveal_intro' | 'reveal';
+
+export function isBreakStatus(status: GameStatus): status is BreakStatus {
   return BREAK_STATUSES.has(status);
 }
 
@@ -58,7 +61,9 @@ export function isGradedStatus(status: GameStatus): boolean {
   return GRADED_STATUSES.has(status);
 }
 
-export function isRevealingStatus(status: GameStatus): boolean {
+export function isRevealingStatus(
+  status: GameStatus,
+): status is RevealingStatus {
   return REVEALING_STATUSES.has(status);
 }
 

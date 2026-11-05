@@ -71,31 +71,41 @@ interface ReadGroup {
   invalidKeys: string[];
 }
 
+function readSettingValue(body: string, key: string): string | undefined {
+  return keyPattern(key, `[^\\s,}"']+`).exec(body)?.[1];
+}
+
+/** The `margin` setting, and whether it was set but unreadable. */
+function readMargin(body: string): ReadGroup {
+  const raw = readSettingValue(body, MARGIN_NOTES_KEY);
+  if (raw === undefined) return { clip: {}, invalidKeys: [] };
+  const margin = parseMarginCell(raw);
+  return margin
+    ? { clip: { margin }, invalidKeys: [] }
+    : { clip: {}, invalidKeys: [MARGIN_NOTES_KEY] };
+}
+
+/** The `scoring` setting (legacy names too), and whether it was set but unreadable. */
+function readScoring(body: string): ReadGroup {
+  const raw = readSettingValue(body, SCORING_NOTES_KEY)?.toLowerCase();
+  if (raw === undefined) return { clip: {}, invalidKeys: [] };
+  const scoringMode =
+    SCORING_MODES.find((mode) => mode === raw) ?? LEGACY_SCORING_NAMES.get(raw);
+  return scoringMode
+    ? { clip: { scoringMode }, invalidKeys: [] }
+    : { clip: {}, invalidKeys: [SCORING_NOTES_KEY] };
+}
+
 function readGroup(body: string): ReadGroup {
   const readings = TIMECODE_KEYS.flatMap(([key, field]) => {
-    const raw = keyPattern(key, `[^\\s,}"']+`).exec(body)?.[1];
+    const raw = readSettingValue(body, key);
     if (raw === undefined) return [];
     const seconds = parseTimecode(raw);
     return [{ key, field, seconds }];
   });
   const isHidden = keyPattern('hideVideo', 'true').test(body);
-  const rawMargin = keyPattern(MARGIN_NOTES_KEY, `[^\\s,}"']+`).exec(body)?.[1];
-  const margin =
-    rawMargin === undefined ? undefined : parseMarginCell(rawMargin);
-  const rawScoring = keyPattern(SCORING_NOTES_KEY, `[^\\s,}"']+`)
-    .exec(body)?.[1]
-    .toLowerCase();
-  const scoringMode =
-    SCORING_MODES.find((mode) => mode === rawScoring) ??
-    LEGACY_SCORING_NAMES.get(rawScoring ?? '');
-  const invalidSettingKeys = [
-    ...(rawMargin !== undefined && margin === undefined
-      ? [MARGIN_NOTES_KEY]
-      : []),
-    ...(rawScoring !== undefined && scoringMode === undefined
-      ? [SCORING_NOTES_KEY]
-      : []),
-  ];
+  const margin = readMargin(body);
+  const scoring = readScoring(body);
   return {
     clip: {
       ...Object.fromEntries(
@@ -104,14 +114,15 @@ function readGroup(body: string): ReadGroup {
         ),
       ),
       ...(isHidden ? { isVideoHidden: true as const } : {}),
-      ...(margin ? { margin } : {}),
-      ...(scoringMode ? { scoringMode } : {}),
+      ...margin.clip,
+      ...scoring.clip,
     },
     invalidKeys: [
       ...readings.flatMap(({ key, seconds }) =>
         seconds === undefined ? [key] : [],
       ),
-      ...invalidSettingKeys,
+      ...margin.invalidKeys,
+      ...scoring.invalidKeys,
     ],
   };
 }

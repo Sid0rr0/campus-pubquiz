@@ -40,22 +40,28 @@ export function computeLeaderboardRevealCount(
   ) {
     return revealTarget;
   }
-  if (action === 'TOGGLE_LEADERBOARD') {
-    return 0;
-  }
-  // Showing the join overlay takes the board down, so its reveal starts over.
-  if (action === 'TOGGLE_JOIN_OVERLAY' && wasLeaderboardVisible) {
-    return 0;
-  }
-  // Any auto-triggered transition that newly shows the board — ending the
-  // quiz, or finishing a mid-quiz reveal block — starts from empty, same as
-  // an explicit TOGGLE_LEADERBOARD: it must never inherit a stale or partial
-  // count left over from an earlier reveal.
-  if (!wasLeaderboardVisible && newProgress.isLeaderboardVisible) {
+  if (isRevealRestarted(action, wasLeaderboardVisible, newProgress)) {
     return 0;
   }
   if (action === 'ADVANCE' && newProgress.isLeaderboardVisible) {
     return Math.min(currentRevealCount + 1, revealTarget);
   }
   return currentRevealCount;
+}
+
+function isRevealRestarted(
+  action: GameAction | null,
+  wasLeaderboardVisible: boolean,
+  newProgress: GameProgress,
+): boolean {
+  return (
+    action === 'TOGGLE_LEADERBOARD' ||
+    // Showing the join overlay takes the board down, so its reveal starts over.
+    (action === 'TOGGLE_JOIN_OVERLAY' && wasLeaderboardVisible) ||
+    // Any auto-triggered transition that newly shows the board — ending the
+    // quiz, or finishing a mid-quiz reveal block — starts from empty, same as
+    // an explicit TOGGLE_LEADERBOARD: it must never inherit a stale or partial
+    // count left over from an earlier reveal.
+    (!wasLeaderboardVisible && newProgress.isLeaderboardVisible)
+  );
 }

@@ -242,14 +242,22 @@ export function rowToPreview(
     points: row.points,
     ...(freeNotes ? { notes: freeNotes } : {}),
     ...(row.showNotesAtReveal ? { showNotesAtReveal: true } : {}),
-    ...carriedFields(row.type, {
-      ...payload,
-      mediaStartSeconds: payload.mediaStartSeconds ?? clip.startSeconds,
-      mediaEndSeconds: payload.mediaEndSeconds ?? clip.endSeconds,
-      isVideoHidden: payload.isVideoHidden || clip.isVideoHidden,
-      revealStartSeconds: payload.revealStartSeconds ?? clip.revealStartSeconds,
-      revealEndSeconds: payload.revealEndSeconds ?? clip.revealEndSeconds,
-    }),
+    ...carriedFields(row.type, withClipFallback(payload, clip)),
+  };
+}
+
+/** The payload with each clip field it lacks filled from the notes group. */
+function withClipFallback(
+  payload: QuestionPayload,
+  clip: NotesGroupFields,
+): QuestionPayload {
+  return {
+    ...payload,
+    mediaStartSeconds: payload.mediaStartSeconds ?? clip.startSeconds,
+    mediaEndSeconds: payload.mediaEndSeconds ?? clip.endSeconds,
+    isVideoHidden: payload.isVideoHidden || clip.isVideoHidden,
+    revealStartSeconds: payload.revealStartSeconds ?? clip.revealStartSeconds,
+    revealEndSeconds: payload.revealEndSeconds ?? clip.revealEndSeconds,
   };
 }
 

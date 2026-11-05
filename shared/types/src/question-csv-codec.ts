@@ -97,15 +97,7 @@ export function toCanonicalMatchAnswer(
   left: string[],
   right: string[],
 ): string | undefined {
-  const pairs = splitPipeList(rawAnswer).map((pair) => {
-    const separatorIndex = pair.indexOf(PAIR_SEPARATOR);
-    if (separatorIndex === -1) return undefined;
-    const pairLeft = pair.slice(0, separatorIndex).trim();
-    const pairRight = pair.slice(separatorIndex + 1).trim();
-    return pairLeft && pairRight
-      ? { left: pairLeft, right: pairRight }
-      : undefined;
-  });
+  const pairs = splitPipeList(rawAnswer).map(parseMatchPair);
   if (
     pairs.length !== left.length ||
     pairs.some((pair) => pair === undefined)
@@ -116,7 +108,28 @@ export function toCanonicalMatchAnswer(
   const rightByLeft = new Map(pairs.map((pair) => [pair!.left, pair!.right]));
   // Stryker disable next-line ConditionalExpression: a short map leaves some left item without a right item, which the loop below refuses
   if (rightByLeft.size !== left.length) return undefined;
+  return rightInLeftOrder(rightByLeft, left, right);
+}
 
+/** One `left+right` pair, or undefined when either side is missing. */
+function parseMatchPair(
+  pair: string,
+): { left: string; right: string } | undefined {
+  const separatorIndex = pair.indexOf(PAIR_SEPARATOR);
+  if (separatorIndex === -1) return undefined;
+  const pairLeft = pair.slice(0, separatorIndex).trim();
+  const pairRight = pair.slice(separatorIndex + 1).trim();
+  return pairLeft && pairRight
+    ? { left: pairLeft, right: pairRight }
+    : undefined;
+}
+
+/** Each left item's right item in left order, or undefined unless every right item is used exactly once. */
+function rightInLeftOrder(
+  rightByLeft: ReadonlyMap<string, string>,
+  left: readonly string[],
+  right: readonly string[],
+): string | undefined {
   const usedRight = new Set<string>();
   const canonical: string[] = [];
   for (const leftItem of left) {

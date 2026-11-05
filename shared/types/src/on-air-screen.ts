@@ -1,5 +1,9 @@
-import { isBreakStatus, isRevealingStatus } from './game-state-groups';
-import type { GameProgress } from './game-state-types';
+import {
+  isBreakStatus,
+  isRevealingStatus,
+  type RevealingStatus,
+} from './game-state-groups';
+import type { GameProgress, GameStatus } from './game-state-types';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
@@ -117,6 +121,61 @@ function getHeader(
   }
 }
 
+function questionScreen(
+  input: OnAirInput,
+  kind: 'question' | 'locking',
+): OnAirScreen {
+  const { progress } = input;
+  return {
+    kind,
+    roundIndex: progress.roundIndex,
+    questionIndex: progress.questionIndex,
+    questionId: input.currentQuestion?.id ?? null,
+  };
+}
+
+function breakScreen(
+  input: OnAirInput,
+  breakQuestion: BlockQuestionView | undefined,
+): OnAirScreen {
+  const { progress } = input;
+  if (progress.status === 'break_round_intro') {
+    return {
+      kind: 'break_round_title',
+      roundIndex: breakQuestion ? breakQuestion.roundNumber - 1 : null,
+      questionId: breakQuestion?.id ?? null,
+    };
+  }
+  if (progress.status === 'break' && breakQuestion) {
+    return { kind: 'break_review', questionId: breakQuestion.id };
+  }
+  return {
+    kind: 'break_intro',
+    roundIndex: progress.roundIndex,
+    isFeedbackPromptShown: input.settings?.collectFeedback ?? false,
+  };
+}
+
+function revealScreen(
+  kind: 'reveal_intro' | 'reveal',
+  revealQuestion: BlockRevealQuestionView | undefined,
+): OnAirScreen {
+  return {
+    kind,
+    roundIndex: revealQuestion ? revealQuestion.roundNumber - 1 : null,
+    questionId: revealQuestion?.id ?? null,
+  };
+}
+
+function endedScreen(input: OnAirInput): OnAirScreen {
+  return input.activeShowdown
+    ? { kind: 'showdown', showdownId: input.activeShowdown.id }
+    : {
+        kind: 'ended',
+        isFeedbackPromptShown: input.settings?.collectFeedback ?? false,
+      };
+}
+
 function getScreen(
   input: OnAirInput,
   breakQuestion: BlockQuestionView | undefined,
@@ -125,71 +184,38 @@ function getScreen(
   const { progress } = input;
   if (progress.isLeaderboardVisible) return { kind: 'leaderboard' };
   if (progress.isJoinOverlayVisible) return { kind: 'join_overlay' };
-
-  const questionId = input.currentQuestion?.id ?? null;
-  const isFeedbackPromptShown = input.settings?.collectFeedback ?? false;
-  const revealRoundIndex = revealQuestion
-    ? revealQuestion.roundNumber - 1
-    : null;
-  switch (progress.status) {
-    case 'lobby':
-    case 'rules':
-    case 'round_overview':
-    case 'joker_pick':
-      return { kind: progress.status };
+  const { status } = progress;
+  if (isBreakStatus(status)) return breakScreen(input, breakQuestion);
+  if (isRevealingStatus(status)) return revealScreen(status, revealQuestion);
+  switch (status) {
     case 'round_intro':
       return { kind: 'round_title', roundIndex: progress.roundIndex };
     case 'question_open':
-      return {
-        kind: 'question',
-        roundIndex: progress.roundIndex,
-        questionIndex: progress.questionIndex,
-        questionId,
-      };
+      return questionScreen(input, 'question');
     case 'locking':
-      return {
-        kind: 'locking',
-        roundIndex: progress.roundIndex,
-        questionIndex: progress.questionIndex,
-        questionId,
-      };
-    case 'break_intro':
-      return {
-        kind: 'break_intro',
-        roundIndex: progress.roundIndex,
-        isFeedbackPromptShown,
-      };
-    case 'break':
-      return breakQuestion
-        ? { kind: 'break_review', questionId: breakQuestion.id }
-        : {
-            kind: 'break_intro',
-            roundIndex: progress.roundIndex,
-            isFeedbackPromptShown,
-          };
-    case 'break_round_intro':
-      return {
-        kind: 'break_round_title',
-        roundIndex: breakQuestion ? breakQuestion.roundNumber - 1 : null,
-        questionId: breakQuestion?.id ?? null,
-      };
-    case 'reveal_intro':
-      return {
-        kind: 'reveal_intro',
-        roundIndex: revealRoundIndex,
-        questionId: revealQuestion?.id ?? null,
-      };
-    case 'reveal':
-      return {
-        kind: 'reveal',
-        roundIndex: revealRoundIndex,
-        questionId: revealQuestion?.id ?? null,
-      };
+      return questionScreen(input, 'locking');
     case 'ended':
-      return input.activeShowdown
-        ? { kind: 'showdown', showdownId: input.activeShowdown.id }
-        : { kind: 'ended', isFeedbackPromptShown };
+      return endedScreen(input);
+    default:
+      return { kind: status };
   }
+}
+
+function endedScreenKey(input: OnAirInput): string {
+  return input.activeShowdown
+    ? `ended-showdown-${input.activeShowdown.id}-${input.showdownRevealStep ?? 0}`
+    : 'ended';
+}
+
+function revealScreenKey(
+  input: OnAirInput,
+  status: RevealingStatus,
+  revealQuestion: RoundPosition | undefined,
+): string {
+  const position = `${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}`;
+  return status === 'reveal'
+    ? `reveal-${position}-${input.closestGuessRevealStep ?? 0}`
+    : `reveal_intro-${position}`;
 }
 
 function getScreenKey(
@@ -199,30 +225,33 @@ function getScreenKey(
   const { progress } = input;
   if (progress.isLeaderboardVisible) return 'leaderboard';
   if (progress.isJoinOverlayVisible) return 'join_overlay';
+  return statusScreenKey(input, revealQuestion);
+}
 
-  const revealPosition = `${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}`;
-  switch (progress.status) {
+function statusScreenKey(
+  input: OnAirInput,
+  revealQuestion: RoundPosition | undefined,
+): string {
+  const { progress } = input;
+  const { status } = progress;
+  if (isRevealingStatus(status)) {
+    return revealScreenKey(input, status, revealQuestion);
+  }
+  switch (status) {
     case 'ended':
-      return input.activeShowdown
-        ? `ended-showdown-${input.activeShowdown.id}-${input.showdownRevealStep ?? 0}`
-        : 'ended';
+      return endedScreenKey(input);
     case 'question_open':
     case 'locking':
-      return `${progress.status}-${progress.roundIndex}-${progress.questionIndex}`;
+      return `${status}-${progress.roundIndex}-${progress.questionIndex}`;
     case 'round_intro':
-      return `round_intro-${progress.roundIndex}`;
     case 'break_intro':
-      return `break_intro-${progress.roundIndex}`;
+      return `${status}-${progress.roundIndex}`;
     case 'break':
       return `break-${progress.roundIndex}-${progress.revealIndex}`;
     case 'break_round_intro':
       return `break_round_intro-${progress.revealIndex}`;
-    case 'reveal_intro':
-      return `reveal_intro-${revealPosition}`;
-    case 'reveal':
-      return `reveal-${revealPosition}-${input.closestGuessRevealStep ?? 0}`;
     default:
-      return progress.status;
+      return status;
   }
 }
 
@@ -262,6 +291,28 @@ function walkStep(revealIndex: number, isCardOnAir: boolean): number {
   return revealIndex * 2 + (isCardOnAir ? 0 : 1);
 }
 
+const PRE_QUIZ_POSITION: Partial<Record<GameStatus, number>> = {
+  lobby: 0,
+  rules: 1,
+  round_overview: 2,
+  joker_pick: 3,
+  ended: ENDED_POSITION,
+};
+
+/** Each in-quiz status's region, and whether its walk step is a title card (else null: no walk). */
+const IN_QUIZ_REGION: Partial<
+  Record<GameStatus, { region: number; isCard: boolean | null }>
+> = {
+  round_intro: { region: REGION.roundIntro, isCard: null },
+  question_open: { region: REGION.question, isCard: null },
+  locking: { region: REGION.locking, isCard: null },
+  break: { region: REGION.breakReview, isCard: false },
+  break_round_intro: { region: REGION.breakReview, isCard: true },
+  break_intro: { region: REGION.breakIntro, isCard: null },
+  reveal_intro: { region: REGION.reveal, isCard: true },
+  reveal: { region: REGION.reveal, isCard: false },
+};
+
 /**
  * One number that orders the On-air screens of a quiz: it grows on every
  * forward move (START_QUIZ, ADVANCE, END_QUIZ) that changes the screen under
@@ -275,45 +326,15 @@ function walkStep(revealIndex: number, isCardOnAir: boolean): number {
  */
 export function screenPositionOf(progress: GameProgress): number {
   const { status, roundIndex, questionIndex, revealIndex } = progress;
-  switch (status) {
-    case 'lobby':
-      return 0;
-    case 'rules':
-      return 1;
-    case 'round_overview':
-      return 2;
-    case 'joker_pick':
-      return 3;
-    case 'ended':
-      return ENDED_POSITION;
-    // Stryker disable next-line ConditionalExpression: an empty `default:` falls out of the switch exactly as `break` does
-    default:
-      break;
-  }
+  const preQuiz = PRE_QUIZ_POSITION[status];
+  if (preQuiz !== undefined) return preQuiz;
+  const { region, isCard } = IN_QUIZ_REGION[status]!;
   const slot =
     (roundIndex * ROUND_SPAN + (status === 'round_intro' ? 0 : questionIndex)) *
     REGIONS *
     REGION_SPAN;
-  const at = (region: number, step = 0) =>
-    PRE_QUIZ_SCREENS + slot + region * REGION_SPAN + step;
-  switch (status) {
-    case 'round_intro':
-      return at(REGION.roundIntro);
-    case 'question_open':
-      return at(REGION.question);
-    case 'locking':
-      return at(REGION.locking);
-    case 'break':
-      return at(REGION.breakReview, walkStep(revealIndex, false));
-    case 'break_round_intro':
-      return at(REGION.breakReview, walkStep(revealIndex, true));
-    case 'break_intro':
-      return at(REGION.breakIntro);
-    case 'reveal_intro':
-      return at(REGION.reveal, walkStep(revealIndex, true));
-    case 'reveal':
-      return at(REGION.reveal, walkStep(revealIndex, false));
-  }
+  const step = isCard === null ? 0 : walkStep(revealIndex, isCard);
+  return PRE_QUIZ_SCREENS + slot + region * REGION_SPAN + step;
 }
 
 /** What the quiz master's question browser marks as on air, for /control. */
@@ -340,42 +361,41 @@ export function describeAdminIndicators(input: OnAirInput): AdminIndicators {
       isJoinOverlayVisible: false,
     },
   });
+  return {
+    onDisplayQuestionId: onDisplayQuestionIdOf(screen),
+    titleCardRoundIndex: titleCardRoundIndexOf(screen),
+    breakRoundIndex: BREAK_LIT_SCREENS.has(screen.kind)
+      ? input.progress.roundIndex
+      : null,
+  };
+}
+
+const BREAK_LIT_SCREENS: ReadonlySet<OnAirScreen['kind']> = new Set([
+  'break_review',
+  'break_round_title',
+  'break_intro',
+]);
+
+function onDisplayQuestionIdOf(screen: OnAirScreen): number | null {
   switch (screen.kind) {
     case 'question':
     case 'locking':
     case 'reveal':
     case 'break_review':
-      return {
-        onDisplayQuestionId: screen.questionId,
-        titleCardRoundIndex: null,
-        breakRoundIndex:
-          screen.kind === 'break_review' ? input.progress.roundIndex : null,
-      };
+      return screen.questionId;
+    default:
+      return null;
+  }
+}
+
+function titleCardRoundIndexOf(screen: OnAirScreen): number | null {
+  switch (screen.kind) {
     case 'round_title':
     case 'reveal_intro':
-      return {
-        onDisplayQuestionId: null,
-        titleCardRoundIndex: screen.roundIndex,
-        breakRoundIndex: null,
-      };
     case 'break_round_title':
-      return {
-        onDisplayQuestionId: null,
-        titleCardRoundIndex: screen.roundIndex,
-        breakRoundIndex: input.progress.roundIndex,
-      };
-    case 'break_intro':
-      return {
-        onDisplayQuestionId: null,
-        titleCardRoundIndex: null,
-        breakRoundIndex: input.progress.roundIndex,
-      };
+      return screen.roundIndex;
     default:
-      return {
-        onDisplayQuestionId: null,
-        titleCardRoundIndex: null,
-        breakRoundIndex: null,
-      };
+      return null;
   }
 }
 
@@ -489,11 +509,31 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
       isJoinOverlayVisible: false,
     },
   });
+  return phoneScreenUnderBoard(input, screen, mode);
+}
+
+type PassThroughScreen = Extract<
+  OnAirScreen,
+  { kind: 'lobby' | 'rules' | 'round_overview' | 'ended' }
+>;
+const PASS_THROUGH_KINDS: ReadonlySet<OnAirScreen['kind']> = new Set([
+  'lobby',
+  'rules',
+  'round_overview',
+  'ended',
+]);
+function isPassThroughScreen(screen: OnAirScreen): screen is PassThroughScreen {
+  return PASS_THROUGH_KINDS.has(screen.kind);
+}
+
+/** The phone screen for the content on air, read as if the board weren't covering it. */
+function phoneScreenUnderBoard(
+  input: PlayersScreenInput,
+  screen: OnAirScreen,
+  mode: BlockMode,
+): PhoneScreen {
+  if (isPassThroughScreen(screen)) return { kind: screen.kind };
   switch (screen.kind) {
-    case 'lobby':
-    case 'rules':
-    case 'round_overview':
-      return { kind: screen.kind };
     case 'joker_pick':
       return { kind: 'joker_pick', isOpen: input.isJokerPickOpen };
     case 'round_title':
@@ -505,32 +545,44 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
     case 'reveal':
       return { kind: 'block', mode, onScreenQuestionId: screen.questionId };
     case 'reveal_intro':
-    case 'break_round_title': {
-      const card = roundTitleCardOf(
-        screen.kind === 'reveal_intro'
-          ? input.revealQuestions
-          : input.blockQuestions,
-        screen.questionId,
-      );
-      return card === null
-        ? { kind: 'block', mode, onScreenQuestionId: null }
-        : { kind: 'round_title', ...card };
-    }
-    case 'ended':
-      return { kind: 'ended' };
+    case 'break_round_title':
+      return walkTitleCardPhoneScreen(input, screen, mode);
     case 'showdown':
-      return {
-        kind: isShowdownAcceptingGuesses(
-          { id: screen.showdownId, resolved: input.isShowdownResolved },
-          screen.showdownId,
-          input.showdownRevealStep ?? 0,
-        )
-          ? 'showdown_guessing'
-          : 'showdown_reveal',
-      };
+      return showdownPhoneScreen(input, screen.showdownId);
     default:
       return { kind: 'block', mode, onScreenQuestionId: null };
   }
+}
+
+function walkTitleCardPhoneScreen(
+  input: PlayersScreenInput,
+  screen: Extract<OnAirScreen, { kind: 'reveal_intro' | 'break_round_title' }>,
+  mode: BlockMode,
+): PhoneScreen {
+  const card = roundTitleCardOf(
+    screen.kind === 'reveal_intro'
+      ? input.revealQuestions
+      : input.blockQuestions,
+    screen.questionId,
+  );
+  return card === null
+    ? { kind: 'block', mode, onScreenQuestionId: null }
+    : { kind: 'round_title', ...card };
+}
+
+function showdownPhoneScreen(
+  input: PlayersScreenInput,
+  showdownId: number,
+): PhoneScreen {
+  return {
+    kind: isShowdownAcceptingGuesses(
+      { id: showdownId, resolved: input.isShowdownResolved },
+      showdownId,
+      input.showdownRevealStep ?? 0,
+    )
+      ? 'showdown_guessing'
+      : 'showdown_reveal',
+  };
 }
 
 /** A round a team can be asked to rate. */

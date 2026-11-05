@@ -22,6 +22,7 @@ import {
   type GameAction,
   type GameContext,
   type GameProgress,
+  type GameStatus,
 } from './game-state-types';
 
 export * from './game-state-types';
@@ -56,6 +57,17 @@ function applyTransition(
   action: GameAction,
   context: GameContext,
 ): GameProgress {
+  return (
+    applyMediaAction(progress, action) ??
+    applyMoveAction(settleMedia(progress, action), action, context)
+  );
+}
+
+/** The media actions, which leave everything else untouched; null for any other action. */
+function applyMediaAction(
+  progress: GameProgress,
+  action: GameAction,
+): GameProgress | null {
   if (action === 'TOGGLE_MEDIA_FULLSCREEN') {
     return {
       ...progress,
@@ -82,9 +94,14 @@ function applyTransition(
       isMediaPaused: !progress.isMediaPaused,
     };
   }
+  return null;
+}
 
-  progress = settleMedia(progress, action);
-
+function applyMoveAction(
+  progress: GameProgress,
+  action: GameAction,
+  context: GameContext,
+): GameProgress {
   switch (action) {
     case 'TOGGLE_LEADERBOARD':
       return toggleLeaderboard(progress);
@@ -105,6 +122,9 @@ function applyTransition(
       return advance(progress, action, context);
     case 'PREVIOUS':
       return previous(progress, action, context);
+    default:
+      // The media actions were handled before the move actions.
+      return illegal(progress.status, action);
   }
 }
 
@@ -173,75 +193,92 @@ function endQuiz(progress: GameProgress, action: GameAction): GameProgress {
   };
 }
 
-function advance(
+type Transition = (
   progress: GameProgress,
-  action: GameAction,
+  context: GameContext,
+) => GameProgress;
+
+/** Back to the first round's start, at `status`. */
+function toQuizStart(progress: GameProgress, status: GameStatus): GameProgress {
+  return {
+    ...progress,
+    status,
+    roundIndex: 0,
+    questionIndex: 0,
+    revealIndex: 0,
+  };
+}
+
+function advanceFromRules(
+  progress: GameProgress,
   context: GameContext,
 ): GameProgress {
-  if (progress.status === 'rules') {
-    return {
-      ...progress,
-      status: context.showRoundOverview ? 'round_overview' : 'round_intro',
-      roundIndex: 0,
-      questionIndex: 0,
-      revealIndex: 0,
-    };
+  return toQuizStart(
+    progress,
+    context.showRoundOverview ? 'round_overview' : 'round_intro',
+  );
+}
+
+function advanceFromRoundOverview(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  return toQuizStart(
+    progress,
+    context.jokersEnabled ? 'joker_pick' : 'round_intro',
+  );
+}
+
+function advanceFromRoundIntro(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  return {
+    ...progress,
+    status: 'question_open',
+    questionIndex: 0,
+    furthestOpenIndex: Math.max(
+      progress.furthestOpenIndex,
+      getBlockPositionForQuestion(progress.roundIndex, 0, context),
+    ),
+  };
+}
+
+function advanceFromLocking(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  const round = context.rounds[progress.roundIndex];
+  const revealIndex =
+    getBlockQuestionCount(
+      progress.roundIndex,
+      progress.questionIndex,
+      context,
+    ) - 1;
+  // Kahoot rounds skip break_intro/break/reveal_intro entirely — every
+  // question is auto-graded, so there's never a manual-grading gate to
+  // wait through, and the "fewer clicks" design collapses straight to
+  // this question's own reveal.
+  if (round.kahootMode) {
+    return { ...progress, status: 'reveal', revealIndex };
   }
-  if (progress.status === 'round_overview') {
-    return {
-      ...progress,
-      status: context.jokersEnabled ? 'joker_pick' : 'round_intro',
-      roundIndex: 0,
-      questionIndex: 0,
-      revealIndex: 0,
-    };
-  }
-  if (progress.status === 'joker_pick') {
-    return {
-      ...progress,
-      status: 'round_intro',
-      roundIndex: 0,
-      questionIndex: 0,
-      revealIndex: 0,
-    };
-  }
-  if (progress.status === 'round_intro') {
-    return {
-      ...progress,
-      status: 'question_open',
-      questionIndex: 0,
-      furthestOpenIndex: Math.max(
-        progress.furthestOpenIndex,
-        getBlockPositionForQuestion(progress.roundIndex, 0, context),
-      ),
-    };
-  }
-  if (progress.status === 'question_open')
-    return advanceFromQuestionOpen(progress, context);
-  if (progress.status === 'locking') {
-    const round = context.rounds[progress.roundIndex];
-    const revealIndex =
-      getBlockQuestionCount(
-        progress.roundIndex,
-        progress.questionIndex,
-        context,
-      ) - 1;
-    // Kahoot rounds skip break_intro/break/reveal_intro entirely — every
-    // question is auto-graded, so there's never a manual-grading gate to
-    // wait through, and the "fewer clicks" design collapses straight to
-    // this question's own reveal.
-    if (round.kahootMode) {
-      return { ...progress, status: 'reveal', revealIndex };
-    }
-    return {
-      ...progress,
-      status: 'break_intro',
-      // Pins to the block's last question — the one that just locked —
-      // so PREVIOUS reveals it directly instead of starting pinned to
-      // the block's first question.
-      revealIndex,
-    };
-  }
+  return {
+    ...progress,
+    status: 'break_intro',
+    // Pins to the block's last question — the one that just locked —
+    // so PREVIOUS reveals it directly instead of starting pinned to
+    // the block's first question.
+    revealIndex,
+  };
+}
+
+const ADVANCE_FROM: Partial<Record<GameStatus, Transition>> = {
+  rules: advanceFromRules,
+  round_overview: advanceFromRoundOverview,
+  joker_pick: (progress) => toQuizStart(progress, 'round_intro'),
+  round_intro: advanceFromRoundIntro,
+  question_open: advanceFromQuestionOpen,
+  locking: advanceFromLocking,
   // break_intro is always pinned to the block's last question (see
   // 'locking' above), so this always falls into advanceFromBlockReview's
   // "already at the last question" branch and leaves straight to
@@ -251,17 +288,52 @@ function advance(
   // Previous and forward again with Advance lands back where you were
   // instead of re-attempting to leave the block (and re-tripping the
   // ungraded-answers gate) on every click.
-  if (progress.status === 'break_intro' || progress.status === 'break') {
-    return advanceFromBlockReview(progress, context);
-  }
+  break_intro: advanceFromBlockReview,
+  break: advanceFromBlockReview,
   // Resumes into the specific question that was paused on, same as
   // reveal_intro resuming into 'reveal' at the same revealIndex.
-  if (progress.status === 'break_round_intro')
-    return { ...progress, status: 'break' };
-  if (progress.status === 'reveal_intro')
-    return { ...progress, status: 'reveal' };
-  if (progress.status === 'reveal') return advanceFromReveal(progress, context);
-  return illegal(progress.status, action);
+  break_round_intro: (progress) => ({ ...progress, status: 'break' }),
+  reveal_intro: (progress) => ({ ...progress, status: 'reveal' }),
+  reveal: advanceFromReveal,
+};
+
+const PREVIOUS_FROM: Partial<Record<GameStatus, Transition>> = {
+  // Undoes START_QUIZ: no question has opened yet, so nothing is lost.
+  rules: (progress) => toQuizStart(progress, 'lobby'),
+  round_overview: (progress) => ({
+    ...progress,
+    status: 'rules',
+    questionIndex: 0,
+    revealIndex: 0,
+  }),
+  joker_pick: (progress) => ({
+    ...progress,
+    status: 'round_overview',
+    questionIndex: 0,
+    revealIndex: 0,
+  }),
+  round_intro: previousFromRoundIntro,
+  question_open: previousFromQuestionOpen,
+  locking: (progress) => ({ ...progress, status: 'question_open' }),
+  // Reveals the specific just-locked question at the same revealIndex —
+  // never decrements, so it's never silently skipped past.
+  break_intro: (progress) => ({ ...progress, status: 'break' }),
+  break: previousFromBlockReview,
+  break_round_intro: previousFromBreakRoundIntro,
+  reveal_intro: previousFromRevealIntro,
+  reveal: previousFromReveal,
+  ended: previousFromEnded,
+};
+
+function advance(
+  progress: GameProgress,
+  action: GameAction,
+  context: GameContext,
+): GameProgress {
+  const transition = ADVANCE_FROM[progress.status];
+  return transition
+    ? transition(progress, context)
+    : illegal(progress.status, action);
 }
 
 function previous(
@@ -269,47 +341,8 @@ function previous(
   action: GameAction,
   context: GameContext,
 ): GameProgress {
-  // Undoes START_QUIZ: no question has opened yet, so nothing is lost.
-  if (progress.status === 'rules')
-    return {
-      ...progress,
-      status: 'lobby',
-      roundIndex: 0,
-      questionIndex: 0,
-      revealIndex: 0,
-    };
-  if (progress.status === 'round_overview')
-    return {
-      ...progress,
-      status: 'rules',
-      questionIndex: 0,
-      revealIndex: 0,
-    };
-  if (progress.status === 'joker_pick')
-    return {
-      ...progress,
-      status: 'round_overview',
-      questionIndex: 0,
-      revealIndex: 0,
-    };
-  if (progress.status === 'round_intro')
-    return previousFromRoundIntro(progress, context);
-  if (progress.status === 'question_open')
-    return previousFromQuestionOpen(progress, context);
-  if (progress.status === 'locking')
-    return { ...progress, status: 'question_open' };
-  // Reveals the specific just-locked question at the same revealIndex —
-  // never decrements, so it's never silently skipped past.
-  if (progress.status === 'break_intro')
-    return { ...progress, status: 'break' };
-  if (progress.status === 'break')
-    return previousFromBlockReview(progress, context);
-  if (progress.status === 'break_round_intro')
-    return previousFromBreakRoundIntro(progress, context);
-  if (progress.status === 'reveal_intro')
-    return previousFromRevealIntro(progress, context);
-  if (progress.status === 'reveal')
-    return previousFromReveal(progress, context);
-  if (progress.status === 'ended') return previousFromEnded(progress);
-  return illegal(progress.status, action);
+  const transition = PREVIOUS_FROM[progress.status];
+  return transition
+    ? transition(progress, context)
+    : illegal(progress.status, action);
 }
