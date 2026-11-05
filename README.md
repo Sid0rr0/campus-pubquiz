@@ -256,6 +256,33 @@ are gitignored.
   Stryker runs the suite from a sandbox copy, so `stryker.config.mjs` hands
   `vitest.config.ts` the real path of `shared/types` via `SHARED_TYPES_ENTRY`.
 
+## Running the CRAP report
+
+CRAP (Change Risk Anti-Patterns) scores each function by its complexity and
+how much of it the tests leave uncovered: `CC² × (1 − coverage)³ + CC`. A
+fully covered function still scores its complexity, so a high score means
+"add tests" or, past 30 at full coverage, "split it". 1–5 is low risk, 5–30
+worth a look, above 30 too complex for its tests.
+[crapper](https://github.com/unclebob/crapper) does the scoring. It's a local
+check: not in `pnpm test`, the pre-commit hook or CI.
+
+```bash
+pnpm crap           # rerun coverage in every workspace, rank every function (about 2 min)
+pnpm crap:changed   # only the uncommitted source files; coverage reruns only where they live
+```
+
+Both exit 2 when a scored function is above 30. With `crap:changed` that's
+every function in a touched file, not just the lines you edited: touching a
+file with an offender means fixing it first. Backend coverage needs Docker
+(Testcontainers).
+
+`scripts/crap.mjs` clones crapper at a pinned commit into `.tools/crapper/`
+on first run and installs it into its own Python venv (needs `python3`). To
+upgrade, bump `CRAPPER_SHA` and the pinned `tree-sitter` versions there.
+Coverage goes to `coverage/<workspace>/lcov.info` (Vitest's 80% thresholds
+are switched off for this run); crapper writes `.metrics/crap.edn`. Both are
+gitignored.
+
 ## Docs
 
 Each file has one job; link to it rather than repeating it elsewhere.

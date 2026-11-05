@@ -80,3 +80,5 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ e2e-power-ups hit 23 rebase conflicts in `power-ups.spec.ts`, `coverage.ts` and `power-ups.ts`; power-ups hit 17 in `power-ups.ts` and `purchase-changes.ts`.
 - **implement browser check (2026-11-01 retro)**: sign in with `node scripts/dev-admin.mjs`; `.mcp.json` runs chrome-devtools with `--isolated`.
   _Why:_ six sessions found the shared Chrome profile locked, and two couldn't sign in, so changed screens went unchecked.
+- **tdd, rules of the loop (2026-11-05)**: once the last slice is green, run `pnpm crap:changed`; a function above 30 goes to review as a refactor target.
+  _Why:_ the CRAP gate is local only, so without a trigger in the dev loop nobody runs it; tdd has no refactor step, so the check hands its findings to review.

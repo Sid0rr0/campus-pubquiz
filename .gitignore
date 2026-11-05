@@ -59,6 +59,11 @@ scripts/.simulated-teams.json
 .stryker-tmp/
 reports/
 
+# CRAP score (scripts/crap.mjs): pinned crapper checkout, its snapshot and scratch coverage
+.tools/
+.metrics/
+target/
+
 # graphify
 graphify-out/
 apps/graphify-out/
