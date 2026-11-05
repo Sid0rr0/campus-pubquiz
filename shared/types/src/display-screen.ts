@@ -122,11 +122,6 @@ export function describeDisplayScreen({
 }: DisplayScreenInput): DisplayScreen {
   const { progress, quizStructure } = snapshot;
   const { rounds, settings } = session.seededGame;
-  const questionById = <Question extends { id: number }>(
-    questions: readonly Question[],
-    id: number | null,
-  ): Question | undefined => questions.find((question) => question.id === id);
-
   switch (onAir.kind) {
     case 'lobby':
     case 'rules':
@@ -175,6 +170,57 @@ export function describeDisplayScreen({
         funFacts: settings.funFactsEnabled ? describeFunFacts(session) : [],
         breakEndsAt: session.breakEndsAt,
       };
+    case 'break_review':
+    case 'break_round_title':
+    case 'reveal_intro':
+    case 'reveal':
+      return describeBlockQuestionScreen(
+        { session, onAir, snapshot, revealQuestions },
+        onAir,
+      );
+    case 'leaderboard':
+      return {
+        kind: 'leaderboard',
+        board: describeLeaderboardBoard(session),
+        revealCount: session.leaderboardRevealCount,
+        // The board shown once the quiz is over, or during its last break, crowns the winners.
+        isFinal:
+          progress.status === 'ended' ||
+          isShowingLastBreak(progress, quizStructure),
+      };
+    case 'ended':
+      return {
+        kind: 'ended',
+        isFeedbackPromptShown: onAir.isFeedbackPromptShown,
+      };
+    case 'showdown':
+      return snapshot.activeShowdown
+        ? {
+            kind: 'showdown',
+            showdown: snapshot.activeShowdown,
+            step: snapshot.showdownRevealStep,
+          }
+        : BLANK;
+  }
+}
+
+function questionById<Question extends { id: number }>(
+  questions: readonly Question[],
+  id: number | null,
+): Question | undefined {
+  return questions.find((question) => question.id === id);
+}
+
+/** The screens that show one question of the block in play: blank when it isn't there. */
+function describeBlockQuestionScreen(
+  { session, snapshot, revealQuestions }: DisplayScreenInput,
+  onAir: Extract<
+    OnAirScreen,
+    { kind: 'break_review' | 'break_round_title' | 'reveal_intro' | 'reveal' }
+  >,
+): DisplayScreen {
+  const { rounds } = session.seededGame;
+  switch (onAir.kind) {
     case 'break_review': {
       const question = questionById(snapshot.blockQuestions, onAir.questionId);
       return question ? { kind: 'break_review', question } : BLANK;
@@ -208,28 +254,5 @@ export function describeDisplayScreen({
           }
         : BLANK;
     }
-    case 'leaderboard':
-      return {
-        kind: 'leaderboard',
-        board: describeLeaderboardBoard(session),
-        revealCount: session.leaderboardRevealCount,
-        // The board shown once the quiz is over, or during its last break, crowns the winners.
-        isFinal:
-          progress.status === 'ended' ||
-          isShowingLastBreak(progress, quizStructure),
-      };
-    case 'ended':
-      return {
-        kind: 'ended',
-        isFeedbackPromptShown: onAir.isFeedbackPromptShown,
-      };
-    case 'showdown':
-      return snapshot.activeShowdown
-        ? {
-            kind: 'showdown',
-            showdown: snapshot.activeShowdown,
-            step: snapshot.showdownRevealStep,
-          }
-        : BLANK;
   }
 }
