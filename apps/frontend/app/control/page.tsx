@@ -42,6 +42,54 @@ const NO_INDICATORS: AdminIndicators = {
   breakRoundIndex: null,
 };
 
+type AdminSession = ReturnType<typeof useAdminSession>;
+type AdminSnapshot = AdminSession['snapshot'];
+
+/** The quiz the session is running, from the quiz list (null until it loads). */
+function activeQuizOf(
+  quizzes: Awaited<ReturnType<typeof fetchQuizzes>> | null,
+) {
+  const id = quizzes?.activeQuizId ?? null;
+  const quiz = quizzes?.quizzes.find((candidate) => candidate.id === id);
+  return {
+    id,
+    title: quiz?.title ?? null,
+    rounds: quiz?.rounds ?? EMPTY_ROUNDS,
+  };
+}
+
+/**
+ * The detail column's item: a manual pick from the browser, else what's on
+ * air, else the block's first question (none outside a block).
+ */
+function effectiveItemOf(
+  selectedItem: DetailItem | null,
+  onAir: DetailItem | null,
+  firstBlockQuestionId: number | null,
+): DetailItem | null {
+  if (selectedItem) return selectedItem;
+  if (onAir) return onAir;
+  return firstBlockQuestionId === null
+    ? null
+    : { kind: 'question', questionId: firstBlockQuestionId };
+}
+
+/**
+ * What the keyboard shortcuts can do, as decided by the server (the admin
+ * view). With no view yet there is nothing to act on, hence the fallbacks.
+ */
+function shortcutStateOf(snapshot: AdminSnapshot) {
+  const controls = snapshot?.controlAvailability;
+  return {
+    advanceStep: snapshot?.advanceStep ?? 'none',
+    previousState: snapshot?.previousState ?? 'unavailable',
+    isLeaderboardVisible: snapshot?.progress.isLeaderboardVisible ?? false,
+    canToggleJoinOverlay: controls?.canToggleJoinOverlay ?? false,
+    canPauseMedia: controls?.canPauseMedia ?? false,
+    isDisplaySoundMuted: snapshot?.isDisplaySoundMuted ?? false,
+  } as const;
+}
+
 function AdminPageContent() {
   const router = useRouter();
   const [selectedItem, setSelectedItem] = useState<DetailItem | null>(null);
@@ -120,18 +168,16 @@ function AdminPageContent() {
   // keep moving together again instead of the pick going stale. With nothing
   // on air, it falls back to the block's first question — naturally null
   // wherever blockQuestions is empty (e.g. round_intro).
-  const defaultBlockQuestionId = snapshot?.blockQuestions[0]?.id ?? null;
   // Adjusted during render rather than in an Effect — once selectedItem
   // is nulled, this condition is false on the next render, so it can't loop.
   if (isSameItem(selectedItem, onAir)) {
     setSelectedItem(null);
   }
-  const effectiveItem: DetailItem | null =
-    selectedItem ??
-    onAir ??
-    (defaultBlockQuestionId !== null
-      ? { kind: 'question', questionId: defaultBlockQuestionId }
-      : null);
+  const effectiveItem = effectiveItemOf(
+    selectedItem,
+    onAir,
+    snapshot?.blockQuestions[0]?.id ?? null,
+  );
   const effectiveQuestionId =
     effectiveItem?.kind === 'question' ? effectiveItem.questionId : null;
 
@@ -185,12 +231,11 @@ function AdminPageContent() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.answers.all });
   }, [reconnectedAt, queryClient]);
 
-  const activeQuizId = quizzes?.activeQuizId ?? null;
-  const activeQuizTitle =
-    quizzes?.quizzes.find((quiz) => quiz.id === activeQuizId)?.title ?? null;
-  const activeQuizRounds =
-    quizzes?.quizzes.find((quiz) => quiz.id === activeQuizId)?.rounds ??
-    EMPTY_ROUNDS;
+  const {
+    id: activeQuizId,
+    title: activeQuizTitle,
+    rounds: activeQuizRounds,
+  } = activeQuizOf(quizzes);
 
   const closeSessionMutation = useMutation({
     mutationFn: (joinCode: string) => closeSession(joinCode),
@@ -215,19 +260,9 @@ function AdminPageContent() {
     router.push('/');
   }
 
-  const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
-  const controls = snapshot?.controlAvailability;
-  // What the Advance slot and Previous do next is decided by the server (the
-  // admin view). This hook runs before the null-snapshot early return below,
-  // so the fallbacks (including `?? false` below) cover "no view yet", when there is nothing to act on.
-
+  // This hook runs before the null-snapshot early return below.
   useAdminKeyboardShortcuts({
-    advanceStep: snapshot?.advanceStep ?? 'none',
-    previousState: snapshot?.previousState ?? 'unavailable',
-    isLeaderboardVisible,
-    canToggleJoinOverlay: controls?.canToggleJoinOverlay ?? false,
-    canPauseMedia: controls?.canPauseMedia ?? false,
-    isDisplaySoundMuted: snapshot?.isDisplaySoundMuted ?? false,
+    ...shortcutStateOf(snapshot),
     sendAction,
     setDisplaySoundMuted,
   });
@@ -253,20 +288,7 @@ function AdminPageContent() {
     );
   }
 
-  const {
-    progress,
-    currentQuestion,
-    activeBlockStartIndex,
-    blockQuestions,
-    leaderboard,
-    roundTitles,
-    teams,
-    ungradedQuestionIds,
-    settings,
-  } = snapshot;
-  const fallbackQuestions = currentQuestion
-    ? [currentQuestion, ...blockQuestions]
-    : blockQuestions;
+  const { progress, settings } = snapshot;
   const panel: ControlPanel = {
     view: snapshot,
     quiz: { id: activeQuizId, title: activeQuizTitle },
@@ -297,65 +319,18 @@ function AdminPageContent() {
           />
         )}
         {progress.status !== 'lobby' && (
-          <>
-            <div className="flex flex-col gap-3 md:flex-row md:items-start">
-              <div className="md:max-w-[60%] md:flex-none">
-                <QuestionBrowserPanel
-                  rounds={activeQuizRounds}
-                  currentRoundIndex={progress.roundIndex}
-                  activeBlockStartIndex={activeBlockStartIndex}
-                  selected={effectiveItem}
-                  indicators={indicators}
-                  onSelect={setSelectedItem}
-                  ungradedQuestionIds={ungradedQuestionIds}
-                />
-              </div>
-              <div className="md:min-w-0 md:flex-1">
-                {effectiveItem && effectiveItem.kind !== 'question' ? (
-                  <RoundCardDetail
-                    item={effectiveItem}
-                    rounds={activeQuizRounds}
-                    kindLabel={
-                      selectedItem === null
-                        ? titleCardKindLabel(progress.status)
-                        : undefined
-                    }
-                  />
-                ) : (
-                  <QuestionDetail
-                    questionId={effectiveQuestionId}
-                    rounds={activeQuizRounds}
-                    liveAnswers={liveAnswers}
-                    fallbackQuestions={fallbackQuestions}
-                  />
-                )}
-              </div>
-            </div>
-            {liveAnswers && liveAnswers.questionId === effectiveQuestionId && (
-              <AnswersPanel
-                liveAnswers={liveAnswers}
-                teams={teams}
-                onGrade={gradeAnswer}
-              />
-            )}
-            <section className="flex flex-col gap-3">
-              <h2 className="font-display text-xl">Teams</h2>
-              <TeamsTable
-                joinCode={snapshot.joinCode}
-                leaderboard={leaderboard}
-                roundTitles={roundTitles}
-                onAwardBonus={awardBonus}
-                enabledBonusCategories={settings.enabledBonusCategories}
-                coinsByTeamId={
-                  settings.powerUpsEnabled
-                    ? Object.fromEntries(
-                        teams.map((team) => [team.teamId, team.coins]),
-                      )
-                    : undefined
-                }
-              />
-            </section>
-          </>
+          <SessionWorkspace
+            view={snapshot}
+            rounds={activeQuizRounds}
+            item={effectiveItem}
+            questionId={effectiveQuestionId}
+            isManualPick={selectedItem !== null}
+            indicators={indicators}
+            onSelect={setSelectedItem}
+            liveAnswers={liveAnswers}
+            onGrade={gradeAnswer}
+            onAwardBonus={awardBonus}
+          />
         )}
       </div>
     </main>
@@ -368,5 +343,108 @@ export default function AdminPage() {
     <Suspense fallback={null}>
       <AdminPageContent />
     </Suspense>
+  );
+}
+
+/** The control page below the sidebar once the quiz has left the lobby. */
+function SessionWorkspace({
+  view,
+  rounds,
+  item,
+  questionId,
+  isManualPick,
+  indicators,
+  onSelect,
+  liveAnswers,
+  onGrade,
+  onAwardBonus,
+}: {
+  view: NonNullable<AdminSnapshot>;
+  rounds: typeof EMPTY_ROUNDS;
+  item: DetailItem | null;
+  questionId: number | null;
+  isManualPick: boolean;
+  indicators: AdminIndicators;
+  onSelect: (item: DetailItem | null) => void;
+  liveAnswers: AdminSession['liveAnswers'];
+  onGrade: AdminSession['gradeAnswer'];
+  onAwardBonus: AdminSession['awardBonus'];
+}) {
+  const {
+    progress,
+    currentQuestion,
+    activeBlockStartIndex,
+    blockQuestions,
+    leaderboard,
+    roundTitles,
+    teams,
+    ungradedQuestionIds,
+    settings,
+  } = view;
+  const fallbackQuestions = currentQuestion
+    ? [currentQuestion, ...blockQuestions]
+    : blockQuestions;
+  return (
+    <>
+      <>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start">
+          <div className="md:max-w-[60%] md:flex-none">
+            <QuestionBrowserPanel
+              rounds={rounds}
+              currentRoundIndex={progress.roundIndex}
+              activeBlockStartIndex={activeBlockStartIndex}
+              selected={item}
+              indicators={indicators}
+              onSelect={onSelect}
+              ungradedQuestionIds={ungradedQuestionIds}
+            />
+          </div>
+          <div className="md:min-w-0 md:flex-1">
+            {item && item.kind !== 'question' ? (
+              <RoundCardDetail
+                item={item}
+                rounds={rounds}
+                kindLabel={
+                  !isManualPick
+                    ? titleCardKindLabel(progress.status)
+                    : undefined
+                }
+              />
+            ) : (
+              <QuestionDetail
+                questionId={questionId}
+                rounds={rounds}
+                liveAnswers={liveAnswers}
+                fallbackQuestions={fallbackQuestions}
+              />
+            )}
+          </div>
+        </div>
+        {liveAnswers && liveAnswers.questionId === questionId && (
+          <AnswersPanel
+            liveAnswers={liveAnswers}
+            teams={teams}
+            onGrade={onGrade}
+          />
+        )}
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-xl">Teams</h2>
+          <TeamsTable
+            joinCode={view.joinCode}
+            leaderboard={leaderboard}
+            roundTitles={roundTitles}
+            onAwardBonus={onAwardBonus}
+            enabledBonusCategories={settings.enabledBonusCategories}
+            coinsByTeamId={
+              settings.powerUpsEnabled
+                ? Object.fromEntries(
+                    teams.map((team) => [team.teamId, team.coins]),
+                  )
+                : undefined
+            }
+          />
+        </section>
+      </>
+    </>
   );
 }
