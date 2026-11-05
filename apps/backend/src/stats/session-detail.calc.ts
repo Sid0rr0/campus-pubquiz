@@ -191,6 +191,183 @@ function computeBonusSummary(
   };
 }
 
+type DetailAnswer = SessionDetailInput['answers'][number];
+type DetailQuestion = SessionDetailInput['questions'][number];
+type DetailRound = SessionDetailInput['rounds'][number];
+type QuestionResultById = Map<
+  number,
+  ReturnType<typeof sessionResult>['questions'][number]
+>;
+
+function timedResponsesOf(answers: readonly DetailAnswer[]): number[] {
+  return answers
+    .map((a) => a.responseMs)
+    .filter((ms): ms is number => ms !== null);
+}
+
+function averageOf(values: readonly number[]): number | null {
+  return values.length > 0
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : null;
+}
+
+function toStandingRow(
+  team: TeamResult,
+  answers: readonly DetailAnswer[],
+  playerCounts: SessionDetailInput['playerCounts'],
+): SessionDetailStandingRow {
+  return {
+    rank: team.placing,
+    rankTo: team.placingTo,
+    hasLeft: team.hasLeft,
+    isWinner: team.isSessionWinner,
+    teamId: team.teamId,
+    teamName: team.teamName,
+    playerCount: playerCounts.get(team.teamId) ?? null,
+    answerPoints: team.answerPoints,
+    bonusPoints: team.bonusPoints,
+    total: team.totalPoints,
+    correctCount: team.correctCount,
+    avgResponseMs: averageOf(
+      timedResponsesOf(answers.filter((a) => a.teamId === team.teamId)),
+    ),
+  };
+}
+
+function toRoundRow(
+  round: DetailRound,
+  {
+    questions,
+    answers,
+    played,
+    questionResultById,
+    teamCount,
+    rating,
+  }: {
+    questions: readonly DetailQuestion[];
+    answers: readonly DetailAnswer[];
+    played: ReadonlySet<number>;
+    questionResultById: QuestionResultById;
+    teamCount: number;
+    rating: SessionDetailInput['roundRatings'][number] | undefined;
+  },
+): SessionDetailRoundRow {
+  const roundQuestions = questions.filter(
+    (q) => q.roundId === round.roundId && played.has(q.questionId),
+  );
+  const roundQuestionIds = new Set(roundQuestions.map((q) => q.questionId));
+  const roundMaxPoints = roundQuestions.reduce((sum, q) => sum + q.points, 0);
+  const roundAnswers = answers.filter((a) =>
+    roundQuestionIds.has(a.questionId),
+  );
+  const achievablePoints = teamCount * roundMaxPoints;
+  // Only the questions that have a correct rate count towards the round's.
+  const ratedResults = roundQuestions.flatMap((q) => {
+    const r = questionResultById.get(q.questionId);
+    return r && r.correctRate !== null ? [r.correctRate] : [];
+  });
+  return {
+    roundId: round.roundId,
+    title: round.title,
+    category: round.category,
+    rating: rating ? { average: rating.average, count: rating.count } : null,
+    // The mean of the questions' own rates, so a partial answer counts the
+    // same way here as it does on the question row.
+    correctRate: averageOf(ratedResults),
+    pointsPercent:
+      achievablePoints > 0
+        ? (roundAnswers.reduce((sum, a) => sum + a.pointsAwarded, 0) /
+            achievablePoints) *
+          100
+        : 0,
+    avgResponseMs: averageOf(timedResponsesOf(roundAnswers)),
+  };
+}
+
+function toQuestionRow(
+  question: DetailQuestion,
+  {
+    answers,
+    played,
+    questionResultById,
+    roundTitle,
+  }: {
+    answers: readonly DetailAnswer[];
+    played: ReadonlySet<number>;
+    questionResultById: QuestionResultById;
+    roundTitle: string;
+  },
+): SessionDetailQuestionRow {
+  const timedResponses = timedResponsesOf(
+    answers.filter((a) => a.questionId === question.questionId),
+  );
+  const questionResult = questionResultById.get(question.questionId);
+  return {
+    questionId: question.questionId,
+    roundId: question.roundId,
+    roundTitle,
+    orderIndex: question.orderIndex,
+    prompt: question.prompt,
+    type: question.type,
+    answer: question.answer,
+    points: question.points,
+    answeredCount: questionResult?.answeredCount ?? 0,
+    correctCount: questionResult?.correctCount ?? 0,
+    correctRate: played.has(question.questionId)
+      ? (questionResult?.correctRate ?? null)
+      : null,
+    fastestResponseMs:
+      timedResponses.length > 0 ? Math.min(...timedResponses) : null,
+  };
+}
+
+function computeHighlights({
+  questionRows,
+  roundRows,
+  teamCount,
+  bonusAwards,
+  leaderboard,
+}: {
+  questionRows: readonly SessionDetailQuestionRow[];
+  roundRows: readonly SessionDetailRoundRow[];
+  teamCount: number;
+  bonusAwards: SessionDetailInput['bonusAwards'];
+  leaderboard: SessionStandings['leaderboard'];
+}): SessionDetailStats['highlights'] {
+  // Highlights consider only rows that have a correct rate (none do when the
+  // session has no participants).
+  const ratedQuestions = questionRows.filter(
+    (row): row is SessionDetailQuestionRow & { correctRate: number } =>
+      row.correctRate !== null,
+  );
+  const ratedRounds = roundRows.filter(
+    (row): row is SessionDetailRoundRow & { correctRate: number } =>
+      row.correctRate !== null,
+  );
+  return {
+    hardestQuestionId:
+      pickExtreme(ratedQuestions, (row) => row.correctRate, 'min')
+        ?.questionId ?? null,
+    easiestQuestionId:
+      pickExtreme(ratedQuestions, (row) => row.correctRate, 'max')
+        ?.questionId ?? null,
+    hardestRoundId:
+      pickExtreme(ratedRounds, (row) => row.correctRate, 'min')?.roundId ??
+      null,
+    allCorrectQuestionIds: ratedQuestions
+      .filter((row) => row.correctCount === teamCount)
+      .map((row) => row.questionId),
+    noneCorrectQuestionIds: ratedQuestions
+      .filter((row) => row.correctCount === 0)
+      .map((row) => row.questionId),
+    bonus: computeBonusSummary(bonusAwards),
+    winningMargin:
+      leaderboard.length >= 2
+        ? leaderboard[0].totalPoints - leaderboard[1].totalPoints
+        : null,
+  };
+}
+
 /**
  * Pure aggregation over one ended session's rows into `SessionDetailStats` —
  * StatsService.getSessionDetail fetches the rows, this does all the math, so
@@ -228,33 +405,11 @@ export function computeSessionDetail(
     result.questions.map((q) => [q.questionId, q]),
   );
 
-  const toRow = (team: TeamResult): SessionDetailStandingRow => {
-    const timedResponses = answers
-      .filter((a) => a.teamId === team.teamId)
-      .map((a) => a.responseMs)
-      .filter((ms): ms is number => ms !== null);
-    return {
-      rank: team.placing,
-      rankTo: team.placingTo,
-      hasLeft: team.hasLeft,
-      isWinner: team.isSessionWinner,
-      teamId: team.teamId,
-      teamName: team.teamName,
-      playerCount: playerCounts.get(team.teamId) ?? null,
-      answerPoints: team.answerPoints,
-      bonusPoints: team.bonusPoints,
-      total: team.totalPoints,
-      correctCount: team.correctCount,
-      avgResponseMs:
-        timedResponses.length > 0
-          ? timedResponses.reduce((sum, ms) => sum + ms, 0) /
-            timedResponses.length
-          : null,
-    };
-  };
   // Ranked teams first, in the order the Session result gives them, then the
   // ones that left — this function never sorts or ranks.
-  const standings: SessionDetailStandingRow[] = result.teams.map(toRow);
+  const standings: SessionDetailStandingRow[] = result.teams.map((team) =>
+    toStandingRow(team, answers, playerCounts),
+  );
 
   const sortedRounds = [...rounds].sort((a, b) => a.orderIndex - b.orderIndex);
   const roundTitleById = new Map(
@@ -265,50 +420,16 @@ export function computeSessionDetail(
   );
 
   const ratingByRoundId = new Map(roundRatings.map((r) => [r.roundId, r]));
-  const roundRows: SessionDetailRoundRow[] = sortedRounds.map((round) => {
-    const roundQuestions = questions.filter(
-      (q) => q.roundId === round.roundId && played.has(q.questionId),
-    );
-    const roundQuestionIds = new Set(roundQuestions.map((q) => q.questionId));
-    const roundMaxPoints = roundQuestions.reduce((sum, q) => sum + q.points, 0);
-    const roundAnswers = answers.filter((a) =>
-      roundQuestionIds.has(a.questionId),
-    );
-    const achievablePoints = teamCount * roundMaxPoints;
-    const rating = ratingByRoundId.get(round.roundId);
-    const timedResponses = roundAnswers
-      .map((a) => a.responseMs)
-      .filter((ms): ms is number => ms !== null);
-    // Only the questions that have a correct rate count towards the round's.
-    const ratedResults = roundQuestions.flatMap((q) => {
-      const r = questionResultById.get(q.questionId);
-      return r && r.correctRate !== null ? [r] : [];
-    });
-    return {
-      roundId: round.roundId,
-      title: round.title,
-      category: round.category,
-      rating: rating ? { average: rating.average, count: rating.count } : null,
-      // The mean of the questions' own rates, so a partial answer counts the
-      // same way here as it does on the question row.
-      correctRate:
-        ratedResults.length > 0
-          ? ratedResults.reduce((sum, r) => sum + (r.correctRate ?? 0), 0) /
-            ratedResults.length
-          : null,
-      pointsPercent:
-        achievablePoints > 0
-          ? (roundAnswers.reduce((sum, a) => sum + a.pointsAwarded, 0) /
-              achievablePoints) *
-            100
-          : 0,
-      avgResponseMs:
-        timedResponses.length > 0
-          ? timedResponses.reduce((sum, ms) => sum + ms, 0) /
-            timedResponses.length
-          : null,
-    };
-  });
+  const roundRows = sortedRounds.map((round) =>
+    toRoundRow(round, {
+      questions,
+      answers,
+      played,
+      questionResultById,
+      teamCount,
+      rating: ratingByRoundId.get(round.roundId),
+    }),
+  );
 
   // Display order: round order, then question order within the round —
   // also the order pickExtreme relies on for "ties go to the earlier one".
@@ -319,44 +440,13 @@ export function computeSessionDetail(
     return roundDiff !== 0 ? roundDiff : a.orderIndex - b.orderIndex;
   });
 
-  const questionRows: SessionDetailQuestionRow[] = sortedQuestions.map(
-    (question) => {
-      const questionAnswers = answers.filter(
-        (a) => a.questionId === question.questionId,
-      );
-      const timedResponses = questionAnswers
-        .map((a) => a.responseMs)
-        .filter((ms): ms is number => ms !== null);
-      const questionResult = questionResultById.get(question.questionId);
-      return {
-        questionId: question.questionId,
-        roundId: question.roundId,
-        roundTitle: roundTitleById.get(question.roundId) ?? '',
-        orderIndex: question.orderIndex,
-        prompt: question.prompt,
-        type: question.type,
-        answer: question.answer,
-        points: question.points,
-        answeredCount: questionResult?.answeredCount ?? 0,
-        correctCount: questionResult?.correctCount ?? 0,
-        correctRate: played.has(question.questionId)
-          ? (questionResult?.correctRate ?? null)
-          : null,
-        fastestResponseMs:
-          timedResponses.length > 0 ? Math.min(...timedResponses) : null,
-      };
-    },
-  );
-
-  // Highlights consider only rows that have a correct rate (none do when the
-  // session has no participants).
-  const ratedQuestions = questionRows.filter(
-    (row): row is SessionDetailQuestionRow & { correctRate: number } =>
-      row.correctRate !== null,
-  );
-  const ratedRounds = roundRows.filter(
-    (row): row is SessionDetailRoundRow & { correctRate: number } =>
-      row.correctRate !== null,
+  const questionRows = sortedQuestions.map((question) =>
+    toQuestionRow(question, {
+      answers,
+      played,
+      questionResultById,
+      roundTitle: roundTitleById.get(question.roundId) ?? '',
+    }),
   );
 
   // Difficulty measures the questions, so it reads the raw stored points: a
@@ -389,29 +479,13 @@ export function computeSessionDetail(
       roundRatings,
     }),
     questions: questionRows,
-    highlights: {
-      hardestQuestionId:
-        pickExtreme(ratedQuestions, (row) => row.correctRate, 'min')
-          ?.questionId ?? null,
-      easiestQuestionId:
-        pickExtreme(ratedQuestions, (row) => row.correctRate, 'max')
-          ?.questionId ?? null,
-      hardestRoundId:
-        pickExtreme(ratedRounds, (row) => row.correctRate, 'min')?.roundId ??
-        null,
-      allCorrectQuestionIds: ratedQuestions
-        .filter((row) => row.correctCount === teamCount)
-        .map((row) => row.questionId),
-      noneCorrectQuestionIds: ratedQuestions
-        .filter((row) => row.correctCount === 0)
-        .map((row) => row.questionId),
-      bonus: computeBonusSummary(bonusAwards),
-      winningMargin:
-        sessionStandings.leaderboard.length >= 2
-          ? sessionStandings.leaderboard[0].totalPoints -
-            sessionStandings.leaderboard[1].totalPoints
-          : null,
-    },
+    highlights: computeHighlights({
+      questionRows,
+      roundRows,
+      teamCount,
+      bonusAwards,
+      leaderboard: sessionStandings.leaderboard,
+    }),
     scoresheet: answers.map((a) => ({
       teamId: a.teamId,
       questionId: a.questionId,
