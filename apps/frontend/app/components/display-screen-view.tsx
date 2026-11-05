@@ -66,6 +66,9 @@ export function DisplayScreenView({
   live,
 }: DisplayScreenViewProps): ReactNode {
   const { settings, quizStructure } = quiz;
+  const media = liveMediaProps(live);
+  // A preview has no live session: nobody connected, no teams yet.
+  const isConnected = live?.isConnected ?? false;
 
   switch (screen.kind) {
     case 'leaderboard':
@@ -77,7 +80,7 @@ export function DisplayScreenView({
           <Leaderboard
             board={screen.board}
             revealCount={screen.revealCount}
-            isConnected={live?.isConnected ?? false}
+            isConnected={isConnected}
             isFinal={screen.isFinal}
             onWinnerCelebrated={live?.onWinnerCelebrated}
           />
@@ -137,6 +140,65 @@ export function DisplayScreenView({
           note={screen.note}
         />
       );
+    case 'ended':
+      return (
+        <EndedScreen
+          leaderboard={live?.leaderboard ?? []}
+          isFeedbackPromptShown={screen.isFeedbackPromptShown}
+        />
+      );
+    case 'showdown':
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
+          <DisplayShowdown
+            activeShowdown={screen.showdown}
+            step={screen.step}
+            isConnected={isConnected}
+          />
+        </div>
+      );
+    case 'blank':
+      return null;
+    default:
+      return (
+        <BlockScreen
+          screen={screen}
+          settings={settings}
+          quizStructure={quizStructure}
+          media={media}
+          live={live}
+        />
+      );
+  }
+}
+
+/** The screens of the block in play: its questions, the break and the reveal. */
+function BlockScreen({
+  screen,
+  settings,
+  quizStructure,
+  media,
+  live,
+}: {
+  screen: Extract<
+    DisplayScreenViewProps['screen'],
+    {
+      kind:
+        | 'question'
+        | 'locking'
+        | 'break_intro'
+        | 'break_review'
+        | 'break_round_title'
+        | 'reveal_intro'
+        | 'reveal';
+    }
+  >;
+  settings: DisplayScreenViewProps['quiz']['settings'];
+  quizStructure: DisplayScreenViewProps['quiz']['quizStructure'];
+  media: LiveMediaProps;
+  live: DisplayScreenViewProps['live'];
+}): ReactNode {
+  switch (screen.kind) {
     case 'question':
       return (
         <QuestionOpenScreen
@@ -148,10 +210,7 @@ export function DisplayScreenView({
             }
           }
           autoplayMedia={settings.autoplayMedia}
-          isFullscreen={live?.isMediaFullscreen}
-          mediaReplayToken={live?.mediaReplayToken}
-          isMediaPaused={live?.isMediaPaused}
-          isDisplaySoundMuted={live?.isDisplaySoundMuted}
+          {...media}
           kahootQuestionEndsAt={live?.kahootQuestionEndsAt}
         />
       );
@@ -186,7 +245,7 @@ export function DisplayScreenView({
         <BreakReviewScreen
           question={screen.question}
           autoplayMedia={settings.autoplayMedia}
-          isDisplaySoundMuted={live?.isDisplaySoundMuted}
+          isDisplaySoundMuted={media.isDisplaySoundMuted}
         />
       );
     case 'break_round_title':
@@ -204,82 +263,89 @@ export function DisplayScreenView({
           roundTitle={screen.title}
         />
       );
-    case 'reveal': {
-      const revealQuestion = screen.question;
-      switch (revealQuestion.revealKind) {
-        case 'closest_guess':
-        case 'closest_guess_pending': {
-          return (
-            <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-              <RevealEntranceConfig>
-                <ClosestGuessRevealScreen
-                  prompt={revealQuestion.prompt}
-                  closestGuess={revealQuestion.closestGuess}
-                  mediaTestIdPrefix="reveal"
-                  autoplayMedia={settings.autoplayMedia}
-                  isFullscreen={live?.isMediaFullscreen}
-                  isMediaPaused={live?.isMediaPaused}
-                  mediaReplayToken={live?.mediaReplayToken}
-                  isDisplaySoundMuted={live?.isDisplaySoundMuted}
-                  hasEntrance
-                  revealNotes={screen.notes}
-                  {...closestGuessAnswerProps(revealQuestion)}
-                />
-              </RevealEntranceConfig>
-            </div>
-          );
-        }
-        case 'answer': {
-          const teamsCorrect = live?.teamsCorrect;
-          return (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-              <RevealEntranceConfig>
-                <QuestionDisplay
-                  question={revealQuestion}
-                  mediaTestIdPrefix="reveal"
-                  autoplayMedia={settings.autoplayMedia}
-                  isFullscreen={live?.isMediaFullscreen}
-                  mediaReplayToken={live?.mediaReplayToken}
-                  isMediaPaused={live?.isMediaPaused}
-                  isDisplaySoundMuted={live?.isDisplaySoundMuted}
-                  hasRevealEntrance
-                  revealNotes={screen.notes}
-                />
-              </RevealEntranceConfig>
-              {teamsCorrect && teamsCorrect.teamCount > 0 && (
-                <TeamsCorrectCount {...teamsCorrect} />
-              )}
-              <PowerUpCounts counts={live?.powerUpCounts ?? []} />
-            </div>
-          );
-        }
-        default: {
-          const unhandled: never = revealQuestion;
-          return unhandled;
-        }
-      }
-    }
-    case 'ended':
+    case 'reveal':
       return (
-        <EndedScreen
-          leaderboard={live?.leaderboard ?? []}
-          isFeedbackPromptShown={screen.isFeedbackPromptShown}
+        <RevealScreen
+          screen={screen}
+          autoplayMedia={settings.autoplayMedia}
+          media={media}
+          live={live}
         />
       );
-    case 'showdown':
-      return (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
-          <DisplayShowdown
-            activeShowdown={screen.showdown}
-            step={screen.step}
-            isConnected={live?.isConnected ?? false}
-          />
-        </div>
-      );
-    case 'blank':
-      return null;
     default: {
       const unhandled: never = screen;
+      return unhandled;
+    }
+  }
+}
+
+type LiveMediaProps = ReturnType<typeof liveMediaProps>;
+
+/** The media flags a live screen passes to its player; absent in a preview. */
+function liveMediaProps(live: DisplayScreenViewProps['live']) {
+  return {
+    isFullscreen: live?.isMediaFullscreen,
+    mediaReplayToken: live?.mediaReplayToken,
+    isMediaPaused: live?.isMediaPaused,
+    isDisplaySoundMuted: live?.isDisplaySoundMuted,
+  };
+}
+
+function RevealScreen({
+  screen,
+  autoplayMedia,
+  media,
+  live,
+}: {
+  screen: Extract<DisplayScreenViewProps['screen'], { kind: 'reveal' }>;
+  autoplayMedia: boolean;
+  media: LiveMediaProps;
+  live: DisplayScreenViewProps['live'];
+}): ReactNode {
+  const revealQuestion = screen.question;
+  switch (revealQuestion.revealKind) {
+    case 'closest_guess':
+    case 'closest_guess_pending': {
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+          <RevealEntranceConfig>
+            <ClosestGuessRevealScreen
+              prompt={revealQuestion.prompt}
+              closestGuess={revealQuestion.closestGuess}
+              mediaTestIdPrefix="reveal"
+              autoplayMedia={autoplayMedia}
+              {...media}
+              hasEntrance
+              revealNotes={screen.notes}
+              {...closestGuessAnswerProps(revealQuestion)}
+            />
+          </RevealEntranceConfig>
+        </div>
+      );
+    }
+    case 'answer': {
+      const teamsCorrect = live?.teamsCorrect;
+      return (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+          <RevealEntranceConfig>
+            <QuestionDisplay
+              question={revealQuestion}
+              mediaTestIdPrefix="reveal"
+              autoplayMedia={autoplayMedia}
+              {...media}
+              hasRevealEntrance
+              revealNotes={screen.notes}
+            />
+          </RevealEntranceConfig>
+          {teamsCorrect && teamsCorrect.teamCount > 0 && (
+            <TeamsCorrectCount {...teamsCorrect} />
+          )}
+          <PowerUpCounts counts={live?.powerUpCounts ?? []} />
+        </div>
+      );
+    }
+    default: {
+      const unhandled: never = revealQuestion;
       return unhandled;
     }
   }
