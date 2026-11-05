@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { LightningBoltIcon } from '@radix-ui/react-icons';
 import { POWER_UP_LABELS, type PowerUpId } from '@campus-pubquiz/types';
+import { formatCoins } from '@/app/play/power-ups-list';
 
 const MOMENT_VISIBLE_MS = 1200;
 const STAMP_EASE = [0.16, 1, 0.3, 1] as const;
@@ -44,12 +45,19 @@ export function usePowerUpMoment() {
 }
 
 /** The stamp itself: the card lands as the bolt strikes down through it. Never takes a tap, so answering carries on under it. */
+/** Reduced motion keeps only the fade. */
+const FULL_ENTRANCE = {
+  stamp: { opacity: 0, scale: 1.6 },
+  bolt: { clipPath: 'inset(0 0 100% 0)' },
+};
+const REDUCED_ENTRANCE = { stamp: { opacity: 0 }, bolt: false as const };
+
 export function PowerUpMoment({
   moment,
 }: {
   moment: PowerUpMomentState | null;
 }) {
-  const shouldReduceMotion = useReducedMotion();
+  const entrance = useReducedMotion() ? REDUCED_ENTRANCE : FULL_ENTRANCE;
   return (
     <AnimatePresence>
       {moment && (
@@ -57,9 +65,7 @@ export function PowerUpMoment({
           key={moment.id}
           role="status"
           className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
-          initial={
-            shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.6 }
-          }
+          initial={entrance.stamp}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.15 } }}
           transition={{ duration: 0.25, ease: STAMP_EASE }}
@@ -67,9 +73,7 @@ export function PowerUpMoment({
           <span className="flex -rotate-3 flex-col items-center gap-1 rounded-2xl border-4 border-magenta bg-background/95 px-8 py-4 text-magenta">
             <motion.span
               aria-hidden="true"
-              initial={
-                shouldReduceMotion ? false : { clipPath: 'inset(0 0 100% 0)' }
-              }
+              initial={entrance.bolt}
               animate={{ clipPath: 'inset(0 0 0% 0)' }}
               transition={{ delay: 0.12, duration: 0.2, ease: 'easeOut' }}
             >
@@ -80,7 +84,7 @@ export function PowerUpMoment({
             </span>
             {moment.cost > 0 && (
               <span className="text-sm font-black tabular-nums">
-                −{moment.cost} {moment.cost === 1 ? 'coin' : 'coins'}
+                −{formatCoins(moment.cost)}
               </span>
             )}
           </span>

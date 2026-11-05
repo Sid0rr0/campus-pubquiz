@@ -342,7 +342,6 @@ function matchRevealBody({
       <ul className="flex w-full max-w-[calc(72rem*var(--display-text-scale,1))] flex-col gap-3 text-left">
         {options.map((left, index) => {
           const right = shownRights[index];
-          const rightLetterIndex = matchTargets?.indexOf(right) ?? index;
           return (
             <MatchRevealRow
               key={index}
@@ -352,7 +351,7 @@ function matchRevealBody({
               leftLabel={String(index + 1)}
               left={left}
               rightLabel={getLowerOptionLetter(
-                rightLetterIndex >= 0 ? rightLetterIndex : index,
+                rightLetterIndex(matchTargets, right, index),
               )}
               right={right}
             />
@@ -361,6 +360,16 @@ function matchRevealBody({
       </ul>
     ),
   };
+}
+
+/** Where `right` sits among the match targets, else the row's own position. */
+function rightLetterIndex(
+  matchTargets: readonly string[] | undefined,
+  right: string,
+  index: number,
+): number {
+  const found = matchTargets?.indexOf(right) ?? index;
+  return found >= 0 ? found : index;
 }
 
 function typedRevealBody({

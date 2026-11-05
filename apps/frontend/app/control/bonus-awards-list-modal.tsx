@@ -73,10 +73,7 @@ function AwardEditor({
   const label = BONUS_CATEGORY_LABELS[award.category];
   const isCustom = award.category === 'custom';
   const points = Number(pointsInput);
-  const canSubmit =
-    Number.isFinite(points) &&
-    points !== 0 &&
-    (!isCustom || reasonInput.trim().length > 0);
+  const canSubmit = canSaveAward(points, isCustom ? reasonInput : null);
 
   function handleSave(): void {
     if (!canSubmit) return;
@@ -131,6 +128,15 @@ function AwardEditor({
         </Button>
       </div>
     </li>
+  );
+}
+
+/** `customReason` is null for a predefined category, which needs no reason. */
+function canSaveAward(points: number, customReason: string | null): boolean {
+  return (
+    Number.isFinite(points) &&
+    points !== 0 &&
+    (customReason === null || customReason.trim().length > 0)
   );
 }
 

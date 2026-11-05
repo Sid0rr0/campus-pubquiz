@@ -166,6 +166,43 @@ describe('QuestionDetail', () => {
     );
   });
 
+  it('takes the lists and notes the live context lacks from the round list', () => {
+    renderDetail(
+      7,
+      roundWith({
+        id: 7,
+        type: 'match',
+        prompt: 'Match the capitals',
+        answer: 'Paris|Rome',
+        options: ['France', 'Italy'],
+        matchTargets: ['Rome', 'Paris'],
+        notes: 'Read both lists aloud.',
+      }),
+      {
+        questionId: 7,
+        question: {
+          type: 'match',
+          prompt: 'Match the capitals',
+          points: 2,
+          correctAnswer: 'Paris|Rome',
+          roundTitle: 'Geography',
+          roundNumber: 2,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
+        answers: [],
+      },
+    );
+
+    expect(screen.getByRole('list', { name: 'Left items' })).toHaveTextContent(
+      'FranceItaly',
+    );
+    expect(
+      screen.getByRole('list', { name: 'Match targets' }),
+    ).toHaveTextContent('RomeParis');
+    expect(screen.getByText('Read both lists aloud.')).toBeInTheDocument();
+  });
+
   it('shows just the prompt from the live snapshot while nothing else has loaded', () => {
     renderDetail(99, [], null, 'Loading gap prompt');
 

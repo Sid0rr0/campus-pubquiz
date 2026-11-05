@@ -158,6 +158,6 @@ function useTapToClose() {
   return { triggerRef, onTriggerClick, onPointerDownOutside };
 }
 
-function isPointInRect(rect: DOMRect, x: number, y: number): boolean {
+export function isPointInRect(rect: DOMRect, x: number, y: number): boolean {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }

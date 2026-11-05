@@ -270,7 +270,7 @@ function outlineFlagsOf(described: Described, index: number) {
 }
 
 /** The rounds after a drag, or null when it was dropped nowhere or touches a round a live session has reached. */
-function roundsAfterDrop<Round extends { id: string }>(
+export function roundsAfterDrop<Round extends { id: string }>(
   rounds: Round[],
   described: Described,
   { active, over }: DragEndEvent,
@@ -287,7 +287,7 @@ function roundsAfterDrop<Round extends { id: string }>(
 }
 
 /** The questions after a drag, or null when it was dropped nowhere or touches a pinned question. */
-function questionsAfterDrop<Question extends { id: string }>(
+export function questionsAfterDrop<Question extends { id: string }>(
   questions: Question[],
   pinnedQuestionCount: number,
   { active, over }: DragEndEvent,

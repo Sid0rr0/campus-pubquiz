@@ -103,8 +103,8 @@ function liveFields(
   stored: StoredQuestion | undefined,
 ): Omit<DetailData, 'prompt'> {
   return {
-    type: live.type ?? stored?.type,
-    correctAnswer: live.correctAnswer ?? stored?.answer,
+    type: live.type,
+    correctAnswer: live.correctAnswer,
     options: live.options ?? stored?.options,
     matchTargets: live.matchTargets ?? stored?.matchTargets,
     notes: stored?.notes,

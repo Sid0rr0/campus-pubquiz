@@ -397,30 +397,57 @@ function RevealScreen({
         </div>
       );
     }
-    case 'answer': {
-      const teamsCorrect = live?.teamsCorrect;
+    case 'answer':
       return (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-          <RevealEntranceConfig>
-            <QuestionDisplay
-              question={revealQuestion}
-              mediaTestIdPrefix="reveal"
-              autoplayMedia={autoplayMedia}
-              {...media}
-              hasRevealEntrance
-              revealNotes={screen.notes}
-            />
-          </RevealEntranceConfig>
-          {teamsCorrect && teamsCorrect.teamCount > 0 && (
-            <TeamsCorrectCount {...teamsCorrect} />
-          )}
-          <PowerUpCounts counts={live?.powerUpCounts ?? []} />
-        </div>
+        <AnswerRevealScreen
+          question={revealQuestion}
+          notes={screen.notes}
+          autoplayMedia={autoplayMedia}
+          media={media}
+          live={live}
+        />
       );
-    }
     default: {
       const unhandled: never = revealQuestion;
       return unhandled;
     }
   }
+}
+
+/** An answer's reveal, with how many teams got it and the power-ups used on it. */
+function AnswerRevealScreen({
+  question: revealQuestion,
+  notes,
+  autoplayMedia,
+  media,
+  live,
+}: {
+  question: Extract<
+    Extract<DisplayScreen, { kind: 'reveal' }>['question'],
+    { revealKind: 'answer' }
+  >;
+  notes: Extract<DisplayScreen, { kind: 'reveal' }>['notes'];
+  autoplayMedia: boolean;
+  media: LiveMediaProps;
+  live: DisplayScreenViewProps['live'];
+}) {
+  const teamsCorrect = live?.teamsCorrect;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+      <RevealEntranceConfig>
+        <QuestionDisplay
+          question={revealQuestion}
+          mediaTestIdPrefix="reveal"
+          autoplayMedia={autoplayMedia}
+          {...media}
+          hasRevealEntrance
+          revealNotes={notes}
+        />
+      </RevealEntranceConfig>
+      {teamsCorrect && teamsCorrect.teamCount > 0 && (
+        <TeamsCorrectCount {...teamsCorrect} />
+      )}
+      <PowerUpCounts counts={live?.powerUpCounts ?? []} />
+    </div>
+  );
 }

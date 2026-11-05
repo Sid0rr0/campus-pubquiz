@@ -1,7 +1,10 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LiveSessionSelect } from '@/app/components/live-session-select';
+import {
+  LiveSessionSelect,
+  isPointInRect,
+} from '@/app/components/live-session-select';
 import { renderWithQuery } from '@/test-utils/query';
 
 const { mockFetchPublicSessions } = vi.hoisted(() => ({
@@ -81,5 +84,21 @@ describe('LiveSessionSelect', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /could not load live games/i,
     );
+  });
+});
+
+describe('isPointInRect', () => {
+  const rect = { left: 10, right: 20, top: 30, bottom: 40 } as DOMRect;
+
+  it('counts a point on or inside the edges as on the trigger', () => {
+    expect(isPointInRect(rect, 10, 30)).toBe(true);
+    expect(isPointInRect(rect, 20, 40)).toBe(true);
+  });
+
+  it('counts a point past any edge as off the trigger', () => {
+    expect(isPointInRect(rect, 9, 35)).toBe(false);
+    expect(isPointInRect(rect, 21, 35)).toBe(false);
+    expect(isPointInRect(rect, 15, 29)).toBe(false);
+    expect(isPointInRect(rect, 15, 41)).toBe(false);
   });
 });
