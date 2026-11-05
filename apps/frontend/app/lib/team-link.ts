@@ -783,25 +783,12 @@ export function teamLink(
   input: TeamLinkInput,
 ): TeamLinkStep {
   switch (input.type) {
+    case 'connected':
+      return connect(state, input);
     case 'storageRead':
       // A kick already cleared what this would restore.
       if (state.kickNotice) return unchanged(state);
       return joinOncePerConnection(withStoredIdentity(state, input.stored));
-    case 'connected': {
-      const isNewConnection = state.connection?.id !== input.connectionId;
-      const unlinked = isNewConnection ? unlink(state) : unchanged(state);
-      const join = joinOncePerConnection({
-        ...unlinked.state,
-        joinRetries: isNewConnection ? 0 : unlinked.state.joinRetries,
-        // The first status on a new connection is a first status again.
-        lastStatus: isNewConnection ? null : unlinked.state.lastStatus,
-        connection: { id: input.connectionId, socketId: input.socketId },
-      });
-      return {
-        state: join.state,
-        commands: [...unlinked.commands, ...join.commands],
-      };
-    }
     case 'disconnected':
       return unlink({ ...state, connection: null, lastStatus: null });
     case 'connectionRefused':
@@ -816,18 +803,102 @@ export function teamLink(
       };
     case 'answerReceived':
       return receiveAnswer(state, input.payload);
+    case 'bonusAwarded':
+      return awardBonus(state, input.payload);
+    case 'coinAwarded':
+      return awardCoins(state, input.payload);
+    case 'answerResult':
+      return receiveAnswerResult(state, input.attempt, input.result);
+    case 'answerNotDelivered':
+      return keepAnswerPending(state, input.attempt);
+    case 'answerTimedOut':
+      if (input.attempt !== state.answerAttempt) return unchanged(state);
+      return {
+        state: { ...state, isLinked: false },
+        commands: [{ type: 'forceReconnect' }],
+      };
+    case 'jokerSynced':
+      return syncJoker(state, input.joker);
+    case 'joinRefused':
+      // An answer to a join on an earlier connection says nothing about this one.
+      if (input.connectionId !== state.joinSentFor) return unchanged(state);
+      return refuseJoin(state, input.connectionId, input.reason);
+    case 'joinRetryDue':
+      return retryJoin(state, input.connectionId);
+    case 'statusSeen':
+      return seeStatus(state, input.status);
+    case 'kicked':
+      return leaveSession(state, 'kicked');
+    case 'sessionClosed':
+      return leaveSession(state, 'sessionClosed');
+    case 'logoutRequested':
+      return leaveSession(state, 'loggedOut');
+    case 'joinSubmitted':
+      return submitJoin(state);
+    case 'answerSubmitted':
+      return submitAnswer(state, {
+        questionId: input.questionId,
+        teamId: input.teamId,
+        value: input.value,
+      });
+    default:
+      return recordTeamData(state, input);
+  }
+}
+
+/** A (re)connected socket: a new connection unlinks the old one and joins once. */
+function connect(
+  state: TeamLinkState,
+  input: Extract<TeamLinkInput, { type: 'connected' }>,
+): TeamLinkStep {
+  const isNewConnection = state.connection?.id !== input.connectionId;
+  const unlinked = isNewConnection ? unlink(state) : unchanged(state);
+  const join = joinOncePerConnection({
+    ...unlinked.state,
+    joinRetries: isNewConnection ? 0 : unlinked.state.joinRetries,
+    // The first status on a new connection is a first status again.
+    lastStatus: isNewConnection ? null : unlinked.state.lastStatus,
+    connection: { id: input.connectionId, socketId: input.socketId },
+  });
+  return {
+    state: join.state,
+    commands: [...unlinked.commands, ...join.commands],
+  };
+}
+
+/** Inputs that only record what the server sent or the team typed. */
+function recordTeamData(
+  state: TeamLinkState,
+  input: Extract<
+    TeamLinkInput,
+    {
+      type:
+        | 'teamAnswersSynced'
+        | 'bonusAwardsSynced'
+        | 'coinsSynced'
+        | 'ratingSaved'
+        | 'feedbackSaved'
+        | 'sessionRatingSaved'
+        | 'playerCountSynced'
+        | 'playerCountSaved'
+        | 'jokerSaved'
+        | 'purchasesSynced'
+        | 'roomReadySynced'
+        | 'nameTyped'
+        | 'gameCodeTyped'
+        | 'teamCodeTyped';
+    }
+  >,
+): TeamLinkStep {
+  switch (input.type) {
     case 'teamAnswersSynced':
       return unchanged({
         ...state,
         myAnswers: buildMyAnswers(input.answers),
         myAnswerGrades: buildMyAnswerGrades(input.answers),
       });
-    case 'bonusAwarded':
-      return awardBonus(state, input.payload);
     case 'bonusAwardsSynced':
       return unchanged({ ...state, myBonusAwards: input.bonusAwards });
-    case 'coinAwarded':
-      return awardCoins(state, input.payload);
     case 'coinsSynced':
       return unchanged(
         state.team
@@ -841,16 +912,6 @@ export function teamLink(
             }
           : state,
       );
-    case 'answerResult':
-      return receiveAnswerResult(state, input.attempt, input.result);
-    case 'answerNotDelivered':
-      return keepAnswerPending(state, input.attempt);
-    case 'answerTimedOut':
-      if (input.attempt !== state.answerAttempt) return unchanged(state);
-      return {
-        state: { ...state, isLinked: false },
-        commands: [{ type: 'forceReconnect' }],
-      };
     case 'ratingSaved':
       return unchanged({
         ...state,
@@ -872,8 +933,6 @@ export function teamLink(
     case 'playerCountSynced':
     case 'playerCountSaved':
       return unchanged({ ...state, myPlayerCount: input.playerCount });
-    case 'jokerSynced':
-      return syncJoker(state, input.joker);
     case 'jokerSaved':
       return unchanged({ ...state, myJoker: input.joker });
     case 'purchasesSynced':
@@ -892,34 +951,12 @@ export function teamLink(
         roomReadyQuestionIds: isReady ? [...others, questionId] : others,
       });
     }
-    case 'joinRefused':
-      // An answer to a join on an earlier connection says nothing about this one.
-      if (input.connectionId !== state.joinSentFor) return unchanged(state);
-      return refuseJoin(state, input.connectionId, input.reason);
-    case 'joinRetryDue':
-      return retryJoin(state, input.connectionId);
-    case 'statusSeen':
-      return seeStatus(state, input.status);
-    case 'kicked':
-      return leaveSession(state, 'kicked');
-    case 'sessionClosed':
-      return leaveSession(state, 'sessionClosed');
-    case 'logoutRequested':
-      return leaveSession(state, 'loggedOut');
     case 'nameTyped':
       return unchanged({ ...state, nameInput: input.value });
     case 'gameCodeTyped':
       return unchanged({ ...state, codeInput: input.value });
     case 'teamCodeTyped':
       return unchanged({ ...state, teamCodeInput: input.value });
-    case 'joinSubmitted':
-      return submitJoin(state);
-    case 'answerSubmitted':
-      return submitAnswer(state, {
-        questionId: input.questionId,
-        teamId: input.teamId,
-        value: input.value,
-      });
     default: {
       const unhandled: never = input;
       throw new Error(

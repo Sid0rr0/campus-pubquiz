@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type SubmitEvent,
+  type RefObject,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -188,6 +189,123 @@ function showToast(command: Extract<TeamLinkCommand, { type: 'toast' }>) {
   else toast(command.message, options);
 }
 
+type TimerRef = RefObject<ReturnType<typeof setTimeout> | null>;
+
+/** The hook's refs a command reads or writes; each is stable for the hook's lifetime. */
+interface TeamLinkCommandRefs {
+  connectionRef: RefObject<PlayerConnection | null>;
+  goToJoinScreenRef: RefObject<() => void>;
+  confirmTimerRef: TimerRef;
+  joinRetryTimerRef: TimerRef;
+  answerWaitersRef: RefObject<Map<number, (r: AckResult) => void>>;
+  latestAnswerRef: RefObject<Promise<AckResult> | null>;
+}
+
+function clearTimer(timerRef: TimerRef) {
+  if (timerRef.current === null) return;
+  clearTimeout(timerRef.current);
+  timerRef.current = null;
+}
+
+/** Carries out one Team link command against the socket, timers and storage. */
+function runTeamLinkCommand(
+  command: TeamLinkCommand,
+  dispatch: (input: TeamLinkInput) => void,
+  {
+    connectionRef,
+    goToJoinScreenRef,
+    confirmTimerRef,
+    joinRetryTimerRef,
+    answerWaitersRef,
+    latestAnswerRef,
+  }: TeamLinkCommandRefs,
+) {
+  const connection = connectionRef.current;
+  switch (command.type) {
+    case 'sendJoin':
+      void connection
+        ?.emitWithAck(SOCKET_EVENTS.JOIN_PLAYERS, command.payload)
+        .then((result) => {
+          if (result.success) return;
+          dispatch({
+            type: 'joinRefused',
+            connectionId: command.connectionId,
+            reason: result.error,
+          });
+        });
+      break;
+    case 'sendAnswer': {
+      const { attempt, payload } = command;
+      latestAnswerRef.current = new Promise<AckResult>((resolve) => {
+        answerWaitersRef.current.set(attempt, resolve);
+        const sent =
+          connection?.emitWithAck(SOCKET_EVENTS.SUBMIT_ANSWER, payload) ??
+          Promise.resolve(NOT_CONNECTED_RESULT);
+        void sent.then((result) => {
+          // Stryker disable next-line CallExpression: equivalent — a waiter left in the map is only resolved a second time later, which a promise ignores
+          answerWaitersRef.current.delete(attempt);
+          resolve(result);
+          dispatch(
+            isNotDelivered(result)
+              ? { type: 'answerNotDelivered', attempt }
+              : { type: 'answerResult', attempt, result },
+          );
+        });
+      });
+      break;
+    }
+    case 'armConfirmTimer':
+      // Stryker disable next-line CallExpression: equivalent — the Team link always emits `clearConfirmTimer` just before `armConfirmTimer`
+      clearTimer(confirmTimerRef);
+      confirmTimerRef.current = setTimeout(() => {
+        confirmTimerRef.current = null;
+        answerWaitersRef.current.get(command.attempt)?.(NOT_CONNECTED_RESULT);
+        dispatch({ type: 'answerTimedOut', attempt: command.attempt });
+      }, SUBMIT_CONFIRM_TIMEOUT_MS);
+      break;
+    case 'clearConfirmTimer':
+      clearTimer(confirmTimerRef);
+      break;
+    case 'forceReconnect':
+      connection?.forceReconnect();
+      break;
+    case 'scheduleJoinRetry':
+      clearTimer(joinRetryTimerRef);
+      joinRetryTimerRef.current = setTimeout(() => {
+        joinRetryTimerRef.current = null;
+        dispatch({
+          type: 'joinRetryDue',
+          connectionId: command.connectionId,
+        });
+      }, command.delayMs);
+      break;
+    case 'toast':
+      showToast(command);
+      break;
+    case 'writeIdentity':
+      writeIdentity(command.identity);
+      break;
+    case 'clearIdentity':
+      clearStoredSession(command.scope === 'all');
+      break;
+    case 'sendLeave': {
+      const payload: LeaveSessionPayload = { teamId: command.teamId };
+      // Best-effort: the team is leaving whether or not the server hears it.
+      void connection?.emitWithAck(SOCKET_EVENTS.LEAVE_SESSION, payload);
+      break;
+    }
+    case 'goToJoinScreen':
+      goToJoinScreenRef.current();
+      break;
+    // Stryker disable next-line ConditionalExpression,BlockStatement,StringLiteral: equivalent — an exhaustiveness guard; `command` is `never` here, so no input reaches it
+    default: {
+      const unhandled: never = command;
+      // Stryker disable next-line CallExpression,StringLiteral: equivalent — the throw is unreachable (`command` is `never`), so neither it nor its message can be observed
+      throw new Error(`Unhandled team link command: ${String(unhandled)}`);
+    }
+  }
+}
+
 /**
  * Runs the Team link with React for /play and the home page's join panel:
  * feeds the socket's events and the team's taps into the module, keeps its
@@ -230,107 +348,15 @@ export function useTeamLink(
     const step = teamLink(linkRef.current, input);
     linkRef.current = step.state;
     setLink(step.state);
-    for (const command of step.commands) runCommand(command);
-
-    function clearConfirmTimer() {
-      if (confirmTimerRef.current === null) return;
-      clearTimeout(confirmTimerRef.current);
-      confirmTimerRef.current = null;
-    }
-
-    function clearJoinRetryTimer() {
-      if (joinRetryTimerRef.current === null) return;
-      clearTimeout(joinRetryTimerRef.current);
-      joinRetryTimerRef.current = null;
-    }
-
-    function runCommand(command: TeamLinkCommand) {
-      const connection = connectionRef.current;
-      switch (command.type) {
-        case 'sendJoin':
-          void connection
-            ?.emitWithAck(SOCKET_EVENTS.JOIN_PLAYERS, command.payload)
-            .then((result) => {
-              if (result.success) return;
-              dispatch({
-                type: 'joinRefused',
-                connectionId: command.connectionId,
-                reason: result.error,
-              });
-            });
-          break;
-        case 'sendAnswer': {
-          const { attempt, payload } = command;
-          latestAnswerRef.current = new Promise<AckResult>((resolve) => {
-            answerWaitersRef.current.set(attempt, resolve);
-            const sent =
-              connection?.emitWithAck(SOCKET_EVENTS.SUBMIT_ANSWER, payload) ??
-              Promise.resolve(NOT_CONNECTED_RESULT);
-            void sent.then((result) => {
-              // Stryker disable next-line CallExpression: equivalent — a waiter left in the map is only resolved a second time later, which a promise ignores
-              answerWaitersRef.current.delete(attempt);
-              resolve(result);
-              dispatch(
-                isNotDelivered(result)
-                  ? { type: 'answerNotDelivered', attempt }
-                  : { type: 'answerResult', attempt, result },
-              );
-            });
-          });
-          break;
-        }
-        case 'armConfirmTimer':
-          // Stryker disable next-line CallExpression: equivalent — the Team link always emits `clearConfirmTimer` just before `armConfirmTimer`
-          clearConfirmTimer();
-          confirmTimerRef.current = setTimeout(() => {
-            confirmTimerRef.current = null;
-            answerWaitersRef.current.get(command.attempt)?.(
-              NOT_CONNECTED_RESULT,
-            );
-            dispatch({ type: 'answerTimedOut', attempt: command.attempt });
-          }, SUBMIT_CONFIRM_TIMEOUT_MS);
-          break;
-        case 'clearConfirmTimer':
-          clearConfirmTimer();
-          break;
-        case 'forceReconnect':
-          connection?.forceReconnect();
-          break;
-        case 'scheduleJoinRetry':
-          clearJoinRetryTimer();
-          joinRetryTimerRef.current = setTimeout(() => {
-            joinRetryTimerRef.current = null;
-            dispatch({
-              type: 'joinRetryDue',
-              connectionId: command.connectionId,
-            });
-          }, command.delayMs);
-          break;
-        case 'toast':
-          showToast(command);
-          break;
-        case 'writeIdentity':
-          writeIdentity(command.identity);
-          break;
-        case 'clearIdentity':
-          clearStoredSession(command.scope === 'all');
-          break;
-        case 'sendLeave': {
-          const payload: LeaveSessionPayload = { teamId: command.teamId };
-          // Best-effort: the team is leaving whether or not the server hears it.
-          void connection?.emitWithAck(SOCKET_EVENTS.LEAVE_SESSION, payload);
-          break;
-        }
-        case 'goToJoinScreen':
-          goToJoinScreenRef.current();
-          break;
-        // Stryker disable next-line ConditionalExpression,BlockStatement,StringLiteral: equivalent — an exhaustiveness guard; `command` is `never` here, so no input reaches it
-        default: {
-          const unhandled: never = command;
-          // Stryker disable next-line CallExpression,StringLiteral: equivalent — the throw is unreachable (`command` is `never`), so neither it nor its message can be observed
-          throw new Error(`Unhandled team link command: ${String(unhandled)}`);
-        }
-      }
+    for (const command of step.commands) {
+      runTeamLinkCommand(command, dispatch, {
+        connectionRef,
+        goToJoinScreenRef,
+        confirmTimerRef,
+        joinRetryTimerRef,
+        answerWaitersRef,
+        latestAnswerRef,
+      });
     }
   }, []);
   // Stryker restore ArrayDeclaration
