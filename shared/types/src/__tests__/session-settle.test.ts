@@ -300,6 +300,15 @@ describe('settling the opened questions', () => {
 describe('settling the revealed kahoot questions', () => {
   const lobbySession = sessionOver(rounds, progressAt('lobby'));
 
+  it('records nothing for a round that is not kahoot', () => {
+    const settled = move(
+      lobbySession,
+      progressAt('reveal', { roundIndex: 0, questionIndex: 1 }),
+    );
+
+    expect(settled.revealedKahootQuestionIds).toEqual([]);
+  });
+
   it('records the kahoot question that has just been revealed', () => {
     const settled = move(
       lobbySession,

@@ -459,6 +459,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
         author: '  Sam ',
         roundNote: ' Read slowly ',
         showRoundNote: ' 1 ',
+        showNote: ' 1 ',
       },
       'free_text',
     );
@@ -470,7 +471,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
       author: 'Sam',
       round_note: 'Read slowly',
       show_round_note: '1',
-      show_note: '',
+      show_note: '1',
     });
     expect(question).toMatchObject({
       prompt: 'Q?',
@@ -478,6 +479,7 @@ describe('decodeSheetRow: cells are trimmed, blanks mean unset', () => {
       points: 3,
       mediaUrl: 'https://example.com/a.png',
       notes: 'a note',
+      showNotesAtReveal: true,
     });
   });
 

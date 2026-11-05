@@ -803,6 +803,14 @@ describe('describeFunFacts', () => {
               roundId: null,
               cost: 1,
             },
+            // A purchase that is no extra joker, even with a round set.
+            {
+              teamId: 1,
+              powerUp: 'fifty_fifty',
+              questionId: 1,
+              roundId: 2,
+              cost: 1,
+            },
           ],
         }),
         { 2: { roundId: 3, source: 'chosen' } },

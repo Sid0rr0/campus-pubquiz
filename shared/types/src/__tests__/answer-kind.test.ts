@@ -145,6 +145,11 @@ describe('sort one_off scoring', () => {
     expect(sort('b|c|a|d').verdict).toBe('incorrect');
   });
 
+  it('needs both halves of the swap, not just one', () => {
+    expect(sort('a|x|b|d').verdict).toBe('incorrect');
+    expect(sort('a|c|y|d').verdict).toBe('incorrect');
+  });
+
   it('gives nothing for a wrong item count, even with a matching prefix', () => {
     expect(sort('b|a').verdict).toBe('incorrect');
   });

@@ -151,8 +151,10 @@ export function isPinOffPlace(
   answer: string,
   pin: PinEffect | undefined,
 ): boolean {
+  // Stryker disable next-line ConditionalExpression: without a pin lockPin returns the order unchanged, so the answer is false either way
   if (pin === undefined) return false;
   const order: unknown = ANSWER_FORMATS[kind].decode(answer);
+  // Stryker disable next-line MethodExpression,ArrowFunction,ConditionalExpression: the answer decoders only ever give strings or string lists, so a list with a non-string item can't be built
   if (!Array.isArray(order) || order.some((item) => typeof item !== 'string')) {
     return false;
   }
@@ -204,6 +206,7 @@ export type BuyPowerUpPayload =
 
 /** The statuses before any round intro has been on air. */
 const BEFORE_FIRST_INTRO: readonly string[] = [
+  // Stryker disable next-line StringLiteral: extraJokerRoundId returns null for the lobby before this list is read
   'lobby',
   'rules',
   'round_overview',
@@ -328,6 +331,7 @@ export function askTheRoomSplit(
   const shares = counts.map((count) => Math.floor((count * 100) / total));
   const byRemainder = counts
     .map((count, i) => ({ i, rest: (count * 100) % total }))
+    // Stryker disable next-line ArithmeticOperator: the engine only ever compares a later index with an earlier one, which `+` and `-` both rank after it
     .sort((a, b) => b.rest - a.rest || a.i - b.i);
   const leftover = 100 - shares.reduce((a, b) => a + b, 0);
   for (const { i } of byRemainder.slice(0, leftover)) shares[i] += 1;
@@ -343,6 +347,7 @@ export function askTheRoomReady(
   return (
     powerUpApplies('ask_the_room', question) &&
     askTheRoomSplit(
+      // Stryker disable next-line ArrayDeclaration: a question without options fails powerUpApplies above, so the fallback is never read
       question.options ?? [],
       answers
         .filter((answer) => answer.teamId !== teamId)

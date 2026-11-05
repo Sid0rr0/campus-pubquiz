@@ -71,6 +71,7 @@ export const sheetRowMetaSchema = z.object({
   show_round_note: z.enum(['', '0', '1'], {
     error: 'show_round_note must be "1", "0", or blank',
   }),
+  // Stryker disable next-line StringLiteral: emptying the first member leaves the enum identical
   show_note: z.enum(['', '0', '1'], {
     error: 'show_note must be "1", "0", or blank',
   }),

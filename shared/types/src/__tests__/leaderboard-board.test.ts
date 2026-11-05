@@ -324,7 +324,11 @@ describe('describeLeaderboardBoard', () => {
           funFactData: {
             answers: [],
             bonusAwards: [],
-            powerUps: [extraJoker(2, 1), extraJoker(3, 3)],
+            powerUps: [
+              extraJoker(2, 1),
+              extraJoker(3, 3),
+              { ...extraJoker(3, 1), powerUp: 'fifty_fifty' as const },
+            ],
           },
         }),
       );

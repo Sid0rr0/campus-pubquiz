@@ -96,6 +96,7 @@ function isMediaActionAvailable(
   const { canReplayMedia, canPauseMedia } = describeMediaControls(
     getPlayingMediaUrl(describeSessionDisplayScreen(session)),
   );
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: both flags are the same value today (isPausableMediaUrl), so picking either is indistinguishable
   return action === 'REPLAY_MEDIA' ? canReplayMedia : canPauseMedia;
 }
 

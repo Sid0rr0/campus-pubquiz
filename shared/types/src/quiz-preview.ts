@@ -424,6 +424,7 @@ function pressNext(session: SessionState): SessionState | null {
 }
 
 /** Whether a press planning each step moves the walk on; the others stop it. */
+// Stryker disable BooleanLiteral: a dry-run Advance over a fresh quiz (no teams, answers, leaderboard or join overlay) only ever plans transitions, so no test can reach the other step kinds
 const PRESS_MOVES: Record<MoveStep['kind'], boolean> = {
   showdown_waiting: false,
   grading_pending: false,
@@ -434,6 +435,7 @@ const PRESS_MOVES: Record<MoveStep['kind'], boolean> = {
   join_overlay_hide: true,
   reveal_step: true,
 };
+// Stryker restore BooleanLiteral
 
 function nightStep(
   screen: DisplayScreen,
