@@ -22,6 +22,12 @@ describe('detectImageType', () => {
     ['GIF89a', withHeader('GIF89a'), 'image/gif', 'gif'],
     ['WebP', withHeader('RIFF', 0, 0, 0, 0, 'WEBP'), 'image/webp', 'webp'],
     ['AVIF', withHeader(0, 0, 0, 0x1c, 'ftypavif'), 'image/avif', 'avif'],
+    [
+      'AVIF sequence',
+      withHeader(0, 0, 0, 0x1c, 'ftypavis'),
+      'image/avif',
+      'avif',
+    ],
   ])('recognises %s by its magic bytes', (_name, data, contentType, ext) => {
     expect(detectImageType(data)).toEqual({ contentType, extension: ext });
   });

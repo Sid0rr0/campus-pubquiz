@@ -5,6 +5,10 @@ import {
 } from '@/auth/session-cookie';
 import { SESSION_IDLE_TIMEOUT_MS } from '@/auth/session.service';
 
+it('reads the cookie under its fixed name', () => {
+  expect(SESSION_COOKIE_NAME).toBe('campus_pubquiz_session');
+});
+
 describe('extractSessionCookie', () => {
   it('returns undefined without a header', () => {
     expect(extractSessionCookie(undefined)).toBeUndefined();

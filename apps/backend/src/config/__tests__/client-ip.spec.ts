@@ -15,6 +15,15 @@ describe('clientIpOf', () => {
     expect(clientIpOf({ ip })).toBe(expected);
   });
 
+  it.each([
+    'x203.0.113.7:51234',
+    '203.0.113.7:51234x',
+    'x[2001:db8::1]:443',
+    '[2001:db8::1]:443x',
+  ])('leaves %s alone, since it is not a clean address with a port', (ip) => {
+    expect(clientIpOf({ ip })).toBe(ip);
+  });
+
   it('gives two connections of one client the same key', () => {
     expect(clientIpOf({ ip: '203.0.113.7:1111' })).toBe(
       clientIpOf({ ip: '203.0.113.7:2222' }),

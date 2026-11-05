@@ -347,6 +347,17 @@ describe('computeSessionBrief answer wording', () => {
 });
 
 describe('computeSessionBrief unplayed questions', () => {
+  it('does not call a question "not played" when it has answers but is missing from the opened ids', () => {
+    const brief = computeSessionBrief(
+      buildInput({
+        answers: [answer(10, 1, 'correct', 2)],
+        openedQuestionIds: [11],
+      }),
+    );
+
+    expect(brief.split(/^### /m)[1]).not.toContain('not played');
+  });
+
   it('marks a question the session never reached "not played" and one reached with no answers "0 answered"', () => {
     const brief = computeSessionBrief(
       buildInput({
