@@ -80,7 +80,7 @@ export function TeamsDirectoryPanel() {
   const table = useTable({
     features,
     columns,
-    data: payload?.items ?? [],
+    data: payload?.items ?? NO_TEAMS,
     getRowId: (team) => String(team.id),
     manualSorting: true,
     manualPagination: true,
@@ -126,9 +126,7 @@ export function TeamsDirectoryPanel() {
 
       <SortableTable
         table={table}
-        emptyMessage={
-          trimmedSearch ? 'No teams match.' : 'No teams have joined yet.'
-        }
+        emptyMessage={emptyMessageFor(trimmedSearch)}
       />
 
       <DirectoryPager table={table} pageIndex={pagination.pageIndex} />
@@ -282,4 +280,10 @@ function DirectoryPager({
       </Button>
     </div>
   );
+}
+
+const NO_TEAMS: TeamListItem[] = [];
+
+function emptyMessageFor(search: string): string {
+  return search ? 'No teams match.' : 'No teams have joined yet.';
 }

@@ -281,7 +281,7 @@ function LeaderboardRowItem({
     >
       {trend !== undefined && <RankTrendIcon trend={trend} />}
       <span
-        className={`font-display w-[4em] shrink-0 whitespace-nowrap text-display-3xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
+        className={`font-display w-[4em] shrink-0 whitespace-nowrap text-display-3xl ${rankAccentClass(rankIndex)}`}
       >
         {label}
       </span>
@@ -379,4 +379,8 @@ function splitPodium(
         .map((row) => row.entry.teamId),
     ),
   };
+}
+
+function rankAccentClass(rankIndex: number): string {
+  return RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50';
 }

@@ -129,6 +129,39 @@ export class LiveEditService {
    * what the save would change, QuizDraftInvalidError (422) for a malformed
    * draft and QuizNotFoundError (404) for an unknown quiz.
    */
+  /** Refuses a save made from an out-of-date copy, one naming another quiz's questions, or one that drops or moves an answered question. */
+  private async assertSavable(
+    quizId: number,
+    currentDraft: NonNullable<
+      Awaited<ReturnType<QuizService['findDraftById']>>
+    >,
+    {
+      rounds,
+      loadedUpdatedAt,
+    }: Pick<QuizDraftSaveRequest, 'rounds' | 'loadedUpdatedAt'>,
+  ): Promise<void> {
+    // shortcut: checked and written without a lock when no session is on the quiz (the hold covers none), so two saves landing in the same instant can both pass; fine for two staff, move the check into the UPDATE if it ever matters.
+    if (
+      loadedUpdatedAt !== undefined &&
+      loadedUpdatedAt !== currentDraft.updatedAt
+    ) {
+      throw new QuizStaleSaveError(quizId);
+    }
+    const foreign = findForeignQuestionIds(currentDraft.rounds, rounds);
+    if (foreign.length > 0) throw new QuizDraftInvalidError(foreign);
+    const answeredIds = await this.quizService.answeredQuestionIds(quizId);
+    const answeredIssues = [
+      ...findDroppedAnsweredQuestions(currentDraft.rounds, rounds, answeredIds),
+      ...findMovedAnsweredQuestions(currentDraft.rounds, rounds, answeredIds),
+    ];
+    if (answeredIssues.length > 0) {
+      throw new QuizLiveEditBlockedError(
+        answeredIssues,
+        answeredIssues[0].message,
+      );
+    }
+  }
+
   async save(
     quizId: number,
     { title, rounds, loadedUpdatedAt }: QuizDraftSaveRequest,
@@ -141,35 +174,10 @@ export class LiveEditService {
         async (held) => {
           const currentDraft = await this.quizService.findDraftById(quizId);
           if (!currentDraft) throw new QuizNotFoundError(quizId);
-          // shortcut: checked and written without a lock when no session is on the quiz (the hold covers none), so two saves landing in the same instant can both pass; fine for two staff, move the check into the UPDATE if it ever matters.
-          if (
-            loadedUpdatedAt !== undefined &&
-            loadedUpdatedAt !== currentDraft.updatedAt
-          ) {
-            throw new QuizStaleSaveError(quizId);
-          }
-          const foreign = findForeignQuestionIds(currentDraft.rounds, rounds);
-          if (foreign.length > 0) throw new QuizDraftInvalidError(foreign);
-          const answeredIds =
-            await this.quizService.answeredQuestionIds(quizId);
-          const answeredIssues = [
-            ...findDroppedAnsweredQuestions(
-              currentDraft.rounds,
-              rounds,
-              answeredIds,
-            ),
-            ...findMovedAnsweredQuestions(
-              currentDraft.rounds,
-              rounds,
-              answeredIds,
-            ),
-          ];
-          if (answeredIssues.length > 0) {
-            throw new QuizLiveEditBlockedError(
-              answeredIssues,
-              answeredIssues[0].message,
-            );
-          }
+          await this.assertSavable(quizId, currentDraft, {
+            rounds,
+            loadedUpdatedAt,
+          });
 
           const liveSessions = this.listLiveSessions(quizId);
           if (liveSessions.length === 0) {

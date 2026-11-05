@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { MotionConfig, motion } from 'motion/react';
 import type { AckResult } from '@campus-pubquiz/types';
@@ -96,7 +102,7 @@ export function PlayerCountCard({
   );
 
   if (!isFolded && openReason !== 'editing') return card;
-  return bottomSlot && createPortal(card, bottomSlot);
+  return portalInto(card, bottomSlot);
 }
 
 type TimerRef = RefObject<ReturnType<typeof setTimeout> | null>;
@@ -146,4 +152,12 @@ function OpenPlayerCountCard({
       )}
     </motion.section>
   );
+}
+
+/** Folded or being edited, the card moves to the bottom slot (nothing until the slot exists). */
+function portalInto(
+  card: ReactNode,
+  bottomSlot: HTMLElement | null | undefined,
+) {
+  return bottomSlot && createPortal(card, bottomSlot);
 }

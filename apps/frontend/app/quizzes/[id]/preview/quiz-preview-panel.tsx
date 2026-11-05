@@ -80,18 +80,10 @@ export function QuizPreviewPanel({ quizId }: QuizPreviewPanelProps) {
   }
 
   if (query.isError) {
-    const isNotFound =
-      query.error instanceof QuizPreviewApiError && query.error.status === 404;
     return (
       <FullPageMessage>
         <p role="alert" className="font-display text-xl text-magenta">
-          {isNotFound
-            ? 'Quiz not found. It may have been deleted.'
-            : apiErrorMessage(
-                query.error,
-                QuizPreviewApiError,
-                'Could not load the quiz preview.',
-              )}
+          {previewErrorMessage(query.error)}
         </p>
       </FullPageMessage>
     );
@@ -449,4 +441,14 @@ function StepperToolbar({
       </Button>
     </div>
   );
+}
+
+function previewErrorMessage(error: Error): string | null | undefined {
+  return error instanceof QuizPreviewApiError && error.status === 404
+    ? 'Quiz not found. It may have been deleted.'
+    : apiErrorMessage(
+        error,
+        QuizPreviewApiError,
+        'Could not load the quiz preview.',
+      );
 }

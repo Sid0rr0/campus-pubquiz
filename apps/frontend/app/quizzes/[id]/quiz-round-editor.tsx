@@ -161,23 +161,12 @@ export function QuizRoundEditor({
           />
           <FieldErrors issues={fieldIssues(roundLevelIssues, 'title')} />
         </div>
-        <label
-          className="flex items-center gap-2 text-xs font-extrabold text-foreground/60"
-          title={
-            isLast
-              ? 'The last round always breaks so answers can be revealed'
-              : undefined
-          }
-        >
-          <input
-            type="checkbox"
-            checked={isLast || round.breakAfter}
-            disabled={isLast || isReached}
-            onChange={(event) => onChange({ breakAfter: event.target.checked })}
-            className="h-4 w-4"
-          />
-          Break after
-        </label>
+        <BreakAfterToggle
+          isLast={isLast}
+          isReached={isReached}
+          breakAfter={round.breakAfter}
+          onChange={(breakAfter) => onChange({ breakAfter })}
+        />
         <KahootModeToggle
           round={round}
           isReached={isReached}
@@ -445,5 +434,38 @@ function RoundQuestions({
         />
       ))}
     </div>
+  );
+}
+
+/** The last round always breaks; a round a live session has reached keeps its setting. */
+function BreakAfterToggle({
+  isLast,
+  isReached,
+  breakAfter,
+  onChange,
+}: {
+  isLast: boolean;
+  isReached: boolean;
+  breakAfter: boolean;
+  onChange: (breakAfter: boolean) => void;
+}) {
+  return (
+    <label
+      className="flex items-center gap-2 text-xs font-extrabold text-foreground/60"
+      title={
+        isLast
+          ? 'The last round always breaks so answers can be revealed'
+          : undefined
+      }
+    >
+      <input
+        type="checkbox"
+        checked={isLast || breakAfter}
+        disabled={isLast || isReached}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-4 w-4"
+      />
+      Break after
+    </label>
   );
 }

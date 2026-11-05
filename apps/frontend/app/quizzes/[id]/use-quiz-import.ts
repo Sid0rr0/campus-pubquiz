@@ -70,9 +70,7 @@ export function useQuizImport({
   }
 
   function handleImportError(error: unknown, fallback: string): void {
-    setImportError(
-      apiErrorMessage(error, ImportApiError, fallback) ?? fallback,
-    );
+    setImportError(importErrorMessage(error, fallback));
   }
 
   const previewMutation = useMutation({
@@ -147,4 +145,8 @@ function reportImportResult(
 
 function blankToUndefined(text: string): string | undefined {
   return text || undefined;
+}
+
+function importErrorMessage(error: unknown, fallback: string): string {
+  return apiErrorMessage(error, ImportApiError, fallback) ?? fallback;
 }
