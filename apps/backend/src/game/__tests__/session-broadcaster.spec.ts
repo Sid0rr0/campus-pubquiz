@@ -78,6 +78,40 @@ describe('SessionBroadcaster', () => {
     ]);
   });
 
+  describe('refreshLeagueLobbies', () => {
+    it('resolves without emitting when reading the league tops fails', async () => {
+      const game = await harness.createGateway();
+      jest
+        .spyOn(game.gameState, 'refreshLeagueTops')
+        .mockRejectedValue(new Error('db down'));
+      game.clearEmits();
+
+      await expect(
+        game.broadcaster.refreshLeagueLobbies(),
+      ).resolves.toBeUndefined();
+
+      expect(game.roomEmits()).toEqual([]);
+    });
+
+    it('keeps broadcasting the other lobbies when one broadcast fails', async () => {
+      const game = await harness.createGateway();
+      jest
+        .spyOn(game.gameState, 'refreshLeagueTops')
+        .mockResolvedValue(['BROKEN', 'HEALTH']);
+      const broadcastState = jest
+        .spyOn(game.broadcaster, 'broadcastState')
+        .mockRejectedValueOnce('socket gone')
+        .mockResolvedValueOnce(undefined);
+
+      await expect(
+        game.broadcaster.refreshLeagueLobbies('SKIPME'),
+      ).resolves.toBeUndefined();
+
+      expect(game.gameState.refreshLeagueTops).toHaveBeenCalledWith('SKIPME');
+      expect(broadcastState.mock.calls).toEqual([['BROKEN'], ['HEALTH']]);
+    });
+  });
+
   it('broadcastState sends the same per-room snapshots as an admin action that only rebroadcasts', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const admin = await game.connectAdmin();
