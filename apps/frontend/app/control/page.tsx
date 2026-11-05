@@ -78,23 +78,30 @@ function effectiveItemOf(
  * What the keyboard shortcuts can do, as decided by the server (the admin
  * view). With no view yet there is nothing to act on, hence the fallbacks.
  */
+const NO_SHORTCUT_STATE = {
+  advanceStep: 'none',
+  previousState: 'unavailable',
+  isLeaderboardVisible: false,
+  canToggleJoinOverlay: false,
+  canPauseMedia: false,
+  isDisplaySoundMuted: false,
+} as const;
+
 function shortcutStateOf(snapshot: AdminSnapshot) {
-  const controls = snapshot?.controlAvailability;
+  if (!snapshot) return NO_SHORTCUT_STATE;
+  const controls = snapshot.controlAvailability;
   return {
-    advanceStep: snapshot?.advanceStep ?? 'none',
-    previousState: snapshot?.previousState ?? 'unavailable',
-    isLeaderboardVisible: snapshot?.progress.isLeaderboardVisible ?? false,
-    canToggleJoinOverlay: controls?.canToggleJoinOverlay ?? false,
-    canPauseMedia: controls?.canPauseMedia ?? false,
-    isDisplaySoundMuted: snapshot?.isDisplaySoundMuted ?? false,
+    advanceStep: snapshot.advanceStep,
+    previousState: snapshot.previousState,
+    isLeaderboardVisible: snapshot.progress.isLeaderboardVisible,
+    canToggleJoinOverlay: controls.canToggleJoinOverlay,
+    canPauseMedia: controls.canPauseMedia,
+    isDisplaySoundMuted: snapshot.isDisplaySoundMuted,
   } as const;
 }
 
 function AdminPageContent() {
   const router = useRouter();
-  const [selectedItem, setSelectedItem] = useState<DetailItem | null>(null);
-  const queryClient = useQueryClient();
-
   const {
     snapshot,
     connectionError,
@@ -115,16 +122,127 @@ function AdminPageContent() {
     auth,
     isLoading,
   } = useAdminSession('/control');
+  const quizzes = useControlQuizzes(snapshot);
+  const detail = useDetailItem(snapshot);
+  useQuestionAnswers({
+    joinCode: snapshot?.joinCode,
+    questionId: detail.questionId,
+    setLiveAnswers,
+    focusAnswersQuestionId,
+    reconnectedAt,
+  });
+  const {
+    id: activeQuizId,
+    title: activeQuizTitle,
+    rounds: activeQuizRounds,
+  } = activeQuizOf(quizzes);
+  const handleCloseSession = useCloseSession(snapshot);
+
+  function handleLogout(): void {
+    auth.logout();
+    router.push('/');
+  }
+
+  // This hook runs before the null-snapshot early return below.
+  useAdminKeyboardShortcuts({
+    ...shortcutStateOf(snapshot),
+    sendAction,
+    setDisplaySoundMuted,
+  });
+
+  if (isLoading || !snapshot) {
+    return (
+      <ControlNotReadyScreen
+        isLoading={isLoading}
+        connectionError={connectionError}
+      />
+    );
+  }
+
+  const { progress, settings } = snapshot;
+  const panel: ControlPanel = {
+    view: snapshot,
+    quiz: { id: activeQuizId, title: activeQuizTitle },
+    connectionError,
+    controls: snapshot.controlAvailability,
+    actions: {
+      sendAction,
+      kickTeam,
+      setTeamPlayerCount,
+      setTeamJoker,
+      setBreakEndTime,
+      setDisplayTextScale,
+      setDisplaySoundMuted,
+      createShowdownRound,
+      closeSession: handleCloseSession,
+    },
+  };
+
+  return (
+    <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
+      <MobileAdminBar panel={panel} user={auth.user} onLogout={handleLogout} />
+      <DesktopSidebar panel={panel} />
+      <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 pt-0">
+        {progress.status === 'lobby' ? (
+          <SessionSettingsPanel
+            joinCode={snapshot.joinCode}
+            settings={settings}
+          />
+        ) : (
+          <SessionWorkspace
+            view={snapshot}
+            rounds={activeQuizRounds}
+            item={detail.item}
+            questionId={detail.questionId}
+            isManualPick={detail.isManualPick}
+            indicators={detail.indicators}
+            onSelect={detail.select}
+            liveAnswers={liveAnswers}
+            onGrade={gradeAnswer}
+            onAwardBonus={awardBonus}
+          />
+        )}
+      </div>
+    </main>
+  );
+}
+
+function ControlNotReadyScreen({
+  isLoading,
+  connectionError,
+}: {
+  isLoading: boolean;
+  connectionError: string | null;
+}) {
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <p className="font-display text-xl">Loading…</p>
+      </main>
+    );
+  }
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
+      {connectionError && (
+        <p role="alert" className="font-extrabold text-magenta">
+          {connectionError}
+        </p>
+      )}
+      <p className="font-display text-xl">Connecting…</p>
+    </main>
+  );
+}
+
+/** The session's quizzes, re-read whenever the session re-enters a status where a quiz can be chosen. */
+function useControlQuizzes(snapshot: AdminSnapshot) {
+  const queryClient = useQueryClient();
   const connectedJoinCode = snapshot?.joinCode;
-
   const gameStatus = snapshot?.progress.status;
-
   const quizzesQuery = useQuery({
     queryKey: queryKeys.quizzes.list(connectedJoinCode),
     queryFn: () => fetchQuizzes(connectedJoinCode as string),
     enabled: Boolean(connectedJoinCode),
   });
-  const quizzes = quizzesQuery.data ?? null;
   useToastOnError(
     apiErrorMessage(quizzesQuery.error, QuizApiError, 'Could not load quizzes'),
   );
@@ -138,16 +256,29 @@ function AdminPageContent() {
     // that doesn't change status is a no-op.
     const previous = previousGameStatusRef.current;
     previousGameStatusRef.current = gameStatus;
-    const enteredChoosableStatus =
-      previous !== undefined &&
-      previous !== gameStatus &&
-      (gameStatus === 'lobby' || gameStatus === 'ended');
-    if (!enteredChoosableStatus) return;
+    if (!isChoosableStatusEntered(previous, gameStatus)) return;
     void queryClient.invalidateQueries({
       queryKey: queryKeys.quizzes.list(connectedJoinCode),
     });
   }, [gameStatus, connectedJoinCode, queryClient]);
+  return quizzesQuery.data ?? null;
+}
 
+function isChoosableStatusEntered(
+  previous: GameStatus | undefined,
+  current: GameStatus | undefined,
+): boolean {
+  return (
+    previous !== undefined &&
+    previous !== current &&
+    (current === 'lobby' || current === 'ended')
+  );
+}
+
+/** The item the detail column shows: a manual pick from the browser, else what's on air, else the block's first question. */
+function useDetailItem(snapshot: AdminSnapshot) {
+  const [selectedItem, setSelectedItem] = useState<DetailItem | null>(null);
+  const connectedJoinCode = snapshot?.joinCode;
   // A newly selected/restarted quiz invalidates any question id picked under
   // the previous session. Adjusted during render rather than in an Effect.
   const [prevConnectedJoinCode, setPrevConnectedJoinCode] =
@@ -173,23 +304,39 @@ function AdminPageContent() {
   if (isSameItem(selectedItem, onAir)) {
     setSelectedItem(null);
   }
-  const effectiveItem = effectiveItemOf(
+  const item = effectiveItemOf(
     selectedItem,
     onAir,
     snapshot?.blockQuestions[0]?.id ?? null,
   );
-  const effectiveQuestionId =
-    effectiveItem?.kind === 'question' ? effectiveItem.questionId : null;
+  return {
+    item,
+    questionId: item?.kind === 'question' ? item.questionId : null,
+    isManualPick: selectedItem !== null,
+    indicators,
+    select: setSelectedItem,
+  };
+}
 
-  const answersJoinCode = snapshot?.joinCode;
+/** Loads the detail question's answers into the live answers slot, and re-reads them after a reconnect. */
+function useQuestionAnswers({
+  joinCode,
+  questionId,
+  setLiveAnswers,
+  focusAnswersQuestionId,
+  reconnectedAt,
+}: {
+  joinCode: string | undefined;
+  questionId: number | null;
+  setLiveAnswers: AdminSession['setLiveAnswers'];
+  focusAnswersQuestionId: AdminSession['focusAnswersQuestionId'];
+  reconnectedAt: AdminSession['reconnectedAt'];
+}) {
+  const queryClient = useQueryClient();
   const answersQuery = useQuery({
-    queryKey: queryKeys.answers.forQuestion(
-      answersJoinCode ?? '',
-      effectiveQuestionId ?? -1,
-    ),
-    queryFn: () =>
-      fetchAnswers(answersJoinCode as string, effectiveQuestionId as number),
-    enabled: Boolean(answersJoinCode) && effectiveQuestionId !== null,
+    queryKey: queryKeys.answers.forQuestion(joinCode ?? '', questionId ?? -1),
+    queryFn: () => fetchAnswers(joinCode as string, questionId as number),
+    enabled: Boolean(joinCode) && questionId !== null,
     // Transient, request-driven data — never serve a previous block's
     // answers from cache, and don't keep them around once the admin moves
     // on to a different question.
@@ -218,8 +365,8 @@ function AdminPageContent() {
     // panel's data with the wrong question's, which then fails the
     // `liveAnswers.questionId === selectedQuestionId` check below and makes
     // the whole grading panel disappear until something else refreshes it.
-    focusAnswersQuestionId(effectiveQuestionId);
-  }, [effectiveQuestionId, focusAnswersQuestionId]);
+    focusAnswersQuestionId(questionId);
+  }, [questionId, focusAnswersQuestionId]);
 
   useEffect(() => {
     // `liveAnswers` isn't part of the STATE_SYNC snapshot the server resends
@@ -230,13 +377,12 @@ function AdminPageContent() {
     if (reconnectedAt === null) return;
     void queryClient.invalidateQueries({ queryKey: queryKeys.answers.all });
   }, [reconnectedAt, queryClient]);
+}
 
-  const {
-    id: activeQuizId,
-    title: activeQuizTitle,
-    rounds: activeQuizRounds,
-  } = activeQuizOf(quizzes);
-
+/** Closes the session and goes back to the session picker. */
+function useCloseSession(snapshot: AdminSnapshot) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const closeSessionMutation = useMutation({
     mutationFn: (joinCode: string) => closeSession(joinCode),
     onSuccess: () => {
@@ -250,91 +396,10 @@ function AdminPageContent() {
       ),
   });
 
-  function handleCloseSession(): void {
+  return function handleCloseSession(): void {
     if (!snapshot) return;
     closeSessionMutation.mutate(snapshot.joinCode);
-  }
-
-  function handleLogout(): void {
-    auth.logout();
-    router.push('/');
-  }
-
-  // This hook runs before the null-snapshot early return below.
-  useAdminKeyboardShortcuts({
-    ...shortcutStateOf(snapshot),
-    sendAction,
-    setDisplaySoundMuted,
-  });
-
-  if (isLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <p className="font-display text-xl">Loading…</p>
-      </main>
-    );
-  }
-
-  if (!snapshot) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
-        {connectionError && (
-          <p role="alert" className="font-extrabold text-magenta">
-            {connectionError}
-          </p>
-        )}
-        <p className="font-display text-xl">Connecting…</p>
-      </main>
-    );
-  }
-
-  const { progress, settings } = snapshot;
-  const panel: ControlPanel = {
-    view: snapshot,
-    quiz: { id: activeQuizId, title: activeQuizTitle },
-    connectionError,
-    controls: snapshot.controlAvailability,
-    actions: {
-      sendAction,
-      kickTeam,
-      setTeamPlayerCount,
-      setTeamJoker,
-      setBreakEndTime,
-      setDisplayTextScale,
-      setDisplaySoundMuted,
-      createShowdownRound,
-      closeSession: handleCloseSession,
-    },
   };
-
-  return (
-    <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
-      <MobileAdminBar panel={panel} user={auth.user} onLogout={handleLogout} />
-      <DesktopSidebar panel={panel} />
-      <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 pt-0">
-        {progress.status === 'lobby' && (
-          <SessionSettingsPanel
-            joinCode={snapshot.joinCode}
-            settings={settings}
-          />
-        )}
-        {progress.status !== 'lobby' && (
-          <SessionWorkspace
-            view={snapshot}
-            rounds={activeQuizRounds}
-            item={effectiveItem}
-            questionId={effectiveQuestionId}
-            isManualPick={selectedItem !== null}
-            indicators={indicators}
-            onSelect={setSelectedItem}
-            liveAnswers={liveAnswers}
-            onGrade={gradeAnswer}
-            onAwardBonus={awardBonus}
-          />
-        )}
-      </div>
-    </main>
-  );
 }
 
 export default function AdminPage() {

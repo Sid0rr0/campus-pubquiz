@@ -101,62 +101,24 @@ export function useAdminKeyboardShortcuts({
   setDisplaySoundMuted,
 }: UseAdminKeyboardShortcutsOptions): void {
   useEffect(() => {
+    const options = {
+      advanceStep,
+      previousState,
+      isLeaderboardVisible,
+      canToggleJoinOverlay,
+      canPauseMedia,
+      isDisplaySoundMuted,
+      sendAction,
+      setDisplaySoundMuted,
+    };
     function handleKeyDown(event: KeyboardEvent): void {
-      if (!isShortcutCandidate(event)) {
-        return;
-      }
-      if (event.key === ADMIN_SHORTCUTS.previous.key) {
-        if (previousState === 'available') {
-          event.preventDefault();
-          sendAction('PREVIOUS');
-        }
-        return;
-      }
-      if (event.key === ADMIN_SHORTCUTS.advance.key) {
-        if (advanceStep !== 'none') {
-          event.preventDefault();
-          sendAction('ADVANCE');
-        }
-        return;
-      }
-      if (event.key === ADMIN_SHORTCUTS.showLeaderboard.key) {
-        if (!isLeaderboardVisible) {
-          event.preventDefault();
-          sendAction('TOGGLE_LEADERBOARD');
-        }
-        return;
-      }
-      if (
-        event.key === ADMIN_SHORTCUTS.hideLeaderboard.key &&
-        isLeaderboardVisible
-      ) {
-        event.preventDefault();
-        sendAction('TOGGLE_LEADERBOARD');
-        return;
-      }
-      if (matchesKey(event, ADMIN_SHORTCUTS.toggleJoinOverlay.key)) {
-        if (canToggleJoinOverlay) {
-          event.preventDefault();
-          sendAction('TOGGLE_JOIN_OVERLAY');
-        }
-        return;
-      }
-      if (matchesKey(event, ADMIN_SHORTCUTS.toggleMediaFullscreen.key)) {
-        event.preventDefault();
-        sendAction('TOGGLE_MEDIA_FULLSCREEN');
-        return;
-      }
-      if (matchesKey(event, ADMIN_SHORTCUTS.toggleMediaPause.key)) {
-        if (canPauseMedia) {
-          event.preventDefault();
-          sendAction('TOGGLE_MEDIA_PAUSE');
-        }
-        return;
-      }
-      if (matchesKey(event, ADMIN_SHORTCUTS.toggleDisplayMute.key)) {
-        event.preventDefault();
-        setDisplaySoundMuted(!isDisplaySoundMuted);
-      }
+      if (!isShortcutCandidate(event)) return;
+      const rule = SHORTCUT_RULES.find((candidate) =>
+        candidate.matches(event, options),
+      );
+      if (!rule?.isEnabled(options)) return;
+      event.preventDefault();
+      rule.run(options);
     }
 
     window.addEventListener('keydown', handleKeyDown);
@@ -172,3 +134,63 @@ export function useAdminKeyboardShortcuts({
     setDisplaySoundMuted,
   ]);
 }
+
+type ShortcutOptions = UseAdminKeyboardShortcutsOptions;
+
+/**
+ * The shortcuts in the order they are tried. The first rule whose key matches
+ * claims the key press, and acts only when it is enabled. Hiding the
+ * leaderboard only claims its key while the board is up.
+ */
+const SHORTCUT_RULES: {
+  matches: (event: KeyboardEvent, options: ShortcutOptions) => boolean;
+  isEnabled: (options: ShortcutOptions) => boolean;
+  run: (options: ShortcutOptions) => void;
+}[] = [
+  {
+    matches: (event) => event.key === ADMIN_SHORTCUTS.previous.key,
+    isEnabled: (options) => options.previousState === 'available',
+    run: (options) => options.sendAction('PREVIOUS'),
+  },
+  {
+    matches: (event) => event.key === ADMIN_SHORTCUTS.advance.key,
+    isEnabled: (options) => options.advanceStep !== 'none',
+    run: (options) => options.sendAction('ADVANCE'),
+  },
+  {
+    matches: (event) => event.key === ADMIN_SHORTCUTS.showLeaderboard.key,
+    isEnabled: (options) => !options.isLeaderboardVisible,
+    run: (options) => options.sendAction('TOGGLE_LEADERBOARD'),
+  },
+  {
+    matches: (event, options) =>
+      event.key === ADMIN_SHORTCUTS.hideLeaderboard.key &&
+      options.isLeaderboardVisible,
+    isEnabled: () => true,
+    run: (options) => options.sendAction('TOGGLE_LEADERBOARD'),
+  },
+  {
+    matches: (event) =>
+      matchesKey(event, ADMIN_SHORTCUTS.toggleJoinOverlay.key),
+    isEnabled: (options) => options.canToggleJoinOverlay,
+    run: (options) => options.sendAction('TOGGLE_JOIN_OVERLAY'),
+  },
+  {
+    matches: (event) =>
+      matchesKey(event, ADMIN_SHORTCUTS.toggleMediaFullscreen.key),
+    isEnabled: () => true,
+    run: (options) => options.sendAction('TOGGLE_MEDIA_FULLSCREEN'),
+  },
+  {
+    matches: (event) => matchesKey(event, ADMIN_SHORTCUTS.toggleMediaPause.key),
+    isEnabled: (options) => options.canPauseMedia,
+    run: (options) => options.sendAction('TOGGLE_MEDIA_PAUSE'),
+  },
+  {
+    matches: (event) =>
+      matchesKey(event, ADMIN_SHORTCUTS.toggleDisplayMute.key),
+    isEnabled: () => true,
+    run: (options) =>
+      options.setDisplaySoundMuted(!options.isDisplaySoundMuted),
+  },
+];

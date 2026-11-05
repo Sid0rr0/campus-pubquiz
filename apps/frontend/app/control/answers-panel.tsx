@@ -69,15 +69,10 @@ function AnswerRow({
   onGrade,
 }: AnswerRowProps) {
   const hasAnswered = answer !== null;
-  const isGraded = hasAnswered && answer.gradingState === 'graded';
   // The server says when an answer is graded in one batch at the lock (such as
   // a closest_guess answer); until then there's nothing to override.
   const isAwaitingBatch =
     hasAnswered && answer.gradingState === 'awaiting_batch';
-  const options = gradeOptions(maxPoints);
-  const matchesAGradeOption =
-    hasAnswered &&
-    options.some((option) => option.value === answer.pointsAwarded);
 
   return (
     <motion.li
@@ -113,46 +108,89 @@ function AnswerRow({
           Graded when the block locks
         </span>
       ) : (
-        <>
-          {isGraded && !matchesAGradeOption && (
-            <span className="sr-only">
-              Awarded {answer.pointsAwarded} points
-            </span>
-          )}
-          <div className="flex items-center gap-1.5">
-            <CustomGradeControl
-              teamName={teamName}
-              currentAmount={hasAnswered ? answer.pointsAwarded : 0}
-              isSelected={isGraded && !matchesAGradeOption}
-              isDisabled={!hasAnswered}
-              onConfirm={(amount) =>
-                hasAnswered && onGrade(answer.answerId, amount)
-              }
-            />
-            {options.map(({ display, ariaSuffix, value }) => {
-              const isSelected = isGraded && answer.pointsAwarded === value;
-              return (
-                <Button
-                  key={display}
-                  type="button"
-                  disabled={!hasAnswered}
-                  variant={isSelected ? undefined : 'outline-muted'}
-                  aria-label={`Grade ${teamName} ${ariaSuffix}`}
-                  onClick={() => hasAnswered && onGrade(answer.answerId, value)}
-                  className={
-                    isSelected
-                      ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green px-3 font-extrabold whitespace-nowrap text-white'
-                      : 'flex h-9 min-w-11 items-center justify-center px-3 whitespace-nowrap'
-                  }
-                >
-                  {isSelected ? `✓ ${display}` : display}
-                </Button>
-              );
-            })}
-          </div>
-        </>
+        <GradeControls
+          teamName={teamName}
+          answer={answer}
+          maxPoints={maxPoints}
+          onGrade={onGrade}
+        />
       )}
     </motion.li>
+  );
+}
+
+/** The custom amount and the grade buttons, the current grade marked. */
+function GradeControls({
+  teamName,
+  answer,
+  maxPoints,
+  onGrade,
+}: Pick<AnswerRowProps, 'teamName' | 'answer' | 'maxPoints' | 'onGrade'>) {
+  const options = gradeOptions(maxPoints);
+  const gradedPoints =
+    answer?.gradingState === 'graded' ? answer.pointsAwarded : null;
+  const isCustomGrade =
+    gradedPoints !== null &&
+    !options.some((option) => option.value === gradedPoints);
+  const grade = (points: number) => {
+    if (answer) onGrade(answer.answerId, points);
+  };
+  return (
+    <>
+      {isCustomGrade && (
+        <span className="sr-only">Awarded {gradedPoints} points</span>
+      )}
+      <div className="flex items-center gap-1.5">
+        <CustomGradeControl
+          teamName={teamName}
+          currentAmount={answer?.pointsAwarded ?? 0}
+          isSelected={isCustomGrade}
+          isDisabled={answer === null}
+          onConfirm={grade}
+        />
+        {options.map(({ display, ariaSuffix, value }) => (
+          <GradeOptionButton
+            key={display}
+            label={display}
+            ariaLabel={`Grade ${teamName} ${ariaSuffix}`}
+            isSelected={gradedPoints === value}
+            isDisabled={answer === null}
+            onClick={() => grade(value)}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+function GradeOptionButton({
+  label,
+  ariaLabel,
+  isSelected,
+  isDisabled,
+  onClick,
+}: {
+  label: string;
+  ariaLabel: string;
+  isSelected: boolean;
+  isDisabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      disabled={isDisabled}
+      variant={isSelected ? undefined : 'outline-muted'}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={
+        isSelected
+          ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green px-3 font-extrabold whitespace-nowrap text-white'
+          : 'flex h-9 min-w-11 items-center justify-center px-3 whitespace-nowrap'
+      }
+    >
+      {isSelected ? `✓ ${label}` : label}
+    </Button>
   );
 }
 

@@ -50,31 +50,80 @@ function resolveDetail({
   if (questionId === null) return null;
   const live =
     liveAnswers?.questionId === questionId ? liveAnswers.question : undefined;
-  const roundIndex = rounds.findIndex((round) =>
-    round.questions.some((question) => question.id === questionId),
+  const stored = findStoredQuestion(rounds, questionId);
+  const prompt = promptOf(
+    live ?? stored?.question,
+    fallbackQuestions,
+    questionId,
   );
-  const round = rounds[roundIndex];
-  const questionIndex = round?.questions.findIndex(
-    (question) => question.id === questionId,
-  );
-  const stored = round?.questions[questionIndex];
-  const roundLine = live
-    ? `Round ${live.roundNumber} (${live.roundTitle}) — Q${live.questionNumberInRound} of ${live.totalQuestionsInRound}`
-    : round &&
-      `Round ${roundIndex + 1} (${round.title}) — Q${questionIndex + 1} of ${round.questions.length}`;
-  const prompt =
-    live?.prompt ??
-    stored?.prompt ??
-    fallbackQuestions.find((question) => question.id === questionId)?.prompt;
   if (prompt === undefined) return null;
   return {
     prompt,
-    type: live?.type ?? stored?.type,
-    correctAnswer: live?.correctAnswer ?? stored?.answer,
-    options: live?.options ?? stored?.options,
-    matchTargets: live?.matchTargets ?? stored?.matchTargets,
+    ...(live ? liveFields(live, stored?.question) : storedFields(stored)),
+  };
+}
+
+/** The prompt from the live or stored question, else from the snapshot's questions while those load. */
+function promptOf(
+  known: { prompt: string } | undefined,
+  fallbackQuestions: readonly QuestionView[],
+  questionId: number,
+): string | undefined {
+  return (
+    known?.prompt ??
+    fallbackQuestions.find((question) => question.id === questionId)?.prompt
+  );
+}
+
+type LiveQuestion = NonNullable<AnswersUpdatedPayload['question']>;
+type StoredQuestion = QuizSummaryRound['questions'][number];
+
+/** The question in the quiz's rounds, with the line naming where it sits. */
+function findStoredQuestion(
+  rounds: readonly QuizSummaryRound[],
+  questionId: number,
+): { question: StoredQuestion; roundLine: string } | undefined {
+  for (const [roundIndex, round] of rounds.entries()) {
+    const questionIndex = round.questions.findIndex(
+      (question) => question.id === questionId,
+    );
+    if (questionIndex !== -1) {
+      return {
+        question: round.questions[questionIndex],
+        roundLine: `Round ${roundIndex + 1} (${round.title}) — Q${questionIndex + 1} of ${round.questions.length}`,
+      };
+    }
+  }
+  return undefined;
+}
+
+/** The live question's fields, the stored question filling what it lacks (and the notes, which only it has). */
+function liveFields(
+  live: LiveQuestion,
+  stored: StoredQuestion | undefined,
+): Omit<DetailData, 'prompt'> {
+  return {
+    type: live.type ?? stored?.type,
+    correctAnswer: live.correctAnswer ?? stored?.answer,
+    options: live.options ?? stored?.options,
+    matchTargets: live.matchTargets ?? stored?.matchTargets,
     notes: stored?.notes,
-    roundLine: roundLine || undefined,
+    roundLine: `Round ${live.roundNumber} (${live.roundTitle}) — Q${live.questionNumberInRound} of ${live.totalQuestionsInRound}`,
+  };
+}
+
+function storedFields(
+  stored: ReturnType<typeof findStoredQuestion>,
+): Omit<DetailData, 'prompt'> {
+  if (!stored) return {};
+  const { question, roundLine } = stored;
+  return {
+    type: question.type,
+    correctAnswer: question.answer,
+    options: question.options,
+    matchTargets: question.matchTargets,
+    notes: question.notes,
+    roundLine,
   };
 }
 
@@ -138,17 +187,38 @@ export function QuestionDetail(props: QuestionDetailProps) {
       )}
       {detail.notes && <NotesLine notes={detail.notes} />}
       {headings && options && (
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] items-start gap-3">
-          <OptionList
-            heading={headings[0]}
-            items={options}
-            correct={correctAnswer}
-          />
-          {headings[1] && matchTargets && (
-            <OptionList heading={headings[1]} items={matchTargets} />
-          )}
-        </div>
+        <OptionLists
+          headings={headings}
+          options={options}
+          matchTargets={matchTargets}
+          correctAnswer={correctAnswer}
+        />
       )}
     </section>
+  );
+}
+
+function OptionLists({
+  headings,
+  options,
+  matchTargets,
+  correctAnswer,
+}: {
+  headings: [string, string?];
+  options: string[];
+  matchTargets: string[] | undefined;
+  correctAnswer: string | undefined;
+}) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] items-start gap-3">
+      <OptionList
+        heading={headings[0]}
+        items={options}
+        correct={correctAnswer}
+      />
+      {headings[1] && matchTargets && (
+        <OptionList heading={headings[1]} items={matchTargets} />
+      )}
+    </div>
   );
 }

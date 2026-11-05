@@ -116,75 +116,97 @@ export function TeamsPanel({
         </p>
       )}
       <ul className="flex flex-col gap-1.5">
-        {teams.map((team) => {
-          const hasAnswered =
-            showAnswerStatus && answeredTeamIds.includes(team.teamId);
-          return (
-            <li
-              key={team.teamId}
-              aria-label={
-                showAnswerStatus
-                  ? `${team.teamName} ${hasAnswered ? 'has answered' : 'has not answered yet'}`
-                  : undefined
-              }
-            >
-              <div className="flex items-center gap-1.5 text-sm font-bold">
-                <span
-                  aria-hidden="true"
-                  className={
-                    team.isConnected ? 'text-green' : 'text-background/30'
-                  }
-                >
-                  ●
-                </span>
-                <span className="sr-only">
-                  {team.isConnected ? 'Connected' : 'Disconnected'}
-                </span>
-                {team.teamName}
-                {hasAnswered && (
-                  <span aria-hidden="true" className="ml-1 text-cyan">
-                    ✓
-                  </span>
-                )}
-                <ConfirmDialog
-                  trigger={
-                    <Button
-                      type="button"
-                      className="ml-auto flex items-center gap-1 text-xs font-extrabold text-magenta underline"
-                    >
-                      <Cross2Icon aria-hidden="true" />
-                      Kick
-                    </Button>
-                  }
-                  title={`Kick ${team.teamName}?`}
-                  description="They'll be removed from the session and can rejoin with the join code."
-                  confirmLabel="Kick"
-                  onConfirm={() => onKickTeam(team.teamId)}
-                />
-              </div>
-              {team.joker && (
-                <p className="ml-5 text-xs font-bold text-background/70">
-                  🃏 Round {team.joker.roundNumber} — {team.joker.roundTitle}{' '}
-                  <span className="font-normal text-background/50">
-                    ({JOKER_SOURCE_LABELS[team.joker.source]})
-                  </span>
-                </p>
-              )}
-              {jokerRounds.length > 0 && (
-                <JokerRoundSelect
-                  team={team}
-                  jokerRounds={jokerRounds}
-                  onSetJoker={onSetJoker}
-                />
-              )}
-              <PlayerCountEditor
-                team={team}
-                onSetPlayerCount={onSetPlayerCount}
-              />
-            </li>
-          );
-        })}
+        {teams.map((team) => (
+          <TeamRow
+            key={team.teamId}
+            team={team}
+            showAnswerStatus={showAnswerStatus}
+            answeredTeamIds={answeredTeamIds}
+            onKickTeam={onKickTeam}
+            onSetPlayerCount={onSetPlayerCount}
+            jokerRounds={jokerRounds}
+            onSetJoker={onSetJoker}
+          />
+        ))}
       </ul>
     </section>
+  );
+}
+
+function TeamRow({
+  team,
+  showAnswerStatus,
+  answeredTeamIds,
+  onKickTeam,
+  onSetPlayerCount,
+  jokerRounds,
+  onSetJoker,
+}: Pick<
+  TeamsPanelProps,
+  | 'showAnswerStatus'
+  | 'answeredTeamIds'
+  | 'onKickTeam'
+  | 'onSetPlayerCount'
+  | 'jokerRounds'
+  | 'onSetJoker'
+> & { team: TeamsPanelProps['teams'][number] }) {
+  const hasAnswered = showAnswerStatus && answeredTeamIds.includes(team.teamId);
+  return (
+    <li
+      aria-label={
+        showAnswerStatus
+          ? `${team.teamName} ${hasAnswered ? 'has answered' : 'has not answered yet'}`
+          : undefined
+      }
+    >
+      <div className="flex items-center gap-1.5 text-sm font-bold">
+        <span
+          aria-hidden="true"
+          className={team.isConnected ? 'text-green' : 'text-background/30'}
+        >
+          ●
+        </span>
+        <span className="sr-only">
+          {team.isConnected ? 'Connected' : 'Disconnected'}
+        </span>
+        {team.teamName}
+        {hasAnswered && (
+          <span aria-hidden="true" className="ml-1 text-cyan">
+            ✓
+          </span>
+        )}
+        <ConfirmDialog
+          trigger={
+            <Button
+              type="button"
+              className="ml-auto flex items-center gap-1 text-xs font-extrabold text-magenta underline"
+            >
+              <Cross2Icon aria-hidden="true" />
+              Kick
+            </Button>
+          }
+          title={`Kick ${team.teamName}?`}
+          description="They'll be removed from the session and can rejoin with the join code."
+          confirmLabel="Kick"
+          onConfirm={() => onKickTeam(team.teamId)}
+        />
+      </div>
+      {team.joker && (
+        <p className="ml-5 text-xs font-bold text-background/70">
+          🃏 Round {team.joker.roundNumber} — {team.joker.roundTitle}{' '}
+          <span className="font-normal text-background/50">
+            ({JOKER_SOURCE_LABELS[team.joker.source]})
+          </span>
+        </p>
+      )}
+      {jokerRounds.length > 0 && (
+        <JokerRoundSelect
+          team={team}
+          jokerRounds={jokerRounds}
+          onSetJoker={onSetJoker}
+        />
+      )}
+      <PlayerCountEditor team={team} onSetPlayerCount={onSetPlayerCount} />
+    </li>
   );
 }

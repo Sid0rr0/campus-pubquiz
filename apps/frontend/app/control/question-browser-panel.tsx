@@ -75,112 +75,159 @@ export function QuestionBrowserPanel({
     <section className="flex flex-col gap-2.5">
       <h2 className="font-display text-lg">Grade Questions</h2>
       <div className="flex flex-col gap-1">
-        {rounds.map((round, roundIndex) => {
-          const isActiveRound =
-            roundIndex >= activeBlockStartIndex &&
-            roundIndex <= currentRoundIndex;
-          const isTitleOnDisplay =
-            roundIndex === indicators.titleCardRoundIndex;
-          const isBreakOnDisplay = roundIndex === indicators.breakRoundIndex;
-          const titleItem: DetailItem = { kind: 'title', roundIndex };
-          const breakItem: DetailItem = { kind: 'break', roundIndex };
-          return (
-            <div
-              key={`${round.title}-${roundIndex}`}
-              className="flex flex-col gap-0.5"
-            >
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span role="img" aria-label={`Round ${roundIndex + 1}`}>
-                  {roundIndex + 1}
-                </span>
-                <nav
-                  aria-label={`${round.title} questions`}
-                  className="flex flex-wrap items-center gap-1"
-                >
-                  <Button
-                    type="button"
-                    aria-label={`Show title card of ${round.title}${isTitleOnDisplay ? ' (live on display)' : ''}`}
-                    aria-pressed={isSameItem(selected, titleItem)}
-                    onClick={() => onSelect(titleItem)}
-                    className={displayMarkerClasses(
-                      isTitleOnDisplay,
-                      !isActiveRound,
-                      isSameItem(selected, titleItem),
-                    )}
-                  >
-                    T
-                  </Button>
-                  {round.questions.map((question, questionIndex) => {
-                    const isSelected =
-                      selected?.kind === 'question' &&
-                      question.id === selected.questionId;
-                    const isOnDisplay =
-                      question.id === indicators.onDisplayQuestionId;
-                    const isUngraded = ungradedQuestionIds.includes(
-                      question.id,
-                    );
-                    const label = `Grade question ${questionIndex + 1} of ${round.title}${isOnDisplay ? ' (live on display)' : ''}${isUngraded ? ' (not yet graded)' : ''}`;
-                    return (
-                      <span key={question.id} className="relative inline-flex">
-                        <Button
-                          type="button"
-                          aria-label={label}
-                          aria-pressed={isSelected}
-                          onClick={() =>
-                            onSelect({
-                              kind: 'question',
-                              questionId: question.id,
-                            })
-                          }
-                          className={questionButtonClasses(
-                            isSelected,
-                            isOnDisplay,
-                            !isActiveRound,
-                          )}
-                        >
-                          {questionIndex + 1}
-                        </Button>
-                        {isUngraded && (
-                          <span
-                            aria-hidden="true"
-                            title="Not yet graded"
-                            className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-magenta ring-1 ring-white"
-                          />
-                        )}
-                      </span>
-                    );
-                  })}
-                  {round.breakNumber !== undefined && (
-                    <Button
-                      type="button"
-                      aria-label={`Show break after ${round.title}${isBreakOnDisplay ? ' (live on display)' : ''}`}
-                      aria-pressed={isSameItem(selected, breakItem)}
-                      onClick={() => onSelect(breakItem)}
-                      className={displayMarkerClasses(
-                        isBreakOnDisplay,
-                        !isActiveRound,
-                        isSameItem(selected, breakItem),
-                      )}
-                    >
-                      B
-                    </Button>
-                  )}
-                </nav>
-
-                <p
-                  className={
-                    isActiveRound
-                      ? 'text-xs font-extrabold tracking-wide text-foreground/55'
-                      : 'text-[10px] font-bold tracking-wide text-foreground/35'
-                  }
-                >
-                  {round.title}
-                </p>
-              </div>
-            </div>
-          );
-        })}
+        {rounds.map((round, roundIndex) => (
+          <RoundRow
+            key={`${round.title}-${roundIndex}`}
+            round={round}
+            roundIndex={roundIndex}
+            isActiveRound={
+              roundIndex >= activeBlockStartIndex &&
+              roundIndex <= currentRoundIndex
+            }
+            selected={selected}
+            indicators={indicators}
+            onSelect={onSelect}
+            ungradedQuestionIds={ungradedQuestionIds}
+          />
+        ))}
       </div>
     </section>
+  );
+}
+
+type RowProps = Pick<
+  QuestionBrowserPanelProps,
+  'selected' | 'indicators' | 'onSelect' | 'ungradedQuestionIds'
+>;
+
+function RoundRow({
+  round,
+  roundIndex,
+  isActiveRound,
+  selected,
+  indicators,
+  onSelect,
+  ungradedQuestionIds,
+}: RowProps & {
+  round: QuestionBrowserPanelProps['rounds'][number];
+  roundIndex: number;
+  isActiveRound: boolean;
+}) {
+  const isTitleOnDisplay = roundIndex === indicators.titleCardRoundIndex;
+  const isBreakOnDisplay = roundIndex === indicators.breakRoundIndex;
+  const titleItem: DetailItem = { kind: 'title', roundIndex };
+  const breakItem: DetailItem = { kind: 'break', roundIndex };
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span role="img" aria-label={`Round ${roundIndex + 1}`}>
+          {roundIndex + 1}
+        </span>
+        <nav
+          aria-label={`${round.title} questions`}
+          className="flex flex-wrap items-center gap-1"
+        >
+          <Button
+            type="button"
+            aria-label={`Show title card of ${round.title}${isTitleOnDisplay ? ' (live on display)' : ''}`}
+            aria-pressed={isSameItem(selected, titleItem)}
+            onClick={() => onSelect(titleItem)}
+            className={displayMarkerClasses(
+              isTitleOnDisplay,
+              !isActiveRound,
+              isSameItem(selected, titleItem),
+            )}
+          >
+            T
+          </Button>
+          {round.questions.map((question, questionIndex) => (
+            <QuestionButton
+              key={question.id}
+              question={question}
+              questionIndex={questionIndex}
+              roundTitle={round.title}
+              isDimmed={!isActiveRound}
+              selected={selected}
+              indicators={indicators}
+              ungradedQuestionIds={ungradedQuestionIds}
+              onSelect={onSelect}
+            />
+          ))}
+          {round.breakNumber !== undefined && (
+            <Button
+              type="button"
+              aria-label={`Show break after ${round.title}${isBreakOnDisplay ? ' (live on display)' : ''}`}
+              aria-pressed={isSameItem(selected, breakItem)}
+              onClick={() => onSelect(breakItem)}
+              className={displayMarkerClasses(
+                isBreakOnDisplay,
+                !isActiveRound,
+                isSameItem(selected, breakItem),
+              )}
+            >
+              B
+            </Button>
+          )}
+        </nav>
+
+        <p
+          className={
+            isActiveRound
+              ? 'text-xs font-extrabold tracking-wide text-foreground/55'
+              : 'text-[10px] font-bold tracking-wide text-foreground/35'
+          }
+        >
+          {round.title}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function QuestionButton({
+  question,
+  questionIndex,
+  roundTitle,
+  isDimmed,
+  selected,
+  indicators,
+  ungradedQuestionIds,
+  onSelect,
+}: Omit<RowProps, 'onSelect'> & {
+  question: QuestionBrowserPanelProps['rounds'][number]['questions'][number];
+  questionIndex: number;
+  roundTitle: string;
+  isDimmed: boolean;
+  onSelect: QuestionBrowserPanelProps['onSelect'];
+}) {
+  const isSelected =
+    selected?.kind === 'question' && question.id === selected.questionId;
+  const isOnDisplay = question.id === indicators.onDisplayQuestionId;
+  const isUngraded = ungradedQuestionIds.includes(question.id);
+  const label = `Grade question ${questionIndex + 1} of ${roundTitle}${isOnDisplay ? ' (live on display)' : ''}${isUngraded ? ' (not yet graded)' : ''}`;
+  return (
+    <span key={question.id} className="relative inline-flex">
+      <Button
+        type="button"
+        aria-label={label}
+        aria-pressed={isSelected}
+        onClick={() =>
+          onSelect({
+            kind: 'question',
+            questionId: question.id,
+          })
+        }
+        className={questionButtonClasses(isSelected, isOnDisplay, isDimmed)}
+      >
+        {questionIndex + 1}
+      </Button>
+      {isUngraded && (
+        <span
+          aria-hidden="true"
+          title="Not yet graded"
+          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-magenta ring-1 ring-white"
+        />
+      )}
+    </span>
   );
 }

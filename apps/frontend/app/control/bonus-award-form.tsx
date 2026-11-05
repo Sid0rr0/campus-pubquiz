@@ -40,8 +40,8 @@ export function BonusAwardForm({
     enabledCategories.includes(option.value),
   );
   const isCustomEnabled = enabledCategories.includes('custom');
-  const [category, setCategory] = useState<BonusCategory>(
-    availablePredefined[0]?.value ?? (isCustomEnabled ? 'custom' : 'shot'),
+  const [category, setCategory] = useState<BonusCategory>(() =>
+    initialCategory(availablePredefined, isCustomEnabled),
   );
   // Held as the raw typed string (not a number) so an in-progress "-" isn't
   // wiped out by re-rendering through Number("-") === NaN on every keystroke.
@@ -50,18 +50,12 @@ export function BonusAwardForm({
 
   const [coinsInput, setCoinsInput] = useState('');
   // Until points are typed: the default, or none once coins are, so taking a coin never also gives points and a shot's coins.
-  const pointsInput =
-    typedPoints ?? (coinsInput === '' ? String(DEFAULT_BONUS_POINTS) : '0');
+  const pointsInput = pointsInputOf(typedPoints, coinsInput);
 
   const points = Number(pointsInput);
   const coins = coinsInput === '' ? 0 : Number(coinsInput);
   const isCustom = category === 'custom';
-  // Coins alone (0 points) are a coin award, which needs no reason.
-  const canSubmit =
-    Number.isFinite(points) &&
-    Number.isInteger(coins) &&
-    (points !== 0 || coins !== 0) &&
-    (!isCustom || points === 0 || reason.trim().length > 0);
+  const canSubmit = canSubmitAward(points, coins, isCustom ? reason : null);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -78,33 +72,19 @@ export function BonusAwardForm({
     >
       <div className="flex flex-wrap gap-1">
         {availablePredefined.map((option) => (
-          <Button
+          <CategoryChip
             key={option.value}
-            type="button"
-            onClick={() => setCategory(option.value)}
-            aria-pressed={category === option.value}
-            className={`rounded-full border-2 px-2.5 py-1 font-extrabold ${
-              category === option.value
-                ? 'border-cyan bg-cyan text-dark-blue'
-                : 'border-background/30 text-background'
-            }`}
-          >
-            {option.label}
-          </Button>
+            label={option.label}
+            isSelected={category === option.value}
+            onSelect={() => setCategory(option.value)}
+          />
         ))}
         {isCustomEnabled && (
-          <Button
-            type="button"
-            onClick={() => setCategory('custom')}
-            aria-pressed={isCustom}
-            className={`rounded-full border-2 px-2.5 py-1 font-extrabold ${
-              isCustom
-                ? 'border-cyan bg-cyan text-dark-blue'
-                : 'border-background/30 text-background'
-            }`}
-          >
-            Custom
-          </Button>
+          <CategoryChip
+            label="Custom"
+            isSelected={isCustom}
+            onSelect={() => setCategory('custom')}
+          />
         )}
       </div>
       {isCustom && (
@@ -129,18 +109,7 @@ export function BonusAwardForm({
         />
       </label>
       {isCoinsEnabled && (
-        <label className="flex items-center gap-2 font-bold">
-          Coins
-          <input
-            type="number"
-            step={1}
-            value={coinsInput}
-            onChange={(event) => setCoinsInput(event.target.value)}
-            placeholder="0"
-            aria-label="Coin award"
-            className="w-16 rounded border-2 border-background/30 bg-transparent px-2 py-1 placeholder:text-background/40"
-          />
-        </label>
+        <CoinsField value={coinsInput} onChange={setCoinsInput} />
       )}
       <div className="flex gap-2">
         <Button
@@ -161,5 +130,81 @@ export function BonusAwardForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function initialCategory(
+  availablePredefined: readonly { value: BonusCategory }[],
+  isCustomEnabled: boolean,
+): BonusCategory {
+  return availablePredefined[0]?.value ?? (isCustomEnabled ? 'custom' : 'shot');
+}
+
+/** Until points are typed: the default, or none once coins are, so taking a coin never also gives points and a shot's coins. */
+function pointsInputOf(typedPoints: string | null, coinsInput: string): string {
+  return (
+    typedPoints ?? (coinsInput === '' ? String(DEFAULT_BONUS_POINTS) : '0')
+  );
+}
+
+/** `customReason` is null for a predefined category. Coins alone (0 points) are a coin award, which needs no reason. */
+function canSubmitAward(
+  points: number,
+  coins: number,
+  customReason: string | null,
+): boolean {
+  return (
+    Number.isFinite(points) &&
+    Number.isInteger(coins) &&
+    (points !== 0 || coins !== 0) &&
+    (customReason === null || points === 0 || customReason.trim().length > 0)
+  );
+}
+
+function CategoryChip({
+  label,
+  isSelected,
+  onSelect,
+}: {
+  label: string;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={isSelected}
+      className={`rounded-full border-2 px-2.5 py-1 font-extrabold ${
+        isSelected
+          ? 'border-cyan bg-cyan text-dark-blue'
+          : 'border-background/30 text-background'
+      }`}
+    >
+      {label}
+    </Button>
+  );
+}
+
+function CoinsField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 font-bold">
+      Coins
+      <input
+        type="number"
+        step={1}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="0"
+        aria-label="Coin award"
+        className="w-16 rounded border-2 border-background/30 bg-transparent px-2 py-1 placeholder:text-background/40"
+      />
+    </label>
   );
 }

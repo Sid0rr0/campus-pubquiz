@@ -37,11 +37,9 @@ export function CustomGradeControl({
   // null = input hidden; a string (even '') = input shown with that draft.
   const [draft, setDraft] = useState<string | null>(null);
   const isOpen = draft !== null;
-  const parsedAmount = isOpen ? parseAmount(draft) : null;
-  const confirmableAmount =
-    parsedAmount !== null && parsedAmount !== currentAmount
-      ? parsedAmount
-      : null;
+  const confirmableAmount = isOpen
+    ? confirmableAmountOf(draft, currentAmount)
+    : null;
 
   function confirm(amount: number) {
     onConfirm(amount);
@@ -57,37 +55,24 @@ export function CustomGradeControl({
   }
 
   function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter' && confirmableAmount !== null) {
-      confirm(confirmableAmount);
-    } else if (event.key === 'Escape') {
-      setDraft(null);
-    }
+    if (event.key === 'Escape') setDraft(null);
+    else if (event.key === 'Enter') handleEnter();
   }
 
-  const isConfirming = confirmableAmount !== null;
-  const showsCheckmark = isSelected && !isOpen;
-  const label = isConfirming
-    ? 'Confirm'
-    : showsCheckmark
-      ? `✓ ${currentAmount}`
-      : 'Custom';
+  function handleEnter() {
+    if (confirmableAmount !== null) confirm(confirmableAmount);
+  }
 
   return (
     <>
-      <Button
-        type="button"
-        disabled={isDisabled}
-        variant={showsCheckmark || isConfirming ? undefined : 'outline-muted'}
-        aria-label={`${isConfirming ? 'Confirm' : 'Grade'} ${teamName} custom points`}
+      <CustomGradeButton
+        teamName={teamName}
+        currentAmount={currentAmount}
+        isConfirming={confirmableAmount !== null}
+        showsCheckmark={isSelected && !isOpen}
+        isDisabled={isDisabled}
         onClick={handleButtonClick}
-        className={
-          showsCheckmark || isConfirming
-            ? 'flex h-9 items-center justify-center rounded-lg bg-green px-3 font-extrabold whitespace-nowrap text-white'
-            : 'flex h-9 items-center justify-center px-3 whitespace-nowrap'
-        }
-      >
-        {label}
-      </Button>
+      />
       {isOpen && (
         <input
           type="number"
@@ -103,5 +88,55 @@ export function CustomGradeControl({
         />
       )}
     </>
+  );
+}
+
+/** The typed amount, when it is a valid one that changes the grade. */
+function confirmableAmountOf(
+  draft: string,
+  currentAmount: number,
+): number | null {
+  const parsedAmount = parseAmount(draft);
+  return parsedAmount !== null && parsedAmount !== currentAmount
+    ? parsedAmount
+    : null;
+}
+
+function CustomGradeButton({
+  teamName,
+  currentAmount,
+  isConfirming,
+  showsCheckmark,
+  isDisabled,
+  onClick,
+}: {
+  teamName: string;
+  currentAmount: number;
+  isConfirming: boolean;
+  showsCheckmark: boolean;
+  isDisabled: boolean;
+  onClick: () => void;
+}) {
+  const isHighlighted = showsCheckmark || isConfirming;
+  const label = isConfirming
+    ? 'Confirm'
+    : showsCheckmark
+      ? `✓ ${currentAmount}`
+      : 'Custom';
+  return (
+    <Button
+      type="button"
+      disabled={isDisabled}
+      variant={isHighlighted ? undefined : 'outline-muted'}
+      aria-label={`${isConfirming ? 'Confirm' : 'Grade'} ${teamName} custom points`}
+      onClick={onClick}
+      className={
+        isHighlighted
+          ? 'flex h-9 items-center justify-center rounded-lg bg-green px-3 font-extrabold whitespace-nowrap text-white'
+          : 'flex h-9 items-center justify-center px-3 whitespace-nowrap'
+      }
+    >
+      {label}
+    </Button>
   );
 }
