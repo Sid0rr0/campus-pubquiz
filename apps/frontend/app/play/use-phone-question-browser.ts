@@ -44,28 +44,22 @@ const NO_QUESTIONS: readonly never[] = [];
 export function usePhoneQuestionBrowser(
   view: PlayersView | null,
 ): PhoneQuestionBrowser {
-  // Starts true (always-follow) and is corrected once localStorage is
-  // readable post-mount, the same SSR-safe pattern as use-team-link.ts.
-  const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(true);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAutoAdvanceEnabled(readAutoAdvanceSetting());
-  }, []);
+  const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useAutoAdvanceSetting();
   // null = follow the question currently shown on the big screen.
   const [browsedQuestionId, selectQuestion] = useState<number | null>(null);
-  const currentQuestion = view?.currentQuestion ?? null;
-  const currentQuestionId = currentQuestion?.id ?? null;
-  // Only changes while actively revealing (currentQuestionId stays null
-  // throughout break/reveal), so this alone can key the reveal-walk sync.
-  const revealSyncKey =
-    view?.progress.status === 'reveal' ? view.progress.revealIndex : null;
+  const {
+    currentQuestion,
+    currentQuestionId,
+    revealSyncKey,
+    blockQuestions,
+    onScreenQuestionId,
+    isBlockScreen,
+  } = browserInputsOf(view);
   // What selectPhoneQuestion compares against to spot a new question or
   // reveal step; synced during render after the call below.
   const [prevQuestionId, setPrevQuestionId] = useState(currentQuestionId);
   const [prevRevealSyncKey, setPrevRevealSyncKey] = useState(revealSyncKey);
 
-  const phoneScreen = view?.phoneScreen;
-  const blockQuestions = view?.blockQuestions ?? NO_QUESTIONS;
   const {
     selectedQuestion: resolvedQuestion,
     previousQuestion,
@@ -74,8 +68,7 @@ export function usePhoneQuestionBrowser(
   } = selectPhoneQuestion({
     openedQuestions: blockQuestions,
     currentQuestion,
-    onScreenQuestionId:
-      phoneScreen?.kind === 'block' ? phoneScreen.onScreenQuestionId : null,
+    onScreenQuestionId,
     browsedQuestionId,
     autoAdvanceEnabled,
     revealSyncKey,
@@ -102,40 +95,91 @@ export function usePhoneQuestionBrowser(
     );
   }
 
-  const selectedQuestion =
-    phoneScreen?.kind === 'block' ? resolvedQuestion : null;
-  const revealQuestion =
-    view?.progress.status === 'reveal' && selectedQuestion
-      ? view.revealQuestions.find(
-          (question) => question.id === selectedQuestion.id,
-        )
-      : undefined;
+  const selectedQuestion = isBlockScreen ? resolvedQuestion : null;
   const jumpableQuestionIds = selectedQuestion
     ? new Set(blockQuestions.map((question) => question.id))
     : new Set<number>();
 
   return {
     selectedQuestion,
-    revealQuestion,
+    revealQuestion: revealQuestionOf(view, selectedQuestion),
     navigation: autoAdvanceEnabled
       ? undefined
-      : {
-          canGoBack: previousQuestion !== null,
-          canGoForward: nextQuestion !== null,
-          onBack: () => {
-            if (previousQuestion) {
-              selectQuestion(previousQuestion.id);
-            }
-          },
-          onForward: () => {
-            if (nextQuestion) {
-              selectQuestion(nextQuestion.id);
-            }
-          },
-        },
+      : browserNavigation(previousQuestion, nextQuestion, selectQuestion),
     jumpableQuestionIds,
     selectQuestion,
     autoAdvanceEnabled,
     setAutoAdvance,
+  };
+}
+
+/**
+ * Starts true (always-follow) and is corrected once localStorage is
+ * readable post-mount, the same SSR-safe pattern as use-team-link.ts.
+ */
+function useAutoAdvanceSetting() {
+  const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(true);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAutoAdvanceEnabled(readAutoAdvanceSetting());
+  }, []);
+  return [autoAdvanceEnabled, setAutoAdvanceEnabled] as const;
+}
+
+const NO_VIEW_INPUTS = {
+  currentQuestion: null,
+  currentQuestionId: null,
+  revealSyncKey: null,
+  blockQuestions: NO_QUESTIONS,
+  onScreenQuestionId: null,
+  isBlockScreen: false,
+};
+
+/** What the browser reads from the view; all empty before the first view. */
+function browserInputsOf(view: PlayersView | null) {
+  if (!view) return NO_VIEW_INPUTS;
+  const { currentQuestion, phoneScreen, progress } = view;
+  const isBlockScreen = phoneScreen.kind === 'block';
+  return {
+    currentQuestion,
+    currentQuestionId: currentQuestion?.id ?? null,
+    // Only changes while actively revealing (currentQuestionId stays null
+    // throughout break/reveal), so this alone can key the reveal-walk sync.
+    revealSyncKey: progress.status === 'reveal' ? progress.revealIndex : null,
+    blockQuestions: view.blockQuestions,
+    onScreenQuestionId: isBlockScreen ? phoneScreen.onScreenQuestionId : null,
+    isBlockScreen,
+  };
+}
+
+function revealQuestionOf(
+  view: PlayersView | null,
+  selectedQuestion: { id: number } | null,
+) {
+  return view?.progress.status === 'reveal' && selectedQuestion
+    ? view.revealQuestions.find(
+        (question) => question.id === selectedQuestion.id,
+      )
+    : undefined;
+}
+
+function browserNavigation(
+  previousQuestion: { id: number } | null,
+  nextQuestion: { id: number } | null,
+  selectQuestion: (id: number) => void,
+) {
+  return {
+    canGoBack: previousQuestion !== null,
+    canGoForward: nextQuestion !== null,
+    onBack: () => {
+      if (previousQuestion) {
+        selectQuestion(previousQuestion.id);
+      }
+    },
+    onForward: () => {
+      if (nextQuestion) {
+        selectQuestion(nextQuestion.id);
+      }
+    },
   };
 }

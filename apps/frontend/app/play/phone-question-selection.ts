@@ -59,20 +59,41 @@ export function selectPhoneQuestion<Q extends { id: number }>({
     revealSyncKey !== previousRevealSyncKey;
   const followedBrowsedId =
     hasChanged && autoAdvanceEnabled ? null : browsedQuestionId;
-  const selectedQuestion =
-    openedQuestions.find((question) => question.id === followedBrowsedId) ??
-    openedQuestions.find((question) => question.id === onScreenQuestionId) ??
-    openedQuestions[openedQuestions.length - 1] ??
-    currentQuestion ??
-    null;
-  const index = openedQuestions.findIndex(
-    (question) => question.id === selectedQuestion?.id,
+  const selectedQuestion = resolveSelectedQuestion(
+    openedQuestions,
+    [followedBrowsedId, onScreenQuestionId],
+    currentQuestion,
   );
   return {
     selectedQuestion,
     browsedQuestionId: autoAdvanceEnabled
       ? followedBrowsedId
       : (selectedQuestion?.id ?? followedBrowsedId),
+    ...neighboursOf(openedQuestions, selectedQuestion),
+  };
+}
+
+/** The first of `preferredIds` that is opened, else the last opened question, else the current one. */
+function resolveSelectedQuestion<Q extends { id: number }>(
+  openedQuestions: readonly Q[],
+  preferredIds: readonly (number | null)[],
+  currentQuestion: Q | null,
+): Q | null {
+  for (const id of preferredIds) {
+    const found = openedQuestions.find((question) => question.id === id);
+    if (found) return found;
+  }
+  return openedQuestions[openedQuestions.length - 1] ?? currentQuestion;
+}
+
+function neighboursOf<Q extends { id: number }>(
+  openedQuestions: readonly Q[],
+  selectedQuestion: Q | null,
+): { previousQuestion: Q | null; nextQuestion: Q | null } {
+  const index = openedQuestions.findIndex(
+    (question) => question.id === selectedQuestion?.id,
+  );
+  return {
     previousQuestion: index > 0 ? openedQuestions[index - 1] : null,
     nextQuestion:
       index !== -1 && index < openedQuestions.length - 1

@@ -46,31 +46,37 @@ export function buildOpenedQuestions(
   myAnswerGrades: Record<number, MyAnswerGrade> = {},
 ): OpenedQuestionEntry[] {
   return Object.values(seenQuestions)
-    .map((question) => {
-      const myAnswer = myAnswers[question.id] ?? null;
-      const revealed = isRevealed(question);
-      const grade = revealed ? myAnswerGrades[question.id] : undefined;
-      const pointsAwarded = !revealed
-        ? null
-        : (grade?.pointsAwarded ?? (myAnswer === null ? 0 : null));
-      return {
-        id: question.id,
-        type: question.type,
-        prompt: question.prompt,
-        roundTitle: question.roundTitle,
-        roundNumber: question.roundNumber,
-        questionNumberInRound: question.questionNumberInRound,
-        myAnswer,
-        correctAnswer: revealed ? question.answer : null,
-        options: question.options,
-        maxPoints: question.points,
-        pointsAwarded,
-        verdict: grade?.verdict ?? null,
-      };
-    })
+    .map((question) => toOpenedEntry(question, myAnswers, myAnswerGrades))
     .sort((a, b) =>
       a.roundNumber !== b.roundNumber
         ? a.roundNumber - b.roundNumber
         : a.questionNumberInRound - b.questionNumberInRound,
     );
+}
+
+function toOpenedEntry(
+  question: SeenQuestion,
+  myAnswers: Record<number, string>,
+  myAnswerGrades: Record<number, MyAnswerGrade>,
+): OpenedQuestionEntry {
+  const myAnswer = myAnswers[question.id] ?? null;
+  const revealed = isRevealed(question);
+  const grade = revealed ? myAnswerGrades[question.id] : undefined;
+  const pointsAwarded = !revealed
+    ? null
+    : (grade?.pointsAwarded ?? (myAnswer === null ? 0 : null));
+  return {
+    id: question.id,
+    type: question.type,
+    prompt: question.prompt,
+    roundTitle: question.roundTitle,
+    roundNumber: question.roundNumber,
+    questionNumberInRound: question.questionNumberInRound,
+    myAnswer,
+    correctAnswer: revealed ? question.answer : null,
+    options: question.options,
+    maxPoints: question.points,
+    pointsAwarded,
+    verdict: grade?.verdict ?? null,
+  };
 }

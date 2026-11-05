@@ -99,26 +99,25 @@ function LookAtTheScreen({
  * draws itself). One case per kind; a new kind fails to compile until it has
  * a drawing.
  */
-export function GameStatusScreens({
+export function GameStatusScreens(props: GameStatusScreensProps) {
+  const placing = usePhoneMoments(props);
+  const Screen = STATUS_SCREENS[props.phoneScreen.kind] as (
+    props: StatusScreenProps,
+  ) => ReactNode;
+  return <Screen {...props} placing={placing} />;
+}
+
+/**
+ * The buzz when the team's showdown turn comes live, and confetti for the
+ * podium when the quiz is seen ending live. The first snapshot after a load
+ * or reconnect is silent. Returns the team's final placing once ended.
+ */
+function usePhoneMoments({
   phoneScreen,
-  quizStructure,
-  joinCode,
-  settings,
   activeShowdown,
-  showdownRevealStep,
   myTeamId,
-  coins,
-  hasCarriedCoin,
-  phoneLeaderboard,
   isConnected,
-  teamName,
-  onSubmitShowdownGuess,
   leaderboard,
-  playerCountCard,
-  jokerPick,
-  myJoker,
-  onPickJoker,
-  isJokerBadgeShown,
 }: GameStatusScreensProps) {
   const isMyTurn =
     phoneScreen.kind === 'showdown_guessing' &&
@@ -127,123 +126,142 @@ export function GameStatusScreens({
       (participant) =>
         participant.teamId === myTeamId && !participant.hasGuessed,
     ) === true;
-  // The first snapshot after a load or reconnect is silent, so the buzz fires
-  // only when the turn comes live.
   useOnLiveForwardMove(isMyTurn ? 1 : 0, isConnected, () => vibrate('turn'));
   const isEnded = phoneScreen.kind === 'ended';
   const placing = isEnded ? describeFinalPlacing(leaderboard, myTeamId) : null;
-  // Confetti for the podium only, and only when the quiz is seen ending live:
-  // the phone screen is `ended` once any showdown is decided, not before.
+  // The phone screen is `ended` once any showdown is decided, not before.
   useOnLiveForwardMove(isEnded ? 1 : 0, isConnected, () => {
     if (placing && isPodiumRank(placing.rank)) {
       fireConfetti();
     }
   });
-
-  switch (phoneScreen.kind) {
-    case 'block':
-      return null;
-    case 'leaderboard':
-      return (
-        <LeaderboardScreen
-          board={phoneLeaderboard.board}
-          revealCount={phoneLeaderboard.revealCount}
-          myTeamId={myTeamId}
-          isConnected={isConnected}
-          coins={coins}
-          hasCarriedCoin={hasCarriedCoin}
-        />
-      );
-    case 'lobby':
-      return (
-        <div className="mt-16 flex flex-col items-center gap-3">
-          <h1 className="text-center font-display text-2xl text-green">
-            You&apos;re in!
-          </h1>
-          <p className="text-center">Look for {teamName} on the big screen</p>
-          <p className="text-center text-sm text-foreground/65">
-            Waiting for the quiz to start…
-          </p>
-          {playerCountCard}
-          <a
-            href={`/rules?code=${joinCode}`}
-            className="text-sm font-extrabold text-cyan underline"
-          >
-            Read the rules
-          </a>
-        </div>
-      );
-    case 'rules':
-      return (
-        <div className="mt-6">
-          <RulesContent
-            quizStructure={quizStructure}
-            settings={settings}
-            hasCarriedCoin={hasCarriedCoin}
-          />
-        </div>
-      );
-    case 'round_overview':
-      return <LookAtTheScreen className="text-magenta">Rounds</LookAtTheScreen>;
-    case 'joker_pick':
-      return jokerPick ? (
-        <JokerPickScreen
-          jokerPick={jokerPick}
-          isOpen={phoneScreen.isOpen}
-          myJoker={myJoker}
-          onPick={onPickJoker}
-        />
-      ) : null;
-    case 'round_title':
-      return (
-        <div
-          key={phoneScreen.title}
-          className="mt-16 flex flex-col items-center gap-2 text-center"
-        >
-          <EntranceLine line="kicker">
-            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
-            </p>
-          </EntranceLine>
-          <EntranceLine line="title">
-            <h1 className="font-display text-2xl">{phoneScreen.title}</h1>
-          </EntranceLine>
-          {isJokerBadgeShown && <JokerBadge />}
-        </div>
-      );
-    case 'ended':
-      return (
-        <div className="mt-16 flex flex-col items-center gap-3 text-center">
-          <h1 className="font-display text-2xl">Quiz complete!</h1>
-          {placing && (
-            <p className="font-display text-xl text-magenta">{placing.text}</p>
-          )}
-          <TeamPageLink />
-        </div>
-      );
-    case 'showdown_reveal':
-      return activeShowdown ? (
-        <div className="mt-16 flex flex-col items-center gap-6 px-6 text-center">
-          <ShowdownRevealScreen
-            activeShowdown={activeShowdown}
-            step={showdownRevealStep}
-          />
-        </div>
-      ) : null;
-    case 'showdown_guessing':
-      return (
-        <ShowdownGuessingScreen
-          activeShowdown={activeShowdown}
-          myTeamId={myTeamId}
-          onSubmitShowdownGuess={onSubmitShowdownGuess}
-        />
-      );
-    default: {
-      const unhandled: never = phoneScreen;
-      return unhandled;
-    }
-  }
+  return placing;
 }
+
+type PhoneScreenOf<Kind extends PhoneScreen['kind']> = Extract<
+  PhoneScreen,
+  { kind: Kind }
+>;
+type StatusScreenProps<Kind extends PhoneScreen['kind'] = PhoneScreen['kind']> =
+  Omit<GameStatusScreensProps, 'phoneScreen'> & {
+    phoneScreen: PhoneScreenOf<Kind>;
+    placing: ReturnType<typeof describeFinalPlacing> | null;
+  };
+
+function LobbyScreen({
+  teamName,
+  playerCountCard,
+  joinCode,
+}: StatusScreenProps<'lobby'>) {
+  return (
+    <div className="mt-16 flex flex-col items-center gap-3">
+      <h1 className="text-center font-display text-2xl text-green">
+        You&apos;re in!
+      </h1>
+      <p className="text-center">Look for {teamName} on the big screen</p>
+      <p className="text-center text-sm text-foreground/65">
+        Waiting for the quiz to start…
+      </p>
+      {playerCountCard}
+      <a
+        href={`/rules?code=${joinCode}`}
+        className="text-sm font-extrabold text-cyan underline"
+      >
+        Read the rules
+      </a>
+    </div>
+  );
+}
+
+function RoundTitleScreen({
+  phoneScreen,
+  isJokerBadgeShown,
+}: StatusScreenProps<'round_title'>) {
+  return (
+    <div
+      key={phoneScreen.title}
+      className="mt-16 flex flex-col items-center gap-2 text-center"
+    >
+      <EntranceLine line="kicker">
+        <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+          👀 Look at the screen
+        </p>
+      </EntranceLine>
+      <EntranceLine line="title">
+        <h1 className="font-display text-2xl">{phoneScreen.title}</h1>
+      </EntranceLine>
+      {isJokerBadgeShown && <JokerBadge />}
+    </div>
+  );
+}
+
+function EndedScreen({ placing }: StatusScreenProps<'ended'>) {
+  return (
+    <div className="mt-16 flex flex-col items-center gap-3 text-center">
+      <h1 className="font-display text-2xl">Quiz complete!</h1>
+      {placing && (
+        <p className="font-display text-xl text-magenta">{placing.text}</p>
+      )}
+      <TeamPageLink />
+    </div>
+  );
+}
+
+const STATUS_SCREENS: {
+  [Kind in PhoneScreen['kind']]: (props: StatusScreenProps<Kind>) => ReactNode;
+} = {
+  block: () => null,
+  leaderboard: ({
+    phoneLeaderboard,
+    myTeamId,
+    isConnected,
+    coins,
+    hasCarriedCoin,
+  }) => (
+    <LeaderboardScreen
+      board={phoneLeaderboard.board}
+      revealCount={phoneLeaderboard.revealCount}
+      myTeamId={myTeamId}
+      isConnected={isConnected}
+      coins={coins}
+      hasCarriedCoin={hasCarriedCoin}
+    />
+  ),
+  lobby: LobbyScreen,
+  rules: ({ quizStructure, settings, hasCarriedCoin }) => (
+    <div className="mt-6">
+      <RulesContent
+        quizStructure={quizStructure}
+        settings={settings}
+        hasCarriedCoin={hasCarriedCoin}
+      />
+    </div>
+  ),
+  round_overview: () => (
+    <LookAtTheScreen className="text-magenta">Rounds</LookAtTheScreen>
+  ),
+  joker_pick: ({ jokerPick, phoneScreen, myJoker, onPickJoker }) =>
+    jokerPick ? (
+      <JokerPickScreen
+        jokerPick={jokerPick}
+        isOpen={phoneScreen.isOpen}
+        myJoker={myJoker}
+        onPick={onPickJoker}
+      />
+    ) : null,
+  round_title: RoundTitleScreen,
+  ended: EndedScreen,
+  showdown_reveal: ({ activeShowdown, showdownRevealStep }) =>
+    activeShowdown ? (
+      <div className="mt-16 flex flex-col items-center gap-6 px-6 text-center">
+        <ShowdownRevealScreen
+          activeShowdown={activeShowdown}
+          step={showdownRevealStep}
+        />
+      </div>
+    ) : null,
+  showdown_guessing: ShowdownGuessingScreen,
+};
 
 function ShowdownGuessingScreen({
   activeShowdown,

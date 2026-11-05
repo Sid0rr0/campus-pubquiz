@@ -53,45 +53,24 @@ export function PowerUpsList({
   onBuyExtraJoker,
   onActivated,
 }: PowerUpsListProps) {
-  const rows = POWER_UP_IDS.filter(
-    (powerUp) => settings[powerUp].maxUses > 0,
-  ).map((powerUp) => {
-    const { cost, maxUses } = settings[powerUp];
-    const bought = purchases.filter((p) => p.powerUp === powerUp);
-    const target =
-      bought.length >= maxUses
-        ? null
-        : powerUp === 'extra_joker'
-          ? extraJokerOffer !== null &&
-            extraJokerOffer.roundId !== jokerRoundId &&
-            !bought.some((p) => p.roundId === extraJokerOffer.roundId)
-            ? `the next round: ${
-                extraJokerOffer.title === ''
-                  ? `Round ${extraJokerOffer.roundNumber}`
-                  : extraJokerOffer.title
-              }`
-            : null
-          : question !== null &&
-              powerUpApplies(powerUp, question) &&
-              !bought.some((p) => p.questionId === question.id)
-            ? 'this question'
-            : null;
-    const isWaiting =
-      powerUp === 'ask_the_room' &&
-      question !== null &&
-      !roomReadyQuestionIds.includes(question.id);
-    return { powerUp, cost, maxUses, used: bought.length, target, isWaiting };
+  const rows = powerUpRows({
+    settings,
+    purchases,
+    question,
+    roomReadyQuestionIds,
+    extraJokerOffer,
+    jokerRoundId,
   });
   const available = rows.filter((row) => row.target !== null);
   const unavailable = rows.filter((row) => row.target === null);
 
   async function activate(powerUp: PowerUpId) {
-    const result =
-      powerUp === 'extra_joker' && extraJokerOffer
-        ? await onBuyExtraJoker(extraJokerOffer.roundId)
-        : question
-          ? await onBuy(powerUp, question.id)
-          : null;
+    const result = await buyFor(powerUp, {
+      question,
+      extraJokerOffer,
+      onBuy,
+      onBuyExtraJoker,
+    });
     if (result && !result.success) toast.error(result.error);
     if (result?.success) onActivated?.();
   }
@@ -110,26 +89,12 @@ export function PowerUpsList({
           <h3 className="text-sm font-extrabold">Available now</h3>
           <ul className="flex flex-col gap-2.5">
             {available.map((row) => (
-              <li
+              <AvailablePowerUp
                 key={row.powerUp}
-                className="rounded-xl border border-foreground/15 bg-white px-4 py-3"
-              >
-                <PowerUpDetails {...row} />
-                <Button
-                  type="button"
-                  variant="solid-flat"
-                  className="mt-3 min-h-12 w-full px-3 py-1.5 disabled:bg-foreground/10 disabled:text-foreground/70"
-                  aria-label={`Activate ${POWER_UP_LABELS[row.powerUp]}`}
-                  disabled={row.isWaiting || coins < row.cost}
-                  onClick={() => void activate(row.powerUp)}
-                >
-                  {row.isWaiting
-                    ? 'Waiting for more answers'
-                    : coins < row.cost
-                      ? 'Not enough coins'
-                      : `Activate for ${row.target}`}
-                </Button>
-              </li>
+                row={row}
+                coins={coins}
+                onActivate={() => void activate(row.powerUp)}
+              />
             ))}
           </ul>
         </section>
@@ -149,6 +114,126 @@ export function PowerUpsList({
         </section>
       )}
     </div>
+  );
+}
+
+interface PowerUpRow {
+  powerUp: PowerUpId;
+  cost: number;
+  maxUses: number;
+  used: number;
+  /** What the activation button buys it for, or null when it can't be used right now. */
+  target: string | null;
+  isWaiting: boolean;
+}
+
+type RowInputs = Pick<
+  PowerUpsListProps,
+  | 'settings'
+  | 'purchases'
+  | 'question'
+  | 'roomReadyQuestionIds'
+  | 'extraJokerOffer'
+  | 'jokerRoundId'
+>;
+
+/** Every power-up the session offers (maxUses above 0), with what it can be used on right now. */
+function powerUpRows(inputs: RowInputs): PowerUpRow[] {
+  const { settings, purchases, question, roomReadyQuestionIds } = inputs;
+  return POWER_UP_IDS.filter((powerUp) => settings[powerUp].maxUses > 0).map(
+    (powerUp) => {
+      const { cost, maxUses } = settings[powerUp];
+      const bought = purchases.filter((p) => p.powerUp === powerUp);
+      const target =
+        bought.length >= maxUses ? null : targetOf(powerUp, bought, inputs);
+      const isWaiting =
+        powerUp === 'ask_the_room' &&
+        question !== null &&
+        !roomReadyQuestionIds.includes(question.id);
+      return { powerUp, cost, maxUses, used: bought.length, target, isWaiting };
+    },
+  );
+}
+
+function targetOf(
+  powerUp: PowerUpId,
+  bought: readonly PurchaseView[],
+  { question, extraJokerOffer, jokerRoundId }: RowInputs,
+): string | null {
+  if (powerUp === 'extra_joker') {
+    return extraJokerTarget(bought, extraJokerOffer, jokerRoundId);
+  }
+  return question !== null &&
+    powerUpApplies(powerUp, question) &&
+    !bought.some((p) => p.questionId === question.id)
+    ? 'this question'
+    : null;
+}
+
+function extraJokerTarget(
+  bought: readonly PurchaseView[],
+  offer: PowerUpsListProps['extraJokerOffer'],
+  jokerRoundId: number | null,
+): string | null {
+  if (
+    offer === null ||
+    offer.roundId === jokerRoundId ||
+    bought.some((p) => p.roundId === offer.roundId)
+  ) {
+    return null;
+  }
+  return `the next round: ${
+    offer.title === '' ? `Round ${offer.roundNumber}` : offer.title
+  }`;
+}
+
+/** Asks the server for the purchase; null when there is nothing to buy it for. */
+function buyFor(
+  powerUp: PowerUpId,
+  {
+    question,
+    extraJokerOffer,
+    onBuy,
+    onBuyExtraJoker,
+  }: Pick<
+    PowerUpsListProps,
+    'question' | 'extraJokerOffer' | 'onBuy' | 'onBuyExtraJoker'
+  >,
+): Promise<AckResult | null> {
+  if (powerUp === 'extra_joker' && extraJokerOffer) {
+    return onBuyExtraJoker(extraJokerOffer.roundId);
+  }
+  return question ? onBuy(powerUp, question.id) : Promise.resolve(null);
+}
+
+function AvailablePowerUp({
+  row,
+  coins,
+  onActivate,
+}: {
+  row: PowerUpRow;
+  coins: number;
+  onActivate: () => void;
+}) {
+  const isShort = coins < row.cost;
+  return (
+    <li className="rounded-xl border border-foreground/15 bg-white px-4 py-3">
+      <PowerUpDetails {...row} />
+      <Button
+        type="button"
+        variant="solid-flat"
+        className="mt-3 min-h-12 w-full px-3 py-1.5 disabled:bg-foreground/10 disabled:text-foreground/70"
+        aria-label={`Activate ${POWER_UP_LABELS[row.powerUp]}`}
+        disabled={row.isWaiting || isShort}
+        onClick={onActivate}
+      >
+        {row.isWaiting
+          ? 'Waiting for more answers'
+          : isShort
+            ? 'Not enough coins'
+            : `Activate for ${row.target}`}
+      </Button>
+    </li>
   );
 }
 

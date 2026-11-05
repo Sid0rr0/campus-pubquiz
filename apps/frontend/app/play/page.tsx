@@ -39,26 +39,15 @@ import { useTeamLink } from '@/app/lib/use-team-link';
 import { usePublishPlayerMenu } from '@/app/lib/player-menu-context';
 
 function PlayPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get('code') ?? '';
-  const teamCodeFromUrl = searchParams.get('teamCode') ?? '';
-  const nameFromUrl = searchParams.get('name') ?? '';
-  const { join, game } = useTeamLink(codeFromUrl, teamCodeFromUrl, nameFromUrl);
-  const {
-    teamName,
-    hasStoredIdentity,
-    connectionError,
-    isReconnecting,
-    forceReconnect,
-    team,
-    needsJoinForm,
-    handleLogOut,
-  } = join;
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [playerCountSlot, setPlayerCountSlot] = useState<HTMLElement | null>(
-    null,
+  const { join, game } = useTeamLink(
+    codeFromUrl,
+    searchParams.get('teamCode') ?? '',
+    searchParams.get('name') ?? '',
   );
+  const { teamName, team, handleLogOut } = join;
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Stable reference (like handleLogOut) so the publish effect below doesn't
   // re-fire on every unrelated re-render.
   const openSettings = useCallback(
@@ -69,41 +58,16 @@ function PlayPageContent() {
   // header so its mobile hamburger can surface them — see
   // player-menu-context.tsx.
   usePublishPlayerMenu(teamName, team, handleLogOut, openSettings);
-  const { moment: powerUpMoment, showMoment } = usePowerUpMoment();
-  const { isSaved, submitAndConfirm } = useSavedConfirmation(
-    game?.submitAnswer,
-  );
-  const {
-    selectedQuestion,
-    revealQuestion,
-    navigation,
-    jumpableQuestionIds,
-    selectQuestion,
-    autoAdvanceEnabled,
-    setAutoAdvance,
-  } = usePhoneQuestionBrowser(game?.view ?? null);
+  const powerUpMoment = usePowerUpMoment();
+  const saved = useSavedConfirmation(game?.submitAnswer);
+  const browser = usePhoneQuestionBrowser(game?.view ?? null);
+  useCodeInUrl(teamName, game?.view.joinCode, codeFromUrl);
 
-  const joinCode = game?.view.joinCode;
-  useEffect(() => {
-    // Keeps ?code= in the address bar in sync with whichever session this
-    // socket actually landed on — covers arriving here without a code (e.g.
-    // the home page's post-join redirect, or a restored localStorage
-    // identity) so the URL is always shareable/bookmarkable for this game,
-    // never a stale or absent one. Gated on teamName: once a session closes
-    // or a team is kicked, use-team-link.ts resets teamName to null but the
-    // socket's own snapshot (disabled, not torn down) still holds the old
-    // joinCode — without this guard, this effect would re-append that stale
-    // code right after the redirect back to a bare /play clears it.
-    if (teamName && joinCode && joinCode !== codeFromUrl) {
-      router.replace(`/play?code=${joinCode}`);
-    }
-  }, [teamName, joinCode, codeFromUrl, router]);
-
-  if (needsJoinForm) {
+  if (join.needsJoinForm) {
     return (
       <JoinScreen
         join={join}
-        hasStoredIdentity={hasStoredIdentity}
+        hasStoredIdentity={join.hasStoredIdentity}
         onLogOut={handleLogOut}
       />
     );
@@ -113,79 +77,92 @@ function PlayPageContent() {
     return <ConnectingScreen teamName={teamName} onLogOut={handleLogOut} />;
   }
 
-  const {
-    view,
-    myAnswers,
-    myAnswerGrades,
-    myBonusAwards,
-    myPlayerCount,
-    setPlayerCount,
-    myJoker,
-    myPurchases,
-    roomReadyQuestionIds,
-    buyPowerUp,
-    buyExtraJoker,
-    seenQuestions,
-  } = game;
-  const {
-    progress,
-    blockQuestions,
-    upcomingQuestions,
-    quizStructure,
-    isCurrentRoundKahoot,
-    settings,
-    isAnswerable,
-    phoneScreen,
-  } = view;
-  const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
-  const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
+  return (
+    <JoinedPlayScreen
+      join={join}
+      game={game}
+      browser={browser}
+      saved={saved}
+      powerUpMoment={powerUpMoment}
+      settingsModal={{
+        isOpen: isSettingsOpen,
+        onOpenChange: setIsSettingsOpen,
+      }}
+      onOpenSettings={openSettings}
+    />
+  );
+}
+
+/**
+ * Keeps ?code= in the address bar in sync with whichever session this
+ * socket actually landed on — covers arriving here without a code (e.g.
+ * the home page's post-join redirect, or a restored localStorage
+ * identity) so the URL is always shareable/bookmarkable for this game,
+ * never a stale or absent one. Gated on teamName: once a session closes
+ * or a team is kicked, use-team-link.ts resets teamName to null but the
+ * socket's own snapshot (disabled, not torn down) still holds the old
+ * joinCode — without this guard, this effect would re-append that stale
+ * code right after the redirect back to a bare /play clears it.
+ */
+function useCodeInUrl(
+  teamName: string | null,
+  joinCode: string | undefined,
+  codeFromUrl: string,
+) {
+  const router = useRouter();
+  useEffect(() => {
+    if (teamName && joinCode && joinCode !== codeFromUrl) {
+      router.replace(`/play?code=${joinCode}`);
+    }
+  }, [teamName, joinCode, codeFromUrl, router]);
+}
+
+/** The phone once its team is joined and the first view has arrived. */
+function JoinedPlayScreen({
+  join,
+  game,
+  browser,
+  saved,
+  powerUpMoment,
+  settingsModal,
+  onOpenSettings,
+}: {
+  join: TeamLink['join'];
+  game: TeamGame;
+  browser: ReturnType<typeof usePhoneQuestionBrowser>;
+  saved: ReturnType<typeof useSavedConfirmation>;
+  powerUpMoment: ReturnType<typeof usePowerUpMoment>;
+  settingsModal: { isOpen: boolean; onOpenChange: (isOpen: boolean) => void };
+  onOpenSettings: () => void;
+}) {
+  const { teamName, connectionError, isReconnecting, team } = join;
+  const [playerCountSlot, setPlayerCountSlot] = useState<HTMLElement | null>(
+    null,
+  );
+  const { view, myAnswers, myAnswerGrades, myJoker, myPurchases } = game;
+  const { progress } = view;
+  const { selectedQuestion, jumpableQuestionIds, selectQuestion } = browser;
   // The block browser (question picker + prompt) is the `block` phone
   // screen: open questions, and break/reveal so teams can review the block
   // they just answered. It needs a question to show.
   const openedQuestions = buildOpenedQuestions(
-    seenQuestions,
+    game.seenQuestions,
     myAnswers,
     myAnswerGrades,
   );
-  // MobileQuizActionsBar is fixed to the viewport bottom on mobile, so the
-  // page needs matching bottom padding there or the bar would cover the
-  // last bit of inline content underneath it.
-  const bonus =
-    settings.enabledBonusCategories.length > 0
-      ? {
-          enabledCategories: settings.enabledBonusCategories,
-          maxAwardsPerCategory: settings.maxBonusAwardsPerCategory,
-          myBonusAwards,
-          quizStructure,
-          showAvailability: !isShowingLastBreak(progress, quizStructure),
-        }
-      : null;
-  // The same condition as the shop: a team with coins sees it even in a session without power-ups (a carried coin).
-  const powerUpsList =
-    team && (settings.powerUpsEnabled || team.coins > 0)
-      ? powerUpsListOf({
-          view,
-          team,
-          selectedQuestion,
-          myPurchases,
-          roomReadyQuestionIds,
-          jokerRoundId: myJoker?.roundId ?? null,
-          buyPowerUp,
-          buyExtraJoker,
-          showMoment,
-        })
-      : null;
-  const {
-    doubledRounds,
-    doubledRoundNumbers,
-    isJokerTitleCard,
-    isJokerQuestion,
-  } = jokerMarksOf(view, myJoker, myPurchases, selectedQuestion?.id);
-  const selectedResult = selectedResultOf(
-    openedQuestions,
-    selectedQuestion?.id,
-    doubledRoundNumbers,
+  const { bonus, powerUpsList } = sidePanelsOf(
+    game,
+    team,
+    selectedQuestion,
+    powerUpMoment.showMoment,
   );
+  const jokerMarks = jokerMarksOf(
+    view,
+    myJoker,
+    myPurchases,
+    selectedQuestion?.id,
+  );
+  const isConnected = connectionError === null;
 
   return (
     <main
@@ -201,54 +178,30 @@ function PlayPageContent() {
       <TeamHeader
         teamName={teamName}
         team={team}
-        doubledRounds={doubledRounds}
+        doubledRounds={jokerMarks.doubledRounds}
         status={progress.status}
         pastRevealedQuestions={view.pastRevealedQuestions}
-        onOpenSettings={openSettings}
-        onLogOut={handleLogOut}
+        onOpenSettings={onOpenSettings}
+        onLogOut={join.handleLogOut}
       />
-      {isReconnecting && <ReconnectingBar onReconnect={forceReconnect} />}
-      {connectionError && !isReconnecting && (
-        <p
-          role="alert"
-          className="order-1 mb-4 font-extrabold text-magenta md:order-2"
-        >
-          {connectionError}
-        </p>
-      )}
+      <ConnectionNotices join={join} />
       <StatusSection
         game={game}
         team={team}
         teamName={teamName}
-        isConnected={connectionError === null}
-        isJokerTitleCard={isJokerTitleCard}
+        isConnected={isConnected}
+        isJokerTitleCard={jokerMarks.isJokerTitleCard}
         playerCountSlot={playerCountSlot}
       />
       <div className="order-3 md:order-4 flex flex-col items-center gap-6 lg:flex-row lg:items-start">
-        {phoneScreen.kind === 'block' && selectedQuestion && (
-          <div className="md:min-w-0 md:flex-1">
-            <QuestionBrowser
-              mode={phoneScreen.mode}
-              isAnswerable={isAnswerable}
-              team={team}
-              pickerRounds={pickerRounds}
-              totalPickerSlots={totalPickerSlots}
-              selectedQuestion={selectedQuestion}
-              revealQuestion={revealQuestion}
-              isKahootMode={isCurrentRoundKahoot}
-              myAnswers={myAnswers}
-              myAnswerPoints={selectedResult.points}
-              myAnswerVerdict={selectedResult.verdict}
-              myAnswerJokerExtra={selectedResult.jokerExtra}
-              onSelectQuestion={selectQuestion}
-              onSubmitAnswer={submitAndConfirm}
-              navigation={navigation}
-              isJokerQuestion={isJokerQuestion}
-              doubledRoundNumbers={doubledRoundNumbers}
-              purchases={myPurchases}
-            />
-          </div>
-        )}
+        <BlockBrowser
+          game={game}
+          team={team}
+          browser={browser}
+          openedQuestions={openedQuestions}
+          jokerMarks={jokerMarks}
+          onSubmitAnswer={saved.submitAndConfirm}
+        />
         <div className="flex flex-col gap-6 md:flex-row">
           <AnsweredQuestionsPanel
             entries={openedQuestions}
@@ -263,6 +216,9 @@ function PlayPageContent() {
         ref={setPlayerCountSlot}
         className="order-5 mt-auto pt-4 empty:hidden"
       />
+      {/* MobileQuizActionsBar is fixed to the viewport bottom on mobile, so the
+          page needs matching bottom padding there (pb-24 above) or the bar
+          would cover the last bit of inline content underneath it. */}
       <MobileQuizActionsBar
         historyEntries={openedQuestions}
         jumpableHistoryIds={jumpableQuestionIds}
@@ -274,21 +230,125 @@ function PlayPageContent() {
         view={view}
         myAnswers={myAnswers}
         myAnswerGrades={myAnswerGrades}
-        isConnected={connectionError === null}
-        doubledRoundNumbers={doubledRoundNumbers}
+        isConnected={isConnected}
+        doubledRoundNumbers={jokerMarks.doubledRoundNumbers}
       />
-      <SavedConfirmation isVisible={isSaved} />
-      <PowerUpMoment moment={powerUpMoment} />
+      <SavedConfirmation isVisible={saved.isSaved} />
+      <PowerUpMoment moment={powerUpMoment.moment} />
       <SettingsModal
-        isOpen={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-        autoAdvanceEnabled={autoAdvanceEnabled}
-        onAutoAdvanceChange={setAutoAdvance}
-        playerCount={myPlayerCount}
-        onPlayerCountChange={setPlayerCount}
+        isOpen={settingsModal.isOpen}
+        onOpenChange={settingsModal.onOpenChange}
+        autoAdvanceEnabled={browser.autoAdvanceEnabled}
+        onAutoAdvanceChange={browser.setAutoAdvance}
+        playerCount={game.myPlayerCount}
+        onPlayerCountChange={game.setPlayerCount}
       />
     </main>
   );
+}
+
+function ConnectionNotices({ join }: { join: TeamLink['join'] }) {
+  const { connectionError, isReconnecting, forceReconnect } = join;
+  if (isReconnecting) return <ReconnectingBar onReconnect={forceReconnect} />;
+  if (!connectionError) return null;
+  return (
+    <p
+      role="alert"
+      className="order-1 mb-4 font-extrabold text-magenta md:order-2"
+    >
+      {connectionError}
+    </p>
+  );
+}
+
+/** The block browser, on the `block` phone screen once there is a question to show. */
+function BlockBrowser({
+  game,
+  team,
+  browser,
+  openedQuestions,
+  jokerMarks,
+  onSubmitAnswer,
+}: {
+  game: TeamGame;
+  team: JoinedTeam;
+  browser: ReturnType<typeof usePhoneQuestionBrowser>;
+  openedQuestions: ReturnType<typeof buildOpenedQuestions>;
+  jokerMarks: ReturnType<typeof jokerMarksOf>;
+  onSubmitAnswer: ReturnType<typeof useSavedConfirmation>['submitAndConfirm'];
+}) {
+  const { view, myAnswers, myPurchases } = game;
+  const { phoneScreen, blockQuestions, upcomingQuestions } = view;
+  const { selectedQuestion } = browser;
+  if (phoneScreen.kind !== 'block' || !selectedQuestion) return null;
+  const selectedResult = selectedResultOf(
+    openedQuestions,
+    selectedQuestion.id,
+    jokerMarks.doubledRoundNumbers,
+  );
+  return (
+    <div className="md:min-w-0 md:flex-1">
+      <QuestionBrowser
+        mode={phoneScreen.mode}
+        isAnswerable={view.isAnswerable}
+        team={team}
+        pickerRounds={buildPickerRounds(blockQuestions, upcomingQuestions)}
+        totalPickerSlots={blockQuestions.length + upcomingQuestions.length}
+        selectedQuestion={selectedQuestion}
+        revealQuestion={browser.revealQuestion}
+        isKahootMode={view.isCurrentRoundKahoot}
+        myAnswers={myAnswers}
+        myAnswerPoints={selectedResult.points}
+        myAnswerVerdict={selectedResult.verdict}
+        myAnswerJokerExtra={selectedResult.jokerExtra}
+        onSelectQuestion={browser.selectQuestion}
+        onSubmitAnswer={onSubmitAnswer}
+        navigation={browser.navigation}
+        isJokerQuestion={jokerMarks.isJokerQuestion}
+        doubledRoundNumbers={jokerMarks.doubledRoundNumbers}
+        purchases={myPurchases}
+      />
+    </div>
+  );
+}
+
+/** The bonus and power-ups cards' props, or null for a card the session doesn't show. */
+function sidePanelsOf(
+  game: TeamGame,
+  team: JoinedTeam,
+  selectedQuestion: ReturnType<
+    typeof usePhoneQuestionBrowser
+  >['selectedQuestion'],
+  showMoment: ReturnType<typeof usePowerUpMoment>['showMoment'],
+) {
+  const { view } = game;
+  const { settings, progress, quizStructure } = view;
+  const bonus =
+    settings.enabledBonusCategories.length > 0
+      ? {
+          enabledCategories: settings.enabledBonusCategories,
+          maxAwardsPerCategory: settings.maxBonusAwardsPerCategory,
+          myBonusAwards: game.myBonusAwards,
+          quizStructure,
+          showAvailability: !isShowingLastBreak(progress, quizStructure),
+        }
+      : null;
+  // The same condition as the shop: a team with coins sees it even in a session without power-ups (a carried coin).
+  const powerUpsList =
+    team && (settings.powerUpsEnabled || team.coins > 0)
+      ? powerUpsListOf({
+          view,
+          team,
+          selectedQuestion,
+          myPurchases: game.myPurchases,
+          roomReadyQuestionIds: game.roomReadyQuestionIds,
+          jokerRoundId: game.myJoker?.roundId ?? null,
+          buyPowerUp: game.buyPowerUp,
+          buyExtraJoker: game.buyExtraJoker,
+          showMoment,
+        })
+      : null;
+  return { bonus, powerUpsList };
 }
 
 export default function PlayPage() {
@@ -561,22 +621,14 @@ function StatusSection({
 }) {
   const {
     view,
-    roundRatingsEpoch,
-    myRoundRatings,
-    rateRound,
     myPlayerCount,
     setPlayerCount,
     myJoker,
     pickJoker,
     submitShowdownGuess,
-    mySessionRatings,
-    rateSession,
-    myFeedback,
-    sendFeedback,
   } = game;
   const {
     progress,
-    feedback,
     phoneScreen,
     quizStructure,
     settings,
@@ -597,17 +649,7 @@ function StatusSection({
         isJokerIntro={isJokerTitleCard && progress.status === 'round_intro'}
         isConnected={isConnected}
       />
-      {feedback?.kind === 'break_card' && (
-        // A join payload replaces the saved ratings, so a reconnect starts
-        // the card afresh: a tap still waiting on the old connection's ack
-        // is dropped rather than shown as saved.
-        <RoundRatingCard
-          key={roundRatingsEpoch}
-          rounds={feedback.rounds}
-          savedRatings={myRoundRatings}
-          onRate={rateRound}
-        />
-      )}
+      <BreakRatingCard game={game} />
       <LatePlayerCountPrompt
         joinCode={view.joinCode}
         hasJoined={team !== null}
@@ -624,9 +666,7 @@ function StatusSection({
         activeShowdown={activeShowdown}
         showdownRevealStep={showdownRevealStep}
         myTeamId={myTeamId}
-        coins={
-          settings.powerUpsEnabled || team?.coins ? team?.coins : undefined
-        }
+        coins={shownCoins(settings, team)}
         hasCarriedCoin={team?.hasCarriedCoin}
         phoneLeaderboard={phoneLeaderboard}
         isConnected={isConnected}
@@ -647,18 +687,48 @@ function StatusSection({
         }
         onSubmitShowdownGuess={submitShowdownGuess}
       />
-      {feedback?.kind === 'final_form' && (
-        <FinalFeedbackForm
-          rounds={feedback.rounds}
-          savedRatings={myRoundRatings}
-          ratingsEpoch={roundRatingsEpoch}
-          onRate={rateRound}
-          savedSessionRatings={mySessionRatings}
-          onRateSession={rateSession}
-          savedFeedback={myFeedback}
-          onSendFeedback={sendFeedback}
-        />
-      )}
+      <FinalFeedback game={game} />
     </div>
   );
+}
+
+function BreakRatingCard({ game }: { game: TeamGame }) {
+  const { feedback } = game.view;
+  if (feedback?.kind !== 'break_card') return null;
+  return (
+    // A join payload replaces the saved ratings, so a reconnect starts
+    // the card afresh: a tap still waiting on the old connection's ack
+    // is dropped rather than shown as saved.
+    <RoundRatingCard
+      key={game.roundRatingsEpoch}
+      rounds={feedback.rounds}
+      savedRatings={game.myRoundRatings}
+      onRate={game.rateRound}
+    />
+  );
+}
+
+function FinalFeedback({ game }: { game: TeamGame }) {
+  const { feedback } = game.view;
+  if (feedback?.kind !== 'final_form') return null;
+  return (
+    <FinalFeedbackForm
+      rounds={feedback.rounds}
+      savedRatings={game.myRoundRatings}
+      ratingsEpoch={game.roundRatingsEpoch}
+      onRate={game.rateRound}
+      savedSessionRatings={game.mySessionRatings}
+      onRateSession={game.rateSession}
+      savedFeedback={game.myFeedback}
+      onSendFeedback={game.sendFeedback}
+    />
+  );
+}
+
+/** The coins the status screens show: a team's coins in a session with power-ups, or a carried coin in one without. */
+function shownCoins(
+  settings: PlayerView['settings'],
+  team: JoinedTeam,
+): number | undefined {
+  return settings.powerUpsEnabled || team?.coins ? team?.coins : undefined;
 }

@@ -57,7 +57,6 @@ export function FeedbackTextForm({ saved, onSend }: FeedbackTextFormProps) {
     comment: draft.comment,
     topics: draft.topicLines,
   });
-  const canAddLine = draft.topicLines.length < MAX_FEEDBACK_TOPICS;
 
   function edit(change: Partial<Pick<Draft, 'comment' | 'topicLines'>>): void {
     setDraft((current) => ({
@@ -98,54 +97,12 @@ export function FeedbackTextForm({ saved, onSend }: FeedbackTextFormProps) {
         />
       </label>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-extrabold">
-          Topics you&apos;d like next time
-        </legend>
-        {draft.topicLines.map((line, index) => (
-          <input
-            // Lines have no identity beyond their position.
-            key={index}
-            type="text"
-            aria-label={`Topic ${index + 1}`}
-            value={line}
-            onChange={(event) =>
-              edit({
-                topicLines: draft.topicLines.map((existing, at) =>
-                  at === index ? event.target.value : existing,
-                ),
-              })
-            }
-            className="rounded-md border border-foreground/20 bg-background p-2 text-base"
-          />
-        ))}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            disabled={!canAddLine}
-            onClick={() => edit({ topicLines: [...draft.topicLines, ''] })}
-            className="text-sm font-extrabold text-magenta disabled:text-foreground/40"
-          >
-            + Add another
-          </button>
-          <span className="text-xs text-foreground/55">
-            Up to {MAX_FEEDBACK_TOPICS} topics.
-          </span>
-        </div>
-      </fieldset>
+      <TopicLines
+        lines={draft.topicLines}
+        onChange={(topicLines) => edit({ topicLines })}
+      />
 
-      {problems.length > 0 && (
-        <ul role="alert" className="text-xs font-extrabold text-magenta">
-          {problems.map((problem) => (
-            <li key={problem}>{problem}</li>
-          ))}
-        </ul>
-      )}
-      {hasFailed && (
-        <p role="alert" className="text-xs font-extrabold text-magenta">
-          Not sent — try again.
-        </p>
-      )}
+      <DraftAlerts problems={problems} hasFailed={hasFailed} />
 
       <div className="flex items-center gap-3">
         <button
@@ -163,5 +120,76 @@ export function FeedbackTextForm({ saved, onSend }: FeedbackTextFormProps) {
         )}
       </div>
     </div>
+  );
+}
+
+function TopicLines({
+  lines,
+  onChange,
+}: {
+  lines: string[];
+  onChange: (lines: string[]) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-sm font-extrabold">
+        Topics you&apos;d like next time
+      </legend>
+      {lines.map((line, index) => (
+        <input
+          // Lines have no identity beyond their position.
+          key={index}
+          type="text"
+          aria-label={`Topic ${index + 1}`}
+          value={line}
+          onChange={(event) =>
+            onChange(
+              lines.map((existing, at) =>
+                at === index ? event.target.value : existing,
+              ),
+            )
+          }
+          className="rounded-md border border-foreground/20 bg-background p-2 text-base"
+        />
+      ))}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          disabled={lines.length >= MAX_FEEDBACK_TOPICS}
+          onClick={() => onChange([...lines, ''])}
+          className="text-sm font-extrabold text-magenta disabled:text-foreground/40"
+        >
+          + Add another
+        </button>
+        <span className="text-xs text-foreground/55">
+          Up to {MAX_FEEDBACK_TOPICS} topics.
+        </span>
+      </div>
+    </fieldset>
+  );
+}
+
+function DraftAlerts({
+  problems,
+  hasFailed,
+}: {
+  problems: string[];
+  hasFailed: boolean;
+}) {
+  return (
+    <>
+      {problems.length > 0 && (
+        <ul role="alert" className="text-xs font-extrabold text-magenta">
+          {problems.map((problem) => (
+            <li key={problem}>{problem}</li>
+          ))}
+        </ul>
+      )}
+      {hasFailed && (
+        <p role="alert" className="text-xs font-extrabold text-magenta">
+          Not sent — try again.
+        </p>
+      )}
+    </>
   );
 }

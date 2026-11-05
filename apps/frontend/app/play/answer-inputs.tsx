@@ -81,6 +81,48 @@ function NumberInput(props: AnswerInputProps) {
   return <TypedInput inputType="number" {...props} />;
 }
 
+/** How many options before `index` have the same text. */
+function occurrenceOf(options: readonly string[], index: number): number {
+  return options.slice(0, index).filter((other) => other === options[index])
+    .length;
+}
+
+function ChoiceOption({
+  option,
+  index,
+  isChosen,
+  isRemoved,
+  isLocked,
+  onClick,
+}: {
+  option: string;
+  index: number;
+  isChosen: boolean;
+  isRemoved: boolean;
+  isLocked: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      aria-pressed={isChosen}
+      disabled={isRemoved || isLocked}
+      onClick={onClick}
+      className={`flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs bg-white px-4 text-lg font-bold ${
+        isChosen ? 'border-dark-blue' : 'border-foreground/30'
+      } ${isRemoved ? 'opacity-40' : ''}`}
+    >
+      <span aria-hidden="true" className="font-display text-cyan">
+        {getOptionLetter(index)}
+      </span>
+      {option}
+      {isChosen && (
+        <CheckIcon aria-hidden="true" className="ml-auto text-magenta" />
+      )}
+    </Button>
+  );
+}
+
 function ChoiceInput({
   question,
   initialValue,
@@ -106,34 +148,18 @@ function ChoiceInput({
 
   return (
     <div className="flex flex-col gap-2.5">
-      {(question.options ?? NO_ITEMS).map((option, index, options) => {
-        const isChosen = option === value;
-        const isRemoved = removedOptions.includes(option);
-        // Nothing forbids two options with the same text, so the text alone can't be the key.
-        const occurrence = options
-          .slice(0, index)
-          .filter((other) => other === option).length;
-        return (
-          <Button
-            key={`${option}#${occurrence}`}
-            type="button"
-            aria-pressed={isChosen}
-            disabled={isRemoved || (isKahootMode && hasAnswered)}
-            onClick={() => handleOptionClick(option)}
-            className={`flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs bg-white px-4 text-lg font-bold ${
-              isChosen ? 'border-dark-blue' : 'border-foreground/30'
-            } ${isRemoved ? 'opacity-40' : ''}`}
-          >
-            <span aria-hidden="true" className="font-display text-cyan">
-              {getOptionLetter(index)}
-            </span>
-            {option}
-            {isChosen && (
-              <CheckIcon aria-hidden="true" className="ml-auto text-magenta" />
-            )}
-          </Button>
-        );
-      })}
+      {(question.options ?? NO_ITEMS).map((option, index, options) => (
+        <ChoiceOption
+          // Nothing forbids two options with the same text, so the text alone can't be the key.
+          key={`${option}#${occurrenceOf(options, index)}`}
+          option={option}
+          index={index}
+          isChosen={option === value}
+          isRemoved={removedOptions.includes(option)}
+          isLocked={isKahootMode && hasAnswered}
+          onClick={() => handleOptionClick(option)}
+        />
+      ))}
       {!isKahootMode && (
         <SubmitAnswerButton
           isSubmitted={isSubmitted}

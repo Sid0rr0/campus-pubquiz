@@ -54,14 +54,7 @@ function useIsMultiline<T extends HTMLElement>(): [
 
     function measure() {
       if (!element || !row) return;
-      const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
-      if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
-      const rowWidth = row.clientWidth;
-      if (element.scrollHeight > lineHeight * 1.5) {
-        wrappedAtRowWidth = rowWidth;
-      } else if (wrappedAtRowWidth !== null && rowWidth > wrappedAtRowWidth) {
-        wrappedAtRowWidth = null;
-      }
+      wrappedAtRowWidth = wrappedRowWidth(element, row, wrappedAtRowWidth);
       setIsMultiline(wrappedAtRowWidth !== null);
     }
 
@@ -232,4 +225,23 @@ export function SortAnswer({
       />
     </div>
   );
+}
+
+/**
+ * The row width the text last wrapped at, or null once the row has grown
+ * past it: a wrap is only undone by more room than it wrapped in, so the
+ * layout doesn't flip back and forth at the edge.
+ */
+function wrappedRowWidth(
+  element: HTMLElement,
+  row: HTMLElement,
+  wrappedAtRowWidth: number | null,
+): number | null {
+  const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
+  if (!Number.isFinite(lineHeight) || lineHeight <= 0) return wrappedAtRowWidth;
+  const rowWidth = row.clientWidth;
+  if (element.scrollHeight > lineHeight * 1.5) return rowWidth;
+  return wrappedAtRowWidth !== null && rowWidth > wrappedAtRowWidth
+    ? null
+    : wrappedAtRowWidth;
 }

@@ -59,28 +59,8 @@ export function JokerPickScreen({
     );
   }
 
-  if (!isOpen) {
-    const round = jokerPick.rounds.find(
-      (candidate) => candidate.roundId === myJoker?.roundId,
-    );
-    return (
-      <div className="mt-16 flex flex-col items-center gap-3 text-center">
-        <h1 className="font-display text-2xl text-magenta">
-          {round
-            ? `Your joker: Round ${round.roundNumber} — ${round.title}`
-            : 'Your joker is set'}
-        </h1>
-        {myJoker?.source === 'drawn' && (
-          <p className="text-sm text-foreground/65">
-            No pick, so it was drawn for you.
-          </p>
-        )}
-        <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-          👀 Look at the screen
-        </p>
-      </div>
-    );
-  }
+  if (!isOpen)
+    return <ClosedJokerPick jokerPick={jokerPick} myJoker={myJoker} />;
 
   return (
     <div className="mt-6 flex flex-col gap-4">
@@ -101,31 +81,15 @@ export function JokerPickScreen({
         change it until time is up.
       </p>
       <ul className="flex flex-col gap-3">
-        {jokerPick.rounds.map((round) => {
-          const isPicked = myJoker?.roundId === round.roundId;
-          return (
-            <li key={round.roundId}>
-              <button
-                type="button"
-                aria-pressed={isPicked}
-                onClick={() => void pick(round.roundId)}
-                className={`flex w-full flex-col items-start gap-1 rounded-xl border-2 px-4 py-3 text-left ${
-                  isPicked
-                    ? 'border-magenta bg-magenta/15'
-                    : 'border-foreground/20'
-                }`}
-              >
-                <span className="text-xs font-extrabold tracking-wide text-foreground/55">
-                  ROUND {round.roundNumber}
-                </span>
-                <span className="font-display text-xl">{round.title}</span>
-                {round.category && (
-                  <span className="text-sm text-cyan">{round.category}</span>
-                )}
-              </button>
-            </li>
-          );
-        })}
+        {jokerPick.rounds.map((round) => (
+          <li key={round.roundId}>
+            <JokerRoundButton
+              round={round}
+              isPicked={myJoker?.roundId === round.roundId}
+              onPick={() => void pick(round.roundId)}
+            />
+          </li>
+        ))}
       </ul>
       {refusal && (
         <p role="alert" className="font-extrabold text-magenta">
@@ -134,5 +98,61 @@ export function JokerPickScreen({
       )}
       <SavedConfirmation isVisible={isSaved} />
     </div>
+  );
+}
+
+/** Once the pick has closed: the team's joker round, and whether it was drawn. */
+function ClosedJokerPick({
+  jokerPick,
+  myJoker,
+}: Pick<JokerPickScreenProps, 'jokerPick' | 'myJoker'>) {
+  const round = jokerPick.rounds.find(
+    (candidate) => candidate.roundId === myJoker?.roundId,
+  );
+  return (
+    <div className="mt-16 flex flex-col items-center gap-3 text-center">
+      <h1 className="font-display text-2xl text-magenta">
+        {round
+          ? `Your joker: Round ${round.roundNumber} — ${round.title}`
+          : 'Your joker is set'}
+      </h1>
+      {myJoker?.source === 'drawn' && (
+        <p className="text-sm text-foreground/65">
+          No pick, so it was drawn for you.
+        </p>
+      )}
+      <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+        👀 Look at the screen
+      </p>
+    </div>
+  );
+}
+
+function JokerRoundButton({
+  round,
+  isPicked,
+  onPick,
+}: {
+  round: JokerPickScreenProps['jokerPick']['rounds'][number];
+  isPicked: boolean;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={isPicked}
+      onClick={onPick}
+      className={`flex w-full flex-col items-start gap-1 rounded-xl border-2 px-4 py-3 text-left ${
+        isPicked ? 'border-magenta bg-magenta/15' : 'border-foreground/20'
+      }`}
+    >
+      <span className="text-xs font-extrabold tracking-wide text-foreground/55">
+        ROUND {round.roundNumber}
+      </span>
+      <span className="font-display text-xl">{round.title}</span>
+      {round.category && (
+        <span className="text-sm text-cyan">{round.category}</span>
+      )}
+    </button>
   );
 }

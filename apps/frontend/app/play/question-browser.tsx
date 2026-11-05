@@ -138,21 +138,6 @@ export function QuestionBrowser({
   purchases = [],
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
-  // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
-  const removedOptions = removedOptionsOf(selectedQuestion.id, purchases);
-  const hasWiderMargin = purchases.some(
-    (p) =>
-      p.effect.kind === 'wider_margin' && p.questionId === selectedQuestion.id,
-  );
-  const pin = pinFor(selectedQuestion.id, purchases);
-  // A pin snaps its item into place on the phone, but the answer already sent keeps the old order.
-  const hasPinOffPlace =
-    myAnswer !== undefined &&
-    isPinOffPlace(resolveAnswerKind(selectedQuestion), myAnswer, pin);
-  // The server grades a wider margin at once, but a pin changes the order only when it is sent again.
-  const resubmitNote = hasPinOffPlace
-    ? 'Submit again to send the pinned order.'
-    : null;
   const verdictTextClass = yourAnswerTextClass({
     myAnswer: myAnswer || null,
     pointsAwarded: myAnswerPoints,
@@ -187,76 +172,144 @@ export function QuestionBrowser({
           verdictTextClass={verdictTextClass}
         />
       ) : (
-        <>
-          <h1 className="text-balance font-display text-2xl leading-tight">
-            {selectedQuestion.prompt}
-          </h1>
-          <NumberMarginText
-            question={
-              selectedQuestion.margin && hasWiderMargin
-                ? { margin: widenedMargin(selectedQuestion.margin) }
-                : selectedQuestion
-            }
-            className="text-center text-sm font-extrabold tracking-wide text-foreground/55"
-          />
-          {resubmitNote !== null && mode === 'answering' && isAnswerable && (
-            <p className="text-center text-sm font-extrabold text-magenta">
-              {resubmitNote}
-            </p>
-          )}
-          {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
-            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              {selectedQuestion.isVideoHidden
-                ? '🎧 Listen'
-                : '👀 Look at the screen'}
-            </p>
-          )}
-          {myAnswer && (
-            <p className="text-center text-lg font-extrabold tracking-wide">
-              <span className="text-foreground/55">Submitted: </span>
-              {formatAnswer(myAnswer, {
-                type: selectedQuestion.type,
-                options: selectedQuestion.options,
-              })}
-            </p>
-          )}
-          <PowerUpEffects
-            question={selectedQuestion}
-            purchases={purchases}
-            isRoomSplitShown={
-              mode === 'answering' && isAnswerable && team !== null
-            }
-          />
-          {mode === 'answering' && team && (
-            // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
-            <div hidden={!isAnswerable}>
-              <AnswerForm
-                key={selectedQuestion.id}
-                question={selectedQuestion}
-                removedOptions={removedOptions}
-                initialValue={myAnswers[selectedQuestion.id] ?? ''}
-                isKahootMode={isKahootMode}
-                pin={pin}
-                onSubmit={(value) =>
-                  onSubmitAnswer(selectedQuestion.id, team.teamId, value)
-                }
-              />
-            </div>
-          )}
-          {mode === 'locked' && (
-            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              Answering is locked for this question
-            </p>
-          )}
-          {mode === 'revealing' && (
-            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              Revealing answers…
-            </p>
-          )}
-        </>
+        <OpenQuestion
+          mode={mode}
+          isAnswerable={isAnswerable}
+          team={team}
+          question={selectedQuestion}
+          myAnswer={myAnswer}
+          isKahootMode={isKahootMode}
+          onSubmitAnswer={onSubmitAnswer}
+          purchases={purchases}
+        />
       )}
     </div>
   );
+}
+
+/** The selected question as asked: its prompt, notes, power-up hints and, while answering, the answer form. */
+function OpenQuestion({
+  mode,
+  isAnswerable,
+  team,
+  question,
+  myAnswer,
+  isKahootMode,
+  onSubmitAnswer,
+  purchases,
+}: Pick<
+  QuestionBrowserProps,
+  'mode' | 'isAnswerable' | 'team' | 'isKahootMode' | 'onSubmitAnswer'
+> & {
+  question: QuestionBrowserProps['selectedQuestion'];
+  myAnswer: string | undefined;
+  purchases: NonNullable<QuestionBrowserProps['purchases']>;
+}) {
+  const hasWiderMargin = purchases.some(
+    (p) => p.effect.kind === 'wider_margin' && p.questionId === question.id,
+  );
+  const pin = pinFor(question.id, purchases);
+  const isAnswering = mode === 'answering' && isAnswerable;
+  return (
+    <>
+      <h1 className="text-balance font-display text-2xl leading-tight">
+        {question.prompt}
+      </h1>
+      <NumberMarginText
+        question={
+          question.margin && hasWiderMargin
+            ? { margin: widenedMargin(question.margin) }
+            : question
+        }
+        className="text-center text-sm font-extrabold tracking-wide text-foreground/55"
+      />
+      <QuestionNotes
+        question={question}
+        myAnswer={myAnswer}
+        pin={pin}
+        isAnswering={isAnswering}
+      />
+      <PowerUpEffects
+        question={question}
+        purchases={purchases}
+        isRoomSplitShown={isAnswering && team !== null}
+      />
+      {mode === 'answering' && team && (
+        // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
+        <div hidden={!isAnswerable}>
+          <AnswerForm
+            key={question.id}
+            question={question}
+            // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
+            removedOptions={removedOptionsOf(question.id, purchases)}
+            initialValue={myAnswer ?? ''}
+            isKahootMode={isKahootMode}
+            pin={pin}
+            onSubmit={(value) =>
+              onSubmitAnswer(question.id, team.teamId, value)
+            }
+          />
+        </div>
+      )}
+      <ModeNote mode={mode} />
+    </>
+  );
+}
+
+/** The resubmit nudge, the media hint and the answer already sent. */
+function QuestionNotes({
+  question,
+  myAnswer,
+  pin,
+  isAnswering,
+}: {
+  question: QuestionBrowserProps['selectedQuestion'];
+  myAnswer: string | undefined;
+  pin: ReturnType<typeof pinFor>;
+  isAnswering: boolean;
+}) {
+  // A pin snaps its item into place on the phone, but the answer already sent keeps the old order.
+  // The server grades a wider margin at once, but a pin changes the order only when it is sent again.
+  const hasPinOffPlace =
+    myAnswer !== undefined &&
+    isPinOffPlace(resolveAnswerKind(question), myAnswer, pin);
+  return (
+    <>
+      {hasPinOffPlace && isAnswering && (
+        <p className="text-center text-sm font-extrabold text-magenta">
+          Submit again to send the pinned order.
+        </p>
+      )}
+      {isHttpUrl(question.mediaUrl ?? '') && (
+        <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
+          {question.isVideoHidden ? '🎧 Listen' : '👀 Look at the screen'}
+        </p>
+      )}
+      {myAnswer && (
+        <p className="text-center text-lg font-extrabold tracking-wide">
+          <span className="text-foreground/55">Submitted: </span>
+          {formatAnswer(myAnswer, {
+            type: question.type,
+            options: question.options,
+          })}
+        </p>
+      )}
+    </>
+  );
+}
+
+const MODE_NOTES: Partial<Record<QuestionBrowserProps['mode'], string>> = {
+  locked: 'Answering is locked for this question',
+  revealing: 'Revealing answers…',
+};
+
+function ModeNote({ mode }: { mode: QuestionBrowserProps['mode'] }) {
+  const note = MODE_NOTES[mode];
+  return note ? (
+    <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
+      {note}
+    </p>
+  ) : null;
 }
 
 function PrevNextNav({

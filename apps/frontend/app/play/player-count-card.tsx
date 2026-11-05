@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { MotionConfig, motion } from 'motion/react';
 import type { AckResult } from '@campus-pubquiz/types';
@@ -52,14 +52,7 @@ export function PlayerCountCard({
   const count = savedCount ?? sentCount;
   const isFolded = openReason === null && count !== null;
 
-  useEffect(
-    () => () => {
-      if (collapseTimerRef.current !== null) {
-        clearTimeout(collapseTimerRef.current);
-      }
-    },
-    [],
-  );
+  useClearTimeoutOnUnmount(collapseTimerRef);
 
   async function send(playerCount: number): Promise<AckResult> {
     setOpenReason((reason) => reason ?? 'asking');
@@ -72,9 +65,7 @@ export function PlayerCountCard({
 
   function handleSaved(playerCount: number): void {
     setSentCount(playerCount);
-    if (collapseTimerRef.current !== null) {
-      clearTimeout(collapseTimerRef.current);
-    }
+    clearPending(collapseTimerRef);
     collapseTimerRef.current = setTimeout(
       () => setOpenReason(null),
       COLLAPSE_AFTER_SAVED_MS,
@@ -94,34 +85,65 @@ export function PlayerCountCard({
           {describePlayers(count)} · edit
         </motion.button>
       ) : (
-        <motion.section
-          layoutId={CARD_LAYOUT_ID}
-          layout="position"
-          aria-labelledby="player-count-heading"
-          className="flex w-full flex-col items-center gap-3 rounded-lg border border-foreground/15 p-4"
-        >
-          <h2 id="player-count-heading" className="font-display text-lg">
-            How many players does your team have?
-          </h2>
-          <PlayerCountStepper
-            initialCount={count ?? DEFAULT_PLAYER_COUNT}
-            onSend={send}
-            onSaved={handleSaved}
-          />
-          {onDismiss && count === null && (
-            <button
-              type="button"
-              onClick={onDismiss}
-              className="text-xs font-extrabold text-foreground/55 underline"
-            >
-              Dismiss
-            </button>
-          )}
-        </motion.section>
+        <OpenPlayerCountCard
+          count={count}
+          onSend={send}
+          onSaved={handleSaved}
+          onDismiss={onDismiss}
+        />
       )}
     </MotionConfig>
   );
 
   if (!isFolded && openReason !== 'editing') return card;
   return bottomSlot && createPortal(card, bottomSlot);
+}
+
+type TimerRef = RefObject<ReturnType<typeof setTimeout> | null>;
+
+function clearPending(timerRef: TimerRef): void {
+  if (timerRef.current !== null) clearTimeout(timerRef.current);
+}
+
+function useClearTimeoutOnUnmount(timerRef: TimerRef): void {
+  useEffect(() => () => clearPending(timerRef), [timerRef]);
+}
+
+function OpenPlayerCountCard({
+  count,
+  onSend,
+  onSaved,
+  onDismiss,
+}: {
+  count: number | null;
+  onSend: (playerCount: number) => Promise<AckResult>;
+  onSaved: (playerCount: number) => void;
+  onDismiss: PlayerCountCardProps['onDismiss'];
+}) {
+  return (
+    <motion.section
+      layoutId={CARD_LAYOUT_ID}
+      layout="position"
+      aria-labelledby="player-count-heading"
+      className="flex w-full flex-col items-center gap-3 rounded-lg border border-foreground/15 p-4"
+    >
+      <h2 id="player-count-heading" className="font-display text-lg">
+        How many players does your team have?
+      </h2>
+      <PlayerCountStepper
+        initialCount={count ?? DEFAULT_PLAYER_COUNT}
+        onSend={onSend}
+        onSaved={onSaved}
+      />
+      {onDismiss && count === null && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-xs font-extrabold text-foreground/55 underline"
+        >
+          Dismiss
+        </button>
+      )}
+    </motion.section>
+  );
 }
