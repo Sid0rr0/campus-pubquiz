@@ -196,34 +196,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           {importError}
         </p>
       )}
-      {saveError && (
-        <div
-          role="alert"
-          className="bg-white px-5 py-3 font-extrabold text-magenta"
-        >
-          <p>{saveError}</p>
-          {saveIssues.length > 0 && (
-            <ul className="mt-2 flex flex-col gap-1 text-xs font-bold">
-              {saveIssues.map((issue, index) => (
-                <li key={index}>{issueLabel(issue)}</li>
-              ))}
-            </ul>
-          )}
-          {draft.isLiveEditConflict && (
-            <Button
-              type="button"
-              onClick={() => draft.refreshLockState()}
-              disabled={draft.isRefreshingLockState}
-              size="sm"
-              className="mt-2 rounded-lg bg-foreground px-3 py-1.5 text-xs font-extrabold text-background disabled:opacity-50"
-            >
-              {draft.isRefreshingLockState
-                ? 'Refreshing…'
-                : 'Refresh lock state'}
-            </Button>
-          )}
-        </div>
-      )}
+      {saveError && <SaveErrorBanner draft={draft} />}
 
       {isLive && (
         <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
@@ -301,21 +274,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                     )
                   }
                 />
-                {!isLast &&
-                  (round.breakAfter ? (
-                    <div
-                      role="separator"
-                      className="flex items-center gap-4 py-2"
-                    >
-                      <div className="h-1 flex-1 rounded-full bg-magenta/30" />
-                      <span className="shrink-0 rounded-full bg-magenta px-5 py-2 text-sm font-extrabold uppercase tracking-wide text-white">
-                        Break
-                      </span>
-                      <div className="h-1 flex-1 rounded-full bg-magenta/30" />
-                    </div>
-                  ) : (
-                    <div role="separator" className="h-1 bg-foreground" />
-                  ))}
+                {!isLast && <RoundSeparator isBreak={round.breakAfter} />}
               </div>
             );
           })}
@@ -343,5 +302,53 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         />
       </div>
     </main>
+  );
+}
+
+function SaveErrorBanner({
+  draft,
+}: {
+  draft: ReturnType<typeof useQuizDraft>;
+}) {
+  return (
+    <div
+      role="alert"
+      className="bg-white px-5 py-3 font-extrabold text-magenta"
+    >
+      <p>{draft.saveError}</p>
+      {draft.saveIssues.length > 0 && (
+        <ul className="mt-2 flex flex-col gap-1 text-xs font-bold">
+          {draft.saveIssues.map((issue, index) => (
+            <li key={index}>{issueLabel(issue)}</li>
+          ))}
+        </ul>
+      )}
+      {draft.isLiveEditConflict && (
+        <Button
+          type="button"
+          onClick={() => draft.refreshLockState()}
+          disabled={draft.isRefreshingLockState}
+          size="sm"
+          className="mt-2 rounded-lg bg-foreground px-3 py-1.5 text-xs font-extrabold text-background disabled:opacity-50"
+        >
+          {draft.isRefreshingLockState ? 'Refreshing…' : 'Refresh lock state'}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** The rule between two rounds: a Break banner when the quiz pauses there. */
+function RoundSeparator({ isBreak }: { isBreak: boolean }) {
+  return isBreak ? (
+    <div role="separator" className="flex items-center gap-4 py-2">
+      <div className="h-1 flex-1 rounded-full bg-magenta/30" />
+      <span className="shrink-0 rounded-full bg-magenta px-5 py-2 text-sm font-extrabold uppercase tracking-wide text-white">
+        Break
+      </span>
+      <div className="h-1 flex-1 rounded-full bg-magenta/30" />
+    </div>
+  ) : (
+    <div role="separator" className="h-1 bg-foreground" />
   );
 }
