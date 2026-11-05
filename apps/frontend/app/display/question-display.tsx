@@ -1,4 +1,9 @@
-import { useState, type ReactNode, type SyntheticEvent } from 'react';
+import {
+  useState,
+  type ComponentProps,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react';
 import {
   classifyMediaUrl,
   extractYoutubeVideoId,
@@ -85,6 +90,177 @@ function AnswerVideoFrame({
 // correct-answer step — same image/audio/YouTube inference and http(s)-only
 // guard (media_url/answer_media_url come from an admin-imported spreadsheet,
 // not a trusted author).
+/**
+ * The question's text content below the prompt: its options or lists while
+ * asked, the answer at reveal. Presence of the prop (not its content) is
+ * what switches sort/match into player-reveal mode — an empty string still
+ * means "don't show the answer key", it just has nothing of the team's own
+ * to show either.
+ */
+function QuestionText({
+  question,
+  playerAnswer,
+  hasRevealEntrance,
+}: Pick<QuestionDisplayProps, 'question' | 'playerAnswer'> & {
+  hasRevealEntrance: boolean;
+}) {
+  const answerKind = resolveAnswerKind(question);
+  if (question.answer === undefined) {
+    const QuestionBody = QUESTION_BODIES[answerKind];
+    return <QuestionBody question={question} />;
+  }
+  const reveal = REVEAL_BODIES[answerKind]({
+    question,
+    correctAnswer: question.answer,
+    playerAnswer,
+    hasEntrance: hasRevealEntrance,
+  });
+  return (
+    <>
+      {reveal.lead}
+      {reveal.body}
+    </>
+  );
+}
+
+/** Covered while the question is asked and in break review; uncovered at reveal, where a hidden video may restart on its reveal clip. */
+function videoCoverOf(
+  question: QuestionDisplayProps['question'],
+  isRevealing: boolean,
+  revealClip: ReturnType<typeof resolveRevealClip>,
+) {
+  return {
+    isVideoCovered: question.isVideoHidden === true && !isRevealing,
+    restartsAtReveal:
+      isRevealing && restartsVideoAtReveal(question.isVideoHidden, revealClip),
+  };
+}
+
+/** Stretched (by the row's items-stretch) to a definite height, so the image's max-h-full caps against it. */
+function MediaColumn({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
+      {children}
+    </div>
+  );
+}
+
+function AnswerMediaBelow({
+  url,
+  answerMedia,
+}: {
+  url: string | undefined;
+  answerMedia: ReactNode;
+}) {
+  if (!url) return null;
+  return (
+    <div className="flex w-full min-h-0 items-center justify-center">
+      {answerMedia}
+    </div>
+  );
+}
+
+function questionClipOf(
+  question: QuestionDisplayProps['question'],
+  isRevealing: boolean,
+  revealClip: ReturnType<typeof resolveRevealClip>,
+) {
+  return isRevealing
+    ? revealClip
+    : { start: question.mediaStartSeconds, end: question.mediaEndSeconds };
+}
+
+/** A question image shown inline; fullscreen has its own layout, except that an answer video keeps the inline one: leaving it would remount the player. */
+function keepsInlineImageLayout(
+  questionMediaKind: ReturnType<typeof classifyMediaUrl>,
+  {
+    isFullscreen,
+    isRevealingWithAnswerMedia,
+    answerMediaUrl,
+  }: {
+    isFullscreen: boolean;
+    isRevealingWithAnswerMedia: boolean;
+    answerMediaUrl: string | undefined;
+  },
+): boolean {
+  return (
+    questionMediaKind === 'image' &&
+    (!isFullscreen ||
+      (isRevealingWithAnswerMedia && isVideoUrl(answerMediaUrl)))
+  );
+}
+
+/**
+ * Detected once the <img> actually loads — naturalWidth/naturalHeight
+ * reflect the real pixel dimensions regardless of CSS scaling. Reset
+ * whenever the media changes (tracked here rather than in an effect, so
+ * the stale orientation never paints even for one frame) so it can't leak
+ * from the previous question into this one before the new image loads.
+ */
+function useImageOrientation(url: string | undefined) {
+  const [orientation, setOrientation] = useState<
+    'portrait' | 'landscape' | null
+  >(null);
+  const [trackedUrl, setTrackedUrl] = useState(url);
+  if (trackedUrl !== url) {
+    setTrackedUrl(url);
+    setOrientation(null);
+  }
+  function handleLoad(event: SyntheticEvent<HTMLImageElement>) {
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    setOrientation(naturalHeight > naturalWidth ? 'portrait' : 'landscape');
+  }
+  return [orientation, handleLoad] as const;
+}
+
+/** The question's own media below the prompt: its video, its inline image, or its sound. */
+function QuestionMedia({
+  url,
+  kind,
+  isVideo,
+  hasVideoFailed,
+  showsInlineImage,
+  video,
+  image,
+  answerMedia,
+  isAnswerSound,
+  audioRef,
+}: {
+  url: string;
+  kind: ReturnType<typeof classifyMediaUrl>;
+  isVideo: boolean;
+  hasVideoFailed: boolean;
+  showsInlineImage: boolean;
+  video: Omit<ComponentProps<typeof QuestionVideo>, 'url'>;
+  image: ReactNode;
+  answerMedia: ReactNode;
+  isAnswerSound: boolean;
+  audioRef: ReturnType<typeof useMediaPause>['audioRef'];
+}) {
+  return (
+    <>
+      {isVideo && !hasVideoFailed && <QuestionVideo url={url} {...video} />}
+      {kind === 'image' && showsInlineImage && (
+        <InlineImage
+          image={image}
+          answerMedia={answerMedia}
+          isFullscreen={video.isFullscreen}
+          isAnswerSound={isAnswerSound}
+        />
+      )}
+      {kind === 'audio' && (
+        <audio
+          ref={audioRef}
+          data-testid={`${video.mediaTestIdPrefix}-audio`}
+          src={url}
+          controls
+          autoPlay={video.autoplayMedia}
+        />
+      )}
+    </>
+  );
+}
+
 export function AnswerMedia({
   url,
   mediaTestIdPrefix,
@@ -97,7 +273,7 @@ export function AnswerMedia({
   mediaReplayToken = 0,
   isDisplaySoundMuted = false,
 }: AnswerMediaProps) {
-  const safeUrl = url && isHttpUrl(url) ? url : undefined;
+  const safeUrl = httpUrlOrNone(url);
   const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
   const { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady } =
     useMediaPause(
@@ -163,11 +339,36 @@ export function AnswerMedia({
     );
   }
   return (
+    <AnswerImage
+      url={safeUrl}
+      mediaTestIdPrefix={mediaTestIdPrefix}
+      imageClassName={imageClassName}
+      isFullscreen={isFullscreen}
+    />
+  );
+}
+
+function httpUrlOrNone(url: string | undefined): string | undefined {
+  return url && isHttpUrl(url) ? url : undefined;
+}
+
+function AnswerImage({
+  url,
+  mediaTestIdPrefix,
+  imageClassName,
+  isFullscreen,
+}: {
+  url: string;
+  mediaTestIdPrefix: string;
+  imageClassName: string;
+  isFullscreen: boolean;
+}) {
+  return (
     <div className={isFullscreen ? FULLSCREEN_OVERLAY : 'contents'}>
       {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
       <img
         data-testid={`${mediaTestIdPrefix}-answer-image`}
-        src={safeUrl}
+        src={url}
         alt="Answer image"
         className={
           isFullscreen ? 'max-h-full max-w-full object-contain' : imageClassName
@@ -270,9 +471,7 @@ export function QuestionDisplay({
   // While asked the question video plays its clip; at reveal it plays the
   // reveal clip, which falls back to that clip when left blank.
   const revealClip = resolveRevealClip(question);
-  const questionClip = isRevealing
-    ? revealClip
-    : { start: question.mediaStartSeconds, end: question.mediaEndSeconds };
+  const questionClip = questionClipOf(question, isRevealing, revealClip);
   const { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady } =
     useMediaPause(
       isMediaPaused,
@@ -280,19 +479,6 @@ export function QuestionDisplay({
       questionClip.start ?? 0,
       isDisplaySoundMuted,
     );
-  // Presence of the prop (not its content) is what switches sort/match into
-  // player-reveal mode — an empty string still means "don't show the answer
-  // key", it just has nothing of the team's own to show either.
-  const answerKind = resolveAnswerKind(question);
-  const reveal = isRevealing
-    ? REVEAL_BODIES[answerKind]({
-        question,
-        correctAnswer,
-        playerAnswer,
-        hasEntrance: hasRevealEntrance,
-      })
-    : undefined;
-  const QuestionBody = QUESTION_BODIES[answerKind];
   const {
     answerMediaUrl,
     isRevealingWithAnswerMedia,
@@ -300,30 +486,9 @@ export function QuestionDisplay({
     showSideBySideReveal,
     questionMediaUrl,
   } = questionMediaOf(question, isMediaHidden, isRevealing);
-  // Covered while the question is asked and in break review; uncovered at reveal.
-  const isVideoCovered = question.isVideoHidden === true && !isRevealing;
 
-  // Detected once the <img> actually loads — naturalWidth/naturalHeight
-  // reflect the real pixel dimensions regardless of CSS scaling. Reset
-  // whenever the media changes (tracked here rather than in an effect, so
-  // the stale orientation never paints even for one frame) so it can't leak
-  // from the previous question into this one before the new image loads.
-  const [questionImageOrientation, setQuestionImageOrientation] = useState<
-    'portrait' | 'landscape' | null
-  >(null);
-  const [orientationTrackedUrl, setOrientationTrackedUrl] =
-    useState(questionMediaUrl);
-  if (orientationTrackedUrl !== questionMediaUrl) {
-    setOrientationTrackedUrl(questionMediaUrl);
-    setQuestionImageOrientation(null);
-  }
-
-  function handleQuestionImageLoad(event: SyntheticEvent<HTMLImageElement>) {
-    const { naturalWidth, naturalHeight } = event.currentTarget;
-    setQuestionImageOrientation(
-      naturalHeight > naturalWidth ? 'portrait' : 'landscape',
-    );
-  }
+  const [questionImageOrientation, handleQuestionImageLoad] =
+    useImageOrientation(questionMediaUrl);
 
   // Side-by-side answer reveal and fullscreen already have their own
   // deliberate layouts — the two-column treatment only applies to a plain
@@ -331,16 +496,16 @@ export function QuestionDisplay({
   const questionMediaKind = classifyMediaUrl(questionMediaUrl);
   const isQuestionVideo = isVideoUrl(questionMediaUrl);
   const questionVideoFailure = useVideoLoadFailure(questionMediaUrl);
-  const restartsAtReveal =
-    isRevealing && restartsVideoAtReveal(question.isVideoHidden, revealClip);
   // A portrait image also wins over the side-by-side reveal: the answer image
   // then takes the image column in place of the question image.
   // An answer video keeps this layout in fullscreen: leaving it would remount the player.
   const showTwoColumnLayout =
-    questionMediaKind === 'image' &&
-    (!isFullscreen ||
-      (isRevealingWithAnswerMedia && isVideoUrl(answerMediaUrl))) &&
-    questionImageOrientation === 'portrait';
+    questionImageOrientation === 'portrait' &&
+    keepsInlineImageLayout(questionMediaKind, {
+      isFullscreen,
+      isRevealingWithAnswerMedia,
+      answerMediaUrl,
+    });
 
   const layout = showTwoColumnLayout ? TWO_COLUMN_LAYOUT : STACKED_LAYOUT;
   const answerMedia = (
@@ -381,60 +546,48 @@ export function QuestionDisplay({
           className={layout.promptColumn}
         >
           <h1 className={promptClassName}>{prompt}</h1>
-          {reveal?.lead}
-          {reveal ? reveal.body : <QuestionBody question={question} />}
+          <QuestionText
+            question={question}
+            playerAnswer={playerAnswer}
+            hasRevealEntrance={hasRevealEntrance}
+          />
           <RevealNotes notes={revealNotes} hasEntrance={hasRevealEntrance} />
         </div>
         {showTwoColumnLayout && (
-          // Stretched (by the row's items-stretch) to a definite height, so the image's max-h-full caps against it.
-          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
+          <MediaColumn>
             {isRevealingWithAnswerMedia ? answerMedia : questionImage}
-          </div>
+          </MediaColumn>
         )}
       </div>
-      {questionMediaUrl &&
-        isQuestionVideo &&
-        !questionVideoFailure.isFailed && (
-          <QuestionVideo
-            url={questionMediaUrl}
-            youtubeId={questionYoutubeId}
-            clip={questionClip}
-            restartsAtReveal={restartsAtReveal}
-            mediaReplayToken={mediaReplayToken}
-            isFullscreen={isFullscreen}
-            isVideoCovered={isVideoCovered}
-            autoplayMedia={autoplayMedia}
-            mediaTestIdPrefix={mediaTestIdPrefix}
-            youtubeRef={youtubeRef}
-            onYoutubeLoad={onYoutubeLoad}
-            videoRef={videoRef}
-            onVideoReady={onVideoReady}
-            onError={questionVideoFailure.onError}
-          />
-        )}
-      {questionMediaUrl &&
-        questionMediaKind === 'image' &&
-        !showTwoColumnLayout && (
-          <InlineImage
-            image={questionImage}
-            answerMedia={showSideBySideReveal ? answerMedia : null}
-            isFullscreen={isFullscreen}
-            isAnswerSound={classifyMediaUrl(answerMediaUrl) === 'audio'}
-          />
-        )}
-      {questionMediaUrl && questionMediaKind === 'audio' && (
-        <audio
-          ref={audioRef}
-          data-testid={`${mediaTestIdPrefix}-audio`}
-          src={questionMediaUrl}
-          controls
-          autoPlay={autoplayMedia}
+      {questionMediaUrl && (
+        <QuestionMedia
+          url={questionMediaUrl}
+          kind={questionMediaKind}
+          isVideo={isQuestionVideo}
+          hasVideoFailed={questionVideoFailure.isFailed}
+          showsInlineImage={!showTwoColumnLayout}
+          video={{
+            youtubeId: questionYoutubeId,
+            clip: questionClip,
+            ...videoCoverOf(question, isRevealing, revealClip),
+            mediaReplayToken,
+            isFullscreen,
+            autoplayMedia,
+            mediaTestIdPrefix,
+            youtubeRef,
+            onYoutubeLoad,
+            videoRef,
+            onVideoReady,
+            onError: questionVideoFailure.onError,
+          }}
+          image={questionImage}
+          answerMedia={showSideBySideReveal ? answerMedia : null}
+          isAnswerSound={classifyMediaUrl(answerMediaUrl) === 'audio'}
+          audioRef={audioRef}
         />
       )}
-      {isRevealing && !showSideBySideReveal && answerMediaUrl && (
-        <div className="flex w-full min-h-0 items-center justify-center">
-          {answerMedia}
-        </div>
+      {isRevealing && !showSideBySideReveal && (
+        <AnswerMediaBelow url={answerMediaUrl} answerMedia={answerMedia} />
       )}
     </>
   );

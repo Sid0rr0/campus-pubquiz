@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
@@ -32,64 +32,8 @@ function DisplayPageContent() {
   );
   const isRefused = connectionIssue === 'refused';
   const isConnected = snapshot !== null && !connectionError;
-  const isCountdownSoundOn =
-    snapshot?.settings.playLockCountdownSound ??
-    DEFAULT_SESSION_SETTINGS.playLockCountdownSound;
-  // One countdown track serves the block's lock and the joker pick; the two
-  // never run at once.
-  const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
-    useLockCountdownSound({
-      lockAt: snapshot?.questionLockAt ?? snapshot?.jokerPickEndsAt ?? null,
-      enabled: isCountdownSoundOn,
-      isMuted: snapshot?.isDisplaySoundMuted ?? false,
-      isRegistryInUse: true,
-    });
-  // Set once the final leaderboard has crowned the winner, so Quiz complete
-  // doesn't play the same fanfare and confetti a second time.
-  const hasWinnerBeenCelebratedRef = useRef(false);
-  // Round sting, reveal sting, time-up and the fanfare with confetti follow
-  // the Display screen the room sees, on a live forward move only.
-  useDisplayScreenSounds(
-    snapshot,
-    isConnected,
-    hasWinnerBeenCelebratedRef,
-    isCountdownSoundOn,
-  );
-
-  useDisplaySoundMuted(snapshot?.isDisplaySoundMuted ?? false);
-
-  // A bare /display resumes the game this screen last showed, once, on load.
-  const hasTriedResumeRef = useRef(false);
-  useEffect(() => {
-    if (hasTriedResumeRef.current) return;
-    hasTriedResumeRef.current = true;
-    if (codeFromUrl) return;
-    const storedCode = readStoredDisplayCode();
-    if (storedCode) router.replace(`/display?code=${storedCode}`);
-  }, [codeFromUrl, router]);
-
-  // A code the server has really served is the one to resume after a reload.
-  const hasSnapshot = snapshot !== null;
-  useEffect(() => {
-    if (codeFromUrl && hasSnapshot) storeDisplayCode(codeFromUrl);
-  }, [codeFromUrl, hasSnapshot]);
-
-  // An unknown/stale code (e.g. a pre-printed QR for a session that's since
-  // ended) silently falls back to the plain picker rather than surfacing a
-  // "connection error" for what's normal end-of-game cleanup — this forgets
-  // the code and strips the bad ?code= from the address bar. A transient
-  // drop (`reconnecting`) is not a refusal: socket.io retries on its own.
-  useEffect(() => {
-    if (codeFromUrl && isRefused) {
-      clearStoredDisplayCode();
-      router.replace('/display');
-    }
-  }, [codeFromUrl, isRefused, router]);
-
-  function pickAnotherGame() {
-    clearStoredDisplayCode();
-    router.replace('/display');
-  }
+  const sound = useDisplaySound(snapshot, isConnected);
+  useRememberedDisplayCode(codeFromUrl, snapshot !== null, isRefused);
 
   if (!codeFromUrl || isRefused) {
     return (
@@ -109,6 +53,110 @@ function DisplayPageContent() {
     );
   }
 
+  return (
+    <DisplayStage
+      snapshot={snapshot}
+      joinCode={codeFromUrl}
+      isConnected={isConnected}
+      isReconnecting={connectionIssue === 'reconnecting'}
+      sound={sound}
+      onPickAnotherGame={() => {
+        clearStoredDisplayCode();
+        router.replace('/display');
+      }}
+    />
+  );
+}
+
+type DisplaySnapshot = NonNullable<
+  ReturnType<typeof useDisplayGame>['snapshot']
+>;
+
+/** The lock countdown, the screen sounds and the mute, all following the snapshot. */
+function useDisplaySound(
+  snapshot: DisplaySnapshot | null,
+  isConnected: boolean,
+) {
+  const isCountdownSoundOn =
+    snapshot?.settings.playLockCountdownSound ??
+    DEFAULT_SESSION_SETTINGS.playLockCountdownSound;
+  const isMuted = snapshot?.isDisplaySoundMuted ?? false;
+  // One countdown track serves the block's lock and the joker pick; the two
+  // never run at once.
+  const { needsUnlock, unlock } = useLockCountdownSound({
+    lockAt: snapshot?.questionLockAt ?? snapshot?.jokerPickEndsAt ?? null,
+    enabled: isCountdownSoundOn,
+    isMuted,
+    isRegistryInUse: true,
+  });
+  // Set once the final leaderboard has crowned the winner, so Quiz complete
+  // doesn't play the same fanfare and confetti a second time.
+  const hasWinnerBeenCelebratedRef = useRef(false);
+  // Round sting, reveal sting, time-up and the fanfare with confetti follow
+  // the Display screen the room sees, on a live forward move only.
+  useDisplayScreenSounds(
+    snapshot,
+    isConnected,
+    hasWinnerBeenCelebratedRef,
+    isCountdownSoundOn,
+  );
+  useDisplaySoundMuted(isMuted);
+  const markWinnerCelebrated = useCallback(() => {
+    hasWinnerBeenCelebratedRef.current = true;
+  }, []);
+  return { needsUnlock, unlock, markWinnerCelebrated };
+}
+
+/** Resumes the game this screen last showed, and forgets a code the server refuses. */
+function useRememberedDisplayCode(
+  codeFromUrl: string | undefined,
+  hasSnapshot: boolean,
+  isRefused: boolean,
+) {
+  const router = useRouter();
+  // A bare /display resumes the game this screen last showed, once, on load.
+  const hasTriedResumeRef = useRef(false);
+  useEffect(() => {
+    if (hasTriedResumeRef.current) return;
+    hasTriedResumeRef.current = true;
+    if (codeFromUrl) return;
+    const storedCode = readStoredDisplayCode();
+    if (storedCode) router.replace(`/display?code=${storedCode}`);
+  }, [codeFromUrl, router]);
+
+  // A code the server has really served is the one to resume after a reload.
+  useEffect(() => {
+    if (codeFromUrl && hasSnapshot) storeDisplayCode(codeFromUrl);
+  }, [codeFromUrl, hasSnapshot]);
+
+  // An unknown/stale code (e.g. a pre-printed QR for a session that's since
+  // ended) silently falls back to the plain picker rather than surfacing a
+  // "connection error" for what's normal end-of-game cleanup — this forgets
+  // the code and strips the bad ?code= from the address bar. A transient
+  // drop (`reconnecting`) is not a refusal: socket.io retries on its own.
+  useEffect(() => {
+    if (codeFromUrl && isRefused) {
+      clearStoredDisplayCode();
+      router.replace('/display');
+    }
+  }, [codeFromUrl, isRefused, router]);
+}
+
+function DisplayStage({
+  snapshot,
+  joinCode,
+  isConnected,
+  isReconnecting,
+  sound,
+  onPickAnotherGame,
+}: {
+  snapshot: DisplaySnapshot;
+  joinCode: string;
+  isConnected: boolean;
+  isReconnecting: boolean;
+  sound: ReturnType<typeof useDisplaySound>;
+  onPickAnotherGame: () => void;
+}) {
   const {
     progress,
     quizStructure,
@@ -137,7 +185,7 @@ function DisplayPageContent() {
         { '--display-text-scale': displayTextScale } as React.CSSProperties
       }
     >
-      {connectionIssue === 'reconnecting' && (
+      {isReconnecting && (
         <p
           role="status"
           className="fixed right-4 bottom-4 z-50 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
@@ -145,7 +193,7 @@ function DisplayPageContent() {
           Reconnecting…
         </p>
       )}
-      {needsSoundUnlock && <EnableSoundButton onClick={unlockSound} />}
+      {sound.needsUnlock && <EnableSoundButton onClick={sound.unlock} />}
       <TriviaHeader
         label={headerContent.label}
         title={headerContent.title}
@@ -176,17 +224,15 @@ function DisplayPageContent() {
               leagueTop,
               teamsCorrect,
               powerUpCounts,
-              joinCode: codeFromUrl,
+              joinCode,
               isConnected,
               isMediaFullscreen: progress.isMediaFullscreen,
               isMediaPaused: progress.isMediaPaused,
               isDisplaySoundMuted,
               mediaReplayToken: progress.mediaReplayToken,
               kahootQuestionEndsAt,
-              onPickAnotherGame: pickAnotherGame,
-              onWinnerCelebrated: () => {
-                hasWinnerBeenCelebratedRef.current = true;
-              },
+              onPickAnotherGame,
+              onWinnerCelebrated: sound.markWinnerCelebrated,
             }}
           />
         </motion.div>

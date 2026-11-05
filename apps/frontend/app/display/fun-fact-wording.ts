@@ -38,78 +38,71 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
+type FactOf<Kind extends FunFact['kind']> = Extract<FunFact, { kind: Kind }>;
+
+/** Each fact kind's wording; the ones about a question carry its prompt and answer. */
+const FUN_FACT_LINES: {
+  [Kind in FunFact['kind']]: (fact: FactOf<Kind>) => FunFactLine;
+} = {
+  fastest_correct_answer: (fact) => ({
+    headline: fact.teamName,
+    detail: `Fastest correct answer: ${(fact.responseMs / MS_PER_SECOND).toFixed(1)} s on ${questionLabel(fact.question)}`,
+    prompt: fact.question.prompt,
+    answer: fact.question.answer,
+  }),
+  toughest_question: (fact) => ({
+    headline: questionLabel(fact.question),
+    detail: `Toughest question: only ${percent(fact.correctRate)} got it right`,
+    prompt: fact.question.prompt,
+    answer: fact.question.answer,
+  }),
+  room_split: (fact) => ({
+    headline: questionLabel(fact.question),
+    detail: `The room was split: ${percent(fact.correctRate)} got it right`,
+    prompt: fact.question.prompt,
+    answer: fact.question.answer,
+  }),
+  nobody_got_it: (fact) => ({
+    headline: 'Nobody got it',
+    detail: questionLabel(fact.question),
+    prompt: fact.question.prompt,
+    answer: fact.question.answer,
+  }),
+  clean_sweep: (fact) => ({
+    headline: fact.teamNames.join(', '),
+    detail: 'Clean sweep: every question right in the last block',
+  }),
+  joker_favourite_round: (fact) => ({
+    headline: `Round ${fact.roundNumber} — ${fact.roundTitle}`,
+    detail: `${plural(fact.teamCount, 'team', 'teams')} bet their joker on it`,
+  }),
+  joker_snubbed_round: (fact) => ({
+    headline: `Nobody trusted themselves with Round ${fact.roundNumber} — ${fact.roundTitle}`,
+    detail: 'Not one joker on it',
+  }),
+  joker_drawn_count: (fact) => ({
+    headline: plural(fact.teamCount, 'team', 'teams'),
+    detail: 'ran out of time and got a random joker',
+  }),
+  best_joker: (fact) => ({
+    headline: fact.teamName,
+    detail: `Best joker so far: Round ${fact.roundNumber} — ${fact.roundTitle}, +${fact.extraPoints}`,
+  }),
+  joker_backfired: (fact) => ({
+    headline: fact.teamName,
+    detail: `Joker backfired: Round ${fact.roundNumber} — ${fact.roundTitle} was their worst round`,
+  }),
+  bonus_awards_so_far: (fact) => ({
+    headline: fact.counts
+      .map(({ category, count }) =>
+        plural(count, BONUS_NOUNS[category].one, BONUS_NOUNS[category].many),
+      )
+      .join(', '),
+    detail: 'bonus awards so far',
+  }),
+};
+
 export function describeFunFactLine(fact: FunFact): FunFactLine {
-  switch (fact.kind) {
-    case 'fastest_correct_answer':
-      return {
-        headline: fact.teamName,
-        detail: `Fastest correct answer: ${(fact.responseMs / MS_PER_SECOND).toFixed(1)} s on ${questionLabel(fact.question)}`,
-        prompt: fact.question.prompt,
-        answer: fact.question.answer,
-      };
-    case 'toughest_question':
-      return {
-        headline: questionLabel(fact.question),
-        detail: `Toughest question: only ${percent(fact.correctRate)} got it right`,
-        prompt: fact.question.prompt,
-        answer: fact.question.answer,
-      };
-    case 'room_split':
-      return {
-        headline: questionLabel(fact.question),
-        detail: `The room was split: ${percent(fact.correctRate)} got it right`,
-        prompt: fact.question.prompt,
-        answer: fact.question.answer,
-      };
-    case 'nobody_got_it':
-      return {
-        headline: 'Nobody got it',
-        detail: questionLabel(fact.question),
-        prompt: fact.question.prompt,
-        answer: fact.question.answer,
-      };
-    case 'clean_sweep':
-      return {
-        headline: fact.teamNames.join(', '),
-        detail: 'Clean sweep: every question right in the last block',
-      };
-    case 'joker_favourite_round':
-      return {
-        headline: `Round ${fact.roundNumber} — ${fact.roundTitle}`,
-        detail: `${plural(fact.teamCount, 'team', 'teams')} bet their joker on it`,
-      };
-    case 'joker_snubbed_round':
-      return {
-        headline: `Nobody trusted themselves with Round ${fact.roundNumber} — ${fact.roundTitle}`,
-        detail: 'Not one joker on it',
-      };
-    case 'joker_drawn_count':
-      return {
-        headline: plural(fact.teamCount, 'team', 'teams'),
-        detail: 'ran out of time and got a random joker',
-      };
-    case 'best_joker':
-      return {
-        headline: fact.teamName,
-        detail: `Best joker so far: Round ${fact.roundNumber} — ${fact.roundTitle}, +${fact.extraPoints}`,
-      };
-    case 'joker_backfired':
-      return {
-        headline: fact.teamName,
-        detail: `Joker backfired: Round ${fact.roundNumber} — ${fact.roundTitle} was their worst round`,
-      };
-    case 'bonus_awards_so_far':
-      return {
-        headline: fact.counts
-          .map(({ category, count }) =>
-            plural(
-              count,
-              BONUS_NOUNS[category].one,
-              BONUS_NOUNS[category].many,
-            ),
-          )
-          .join(', '),
-        detail: 'bonus awards so far',
-      };
-  }
+  const describe = FUN_FACT_LINES[fact.kind] as (fact: FunFact) => FunFactLine;
+  return describe(fact);
 }

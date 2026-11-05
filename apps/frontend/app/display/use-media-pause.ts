@@ -49,11 +49,42 @@ export function useMediaPause(
   const youtubeRef = useRef<HTMLIFrameElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const wasPausedRef = useRef(false);
-  const wasMutedRef = useRef(false);
-  const lastReplayTokenRef = useRef(replayToken);
   const mountedReplayToken = useRef(replayToken).current;
 
+  const refs = { youtubeRef, audioRef, videoRef };
+  useReplayFollowing(replayToken, clipStart, refs);
+  usePauseFollowing(isPaused, refs);
+  useMuteFollowing(isMuted, refs);
+
+  const onYoutubeLoad = useCallback(() => {
+    if (isPaused) postYoutubeCommand(youtubeRef.current, 'pauseVideo');
+    // Play again remounted the embed, whose autoplay param follows the setting: the press itself must start it.
+    else if (replayToken !== mountedReplayToken) {
+      postYoutubeCommand(youtubeRef.current, 'playVideo');
+    }
+    if (isMuted) postYoutubeCommand(youtubeRef.current, 'mute');
+  }, [isPaused, isMuted, replayToken, mountedReplayToken]);
+
+  const onVideoReady = useCallback(() => {
+    if (isPaused) videoRef.current?.pause();
+  }, [isPaused]);
+
+  return { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady };
+}
+
+interface MediaRefs {
+  youtubeRef: RefObject<HTMLIFrameElement | null>;
+  audioRef: RefObject<HTMLAudioElement | null>;
+  videoRef: RefObject<HTMLVideoElement | null>;
+}
+
+/** Play again restarts the media element: a video from its clip, a sound from the top. */
+function useReplayFollowing(
+  replayToken: number,
+  clipStart: number,
+  { audioRef, videoRef }: MediaRefs,
+) {
+  const lastReplayTokenRef = useRef(replayToken);
   useEffect(() => {
     if (replayToken === lastReplayTokenRef.current) return;
     lastReplayTokenRef.current = replayToken;
@@ -62,8 +93,14 @@ export function useMediaPause(
     if (!element) return;
     element.currentTime = video ? clipStart : 0;
     element.play()?.catch(() => undefined);
-  }, [replayToken, clipStart]);
+  }, [replayToken, clipStart, audioRef, videoRef]);
+}
 
+function usePauseFollowing(
+  isPaused: boolean,
+  { youtubeRef, audioRef, videoRef }: MediaRefs,
+) {
+  const wasPausedRef = useRef(false);
   useEffect(() => {
     if (isPaused === wasPausedRef.current) return;
     wasPausedRef.current = isPaused;
@@ -81,13 +118,19 @@ export function useMediaPause(
         element.play()?.catch(() => undefined);
       }
     }
-  }, [isPaused]);
+  }, [isPaused, youtubeRef, audioRef, videoRef]);
+}
 
+function useMuteFollowing(
+  isMuted: boolean,
+  { youtubeRef, audioRef, videoRef }: MediaRefs,
+) {
+  const wasMutedRef = useRef(false);
   useEffect(() => {
     if (isMuted === wasMutedRef.current) return;
     wasMutedRef.current = isMuted;
     postYoutubeCommand(youtubeRef.current, isMuted ? 'mute' : 'unMute');
-  }, [isMuted]);
+  }, [isMuted, youtubeRef]);
 
   // No dependency list: <audio> and <video> remount with a new question, Play
   // again or the reveal, and a standing mute must reach each new element.
@@ -97,19 +140,4 @@ export function useMediaPause(
       if (element && element.muted !== isMuted) element.muted = isMuted;
     }
   });
-
-  const onYoutubeLoad = useCallback(() => {
-    if (isPaused) postYoutubeCommand(youtubeRef.current, 'pauseVideo');
-    // Play again remounted the embed, whose autoplay param follows the setting: the press itself must start it.
-    else if (replayToken !== mountedReplayToken) {
-      postYoutubeCommand(youtubeRef.current, 'playVideo');
-    }
-    if (isMuted) postYoutubeCommand(youtubeRef.current, 'mute');
-  }, [isPaused, isMuted, replayToken, mountedReplayToken]);
-
-  const onVideoReady = useCallback(() => {
-    if (isPaused) videoRef.current?.pause();
-  }, [isPaused]);
-
-  return { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady };
 }
