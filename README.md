@@ -274,7 +274,8 @@ pnpm crap:changed   # only the uncommitted source files; coverage reruns only wh
 Both exit 2 when a scored function is above 30. With `crap:changed` that's
 every function in a touched file, not just the lines you edited: touching a
 file with an offender means fixing it first. Backend coverage needs Docker
-(Testcontainers).
+(Testcontainers). A failing test stops the run with exit 1, since a
+workspace whose tests fail has no coverage report and would score 0%.
 
 `scripts/crap.mjs` clones crapper at a pinned commit into `.tools/crapper/`
 on first run and installs it into its own Python venv (needs `python3`). To

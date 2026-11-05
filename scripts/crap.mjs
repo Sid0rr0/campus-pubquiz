@@ -134,9 +134,13 @@ const workspaces = changed
 ensureCrapper();
 for (const w of workspaces) {
   console.log(`crap: coverage for ${w.name}`);
-  // A failing test still leaves coverage behind; the score just reads lower, so carry on.
-  if (run('pnpm', ['exec', ...w.cmd], join(ROOT, w.dir)) !== 0)
-    console.warn(`crap: ${w.name} tests failed; its coverage may be partial.`);
+  // A failed run leaves no report (Vitest clears it first), so every function would score 0% covered.
+  if (run('pnpm', ['exec', ...w.cmd], join(ROOT, w.dir)) !== 0) {
+    console.error(
+      `crap: ${w.name} tests failed, so its scores would be wrong. Fix the tests and rerun.`,
+    );
+    process.exit(1);
+  }
 }
 
 const code = run(join(TOOL, '.venv', 'bin', 'python'), [
