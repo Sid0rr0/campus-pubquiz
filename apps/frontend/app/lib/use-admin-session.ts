@@ -61,6 +61,35 @@ export function useAdminSession(
     }
   }
 
+  useSessionUrlSync({ route, sessionCode, snapshot, isAuthenticated, router });
+  useAdminBounces({
+    sessionCode,
+    connectionIssue,
+    hasSnapshot: snapshot !== null && snapshot !== undefined,
+    authStatus: auth.status,
+    router,
+  });
+
+  const isLoading = !isAuthenticated || !sessionCode;
+
+  return { ...game, auth, sessionCode, isLoading };
+}
+
+type AdminRouter = ReturnType<typeof useRouter>;
+
+function useSessionUrlSync({
+  route,
+  sessionCode,
+  snapshot,
+  isAuthenticated,
+  router,
+}: {
+  route: AdminSessionRoute;
+  sessionCode: string | null;
+  snapshot: { joinCode: string } | null | undefined;
+  isAuthenticated: boolean;
+  router: AdminRouter;
+}) {
   useEffect(() => {
     // Keeps the URL's ?code= in sync with whatever session the socket is
     // actually connected to, so a refresh lands back in the same session
@@ -79,7 +108,21 @@ export function useAdminSession(
       router.replace('/sessions');
     }
   }, [isAuthenticated, sessionCode, router]);
+}
 
+function useAdminBounces({
+  sessionCode,
+  connectionIssue,
+  hasSnapshot,
+  authStatus,
+  router,
+}: {
+  sessionCode: string | null;
+  connectionIssue: ReturnType<typeof useAdminGame>['connectionIssue'];
+  hasSnapshot: boolean;
+  authStatus: ReturnType<typeof useAuth>['status'];
+  router: AdminRouter;
+}) {
   useEffect(() => {
     // Only bounces back to the picker for a session the server turned away
     // (an unknown/invalid ?code=): handleConnection disconnects before ever
@@ -87,20 +130,16 @@ export function useAdminSession(
     // socket.io is still retrying (`reconnecting`) is not a refusal, and
     // neither is a drop once a snapshot exists: both render inline via the
     // connectionError banner instead of redirecting away.
-    if (sessionCode && connectionIssue === 'refused' && !snapshot) {
+    if (sessionCode && connectionIssue === 'refused' && !hasSnapshot) {
       router.replace('/sessions');
     }
-  }, [sessionCode, connectionIssue, snapshot, router]);
+  }, [sessionCode, connectionIssue, hasSnapshot, router]);
 
   useEffect(() => {
     // Login/register/pending-approval live at /login and /register —
     // anyone landing here without a session bounces there.
-    if (auth.status === 'unauthenticated' || auth.status === 'pending') {
+    if (authStatus === 'unauthenticated' || authStatus === 'pending') {
       router.replace('/login');
     }
-  }, [auth.status, router]);
-
-  const isLoading = !isAuthenticated || !sessionCode;
-
-  return { ...game, auth, sessionCode, isLoading };
+  }, [authStatus, router]);
 }

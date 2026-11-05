@@ -32,16 +32,10 @@ export function useDisplayScreenSounds(
   useOnLiveForwardMove(frame?.screenPosition ?? 0, isConnected, () => {
     const previous = previousScreenRef.current;
     if (!previous || !screen) return;
-    const sound = soundFor(previous, screen);
-    if (!sound) return;
-    // The joker pick's time-up closes a countdown, so the countdown sound
-    // setting governs it with the countdown track.
-    if (previous.kind === 'joker_pick' && !isCountdownSoundOn) return;
-    if (sound === 'fanfare') {
-      if (hasWinnerBeenCelebratedRef.current) return;
-      fireConfetti();
-    }
-    displaySounds.play(sound);
+    playMoveSound(previous, screen, {
+      isCountdownSoundOn,
+      hasWinnerBeenCelebrated: hasWinnerBeenCelebratedRef.current,
+    });
   });
 
   // Declared after the live-change hook so its effect reads the screen from
@@ -49,4 +43,24 @@ export function useDisplayScreenSounds(
   useEffect(() => {
     previousScreenRef.current = screen;
   }, [screen]);
+}
+
+function playMoveSound(
+  previous: DisplayScreen,
+  screen: DisplayScreen,
+  {
+    isCountdownSoundOn,
+    hasWinnerBeenCelebrated,
+  }: { isCountdownSoundOn: boolean; hasWinnerBeenCelebrated: boolean },
+): void {
+  const sound = soundFor(previous, screen);
+  if (!sound) return;
+  // The joker pick's time-up closes a countdown, so the countdown sound
+  // setting governs it with the countdown track.
+  if (previous.kind === 'joker_pick' && !isCountdownSoundOn) return;
+  if (sound === 'fanfare') {
+    if (hasWinnerBeenCelebrated) return;
+    fireConfetti();
+  }
+  displaySounds.play(sound);
 }

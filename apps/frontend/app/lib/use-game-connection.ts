@@ -115,39 +115,11 @@ export function useGameConnection<Role extends SocketRoomName>(
       withCredentials: true,
     });
     socketRef.current = socket;
-    // The server explains a refusal (unknown game code, expired login) with a bare message just before it disconnects; a handler's failure arrives as an object and is not a refusal.
-    let refusalReason: string | null = null;
-    socket.on('exception', (payload) => {
-      if (typeof payload === 'string') refusalReason = payload;
-    });
-
-    socket.on('connect', () => {
-      setReconnectedAt(Date.now());
-      setSocketConnection({ socketId: socket.id ?? null });
-    });
-    socket.on(SOCKET_EVENTS.STATE_SYNC, (payload) => {
-      setSnapshot(payload);
-      reportConnection(null, null);
-    });
-    socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload) => {
-      setSnapshot(payload);
-    });
-    socket.on('connect_error', () => {
-      // The backend refuses a socket by accepting and then disconnecting it
-      // (see `disconnect` below), never with a CONNECT_ERROR packet. So every
-      // `connect_error` is a transport failure — including each failed retry
-      // while the network is down — and socket.io is still retrying.
-      reportConnection('reconnecting', RECONNECTING_MESSAGE);
-    });
-    socket.on('disconnect', (reason: string) => {
-      setSocketConnection(null);
-      if (reason === 'io client disconnect') return;
-      if (reason === 'io server disconnect') {
-        // The server refused this socket — socket.io won't retry on its own.
-        reportConnection('refused', refusalReason ?? `Disconnected: ${reason}`);
-        return;
-      }
-      reportConnection('reconnecting', RECONNECTING_MESSAGE);
+    wireConnectionEvents(socket, {
+      setReconnectedAt,
+      setSocketConnection,
+      setSnapshot,
+      reportConnection,
     });
     bindSocketRef.current?.(socket);
 
@@ -162,33 +134,8 @@ export function useGameConnection<Role extends SocketRoomName>(
     <E extends ClientToServerEvent>(
       event: E,
       payload: ClientToServerPayload<E>,
-    ): Promise<AckResult<ClientToServerAck<E>>> => {
-      const socket = socketRef.current;
-      if (!socket?.connected) {
-        return Promise.resolve({
-          success: false,
-          error: NOT_CONNECTED_MESSAGE,
-        });
-      }
-      return new Promise((resolve) => {
-        const timer = setTimeout(
-          () => resolve({ success: false, error: NOT_CONNECTED_MESSAGE }),
-          ACK_TIMEOUT_MS,
-        );
-        // socket.io's typed `emit` can't resolve a generic event against its
-        // listener map, so the call is typed by the same protocol signature
-        // this function's own parameters carry.
-        const emit = socket.emit.bind(socket) as (
-          event: E,
-          payload: ClientToServerPayload<E>,
-          ack: (result: AckResult<ClientToServerAck<E>>) => void,
-        ) => void;
-        emit(event, payload, (result) => {
-          clearTimeout(timer);
-          resolve(result);
-        });
-      });
-    },
+    ): Promise<AckResult<ClientToServerAck<E>>> =>
+      emitOnSocket(socketRef.current, event, payload),
     // Stryker disable next-line ArrayDeclaration: a constant dependency is as stable as none
     [],
   );
@@ -217,4 +164,93 @@ export function useGameConnection<Role extends SocketRoomName>(
     emitWithAck,
     forceReconnect,
   };
+}
+
+/** The connection's own events: connect, the state sync and updates, and every way it can drop. */
+function wireConnectionEvents<Role extends SocketRoomName>(
+  socket: RoomSocket<Role>,
+  {
+    setReconnectedAt,
+    setSocketConnection,
+    setSnapshot,
+    reportConnection,
+  }: {
+    setReconnectedAt: (at: number) => void;
+    setSocketConnection: (connection: SocketConnection | null) => void;
+    setSnapshot: (snapshot: StateViewByRoom[Role]) => void;
+    reportConnection: (
+      issue: ConnectionIssue | null,
+      message: string | null,
+    ) => void;
+  },
+): void {
+  // The server explains a refusal (unknown game code, expired login) with a bare message just before it disconnects; a handler's failure arrives as an object and is not a refusal.
+  let refusalReason: string | null = null;
+  socket.on('exception', (payload) => {
+    if (typeof payload === 'string') refusalReason = payload;
+  });
+
+  socket.on('connect', () => {
+    setReconnectedAt(Date.now());
+    setSocketConnection({ socketId: socket.id ?? null });
+  });
+  socket.on(SOCKET_EVENTS.STATE_SYNC, (payload) => {
+    setSnapshot(payload);
+    reportConnection(null, null);
+  });
+  socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload) => {
+    setSnapshot(payload);
+  });
+  socket.on('connect_error', () => {
+    // The backend refuses a socket by accepting and then disconnecting it
+    // (see `disconnect` below), never with a CONNECT_ERROR packet. So every
+    // `connect_error` is a transport failure — including each failed retry
+    // while the network is down — and socket.io is still retrying.
+    reportConnection('reconnecting', RECONNECTING_MESSAGE);
+  });
+  socket.on('disconnect', (reason: string) => {
+    setSocketConnection(null);
+    if (reason === 'io client disconnect') return;
+    if (reason === 'io server disconnect') {
+      // The server refused this socket — socket.io won't retry on its own.
+      reportConnection('refused', refusalReason ?? `Disconnected: ${reason}`);
+      return;
+    }
+    reportConnection('reconnecting', RECONNECTING_MESSAGE);
+  });
+}
+
+/** Sends `event` and waits for the server's acknowledgement; "not connected" when there is no live socket or no answer in time. */
+function emitOnSocket<
+  Role extends SocketRoomName,
+  E extends ClientToServerEvent,
+>(
+  socket: RoomSocket<Role> | null,
+  event: E,
+  payload: ClientToServerPayload<E>,
+): Promise<AckResult<ClientToServerAck<E>>> {
+  if (!socket?.connected) {
+    return Promise.resolve({
+      success: false,
+      error: NOT_CONNECTED_MESSAGE,
+    });
+  }
+  return new Promise((resolve) => {
+    const timer = setTimeout(
+      () => resolve({ success: false, error: NOT_CONNECTED_MESSAGE }),
+      ACK_TIMEOUT_MS,
+    );
+    // socket.io's typed `emit` can't resolve a generic event against its
+    // listener map, so the call is typed by the same protocol signature
+    // this function's own parameters carry.
+    const emit = socket.emit.bind(socket) as (
+      event: E,
+      payload: ClientToServerPayload<E>,
+      ack: (result: AckResult<ClientToServerAck<E>>) => void,
+    ) => void;
+    emit(event, payload, (result) => {
+      clearTimeout(timer);
+      resolve(result);
+    });
+  });
 }

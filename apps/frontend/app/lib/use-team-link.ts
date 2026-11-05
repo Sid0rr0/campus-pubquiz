@@ -44,6 +44,7 @@ import {
   type MyAnswerGrade,
   type TeamLinkCommand,
   type TeamLinkInput,
+  type TeamLinkState,
 } from '@/app/lib/team-link';
 import {
   JOIN_CODE_STORAGE_KEY,
@@ -55,6 +56,7 @@ import {
 } from '@/app/lib/team-storage';
 import {
   useGameConnection,
+  type EmitWithAck,
   type RoomSocket,
   type UseGameConnectionResult,
 } from '@/app/lib/use-game-connection';
@@ -211,100 +213,124 @@ function clearTimer(timerRef: TimerRef) {
 function runTeamLinkCommand(
   command: TeamLinkCommand,
   dispatch: (input: TeamLinkInput) => void,
-  {
-    connectionRef,
-    goToJoinScreenRef,
-    confirmTimerRef,
-    joinRetryTimerRef,
-    answerWaitersRef,
-    latestAnswerRef,
-  }: TeamLinkCommandRefs,
+  refs: TeamLinkCommandRefs,
 ) {
-  const connection = connectionRef.current;
-  switch (command.type) {
-    case 'sendJoin':
-      void connection
-        ?.emitWithAck(SOCKET_EVENTS.JOIN_PLAYERS, command.payload)
-        .then((result) => {
-          if (result.success) return;
-          dispatch({
-            type: 'joinRefused',
-            connectionId: command.connectionId,
-            reason: result.error,
-          });
-        });
-      break;
-    case 'sendAnswer': {
-      const { attempt, payload } = command;
-      latestAnswerRef.current = new Promise<AckResult>((resolve) => {
-        answerWaitersRef.current.set(attempt, resolve);
-        const sent =
-          connection?.emitWithAck(SOCKET_EVENTS.SUBMIT_ANSWER, payload) ??
-          Promise.resolve(NOT_CONNECTED_RESULT);
-        void sent.then((result) => {
-          // Stryker disable next-line CallExpression: equivalent — a waiter left in the map is only resolved a second time later, which a promise ignores
-          answerWaitersRef.current.delete(attempt);
-          resolve(result);
-          dispatch(
-            isNotDelivered(result)
-              ? { type: 'answerNotDelivered', attempt }
-              : { type: 'answerResult', attempt, result },
-          );
-        });
-      });
-      break;
-    }
-    case 'armConfirmTimer':
-      // Stryker disable next-line CallExpression: equivalent — the Team link always emits `clearConfirmTimer` just before `armConfirmTimer`
-      clearTimer(confirmTimerRef);
-      confirmTimerRef.current = setTimeout(() => {
-        confirmTimerRef.current = null;
-        answerWaitersRef.current.get(command.attempt)?.(NOT_CONNECTED_RESULT);
-        dispatch({ type: 'answerTimedOut', attempt: command.attempt });
-      }, SUBMIT_CONFIRM_TIMEOUT_MS);
-      break;
-    case 'clearConfirmTimer':
-      clearTimer(confirmTimerRef);
-      break;
-    case 'forceReconnect':
-      connection?.forceReconnect();
-      break;
-    case 'scheduleJoinRetry':
-      clearTimer(joinRetryTimerRef);
-      joinRetryTimerRef.current = setTimeout(() => {
-        joinRetryTimerRef.current = null;
-        dispatch({
-          type: 'joinRetryDue',
-          connectionId: command.connectionId,
-        });
-      }, command.delayMs);
-      break;
-    case 'toast':
-      showToast(command);
-      break;
-    case 'writeIdentity':
-      writeIdentity(command.identity);
-      break;
-    case 'clearIdentity':
-      clearStoredSession(command.scope === 'all');
-      break;
-    case 'sendLeave': {
-      const payload: LeaveSessionPayload = { teamId: command.teamId };
-      // Best-effort: the team is leaving whether or not the server hears it.
-      void connection?.emitWithAck(SOCKET_EVENTS.LEAVE_SESSION, payload);
-      break;
-    }
-    case 'goToJoinScreen':
-      goToJoinScreenRef.current();
-      break;
-    // Stryker disable next-line ConditionalExpression,BlockStatement,StringLiteral: equivalent — an exhaustiveness guard; `command` is `never` here, so no input reaches it
-    default: {
-      const unhandled: never = command;
-      // Stryker disable next-line CallExpression,StringLiteral: equivalent — the throw is unreachable (`command` is `never`), so neither it nor its message can be observed
-      throw new Error(`Unhandled team link command: ${String(unhandled)}`);
-    }
+  const run = COMMAND_RUNNERS[command.type] as
+    | CommandRunner<TeamLinkCommand>
+    | undefined;
+  // Stryker disable next-line ConditionalExpression,BlockStatement: equivalent — an exhaustiveness guard; every command type has a runner
+  if (!run) {
+    throw new Error(`Unhandled team link command: ${String(command)}`);
   }
+  run(command, dispatch, refs);
 }
+
+type CommandRunner<Command> = (
+  command: Command,
+  dispatch: (input: TeamLinkInput) => void,
+  refs: TeamLinkCommandRefs,
+) => void;
+type CommandOf<Type extends TeamLinkCommand['type']> = Extract<
+  TeamLinkCommand,
+  { type: Type }
+>;
+
+function sendJoin(
+  command: CommandOf<'sendJoin'>,
+  dispatch: (input: TeamLinkInput) => void,
+  { connectionRef }: TeamLinkCommandRefs,
+) {
+  void connectionRef.current
+    ?.emitWithAck(SOCKET_EVENTS.JOIN_PLAYERS, command.payload)
+    .then((result) => {
+      if (result.success) return;
+      dispatch({
+        type: 'joinRefused',
+        connectionId: command.connectionId,
+        reason: result.error,
+      });
+    });
+}
+
+function sendAnswer(
+  { attempt, payload }: CommandOf<'sendAnswer'>,
+  dispatch: (input: TeamLinkInput) => void,
+  { connectionRef, answerWaitersRef, latestAnswerRef }: TeamLinkCommandRefs,
+) {
+  latestAnswerRef.current = new Promise<AckResult>((resolve) => {
+    answerWaitersRef.current.set(attempt, resolve);
+    const sent =
+      connectionRef.current?.emitWithAck(
+        SOCKET_EVENTS.SUBMIT_ANSWER,
+        payload,
+      ) ?? Promise.resolve(NOT_CONNECTED_RESULT);
+    void sent.then((result) => {
+      // Stryker disable next-line CallExpression: equivalent — a waiter left in the map is only resolved a second time later, which a promise ignores
+      answerWaitersRef.current.delete(attempt);
+      resolve(result);
+      dispatch(
+        isNotDelivered(result)
+          ? { type: 'answerNotDelivered', attempt }
+          : { type: 'answerResult', attempt, result },
+      );
+    });
+  });
+}
+
+function armConfirmTimer(
+  command: CommandOf<'armConfirmTimer'>,
+  dispatch: (input: TeamLinkInput) => void,
+  { confirmTimerRef, answerWaitersRef }: TeamLinkCommandRefs,
+) {
+  // Stryker disable next-line CallExpression: equivalent — the Team link always emits `clearConfirmTimer` just before `armConfirmTimer`
+  clearTimer(confirmTimerRef);
+  confirmTimerRef.current = setTimeout(() => {
+    confirmTimerRef.current = null;
+    answerWaitersRef.current.get(command.attempt)?.(NOT_CONNECTED_RESULT);
+    dispatch({ type: 'answerTimedOut', attempt: command.attempt });
+  }, SUBMIT_CONFIRM_TIMEOUT_MS);
+}
+
+function scheduleJoinRetry(
+  command: CommandOf<'scheduleJoinRetry'>,
+  dispatch: (input: TeamLinkInput) => void,
+  { joinRetryTimerRef }: TeamLinkCommandRefs,
+) {
+  clearTimer(joinRetryTimerRef);
+  joinRetryTimerRef.current = setTimeout(() => {
+    joinRetryTimerRef.current = null;
+    dispatch({ type: 'joinRetryDue', connectionId: command.connectionId });
+  }, command.delayMs);
+}
+
+function sendLeave(
+  command: CommandOf<'sendLeave'>,
+  _dispatch: (input: TeamLinkInput) => void,
+  { connectionRef }: TeamLinkCommandRefs,
+) {
+  const payload: LeaveSessionPayload = { teamId: command.teamId };
+  // Best-effort: the team is leaving whether or not the server hears it.
+  void connectionRef.current?.emitWithAck(SOCKET_EVENTS.LEAVE_SESSION, payload);
+}
+
+const COMMAND_RUNNERS: {
+  [Type in TeamLinkCommand['type']]: CommandRunner<CommandOf<Type>>;
+} = {
+  sendJoin,
+  sendAnswer,
+  armConfirmTimer,
+  clearConfirmTimer: (_command, _dispatch, { confirmTimerRef }) =>
+    clearTimer(confirmTimerRef),
+  forceReconnect: (_command, _dispatch, { connectionRef }) =>
+    connectionRef.current?.forceReconnect(),
+  scheduleJoinRetry,
+  toast: (command) => showToast(command),
+  writeIdentity: (command) => writeIdentity(command.identity),
+  clearIdentity: (command) => clearStoredSession(command.scope === 'all'),
+  sendLeave,
+  goToJoinScreen: (_command, _dispatch, { goToJoinScreenRef }) =>
+    goToJoinScreenRef.current(),
+};
 
 /**
  * Runs the Team link with React for /play and the home page's join panel:
@@ -443,19 +469,152 @@ export function useTeamLink(
   }, [emitWithAck, forceReconnect, router]);
   // Stryker restore ArrayDeclaration
 
-  useEffect(
-    () => () => {
-      if (confirmTimerRef.current !== null) {
-        clearTimeout(confirmTimerRef.current);
-      }
-      if (joinRetryTimerRef.current !== null) {
-        clearTimeout(joinRetryTimerRef.current);
-      }
+  useClearTimersOnUnmount(confirmTimerRef, joinRetryTimerRef);
+  useLinkFollowsConnection({
+    identityKey,
+    socketConnection,
+    socketConnectionError,
+    link,
+    linkRef,
+    dispatch,
+    setSeenQuestions,
+  });
+  const actions = useTeamLinkActions(emitWithAck, dispatch);
+
+  const submitAnswer = useCallback(
+    (questionId: number, teamId: number, value: string) => {
+      latestAnswerRef.current = null;
+      dispatch({ type: 'answerSubmitted', questionId, teamId, value });
+      return latestAnswerRef.current ?? Promise.resolve(NOT_CONNECTED_RESULT);
     },
-    // Stryker disable next-line ArrayDeclaration: equivalent — an unmount cleanup; a constant dependency never re-runs it, same as none
-    [],
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `submitAnswer` is the same function either way
+    [dispatch],
   );
 
+  const setNameInput = useCallback(
+    (value: string) => dispatch({ type: 'nameTyped', value }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setNameInput` is the same function either way
+    [dispatch],
+  );
+  const setCodeInput = useCallback(
+    (value: string) => dispatch({ type: 'gameCodeTyped', value }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setCodeInput` is the same function either way
+    [dispatch],
+  );
+  const setTeamCodeInput = useCallback(
+    (value: string) => dispatch({ type: 'teamCodeTyped', value }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setTeamCodeInput` is the same function either way
+    [dispatch],
+  );
+
+  function handleJoin(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    dispatch({ type: 'joinSubmitted' });
+  }
+
+  // Stable across renders since SiteHeader's PlayerMenuProvider bridge
+  // depends on this reference.
+  const handleLogOut = useCallback(
+    () => dispatch({ type: 'logoutRequested' }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `handleLogOut` is the same function either way
+    [dispatch],
+  );
+
+  const connectionError =
+    link.joinError ?? link.kickNotice ?? socketConnectionError;
+
+  return {
+    join: {
+      team: link.team,
+      needsJoinForm: needsJoinForm({
+        teamName: link.teamName,
+        activeJoinCode: link.activeJoinCode,
+        hasView: Boolean(snapshot),
+        connectionError,
+        hasTeam: Boolean(link.team),
+      }),
+      connectionError,
+      isReconnecting:
+        link.joinError === null &&
+        link.kickNotice === null &&
+        connectionIssue === 'reconnecting',
+      forceReconnect,
+      teamName: link.teamName,
+      nameInput: link.nameInput,
+      setNameInput,
+      codeInput: link.codeInput,
+      setCodeInput,
+      teamCodeInput: link.teamCodeInput,
+      setTeamCodeInput,
+      hasStoredIdentity: link.hasStoredIdentity,
+      activeJoinCode: link.activeJoinCode,
+      handleJoin,
+      handleLogOut,
+    },
+    game: snapshot
+      ? {
+          ...teamGameFields(link, snapshot),
+          seenQuestions,
+          submitAnswer,
+          ...actions,
+        }
+      : undefined,
+  };
+}
+
+/** What the Team link state gives a joined phone to play with. */
+function teamGameFields(
+  link: TeamLinkState,
+  snapshot: StateViewByRoom['players'],
+) {
+  return {
+    view: viewWithSeat(snapshot, link.isLinked),
+    myAnswers: link.myAnswers,
+    myAnswerGrades: link.myAnswerGrades,
+    myBonusAwards: link.myBonusAwards,
+    myRoundRatings: link.myRoundRatings,
+    myFeedback: link.myFeedback,
+    mySessionRatings: link.mySessionRatings,
+    myPlayerCount: link.myPlayerCount,
+    roundRatingsEpoch: link.roundRatingsEpoch,
+    myJoker: link.myJoker,
+    myPurchases: link.myPurchases,
+    roomReadyQuestionIds: link.roomReadyQuestionIds,
+  } satisfies Partial<TeamLinkGame>;
+}
+
+function useClearTimersOnUnmount(
+  confirmTimerRef: TimerRef,
+  joinRetryTimerRef: TimerRef,
+) {
+  useEffect(
+    () => () => {
+      clearTimer(confirmTimerRef);
+      clearTimer(joinRetryTimerRef);
+    },
+    // Stryker disable next-line ArrayDeclaration: equivalent — an unmount cleanup; the refs are stable, so it never re-runs, same as none
+    [confirmTimerRef, joinRetryTimerRef],
+  );
+}
+
+/** Feeds the connection's comings and goings into the Team link. */
+function useLinkFollowsConnection({
+  identityKey,
+  socketConnection,
+  socketConnectionError,
+  link,
+  linkRef,
+  dispatch,
+  setSeenQuestions,
+}: {
+  identityKey: ReturnType<typeof useGameConnection>['identityKey'];
+  socketConnection: ReturnType<typeof useGameConnection>['socketConnection'];
+  socketConnectionError: string | null;
+  link: TeamLinkState;
+  linkRef: RefObject<TeamLinkState>;
+  dispatch: (input: TeamLinkInput) => void;
+  setSeenQuestions: (seen: SeenQuestions) => void;
+}) {
   // A fresh connect starts from a clean slate — otherwise the previous
   // identity's data stays on screen until the new STATE_SYNC arrives.
   const [prevIdentityKey, setPrevIdentityKey] = useState(identityKey);
@@ -468,7 +627,7 @@ export function useTeamLink(
     if (identityKeyRef.current === identityKey) return;
     identityKeyRef.current = identityKey;
     if (linkRef.current.activeJoinCode) dispatch({ type: 'identityChanged' });
-  }, [identityKey, dispatch]);
+  }, [identityKey, dispatch, linkRef]);
 
   // A range, not next-line, for the same reason as `dispatch`. Equivalent — `dispatch` never changes, so an emptied list still reads the stored identity once on mount.
   // Stryker disable ArrayDeclaration: see above
@@ -498,24 +657,20 @@ export function useTeamLink(
       connectionId: counter.count,
       socketId: socketConnection.socketId,
     });
-  }, [socketConnection, dispatch]);
+  }, [socketConnection, dispatch, linkRef]);
 
   useEffect(() => {
     // A refused connection (e.g. an unknown game code) never gets as far as a
     // join, so no join result will arrive to release the guard.
     if (socketConnectionError) dispatch({ type: 'connectionRefused' });
   }, [socketConnectionError, dispatch]);
+}
 
-  const submitAnswer = useCallback(
-    (questionId: number, teamId: number, value: string) => {
-      latestAnswerRef.current = null;
-      dispatch({ type: 'answerSubmitted', questionId, teamId, value });
-      return latestAnswerRef.current ?? Promise.resolve(NOT_CONNECTED_RESULT);
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `submitAnswer` is the same function either way
-    [dispatch],
-  );
-
+/** The team's requests that wait for the server's verdict. */
+function useTeamLinkActions(
+  emitWithAck: EmitWithAck,
+  dispatch: (input: TeamLinkInput) => void,
+) {
   const rateRound = useCallback(
     async (roundId: number, stars: number) => {
       const payload: RateRoundPayload = { roundId, stars };
@@ -611,91 +766,14 @@ export function useTeamLink(
     [emitWithAck],
   );
 
-  const setNameInput = useCallback(
-    (value: string) => dispatch({ type: 'nameTyped', value }),
-    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setNameInput` is the same function either way
-    [dispatch],
-  );
-  const setCodeInput = useCallback(
-    (value: string) => dispatch({ type: 'gameCodeTyped', value }),
-    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setCodeInput` is the same function either way
-    [dispatch],
-  );
-  const setTeamCodeInput = useCallback(
-    (value: string) => dispatch({ type: 'teamCodeTyped', value }),
-    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `setTeamCodeInput` is the same function either way
-    [dispatch],
-  );
-
-  function handleJoin(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-    dispatch({ type: 'joinSubmitted' });
-  }
-
-  // Stable across renders since SiteHeader's PlayerMenuProvider bridge
-  // depends on this reference.
-  const handleLogOut = useCallback(
-    () => dispatch({ type: 'logoutRequested' }),
-    // Stryker disable next-line ArrayDeclaration: equivalent — `dispatch` never changes, so `handleLogOut` is the same function either way
-    [dispatch],
-  );
-
-  const connectionError =
-    link.joinError ?? link.kickNotice ?? socketConnectionError;
-
   return {
-    join: {
-      team: link.team,
-      needsJoinForm: needsJoinForm({
-        teamName: link.teamName,
-        activeJoinCode: link.activeJoinCode,
-        hasView: Boolean(snapshot),
-        connectionError,
-        hasTeam: Boolean(link.team),
-      }),
-      connectionError,
-      isReconnecting:
-        link.joinError === null &&
-        link.kickNotice === null &&
-        connectionIssue === 'reconnecting',
-      forceReconnect,
-      teamName: link.teamName,
-      nameInput: link.nameInput,
-      setNameInput,
-      codeInput: link.codeInput,
-      setCodeInput,
-      teamCodeInput: link.teamCodeInput,
-      setTeamCodeInput,
-      hasStoredIdentity: link.hasStoredIdentity,
-      activeJoinCode: link.activeJoinCode,
-      handleJoin,
-      handleLogOut,
-    },
-    game: snapshot
-      ? {
-          view: viewWithSeat(snapshot, link.isLinked),
-          myAnswers: link.myAnswers,
-          myAnswerGrades: link.myAnswerGrades,
-          myBonusAwards: link.myBonusAwards,
-          myRoundRatings: link.myRoundRatings,
-          myFeedback: link.myFeedback,
-          mySessionRatings: link.mySessionRatings,
-          myPlayerCount: link.myPlayerCount,
-          roundRatingsEpoch: link.roundRatingsEpoch,
-          seenQuestions,
-          submitAnswer,
-          rateRound,
-          sendFeedback,
-          rateSession,
-          setPlayerCount,
-          myJoker: link.myJoker,
-          pickJoker,
-          myPurchases: link.myPurchases,
-          roomReadyQuestionIds: link.roomReadyQuestionIds,
-          buyPowerUp,
-          buyExtraJoker,
-          submitShowdownGuess,
-        }
-      : undefined,
+    rateRound,
+    sendFeedback,
+    rateSession,
+    setPlayerCount,
+    pickJoker,
+    buyPowerUp,
+    buyExtraJoker,
+    submitShowdownGuess,
   };
 }

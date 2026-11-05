@@ -301,13 +301,19 @@ function withStoredIdentity(
       : undefined,
     storedTeamCode: stored.teamCode,
   };
-  if (!stored.teamName) return base;
-  // The URL wins over what this phone stored: a fresh QR scan for a specific
-  // game or team beats whatever last played on this device.
+  return stored.teamName ? withStoredTeam(base, stored, stored.teamName) : base;
+}
+
+/** The URL wins over what this phone stored: a fresh QR scan for a specific game or team beats whatever last played on this device. */
+function withStoredTeam(
+  state: TeamLinkState,
+  stored: StoredIdentity,
+  storedName: string,
+): TeamLinkState {
   return {
-    ...base,
-    teamName: state.urlName || stored.teamName,
-    nameInput: state.nameInput || stored.teamName,
+    ...state,
+    teamName: state.urlName || storedName,
+    nameInput: state.nameInput || storedName,
     codeInput: state.urlGameCode || stored.gameCode || state.codeInput,
     activeJoinCode: state.activeJoinCode ?? stored.gameCode ?? null,
     teamCodeInput: state.teamCodeInput || stored.teamCode || '',
@@ -499,16 +505,8 @@ const LEAVE_RULES: Record<LeaveKind, LeaveRule> = {
  * clear the join error and forget the team, its link and its pending answer.
  */
 function leaveSession(state: TeamLinkState, kind: LeaveKind): TeamLinkStep {
-  const { clearAll, kickNotice, shouldNavigate } = LEAVE_RULES[kind];
+  const { clearAll, kickNotice } = LEAVE_RULES[kind];
   const gameCode = kind === 'loggedOut' ? state.urlGameCode : '';
-  const commands: TeamLinkCommand[] = [];
-  // The leave goes first, while the socket is still connected.
-  if (kind === 'loggedOut' && state.confirmedTeamId != null) {
-    commands.push({ type: 'sendLeave', teamId: state.confirmedTeamId });
-  }
-  if (state.pendingAnswer) commands.push(CLEAR_TIMER);
-  commands.push({ type: 'clearIdentity', scope: clearAll ? 'all' : 'session' });
-  if (shouldNavigate) commands.push({ type: 'goToJoinScreen' });
   return {
     state: {
       ...clearTeamData(state),
@@ -530,8 +528,24 @@ function leaveSession(state: TeamLinkState, kind: LeaveKind): TeamLinkStep {
       kickNotice,
       confirmedTeamId: null,
     },
-    commands,
+    commands: leaveCommands(state, kind),
   };
+}
+
+function leaveCommands(
+  state: TeamLinkState,
+  kind: LeaveKind,
+): TeamLinkCommand[] {
+  const { clearAll, shouldNavigate } = LEAVE_RULES[kind];
+  const commands: TeamLinkCommand[] = [];
+  // The leave goes first, while the socket is still connected.
+  if (kind === 'loggedOut' && state.confirmedTeamId != null) {
+    commands.push({ type: 'sendLeave', teamId: state.confirmedTeamId });
+  }
+  if (state.pendingAnswer) commands.push(CLEAR_TIMER);
+  commands.push({ type: 'clearIdentity', scope: clearAll ? 'all' : 'session' });
+  if (shouldNavigate) commands.push({ type: 'goToJoinScreen' });
+  return commands;
 }
 
 /** A status moving into the lobby from another one on the same connection is a session restart. */
@@ -591,7 +605,6 @@ function acceptJoin(
   state: TeamLinkState,
   payload: JoinAcceptedPayload,
 ): TeamLinkStep {
-  const answers = payload.answers ?? [];
   const accepted: TeamLinkState = {
     ...state,
     isJoinInFlight: false,
@@ -606,16 +619,7 @@ function acceptJoin(
     teamCodeInput: payload.teamCode,
     team: payload,
     isLinked: true,
-    myAnswers: buildMyAnswers(answers),
-    myAnswerGrades: buildMyAnswerGrades(answers),
-    myBonusAwards: payload.bonusAwards ?? [],
-    myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
-    myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
-    mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
-    myPlayerCount: payload.playerCount ?? null,
-    myJoker: payload.joker ?? null,
-    myPurchases: payload.purchases,
-    roomReadyQuestionIds: payload.roomReadyQuestionIds,
+    ...teamDataFromJoin(payload),
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -633,6 +637,23 @@ function acceptJoin(
     state: resend.state,
     commands: [storeIdentity, ...resend.commands],
   };
+}
+
+/** What the accepted join tells the phone about its team's answers, awards and choices so far. */
+function teamDataFromJoin(payload: JoinAcceptedPayload) {
+  const answers = payload.answers ?? [];
+  return {
+    myAnswers: buildMyAnswers(answers),
+    myAnswerGrades: buildMyAnswerGrades(answers),
+    myBonusAwards: payload.bonusAwards ?? [],
+    myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
+    myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
+    mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
+    myPlayerCount: payload.playerCount ?? null,
+    myJoker: payload.joker ?? null,
+    myPurchases: payload.purchases,
+    roomReadyQuestionIds: payload.roomReadyQuestionIds,
+  } satisfies Partial<TeamLinkState>;
 }
 
 function isSeatLostRefusal(result: AckResult): boolean {
@@ -782,68 +803,62 @@ export function teamLink(
   state: TeamLinkState,
   input: TeamLinkInput,
 ): TeamLinkStep {
-  switch (input.type) {
-    case 'connected':
-      return connect(state, input);
-    case 'storageRead':
-      // A kick already cleared what this would restore.
-      if (state.kickNotice) return unchanged(state);
-      return joinOncePerConnection(withStoredIdentity(state, input.stored));
-    case 'disconnected':
-      return unlink({ ...state, connection: null, lastStatus: null });
-    case 'connectionRefused':
-      return unchanged({ ...state, isJoinInFlight: false });
-    case 'joinAccepted':
-      if (state.kickNotice) return unchanged(state);
-      return acceptJoin(state, input.payload);
-    case 'identityChanged':
-      return {
-        state: clearTeamData(state),
-        commands: state.pendingAnswer ? [CLEAR_TIMER] : [],
-      };
-    case 'answerReceived':
-      return receiveAnswer(state, input.payload);
-    case 'bonusAwarded':
-      return awardBonus(state, input.payload);
-    case 'coinAwarded':
-      return awardCoins(state, input.payload);
-    case 'answerResult':
-      return receiveAnswerResult(state, input.attempt, input.result);
-    case 'answerNotDelivered':
-      return keepAnswerPending(state, input.attempt);
-    case 'answerTimedOut':
-      if (input.attempt !== state.answerAttempt) return unchanged(state);
-      return {
-        state: { ...state, isLinked: false },
-        commands: [{ type: 'forceReconnect' }],
-      };
-    case 'jokerSynced':
-      return syncJoker(state, input.joker);
-    case 'joinRefused':
-      // An answer to a join on an earlier connection says nothing about this one.
-      if (input.connectionId !== state.joinSentFor) return unchanged(state);
-      return refuseJoin(state, input.connectionId, input.reason);
-    case 'joinRetryDue':
-      return retryJoin(state, input.connectionId);
-    case 'statusSeen':
-      return seeStatus(state, input.status);
-    case 'kicked':
-      return leaveSession(state, 'kicked');
-    case 'sessionClosed':
-      return leaveSession(state, 'sessionClosed');
-    case 'logoutRequested':
-      return leaveSession(state, 'loggedOut');
-    case 'joinSubmitted':
-      return submitJoin(state);
-    case 'answerSubmitted':
-      return submitAnswer(state, {
-        questionId: input.questionId,
-        teamId: input.teamId,
-        value: input.value,
-      });
-    default:
-      return recordTeamData(state, input);
+  const handle = INPUT_HANDLERS[input.type] as
+    | ((state: TeamLinkState, input: TeamLinkInput) => TeamLinkStep)
+    | undefined;
+  if (!handle) {
+    throw new Error(`Unhandled team link input: ${JSON.stringify(input)}`);
   }
+  return handle(state, input);
+}
+
+type InputOf<Type extends TeamLinkInput['type']> = Extract<
+  TeamLinkInput,
+  { type: Type }
+>;
+
+function readStorage(
+  state: TeamLinkState,
+  input: InputOf<'storageRead'>,
+): TeamLinkStep {
+  // A kick already cleared what this would restore.
+  if (state.kickNotice) return unchanged(state);
+  return joinOncePerConnection(withStoredIdentity(state, input.stored));
+}
+
+function receiveJoinAccepted(
+  state: TeamLinkState,
+  input: InputOf<'joinAccepted'>,
+): TeamLinkStep {
+  if (state.kickNotice) return unchanged(state);
+  return acceptJoin(state, input.payload);
+}
+
+function changeIdentity(state: TeamLinkState): TeamLinkStep {
+  return {
+    state: clearTeamData(state),
+    commands: state.pendingAnswer ? [CLEAR_TIMER] : [],
+  };
+}
+
+function timeOutAnswer(
+  state: TeamLinkState,
+  input: InputOf<'answerTimedOut'>,
+): TeamLinkStep {
+  if (input.attempt !== state.answerAttempt) return unchanged(state);
+  return {
+    state: { ...state, isLinked: false },
+    commands: [{ type: 'forceReconnect' }],
+  };
+}
+
+function receiveJoinRefused(
+  state: TeamLinkState,
+  input: InputOf<'joinRefused'>,
+): TeamLinkStep {
+  // An answer to a join on an earlier connection says nothing about this one.
+  if (input.connectionId !== state.joinSentFor) return unchanged(state);
+  return refuseJoin(state, input.connectionId, input.reason);
 }
 
 /** A (re)connected socket: a new connection unlinks the old one and joins once. */
@@ -866,102 +881,116 @@ function connect(
   };
 }
 
-/** Inputs that only record what the server sent or the team typed. */
-function recordTeamData(
+function syncCoins(
   state: TeamLinkState,
-  input: Extract<
-    TeamLinkInput,
-    {
-      type:
-        | 'teamAnswersSynced'
-        | 'bonusAwardsSynced'
-        | 'coinsSynced'
-        | 'ratingSaved'
-        | 'feedbackSaved'
-        | 'sessionRatingSaved'
-        | 'playerCountSynced'
-        | 'playerCountSaved'
-        | 'jokerSaved'
-        | 'purchasesSynced'
-        | 'roomReadySynced'
-        | 'nameTyped'
-        | 'gameCodeTyped'
-        | 'teamCodeTyped';
-    }
-  >,
+  input: InputOf<'coinsSynced'>,
 ): TeamLinkStep {
-  switch (input.type) {
-    case 'teamAnswersSynced':
-      return unchanged({
-        ...state,
-        myAnswers: buildMyAnswers(input.answers),
-        myAnswerGrades: buildMyAnswerGrades(input.answers),
-      });
-    case 'bonusAwardsSynced':
-      return unchanged({ ...state, myBonusAwards: input.bonusAwards });
-    case 'coinsSynced':
-      return unchanged(
-        state.team
-          ? {
-              ...state,
-              team: {
-                ...state.team,
-                coins: input.payload.balance,
-                hasCarriedCoin: input.payload.hasCarriedCoin,
-              },
-            }
-          : state,
-      );
-    case 'ratingSaved':
-      return unchanged({
-        ...state,
-        myRoundRatings: {
-          ...state.myRoundRatings,
-          [input.roundId]: input.stars,
-        },
-      });
-    case 'feedbackSaved':
-      return unchanged({ ...state, myFeedback: input.feedback });
-    case 'sessionRatingSaved':
-      return unchanged({
-        ...state,
-        mySessionRatings: {
-          ...state.mySessionRatings,
-          [input.rating.scale]: input.rating.value,
-        },
-      });
-    case 'playerCountSynced':
-    case 'playerCountSaved':
-      return unchanged({ ...state, myPlayerCount: input.playerCount });
-    case 'jokerSaved':
-      return unchanged({ ...state, myJoker: input.joker });
-    case 'purchasesSynced':
-      return unchanged({
-        ...state,
-        myPurchases: input.payload.purchases,
-        team: state.team && { ...state.team, coins: input.payload.coins },
-      });
-    case 'roomReadySynced': {
-      const { questionId, isReady } = input.payload;
-      const others = state.roomReadyQuestionIds.filter(
-        (id) => id !== questionId,
-      );
-      return unchanged({
-        ...state,
-        roomReadyQuestionIds: isReady ? [...others, questionId] : others,
-      });
-    }
-    case 'nameTyped':
-      return unchanged({ ...state, nameInput: input.value });
-    case 'gameCodeTyped':
-      return unchanged({ ...state, codeInput: input.value });
-    case 'teamCodeTyped':
-      return unchanged({ ...state, teamCodeInput: input.value });
-    default: {
-      const unhandled: never = input;
-      throw new Error(
-        `Unhandled team link input: ${JSON.stringify(unhandled)}`,
-      );
-    }
-  }
+  return unchanged(
+    state.team
+      ? {
+          ...state,
+          team: {
+            ...state.team,
+            coins: input.payload.balance,
+            hasCarriedCoin: input.payload.hasCarriedCoin,
+          },
+        }
+      : state,
+  );
 }
+
+function syncPurchases(
+  state: TeamLinkState,
+  input: InputOf<'purchasesSynced'>,
+): TeamLinkStep {
+  return unchanged({
+    ...state,
+    myPurchases: input.payload.purchases,
+    team: state.team && { ...state.team, coins: input.payload.coins },
+  });
+}
+
+function syncRoomReady(
+  state: TeamLinkState,
+  input: InputOf<'roomReadySynced'>,
+): TeamLinkStep {
+  const { questionId, isReady } = input.payload;
+  const others = state.roomReadyQuestionIds.filter((id) => id !== questionId);
+  return unchanged({
+    ...state,
+    roomReadyQuestionIds: isReady ? [...others, questionId] : others,
+  });
+}
+
+/** Each input's handler. Events (what the connection and the server did) and intents (what the team did); the plain record-keeping ones inline. */
+const INPUT_HANDLERS: {
+  [Type in TeamLinkInput['type']]: (
+    state: TeamLinkState,
+    input: InputOf<Type>,
+  ) => TeamLinkStep;
+} = {
+  connected: connect,
+  storageRead: readStorage,
+  disconnected: (state) =>
+    unlink({ ...state, connection: null, lastStatus: null }),
+  connectionRefused: (state) => unchanged({ ...state, isJoinInFlight: false }),
+  joinAccepted: receiveJoinAccepted,
+  identityChanged: changeIdentity,
+  answerReceived: (state, input) => receiveAnswer(state, input.payload),
+  bonusAwarded: (state, input) => awardBonus(state, input.payload),
+  coinAwarded: (state, input) => awardCoins(state, input.payload),
+  answerResult: (state, input) =>
+    receiveAnswerResult(state, input.attempt, input.result),
+  answerNotDelivered: (state, input) => keepAnswerPending(state, input.attempt),
+  answerTimedOut: timeOutAnswer,
+  jokerSynced: (state, input) => syncJoker(state, input.joker),
+  joinRefused: receiveJoinRefused,
+  joinRetryDue: (state, input) => retryJoin(state, input.connectionId),
+  statusSeen: (state, input) => seeStatus(state, input.status),
+  kicked: (state) => leaveSession(state, 'kicked'),
+  sessionClosed: (state) => leaveSession(state, 'sessionClosed'),
+  logoutRequested: (state) => leaveSession(state, 'loggedOut'),
+  joinSubmitted: (state) => submitJoin(state),
+  answerSubmitted: (state, input) =>
+    submitAnswer(state, {
+      questionId: input.questionId,
+      teamId: input.teamId,
+      value: input.value,
+    }),
+  teamAnswersSynced: (state, input) =>
+    unchanged({
+      ...state,
+      myAnswers: buildMyAnswers(input.answers),
+      myAnswerGrades: buildMyAnswerGrades(input.answers),
+    }),
+  bonusAwardsSynced: (state, input) =>
+    unchanged({ ...state, myBonusAwards: input.bonusAwards }),
+  coinsSynced: syncCoins,
+  ratingSaved: (state, input) =>
+    unchanged({
+      ...state,
+      myRoundRatings: { ...state.myRoundRatings, [input.roundId]: input.stars },
+    }),
+  feedbackSaved: (state, input) =>
+    unchanged({ ...state, myFeedback: input.feedback }),
+  sessionRatingSaved: (state, input) =>
+    unchanged({
+      ...state,
+      mySessionRatings: {
+        ...state.mySessionRatings,
+        [input.rating.scale]: input.rating.value,
+      },
+    }),
+  playerCountSynced: (state, input) =>
+    unchanged({ ...state, myPlayerCount: input.playerCount }),
+  playerCountSaved: (state, input) =>
+    unchanged({ ...state, myPlayerCount: input.playerCount }),
+  jokerSaved: (state, input) => unchanged({ ...state, myJoker: input.joker }),
+  purchasesSynced: syncPurchases,
+  roomReadySynced: syncRoomReady,
+  nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),
+  gameCodeTyped: (state, input) =>
+    unchanged({ ...state, codeInput: input.value }),
+  teamCodeTyped: (state, input) =>
+    unchanged({ ...state, teamCodeInput: input.value }),
+};
