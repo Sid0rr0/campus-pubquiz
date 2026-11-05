@@ -56,47 +56,14 @@ export function SortableTable<
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className={classes.headerRow}>
-              {headerGroup.headers.map((header) => {
-                // Tables built without the sorting feature have no sort API.
-                const column = header.column;
-                const isSortable =
-                  'getCanSort' in column && column.getCanSort();
-                const sorted =
-                  'getIsSorted' in column ? column.getIsSorted() : false;
-                return (
-                  <th
-                    key={header.id}
-                    aria-sort={
-                      sorted === 'asc'
-                        ? 'ascending'
-                        : sorted === 'desc'
-                          ? 'descending'
-                          : isSortable
-                            ? 'none'
-                            : undefined
-                    }
-                    className={`px-4 py-2 font-display text-sm ${classes.headerCell}`}
-                  >
-                    {header.isPlaceholder ? null : isSortable ? (
-                      <button
-                        type="button"
-                        onClick={column.getToggleSortingHandler()}
-                        className="flex items-center gap-1"
-                      >
-                        <table.FlexRender header={header} />
-                        {sorted === 'asc' && (
-                          <ChevronUpIcon aria-hidden="true" />
-                        )}
-                        {sorted === 'desc' && (
-                          <ChevronDownIcon aria-hidden="true" />
-                        )}
-                      </button>
-                    ) : (
-                      <table.FlexRender header={header} />
-                    )}
-                  </th>
-                );
-              })}
+              {headerGroup.headers.map((header) => (
+                <SortableHeaderCell
+                  key={header.id}
+                  table={table}
+                  header={header}
+                  className={classes.headerCell}
+                />
+              ))}
             </tr>
           ))}
         </thead>
@@ -125,4 +92,58 @@ export function SortableTable<
       </table>
     </div>
   );
+}
+
+type HeaderOf<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+> = ReturnType<
+  SortableTableProps<TFeatures, TData>['table']['getHeaderGroups']
+>[number]['headers'][number];
+
+function SortableHeaderCell<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>({
+  table,
+  header,
+  className,
+}: {
+  table: SortableTableProps<TFeatures, TData>['table'];
+  header: HeaderOf<TFeatures, TData>;
+  className: string;
+}) {
+  // Tables built without the sorting feature have no sort API.
+  const column = header.column;
+  const isSortable = 'getCanSort' in column && column.getCanSort();
+  const sorted = 'getIsSorted' in column ? column.getIsSorted() : false;
+  return (
+    <th
+      aria-sort={ariaSortOf(sorted, isSortable)}
+      className={`px-4 py-2 font-display text-sm ${className}`}
+    >
+      {header.isPlaceholder ? null : isSortable ? (
+        <button
+          type="button"
+          onClick={column.getToggleSortingHandler()}
+          className="flex items-center gap-1"
+        >
+          <table.FlexRender header={header} />
+          {sorted === 'asc' && <ChevronUpIcon aria-hidden="true" />}
+          {sorted === 'desc' && <ChevronDownIcon aria-hidden="true" />}
+        </button>
+      ) : (
+        <table.FlexRender header={header} />
+      )}
+    </th>
+  );
+}
+
+function ariaSortOf(
+  sorted: false | 'asc' | 'desc',
+  isSortable: boolean,
+): 'ascending' | 'descending' | 'none' | undefined {
+  if (sorted === 'asc') return 'ascending';
+  if (sorted === 'desc') return 'descending';
+  return isSortable ? 'none' : undefined;
 }

@@ -37,55 +37,10 @@ export function StartSessionDialog({
   onClose,
   onCreated,
 }: StartSessionDialogProps) {
-  const queryClient = useQueryClient();
-  const [settings, setSettings] = useState<SessionSettings>(
-    DEFAULT_SESSION_SETTINGS,
-  );
-  const [name, setName] = useState('');
-  const [leagueIds, setLeagueIds] = useState<number[]>([]);
+  const { settings, setSettings, name, setName, leagueIds, setLeagueIds } =
+    useSessionDraft(quiz);
   const { leagues } = useTickableLeagues();
-  // Resets the form whenever a different (or no) quiz becomes pending —
-  // adjusted during render rather than in an Effect.
-  const [prevQuizId, setPrevQuizId] = useState(quiz?.id ?? null);
-  if ((quiz?.id ?? null) !== prevQuizId) {
-    setPrevQuizId(quiz?.id ?? null);
-    setSettings({
-      ...DEFAULT_SESSION_SETTINGS,
-      kahootQuestionTimerSeconds: quiz?.rounds.some((round) => round.kahootMode)
-        ? DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS
-        : null,
-    });
-    setName(quiz?.title ?? '');
-    setLeagueIds([]);
-  }
-
-  const createMutation = useMutation({
-    mutationFn: (variables: {
-      quizId: number;
-      settings: SessionSettings;
-      name: string;
-      leagueIds: number[];
-    }) =>
-      createSession(
-        variables.quizId,
-        variables.settings,
-        variables.name,
-        variables.leagueIds,
-      ),
-    onSuccess: (session) => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
-      onCreated(session.joinCode);
-    },
-    onError: (createError) =>
-      toast.error(
-        apiErrorMessage(
-          createError,
-          SessionApiError,
-          'Could not start session',
-        ) ?? 'Could not start session',
-      ),
-    onSettled: () => onClose(),
-  });
+  const createMutation = useCreateSession(onCreated, onClose);
 
   function handleConfirm(): void {
     if (!quiz) return;
@@ -120,37 +75,11 @@ export function StartSessionDialog({
             selected={leagueIds}
             onChange={setLeagueIds}
           />
-          <Tabs.Root defaultValue="overview" className="flex flex-col gap-3">
-            <Tabs.List className="flex gap-1 border-b border-foreground/15">
-              <Tabs.Trigger
-                value="overview"
-                className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
-              >
-                Overview
-              </Tabs.Trigger>
-              <Tabs.Trigger
-                value="settings"
-                className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
-              >
-                Settings
-              </Tabs.Trigger>
-              <Tabs.Trigger
-                value="power-ups"
-                className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
-              >
-                Power-ups
-              </Tabs.Trigger>
-            </Tabs.List>
-            <Tabs.Content value="overview">
-              {quiz && <RoundsList rounds={quiz.rounds} />}
-            </Tabs.Content>
-            <Tabs.Content value="settings">
-              <SessionSettingsForm value={settings} onChange={setSettings} />
-            </Tabs.Content>
-            <Tabs.Content value="power-ups">
-              <PowerUpsSettingsForm value={settings} onChange={setSettings} />
-            </Tabs.Content>
-          </Tabs.Root>
+          <SessionTabs
+            rounds={quiz?.rounds}
+            settings={settings}
+            onSettingsChange={setSettings}
+          />
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -177,5 +106,112 @@ export function StartSessionDialog({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+/** The new session's name, settings and leagues, reset whenever a different (or no) quiz becomes pending — adjusted during render rather than in an Effect. */
+function useSessionDraft(quiz: StartSessionDialogProps['quiz']) {
+  const [settings, setSettings] = useState<SessionSettings>(
+    DEFAULT_SESSION_SETTINGS,
+  );
+  const [name, setName] = useState('');
+  const [leagueIds, setLeagueIds] = useState<number[]>([]);
+  const quizId = quiz?.id ?? null;
+  const [prevQuizId, setPrevQuizId] = useState(quizId);
+  if (quizId !== prevQuizId) {
+    setPrevQuizId(quizId);
+    setSettings(defaultSettingsFor(quiz));
+    setName(quiz?.title ?? '');
+    setLeagueIds([]);
+  }
+  return { settings, setSettings, name, setName, leagueIds, setLeagueIds };
+}
+
+function defaultSettingsFor(
+  quiz: StartSessionDialogProps['quiz'],
+): SessionSettings {
+  return {
+    ...DEFAULT_SESSION_SETTINGS,
+    kahootQuestionTimerSeconds: quiz?.rounds.some((round) => round.kahootMode)
+      ? DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS
+      : null,
+  };
+}
+
+function useCreateSession(
+  onCreated: StartSessionDialogProps['onCreated'],
+  onClose: StartSessionDialogProps['onClose'],
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: {
+      quizId: number;
+      settings: SessionSettings;
+      name: string;
+      leagueIds: number[];
+    }) =>
+      createSession(
+        variables.quizId,
+        variables.settings,
+        variables.name,
+        variables.leagueIds,
+      ),
+    onSuccess: (session) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
+      onCreated(session.joinCode);
+    },
+    onError: (createError) =>
+      toast.error(
+        apiErrorMessage(
+          createError,
+          SessionApiError,
+          'Could not start session',
+        ) ?? 'Could not start session',
+      ),
+    onSettled: () => onClose(),
+  });
+}
+
+function SessionTabs({
+  rounds,
+  settings,
+  onSettingsChange,
+}: {
+  rounds: NonNullable<StartSessionDialogProps['quiz']>['rounds'] | undefined;
+  settings: SessionSettings;
+  onSettingsChange: (settings: SessionSettings) => void;
+}) {
+  return (
+    <Tabs.Root defaultValue="overview" className="flex flex-col gap-3">
+      <Tabs.List className="flex gap-1 border-b border-foreground/15">
+        <Tabs.Trigger
+          value="overview"
+          className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
+        >
+          Overview
+        </Tabs.Trigger>
+        <Tabs.Trigger
+          value="settings"
+          className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
+        >
+          Settings
+        </Tabs.Trigger>
+        <Tabs.Trigger
+          value="power-ups"
+          className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
+        >
+          Power-ups
+        </Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Content value="overview">
+        {rounds && <RoundsList rounds={rounds} />}
+      </Tabs.Content>
+      <Tabs.Content value="settings">
+        <SessionSettingsForm value={settings} onChange={onSettingsChange} />
+      </Tabs.Content>
+      <Tabs.Content value="power-ups">
+        <PowerUpsSettingsForm value={settings} onChange={onSettingsChange} />
+      </Tabs.Content>
+    </Tabs.Root>
   );
 }

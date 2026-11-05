@@ -79,7 +79,7 @@ export function MobileHeaderMenu({
           <div className="-mx-4 flex h-(--site-header-height) shrink-0 items-center justify-between gap-3 border-b border-background/15 px-4">
             {/* Generic when AccountMenuLinks below already shows the username; the team name has no other home in this drawer, so it keeps the title slot. */}
             <Dialog.Title className="truncate font-display text-xl font-extrabold">
-              {accountUser ? 'Menu' : (playerMenu?.teamName ?? 'Menu')}
+              {drawerTitle(accountUser, playerMenu)}
             </Dialog.Title>
             <Dialog.Close asChild>
               <Button
@@ -92,44 +92,11 @@ export function MobileHeaderMenu({
             </Dialog.Close>
           </div>
           {playerMenu && (
-            <div className="flex flex-col gap-3">
-              {playerMenu.team && (
-                <div className="flex flex-col gap-2 rounded-xl bg-background/10 p-4">
-                  <p className="text-xs font-extrabold uppercase tracking-wider text-background/70">
-                    Team code
-                  </p>
-                  <span className="break-words font-display text-xl font-extrabold uppercase tracking-wider">
-                    {playerMenu.team.teamCode}
-                  </span>
-                  <CopyButton
-                    value={playerMenu.team.teamCode}
-                    text={true}
-                    className="self-start border-background/40! text-background!"
-                  />
-                  <p className="text-xs font-bold text-background/70">
-                    Save it to play as this team another night.
-                  </p>
-                </div>
-              )}
-              <div className="drawer-nav">
-                <Button
-                  type="button"
-                  onClick={handleOpenSettings}
-                  className="nav-item"
-                >
-                  <GearIcon aria-hidden="true" />
-                  Settings
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handlePlayerLogOut}
-                  className="nav-item"
-                >
-                  <ExitIcon aria-hidden="true" />
-                  Change team
-                </Button>
-              </div>
-            </div>
+            <PlayerMenuSection
+              playerMenu={playerMenu}
+              onOpenSettings={handleOpenSettings}
+              onLogOut={handlePlayerLogOut}
+            />
           )}
           <nav
             aria-label="Site"
@@ -152,5 +119,56 @@ export function MobileHeaderMenu({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+/** Generic when AccountMenuLinks already shows the username; the team name has no other home in the drawer, so it keeps the title slot. */
+function drawerTitle(
+  accountUser: MobileHeaderMenuProps['accountUser'],
+  playerMenu: MobileHeaderMenuProps['playerMenu'],
+): string {
+  return accountUser ? 'Menu' : (playerMenu?.teamName ?? 'Menu');
+}
+
+function PlayerMenuSection({
+  playerMenu,
+  onOpenSettings,
+  onLogOut,
+}: {
+  playerMenu: NonNullable<MobileHeaderMenuProps['playerMenu']>;
+  onOpenSettings: () => void;
+  onLogOut: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {playerMenu.team && (
+        <div className="flex flex-col gap-2 rounded-xl bg-background/10 p-4">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-background/70">
+            Team code
+          </p>
+          <span className="break-words font-display text-xl font-extrabold uppercase tracking-wider">
+            {playerMenu.team.teamCode}
+          </span>
+          <CopyButton
+            value={playerMenu.team.teamCode}
+            text={true}
+            className="self-start border-background/40! text-background!"
+          />
+          <p className="text-xs font-bold text-background/70">
+            Save it to play as this team another night.
+          </p>
+        </div>
+      )}
+      <div className="drawer-nav">
+        <Button type="button" onClick={onOpenSettings} className="nav-item">
+          <GearIcon aria-hidden="true" />
+          Settings
+        </Button>
+        <Button type="button" onClick={onLogOut} className="nav-item">
+          <ExitIcon aria-hidden="true" />
+          Change team
+        </Button>
+      </div>
+    </div>
   );
 }

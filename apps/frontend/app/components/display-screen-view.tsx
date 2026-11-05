@@ -59,225 +59,299 @@ interface DisplayScreenViewProps {
   live?: DisplayLiveContext;
 }
 
+type ScreenOf<Kind extends DisplayScreen['kind']> = Extract<
+  DisplayScreen,
+  { kind: Kind }
+>;
+
+/** What every screen's view is drawn from. */
+interface ScreenViewProps<Kind extends DisplayScreen['kind']> {
+  screen: ScreenOf<Kind>;
+  quiz: QuizPreviewContext;
+  settings: QuizPreviewContext['settings'];
+  quizStructure: QuizPreviewContext['quizStructure'];
+  live: DisplayLiveContext | undefined;
+  media: LiveMediaProps;
+  /** A preview has no live session: nobody connected, no teams yet. */
+  isConnected: boolean;
+}
+
 /** Draws one Display screen exactly as the big screen does. */
 export function DisplayScreenView({
   screen,
   quiz,
   live,
 }: DisplayScreenViewProps): ReactNode {
-  const { settings, quizStructure } = quiz;
-  const media = liveMediaProps(live);
-  // A preview has no live session: nobody connected, no teams yet.
-  const isConnected = live?.isConnected ?? false;
-
-  switch (screen.kind) {
-    case 'leaderboard':
-      return (
-        <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
-          <h1 className="text-center font-display text-display-4xl">
-            <span className="text-magenta">Leaderboard</span>
-          </h1>
-          <Leaderboard
-            board={screen.board}
-            revealCount={screen.revealCount}
-            isConnected={isConnected}
-            isFinal={screen.isFinal}
-            onWinnerCelebrated={live?.onWinnerCelebrated}
-          />
-        </div>
-      );
-    case 'lobby':
-      if (!live) return null;
-      return (
-        <LobbyScreen
-          teams={live.teams}
-          leagueTop={live.leagueTop}
-          isConnected={live.isConnected}
-          joinCode={live.joinCode}
-          maxPlayersPerTeam={settings.maxPlayersPerTeam}
-          extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
-          onPickAnotherGame={live.onPickAnotherGame}
-        />
-      );
-    case 'join_overlay':
-      if (!live) return null;
-      return (
-        <JoinOverlayScreen
-          joinCode={live.joinCode}
-          maxPlayersPerTeam={settings.maxPlayersPerTeam}
-          extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
-        />
-      );
-    case 'rules':
-      return (
-        <div className="flex flex-1 items-center justify-center px-16 py-10">
-          <RulesContent quizStructure={quizStructure} settings={settings} />
-        </div>
-      );
-    case 'round_overview':
-      return (
-        <RoundOverviewScreen
-          roundTitles={quiz.roundTitles}
-          roundCategories={quiz.roundCategories}
-          roundAuthors={quiz.roundAuthors}
-        />
-      );
-    case 'joker_pick':
-      return (
-        <JokerPickScreen
-          endsAt={screen.endsAt}
-          rounds={screen.rounds}
-          teams={live?.teams ?? []}
-          pickedTeamIds={screen.pickedTeamIds}
-        />
-      );
-    case 'round_title':
-      return (
-        <RoundTitleCard
-          label={`ROUND ${screen.roundNumber}${screen.category ? ` — ${screen.category}` : ''}`}
-          roundTitle={screen.title}
-          author={screen.author}
-          note={screen.note}
-        />
-      );
-    case 'ended':
-      return (
-        <EndedScreen
-          leaderboard={live?.leaderboard ?? []}
-          isFeedbackPromptShown={screen.isFeedbackPromptShown}
-        />
-      );
-    case 'showdown':
-      return (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
-          <DisplayShowdown
-            activeShowdown={screen.showdown}
-            step={screen.step}
-            isConnected={isConnected}
-          />
-        </div>
-      );
-    case 'blank':
-      return null;
-    default:
-      return (
-        <BlockScreen
-          screen={screen}
-          settings={settings}
-          quizStructure={quizStructure}
-          media={media}
-          live={live}
-        />
-      );
-  }
+  const View = SCREEN_VIEWS[screen.kind] as (
+    props: ScreenViewProps<DisplayScreen['kind']>,
+  ) => ReactNode;
+  return (
+    <View
+      screen={screen}
+      quiz={quiz}
+      settings={quiz.settings}
+      quizStructure={quiz.quizStructure}
+      live={live}
+      media={liveMediaProps(live)}
+      isConnected={live?.isConnected ?? false}
+    />
+  );
 }
 
-/** The screens of the block in play: its questions, the break and the reveal. */
-function BlockScreen({
+function LeaderboardView({
+  screen,
+  live,
+  isConnected,
+}: ScreenViewProps<'leaderboard'>): ReactNode {
+  return (
+    <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
+      <h1 className="text-center font-display text-display-4xl">
+        <span className="text-magenta">Leaderboard</span>
+      </h1>
+      <Leaderboard
+        board={screen.board}
+        revealCount={screen.revealCount}
+        isConnected={isConnected}
+        isFinal={screen.isFinal}
+        onWinnerCelebrated={live?.onWinnerCelebrated}
+      />
+    </div>
+  );
+}
+
+function LobbyView({ settings, live }: ScreenViewProps<'lobby'>): ReactNode {
+  if (!live) return null;
+  return (
+    <LobbyScreen
+      teams={live.teams}
+      leagueTop={live.leagueTop}
+      isConnected={live.isConnected}
+      joinCode={live.joinCode}
+      maxPlayersPerTeam={settings.maxPlayersPerTeam}
+      extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
+      onPickAnotherGame={live.onPickAnotherGame}
+    />
+  );
+}
+
+function JoinOverlayView({
+  settings,
+  live,
+}: ScreenViewProps<'join_overlay'>): ReactNode {
+  if (!live) return null;
+  return (
+    <JoinOverlayScreen
+      joinCode={live.joinCode}
+      maxPlayersPerTeam={settings.maxPlayersPerTeam}
+      extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
+    />
+  );
+}
+
+function RulesView({
+  settings,
+  quizStructure,
+}: ScreenViewProps<'rules'>): ReactNode {
+  return (
+    <div className="flex flex-1 items-center justify-center px-16 py-10">
+      <RulesContent quizStructure={quizStructure} settings={settings} />
+    </div>
+  );
+}
+
+function RoundOverviewView({
+  quiz,
+}: ScreenViewProps<'round_overview'>): ReactNode {
+  return (
+    <RoundOverviewScreen
+      roundTitles={quiz.roundTitles}
+      roundCategories={quiz.roundCategories}
+      roundAuthors={quiz.roundAuthors}
+    />
+  );
+}
+
+function JokerPickView({
+  screen,
+  live,
+}: ScreenViewProps<'joker_pick'>): ReactNode {
+  return (
+    <JokerPickScreen
+      endsAt={screen.endsAt}
+      rounds={screen.rounds}
+      teams={live?.teams ?? []}
+      pickedTeamIds={screen.pickedTeamIds}
+    />
+  );
+}
+
+function RoundTitleView({ screen }: ScreenViewProps<'round_title'>): ReactNode {
+  return (
+    <RoundTitleCard
+      label={`ROUND ${screen.roundNumber}${screen.category ? ` — ${screen.category}` : ''}`}
+      roundTitle={screen.title}
+      author={screen.author}
+      note={screen.note}
+    />
+  );
+}
+
+function EndedView({ screen, live }: ScreenViewProps<'ended'>): ReactNode {
+  return (
+    <EndedScreen
+      leaderboard={live?.leaderboard ?? []}
+      isFeedbackPromptShown={screen.isFeedbackPromptShown}
+    />
+  );
+}
+
+function ShowdownView({
+  screen,
+  isConnected,
+}: ScreenViewProps<'showdown'>): ReactNode {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
+      <DisplayShowdown
+        activeShowdown={screen.showdown}
+        step={screen.step}
+        isConnected={isConnected}
+      />
+    </div>
+  );
+}
+
+function QuestionView({
+  screen,
+  settings,
+  live,
+  media,
+}: ScreenViewProps<'question'>): ReactNode {
+  return (
+    <QuestionOpenScreen
+      question={screen.question}
+      teamCounts={
+        live && {
+          answeredCount: live.answeredTeamIds.length,
+          totalTeams: live.teams.length,
+        }
+      }
+      autoplayMedia={settings.autoplayMedia}
+      {...media}
+      kahootQuestionEndsAt={live?.kahootQuestionEndsAt}
+    />
+  );
+}
+
+function LockingView({ screen }: ScreenViewProps<'locking'>): ReactNode {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
+      <QuestionLockHeading
+        key={`heading-${screen.lockAt}`}
+        lockAt={screen.lockAt}
+      />
+      <QuestionLockCountdown
+        key={`ring-${screen.lockAt}`}
+        lockAt={screen.lockAt}
+      />
+    </div>
+  );
+}
+
+function BreakIntroView({
   screen,
   settings,
   quizStructure,
-  media,
-  live,
-}: {
-  screen: Extract<
-    DisplayScreenViewProps['screen'],
-    {
-      kind:
-        | 'question'
-        | 'locking'
-        | 'break_intro'
-        | 'break_review'
-        | 'break_round_title'
-        | 'reveal_intro'
-        | 'reveal';
-    }
-  >;
-  settings: DisplayScreenViewProps['quiz']['settings'];
-  quizStructure: DisplayScreenViewProps['quiz']['quizStructure'];
-  media: LiveMediaProps;
-  live: DisplayScreenViewProps['live'];
-}): ReactNode {
-  switch (screen.kind) {
-    case 'question':
-      return (
-        <QuestionOpenScreen
-          question={screen.question}
-          teamCounts={
-            live && {
-              answeredCount: live.answeredTeamIds.length,
-              totalTeams: live.teams.length,
-            }
-          }
-          autoplayMedia={settings.autoplayMedia}
-          {...media}
-          kahootQuestionEndsAt={live?.kahootQuestionEndsAt}
-        />
-      );
-    case 'locking':
-      return (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
-          <QuestionLockHeading
-            key={`heading-${screen.lockAt}`}
-            lockAt={screen.lockAt}
-          />
-          <QuestionLockCountdown
-            key={`ring-${screen.lockAt}`}
-            lockAt={screen.lockAt}
-          />
-        </div>
-      );
-    case 'break_intro':
-      return (
-        <BreakIntroScreen
-          roundNumber={screen.roundNumber}
-          breakNumber={screen.breakNumber}
-          enabledBonusCategories={settings.enabledBonusCategories}
-          breakEndsAt={screen.breakEndsAt}
-          quizStructure={quizStructure}
-          showBonusList={!screen.isFinalBreak}
-          isFeedbackPromptShown={screen.isFeedbackPromptShown}
-          funFacts={screen.funFacts}
-        />
-      );
-    case 'break_review':
-      return (
-        <BreakReviewScreen
-          question={screen.question}
-          autoplayMedia={settings.autoplayMedia}
-          isDisplaySoundMuted={media.isDisplaySoundMuted}
-        />
-      );
-    case 'break_round_title':
-      return (
-        <RoundTitleCard
-          label={`ROUND ${screen.roundNumber}`}
-          roundTitle={screen.title}
-          note={screen.note}
-        />
-      );
-    case 'reveal_intro':
-      return (
-        <RoundTitleCard
-          label={`REVEALING ANSWERS · ROUND ${screen.roundNumber}`}
-          roundTitle={screen.title}
-        />
-      );
-    case 'reveal':
-      return (
-        <RevealScreen
-          screen={screen}
-          autoplayMedia={settings.autoplayMedia}
-          media={media}
-          live={live}
-        />
-      );
-    default: {
-      const unhandled: never = screen;
-      return unhandled;
-    }
-  }
+}: ScreenViewProps<'break_intro'>): ReactNode {
+  return (
+    <BreakIntroScreen
+      roundNumber={screen.roundNumber}
+      breakNumber={screen.breakNumber}
+      enabledBonusCategories={settings.enabledBonusCategories}
+      breakEndsAt={screen.breakEndsAt}
+      quizStructure={quizStructure}
+      showBonusList={!screen.isFinalBreak}
+      isFeedbackPromptShown={screen.isFeedbackPromptShown}
+      funFacts={screen.funFacts}
+    />
+  );
 }
+
+function BreakReviewView({
+  screen,
+  settings,
+  media,
+}: ScreenViewProps<'break_review'>): ReactNode {
+  return (
+    <BreakReviewScreen
+      question={screen.question}
+      autoplayMedia={settings.autoplayMedia}
+      isDisplaySoundMuted={media.isDisplaySoundMuted}
+    />
+  );
+}
+
+function BreakRoundTitleView({
+  screen,
+}: ScreenViewProps<'break_round_title'>): ReactNode {
+  return (
+    <RoundTitleCard
+      label={`ROUND ${screen.roundNumber}`}
+      roundTitle={screen.title}
+      note={screen.note}
+    />
+  );
+}
+
+function RevealIntroView({
+  screen,
+}: ScreenViewProps<'reveal_intro'>): ReactNode {
+  return (
+    <RoundTitleCard
+      label={`REVEALING ANSWERS · ROUND ${screen.roundNumber}`}
+      roundTitle={screen.title}
+    />
+  );
+}
+
+function RevealView({
+  screen,
+  settings,
+  live,
+  media,
+}: ScreenViewProps<'reveal'>): ReactNode {
+  return (
+    <RevealScreen
+      screen={screen}
+      autoplayMedia={settings.autoplayMedia}
+      media={media}
+      live={live}
+    />
+  );
+}
+
+const SCREEN_VIEWS: {
+  [Kind in DisplayScreen['kind']]: (props: ScreenViewProps<Kind>) => ReactNode;
+} = {
+  leaderboard: LeaderboardView,
+  lobby: LobbyView,
+  join_overlay: JoinOverlayView,
+  rules: RulesView,
+  round_overview: RoundOverviewView,
+  joker_pick: JokerPickView,
+  round_title: RoundTitleView,
+  ended: EndedView,
+  showdown: ShowdownView,
+  blank: () => null,
+  question: QuestionView,
+  locking: LockingView,
+  break_intro: BreakIntroView,
+  break_review: BreakReviewView,
+  break_round_title: BreakRoundTitleView,
+  reveal_intro: RevealIntroView,
+  reveal: RevealView,
+};
+
+/** The screens of the block in play: its questions, the break and the reveal. */
 
 type LiveMediaProps = ReturnType<typeof liveMediaProps>;
 

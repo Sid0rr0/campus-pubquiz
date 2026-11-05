@@ -36,14 +36,6 @@ export function ShowdownRevealScreen({
   // The seat whose guess was just revealed is "up"; once the answer is on
   // screen the winner takes the spotlight instead.
   const spotlitSeatIndex = showAnswer ? null : step - 1;
-  // Motion is transform/opacity only; reduced motion keeps just the fade.
-  const slamIn = isReducedMotion
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 } }
-    : {
-        initial: { opacity: 0, scale: 1.8 },
-        animate: { opacity: 1, scale: 1 },
-        transition: { type: 'spring' as const, stiffness: 500, damping: 20 },
-      };
 
   return (
     <>
@@ -54,54 +46,102 @@ export function ShowdownRevealScreen({
         {question}
       </h1>
       <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
-        {participants.map((participant) => {
-          const isRevealed = step >= participant.seatIndex + 1;
-          const isWinner =
-            showAnswer && activeShowdown.winnerTeamId === participant.teamId;
-          const isSpotlit = participant.seatIndex === spotlitSeatIndex;
-          return (
-            <li
-              key={participant.teamId}
-              data-spotlight={isSpotlit}
-              className={`relative flex items-center justify-between gap-3 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold text-foreground transition-transform ${
-                isWinner
-                  ? 'border-green'
-                  : isSpotlit
-                    ? 'border-magenta'
-                    : 'border-foreground/20'
-              } ${isSpotlit && !isReducedMotion ? 'scale-105' : ''}`}
-            >
-              {isWinner && <WinnerBurst isReducedMotion={isReducedMotion} />}
-              <span>{participant.teamName}</span>
-              {isRevealed && participant.guess !== undefined ? (
-                <motion.span {...slamIn}>{participant.guess}</motion.span>
-              ) : (
-                <span className="text-display-sm font-extrabold text-foreground/45">
-                  {isRevealed
-                    ? 'no guess'
-                    : participant.hasGuessed
-                      ? 'Answered'
-                      : 'waiting…'}
-                </span>
-              )}
-              {isWinner && (
-                <span aria-hidden="true" className="text-green">
-                  ✓
-                </span>
-              )}
-            </li>
-          );
-        })}
+        {participants.map((participant) => (
+          <ShowdownSeat
+            key={participant.teamId}
+            participant={participant}
+            step={step}
+            isWinner={
+              showAnswer && activeShowdown.winnerTeamId === participant.teamId
+            }
+            isSpotlit={participant.seatIndex === spotlitSeatIndex}
+            isReducedMotion={isReducedMotion}
+          />
+        ))}
       </ul>
-      {showAnswer && (
-        <p className="font-display text-display-lg text-green">
-          <span className="font-body text-display-sm font-extrabold text-foreground/55">
-            ANSWER{' '}
-          </span>
-          {activeShowdown.answer}
-        </p>
+      {showAnswer && <ShowdownAnswer activeShowdown={activeShowdown} />}
+    </>
+  );
+}
+
+type Participant =
+  ShowdownRevealScreenProps['activeShowdown']['participants'][number];
+
+function ShowdownSeat({
+  participant,
+  step,
+  isWinner,
+  isSpotlit,
+  isReducedMotion,
+}: {
+  participant: Participant;
+  step: number;
+  isWinner: boolean;
+  isSpotlit: boolean;
+  isReducedMotion: boolean;
+}) {
+  const isRevealed = step >= participant.seatIndex + 1;
+  return (
+    <li
+      data-spotlight={isSpotlit}
+      className={`relative flex items-center justify-between gap-3 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold text-foreground transition-transform ${seatBorder(
+        isWinner,
+        isSpotlit,
+      )} ${isSpotlit && !isReducedMotion ? 'scale-105' : ''}`}
+    >
+      {isWinner && <WinnerBurst isReducedMotion={isReducedMotion} />}
+      <span>{participant.teamName}</span>
+      {isRevealed && participant.guess !== undefined ? (
+        <motion.span {...slamInOf(isReducedMotion)}>
+          {participant.guess}
+        </motion.span>
+      ) : (
+        <span className="text-display-sm font-extrabold text-foreground/45">
+          {seatStatus(isRevealed, participant.hasGuessed)}
+        </span>
       )}
-      {showAnswer && activeShowdown.isTie === true && (
+      {isWinner && (
+        <span aria-hidden="true" className="text-green">
+          ✓
+        </span>
+      )}
+    </li>
+  );
+}
+
+/** Motion is transform/opacity only; reduced motion keeps just the fade. */
+function slamInOf(isReducedMotion: boolean) {
+  return isReducedMotion
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 } }
+    : {
+        initial: { opacity: 0, scale: 1.8 },
+        animate: { opacity: 1, scale: 1 },
+        transition: { type: 'spring' as const, stiffness: 500, damping: 20 },
+      };
+}
+
+function seatBorder(isWinner: boolean, isSpotlit: boolean): string {
+  if (isWinner) return 'border-green';
+  return isSpotlit ? 'border-magenta' : 'border-foreground/20';
+}
+
+function seatStatus(isRevealed: boolean, hasGuessed: boolean): string {
+  if (isRevealed) return 'no guess';
+  return hasGuessed ? 'Answered' : 'waiting…';
+}
+
+function ShowdownAnswer({
+  activeShowdown,
+}: Pick<ShowdownRevealScreenProps, 'activeShowdown'>) {
+  return (
+    <>
+      <p className="font-display text-display-lg text-green">
+        <span className="font-body text-display-sm font-extrabold text-foreground/55">
+          ANSWER{' '}
+        </span>
+        {activeShowdown.answer}
+      </p>
+      {activeShowdown.isTie === true && (
         <p className="font-display text-display-2xl text-magenta">
           It&apos;s a tie — sudden death!
         </p>

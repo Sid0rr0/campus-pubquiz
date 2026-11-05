@@ -19,15 +19,11 @@ export function StaffGate({
 }) {
   const auth = useAuth();
   const router = useRouter();
-  const signedIn = auth.status === 'authenticated' && Boolean(auth.user);
-  const allowed = signedIn && (!adminOnly || auth.user?.role === 'admin');
+  const allowed = isAllowed(auth, adminOnly);
 
   useEffect(() => {
-    if (auth.status === 'unauthenticated' || auth.status === 'pending') {
-      router.replace('/login');
-    } else if (adminOnly && auth.status === 'authenticated' && !allowed) {
-      router.replace('/control');
-    }
+    const target = redirectFor(auth.status, adminOnly, allowed);
+    if (target) router.replace(target);
   }, [adminOnly, allowed, auth.status, router]);
 
   if (!allowed) {
@@ -39,4 +35,23 @@ export function StaffGate({
   }
 
   return children;
+}
+
+type Auth = ReturnType<typeof useAuth>;
+
+function isAllowed(auth: Auth, adminOnly: boolean): boolean {
+  const signedIn = auth.status === 'authenticated' && Boolean(auth.user);
+  return signedIn && (!adminOnly || auth.user?.role === 'admin');
+}
+
+/** Signed out (or awaiting approval) goes to log in; a moderator on an admin-only page goes to /control. */
+function redirectFor(
+  status: Auth['status'],
+  adminOnly: boolean,
+  allowed: boolean,
+): string | null {
+  if (status === 'unauthenticated' || status === 'pending') return '/login';
+  return adminOnly && status === 'authenticated' && !allowed
+    ? '/control'
+    : null;
 }

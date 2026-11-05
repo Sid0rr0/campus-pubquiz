@@ -22,19 +22,16 @@ export function SessionSettingsForm({
   onChange,
 }: SessionSettingsFormProps) {
   function toggleBonusCategory(category: BonusCategory): void {
-    const enabledBonusCategories = value.enabledBonusCategories.includes(
-      category,
-    )
-      ? value.enabledBonusCategories.filter((c) => c !== category)
-      : [...value.enabledBonusCategories, category];
-    onChange({ ...value, enabledBonusCategories });
+    onChange({
+      ...value,
+      enabledBonusCategories: toggled(value.enabledBonusCategories, category),
+    });
   }
 
   function updateMaxBonusAwards(category: BonusCategory, raw: string): void {
-    const trimmed = raw.trim();
     const maxBonusAwardsPerCategory = { ...value.maxBonusAwardsPerCategory };
-    const parsed = Number(trimmed);
-    if (trimmed === '' || !Number.isFinite(parsed)) {
+    const parsed = parseOptionalNumber(raw);
+    if (parsed === null) {
       delete maxBonusAwardsPerCategory[category];
     } else {
       maxBonusAwardsPerCategory[category] = parsed;
@@ -43,12 +40,9 @@ export function SessionSettingsForm({
   }
 
   function updateKahootQuestionTimerSeconds(raw: string): void {
-    const trimmed = raw.trim();
-    const parsed = Number(trimmed);
     onChange({
       ...value,
-      kahootQuestionTimerSeconds:
-        trimmed === '' || !Number.isFinite(parsed) ? null : parsed,
+      kahootQuestionTimerSeconds: parseOptionalNumber(raw),
     });
   }
 
@@ -104,26 +98,10 @@ export function SessionSettingsForm({
 
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-extrabold">Bonus categories</span>
-        <div className="flex flex-wrap gap-2">
-          {BONUS_CATEGORIES.map((category) => (
-            <Button
-              key={category}
-              type="button"
-              onClick={() => toggleBonusCategory(category)}
-              aria-pressed={value.enabledBonusCategories.includes(category)}
-              className={`rounded-full border-2 px-3 py-1 text-xs font-extrabold ${
-                value.enabledBonusCategories.includes(category)
-                  ? 'border-magenta bg-magenta text-white'
-                  : 'border-foreground/30 text-foreground'
-              }`}
-            >
-              {BONUS_CATEGORY_LABELS[category]}
-              <span className="ml-1 font-normal opacity-70">
-                ({DEFAULT_BONUS_POINTS} pt)
-              </span>
-            </Button>
-          ))}
-        </div>
+        <BonusCategoryToggles
+          enabled={value.enabledBonusCategories}
+          onToggle={toggleBonusCategory}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -200,13 +178,7 @@ export function SessionSettingsForm({
           type="checkbox"
           checked={value.jokersEnabled}
           onChange={(event) =>
-            onChange({
-              // Turning jokers on turns the overview on with them.
-              ...(event.target.checked
-                ? withShowRoundOverview(value, true)
-                : value),
-              jokersEnabled: event.target.checked,
-            })
+            onChange(withJokers(value, event.target.checked))
           }
         />
         Jokers
@@ -319,6 +291,58 @@ export function SessionSettingsForm({
           Add rule
         </Button>
       </div>
+    </div>
+  );
+}
+
+function toggled<T>(items: readonly T[], item: T): T[] {
+  return items.includes(item)
+    ? items.filter((existing) => existing !== item)
+    : [...items, item];
+}
+
+/** A typed number, or null for a blank or unreadable cell. */
+function parseOptionalNumber(raw: string): number | null {
+  const trimmed = raw.trim();
+  const parsed = Number(trimmed);
+  return trimmed === '' || !Number.isFinite(parsed) ? null : parsed;
+}
+
+/** Turning jokers on turns the overview on with them. */
+function withJokers(value: SessionSettings, jokersEnabled: boolean) {
+  return {
+    ...(jokersEnabled ? withShowRoundOverview(value, true) : value),
+    jokersEnabled,
+  };
+}
+
+function BonusCategoryToggles({
+  enabled,
+  onToggle,
+}: {
+  enabled: readonly BonusCategory[];
+  onToggle: (category: BonusCategory) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {BONUS_CATEGORIES.map((category) => (
+        <Button
+          key={category}
+          type="button"
+          onClick={() => onToggle(category)}
+          aria-pressed={enabled.includes(category)}
+          className={`rounded-full border-2 px-3 py-1 text-xs font-extrabold ${
+            enabled.includes(category)
+              ? 'border-magenta bg-magenta text-white'
+              : 'border-foreground/30 text-foreground'
+          }`}
+        >
+          {BONUS_CATEGORY_LABELS[category]}
+          <span className="ml-1 font-normal opacity-70">
+            ({DEFAULT_BONUS_POINTS} pt)
+          </span>
+        </Button>
+      ))}
     </div>
   );
 }

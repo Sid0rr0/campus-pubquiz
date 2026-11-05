@@ -175,28 +175,7 @@ export function Leaderboard({
   onWinnerCelebrated,
 }: LeaderboardProps) {
   const hasOldState = board.countUpBoard !== undefined;
-  const [phase, setPhase] = useState<LeaderboardPhase>(
-    hasOldState ? 'old' : 'settled',
-  );
-
-  useEffect(() => {
-    if (!hasOldState) return undefined;
-    const toCounting = setTimeout(
-      () => setPhase('counting'),
-      OLD_STATE_HOLD_MS,
-    );
-    const toSettled = setTimeout(
-      () => setPhase('settled'),
-      OLD_STATE_HOLD_MS + SCORE_COUNT_UP_MS,
-    );
-    return () => {
-      clearTimeout(toCounting);
-      clearTimeout(toSettled);
-    };
-    // Deliberately only depends on hasOldState, not the board's contents:
-    // this sequence should play once per mount (a fresh leaderboard screen),
-    // not restart on every snapshot broadcast while it's on screen.
-  }, [hasOldState]);
+  const phase = useLeaderboardPhase(hasOldState);
 
   const visibleRows = selectLeaderboardRows({ board, revealCount, phase });
   const newestRankIndex = visibleRows[0]?.rankIndex;
@@ -211,37 +190,24 @@ export function Leaderboard({
       ),
   );
 
-  // Rank reveal stays one rank per Advance; the drumroll marks the three that
-  // matter. A reload or reconnect remounts the board, so it stays silent.
-  useOnLiveForwardMove(revealCount ?? 0, isConnected, () => {
-    if (isFinal && visibleRows[0]?.rankIndex === 0) {
-      // The winner appears with its own fanfare, so no drumroll over it.
-      displaySounds.play('fanfare');
-      fireConfetti();
-      onWinnerCelebrated?.();
-      return;
-    }
-    if (isTopThreeReveal(visibleRows)) {
-      displaySounds.play('drumroll');
-    }
+  useRankRevealSounds({
+    revealCount,
+    isConnected,
+    isFinal,
+    visibleRows,
+    onWinnerCelebrated,
   });
 
   const isPodiumMode = isFinal && phase === 'settled';
-  const podiumTeamIds = new Set(
-    podiumEntries(board.entries).map((entry) => entry.teamId),
-  );
-  const listRows = isPodiumMode
-    ? visibleRows.filter((row) => !podiumTeamIds.has(row.entry.teamId))
-    : visibleRows;
-  const standingTeamIds = new Set(
-    visibleRows
-      .filter((row) => podiumTeamIds.has(row.entry.teamId))
-      .map((row) => row.entry.teamId),
+  const { listRows, standingTeamIds } = splitPodium(
+    board,
+    visibleRows,
+    isPodiumMode,
   );
 
   return (
     <div className="flex flex-col gap-6">
-      {isPodiumMode && standingTeamIds.size > 0 && (
+      {standingTeamIds.size > 0 && (
         <Podium
           entries={board.entries}
           visibleTeamIds={standingTeamIds}
@@ -337,4 +303,80 @@ function LeaderboardRowItem({
       )}
     </motion.li>
   );
+}
+
+/** Plays the old standings, the count-up, then settles — once per mount (a fresh leaderboard screen). */
+function useLeaderboardPhase(hasOldState: boolean): LeaderboardPhase {
+  const [phase, setPhase] = useState<LeaderboardPhase>(
+    hasOldState ? 'old' : 'settled',
+  );
+
+  useEffect(() => {
+    if (!hasOldState) return undefined;
+    const toCounting = setTimeout(
+      () => setPhase('counting'),
+      OLD_STATE_HOLD_MS,
+    );
+    const toSettled = setTimeout(
+      () => setPhase('settled'),
+      OLD_STATE_HOLD_MS + SCORE_COUNT_UP_MS,
+    );
+    return () => {
+      clearTimeout(toCounting);
+      clearTimeout(toSettled);
+    };
+    // Deliberately only depends on hasOldState, not the board's contents:
+    // this sequence should play once per mount (a fresh leaderboard screen),
+    // not restart on every snapshot broadcast while it's on screen.
+  }, [hasOldState]);
+  return phase;
+}
+
+/** Rank reveal stays one rank per Advance; the drumroll marks the three that matter, the winner gets the fanfare. */
+function useRankRevealSounds({
+  revealCount,
+  isConnected,
+  isFinal,
+  visibleRows,
+  onWinnerCelebrated,
+}: Pick<
+  LeaderboardProps,
+  'revealCount' | 'isConnected' | 'isFinal' | 'onWinnerCelebrated'
+> & { visibleRows: ReturnType<typeof selectLeaderboardRows> }) {
+  // Rank reveal stays one rank per Advance; the drumroll marks the three that
+  // matter. A reload or reconnect remounts the board, so it stays silent.
+  useOnLiveForwardMove(revealCount ?? 0, isConnected, () => {
+    if (isFinal && visibleRows[0]?.rankIndex === 0) {
+      // The winner appears with its own fanfare, so no drumroll over it.
+      displaySounds.play('fanfare');
+      fireConfetti();
+      onWinnerCelebrated?.();
+      return;
+    }
+    if (isTopThreeReveal(visibleRows)) {
+      displaySounds.play('drumroll');
+    }
+  });
+}
+
+/** On the final board's podium the top three stand on the podium, not in the list; only those already revealed stand. */
+function splitPodium(
+  board: LeaderboardProps['board'],
+  visibleRows: ReturnType<typeof selectLeaderboardRows>,
+  isPodiumMode: boolean,
+) {
+  if (!isPodiumMode) {
+    return { listRows: visibleRows, standingTeamIds: new Set<number>() };
+  }
+  const podiumTeamIds = new Set(
+    podiumEntries(board.entries).map((entry) => entry.teamId),
+  );
+  return {
+    listRows: visibleRows.filter((row) => !podiumTeamIds.has(row.entry.teamId)),
+    standingTeamIds: new Set(
+      visibleRows
+        .filter((row) => podiumTeamIds.has(row.entry.teamId))
+        .map((row) => row.entry.teamId),
+    ),
+  };
 }
