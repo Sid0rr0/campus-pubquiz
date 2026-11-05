@@ -61,10 +61,11 @@ export function QuestionPicker({
                   key={slot.key}
                   type="button"
                   aria-label={`Question ${slot.questionNumberInRound}${isAnswered ? ' (answered)' : ''}`}
+                  aria-current={isSelected ? 'true' : undefined}
                   onClick={() => onSelect(question.id)}
                   className={
                     isSelected
-                      ? 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-dark-blue bg-white font-extrabold text-dark-blue'
+                      ? 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-foreground bg-foreground font-extrabold text-background'
                       : 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-foreground/30 bg-white font-extrabold'
                   }
                 >

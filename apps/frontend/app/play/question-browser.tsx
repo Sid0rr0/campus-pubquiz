@@ -153,6 +153,11 @@ export function QuestionBrowser({
   const resubmitNote = hasPinOffPlace
     ? 'Submit again to send the pinned order.'
     : null;
+  const verdictTextClass = yourAnswerTextClass({
+    myAnswer: myAnswer || null,
+    pointsAwarded: myAnswerPoints,
+    verdict: myAnswerVerdict,
+  });
 
   return (
     <div
@@ -200,14 +205,8 @@ export function QuestionBrowser({
             revealQuestion={revealQuestion}
             myAnswer={myAnswer ?? ''}
           />
-          <p
-            className={`font-display text-2xl ${yourAnswerTextClass({
-              myAnswer: myAnswer || null,
-              pointsAwarded: myAnswerPoints,
-              verdict: myAnswerVerdict,
-            })}`}
-          >
-            <span className="font-body text-md font-extrabold text-foreground/55">
+          <p className={`font-display text-2xl ${verdictTextClass}`}>
+            <span className="font-body text-base font-extrabold text-foreground/55">
               Your answer{': '}
             </span>
             {myAnswer
@@ -218,7 +217,9 @@ export function QuestionBrowser({
               : 'No answer submitted'}
           </p>
           {myAnswerPoints !== null && (
-            <p className="font-body text-3xl font-extrabold text-foreground/55">
+            <p
+              className={`font-body text-3xl font-extrabold tabular-nums ${verdictTextClass}`}
+            >
               {myAnswerPoints} / {revealQuestion.points} points
               {myAnswerJokerExtra !== null && (
                 <span className="ml-2 whitespace-nowrap text-foreground">
