@@ -261,8 +261,6 @@ export function QuestionDisplay({
   revealNotes,
 }: QuestionDisplayProps) {
   const { prompt, answer: correctAnswer } = question;
-  const mediaUrl = isMediaHidden ? undefined : question.mediaUrl;
-  const answerMediaUrl = isMediaHidden ? undefined : question.answerMediaUrl;
   // On reveal, answer_media_url (when set) normally replaces the question's
   // own media_url rather than showing both. The one exception is a plain
   // question whose media is an image (not audio/video): then both are shown
@@ -295,21 +293,15 @@ export function QuestionDisplay({
       })
     : undefined;
   const QuestionBody = QUESTION_BODIES[answerKind];
-  const isRevealingWithAnswerMedia =
-    isRevealing && answerMediaUrl !== undefined;
-  const rawQuestionMediaUrl =
-    mediaUrl && isHttpUrl(mediaUrl) ? mediaUrl : undefined;
-  const questionYoutubeId = rawQuestionMediaUrl
-    ? extractYoutubeVideoId(rawQuestionMediaUrl)
-    : undefined;
-  const questionIsImage = classifyMediaUrl(rawQuestionMediaUrl) === 'image';
-  const showSideBySideReveal = isRevealingWithAnswerMedia && questionIsImage;
+  const {
+    answerMediaUrl,
+    isRevealingWithAnswerMedia,
+    questionYoutubeId,
+    showSideBySideReveal,
+    questionMediaUrl,
+  } = questionMediaOf(question, isMediaHidden, isRevealing);
   // Covered while the question is asked and in break review; uncovered at reveal.
   const isVideoCovered = question.isVideoHidden === true && !isRevealing;
-  const questionMediaUrl =
-    isRevealingWithAnswerMedia && !showSideBySideReveal
-      ? undefined
-      : rawQuestionMediaUrl;
 
   // Detected once the <img> actually loads — naturalWidth/naturalHeight
   // reflect the real pixel dimensions regardless of CSS scaling. Reset
@@ -340,16 +332,7 @@ export function QuestionDisplay({
   const isQuestionVideo = isVideoUrl(questionMediaUrl);
   const questionVideoFailure = useVideoLoadFailure(questionMediaUrl);
   const restartsAtReveal =
-    isRevealing &&
-    (question.isVideoHidden !== true ||
-      revealClip.start !== undefined ||
-      revealClip.end !== undefined);
-  const videoKey = restartsAtReveal
-    ? `${mediaReplayToken}-reveal`
-    : mediaReplayToken;
-  // A video file replays by seeking in place (see useMediaPause), so its key
-  // leaves out the replay token; it still remounts at reveal for the reveal clip.
-  const videoFileKey = restartsAtReveal ? 'reveal' : 'question';
+    isRevealing && restartsVideoAtReveal(question.isVideoHidden, revealClip);
   // A portrait image also wins over the side-by-side reveal: the answer image
   // then takes the image column in place of the question image.
   // An answer video keeps this layout in fullscreen: leaving it would remount the player.
@@ -359,25 +342,43 @@ export function QuestionDisplay({
       (isRevealingWithAnswerMedia && isVideoUrl(answerMediaUrl))) &&
     questionImageOrientation === 'portrait';
 
+  const layout = showTwoColumnLayout ? TWO_COLUMN_LAYOUT : STACKED_LAYOUT;
+  const answerMedia = (
+    <AnswerMedia
+      url={answerMediaUrl}
+      mediaTestIdPrefix={mediaTestIdPrefix}
+      autoplayMedia={autoplayMedia}
+      imageClassName="max-h-full max-w-full rounded-xl object-contain"
+      startSeconds={revealClip.start}
+      endSeconds={revealClip.end}
+      isFullscreen={isFullscreen}
+      isMediaPaused={isMediaPaused}
+      mediaReplayToken={mediaReplayToken}
+      isDisplaySoundMuted={isDisplaySoundMuted}
+    />
+  );
+  const questionImage = (
+    // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
+    <img
+      data-testid={`${mediaTestIdPrefix}-image`}
+      src={questionMediaUrl}
+      alt="Question image"
+      onLoad={handleQuestionImageLoad}
+      className="max-h-full max-w-full rounded-xl object-contain"
+    />
+  );
+
   return (
     <>
       <div
         data-testid={`${mediaTestIdPrefix}-prompt-media-row`}
-        data-layout={showTwoColumnLayout ? 'two-column' : 'stacked'}
-        className={
-          showTwoColumnLayout
-            ? 'flex w-full min-h-0 flex-1 items-stretch gap-8'
-            : 'contents'
-        }
+        data-layout={layout.name}
+        className={layout.row}
       >
         {/* The prompt and its text content (margin, options, lists, reveal answer line) travel together in both layouts. */}
         <div
           data-testid={`${mediaTestIdPrefix}-prompt-column`}
-          className={
-            showTwoColumnLayout
-              ? 'flex min-w-0 flex-1 flex-col items-start justify-center gap-4 self-center text-left'
-              : 'contents'
-          }
+          className={layout.promptColumn}
         >
           <h1 className={promptClassName}>{prompt}</h1>
           {reveal?.lead}
@@ -387,164 +388,40 @@ export function QuestionDisplay({
         {showTwoColumnLayout && (
           // Stretched (by the row's items-stretch) to a definite height, so the image's max-h-full caps against it.
           <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
-            {isRevealingWithAnswerMedia ? (
-              <AnswerMedia
-                url={answerMediaUrl}
-                mediaTestIdPrefix={mediaTestIdPrefix}
-                autoplayMedia={autoplayMedia}
-                imageClassName="max-h-full max-w-full rounded-xl object-contain"
-                startSeconds={revealClip.start}
-                endSeconds={revealClip.end}
-                isFullscreen={isFullscreen}
-                isMediaPaused={isMediaPaused}
-                mediaReplayToken={mediaReplayToken}
-                isDisplaySoundMuted={isDisplaySoundMuted}
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
-              <img
-                data-testid={`${mediaTestIdPrefix}-image`}
-                src={questionMediaUrl}
-                alt="Question image"
-                onLoad={handleQuestionImageLoad}
-                className="max-h-full max-w-full rounded-xl object-contain"
-              />
-            )}
+            {isRevealingWithAnswerMedia ? answerMedia : questionImage}
           </div>
         )}
       </div>
       {questionMediaUrl &&
         isQuestionVideo &&
         !questionVideoFailure.isFailed && (
-          <div
-            className={isFullscreen ? FULLSCREEN_OVERLAY : 'w-full max-w-2xl'}
-          >
-            {/* A visible video, or a hidden one with a clip to play at reveal,
-              is keyed on the reveal so it plays again even when the reveal
-              clip's src equals the question's; a hidden video with no clip is
-              not, so lifting its cover must not remount the player.
-              Same nesting (and the same iframe element) in both states —
-              changing the tree shape between fullscreen and inline would
-              remount the iframe and restart the YouTube player instead of
-              continuing playback. */}
-            <div
-              className={
-                isFullscreen
-                  ? 'relative aspect-video max-h-full w-full'
-                  : 'relative aspect-video w-full overflow-hidden rounded-xl'
-              }
-            >
-              {questionYoutubeId ? (
-                <>
-                  <iframe
-                    ref={youtubeRef}
-                    onLoad={onYoutubeLoad}
-                    key={videoKey}
-                    data-testid={`${mediaTestIdPrefix}-youtube`}
-                    src={buildYoutubeEmbedSrc(
-                      questionYoutubeId,
-                      autoplayMedia,
-                      questionClip.start,
-                      questionClip.end,
-                    )}
-                    title="Question video"
-                    className="absolute inset-0 h-full w-full"
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                  />
-                  {/* YouTube always renders its title/channel overlay near the
-                    top of the player and no longer honors any param that
-                    removes it (modestbranding is deprecated) — mask it with a
-                    solid bar instead, sized to the band YouTube draws it in. */}
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 top-0 h-[13%] bg-black"
-                  />
-                </>
-              ) : (
-                <VideoFile
-                  videoRef={videoRef}
-                  key={videoFileKey}
-                  testId={`${mediaTestIdPrefix}-video`}
-                  url={questionMediaUrl}
-                  startSeconds={questionClip.start}
-                  endSeconds={questionClip.end}
-                  autoPlay={autoplayMedia}
-                  onLoadedMetadata={onVideoReady}
-                  onError={questionVideoFailure.onError}
-                  className="absolute inset-0 h-full w-full bg-black object-contain"
-                />
-              )}
-              {/* Hidden video: the player keeps playing at full size under an
-                opaque panel (a hidden or zero-size player may not autoplay).
-                Same tree as the iframe, so lifting it never remounts the
-                player by itself; see restartsAtReveal. */}
-              {isVideoCovered && (
-                <div
-                  data-testid={`${mediaTestIdPrefix}-video-cover`}
-                  className="absolute inset-0 flex items-center justify-center bg-black text-display-4xl"
-                >
-                  <span aria-label="Sound only">🎵</span>
-                </div>
-              )}
-            </div>
-          </div>
+          <QuestionVideo
+            url={questionMediaUrl}
+            youtubeId={questionYoutubeId}
+            clip={questionClip}
+            restartsAtReveal={restartsAtReveal}
+            mediaReplayToken={mediaReplayToken}
+            isFullscreen={isFullscreen}
+            isVideoCovered={isVideoCovered}
+            autoplayMedia={autoplayMedia}
+            mediaTestIdPrefix={mediaTestIdPrefix}
+            youtubeRef={youtubeRef}
+            onYoutubeLoad={onYoutubeLoad}
+            videoRef={videoRef}
+            onVideoReady={onVideoReady}
+            onError={questionVideoFailure.onError}
+          />
         )}
       {questionMediaUrl &&
         questionMediaKind === 'image' &&
-        !showTwoColumnLayout &&
-        (showSideBySideReveal ? (
-          <div className="flex w-full min-h-0 flex-1 items-stretch justify-center gap-6">
-            {/* A sound answer has no picture to enlarge, so fullscreen takes the question image. */}
-            <div
-              className={
-                isFullscreen && classifyMediaUrl(answerMediaUrl) === 'audio'
-                  ? FULLSCREEN_OVERLAY
-                  : 'flex min-h-0 min-w-0 flex-2 items-center justify-center'
-              }
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
-              <img
-                data-testid={`${mediaTestIdPrefix}-image`}
-                src={questionMediaUrl}
-                alt="Question image"
-                onLoad={handleQuestionImageLoad}
-                className="max-h-full max-w-full rounded-xl object-contain"
-              />
-            </div>
-            <div className="flex min-h-0 min-w-0 flex-3 items-center justify-center">
-              <AnswerMedia
-                url={answerMediaUrl}
-                mediaTestIdPrefix={mediaTestIdPrefix}
-                autoplayMedia={autoplayMedia}
-                imageClassName="max-h-full max-w-full rounded-xl object-contain"
-                startSeconds={revealClip.start}
-                endSeconds={revealClip.end}
-                isFullscreen={isFullscreen}
-                isMediaPaused={isMediaPaused}
-                mediaReplayToken={mediaReplayToken}
-                isDisplaySoundMuted={isDisplaySoundMuted}
-              />
-            </div>
-          </div>
-        ) : (
-          <div
-            className={
-              isFullscreen
-                ? FULLSCREEN_OVERLAY
-                : 'flex w-full min-h-0 items-center justify-center'
-            }
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
-            <img
-              data-testid={`${mediaTestIdPrefix}-image`}
-              src={questionMediaUrl}
-              alt="Question image"
-              onLoad={handleQuestionImageLoad}
-              className="max-h-full max-w-full rounded-xl object-contain"
-            />
-          </div>
-        ))}
+        !showTwoColumnLayout && (
+          <InlineImage
+            image={questionImage}
+            answerMedia={showSideBySideReveal ? answerMedia : null}
+            isFullscreen={isFullscreen}
+            isAnswerSound={classifyMediaUrl(answerMediaUrl) === 'audio'}
+          />
+        )}
       {questionMediaUrl && questionMediaKind === 'audio' && (
         <audio
           ref={audioRef}
@@ -556,20 +433,227 @@ export function QuestionDisplay({
       )}
       {isRevealing && !showSideBySideReveal && answerMediaUrl && (
         <div className="flex w-full min-h-0 items-center justify-center">
-          <AnswerMedia
-            url={answerMediaUrl}
-            mediaTestIdPrefix={mediaTestIdPrefix}
-            autoplayMedia={autoplayMedia}
-            imageClassName="max-h-full max-w-full rounded-xl object-contain"
-            startSeconds={revealClip.start}
-            endSeconds={revealClip.end}
-            isFullscreen={isFullscreen}
-            isMediaPaused={isMediaPaused}
-            mediaReplayToken={mediaReplayToken}
-            isDisplaySoundMuted={isDisplaySoundMuted}
-          />
+          {answerMedia}
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Whether the question video remounts at reveal: a visible video always does,
+ * and a hidden one only when it has a reveal clip to play.
+ */
+function restartsVideoAtReveal(
+  isVideoHidden: boolean | undefined,
+  revealClip: { start?: number; end?: number },
+): boolean {
+  return (
+    isVideoHidden !== true ||
+    revealClip.start !== undefined ||
+    revealClip.end !== undefined
+  );
+}
+
+type MediaPause = ReturnType<typeof useMediaPause>;
+
+function QuestionVideo({
+  url,
+  youtubeId,
+  clip,
+  restartsAtReveal,
+  mediaReplayToken,
+  isFullscreen,
+  isVideoCovered,
+  autoplayMedia,
+  mediaTestIdPrefix,
+  youtubeRef,
+  onYoutubeLoad,
+  videoRef,
+  onVideoReady,
+  onError,
+}: {
+  url: string;
+  youtubeId: string | undefined;
+  clip: { start?: number; end?: number };
+  restartsAtReveal: boolean;
+  mediaReplayToken: number;
+  isFullscreen: boolean;
+  isVideoCovered: boolean;
+  autoplayMedia: boolean;
+  mediaTestIdPrefix: string;
+  youtubeRef: MediaPause['youtubeRef'];
+  onYoutubeLoad: MediaPause['onYoutubeLoad'];
+  videoRef: MediaPause['videoRef'];
+  onVideoReady: MediaPause['onVideoReady'];
+  onError: () => void;
+}) {
+  const videoKey = restartsAtReveal
+    ? `${mediaReplayToken}-reveal`
+    : mediaReplayToken;
+  // A video file replays by seeking in place (see useMediaPause), so its key
+  // leaves out the replay token; it still remounts at reveal for the reveal clip.
+  const videoFileKey = restartsAtReveal ? 'reveal' : 'question';
+  return (
+    <div className={isFullscreen ? FULLSCREEN_OVERLAY : 'w-full max-w-2xl'}>
+      {/* A visible video, or a hidden one with a clip to play at reveal,
+        is keyed on the reveal so it plays again even when the reveal
+        clip's src equals the question's; a hidden video with no clip is
+        not, so lifting its cover must not remount the player.
+        Same nesting (and the same iframe element) in both states —
+        changing the tree shape between fullscreen and inline would
+        remount the iframe and restart the YouTube player instead of
+        continuing playback. */}
+      <div
+        className={
+          isFullscreen
+            ? 'relative aspect-video max-h-full w-full'
+            : 'relative aspect-video w-full overflow-hidden rounded-xl'
+        }
+      >
+        {youtubeId ? (
+          <>
+            <iframe
+              ref={youtubeRef}
+              onLoad={onYoutubeLoad}
+              key={videoKey}
+              data-testid={`${mediaTestIdPrefix}-youtube`}
+              src={buildYoutubeEmbedSrc(
+                youtubeId,
+                autoplayMedia,
+                clip.start,
+                clip.end,
+              )}
+              title="Question video"
+              className="absolute inset-0 h-full w-full"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+            />
+            {/* YouTube always renders its title/channel overlay near the
+              top of the player and no longer honors any param that
+              removes it (modestbranding is deprecated) — mask it with a
+              solid bar instead, sized to the band YouTube draws it in. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-[13%] bg-black"
+            />
+          </>
+        ) : (
+          <VideoFile
+            videoRef={videoRef}
+            key={videoFileKey}
+            testId={`${mediaTestIdPrefix}-video`}
+            url={url}
+            startSeconds={clip.start}
+            endSeconds={clip.end}
+            autoPlay={autoplayMedia}
+            onLoadedMetadata={onVideoReady}
+            onError={onError}
+            className="absolute inset-0 h-full w-full bg-black object-contain"
+          />
+        )}
+        {/* Hidden video: the player keeps playing at full size under an
+          opaque panel (a hidden or zero-size player may not autoplay).
+          Same tree as the iframe, so lifting it never remounts the
+          player by itself; see restartsAtReveal. */}
+        {isVideoCovered && (
+          <div
+            data-testid={`${mediaTestIdPrefix}-video-cover`}
+            className="absolute inset-0 flex items-center justify-center bg-black text-display-4xl"
+          >
+            <span aria-label="Sound only">🎵</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const TWO_COLUMN_LAYOUT = {
+  name: 'two-column',
+  row: 'flex w-full min-h-0 flex-1 items-stretch gap-8',
+  promptColumn:
+    'flex min-w-0 flex-1 flex-col items-start justify-center gap-4 self-center text-left',
+};
+const STACKED_LAYOUT = {
+  name: 'stacked',
+  row: 'contents',
+  promptColumn: 'contents',
+};
+
+/**
+ * Which media the question shows. On reveal, answer_media_url (when set)
+ * replaces the question's own media, except a question image, which stays
+ * beside the answer media (the side-by-side reveal).
+ */
+function questionMediaOf(
+  question: QuestionDisplayProps['question'],
+  isMediaHidden: boolean,
+  isRevealing: boolean,
+) {
+  const mediaUrl = isMediaHidden ? undefined : question.mediaUrl;
+  const answerMediaUrl = isMediaHidden ? undefined : question.answerMediaUrl;
+  const isRevealingWithAnswerMedia =
+    isRevealing && answerMediaUrl !== undefined;
+  const rawQuestionMediaUrl =
+    mediaUrl && isHttpUrl(mediaUrl) ? mediaUrl : undefined;
+  const showSideBySideReveal =
+    isRevealingWithAnswerMedia &&
+    classifyMediaUrl(rawQuestionMediaUrl) === 'image';
+  return {
+    answerMediaUrl,
+    isRevealingWithAnswerMedia,
+    questionYoutubeId: rawQuestionMediaUrl
+      ? extractYoutubeVideoId(rawQuestionMediaUrl)
+      : undefined,
+    showSideBySideReveal,
+    questionMediaUrl:
+      isRevealingWithAnswerMedia && !showSideBySideReveal
+        ? undefined
+        : rawQuestionMediaUrl,
+  };
+}
+
+/** A question image shown in the stacked layout: alone, or beside the answer media at a side-by-side reveal. */
+function InlineImage({
+  image,
+  answerMedia,
+  isFullscreen,
+  isAnswerSound,
+}: {
+  image: ReactNode;
+  answerMedia: ReactNode | null;
+  isFullscreen: boolean;
+  isAnswerSound: boolean;
+}) {
+  if (answerMedia === null) {
+    return (
+      <div
+        className={
+          isFullscreen
+            ? FULLSCREEN_OVERLAY
+            : 'flex w-full min-h-0 items-center justify-center'
+        }
+      >
+        {image}
+      </div>
+    );
+  }
+  return (
+    <div className="flex w-full min-h-0 flex-1 items-stretch justify-center gap-6">
+      {/* A sound answer has no picture to enlarge, so fullscreen takes the question image. */}
+      <div
+        className={
+          isFullscreen && isAnswerSound
+            ? FULLSCREEN_OVERLAY
+            : 'flex min-h-0 min-w-0 flex-2 items-center justify-center'
+        }
+      >
+        {image}
+      </div>
+      <div className="flex min-h-0 min-w-0 flex-3 items-center justify-center">
+        {answerMedia}
+      </div>
+    </div>
   );
 }
