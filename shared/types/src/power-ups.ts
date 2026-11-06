@@ -331,7 +331,11 @@ export function askTheRoomSplit(
   const shares = counts.map((count) => Math.floor((count * 100) / total));
   const byRemainder = counts
     .map((count, i) => ({ i, rest: (count * 100) % total }))
-    .sort((a, b) => b.rest - a.rest || a.i - b.i); // Stryker disable-line ArithmeticOperator: the engine only ever compares a later index with an earlier one, which `+` and `-` both rank after it
+    .sort(
+      (a, b) =>
+        // Stryker disable next-line ArithmeticOperator: the engine only ever compares a later index with an earlier one, which `+` and `-` both rank after it
+        b.rest - a.rest || a.i - b.i,
+    );
   const leftover = 100 - shares.reduce((a, b) => a + b, 0);
   for (const { i } of byRemainder.slice(0, leftover)) shares[i] += 1;
   return Object.fromEntries(options.map((option, i) => [option, shares[i]]));
