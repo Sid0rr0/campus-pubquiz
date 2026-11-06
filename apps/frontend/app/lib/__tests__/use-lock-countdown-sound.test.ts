@@ -26,6 +26,47 @@ afterEach(() => {
 });
 
 describe('useLockCountdownSound', () => {
+  it('measures the wait from now, not from the epoch', () => {
+    vi.setSystemTime(1_000_000);
+    const { result } = renderHook(() =>
+      useLockCountdownSound({ lockAt: 1_120_000, enabled: true }),
+    );
+
+    act(() => result.current.unlock());
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(playSpy.mock.contexts).toHaveLength(2);
+  });
+
+  it('holds a long lock back by whole seconds, then starts the track at its very beginning', () => {
+    const { result } = renderHook(() =>
+      useLockCountdownSound({ lockAt: 90_500, enabled: true }),
+    );
+
+    act(() => result.current.unlock());
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    // Still waiting: only the priming element has played.
+    expect(playSpy.mock.contexts).toHaveLength(1);
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    // 90.5s left rounds up to 91s, so the wait is 31s, not 30.5s.
+    expect(playSpy.mock.contexts).toHaveLength(1);
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(playSpy.mock.contexts).toHaveLength(2);
+    const audio = playSpy.mock.contexts.at(-1) as HTMLAudioElement;
+    expect(audio.currentTime).toBe(0);
+  });
+
   it('starts from offset 0 when the full 60s lock duration remains', () => {
     const { result } = renderHook(() =>
       useLockCountdownSound({ lockAt: 60_000, enabled: true }),

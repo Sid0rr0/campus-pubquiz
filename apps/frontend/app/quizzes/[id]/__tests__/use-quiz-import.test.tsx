@@ -230,6 +230,9 @@ describe('replacing a draft that holds questions', () => {
     await act(() => result.current.handleCsvFile(event));
 
     expect(confirm).toHaveBeenCalledTimes(1);
+    expect(confirm).toHaveBeenCalledWith(
+      expect.stringContaining('including unsaved changes. Replace them?'),
+    );
     expect(target.value).toBe('');
     expect(mockPreviewImport).not.toHaveBeenCalled();
     expect(onApply).not.toHaveBeenCalled();

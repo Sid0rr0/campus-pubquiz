@@ -1,6 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  KeyboardSensor,
+  PointerSensor,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useReorderableDraft } from '@/app/play/use-reorderable-draft';
 
 const items = ['a', 'b', 'c'];
@@ -13,6 +18,20 @@ function dragEnd(active: string, over: string | null): DragEndEvent {
 }
 
 describe('useReorderableDraft', () => {
+  it('needs a 4px drag to start, so a tap still scrolls, and moves by keyboard along the list', () => {
+    const { result } = renderHook(() =>
+      useReorderableDraft([], items, undefined),
+    );
+
+    const [pointer, keyboard] = result.current.dragProps.sensors!;
+    expect(pointer.sensor).toBe(PointerSensor);
+    expect(pointer.options).toEqual({ activationConstraint: { distance: 4 } });
+    expect(keyboard.sensor).toBe(KeyboardSensor);
+    expect(keyboard.options).toEqual({
+      coordinateGetter: sortableKeyboardCoordinates,
+    });
+  });
+
   it('starts from the restored order when it fits the items', () => {
     const { result } = renderHook(() =>
       useReorderableDraft(['c', 'a', 'b'], items, undefined),

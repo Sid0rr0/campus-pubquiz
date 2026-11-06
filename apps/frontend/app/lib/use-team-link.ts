@@ -589,6 +589,7 @@ function useClearTimersOnUnmount(
 ) {
   useEffect(
     () => () => {
+      // Stryker disable next-line CallExpression: equivalent — unmounting already settles any waiting answer and its dispatch goes nowhere, so a timer left running changes nothing visible
       clearTimer(confirmTimerRef);
       clearTimer(joinRetryTimerRef);
     },
@@ -735,6 +736,7 @@ function useTeamLinkActions(
   const buyPowerUp = useCallback(
     (powerUp: PowerUpId, questionId: number) =>
       emitWithAck(SOCKET_EVENTS.BUY_POWER_UP, { powerUp, questionId }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
     [emitWithAck],
   );
 
@@ -745,6 +747,7 @@ function useTeamLinkActions(
         powerUp: 'extra_joker',
         roundId,
       }),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
     [emitWithAck],
   );
 

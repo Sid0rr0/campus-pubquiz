@@ -15,6 +15,22 @@ afterEach(() => {
 });
 
 describe('vibrate', () => {
+  it('does nothing where there is no navigator at all', () => {
+    vi.stubGlobal('navigator', undefined);
+
+    expect(() => vibrate('success')).not.toThrow();
+
+    vi.unstubAllGlobals();
+  });
+
+  it('does nothing on a navigator without vibrate, such as iOS Safari', () => {
+    vi.stubGlobal('navigator', {});
+
+    expect(() => vibrate('success')).not.toThrow();
+
+    vi.unstubAllGlobals();
+  });
+
   it('does nothing when navigator.vibrate is missing', () => {
     Reflect.deleteProperty(Navigator.prototype, 'vibrate');
 
@@ -32,6 +48,6 @@ describe('vibrate', () => {
     vibrate('success');
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy.mock.calls[0][0]).toEqual(expect.anything());
+    expect(spy).toHaveBeenCalledWith([120]);
   });
 });

@@ -456,6 +456,51 @@ describe('saving', () => {
         expect(result.current.saveError).toBe('Validation failed');
       });
 
+      it('drops them once two questions swap places, since the positions then name the other card', async () => {
+        const { result } = await renderRejectedWithTwoQuestions();
+
+        act(() =>
+          result.current.editRounds((rounds) => [
+            { ...rounds[0], questions: [...rounds[0].questions].reverse() },
+          ]),
+        );
+
+        expect(result.current.saveIssues).toEqual([]);
+      });
+
+      it('tells question ids apart where they meet, and rounds apart where they meet', async () => {
+        const { result } = await renderRejectedWithTwoQuestions();
+        // Saved as q1, q2: the same letters regrouped are another structure.
+        act(() =>
+          result.current.editRounds((rounds) => [
+            {
+              ...rounds[0],
+              questions: [makeQuestion('q1q'), makeQuestion('2')],
+            },
+          ]),
+        );
+        expect(result.current.saveIssues).toEqual([]);
+
+        // Two rounds saved; one round with the ids run together is another structure.
+        mockCreateQuiz.mockRejectedValue(
+          new QuizDraftApiError('Validation failed', 422, issues),
+        );
+        act(() =>
+          result.current.editRounds((rounds) => [
+            { ...rounds[0], id: 'A', questions: [makeQuestion('x')] },
+            { ...rounds[0], id: 'B', questions: [] },
+          ]),
+        );
+        act(() => result.current.save());
+        await waitFor(() => expect(result.current.saveIssues).toEqual(issues));
+        act(() =>
+          result.current.editRounds((rounds) => [
+            { ...rounds[0], id: 'A', questions: [makeQuestion('xB:')] },
+          ]),
+        );
+        expect(result.current.saveIssues).toEqual([]);
+      });
+
       it('drops them once a question is deleted, since the positions no longer match', async () => {
         const { result } = await renderRejectedWithTwoQuestions();
 
@@ -481,6 +526,24 @@ describe('saving', () => {
       );
       expect(mockToast.error).toHaveBeenCalledWith('Could not save the quiz.');
       expect(result.current.isLiveEditConflict).toBe(false);
+    });
+
+    it('keeps a failure that lists no issues when the structure changes afterwards', async () => {
+      mockCreateQuiz.mockRejectedValue(new Error('network down'));
+      const { result } = await renderStartedNewQuiz();
+      act(() => result.current.save());
+      await waitFor(() =>
+        expect(result.current.saveError).toBe('Could not save the quiz.'),
+      );
+
+      act(() =>
+        result.current.editRounds((rounds) => [
+          ...rounds,
+          { ...rounds[0], id: 'another' },
+        ]),
+      );
+
+      expect(result.current.saveError).toBe('Could not save the quiz.');
     });
 
     it('flags a 409 as a live-edit conflict with its own message', async () => {

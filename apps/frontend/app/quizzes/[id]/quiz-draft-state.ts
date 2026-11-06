@@ -531,6 +531,7 @@ function storedDisplayOrder(
       return question.options;
     case 'match':
       return question.matchTargets;
+    // Stryker disable next-line ConditionalExpression: equivalent — without the clause the switch falls out of the end and returns undefined all the same
     default:
       return undefined;
   }

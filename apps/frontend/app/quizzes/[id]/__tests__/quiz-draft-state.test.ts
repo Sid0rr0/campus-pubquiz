@@ -1050,6 +1050,72 @@ describe('withSyncedQuestionIds', () => {
     expect(questionToPreview(saved).options).toEqual(['c', 'a', 'b']);
   });
 
+  it('records the stored display order of a sort question on the question itself', () => {
+    const sort = {
+      ...makeQuestion('q1'),
+      type: 'sort' as const,
+      sortItems: ['a', 'b', 'c'],
+    };
+    const rounds = [{ ...makeRound('r1', 'History'), questions: [sort] }];
+    const fresh: ImportRoundPreview[] = [
+      {
+        title: 'History',
+        breakAfter: true,
+        questions: [
+          {
+            questionId: 42,
+            type: 'sort',
+            prompt: 'Order these',
+            answer: 'a|b|c',
+            options: ['c', 'a', 'b'],
+            points: 1,
+          },
+        ],
+      },
+    ];
+
+    const [saved] = withSyncedQuestionIds(rounds, fresh)[0].questions;
+
+    expect(saved.savedDisplayOrder).toEqual(['c', 'a', 'b']);
+  });
+
+  it('leaves a question alone when the fresh one at its place is another question, or missing', () => {
+    const known = {
+      ...makeQuestion('q1'),
+      type: 'sort' as const,
+      dbId: 7,
+      sortItems: ['a', 'b'],
+    };
+    const unknown = { ...makeQuestion('q2'), type: 'free_text' as const };
+    const unmatched = { ...makeQuestion('q3'), dbId: 8 };
+    const rounds = [
+      { ...makeRound('r1', 'History'), questions: [known, unknown, unmatched] },
+    ];
+    const other: ImportRoundPreview[] = [
+      {
+        title: 'History',
+        breakAfter: true,
+        questions: [
+          {
+            questionId: 999,
+            type: 'sort',
+            prompt: 'Order these',
+            answer: 'a|b',
+            options: ['b', 'a'],
+            points: 1,
+          },
+        ],
+      },
+    ];
+
+    const [first, second, third] = withSyncedQuestionIds(rounds, other)[0]
+      .questions;
+
+    expect(first).toBe(known);
+    expect(second).toBe(unknown);
+    expect(third).toBe(unmatched);
+  });
+
   it('keeps the stored right-hand order of a newly saved match question', () => {
     const match = {
       ...makeQuestion('q1'),

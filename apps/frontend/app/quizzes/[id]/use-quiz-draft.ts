@@ -130,6 +130,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
   const { savedFlash, flashSaved } = useSavedFlash();
   // The draft's structure when the last save was sent, to tell whether the
   // issues it came back with still point at the right rounds and questions.
+  // Stryker disable next-line StringLiteral: equivalent — the key is only compared once a save has failed, and every save sets it first
   const [savedStructureKey, setSavedStructureKey] = useState('');
   const [liveEdit, setLiveEdit] = useState<LiveEditFrontier | undefined>(
     undefined,

@@ -73,7 +73,7 @@ function submitEvent() {
 }
 
 /** A phone that joined and was accepted. */
-function renderLinkedTeam() {
+function renderLinkedTeam(accepted: object = ACCEPTED) {
   const hook = renderHook(() => useTeamLink(''));
   act(() => {
     hook.result.current.join.setNameInput('The Quizzards');
@@ -82,13 +82,13 @@ function renderLinkedTeam() {
   act(() => hook.result.current.join.handleJoin(submitEvent()));
   const socket = latestSocket();
   act(() => socket.serverConnects());
-  act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+  act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, accepted));
   return { ...hook, socket };
 }
 
 /** A phone that joined and has received its first view. */
-function renderPlayingTeam() {
-  const linked = renderLinkedTeam();
+function renderPlayingTeam(accepted: object = ACCEPTED) {
+  const linked = renderLinkedTeam(accepted);
   act(() =>
     linked.socket.trigger(
       SOCKET_EVENTS.STATE_SYNC,
@@ -474,5 +474,92 @@ describe('useTeamLink: the team data and the pending answer', () => {
       pacing: null,
       feltDifficulty: null,
     });
+  });
+});
+
+const WITH_SHOP = {
+  ...ACCEPTED,
+  coins: 1,
+  hasCarriedCoin: false,
+  purchases: [],
+  roomReadyQuestionIds: [],
+};
+
+describe('useTeamLink: the power-up and coin syncs', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    mockIo.mockReset();
+    mockIo.mockImplementation(() => createFakeSocket());
+    mockToast.mockReset();
+    mockToastSuccess.mockReset();
+  });
+
+  it('takes purchases and coins from a purchases sync', () => {
+    const { result, socket } = renderPlayingTeam(WITH_SHOP);
+    const purchases = [
+      {
+        powerUp: 'first_letter',
+        questionId: 20,
+        cost: 1,
+        effect: { kind: 'first_letter', hint: 'P' },
+      },
+    ];
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, {
+        purchases,
+        coins: 4,
+      }),
+    );
+
+    expect(joinedGame(result).myPurchases).toEqual(purchases);
+    expect(result.current.join.team?.coins).toBe(4);
+  });
+
+  it('tracks which questions have Ask the room ready', () => {
+    const { result, socket } = renderPlayingTeam(WITH_SHOP);
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, {
+        questionId: 20,
+        isReady: true,
+      }),
+    );
+    expect(joinedGame(result).roomReadyQuestionIds).toEqual([20]);
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, {
+        questionId: 20,
+        isReady: false,
+      }),
+    );
+    expect(joinedGame(result).roomReadyQuestionIds).toEqual([]);
+  });
+
+  it('toasts a coin award and keeps the new balance', () => {
+    const { result, socket } = renderPlayingTeam(WITH_SHOP);
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.COIN_AWARDED, { coins: 2, balance: 5 }),
+    );
+
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    expect(mockToastSuccess.mock.calls[0][0]).toContain('+2 coins');
+    expect(result.current.join.team?.coins).toBe(5);
+  });
+
+  it('updates the balance on a coins sync, with no toast', () => {
+    const { result, socket } = renderPlayingTeam(WITH_SHOP);
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_COINS_SYNCED, {
+        balance: 7,
+        hasCarriedCoin: false,
+      }),
+    );
+
+    expect(result.current.join.team?.coins).toBe(7);
+    expect(mockToast).not.toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 });

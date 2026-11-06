@@ -118,11 +118,12 @@ export function usePhoneQuestionBrowser(
  * readable post-mount, the same SSR-safe pattern as use-team-link.ts.
  */
 function useAutoAdvanceSetting() {
+  // Stryker disable next-line BooleanLiteral: equivalent — the effect below replaces the initial value before anything can read it
   const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(true);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAutoAdvanceEnabled(readAutoAdvanceSetting());
-  }, []);
+  }, []); // Stryker disable-line ArrayDeclaration: equivalent — a constant dependency is as stable as none
   return [autoAdvanceEnabled, setAutoAdvanceEnabled] as const;
 }
 
@@ -132,6 +133,7 @@ const NO_VIEW_INPUTS = {
   revealSyncKey: null,
   blockQuestions: NO_QUESTIONS,
   onScreenQuestionId: null,
+  // Stryker disable next-line BooleanLiteral: equivalent — with no view there are no block questions, so the jumpable set is empty either way
   isBlockScreen: false,
 };
 

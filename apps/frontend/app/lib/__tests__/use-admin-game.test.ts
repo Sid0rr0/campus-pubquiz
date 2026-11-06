@@ -382,3 +382,24 @@ describe('useAdminGame', () => {
     });
   });
 });
+
+describe('awardBonus coins', () => {
+  it('sends the coins when given, and no coins key when not', () => {
+    const { result, socket } = renderConnectedAdmin();
+
+    act(() => {
+      void result.current.awardBonus(31, 'shot', 1, undefined, 2);
+    });
+    expect(socket.lastEmitOf(SOCKET_EVENTS.AWARD_BONUS).payload).toHaveProperty(
+      'coins',
+      2,
+    );
+
+    act(() => {
+      void result.current.awardBonus(31, 'shot', 1);
+    });
+    expect(
+      socket.lastEmitOf(SOCKET_EVENTS.AWARD_BONUS).payload,
+    ).not.toHaveProperty('coins');
+  });
+});

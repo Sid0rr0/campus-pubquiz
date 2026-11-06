@@ -68,8 +68,7 @@ export function useLockCountdownSound({
       .catch(() => {});
     displaySounds.unlock();
     setUnlocked(true);
-    // Stryker disable next-line ArrayDeclaration: a constant dependency is as stable as none
-  }, []);
+  }, []); // Stryker disable-line ArrayDeclaration: a constant dependency is as stable as none
 
   useEffect(() => {
     if (!enabled || isMuted || !unlocked || lockAt === null) {

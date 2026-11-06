@@ -53,6 +53,23 @@ describe('usePhoneQuestionBrowser', () => {
     expect(result.current.selectedQuestion?.prompt).toBe('Name a fruit');
   });
 
+  it('ignores a changing reveal index outside the reveal', () => {
+    const during = (revealIndex: number): SessionDescription => ({
+      rounds: ROUNDS,
+      progress: { status: 'question_open', questionIndex: 1, revealIndex },
+    });
+    const { result, rerender } = renderHook(
+      ({ session }) => usePhoneQuestionBrowser(playersView(session)),
+      { initialProps: { session: during(0) } },
+    );
+    const first = result.current.jumpableQuestionIds.values().next().value!;
+    act(() => result.current.selectQuestion(first));
+
+    rerender({ session: during(1) });
+
+    expect(result.current.selectedQuestion?.prompt).toBe('Name a fruit');
+  });
+
   it('keeps a browsed question when the same reveal step is shown on the next render', () => {
     const { result, rerender } = renderHook(
       ({ session }) => usePhoneQuestionBrowser(playersView(session)),

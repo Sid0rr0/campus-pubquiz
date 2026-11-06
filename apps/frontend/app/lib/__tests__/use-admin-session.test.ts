@@ -190,5 +190,56 @@ describe.each(['/control', '/remote'] as const)(
 
       expect(mockUseAdminGame).toHaveBeenLastCalledWith(true, 'ABCDEF');
     });
+
+    it('bounces a refused code even when the snapshot is undefined rather than null', () => {
+      setUrl('code=BADCODE');
+      mockUseAdminGame.mockReturnValue(
+        adminGameResult({
+          snapshot: undefined,
+          connectionError: 'Disconnected: io server disconnect',
+          connectionIssue: 'refused',
+        }),
+      );
+      renderHook(() => useAdminSession(route));
+
+      expect(routerRef.replace).toHaveBeenCalledWith('/sessions');
+    });
+
+    it('stays put when refused after a snapshot already arrived', () => {
+      setUrl('code=ABCDEF');
+      mockUseAdminGame.mockReturnValue(
+        adminGameResult({
+          session: { progress: {}, joinCode: 'ABCDEF' },
+          connectionError: 'Disconnected: io server disconnect',
+          connectionIssue: 'refused',
+        }),
+      );
+      renderHook(() => useAdminSession(route));
+
+      expect(routerRef.replace).not.toHaveBeenCalled();
+    });
+
+    it('re-syncs the URL when the connected session changes later', () => {
+      setUrl('code=ABCDEF');
+      mockUseAdminGame.mockReturnValue(connectedTo('ABCDEF'));
+      const { rerender } = renderHook(() => useAdminSession(route));
+      expect(routerRef.replace).not.toHaveBeenCalled();
+
+      mockUseAdminGame.mockReturnValue(connectedTo('GHIJKL'));
+      rerender();
+
+      expect(routerRef.replace).toHaveBeenCalledWith(`${route}?code=GHIJKL`);
+    });
+
+    it('bounces to /sessions when the code leaves the URL later', () => {
+      setUrl('code=ABCDEF');
+      const { rerender } = renderHook(() => useAdminSession(route));
+      expect(routerRef.replace).not.toHaveBeenCalled();
+
+      setUrl('');
+      rerender();
+
+      expect(routerRef.replace).toHaveBeenCalledWith('/sessions');
+    });
   },
 );

@@ -96,6 +96,7 @@ function neighboursOf<Q extends { id: number }>(
   return {
     previousQuestion: index > 0 ? openedQuestions[index - 1] : null,
     nextQuestion:
+      // Stryker disable next-line ConditionalExpression: equivalent — the selection is always an opened question unless none is opened, and then `index < length - 1` is already false
       index !== -1 && index < openedQuestions.length - 1
         ? openedQuestions[index + 1]
         : null,
