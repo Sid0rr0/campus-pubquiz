@@ -15,11 +15,15 @@ _Avoid_: section, segment, grading group
 The questions of the current block a session has reached. While answering, those up to the furthest opened one (Previous never hides one); once the block locks, the whole block; at `ended`, the last block played, up to where progress stands. Grading, the answering gate and opened questions all cover the block in play. The **Block module** (`shared/types/src/block-in-play.ts`) answers it for any progress; the reveal views are built from its positions.
 _Avoid_: current block, active block
 
-**Kahoot round**:
-A round where every question is its own block, so each one is locked, scored and revealed before the next.
+**Quiz mode**:
+How a quiz is played, chosen when the quiz is created and never changed: a **pub quiz** (answers stay open until a block locks, then a break, then the reveal) or a **quickfire quiz**. Every round of a quiz plays in its mode; a quiz never mixes the two.
 
-**Revealed kahoot question**:
-A kahoot question whose reveal has aired. It stays closed to answers for the rest of the session, even when Previous steps back onto its locking countdown, because its answer was on the big screen.
+**Quickfire quiz**:
+A quiz where every question is its own block, so each one is locked, scored and revealed before the next, and a faster correct answer scores more.
+_Avoid_: kahoot, kahoot round, kahoot mode
+
+**Revealed quickfire question**:
+A quickfire question whose reveal has aired. It stays closed to answers for the rest of the session, even when Previous steps back onto its locking countdown, because its answer was on the big screen.
 
 **Locked**:
 A question that no longer accepts answers. A block's questions lock together when its break starts; locked is a property of questions, not a status of the game.
@@ -33,10 +37,10 @@ A question the big screen has shown in a session, remembered for the rest of tha
 _Avoid_: shown question, locked question (locked means no longer accepting answers)
 
 **Live-edit frontier**:
-Where the live sessions on a quiz have got to — their opened questions, the current round of the furthest-on one, and whether that round's block has started locking. The rounds after the current round can be added, deleted and reordered, and their break-after and kahoot setting can change (which moves where the current block ends); the current round and earlier ones keep their place, break-after and kahoot setting. Questions in rounds after the current round can be added, reordered, moved between those rounds and deleted. In the current round the questions after the last opened one can too, until its block starts locking; from then on its rounds are frozen. Rounds before it are always frozen. It is checked and applied while the live sessions are held, so the game can't move past it during a save.
+Where the live sessions on a quiz have got to — their opened questions, the current round of the furthest-on one, and whether that round's block has started locking. The rounds after the current round can be added, deleted and reordered, and their break-after can change (which moves where the current block ends); the current round and earlier ones keep their place and break-after. Questions in rounds after the current round can be added, reordered, moved between those rounds and deleted. In the current round the questions after the last opened one can too, until its block starts locking; from then on its rounds are frozen. Rounds before it are always frozen. It is checked and applied while the live sessions are held, so the game can't move past it during a save.
 
 **Question type**:
-What a question asks teams to do (free text, number, multiple choice, sort, match, closest guess), which fixes how its answers are graded and whether it can appear in a kahoot round. Media is not a question type.
+What a question asks teams to do (free text, number, multiple choice, sort, match, closest guess), which fixes how its answers are graded and whether it can appear in a quickfire quiz. Media is not a question type.
 _Avoid_: question kind, question format
 
 **Media**:
@@ -79,7 +83,7 @@ The one place a question is converted between its stored row (columns plus a par
 _Avoid_: question mapper, payload mapper
 
 **Grading policy**:
-The one rule set for what each grading mode does on each grading event: submit, hand grade, lock, kahoot speed scoring, key fix. It also decides what a client may grade now: it works out each answer's grading state, and the clients are sent the result.
+The one rule set for what each grading mode does on each grading event: submit, hand grade, lock, quickfire speed scoring, key fix. It also decides what a client may grade now: it works out each answer's grading state, and the clients are sent the result.
 _Avoid_: grading rules, grading service
 
 **Grading state**:
@@ -91,7 +95,7 @@ How one graded answer was judged: `correct`, `partial` or `incorrect`. It is sep
 _Avoid_: result, mark, outcome
 
 **Half points**:
-Exactly half a question's points, so half of a 1-point question is 0.5 and half of 3 is 1.5. Points the app works out itself (a part-right match, a kahoot speed score) are kept to the nearest half point.
+Exactly half a question's points, so half of a 1-point question is 0.5 and half of 3 is 1.5. Points the app works out itself (a part-right match, a quickfire speed score) are kept to the nearest half point.
 _Avoid_: partial points (a partial answer can earn any share, not just half)
 
 **Margin**:
@@ -233,14 +237,17 @@ Where a team finished in one ended session, with tied teams sharing a place (joi
 _Avoid_: position, rank (on its own)
 
 **Average placing**:
-The mean of a team's placings across the ended sessions it played, leaving out the sessions it left. A team with no placing has no average placing. The team page averages every night the team has a placing for; the league averages only the nights that count towards the league (the team answered at least one question).
+The mean of a team's placings across the ended sessions it played, leaving out the sessions it left. A team with no placing has no average placing. The team page averages every pub quiz night the team has a placing for (quickfire nights are listed but not averaged); the league averages only the nights that count towards the league (the team answered at least one question).
 _Avoid_: average position, average rank
 
 **Took part**:
 A team took part in a session if it has an answer or bonus award stored for it. While the session is still running, a team on the roster counts too (the lobby and live leaderboard list quiet teams); once it has ended, a roster team with no answer and no bonus did not take part, so it is left out of the final board, the stats and sessions played. A team that was kicked or departed counts the same way. Used by every screen about a session.
 
 **Sessions played**:
-The ended sessions a team took part in. Shown the same in the team directory and on the team page.
+The ended sessions a team took part in. Shown the same in the team directory and on the team page. Quickfire nights count.
+
+**Quickfire-only team**:
+A team that took part in at least one ended session, all of them quickfire quizzes. A team with no ended session yet, or with any pub quiz night, is not one. The team directory hides quickfire-only teams unless asked to show them.
 
 **Merge**:
 Making two teams that are the same real team into one, after the team joined a later night under another name. The **kept team** carries on with both teams' sessions and either team's name; the **duplicate team** stops existing. Two teams that took part in the same session can't be merged, and a merge can't be undone.
@@ -250,7 +257,7 @@ _Avoid_: combine, link, alias
 What one ended session's results mean, computed by a pure module beside Standings from the session's Standings and its stored questions and answers. Per team: placing, whether it left, totals, whether it answered, its correct count, whether it won the night and whether it is the session winner. Per question: how many teams answered, how many were correct and its correct rate. For the session: the participant count and the max points. It never ranks or re-sums; placing, ties and participation stay with Standings.
 
 **Night won**:
-Placing 1st in an ended session. Every team tied for first wins the night, and a team that left never does. The league's nights won and the team page's Wins both count it.
+Placing 1st in an ended session. Every team tied for first wins the night, and a team that left never does. The league's nights won and the team page's Wins both count it, and only in pub quiz sessions.
 _Avoid_: win (on its own; see **Session winner**)
 
 **Session winner**:
@@ -287,7 +294,7 @@ What a team tells the quiz master about a session from its phone: round ratings,
 _Avoid_: survey, review
 
 **Round rating**:
-A team's score for one round, from 1 to 5 stars in half-star steps (1, 1½ … 5). Asked in the break for the rounds of the block that just locked, and again on the final feedback form, where an earlier rating can be changed. A kahoot round has no break of its own, so it is rated only on the final form.
+A team's score for one round, from 1 to 5 stars in half-star steps (1, 1½ … 5). Asked in the break for the rounds of the block that just locked, and again on the final feedback form, where an earlier rating can be changed. A quickfire quiz has no breaks, so its rounds are rated only on the final form.
 _Avoid_: round score (that's points)
 
 **Pacing**:
@@ -308,7 +315,7 @@ One topic a team would like as a round in a future session, entered as its own s
 ## League
 
 **League**:
-A named competition, such as a semester's, over which teams are ranked across sessions. A session counts towards a league only once it has been added to that league and has ended.
+A named competition, such as a semester's, over which teams are ranked across sessions. A session counts towards a league only once it has been added to that league and has ended. Only pub quiz sessions can be added; a quickfire quiz never counts towards a league.
 _Avoid_: season, championship, all teams ever (that's the team directory)
 
 **League points**:
@@ -365,7 +372,7 @@ _Avoid_: private session, hidden session
 Bringing a session's timers, deadlines and reveal step into line with the point in the quiz it is moving to. Every way a session reaches a new point (starting, restoring after a restart, Advance, Previous) goes through it.
 
 **Phase timers**:
-The three timers every live session can have: the question lock (the last question of a block has been open for the lock grace period), the kahoot question timer (a kahoot question's time ran out) and the joker pick deadline (the **Joker pick**'s fixed minute ran out). Armed from the session's deadlines, re-armed whenever a write moves one, cleared when it goes away, restored for every session after a restart. An expiry presses Advance exactly as the admin would.
+The three timers every live session can have: the question lock (the last question of a block has been open for the lock grace period), the quickfire question timer (a quickfire question's time ran out) and the joker pick deadline (the **Joker pick**'s fixed minute ran out). Armed from the session's deadlines, re-armed whenever a write moves one, cleared when it goes away, restored for every session after a restart. An expiry presses Advance exactly as the admin would.
 
 **Session broadcaster**:
 Everything the backend pushes to connected clients, through one delivery step for every outcome: the replies to the sender, the room broadcasts, the admin answer lists, the team syncs (a team's graded answers, its player count, its joker and its bonus awards, the last when an award is edited or deleted) and any socket closes, in a fixed order, after re-arming the phase timers from the outcome's deadline change. A socket event, a phase-timer expiry, a Live edit save and a REST change all end here, so none of them knows about Socket.IO. It also sends the out-of-band notices (a session was closed, a deactivated user's sockets are dropped) and owns the phase timers. The gateway only receives events and hands each outcome over.
@@ -375,14 +382,14 @@ Carrying out one planned press from start to finish: plan it, grade what it impl
 \_Avoid\*: apply action
 
 **Session write**:
-Every change to a live session: one at a time per session, ending with fresh **Live results**. Writes to different sessions run in parallel. A write whose change fails stores nothing and doesn't block the next one. If a final read fails, the change's work is already done (a press has saved its progress), so the write counts as done: the failure is logged, the session is stored with that figure's earlier value and clients are told as usual; the next write reads again. An event is checked against the session as the previous write left it, and stores nothing when refused: its allowed-check, its database writes and its session change all happen inside the write. Each change says whether it touched scores (wrote answers, grades, bonus awards or the roster), the type checker requires it, and the standings are read only when it did. The write also reports any change to the phase timer deadlines (the question lock, the kahoot question deadline and the joker pick deadline) in its outcome, which the delivery step re-arms before any emit. In the same way, from a before/after comparison of the stored session, it flags in the outcome when league tables may have changed (the status entered or left `ended`, or the session was `ended` before and after and the change touched scores); the delivery step then re-reads the league top of every other live session and redraws the lobbies where it changed. No event sets either by hand. Every event reaches a live session this way; session creation and restart restore place a session through the same last step, so a restored session has its leaderboard in the first snapshot. The Session write module owns the in-memory sessions, so a session is never stored any other way.
+Every change to a live session: one at a time per session, ending with fresh **Live results**. Writes to different sessions run in parallel. A write whose change fails stores nothing and doesn't block the next one. If a final read fails, the change's work is already done (a press has saved its progress), so the write counts as done: the failure is logged, the session is stored with that figure's earlier value and clients are told as usual; the next write reads again. An event is checked against the session as the previous write left it, and stores nothing when refused: its allowed-check, its database writes and its session change all happen inside the write. Each change says whether it touched scores (wrote answers, grades, bonus awards or the roster), the type checker requires it, and the standings are read only when it did. The write also reports any change to the phase timer deadlines (the question lock, the quickfire question deadline and the joker pick deadline) in its outcome, which the delivery step re-arms before any emit. In the same way, from a before/after comparison of the stored session, it flags in the outcome when league tables may have changed (the status entered or left `ended`, or the session was `ended` before and after and the change touched scores); the delivery step then re-reads the league top of every other live session and redraws the lobbies where it changed. No event sets either by hand. Every event reaches a live session this way; session creation and restart restore place a session through the same last step, so a restored session has its leaderboard in the first snapshot. The Session write module owns the in-memory sessions, so a session is never stored any other way.
 
 **Live results**:
 The leaderboard and fun fact data a live session holds. Both are derived from the session's stored answers and bonus awards, and are re-read together after every write that touches scores and when the session is placed (creation, restart). A failed read is logged and that figure keeps its earlier value, which for a fresh or just-restored session is the empty default. The league top is not one of them: a league table counts only ended sessions, so this session's scoring can't change it, and reading it costs a full league table. It is read at placement, on league changes, and when another session's league table may have changed (it ended, was un-ended, or its scores changed after it ended).
 _Avoid_: standings cache
 
 **Prior standings**:
-The standings as they stood before the latest scoring the leaderboard should show: the only basis for trends in every round, and what the big screen counts up from between kahoot questions. They are taken once per block (once per question in a kahoot round) and kept for the rest of the block, by a rule in shared types that the Session write applies to every write: the write that first puts the block in play's first question in front of the teams (on air, leaderboard hidden, from anything that wasn't, and not by stepping back out of a graded status) makes the leaderboard it started from the prior standings, tagged with that block (its first question id); every other write carries them over. In a kahoot round every question is its own block, so that is once per question. A later round of the same block, Previous then Advance back into the block's first question, and toggling the leaderboard or join overlay take nothing. Answers scored on air (auto-graded at submit), a bonus or grading during the block are therefore movement on the board that follows, not part of the prior. The display view's leaderboard description is built from them (its count-up board and trends), so a reloaded or reconnected big screen draws the same board. A team missing from them (it joined during the block) has no trend. Ephemeral like the reveal counters: a restored session after a backend restart has none (empty) until the next block's first question opens, so boards before then have no trends and no count-up board.
+The standings as they stood before the latest scoring the leaderboard should show: the only basis for trends in every round, and what the big screen counts up from between quickfire questions. They are taken once per block (once per question in a quickfire quiz) and kept for the rest of the block, by a rule in shared types that the Session write applies to every write: the write that first puts the block in play's first question in front of the teams (on air, leaderboard hidden, from anything that wasn't, and not by stepping back out of a graded status) makes the leaderboard it started from the prior standings, tagged with that block (its first question id); every other write carries them over. In a quickfire quiz every question is its own block, so that is once per question. A later round of the same block, Previous then Advance back into the block's first question, and toggling the leaderboard or join overlay take nothing. Answers scored on air (auto-graded at submit), a bonus or grading during the block are therefore movement on the board that follows, not part of the prior. The display view's leaderboard description is built from them (its count-up board and trends), so a reloaded or reconnected big screen draws the same board. A team missing from them (it joined during the block) has no trend. Ephemeral like the reveal counters: a restored session after a backend restart has none (empty) until the next block's first question opens, so boards before then have no trends and no count-up board.
 
 **Grading refresh**:
 The one step every change to grades ends through: given the questions whose grades just changed, it works out which of them are ungraded, and the session takes that in a single update. Standings are left to the Session write.
