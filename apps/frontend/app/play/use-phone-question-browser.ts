@@ -120,10 +120,14 @@ export function usePhoneQuestionBrowser(
 function useAutoAdvanceSetting() {
   // Stryker disable next-line BooleanLiteral: equivalent — the effect below replaces the initial value before anything can read it
   const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(true);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAutoAdvanceEnabled(readAutoAdvanceSetting());
-  }, []); // Stryker disable-line ArrayDeclaration: equivalent — a constant dependency is as stable as none
+  useEffect(
+    () => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAutoAdvanceEnabled(readAutoAdvanceSetting());
+    },
+    // Stryker disable next-line ArrayDeclaration: equivalent — a constant dependency is as stable as none
+    [],
+  );
   return [autoAdvanceEnabled, setAutoAdvanceEnabled] as const;
 }
 

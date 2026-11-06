@@ -52,23 +52,27 @@ export function useLockCountdownSound({
     return audioRef.current;
   }
 
-  const unlock = useCallback(() => {
-    // A throwaway element, not the shared one from getAudio() — this play()
-    // call runs inside the real click handler (synchronous user gesture) so
-    // the browser grants this tab permission to autoplay unmuted going
-    // forward, but its priming .then(pause) must never touch the same
-    // element the real countdown plays through: if unlock() is clicked
-    // while the locking phase is already active (very plausible — someone
-    // testing this right after starting a session), that pause could land
-    // after the real playback has already started and silently cut it off.
-    const primer = new Audio(LOCK_COUNTDOWN_SOUND_SRC);
-    primer
-      .play()
-      .then(() => primer.pause())
-      .catch(() => {});
-    displaySounds.unlock();
-    setUnlocked(true);
-  }, []); // Stryker disable-line ArrayDeclaration: a constant dependency is as stable as none
+  const unlock = useCallback(
+    () => {
+      // A throwaway element, not the shared one from getAudio() — this play()
+      // call runs inside the real click handler (synchronous user gesture) so
+      // the browser grants this tab permission to autoplay unmuted going
+      // forward, but its priming .then(pause) must never touch the same
+      // element the real countdown plays through: if unlock() is clicked
+      // while the locking phase is already active (very plausible — someone
+      // testing this right after starting a session), that pause could land
+      // after the real playback has already started and silently cut it off.
+      const primer = new Audio(LOCK_COUNTDOWN_SOUND_SRC);
+      primer
+        .play()
+        .then(() => primer.pause())
+        .catch(() => {});
+      displaySounds.unlock();
+      setUnlocked(true);
+    },
+    // Stryker disable next-line ArrayDeclaration: a constant dependency is as stable as none
+    [],
+  );
 
   useEffect(() => {
     if (!enabled || isMuted || !unlocked || lockAt === null) {
