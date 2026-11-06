@@ -299,7 +299,7 @@ describe('SessionSettings defaults', () => {
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       maxPlayersPerTeam: 6,
       extraPlayerPenaltyPoints: 2,
-      kahootQuestionTimerSeconds: null,
+      quickfireQuestionTimerSeconds: null,
       collectFeedback: true,
       funFactsEnabled: true,
       listed: true,

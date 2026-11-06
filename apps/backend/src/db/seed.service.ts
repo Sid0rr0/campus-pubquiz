@@ -151,7 +151,7 @@ export class SeedService {
         id: roundRow.id,
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
-        kahootMode: roundRow.kahootMode,
+        quickfire: roundRow.quickfire,
         category: roundRow.category ?? undefined,
         author: roundRow.author ?? undefined,
         note: roundRow.note ?? undefined,
@@ -212,7 +212,7 @@ export class SeedService {
         id: roundRow.id,
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
-        kahootMode: roundRow.kahootMode,
+        quickfire: roundRow.quickfire,
         showNoteOnScreen: roundRow.showNoteOnScreen,
         questions,
         // The hardcoded fixture carries no notes — matches what a subsequent

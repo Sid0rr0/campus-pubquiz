@@ -16,7 +16,7 @@ import { SOCKET_ROOMS } from '../socket-events';
 import { revealStepOf, stepRevealOnAir } from '../stepped-reveal';
 import { lobby } from './game-state-fixtures';
 
-/** A block spanning two rounds, a plain block, a kahoot round, and a last block; with the round overview on. */
+/** A block spanning two rounds, a plain block, a quickfire round, and a last block; with the round overview on. */
 const seededQuiz: GameContext = {
   showRoundOverview: true,
   jokersEnabled: true,
@@ -24,7 +24,7 @@ const seededQuiz: GameContext = {
     { questionCount: 2, breakAfter: false },
     { questionCount: 1, breakAfter: true },
     { questionCount: 2, breakAfter: true },
-    { questionCount: 2, breakAfter: false, kahootMode: true },
+    { questionCount: 2, breakAfter: false, quickfire: true },
     { questionCount: 1, breakAfter: true },
   ],
 };
@@ -56,7 +56,7 @@ function sessionAt(progress: GameProgress): SessionState {
           id: roundIndex + 1,
           title: `Round ${roundIndex + 1}`,
           breakAfter: round.breakAfter,
-          kahootMode: round.kahootMode ?? false,
+          quickfire: round.quickfire ?? false,
           questions: Array.from({ length: round.questionCount }, () => {
             const id = nextId++;
             return {

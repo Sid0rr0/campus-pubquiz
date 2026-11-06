@@ -9,15 +9,15 @@ import type { SessionState } from '../session-state';
 import { leaderboardEntry, round, sessionWith } from './session-fixtures';
 
 // Block 1 spans rounds 1 and 2 (round 1 has no break), block 2 is round 3, and
-// round 4 is a kahoot round where every question is its own block.
+// round 4 is a quickfire round where every question is its own block.
 const ROUNDS = [
   round(1, [1, 2], { breakAfter: false }),
   round(2, [3]),
   round(3, [4]),
-  round(4, [5, 6], { kahootMode: true }),
+  round(4, [5, 6], { quickfire: true }),
 ];
 
-const KAHOOT_QUESTION: Partial<GameProgress> = {
+const QUICKFIRE_QUESTION: Partial<GameProgress> = {
   status: 'question_open',
   roundIndex: 3,
   questionIndex: 1,
@@ -40,7 +40,7 @@ function withBoard(
 
 describe('describeLeaderboardBoard', () => {
   describe('entries', () => {
-    it('lists every team, best first, outside a kahoot round', () => {
+    it('lists every team, best first, outside a quickfire round', () => {
       const session = withBoard(
         {
           status: 'break',
@@ -65,9 +65,9 @@ describe('describeLeaderboardBoard', () => {
       ).toEqual(['B', 'C', 'A', 'D', 'E', 'F']);
     });
 
-    it('keeps the top five in a kahoot round', () => {
+    it('keeps the top five in a quickfire round', () => {
       const session = withBoard(
-        { ...KAHOOT_QUESTION, isLeaderboardVisible: true, status: 'reveal' },
+        { ...QUICKFIRE_QUESTION, isLeaderboardVisible: true, status: 'reveal' },
         board(
           [1, 'A', 60],
           [2, 'B', 50],
@@ -151,7 +151,7 @@ describe('describeLeaderboardBoard', () => {
   });
 
   describe('the count-up board', () => {
-    // A..G; the top five once the kahoot cap applies are A, B, C, G, D.
+    // A..G; the top five once the quickfire cap applies are A, B, C, G, D.
     const current = board(
       [1, 'A', 50],
       [2, 'B', 40],
@@ -177,7 +177,7 @@ describe('describeLeaderboardBoard', () => {
 
     it('starts the shown teams from their prior totals, newcomers on zero', () => {
       const { countUpBoard } = boardAt({
-        ...KAHOOT_QUESTION,
+        ...QUICKFIRE_QUESTION,
         isLeaderboardVisible: true,
       });
 
@@ -206,7 +206,7 @@ describe('describeLeaderboardBoard', () => {
         roundPoints: [{ roundTitle: 'Round 1', points: 50 }],
       })) as LeaderboardEntry[];
       const session = withBoard(
-        { ...KAHOOT_QUESTION, isLeaderboardVisible: true },
+        { ...QUICKFIRE_QUESTION, isLeaderboardVisible: true },
         [...withBonus, ...board([2, 'B', 40])],
         {
           priorStandings: {
@@ -229,7 +229,7 @@ describe('describeLeaderboardBoard', () => {
       });
     });
 
-    it('is absent outside a kahoot round', () => {
+    it('is absent outside a quickfire round', () => {
       const result = describeLeaderboardBoard(
         withBoard(
           {
@@ -249,14 +249,14 @@ describe('describeLeaderboardBoard', () => {
 
     it('is absent while the question is not hidden behind the leaderboard', () => {
       expect(
-        boardAt({ ...KAHOOT_QUESTION, isLeaderboardVisible: false }),
+        boardAt({ ...QUICKFIRE_QUESTION, isLeaderboardVisible: false }),
       ).not.toHaveProperty('countUpBoard');
     });
 
     it('is absent once the question is locking', () => {
       expect(
         boardAt({
-          ...KAHOOT_QUESTION,
+          ...QUICKFIRE_QUESTION,
           status: 'locking',
           isLeaderboardVisible: true,
         }),
@@ -265,11 +265,11 @@ describe('describeLeaderboardBoard', () => {
 
     it('is absent without prior standings', () => {
       expect(
-        boardAt({ ...KAHOOT_QUESTION, isLeaderboardVisible: true }, null),
+        boardAt({ ...QUICKFIRE_QUESTION, isLeaderboardVisible: true }, null),
       ).not.toHaveProperty('countUpBoard');
       expect(
         boardAt(
-          { ...KAHOOT_QUESTION, isLeaderboardVisible: true },
+          { ...QUICKFIRE_QUESTION, isLeaderboardVisible: true },
           { board: [], blockFirstQuestionId: 5 },
         ),
       ).not.toHaveProperty('countUpBoard');
@@ -366,7 +366,7 @@ describe('describeLeaderboardBoard', () => {
       expect(result).not.toHaveProperty('jokerTeamIds');
     });
 
-    it('skips a joker team the kahoot cap leaves off the board', () => {
+    it('skips a joker team the quickfire cap leaves off the board', () => {
       const six = board(
         [1, 'A', 60],
         [2, 'B', 50],
@@ -377,7 +377,11 @@ describe('describeLeaderboardBoard', () => {
       );
       const result = describeLeaderboardBoard(
         withBoard(
-          { ...KAHOOT_QUESTION, status: 'reveal', isLeaderboardVisible: true },
+          {
+            ...QUICKFIRE_QUESTION,
+            status: 'reveal',
+            isLeaderboardVisible: true,
+          },
           six,
           {
             priorStandings: { board: six, blockFirstQuestionId: 5 },
@@ -439,7 +443,7 @@ describe('withPriorStandings', () => {
     });
   });
 
-  it('treats every question of a kahoot round as its own block', () => {
+  it('treats every question of a quickfire round as its own block', () => {
     const started = withBoard(
       {
         status: 'question_open',

@@ -534,8 +534,8 @@
           "enumItems": [],
           "mappedType": "json"
         },
-        "revealed_kahoot_question_ids": {
-          "name": "revealed_kahoot_question_ids",
+        "revealed_quickfire_question_ids": {
+          "name": "revealed_quickfire_question_ids",
           "type": "jsonb",
           "unsigned": false,
           "autoincrement": false,
@@ -862,8 +862,8 @@
           "enumItems": [],
           "mappedType": "boolean"
         },
-        "kahoot_mode": {
-          "name": "kahoot_mode",
+        "quickfire": {
+          "name": "quickfire",
           "type": "boolean",
           "unsigned": false,
           "autoincrement": false,

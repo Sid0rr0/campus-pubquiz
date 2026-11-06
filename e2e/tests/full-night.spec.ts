@@ -49,8 +49,8 @@ async function answerText(
   if (answers.b) await phoneB.submitText(answers.b);
 }
 
-/** A kahoot phone submits the moment a choice is tapped. */
-async function tapKahootChoice(
+/** A quickfire phone submits the moment a choice is tapped. */
+async function tapQuickfireChoice(
   phone: PhoneScreen,
   option: string,
 ): Promise<void> {
@@ -323,7 +323,7 @@ async function revealBlockTwo(night: Night): Promise<void> {
   await phoneB.expectRevealedPoints(0, film.wall.points);
 }
 
-async function playKahootRound(night: Night): Promise<void> {
+async function playQuickfireRound(night: Night): Promise<void> {
   const { control, display, phoneA, phoneB } = night;
   await control.advance('round_intro');
   await revealStandings(night, {
@@ -334,12 +334,12 @@ async function playKahootRound(night: Night): Promise<void> {
   await display.expectText(quickFire.title);
   await display.expectText(quickFire.category);
 
-  // Every kahoot question is its own block: it locks and goes straight to its reveal.
+  // Every quickfire question is its own block: it locks and goes straight to its reveal.
   await control.advance('question_open');
   await display.expectQuestion(quickFire.badminton.prompt);
   await phoneA.expectQuestion(quickFire.badminton.prompt);
-  await tapKahootChoice(phoneA, quickFire.badminton.right);
-  await tapKahootChoice(phoneB, quickFire.badminton.wrong);
+  await tapQuickfireChoice(phoneA, quickFire.badminton.right);
+  await tapQuickfireChoice(phoneB, quickFire.badminton.wrong);
   await control.advance('locking');
   await display.expectLockCountdown();
   await control.expectStatus('reveal');
@@ -460,6 +460,6 @@ test('a whole quiz night is played across the big screen, the laptop and two pho
   await crossBackIntoBlockOne(night);
   await revealBlockTwo(night);
 
-  await playKahootRound(night);
+  await playQuickfireRound(night);
   await endTheNight(night);
 });

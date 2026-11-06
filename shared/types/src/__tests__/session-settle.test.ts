@@ -7,10 +7,10 @@ import { progressAt, roundOf, sessionOver } from './session-progress-fixtures';
 
 const NOW = 1_700_000_000_000;
 
-// Round 0 is a normal round (ids 1, 2); round 1 is kahoot (ids 3, 4).
+// Round 0 is a normal round (ids 1, 2); round 1 is quickfire (ids 3, 4).
 const rounds = [
   roundOf(0, [1, 2], { breakAfter: true }),
-  roundOf(1, [3, 4], { kahootMode: true }),
+  roundOf(1, [3, 4], { quickfire: true }),
 ];
 
 function move(
@@ -80,42 +80,42 @@ describe('settling the auto-lock deadline', () => {
   });
 });
 
-describe('settling the kahoot question deadline', () => {
-  const kahootOpen = (questionIndex: number) =>
+describe('settling the quickfire question deadline', () => {
+  const quickfireOpen = (questionIndex: number) =>
     progressAt('question_open', { roundIndex: 1, questionIndex });
-  const timed = { kahootQuestionTimerSeconds: 30 };
+  const timed = { quickfireQuestionTimerSeconds: 30 };
 
   it('arms it from the moment the live question opened', () => {
     const settled = move(
       sessionOver(rounds, progressAt('round_intro', { roundIndex: 1 }), timed),
-      kahootOpen(0),
+      quickfireOpen(0),
     );
 
-    expect(settled.kahootQuestionEndsAt).toBe(NOW + 30_000);
+    expect(settled.quickfireQuestionEndsAt).toBe(NOW + 30_000);
   });
 
   it('stays unarmed with no timer configured', () => {
     const settled = move(
       sessionOver(rounds, progressAt('round_intro', { roundIndex: 1 })),
-      kahootOpen(0),
+      quickfireOpen(0),
     );
 
-    expect(settled.kahootQuestionEndsAt).toBeNull();
+    expect(settled.quickfireQuestionEndsAt).toBeNull();
   });
 
-  it('stays unarmed in a round that is not kahoot', () => {
+  it('stays unarmed in a round that is not quickfire', () => {
     const settled = move(
       sessionOver(rounds, progressAt('lobby'), timed),
       progressAt('question_open'),
     );
 
-    expect(settled.kahootQuestionEndsAt).toBeNull();
+    expect(settled.quickfireQuestionEndsAt).toBeNull();
   });
 
   it('stays unarmed once the question is locking', () => {
     const open = move(
       sessionOver(rounds, progressAt('round_intro', { roundIndex: 1 }), timed),
-      kahootOpen(0),
+      quickfireOpen(0),
     );
 
     const locking = move(
@@ -125,29 +125,29 @@ describe('settling the kahoot question deadline', () => {
       NOW + 1_000,
     );
 
-    expect(locking.kahootQuestionEndsAt).toBeNull();
+    expect(locking.quickfireQuestionEndsAt).toBeNull();
   });
 
   it('stays unarmed on a question behind the leaderboard, which is not live yet', () => {
     const settled = move(
       sessionOver(rounds, progressAt('reveal', { roundIndex: 1 }), timed),
-      { ...kahootOpen(0), isLeaderboardVisible: true },
+      { ...quickfireOpen(0), isLeaderboardVisible: true },
     );
 
-    expect(settled.kahootQuestionEndsAt).toBeNull();
+    expect(settled.quickfireQuestionEndsAt).toBeNull();
   });
 
   it('stays unarmed on an earlier question revisited with Previous', () => {
     const first = move(
       sessionOver(rounds, progressAt('round_intro', { roundIndex: 1 }), timed),
-      kahootOpen(0),
+      quickfireOpen(0),
     );
-    const second = move(first, kahootOpen(1), 'ADVANCE', NOW + 10_000);
-    expect(second.kahootQuestionEndsAt).toBe(NOW + 10_000 + 30_000);
+    const second = move(first, quickfireOpen(1), 'ADVANCE', NOW + 10_000);
+    expect(second.quickfireQuestionEndsAt).toBe(NOW + 10_000 + 30_000);
 
-    const back = move(second, kahootOpen(0), 'PREVIOUS', NOW + 12_000);
+    const back = move(second, quickfireOpen(0), 'PREVIOUS', NOW + 12_000);
 
-    expect(back.kahootQuestionEndsAt).toBeNull();
+    expect(back.quickfireQuestionEndsAt).toBeNull();
   });
 });
 
@@ -280,13 +280,13 @@ describe('settling the opened questions', () => {
     const session = {
       ...sessionOver(rounds, progressAt('lobby')),
       openedQuestionIds: [99],
-      revealedKahootQuestionIds: [98],
+      revealedQuickfireQuestionIds: [98],
     };
 
     const settled = move(session, progressAt('rules'));
 
     expect(settled.openedQuestionIds).toEqual([99]);
-    expect(settled.revealedKahootQuestionIds).toEqual([98]);
+    expect(settled.revealedQuickfireQuestionIds).toEqual([98]);
   });
 
   it('opens nothing before the first block starts', () => {
@@ -297,29 +297,29 @@ describe('settling the opened questions', () => {
   });
 });
 
-describe('settling the revealed kahoot questions', () => {
+describe('settling the revealed quickfire questions', () => {
   const lobbySession = sessionOver(rounds, progressAt('lobby'));
 
-  it('records nothing for a round that is not kahoot', () => {
+  it('records nothing for a round that is not quickfire', () => {
     const settled = move(
       lobbySession,
       progressAt('reveal', { roundIndex: 0, questionIndex: 1 }),
     );
 
-    expect(settled.revealedKahootQuestionIds).toEqual([]);
+    expect(settled.revealedQuickfireQuestionIds).toEqual([]);
   });
 
-  it('records the kahoot question that has just been revealed', () => {
+  it('records the quickfire question that has just been revealed', () => {
     const settled = move(
       lobbySession,
       progressAt('reveal', { roundIndex: 1, questionIndex: 0 }),
     );
 
-    expect(settled.revealedKahootQuestionIds).toEqual([3]);
+    expect(settled.revealedQuickfireQuestionIds).toEqual([3]);
   });
 
   it('never drops one on stepping back, and adds the next once, as it is revealed', () => {
-    const session = { ...lobbySession, revealedKahootQuestionIds: [3] };
+    const session = { ...lobbySession, revealedQuickfireQuestionIds: [3] };
 
     const steppedBack = move(
       session,
@@ -335,16 +335,16 @@ describe('settling the revealed kahoot questions', () => {
       progressAt('reveal', { roundIndex: 1, questionIndex: 1 }),
     );
 
-    expect(steppedBack.revealedKahootQuestionIds).toEqual([3]);
-    expect(nextRevealed.revealedKahootQuestionIds).toEqual([3, 4]);
-    expect(revealedAgain.revealedKahootQuestionIds).toEqual([3, 4]);
+    expect(steppedBack.revealedQuickfireQuestionIds).toEqual([3]);
+    expect(nextRevealed.revealedQuickfireQuestionIds).toEqual([3, 4]);
+    expect(revealedAgain.revealedQuickfireQuestionIds).toEqual([3, 4]);
   });
 
-  it('records nothing for a kahoot question that is only open or locking', () => {
+  it('records nothing for a quickfire question that is only open or locking', () => {
     for (const status of ['question_open', 'locking'] as const) {
       expect(
         move(lobbySession, progressAt(status, { roundIndex: 1 }))
-          .revealedKahootQuestionIds,
+          .revealedQuickfireQuestionIds,
       ).toEqual([]);
     }
   });
@@ -356,7 +356,7 @@ describe('settling the revealed kahoot questions', () => {
         progress,
         step: { kind: 'place' },
         now: NOW,
-      }).revealedKahootQuestionIds;
+      }).revealedQuickfireQuestionIds;
 
     expect(
       placed(progressAt('question_open', { roundIndex: 1, questionIndex: 1 })),
@@ -369,10 +369,10 @@ describe('settling the revealed kahoot questions', () => {
     ).toEqual([3, 4]);
   });
 
-  it('records nothing for the reveal of a round that is not kahoot', () => {
+  it('records nothing for the reveal of a round that is not quickfire', () => {
     expect(
       move(lobbySession, progressAt('reveal', { roundIndex: 0 }))
-        .revealedKahootQuestionIds,
+        .revealedQuickfireQuestionIds,
     ).toEqual([]);
   });
 });

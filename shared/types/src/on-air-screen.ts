@@ -460,7 +460,7 @@ export interface PlayersScreenFields {
 
 /** The core snapshot plus the one server-only fact the phone screen needs. */
 export interface PlayersScreenInput extends OnAirInput {
-  /** Whether the current block can be answered right now (false for a kahoot question hidden behind the board). */
+  /** Whether the current block can be answered right now (false for a quickfire question hidden behind the board). */
   isAnswerable: boolean;
   /** Whether the active showdown round has been decided (false when there is none). */
   isShowdownResolved: boolean;
@@ -618,7 +618,7 @@ export function describeFeedback(input: {
   isShowdownBeingPlayed: boolean;
   /** The rounds of the block the session is on, in quiz order; only read in a break status. */
   blockRounds: () => readonly RatableRound[];
-  /** Every round of the quiz in order, kahoot rounds included; only read at `ended`. */
+  /** Every round of the quiz in order, quickfire rounds included; only read at `ended`. */
   allRounds: () => readonly RatableRound[];
 }): FeedbackField {
   const { status } = input.progress;

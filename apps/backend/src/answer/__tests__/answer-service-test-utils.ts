@@ -31,18 +31,18 @@ export function gradable(row: Question): GradableQuestion {
   };
 }
 
-/** Key-fix regrade of an auto-graded question: `question` is the corrected key, rescored with an optional kahoot timer. */
+/** Key-fix regrade of an auto-graded question: `question` is the corrected key, rescored with an optional quickfire timer. */
 export async function regradeAuto(
   service: AnswerService,
   gameSessionId: number,
   question: GradableQuestion,
-  kahootTimerSeconds: number | null = null,
+  quickfireTimerSeconds: number | null = null,
 ): Promise<void> {
   await service.regradeForKeyFix(
     gameSessionId,
     question,
     question,
-    kahootTimerSeconds,
+    quickfireTimerSeconds,
     false,
   );
 }

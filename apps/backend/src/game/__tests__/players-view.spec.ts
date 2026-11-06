@@ -104,10 +104,10 @@ describe('Screen projection — the players view', () => {
     });
   });
 
-  describe('a kahoot round', () => {
+  describe('a quickfire round', () => {
     beforeEach(async () => {
       game = await harness.createGateway({
-        kahootMode: true,
+        quickfire: true,
         teamNames: ['The Quizzards'],
       });
       await game.act('START_QUIZ');
@@ -140,7 +140,7 @@ describe('Screen projection — the players view', () => {
       expect(await gateAccepts(freeText)).toBe(true);
     });
 
-    it('follows the big screen to the revealed kahoot question', async () => {
+    it('follows the big screen to the revealed quickfire question', async () => {
       await game.act('ADVANCE'); // locking
       await game.act('ADVANCE'); // reveal
 

@@ -64,7 +64,7 @@ export * from './fun-facts';
 export * from './question-view-conversions';
 export * from './block-in-play';
 export * from './block-questions';
-export * from './kahoot-visibility';
+export * from './quickfire-visibility';
 export * from './admin-view-flags';
 export * from './feedback-rounds';
 export * from './closest-guess-reveal';

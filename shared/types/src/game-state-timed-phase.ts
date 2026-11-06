@@ -18,7 +18,7 @@ export function getTimedPhaseKey(
   context: GameContext,
 ): string | null {
   if (isQuestionOnAirStatus(progress.status)) {
-    // A kahootMode question opened behind the leaderboard (see
+    // A quickfire question opened behind the leaderboard (see
     // advanceFromReveal) isn't "live" yet — its answer-speed timer must not
     // start ticking until the admin dismisses the leaderboard and the
     // question is actually visible. Treating it as untimed here means the
@@ -27,7 +27,7 @@ export function getTimedPhaseKey(
     // flips back to false, with no extra state needed.
     if (
       // Stryker disable next-line OptionalChaining: equivalent, an out-of-range round throws in getBlockStartPosition below either way
-      context.rounds[progress.roundIndex]?.kahootMode &&
+      context.rounds[progress.roundIndex]?.quickfire &&
       progress.isLeaderboardVisible
     ) {
       return null;

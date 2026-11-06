@@ -5,8 +5,8 @@ import {
   type GameProgress,
 } from '../game-state';
 import {
-  kahootRoundAfterNormalRound,
-  kahootRoundBeforeNormalRound,
+  quickfireRoundAfterNormalRound,
+  quickfireRoundBeforeNormalRound,
   lobby,
   twoRoundsWithBreakAfterSecond,
 } from './game-state-fixtures';
@@ -476,8 +476,8 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
     });
   });
 
-  describe('kahootMode rounds', () => {
-    it('locks a kahoot question immediately, even mid-round', () => {
+  describe('quickfire rounds', () => {
+    it('locks a quickfire question immediately, even mid-round', () => {
       const open: GameProgress = {
         status: 'question_open',
         roundIndex: 1,
@@ -489,7 +489,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       const next = getNextGameState(
         open,
         'ADVANCE',
-        kahootRoundAfterNormalRound,
+        quickfireRoundAfterNormalRound,
       );
       expect(next).toEqual({ ...open, status: 'locking' });
     });
@@ -506,7 +506,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       const next = getNextGameState(
         locking,
         'ADVANCE',
-        kahootRoundAfterNormalRound,
+        quickfireRoundAfterNormalRound,
       );
       expect(next).toEqual({ ...locking, status: 'reveal', revealIndex: 0 });
     });
@@ -523,7 +523,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       const next = getNextGameState(
         revealing,
         'ADVANCE',
-        kahootRoundAfterNormalRound,
+        quickfireRoundAfterNormalRound,
       );
       expect(next).toEqual({
         status: 'question_open',
@@ -533,13 +533,13 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
         // (top 5, shown fully at once) covers it until TOGGLE_LEADERBOARD.
         isLeaderboardVisible: true,
         revealIndex: 0,
-        // Each kahoot question is its own one-question block, so its
+        // Each quickfire question is its own one-question block, so its
         // block-relative position is always 0, not the flat quiz position.
         furthestOpenIndex: 0,
       });
     });
 
-    it("moves to the next round's intro once the kahoot round's last question is revealed", () => {
+    it("moves to the next round's intro once the quickfire round's last question is revealed", () => {
       const revealing: GameProgress = {
         status: 'reveal',
         roundIndex: 0,
@@ -551,7 +551,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       const next = getNextGameState(
         revealing,
         'ADVANCE',
-        kahootRoundBeforeNormalRound,
+        quickfireRoundBeforeNormalRound,
       );
       expect(next).toEqual({
         status: 'round_intro',
@@ -563,7 +563,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       });
     });
 
-    it('ends the quiz once the last kahoot round question of the last round is revealed', () => {
+    it('ends the quiz once the last quickfire round question of the last round is revealed', () => {
       const revealing: GameProgress = {
         status: 'reveal',
         roundIndex: 1,
@@ -575,7 +575,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       const next = getNextGameState(
         revealing,
         'ADVANCE',
-        kahootRoundAfterNormalRound,
+        quickfireRoundAfterNormalRound,
       );
       expect(next.status).toBe('ended');
       expect(next.previousStatus).toBe('reveal');

@@ -7,8 +7,8 @@ import {
   TrashIcon,
 } from '@radix-ui/react-icons';
 import {
-  isKahootAllowedType,
-  kahootTypeNames,
+  isQuickfireAllowedType,
+  quickfireTypeNames,
   ROUND_CATEGORIES,
   ROUND_NOTE_MAX_LENGTH,
   type QuizDraftIssue,
@@ -37,7 +37,7 @@ interface QuizRoundEditorProps {
   index: number;
   isFirst: boolean;
   isLast: boolean;
-  /** A live session has reached this round (it is the current round or an earlier one) — it keeps its place, break-after and kahoot setting, and can't be deleted. */
+  /** A live session has reached this round (it is the current round or an earlier one) — it keeps its place, break-after and quickfire setting, and can't be deleted. */
   isReached: boolean;
   /** The round above is reached, so this one can't move up past it. */
   isPreviousReached: boolean;
@@ -47,7 +47,7 @@ interface QuizRoundEditorProps {
   pinnedQuestionCount: number;
   /** Why the round's questions are restricted while a session is live, or undefined when they aren't. */
   structureNote?: string;
-  /** The other rounds a question here could move to — a kahoot round is dropped per question when the type doesn't fit. */
+  /** The other rounds a question here could move to — a quickfire round is dropped per question when the type doesn't fit. */
   moveTargetRounds: MoveTargetRound[];
   /** `dbId`s of questions opened in a live session. */
   openedQuestionIds: ReadonlySet<number>;
@@ -62,20 +62,20 @@ interface QuizRoundEditorProps {
   onPreviewQuestion?: (questionIndex: number) => void;
 }
 
-/** 1-based positions, within the round, of the questions whose type a kahoot round can't hold. */
-function kahootBlockingPositions(round: EditorRound): number[] {
+/** 1-based positions, within the round, of the questions whose type a quickfire round can't hold. */
+function quickfireBlockingPositions(round: EditorRound): number[] {
   return round.questions.flatMap((question, index) =>
-    isKahootAllowedType(question.type) ? [] : [index + 1],
+    isQuickfireAllowedType(question.type) ? [] : [index + 1],
   );
 }
 
-/** Where `question` may move: every candidate round except a kahoot round whose type list excludes it. Rounds are numbered by their position in the quiz. */
+/** Where `question` may move: every candidate round except a quickfire round whose type list excludes it. Rounds are numbered by their position in the quiz. */
 function moveTargetsFor(
   question: EditorQuestion,
   candidates: MoveTargetRound[],
 ): MoveTarget[] {
   return candidates.flatMap((round) =>
-    round.kahootMode && !isKahootAllowedType(question.type)
+    round.quickfire && !isQuickfireAllowedType(question.type)
       ? []
       : [{ roundId: round.id, label: round.label }],
   );
@@ -133,7 +133,7 @@ export function QuizRoundEditor({
     onChange({
       questions: [
         ...round.questions,
-        makeQuestion(crypto.randomUUID(), round.kahootMode),
+        makeQuestion(crypto.randomUUID(), round.quickfire),
       ],
     });
   }
@@ -167,12 +167,12 @@ export function QuizRoundEditor({
           breakAfter={round.breakAfter}
           onChange={(breakAfter) => onChange({ breakAfter })}
         />
-        <KahootModeToggle
+        <QuickfireModeToggle
           round={round}
           isReached={isReached}
           onChange={onChange}
         />
-        <FieldErrors issues={fieldIssues(roundLevelIssues, 'kahootMode')} />
+        <FieldErrors issues={fieldIssues(roundLevelIssues, 'quickfire')} />
         <Button
           type="button"
           onClick={onMoveUp}
@@ -294,18 +294,18 @@ function swapQuestion<Question extends { id: string }>(
 }
 
 /**
- * Switching kahoot mode on is blocked while a disallowed question remains;
+ * Switching quickfire mode on is blocked while a disallowed question remains;
  * switching it off is always allowed. Types are never changed for the user.
  */
-function KahootModeToggle({
+function QuickfireModeToggle({
   round,
   isReached,
   onChange,
 }: Pick<QuizRoundEditorProps, 'round' | 'isReached' | 'onChange'>) {
-  const blockingPositions = kahootBlockingPositions(round);
-  const isKahootBlocked = !round.kahootMode && blockingPositions.length > 0;
-  const kahootHintId = `kahoot-mode-hint-${round.id}`;
-  const kahootBlockedHintId = `kahoot-mode-blocked-${round.id}`;
+  const blockingPositions = quickfireBlockingPositions(round);
+  const isQuickfireBlocked = !round.quickfire && blockingPositions.length > 0;
+  const quickfireHintId = `quickfire-mode-hint-${round.id}`;
+  const quickfireBlockedHintId = `quickfire-mode-blocked-${round.id}`;
   return (
     <>
       <label
@@ -314,29 +314,29 @@ function KahootModeToggle({
       >
         <input
           type="checkbox"
-          checked={round.kahootMode}
-          onChange={(event) => onChange({ kahootMode: event.target.checked })}
-          disabled={isKahootBlocked || isReached}
+          checked={round.quickfire}
+          onChange={(event) => onChange({ quickfire: event.target.checked })}
+          disabled={isQuickfireBlocked || isReached}
           className="h-4 w-4"
           aria-describedby={
-            isKahootBlocked
-              ? `${kahootHintId} ${kahootBlockedHintId}`
-              : kahootHintId
+            isQuickfireBlocked
+              ? `${quickfireHintId} ${quickfireBlockedHintId}`
+              : quickfireHintId
           }
         />
-        Kahoot mode
+        Quickfire mode
       </label>
-      <span id={kahootHintId} className="sr-only">
+      <span id={quickfireHintId} className="sr-only">
         Speed-based scoring, answer then reveal, leaderboard shows only the top
         teams
       </span>
-      {isKahootBlocked && (
+      {isQuickfireBlocked && (
         <span
-          id={kahootBlockedHintId}
+          id={quickfireBlockedHintId}
           className="text-xs font-bold text-foreground/60"
         >
-          Kahoot rounds only hold {kahootTypeNames()} questions — change or
-          remove {formatPositions(blockingPositions)} first.
+          Quickfire rounds only hold {quickfireTypeNames()} questions — change
+          or remove {formatPositions(blockingPositions)} first.
         </span>
       )}
     </>
@@ -416,7 +416,7 @@ function RoundQuestions({
           isLast={index === round.questions.length - 1}
           isPinned={index < pinnedQuestionCount}
           moveTargets={moveTargetsFor(question, moveTargetRounds)}
-          isKahootRound={round.kahootMode}
+          isQuickfireRound={round.quickfire}
           isOpened={
             question.dbId !== undefined && openedQuestionIds.has(question.dbId)
           }

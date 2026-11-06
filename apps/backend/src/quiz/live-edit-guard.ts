@@ -246,13 +246,13 @@ export function findMovedAnsweredQuestions(
  * Diffs a quiz draft about to be saved against its currently-persisted
  * rounds while a session is live on this quiz. Game progress is positional,
  * so nothing at or before the frontier may shift: the current round and every
- * earlier round stay in place with their breakAfter/kahootMode, a round before
+ * earlier round stay in place with their breakAfter/quickfire, a round before
  * the frontier's current round keeps exactly its questions in their order, and
  * so does the current round once its block has started locking (see
  * describeLiveEditRounds). Before that, the current round keeps its opened
  * questions at its start in order, and the questions after them can be
  * added, deleted, reordered and moved. Rounds after the current round are
- * free: they can be added, deleted and reordered, their breakAfter/kahootMode
+ * free: they can be added, deleted and reordered, their breakAfter/quickfire
  * can change, and their questions can move between them — that's why a save
  * made after a session reached an edited round is refused here too.
  * A question in the frontier's `openedQuestionIds` (opened) can still have
@@ -288,7 +288,7 @@ export function findLiveEditViolations(
   }
 
   // Rounds after the current round have no progress to preserve: they can be
-  // added, deleted and reordered, and their breakAfter/kahootMode can change.
+  // added, deleted and reordered, and their breakAfter/quickfire can change.
   const roundCount = Math.min(reachedRoundCount, incomingRounds.length);
   for (let roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
     const currentRound = currentRounds[roundIndex];
@@ -323,7 +323,7 @@ export function findLiveEditViolations(
 }
 
 /**
- * Game progress is positional over blocks, which breakAfter and kahootMode
+ * Game progress is positional over blocks, which breakAfter and quickfire
  * both shape — changing either on a round a session has reached shifts what
  * saved positions point at.
  */
@@ -342,9 +342,8 @@ function findBlockShapeViolations(
       !isIncomingLast &&
       effectiveBreakAfter(currentRound, roundIndex, currentRoundCount) !==
         incomingRound.breakAfter,
-    kahootMode:
-      (currentRound.kahootMode ?? false) !==
-      (incomingRound.kahootMode ?? false),
+    quickfire:
+      (currentRound.quickfire ?? false) !== (incomingRound.quickfire ?? false),
   };
   return Object.entries(hasBlockShapeChanged)
     .filter(([, hasChanged]) => hasChanged)

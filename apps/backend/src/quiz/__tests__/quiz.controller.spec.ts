@@ -199,7 +199,7 @@ describe('QuizController', () => {
         {
           title: 'Music',
           breakAfter: true,
-          kahootMode: false,
+          quickfire: false,
           note: 'Headphones on',
           questions: [
             {

@@ -27,8 +27,8 @@ export interface QuizSummaryRound {
   breakNumber?: number;
   /** True on the quiz's final break; present only with breakNumber. */
   isFinalBreak?: boolean;
-  /** See RoundConfig.kahootMode — optional so existing QuizSummaryRound literals don't all need updating; undefined behaves as false. */
-  kahootMode?: boolean;
+  /** See RoundConfig.quickfire — optional so existing QuizSummaryRound literals don't all need updating; undefined behaves as false. */
+  quickfire?: boolean;
   questions: QuizSummaryQuestion[];
 }
 

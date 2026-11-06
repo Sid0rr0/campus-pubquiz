@@ -21,8 +21,8 @@ import {
 
 const NOW = 1_700_000_000_000;
 
-// Round 0 (ids 1, 2) is a normal round; round 1 (ids 3, 4) is kahoot.
-const rounds = [roundOf(10, [1, 2]), roundOf(20, [3, 4], { kahootMode: true })];
+// Round 0 (ids 1, 2) is a normal round; round 1 (ids 3, 4) is quickfire.
+const rounds = [roundOf(10, [1, 2]), roundOf(20, [3, 4], { quickfire: true })];
 
 function standing(teamId: number): LeaderboardEntry {
   return {
@@ -332,12 +332,12 @@ describe('the display view fields', () => {
   it('carries the question and joker pick deadlines', () => {
     const session = {
       ...sessionOver(rounds),
-      kahootQuestionEndsAt: NOW + 1,
+      quickfireQuestionEndsAt: NOW + 1,
       jokerPickEndsAt: NOW + 2,
     };
 
     expect(buildDisplayFields(session)).toMatchObject({
-      kahootQuestionEndsAt: NOW + 1,
+      quickfireQuestionEndsAt: NOW + 1,
       jokerPickEndsAt: NOW + 2,
     });
   });
@@ -396,18 +396,18 @@ describe('the players view fields', () => {
 });
 
 describe('the snapshot', () => {
-  it('says the current round is not kahoot when the round does not say', () => {
+  it('says the current round is not quickfire when the round does not say', () => {
     expect(
       buildSnapshot(sessionOver(rounds, progressAt('question_open')))
-        .isCurrentRoundKahoot,
+        .isCurrentRoundQuickfire,
     ).toBe(false);
   });
 
-  it('says the current round is kahoot for a kahoot round', () => {
+  it('says the current round is quickfire for a quickfire round', () => {
     expect(
       buildSnapshot(
         sessionOver(rounds, progressAt('question_open', { roundIndex: 1 })),
-      ).isCurrentRoundKahoot,
+      ).isCurrentRoundQuickfire,
     ).toBe(true);
   });
 });
@@ -457,7 +457,7 @@ describe('whether the block can be answered', () => {
     expect(answerable(progressAt('lobby'))).toBe(false);
   });
 
-  it('is false for a kahoot question still hidden behind the leaderboard', () => {
+  it('is false for a quickfire question still hidden behind the leaderboard', () => {
     expect(
       answerable(
         progressAt('question_open', {
@@ -470,7 +470,7 @@ describe('whether the block can be answered', () => {
   });
 });
 
-describe('a kahoot question whose reveal already aired', () => {
+describe('a quickfire question whose reveal already aired', () => {
   const backOnLocking = (questionIndex: number) => ({
     ...sessionOver(
       rounds,
@@ -480,7 +480,7 @@ describe('a kahoot question whose reveal already aired', () => {
         furthestOpenIndex: 0,
       }),
     ),
-    revealedKahootQuestionIds: [3],
+    revealedQuickfireQuestionIds: [3],
   });
 
   it('is no longer answerable once Previous reopens its locking countdown', () => {
@@ -488,7 +488,7 @@ describe('a kahoot question whose reveal already aired', () => {
     expect(findQuestionOpenForAnswering(backOnLocking(0), 3)).toBeUndefined();
   });
 
-  it('leaves the next kahoot question answerable', () => {
+  it('leaves the next quickfire question answerable', () => {
     expect(isBlockAnswerable(backOnLocking(1))).toBe(true);
     expect(findQuestionOpenForAnswering(backOnLocking(1), 4)?.id).toBe(4);
   });
@@ -531,7 +531,7 @@ describe('finding the question open for answering', () => {
     expect(findQuestionOpenForAnswering(session, 1)).toBeUndefined();
   });
 
-  it('finds nothing for a kahoot question hidden behind the leaderboard', () => {
+  it('finds nothing for a quickfire question hidden behind the leaderboard', () => {
     const session = sessionOver(
       rounds,
       progressAt('question_open', {

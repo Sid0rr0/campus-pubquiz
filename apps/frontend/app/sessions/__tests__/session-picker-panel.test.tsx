@@ -696,7 +696,7 @@ describe('SessionPickerPanel', () => {
     );
   });
 
-  it('prefills the kahoot question timer to 30s for a quiz with a kahootMode round', async () => {
+  it('prefills the quickfire question timer to 30s for a quiz with a quickfire round', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
       quizzes: [
@@ -707,7 +707,7 @@ describe('SessionPickerPanel', () => {
             {
               title: 'Speed Round',
               breakAfter: false,
-              kahootMode: true,
+              quickfire: true,
               questions: [],
             },
           ],
@@ -730,13 +730,13 @@ describe('SessionPickerPanel', () => {
 
     expect(mockCreateSession).toHaveBeenCalledWith(
       2,
-      { ...DEFAULT_SESSION_SETTINGS, kahootQuestionTimerSeconds: 30 },
+      { ...DEFAULT_SESSION_SETTINGS, quickfireQuestionTimerSeconds: 30 },
       'Speed Quiz',
       [],
     );
   });
 
-  it('prefills the kahoot question timer to null for a quiz with no kahootMode round', async () => {
+  it('prefills the quickfire question timer to null for a quiz with no quickfire round', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
       quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],

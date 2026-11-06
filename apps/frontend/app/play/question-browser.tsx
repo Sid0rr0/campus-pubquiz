@@ -56,8 +56,8 @@ interface QuestionBrowserProps {
   selectedQuestion: QuestionView | BlockQuestionView;
   /** selectedQuestion as the reveal has shown it so far — set only while reveal is showing this question; a closest_guess question has no answer until its answer step. */
   revealQuestion?: PlayersRevealQuestionView;
-  /** Active round's Kahoot-style speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
-  isKahootMode: boolean;
+  /** Active round's quickfire speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
+  isQuickfireMode: boolean;
   myAnswers: Record<number, string>;
   /** Points awarded for the selected question's answer, null until graded. */
   myAnswerPoints: number | null;
@@ -125,7 +125,7 @@ export function QuestionBrowser({
   totalPickerSlots,
   selectedQuestion,
   revealQuestion,
-  isKahootMode,
+  isQuickfireMode,
   myAnswers,
   myAnswerPoints,
   myAnswerVerdict,
@@ -178,7 +178,7 @@ export function QuestionBrowser({
           team={team}
           question={selectedQuestion}
           myAnswer={myAnswer}
-          isKahootMode={isKahootMode}
+          isQuickfireMode={isQuickfireMode}
           onSubmitAnswer={onSubmitAnswer}
           purchases={purchases}
         />
@@ -194,12 +194,12 @@ function OpenQuestion({
   team,
   question,
   myAnswer,
-  isKahootMode,
+  isQuickfireMode,
   onSubmitAnswer,
   purchases,
 }: Pick<
   QuestionBrowserProps,
-  'mode' | 'isAnswerable' | 'team' | 'isKahootMode' | 'onSubmitAnswer'
+  'mode' | 'isAnswerable' | 'team' | 'isQuickfireMode' | 'onSubmitAnswer'
 > & {
   question: QuestionBrowserProps['selectedQuestion'];
   myAnswer: string | undefined;
@@ -243,7 +243,7 @@ function OpenQuestion({
             // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
             removedOptions={removedOptionsOf(question.id, purchases)}
             initialValue={myAnswer ?? ''}
-            isKahootMode={isKahootMode}
+            isQuickfireMode={isQuickfireMode}
             pin={pin}
             onSubmit={(value) =>
               onSubmitAnswer(question.id, team.teamId, value)

@@ -149,8 +149,8 @@ export interface KeyFixInput {
   /** The question as it stood before the fix; the key the stored grades were judged against. */
   previous: ScoredQuestion;
   rows: readonly StoredAnswerRow[];
-  /** The session's kahoot question timer for a kahootMode question, else null. */
-  kahootTimerSeconds: number | null;
+  /** The session's quickfire question timer for a quickfire question, else null. */
+  quickfireTimerSeconds: number | null;
   /** Whether a batch question's batch already ran (the session holds its summary). */
   hasBatchRun: boolean;
 }
@@ -180,14 +180,14 @@ function isGradedAutomatically(
   );
 }
 
-/** Rescores every row speed-scaled by its stored response time when a timer is given. The auto key-fix and kahoot speed scoring share it. */
+/** Rescores every row speed-scaled by its stored response time when a timer is given. The auto key-fix and quickfire speed scoring share it. */
 export function rescoreAutoGraded(
   question: ScoredQuestion,
   rows: readonly StoredAnswerRow[],
-  kahootTimerSeconds: number | null,
+  quickfireTimerSeconds: number | null,
 ): GradeWrite[] {
   const timerMs =
-    kahootTimerSeconds === null ? null : kahootTimerSeconds * 1000;
+    quickfireTimerSeconds === null ? null : quickfireTimerSeconds * 1000;
   return rows.map((row) =>
     setOf(
       scoreSubmission(
@@ -200,9 +200,9 @@ export function rescoreAutoGraded(
 }
 
 const KEY_FIX: Record<GradingMode, (input: KeyFixInput) => KeyFixResult> = {
-  auto: ({ question, rows, kahootTimerSeconds }) => ({
+  auto: ({ question, rows, quickfireTimerSeconds }) => ({
     rescored: true,
-    writes: rescoreAutoGraded(question, rows, kahootTimerSeconds),
+    writes: rescoreAutoGraded(question, rows, quickfireTimerSeconds),
   }),
   // A new match grades correct; a grade the old key gave automatically and
   // the new one no longer gives goes back to ungraded; the rest is the
@@ -266,7 +266,7 @@ const SPEED_SCORE: Record<
   (
     question: ScoredQuestion,
     rows: readonly StoredAnswerRow[],
-    kahootTimerSeconds: number | null,
+    quickfireTimerSeconds: number | null,
   ) => GradeWrite[]
 > = {
   auto: rescoreAutoGraded,
@@ -276,16 +276,16 @@ const SPEED_SCORE: Record<
 };
 
 /**
- * Rescored writes (one per row) when a kahoot question locks: auto questions
+ * Rescored writes (one per row) when a quickfire question locks: auto questions
  * are recomputed from the stored value and response time, so it is
  * idempotent; the other modes get no writes.
  */
 export function speedScore(
   question: ScoredQuestion,
   rows: readonly StoredAnswerRow[],
-  kahootTimerSeconds: number | null,
+  quickfireTimerSeconds: number | null,
 ): GradeWrite[] {
-  return SPEED_SCORE[modeOf(question)](question, rows, kahootTimerSeconds);
+  return SPEED_SCORE[modeOf(question)](question, rows, quickfireTimerSeconds);
 }
 
 const CAN_BE_UNGRADED: Record<GradingMode, boolean> = {

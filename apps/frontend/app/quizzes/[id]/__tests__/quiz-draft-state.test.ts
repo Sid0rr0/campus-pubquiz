@@ -64,7 +64,7 @@ describe('makeQuestion / makeRound', () => {
     });
   });
 
-  it('defaults a kahoot round question to 1000 points', () => {
+  it('defaults a quickfire round question to 1000 points', () => {
     const question = makeQuestion('q1', true);
 
     expect(question.points).toBe(1000);
@@ -75,7 +75,7 @@ describe('makeQuestion / makeRound', () => {
       id: 'r1',
       title: 'Round 1',
       breakAfter: false,
-      kahootMode: false,
+      quickfire: false,
       category: '',
       author: '',
       note: '',
@@ -790,14 +790,14 @@ describe('roundFromPreview', () => {
     ]);
     expect(editorRound.title).toBe('History');
     expect(editorRound.breakAfter).toBe(true);
-    expect(editorRound.kahootMode).toBe(false);
+    expect(editorRound.quickfire).toBe(false);
   });
 
-  it('carries a true kahootMode through from the preview', () => {
+  it('carries a true quickfire through from the preview', () => {
     const round: ImportRoundPreview = {
       title: 'Speed Round',
       breakAfter: true,
-      kahootMode: true,
+      quickfire: true,
       questions: [
         {
           type: 'multiple_choice',
@@ -815,7 +815,7 @@ describe('roundFromPreview', () => {
       (index) => `r1-q${index}`,
     );
 
-    expect(editorRound.kahootMode).toBe(true);
+    expect(editorRound.quickfire).toBe(true);
   });
 });
 
@@ -839,7 +839,7 @@ describe('toSaveRequest', () => {
         {
           title: 'History',
           breakAfter: true,
-          kahootMode: false,
+          quickfire: false,
           questions: [
             {
               type: 'free_text',
@@ -871,9 +871,9 @@ describe('toSaveRequest', () => {
     expect(request.rounds[1].breakAfter).toBe(true);
   });
 
-  it('carries a true kahootMode through to the save request', () => {
+  it('carries a true quickfire through to the save request', () => {
     const round = makeRound('r1', 'Speed Round');
-    round.kahootMode = true;
+    round.quickfire = true;
     round.questions = [
       {
         ...makeQuestion('q1'),
@@ -888,7 +888,7 @@ describe('toSaveRequest', () => {
 
     const request = toSaveRequest('Trivia Night', [round]);
 
-    expect(request.rounds[0].kahootMode).toBe(true);
+    expect(request.rounds[0].quickfire).toBe(true);
   });
 });
 
@@ -1305,8 +1305,8 @@ describe('moveTargetRounds', () => {
 
   it('offers every other round when nothing is live', () => {
     expect(moveTargetRounds(rounds, 0, undefined)).toEqual([
-      { id: 'b', label: '2. Untitled round', kahootMode: false },
-      { id: 'c', label: '3. Three', kahootMode: false },
+      { id: 'b', label: '2. Untitled round', quickfire: false },
+      { id: 'c', label: '3. Three', quickfire: false },
     ]);
   });
 
@@ -1334,13 +1334,13 @@ describe('moveTargetRounds', () => {
     expect(result.map((target) => target.id)).toEqual(['c']);
   });
 
-  it('carries the kahoot flag', () => {
-    const kahoot = [
+  it('carries the quickfire flag', () => {
+    const quickfire = [
       makeRound('a', 'One'),
-      { ...makeRound('b', 'Two'), kahootMode: true },
+      { ...makeRound('b', 'Two'), quickfire: true },
     ];
 
-    expect(moveTargetRounds(kahoot, 0, undefined)[0].kahootMode).toBe(true);
+    expect(moveTargetRounds(quickfire, 0, undefined)[0].quickfire).toBe(true);
   });
 });
 
@@ -1881,7 +1881,7 @@ describe('round settings in the editor draft', () => {
       id: 'r1',
       title: 'R',
       breakAfter: false,
-      kahootMode: false,
+      quickfire: false,
       category: '',
       author: '',
       note: '',
@@ -1948,7 +1948,7 @@ describe('round settings in the editor draft', () => {
     expect(first).toStrictEqual({
       title: 'R',
       breakAfter: false,
-      kahootMode: false,
+      quickfire: false,
       category: 'History',
       author: 'Sam',
       note: 'Say hi',
@@ -1958,7 +1958,7 @@ describe('round settings in the editor draft', () => {
     expect(second).toStrictEqual({
       title: 'S',
       breakAfter: true,
-      kahootMode: false,
+      quickfire: false,
       questions: [],
     });
   });

@@ -20,7 +20,7 @@ function browser(isAnswerable: boolean) {
       pickerRounds={[]}
       totalPickerSlots={0}
       selectedQuestion={QUESTION}
-      isKahootMode={false}
+      isQuickfireMode={false}
       myAnswers={{}}
       myAnswerPoints={null}
       myAnswerVerdict={null}

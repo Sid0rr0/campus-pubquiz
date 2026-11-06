@@ -61,7 +61,7 @@ const NIGHT_KINDS = [
 describe('buildQuizPreview, night', () => {
   const multiBlockQuiz = () => [
     round(1, [question(1), question(2)]),
-    round(2, [question(3), question(4)], { kahootMode: true }),
+    round(2, [question(3), question(4)], { quickfire: true }),
     round(3, [question(5)], { breakAfter: false }),
     round(4, [question(6)]),
   ];
@@ -110,7 +110,7 @@ describe('buildQuizPreview, night', () => {
         ? [step.screen.question.id]
         : [],
     );
-    // Every kahoot question is its own block; round 3 has no break, so it
+    // Every quickfire question is its own block; round 3 has no break, so it
     // shares a block with round 4.
     expect(ends).toEqual([2, 3, 4, 6]);
     expect(steps.filter((step) => step.isBlockEnd)).toHaveLength(4);
@@ -406,9 +406,9 @@ describe('buildQuizPreview, answer_after_question', () => {
     expect(blockEnds).toEqual([1]);
   });
 
-  it('shows a kahoot round like any other: question then answer', () => {
+  it('shows a quickfire round like any other: question then answer', () => {
     const rounds = [
-      round(1, [question(1), question(2)], { kahootMode: true }),
+      round(1, [question(1), question(2)], { quickfire: true }),
       round(2, [question(3)]),
     ];
     expect(labels(rounds)).toEqual([
@@ -422,7 +422,7 @@ describe('buildQuizPreview, answer_after_question', () => {
       'a:3',
     ]);
     const { steps } = buildQuizPreview(rounds, 'answer_after_question');
-    // Every kahoot question is its own block.
+    // Every quickfire question is its own block.
     expect(steps.map((step) => step.isBlockEnd)).toEqual([
       false,
       false,

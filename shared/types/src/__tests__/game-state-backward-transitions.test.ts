@@ -6,7 +6,7 @@ import {
   type GameProgress,
 } from '../game-state';
 import {
-  kahootRoundAfterNormalRound,
+  quickfireRoundAfterNormalRound,
   lobby,
   twoRoundsWithBreakAfterSecond,
 } from './game-state-fixtures';
@@ -595,8 +595,8 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
     ).toThrow(IllegalGameTransitionError);
   });
 
-  describe('kahootMode rounds', () => {
-    it("steps back from a kahoot question's reveal to its own locking countdown", () => {
+  describe('quickfire rounds', () => {
+    it("steps back from a quickfire question's reveal to its own locking countdown", () => {
       const revealing: GameProgress = {
         status: 'reveal',
         roundIndex: 1,
@@ -608,12 +608,12 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
       const next = getNextGameState(
         revealing,
         'PREVIOUS',
-        kahootRoundAfterNormalRound,
+        quickfireRoundAfterNormalRound,
       );
       expect(next).toEqual({ ...revealing, status: 'locking' });
     });
 
-    it('re-enters the previous kahoot question’s reveal from a mid-round question_open, instead of reopening it', () => {
+    it('re-enters the previous quickfire question’s reveal from a mid-round question_open, instead of reopening it', () => {
       const open: GameProgress = {
         status: 'question_open',
         roundIndex: 1,
@@ -625,7 +625,7 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
       const next = getNextGameState(
         open,
         'PREVIOUS',
-        kahootRoundAfterNormalRound,
+        quickfireRoundAfterNormalRound,
       );
       expect(next).toEqual({
         status: 'reveal',
@@ -637,7 +637,7 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
       });
     });
 
-    it("steps back from a kahoot round's first question_open to its own round intro card", () => {
+    it("steps back from a quickfire round's first question_open to its own round intro card", () => {
       const open: GameProgress = {
         status: 'question_open',
         roundIndex: 1,
@@ -649,7 +649,7 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
       const next = getNextGameState(
         open,
         'PREVIOUS',
-        kahootRoundAfterNormalRound,
+        quickfireRoundAfterNormalRound,
       );
       expect(next).toEqual({
         ...open,

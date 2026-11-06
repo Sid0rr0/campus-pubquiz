@@ -95,7 +95,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Running questions',
     paragraphs: [
       'Each round opens with a round title card, then Advance opens questions one by one. Teams can change answers to any question opened this block.',
-      "Advance on a block's last question starts the final countdown, then the break. In kahoot rounds every question is its own block.",
+      "Advance on a block's last question starts the final countdown, then the break. In quickfire rounds every question is its own block.",
     ],
   },
   {

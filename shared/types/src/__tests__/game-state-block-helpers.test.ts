@@ -30,13 +30,13 @@ describe('isBreakPointQuestion', () => {
     ); // last question of round 0 (breakAfter: false)
   });
 
-  it('is true on every question of a kahootMode round, regardless of position', () => {
-    const kahootRound: GameContext = {
-      rounds: [{ questionCount: 3, breakAfter: false, kahootMode: true }],
+  it('is true on every question of a quickfire round, regardless of position', () => {
+    const quickfireRound: GameContext = {
+      rounds: [{ questionCount: 3, breakAfter: false, quickfire: true }],
     };
-    expect(isBreakPointQuestion(0, 0, kahootRound)).toBe(true);
-    expect(isBreakPointQuestion(0, 1, kahootRound)).toBe(true);
-    expect(isBreakPointQuestion(0, 2, kahootRound)).toBe(true);
+    expect(isBreakPointQuestion(0, 0, quickfireRound)).toBe(true);
+    expect(isBreakPointQuestion(0, 1, quickfireRound)).toBe(true);
+    expect(isBreakPointQuestion(0, 2, quickfireRound)).toBe(true);
   });
 });
 
@@ -75,11 +75,11 @@ describe('getBlockStartPosition', () => {
     });
   });
 
-  it('starts a new one-question block at each question of a kahootMode round', () => {
+  it('starts a new one-question block at each question of a quickfire round', () => {
     const mixed: GameContext = {
       rounds: [
         { questionCount: 2, breakAfter: true },
-        { questionCount: 3, breakAfter: false, kahootMode: true },
+        { questionCount: 3, breakAfter: false, quickfire: true },
       ],
     };
     expect(getBlockStartPosition(1, 0, mixed)).toEqual({
@@ -96,14 +96,14 @@ describe('getBlockStartPosition', () => {
     });
   });
 
-  it('starts a new block on a kahootMode round even when the previous round is not a break point', () => {
-    const noBreakBeforeKahoot: GameContext = {
+  it('starts a new block on a quickfire round even when the previous round is not a break point', () => {
+    const noBreakBeforeQuickfire: GameContext = {
       rounds: [
         { questionCount: 2, breakAfter: false },
-        { questionCount: 2, breakAfter: false, kahootMode: true },
+        { questionCount: 2, breakAfter: false, quickfire: true },
       ],
     };
-    expect(getBlockStartPosition(1, 0, noBreakBeforeKahoot)).toEqual({
+    expect(getBlockStartPosition(1, 0, noBreakBeforeQuickfire)).toEqual({
       roundIndex: 1,
       questionIndex: 0,
     });
@@ -313,15 +313,15 @@ describe('getQuizStructureSummary', () => {
     });
   });
 
-  it('never counts a break after a kahoot round, which has none, even with breakAfter set', () => {
-    const kahootRoundWithBreakAfter: GameContext = {
+  it('never counts a break after a quickfire round, which has none, even with breakAfter set', () => {
+    const quickfireRoundWithBreakAfter: GameContext = {
       rounds: [
         { questionCount: 1, breakAfter: true },
-        { questionCount: 1, breakAfter: true, kahootMode: true },
+        { questionCount: 1, breakAfter: true, quickfire: true },
         { questionCount: 1, breakAfter: true },
       ],
     };
-    const summary = getQuizStructureSummary(kahootRoundWithBreakAfter);
+    const summary = getQuizStructureSummary(quickfireRoundWithBreakAfter);
     expect(summary).toEqual({
       blockCount: 2,
       topicsPerBlock: null,

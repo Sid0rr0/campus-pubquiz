@@ -3,18 +3,18 @@ import { BROADCAST_STATE_OUTCOME } from '@/game/state/session-outcome';
 
 const TIMER_SECONDS = 60;
 const LOCK_AT = 4_000_000_000_000;
-const KAHOOT_AT = 4_000_000_500_000;
+const QUICKFIRE_AT = 4_000_000_500_000;
 
 describe('GameGateway — outcome delivery re-arms the phase timers', () => {
   const harness = setupRealStoreGatewayTest();
 
-  async function openKahootQuestion() {
+  async function openQuickfireQuestion() {
     const game = await harness.createGateway({
       teamNames: ['The Quizzards'],
       joinCode: 'DEADLINE1',
-      kahootMode: true,
+      quickfire: true,
       settings: {
-        kahootQuestionTimerSeconds: TIMER_SECONDS,
+        quickfireQuestionTimerSeconds: TIMER_SECONDS,
         lockGraceSeconds: TIMER_SECONDS,
       },
     });
@@ -24,34 +24,34 @@ describe('GameGateway — outcome delivery re-arms the phase timers', () => {
   }
 
   it('arms the timers to the deadlines an outcome carries', async () => {
-    const game = await openKahootQuestion();
+    const game = await openQuickfireQuestion();
 
     await game.broadcaster.deliver(game.joinCode, {
       ...BROADCAST_STATE_OUTCOME,
       deadlineChange: {
         questionLockAt: LOCK_AT,
-        kahootQuestionEndsAt: null,
+        quickfireQuestionEndsAt: null,
         jokerPickEndsAt: null,
       },
     });
 
     expect(game.timers().lock.dueAt()).toBe(LOCK_AT);
-    expect(game.timers().kahoot.isArmed()).toBe(false);
+    expect(game.timers().quickfire.isArmed()).toBe(false);
   });
 
   it('leaves the armed timers alone for an outcome without a deadline change', async () => {
-    const game = await openKahootQuestion();
-    const dueAt = game.timers().kahoot.dueAt();
+    const game = await openQuickfireQuestion();
+    const dueAt = game.timers().quickfire.dueAt();
     expect(dueAt).not.toBeNull();
 
     await game.broadcaster.deliver(game.joinCode, BROADCAST_STATE_OUTCOME);
 
-    expect(game.timers().kahoot.dueAt()).toBe(dueAt);
+    expect(game.timers().quickfire.dueAt()).toBe(dueAt);
     expect(game.timers().lock.isArmed()).toBe(false);
   });
 
   it('re-arms before any emit, so a failed emit cannot leave the timers stale', async () => {
-    const game = await openKahootQuestion();
+    const game = await openQuickfireQuestion();
     game.server.emit.mockImplementation(() => {
       throw new Error('socket hiccup');
     });
@@ -61,13 +61,13 @@ describe('GameGateway — outcome delivery re-arms the phase timers', () => {
         ...BROADCAST_STATE_OUTCOME,
         deadlineChange: {
           questionLockAt: null,
-          kahootQuestionEndsAt: KAHOOT_AT,
+          quickfireQuestionEndsAt: QUICKFIRE_AT,
           jokerPickEndsAt: null,
         },
       }),
     ).rejects.toThrow('socket hiccup');
 
-    expect(game.timers().kahoot.dueAt()).toBe(KAHOOT_AT);
+    expect(game.timers().quickfire.dueAt()).toBe(QUICKFIRE_AT);
     game.server.emit.mockReset();
   });
 });

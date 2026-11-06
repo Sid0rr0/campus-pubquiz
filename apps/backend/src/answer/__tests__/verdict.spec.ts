@@ -160,7 +160,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
     expect(await verdictsByTeam(question.id)).toEqual({ [team.id]: 'correct' });
   });
 
-  it('stores correct for a speed-scaled kahoot answer that earned fewer than full points', async () => {
+  it('stores correct for a speed-scaled quickfire answer that earned fewer than full points', async () => {
     const question = await createQuestion('multiple_choice', 'Paris', 10, {
       options: ['Paris', 'London'],
     });

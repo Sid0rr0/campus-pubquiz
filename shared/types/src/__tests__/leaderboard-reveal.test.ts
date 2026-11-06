@@ -31,7 +31,7 @@ function leaderboardOfSize(size: number): LeaderboardEntry[] {
 }
 
 describe('computeLeaderboardRevealCount', () => {
-  it('reveals a kahoot round leaderboard fully at once between questions (question_open)', () => {
+  it('reveals a quickfire round leaderboard fully at once between questions (question_open)', () => {
     const eightTeams = leaderboardOfSize(8);
     const result = computeLeaderboardRevealCount(
       'ADVANCE',
@@ -42,13 +42,13 @@ describe('computeLeaderboardRevealCount', () => {
       true,
     );
     // Capped to the top-5 cutoff, not every team — there's nothing left to
-    // reveal beyond that on a kahoot leaderboard.
+    // reveal beyond that on a quickfire leaderboard.
     expect(result).toBe(5);
   });
 
-  it('reveals a kahoot round leaderboard one team at a time at round/quiz end, capped at 5', () => {
+  it('reveals a quickfire round leaderboard one team at a time at round/quiz end, capped at 5', () => {
     const eightTeams = leaderboardOfSize(8);
-    const isKahootRound = true;
+    const isQuickfireRound = true;
 
     const shown = computeLeaderboardRevealCount(
       'ADVANCE',
@@ -56,7 +56,7 @@ describe('computeLeaderboardRevealCount', () => {
       progress({ status: 'ended', isLeaderboardVisible: true }),
       eightTeams,
       0,
-      isKahootRound,
+      isQuickfireRound,
     );
     expect(shown).toBe(0);
 
@@ -68,13 +68,13 @@ describe('computeLeaderboardRevealCount', () => {
         progress({ status: 'ended', isLeaderboardVisible: true }),
         eightTeams,
         revealCount,
-        isKahootRound,
+        isQuickfireRound,
       );
       expect(revealCount).toBe(Math.min(click, 5));
     }
   });
 
-  it('reveals a non-kahoot round leaderboard one team at a time through every team, uncapped', () => {
+  it('reveals a non-quickfire round leaderboard one team at a time through every team, uncapped', () => {
     const eightTeams = leaderboardOfSize(8);
     let revealCount = computeLeaderboardRevealCount(
       'ADVANCE',
@@ -99,7 +99,7 @@ describe('computeLeaderboardRevealCount', () => {
     }
   });
 
-  it('does not reveal fully at once for a kahoot round at round_intro (block end)', () => {
+  it('does not reveal fully at once for a quickfire round at round_intro (block end)', () => {
     const eightTeams = leaderboardOfSize(8);
     const result = computeLeaderboardRevealCount(
       'ADVANCE',

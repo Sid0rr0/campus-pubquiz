@@ -43,14 +43,14 @@ export interface ImportRoundPreview {
   title: string;
   breakAfter: boolean;
   /**
-   * Kahoot mode — see RoundConfig.kahootMode. Only settable through the
-   * manual quiz editor, never via CSV/Sheets import (there's no `kahoot_mode`
+   * Quickfire mode — see RoundConfig.quickfire. Only settable through the
+   * manual quiz editor, never via CSV/Sheets import (there's no `quickfire`
    * column), so a CSV-assembled round never sets this. Optional, like
    * breakAfter is required but this isn't, so the many existing
    * ImportRoundPreview literals across the test suite don't all need
    * updating; undefined behaves as false.
    */
-  kahootMode?: boolean;
+  quickfire?: boolean;
   /** Round topic/theme — one of ROUND_CATEGORIES, or unset. Shown on the big screen's round_intro/round_overview alongside the title. */
   category?: string;
   /** Who wrote this round's questions — optional, shown on the big screen's round_intro/round_overview alongside the title. */

@@ -16,7 +16,7 @@ export interface MyStanding {
 /**
  * The team's own row, or null while the big screen has not revealed its rank
  * yet (the phone must not give away what the big screen is still building up
- * to) or when the board does not carry the team (a kahoot board keeps its top
+ * to) or when the board does not carry the team (a quickfire board keeps its top
  * five).
  */
 export function findMyStanding(

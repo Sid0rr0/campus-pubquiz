@@ -25,7 +25,7 @@ function renderEditor(
         isPinned={false}
         moveTargets={[]}
         isOpened={isOpened}
-        isKahootRound={false}
+        isQuickfireRound={false}
         issues={[]}
         onChange={onChange}
         onDelete={vi.fn()}

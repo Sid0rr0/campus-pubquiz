@@ -22,8 +22,8 @@ function question(id: number, type: string, answer: string): ScoredQuestion {
 function seeded(questions: ScoredQuestion[]): SeededGame {
   return {
     gameSessionId: 1,
-    settings: { kahootQuestionTimerSeconds: 10 },
-    rounds: [{ title: 'Round', questions, kahootMode: false }],
+    settings: { quickfireQuestionTimerSeconds: 10 },
+    rounds: [{ title: 'Round', questions, quickfire: false }],
   } as unknown as SeededGame;
 }
 
@@ -36,7 +36,7 @@ describe('BlockGradingService.gradesChanged', () => {
     );
     const seededGame = {
       gameSessionId: 1,
-      settings: { kahootQuestionTimerSeconds: 10 },
+      settings: { quickfireQuestionTimerSeconds: 10 },
       rounds: [
         {
           title: 'Now',

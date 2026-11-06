@@ -32,8 +32,8 @@ import {
  * of issue paths back to sheet column names.
  */
 
-// CSV/Sheets rows never carry kahootMode (it's manual-editor-only), so a
-// blank points cell always falls back to the non-kahoot default.
+// CSV/Sheets rows never carry quickfire (it's manual-editor-only), so a
+// blank points cell always falls back to the non-quickfire default.
 const DEFAULT_POINTS = 1;
 
 // Case-insensitive lookup so "science & nature" in a sheet still resolves to
@@ -181,7 +181,7 @@ function invalidKeyMessage(key: string, type: QuestionType): string {
  * back as the same question. Round-level cells (break_after, category,
  * author, round_note, show_round_note) are written only on the round's last row — the importer lets any
  * row carry them, and the last is where authors conventionally put them.
- * Fields with no column (questionId, round kahootMode) are not written; the
+ * Fields with no column (questionId, round quickfire) are not written; the
  * margin and match scoring mode travel in the notes group.
  */
 export function encodeSheetRow(

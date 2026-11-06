@@ -98,7 +98,7 @@ export interface QuizQuestionSpec {
 export interface QuizRoundSpec {
   title: string;
   breakAfter?: boolean;
-  kahootMode?: boolean;
+  quickfire?: boolean;
   /** Host-only round note shown on /remote while the round's intro is on air. */
   note?: string;
   /** Whether the round note also shows on the big screen. */
@@ -186,7 +186,7 @@ export interface JoinedTeam {
   teamCode: string;
 }
 
-/** One of a session's phase timers (the question lock, the kahoot question deadline or the joker pick deadline), under test control. */
+/** One of a session's phase timers (the question lock, the quickfire question deadline or the joker pick deadline), under test control. */
 export interface PhaseTimerControl {
   isArmed: () => boolean;
   /** Epoch-ms the timer is due, or null when none is armed. */
@@ -308,14 +308,14 @@ export interface RealStoreGateway extends PlayableQuiz {
    */
   letOthersRun: () => Promise<void>;
   /**
-   * The auto-lock timer, the kahoot question timer and the joker pick timer
+   * The auto-lock timer, the quickfire question timer and the joker pick timer
    * of the seeded session (or another by `joinCode`). Nothing waits in real
    * time: read `isArmed` / `dueAt`, or `fireNow` to expire one. Armed timers
    * are cleared when the test ends.
    */
   timers: (joinCode?: string) => {
     lock: PhaseTimerControl;
-    kahoot: PhaseTimerControl;
+    quickfire: PhaseTimerControl;
     jokerPick: PhaseTimerControl;
   };
   /** Sends an admin action through the gateway (connecting an admin on first use) and returns the snapshot the admin room received for it. Throws whatever the gateway rejects with. */
@@ -336,9 +336,9 @@ export interface CreateGatewayOptions {
   teamNames?: string[];
   /** Join code for the seeded session; defaults to REAL_STORE_JOIN_CODE. Lets one test build two independent gateways. */
   joinCode?: string;
-  /** Makes the seeded round a kahootMode round. */
-  kahootMode?: boolean;
-  /** Seeds these rounds instead of the default single playable round (`kahootMode` is ignored). */
+  /** Makes the seeded round a quickfire round. */
+  quickfire?: boolean;
+  /** Seeds these rounds instead of the default single playable round (`quickfire` is ignored). */
   rounds?: QuizRoundSpec[];
   /** Overrides on top of DEFAULT_SESSION_SETTINGS (e.g. a 1s lockGraceSeconds so a timer fires within a test). */
   settings?: Partial<SessionSettings>;
@@ -488,7 +488,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const unreached = finishing
       .map((gate) => gate.finish())
       .filter((message): message is string => message !== undefined);
-    // Closing runs module destroy, which clears armed lock/kahoot timers that
+    // Closing runs module destroy, which clears armed lock/quickfire timers that
     // would otherwise fire into truncated tables and keep the worker alive.
     // It never closes the worker's ORM: the test database module only hands
     // that ORM out.
@@ -510,7 +510,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       {
         title: 'Round 1',
         breakAfter: true,
-        kahootMode: options.kahootMode ?? false,
+        quickfire: options.quickfire ?? false,
         questions: Object.values(PLAYABLE_QUESTIONS),
       },
     ];
@@ -520,7 +520,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         title: spec.title,
         orderIndex,
         breakAfter: spec.breakAfter ?? false,
-        kahootMode: spec.kahootMode ?? false,
+        quickfire: spec.quickfire ?? false,
         note: spec.note,
         showNoteOnScreen: spec.showNoteOnScreen ?? false,
       });
@@ -596,7 +596,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
   ): Promise<RealStoreGateway> {
     const sessionService = createFakeSessionService();
     const lockScheduler = new ManualTimerScheduler();
-    const kahootScheduler = new ManualTimerScheduler();
+    const quickfireScheduler = new ManualTimerScheduler();
     const jokerPickScheduler = new ManualTimerScheduler();
     const gate = new TestWriteGate();
     gates.push(gate);
@@ -608,7 +608,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         createTestDatabaseModule(db.orm),
         phaseTimerSchedulersModule({
           questionLockAt: lockScheduler,
-          kahootQuestionEndsAt: kahootScheduler,
+          quickfireQuestionEndsAt: quickfireScheduler,
           jokerPickEndsAt: jokerPickScheduler,
         }),
         jokerRandomModule(jokerRandom ?? Math.random),
@@ -838,7 +838,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       letOthersRun,
       timers: (joinCode = quiz.joinCode) => ({
         lock: controlTimer(lockScheduler, joinCode),
-        kahoot: controlTimer(kahootScheduler, joinCode),
+        quickfire: controlTimer(quickfireScheduler, joinCode),
         jokerPick: controlTimer(jokerPickScheduler, joinCode),
       }),
       connectAdmin,

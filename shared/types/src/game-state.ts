@@ -255,11 +255,11 @@ function advanceFromLocking(
       progress.questionIndex,
       context,
     ) - 1;
-  // Kahoot rounds skip break_intro/break/reveal_intro entirely — every
+  // Quickfire rounds skip break_intro/break/reveal_intro entirely — every
   // question is auto-graded, so there's never a manual-grading gate to
   // wait through, and the "fewer clicks" design collapses straight to
   // this question's own reveal.
-  if (round.kahootMode) {
+  if (round.quickfire) {
     return { ...progress, status: 'reveal', revealIndex };
   }
   return {

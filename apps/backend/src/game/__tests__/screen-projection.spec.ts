@@ -7,12 +7,12 @@ import {
 const HIDDEN_PROMPT = 'Largest planet?';
 const FIRST_PROMPT = 'Capital of France?';
 
-describe('Screen projection — a kahoot round, per audience', () => {
+describe('Screen projection — a quickfire round, per audience', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
   beforeEach(async () => {
-    game = await harness.createGateway({ kahootMode: true });
+    game = await harness.createGateway({ quickfire: true });
     await game.act('START_QUIZ');
     await game.act('ADVANCE'); // -> round_intro
     await game.act('ADVANCE'); // -> question_open q0

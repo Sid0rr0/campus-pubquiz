@@ -127,9 +127,9 @@ describe('Screen projection — the players view phone screen', () => {
     });
   });
 
-  it('names the leaderboard over a kahoot question still hidden behind the board', () => {
+  it('names the leaderboard over a quickfire question still hidden behind the board', () => {
     const state = session(
-      BLOCK.map((r) => ({ ...r, kahootMode: true })),
+      BLOCK.map((r) => ({ ...r, quickfire: true })),
       {
         status: 'question_open',
         roundIndex: 0,

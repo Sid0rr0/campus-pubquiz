@@ -9,7 +9,7 @@ export type PersistedGameProgress = SavedPhaseTimer & {
   progress: GameProgress;
   /** Load turns a session saved before opened questions were tracked into an empty list; settle derives them from the position. */
   openedQuestionIds: number[];
-  revealedKahootQuestionIds: number[];
+  revealedQuickfireQuestionIds: number[];
 };
 
 @Injectable()
@@ -37,7 +37,7 @@ export class GameProgressRepository {
       data.phaseStartedAt !== null ? new Date(data.phaseStartedAt) : null;
     session.phaseElapsedByKey = data.phaseElapsedByKey;
     session.openedQuestionIds = data.openedQuestionIds;
-    session.revealedKahootQuestionIds = data.revealedKahootQuestionIds;
+    session.revealedQuickfireQuestionIds = data.revealedQuickfireQuestionIds;
     await this.gameSessions.getEntityManager().flush();
   }
 
@@ -71,7 +71,7 @@ export class GameProgressRepository {
           : null,
       phaseElapsedByKey: session.phaseElapsedByKey,
       openedQuestionIds: session.openedQuestionIds ?? [],
-      revealedKahootQuestionIds: session.revealedKahootQuestionIds,
+      revealedQuickfireQuestionIds: session.revealedQuickfireQuestionIds,
     };
   }
 }

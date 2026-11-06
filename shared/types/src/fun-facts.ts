@@ -124,7 +124,7 @@ export type FunFact =
 const HALF = 0.5;
 
 interface RevealedQuestion extends FunFactQuestion {
-  isKahoot: boolean;
+  isQuickfire: boolean;
   type: QuestionType;
   points: number;
 }
@@ -137,7 +137,7 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
       questionNumberInRound: questionIndex + 1,
       prompt: question.prompt,
       answer: formatAnswer(question.answer, question),
-      isKahoot: round.kahootMode ?? false,
+      isQuickfire: round.quickfire ?? false,
       type: question.type,
       points: question.points,
     })),
@@ -169,13 +169,13 @@ function fastestCorrectAnswer(
   revealed: readonly RevealedQuestion[],
   answers: readonly FunFactAnswer[],
 ): FunFact | null {
-  const kahootById = new Map(
-    revealed.filter((q) => q.isKahoot).map((q) => [q.questionId, q]),
+  const quickfireById = new Map(
+    revealed.filter((q) => q.isQuickfire).map((q) => [q.questionId, q]),
   );
   const timed = answers.flatMap((a) =>
     a.verdict === 'correct' &&
     a.responseMs !== null &&
-    kahootById.has(a.questionId)
+    quickfireById.has(a.questionId)
       ? [{ ...a, responseMs: a.responseMs }]
       : [],
   );
@@ -188,7 +188,7 @@ function fastestCorrectAnswer(
     kind: 'fastest_correct_answer',
     teamName: fastest.teamName,
     responseMs: fastest.responseMs,
-    question: toFunFactQuestion(kahootById.get(fastest.questionId)!),
+    question: toFunFactQuestion(quickfireById.get(fastest.questionId)!),
   };
 }
 

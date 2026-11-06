@@ -20,7 +20,7 @@ interface QuizSavedResponse {
 
 /**
  * Imports the CSV at `csvPath` as a new quiz titled `quizTitle`: previews it (so a bad fixture fails here) and saves what the preview parsed.
- * `mapRounds` changes a round before it is saved, for what no CSV column sets (e.g. `kahootMode`).
+ * `mapRounds` changes a round before it is saved, for what no CSV column sets (e.g. `quickfire`).
  */
 export async function importCsvQuiz(
   api: APIRequestContext,

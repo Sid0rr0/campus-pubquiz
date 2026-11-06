@@ -30,7 +30,7 @@ interface RoundQuestionEntry {
   questionIndexInRound: number;
 }
 
-/** Pairs a round's questions with their round-relative labels and (for closest_guess) cached summary — shared by getBlockSeededQuestions and getPastRevealedQuestions. `questionIndexInRound` is each entry's actual index within its round (not necessarily starting at 0 — a kahootMode block can start mid-round), so questionNumberInRound stays correct even for a partial run. */
+/** Pairs a round's questions with their round-relative labels and (for closest_guess) cached summary — shared by getBlockSeededQuestions and getPastRevealedQuestions. `questionIndexInRound` is each entry's actual index within its round (not necessarily starting at 0 — a quickfire block can start mid-round), so questionNumberInRound stays correct even for a partial run. */
 function toRevealQuestionViews(
   entries: RoundQuestionEntry[],
   roundNumber: number,
@@ -122,7 +122,7 @@ export function getBlockSeededQuestions(
 /**
  * Every question from blocks that finished before the current one: every
  * round strictly before the current block's round, plus — when the current
- * block starts mid-round (a kahootMode round's earlier questions, each its
+ * block starts mid-round (a quickfire round's earlier questions, each its
  * own already-finished block) — that round's questions before the block's
  * start. A block can only be left behind once its own break+reveal has
  * completed (see getNextGameState), so these are always safe to return with
@@ -218,7 +218,7 @@ export function getFurthestOpenPosition(session: SessionState): {
  * the picker doesn't grow as questions or rounds unlock. Based on
  * furthestOpenIndex rather than the literal display position, so stepping
  * the display back with PREVIOUS doesn't re-mark already-opened questions
- * as upcoming. Naturally empty for a kahootMode round, whose block is
+ * as upcoming. Naturally empty for a quickfire round, whose block is
  * always just the current question.
  */
 export function getUpcomingQuestionPositions(

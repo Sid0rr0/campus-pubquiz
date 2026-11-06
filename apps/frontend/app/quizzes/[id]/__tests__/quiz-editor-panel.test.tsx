@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import {
   checkQuestion,
   decodeSheetRow,
-  kahootTypeNames,
+  quickfireTypeNames,
 } from '@campus-pubquiz/types';
 import { Toaster } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -811,7 +811,7 @@ describe('QuizEditorPanel', () => {
           {
             title: 'Round 1',
             breakAfter: true,
-            kahootMode: false,
+            quickfire: false,
             questions: [
               {
                 type: 'multiple_choice',
@@ -869,7 +869,7 @@ describe('QuizEditorPanel', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('saves kahootMode: true after checking the Kahoot mode toggle', async () => {
+  it('saves quickfire: true after checking the Quickfire mode toggle', async () => {
     const user = userEvent.setup();
     mockCreateQuiz.mockResolvedValue({
       quizId: 42,
@@ -885,7 +885,7 @@ describe('QuizEditorPanel', () => {
       screen.getByPlaceholderText(/untitled quiz/i),
       'Trivia Night',
     );
-    await user.click(screen.getByLabelText(/kahoot mode/i));
+    await user.click(screen.getByLabelText(/quickfire mode/i));
     await user.click(screen.getByRole('button', { name: /add question/i }));
     await user.type(
       screen.getByPlaceholderText(/question prompt/i),
@@ -901,7 +901,7 @@ describe('QuizEditorPanel', () => {
     await waitFor(() =>
       expect(mockCreateQuiz).toHaveBeenCalledWith(
         expect.objectContaining({
-          rounds: [expect.objectContaining({ kahootMode: true })],
+          rounds: [expect.objectContaining({ quickfire: true })],
         }),
       ),
     );
@@ -1571,7 +1571,7 @@ describe('QuizEditorPanel', () => {
     });
 
     describe('round controls', () => {
-      // Multiple choice, so the rounds are allowed to turn kahoot mode on.
+      // Multiple choice, so the rounds are allowed to turn quickfire mode on.
       const multipleChoice = (questionId: number) => ({
         ...freeText(questionId),
         type: 'multiple_choice' as const,
@@ -1591,7 +1591,7 @@ describe('QuizEditorPanel', () => {
           .getAllByRole('checkbox', { name: label })
           .map((checkbox) => checkbox.hasAttribute('disabled'));
 
-      it('disables move, delete, break-after and kahoot on the current round and earlier ones, and frees the rounds after it', async () => {
+      it('disables move, delete, break-after and quickfire on the current round and earlier ones, and frees the rounds after it', async () => {
         mockFetchQuizDraft.mockResolvedValue(roundsDraft(1));
         renderWithQuery(<QuizEditorPanel quizId="5" />);
         await screen.findByDisplayValue('Trivia Night');
@@ -1612,10 +1612,10 @@ describe('QuizEditorPanel', () => {
           false,
         ]);
         expect(checkboxStates(/break after/i)).toEqual([true, true, true]);
-        expect(checkboxStates(/kahoot mode/i)).toEqual([true, true, false]);
+        expect(checkboxStates(/quickfire mode/i)).toEqual([true, true, false]);
       });
 
-      it('lets a later round move up and down, change break-after and kahoot, and be deleted', async () => {
+      it('lets a later round move up and down, change break-after and quickfire, and be deleted', async () => {
         mockFetchQuizDraft.mockResolvedValue(roundsDraft(0));
         renderWithQuery(<QuizEditorPanel quizId="5" />);
         await screen.findByDisplayValue('Trivia Night');
@@ -1636,7 +1636,7 @@ describe('QuizEditorPanel', () => {
           false,
         ]);
         expect(checkboxStates(/break after/i)).toEqual([true, false, true]);
-        expect(checkboxStates(/kahoot mode/i)).toEqual([true, false, false]);
+        expect(checkboxStates(/quickfire mode/i)).toEqual([true, false, false]);
       });
 
       it("saves a later round's break-after, which moves where the current block ends", async () => {
@@ -2040,7 +2040,7 @@ describe('QuizEditorPanel', () => {
     );
   });
 
-  describe('kahoot mode question types', () => {
+  describe('quickfire mode question types', () => {
     const TYPE_LABELS = [
       'Multiple choice',
       'Free text',
@@ -2048,7 +2048,7 @@ describe('QuizEditorPanel', () => {
       'Match pairs',
       'Closest guess',
     ];
-    const KAHOOT_LABELS = ['Multiple choice', 'Sort / order', 'Match pairs'];
+    const QUICKFIRE_LABELS = ['Multiple choice', 'Sort / order', 'Match pairs'];
 
     const multipleChoice = {
       type: 'multiple_choice',
@@ -2084,50 +2084,50 @@ describe('QuizEditorPanel', () => {
         .filter((label) => TYPE_LABELS.includes(label));
     }
 
-    it('offers only kahoot-allowed types in a kahoot round, leaving other rounds unaffected', async () => {
+    it('offers only quickfire-allowed types in a quickfire round, leaving other rounds unaffected', async () => {
       loadQuiz([
         {
           title: 'Speed',
           breakAfter: false,
-          kahootMode: true,
+          quickfire: true,
           questions: [multipleChoice],
         },
         {
           title: 'Normal',
           breakAfter: true,
-          kahootMode: false,
+          quickfire: false,
           questions: [freeText],
         },
       ]);
       await screen.findByDisplayValue('Speed');
 
-      expect(typeLabelsInRound('Speed')).toEqual(KAHOOT_LABELS);
+      expect(typeLabelsInRound('Speed')).toEqual(QUICKFIRE_LABELS);
       expect(typeLabelsInRound('Normal')).toEqual(TYPE_LABELS);
     });
 
-    it('restores every type in the round once kahoot mode is turned off', async () => {
+    it('restores every type in the round once quickfire mode is turned off', async () => {
       const user = userEvent.setup();
       loadQuiz([
         {
           title: 'Speed',
           breakAfter: true,
-          kahootMode: true,
+          quickfire: true,
           questions: [multipleChoice],
         },
       ]);
       await screen.findByDisplayValue('Speed');
 
-      await user.click(screen.getByLabelText(/kahoot mode/i));
+      await user.click(screen.getByLabelText(/quickfire mode/i));
 
       expect(typeLabelsInRound('Speed')).toEqual(TYPE_LABELS);
     });
 
-    it('disables the kahoot toggle with a hint naming the blocking questions, linked to the toggle', async () => {
+    it('disables the quickfire toggle with a hint naming the blocking questions, linked to the toggle', async () => {
       loadQuiz([
         {
           title: 'Mixed',
           breakAfter: true,
-          kahootMode: false,
+          quickfire: false,
           questions: [
             multipleChoice,
             freeText,
@@ -2137,11 +2137,11 @@ describe('QuizEditorPanel', () => {
       ]);
       await screen.findByDisplayValue('Mixed');
 
-      const toggle = screen.getByLabelText(/kahoot mode/i);
+      const toggle = screen.getByLabelText(/quickfire mode/i);
       expect(toggle).toBeDisabled();
       const hint = screen.getByText(/change or remove questions 2, 3 first/i);
       expect(hint).toHaveTextContent(
-        `Kahoot rounds only hold ${kahootTypeNames()} questions`,
+        `Quickfire rounds only hold ${quickfireTypeNames()} questions`,
       );
       expect(toggle.getAttribute('aria-describedby')?.split(' ')).toContain(
         hint.id,
@@ -2154,19 +2154,19 @@ describe('QuizEditorPanel', () => {
         {
           title: 'Mixed',
           breakAfter: true,
-          kahootMode: false,
+          quickfire: false,
           questions: [freeText],
         },
       ]);
       await screen.findByDisplayValue('Mixed');
-      expect(screen.getByLabelText(/kahoot mode/i)).toBeDisabled();
+      expect(screen.getByLabelText(/quickfire mode/i)).toBeDisabled();
       expect(
         screen.getByText(/change or remove question 1 first/i),
       ).toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: 'Multiple choice' }));
 
-      expect(screen.getByLabelText(/kahoot mode/i)).toBeEnabled();
+      expect(screen.getByLabelText(/quickfire mode/i)).toBeEnabled();
       expect(screen.queryByText(/change or remove/i)).not.toBeInTheDocument();
     });
 
@@ -2176,18 +2176,18 @@ describe('QuizEditorPanel', () => {
         {
           title: 'Mixed',
           breakAfter: true,
-          kahootMode: false,
+          quickfire: false,
           questions: [multipleChoice, freeText],
         },
       ]);
       await screen.findByDisplayValue('Mixed');
-      expect(screen.getByLabelText(/kahoot mode/i)).toBeDisabled();
+      expect(screen.getByLabelText(/quickfire mode/i)).toBeDisabled();
 
       await user.click(
         screen.getAllByRole('button', { name: /delete question/i })[1],
       );
 
-      expect(screen.getByLabelText(/kahoot mode/i)).toBeEnabled();
+      expect(screen.getByLabelText(/quickfire mode/i)).toBeEnabled();
     });
 
     it('never changes a question type when the toggle is blocked', async () => {
@@ -2195,7 +2195,7 @@ describe('QuizEditorPanel', () => {
         {
           title: 'Mixed',
           breakAfter: true,
-          kahootMode: false,
+          quickfire: false,
           questions: [freeText],
         },
       ]);

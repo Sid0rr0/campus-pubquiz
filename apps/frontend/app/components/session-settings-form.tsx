@@ -39,10 +39,10 @@ export function SessionSettingsForm({
     onChange({ ...value, maxBonusAwardsPerCategory });
   }
 
-  function updateKahootQuestionTimerSeconds(raw: string): void {
+  function updateQuickfireQuestionTimerSeconds(raw: string): void {
     onChange({
       ...value,
-      kahootQuestionTimerSeconds: parseOptionalNumber(raw),
+      quickfireQuestionTimerSeconds: parseOptionalNumber(raw),
     });
   }
 
@@ -79,20 +79,20 @@ export function SessionSettingsForm({
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-extrabold">
-        Kahoot question timer (seconds)
+        Quickfire question timer (seconds)
         <input
           type="number"
           min={1}
           step={1}
           placeholder="Unlimited"
-          value={value.kahootQuestionTimerSeconds ?? ''}
+          value={value.quickfireQuestionTimerSeconds ?? ''}
           onChange={(event) =>
-            updateKahootQuestionTimerSeconds(event.target.value)
+            updateQuickfireQuestionTimerSeconds(event.target.value)
           }
           className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
         />
         <span className="text-xs font-normal text-foreground/55">
-          Only applies to kahoot-mode rounds. Leave blank for unlimited time.
+          Only applies to quickfire-mode rounds. Leave blank for unlimited time.
         </span>
       </label>
 

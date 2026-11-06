@@ -280,8 +280,8 @@ function LiveEditNotice() {
     <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
       A session is live on this quiz — questions can still be edited, but opened
       ones keep their type and choices. The current round and the rounds before
-      it keep their place, break-after and kahoot setting; the rounds after it
-      can be added, deleted, reordered and changed. Questions can be added,
+      it keep their place, break-after and quickfire setting; the rounds after
+      it can be added, deleted, reordered and changed. Questions can be added,
       deleted, reordered and moved after the current round&apos;s last opened
       question (until its block starts locking) and in the rounds after it.
       Correcting an opened question&apos;s answer or points re-scores its

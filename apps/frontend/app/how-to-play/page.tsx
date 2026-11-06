@@ -23,7 +23,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
     title: 'Scoring',
     lines: [
       "A right answer earns the question's points; the quiz master can also give half.",
-      'In a kahoot round each question locks on its own, and faster right answers earn more, down to half the points.',
+      'In a quickfire round each question locks on its own, and faster right answers earn more, down to half the points.',
       'The leaderboard adds up answers and bonuses. A tie can be settled by a showdown.',
     ],
   },

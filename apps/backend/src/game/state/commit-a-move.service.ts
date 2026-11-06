@@ -132,7 +132,7 @@ export class MoveCommitter {
       session: {
         ...refreshed,
         openedQuestionIds: saved?.openedQuestionIds ?? [],
-        revealedKahootQuestionIds: saved?.revealedKahootQuestionIds ?? [],
+        revealedQuickfireQuestionIds: saved?.revealedQuickfireQuestionIds ?? [],
       },
       progress,
       step: { kind: 'place' },
@@ -172,7 +172,7 @@ export class MoveCommitter {
       await this.grading.gradeForMove(started, progress);
     // settleMove carries a raw ADVANCE under the leaderboard out as the action
     // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
-    // reveal count, the kahoot timer and everything else downstream treat it
+    // reveal count, the quickfire timer and everything else downstream treat it
     // identically.
     const committed = settleMove(refreshed, step, pressed, Date.now());
 
@@ -259,6 +259,6 @@ function toPersistedProgress(session: SessionState): PersistedGameProgress {
     phaseStartedAt: session.phaseStartedAt,
     phaseElapsedByKey: session.phaseElapsedByKey,
     openedQuestionIds: session.openedQuestionIds,
-    revealedKahootQuestionIds: session.revealedKahootQuestionIds,
+    revealedQuickfireQuestionIds: session.revealedQuickfireQuestionIds,
   };
 }

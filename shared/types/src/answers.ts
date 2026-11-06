@@ -64,7 +64,7 @@ export interface AnswerView {
   gradingState: GradingState;
   /** Set once the admin grades this answer — the source of truth for "is this graded", since pointsAwarded defaults to 0 before grading. */
   gradedAt: string | null;
-  /** Set together with gradedAt — what "correct" means everywhere (a speed-scaled kahoot answer is still correct). Null until graded. */
+  /** Set together with gradedAt — what "correct" means everywhere (a speed-scaled quickfire answer is still correct). Null until graded. */
   verdict: Verdict | null;
   /** The power-ups the team used on this question, so the quiz master can settle disputes. */
   powerUps: PowerUpId[];

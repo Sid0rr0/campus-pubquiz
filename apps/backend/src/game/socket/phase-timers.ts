@@ -36,8 +36,8 @@ export interface PhaseTimersDeps {
 /**
  * Owns the three phase timers for every live session: the question lock (the
  * last question of a breakAfter round has been open for the session's
- * settings.lockGraceSeconds), the kahoot question deadline (a kahootMode
- * question has been open for settings.kahootQuestionTimerSeconds) and the
+ * settings.lockGraceSeconds), the quickfire question deadline (a quickfire
+ * question has been open for settings.quickfireQuestionTimerSeconds) and the
  * joker pick deadline (the pick has been open for its fixed minute). An expiry
  * auto-advances exactly as if the admin had clicked "Advance" themselves.
  *

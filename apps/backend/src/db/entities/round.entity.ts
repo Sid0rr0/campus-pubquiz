@@ -19,7 +19,7 @@ export class Round extends BaseEntity {
     | 'createdAt'
     | 'updatedAt'
     | 'breakAfter'
-    | 'kahootMode'
+    | 'quickfire'
     | 'category'
     | 'author'
     | 'note'
@@ -38,7 +38,7 @@ export class Round extends BaseEntity {
   breakAfter: boolean = false;
 
   @Property({ default: false })
-  kahootMode: boolean = false;
+  quickfire: boolean = false;
 
   /** Round topic/theme — one of ROUND_CATEGORIES, validated at the request boundary (quiz-draft.schema.ts / question-row.schema.ts), not by the DB. Optional, manual/CSV-set metadata shown on the big screen. */
   @Property({ type: 'text', nullable: true })

@@ -13,8 +13,8 @@ import { ANSWER_INPUTS } from '@/app/play/answer-inputs';
 interface AnswerFormProps {
   question: QuestionView;
   initialValue?: string;
-  /** Active round's Kahoot-style speed scoring flag — for multiple_choice, tap submits immediately and locks the pick, with no Submit or "I don't know" button. */
-  isKahootMode?: boolean;
+  /** Active round's quickfire speed scoring flag — for multiple_choice, tap submits immediately and locks the pick, with no Submit or "I don't know" button. */
+  isQuickfireMode?: boolean;
   onSubmit: (value: string) => void;
   /** A pin the team bought on this question (sort or match). */
   pin?: PinEffect;
@@ -51,7 +51,7 @@ function IdkButton({ isChosen, onClick }: IdkButtonProps) {
 export function AnswerForm({
   question,
   initialValue = '',
-  isKahootMode = false,
+  isQuickfireMode = false,
   onSubmit,
   pin,
   removedOptions,
@@ -63,7 +63,7 @@ export function AnswerForm({
     <AnswerInput
       question={question}
       initialValue={initialValue}
-      isKahootMode={isKahootMode}
+      isQuickfireMode={isQuickfireMode}
       onSubmit={onSubmit}
       pin={pin}
       removedOptions={removedOptions}

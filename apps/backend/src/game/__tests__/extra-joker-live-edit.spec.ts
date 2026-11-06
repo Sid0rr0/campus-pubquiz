@@ -113,7 +113,7 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
     expect(syncsTo(game, alpha).at(-1)?.coins).toBe(4);
   });
 
-  it('is refunded when the edit makes its round a kahootMode round', async () => {
+  it('is refunded when the edit makes its round a quickfire round', async () => {
     const { game, alpha } = await withExtraOnRoundOne();
     await advanceUntil(game, 'round_intro'); // round 1's intro is on air: round 2 is next
     await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
@@ -124,7 +124,7 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
 
     await game.saveQuizEdit((rounds) => [
       rounds[0],
-      { ...rounds[1], kahootMode: true },
+      { ...rounds[1], quickfire: true },
       rounds[2],
     ]);
 

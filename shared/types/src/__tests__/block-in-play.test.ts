@@ -9,11 +9,11 @@ import {
 import { progressAt, roundOf } from './session-progress-fixtures';
 
 // Round 0 (ids 1, 2) has no break after it, so it shares a block with round 1
-// (ids 3, 4). Round 2 is kahoot: each of ids 5, 6, 7 is its own block.
+// (ids 3, 4). Round 2 is quickfire: each of ids 5, 6, 7 is its own block.
 const rounds = [
   roundOf(0, [1, 2], { breakAfter: false }),
   roundOf(1, [3, 4]),
-  roundOf(2, [5, 6, 7], { kahootMode: true }),
+  roundOf(2, [5, 6, 7], { quickfire: true }),
 ];
 
 describe('the block in play', () => {
@@ -65,7 +65,7 @@ describe('the block in play', () => {
     expect(getBlockInPlayIds(rounds, progress)).toEqual([1, 2, 3]);
   });
 
-  it('is a single question inside a kahoot round', () => {
+  it('is a single question inside a quickfire round', () => {
     const progress = progressAt('question_open', {
       roundIndex: 2,
       questionIndex: 1,
@@ -85,7 +85,7 @@ describe('the rounds of a block', () => {
     expect(getBlockRoundIndexes(rounds, 3)).toEqual([1]);
   });
 
-  it('lists just the kahoot round for one of its questions', () => {
+  it('lists just the quickfire round for one of its questions', () => {
     expect(getBlockRoundIndexes(rounds, 6)).toEqual([2]);
   });
 
@@ -102,7 +102,7 @@ describe('the past blocks', () => {
     );
   });
 
-  it('holds every earlier round and the kahoot questions before the current one', () => {
+  it('holds every earlier round and the quickfire questions before the current one', () => {
     const progress = progressAt('question_open', {
       roundIndex: 2,
       questionIndex: 2,
@@ -111,7 +111,7 @@ describe('the past blocks', () => {
     expect(getPastBlockIds(rounds, progress)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
-  it('holds only the questions before the block in a kahoot round entered at its first question', () => {
+  it('holds only the questions before the block in a quickfire round entered at its first question', () => {
     const progress = progressAt('question_open', {
       roundIndex: 2,
       questionIndex: 0,

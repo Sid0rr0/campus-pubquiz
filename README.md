@@ -41,7 +41,7 @@ reconnects and picks up exactly where they left off.
 ### Question types
 
 - Free text, multiple choice, sort/order, match pairs, closest guess, number (any question can also carry a picture, audio or YouTube video)
-- Kahoot-style rounds, where each question is locked, scored and revealed on
+- Quickfire rounds, where each question is locked, scored and revealed on
   its own
 
 ### Quiz authoring

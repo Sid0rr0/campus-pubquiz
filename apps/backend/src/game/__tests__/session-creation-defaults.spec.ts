@@ -10,7 +10,7 @@ import {
 import { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
 
 const START_OF_TIME = '2024-01-01T00:00:00.000Z';
-const KAHOOT_TIMER_SECONDS = 30;
+const QUICKFIRE_TIMER_SECONDS = 30;
 const BREAK_END_TIME = Date.parse('2024-01-01T01:00:00.000Z');
 
 describe('GameGateway — a freshly created session', () => {
@@ -19,8 +19,8 @@ describe('GameGateway — a freshly created session', () => {
 
   beforeEach(async () => {
     game = await harness.createGateway({
-      kahootMode: true,
-      settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+      quickfire: true,
+      settings: { quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS },
     });
     freezeClockAt(START_OF_TIME);
   });
@@ -32,7 +32,7 @@ describe('GameGateway — a freshly created session', () => {
   async function dirtyThenEndTheSession() {
     await game.act('START_QUIZ');
     await game.act('ADVANCE'); // -> round_intro
-    await game.act('ADVANCE'); // -> question_open q0, kahoot deadline armed
+    await game.act('ADVANCE'); // -> question_open q0, quickfire deadline armed
     const admin = await game.connectAdmin();
     await game.gateway.handleSetBreakEndTime(asSocket(admin), {
       breakEndsAt: BREAK_END_TIME,
@@ -48,7 +48,7 @@ describe('GameGateway — a freshly created session', () => {
     const snapshot = await game.resync('display', created.joinCode);
     expect(snapshot.progress.status).toBe('lobby');
     expect(snapshot.questionLockAt).toBeNull();
-    expect(snapshot.kahootQuestionEndsAt).toBeNull();
+    expect(snapshot.quickfireQuestionEndsAt).toBeNull();
     expect(snapshot.screen.kind).toBe('lobby');
     expect(
       (await game.resync('admin', created.joinCode)).breakEndsAt,
@@ -82,7 +82,7 @@ describe('GameGateway — a freshly created session', () => {
 
     const snapshot = await game.resync('display', created.joinCode);
     expect(snapshot.progress.status).toBe('lobby');
-    expect(snapshot.kahootQuestionEndsAt).toBeNull();
+    expect(snapshot.quickfireQuestionEndsAt).toBeNull();
     expect(snapshot.screen.kind).toBe('lobby');
     expect(
       (await game.resync('admin', created.joinCode)).breakEndsAt,

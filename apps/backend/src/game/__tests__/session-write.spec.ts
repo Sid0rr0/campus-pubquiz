@@ -1387,7 +1387,7 @@ describe('GameGateway — session write: what a write may return and a held writ
 
     expect(outcome.deadlineChange).toEqual({
       questionLockAt: null,
-      kahootQuestionEndsAt: null,
+      quickfireQuestionEndsAt: null,
       jokerPickEndsAt: 5_000,
     });
   });

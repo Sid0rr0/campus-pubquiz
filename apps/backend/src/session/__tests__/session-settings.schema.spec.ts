@@ -240,37 +240,38 @@ describe('sessionSettingsPartialSchema', () => {
     ).toBe(false);
   });
 
-  it('accepts a positive kahootQuestionTimerSeconds', () => {
+  it('accepts a positive quickfireQuestionTimerSeconds', () => {
     const result = sessionSettingsPartialSchema.safeParse({
-      kahootQuestionTimerSeconds: 30,
+      quickfireQuestionTimerSeconds: 30,
     });
 
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ kahootQuestionTimerSeconds: 30 });
+    expect(result.data).toEqual({ quickfireQuestionTimerSeconds: 30 });
   });
 
-  it('accepts a null kahootQuestionTimerSeconds', () => {
+  it('accepts a null quickfireQuestionTimerSeconds', () => {
     const result = sessionSettingsPartialSchema.safeParse({
-      kahootQuestionTimerSeconds: null,
+      quickfireQuestionTimerSeconds: null,
     });
 
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ kahootQuestionTimerSeconds: null });
+    expect(result.data).toEqual({ quickfireQuestionTimerSeconds: null });
   });
 
-  it('rejects a non-positive or non-integer kahootQuestionTimerSeconds', () => {
-    expect(
-      sessionSettingsPartialSchema.safeParse({ kahootQuestionTimerSeconds: 0 })
-        .success,
-    ).toBe(false);
+  it('rejects a non-positive or non-integer quickfireQuestionTimerSeconds', () => {
     expect(
       sessionSettingsPartialSchema.safeParse({
-        kahootQuestionTimerSeconds: -5,
+        quickfireQuestionTimerSeconds: 0,
       }).success,
     ).toBe(false);
     expect(
       sessionSettingsPartialSchema.safeParse({
-        kahootQuestionTimerSeconds: 15.5,
+        quickfireQuestionTimerSeconds: -5,
+      }).success,
+    ).toBe(false);
+    expect(
+      sessionSettingsPartialSchema.safeParse({
+        quickfireQuestionTimerSeconds: 15.5,
       }).success,
     ).toBe(false);
   });

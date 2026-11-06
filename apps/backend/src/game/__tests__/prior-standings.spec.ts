@@ -11,7 +11,7 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const KAHOOT_TIMER_SECONDS = 10;
+const QUICKFIRE_TIMER_SECONDS = 10;
 const BONUS_POINTS = 3;
 
 describe('GameGateway — prior standings behind the display count-up board', () => {
@@ -22,21 +22,21 @@ describe('GameGateway — prior standings behind the display count-up board', ()
     freezeClockAt('2024-01-01T00:00:00.000Z');
   });
 
-  /** A kahoot round of two questions, opened on its first. Kahoot answers are scored on air, so their points land after the board the question opened on. */
-  async function openKahootRound() {
+  /** A quickfire round of two questions, opened on its first. Quickfire answers are scored on air, so their points land after the board the question opened on. */
+  async function openQuickfireRound() {
     game = await harness.createGateway({
       teamNames: ['First', 'Second'],
       rounds: [
         {
           title: 'Speed Round',
-          kahootMode: true,
+          quickfire: true,
           questions: [
             CAPITAL_QUESTION,
             { ...CAPITAL_QUESTION, prompt: 'Capital of UK?' },
           ],
         },
       ],
-      settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+      settings: { quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS },
     });
     await game.act('START_QUIZ');
     await game.act('ADVANCE'); // -> round_intro
@@ -59,7 +59,7 @@ describe('GameGateway — prior standings behind the display count-up board', ()
     return view.screen.board;
   }
 
-  /** The board the big screen counts up from between kahoot questions. */
+  /** The board the big screen counts up from between quickfire questions. */
   function countUpBoard() {
     const { countUpBoard: board } = boardOf(displayView());
     if (board === undefined) throw new Error('no count-up board was sent');
@@ -89,8 +89,8 @@ describe('GameGateway — prior standings behind the display count-up board', ()
     await game.act('ADVANCE'); // -> q1 open behind the leaderboard
   }
 
-  describe('in a kahoot round', () => {
-    beforeEach(openKahootRound);
+  describe('in a quickfire round', () => {
+    beforeEach(openQuickfireRound);
 
     it('holds the standings from before the last question points landed', async () => {
       await landFirstQuestionPoints();

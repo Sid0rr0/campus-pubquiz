@@ -17,7 +17,7 @@ const CSRF_HEADERS = { 'x-requested-with': 'XMLHttpRequest' } as const;
 /** The settings a spec may choose when it creates a session; any other setting keeps the backend default. */
 export interface SessionSettingsInput {
   lockGraceSeconds?: number;
-  kahootQuestionTimerSeconds?: number | null;
+  quickfireQuestionTimerSeconds?: number | null;
   showRoundOverview?: boolean;
   /** Needs `showRoundOverview` on too (the backend refuses the pair otherwise). */
   jokersEnabled?: boolean;

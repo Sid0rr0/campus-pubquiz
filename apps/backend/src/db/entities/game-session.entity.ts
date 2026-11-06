@@ -27,7 +27,7 @@ export class GameSession extends BaseEntity {
     | 'phaseStartedAt'
     | 'phaseElapsedByKey'
     | 'openedQuestionIds'
-    | 'revealedKahootQuestionIds'
+    | 'revealedQuickfireQuestionIds'
     | 'closedAt';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
@@ -83,9 +83,9 @@ export class GameSession extends BaseEntity {
   @Property({ type: 'json', nullable: true })
   openedQuestionIds: number[] | null = null;
 
-  /** Ids of the kahoot questions whose reveal has aired — see SessionState.revealedKahootQuestionIds. */
+  /** Ids of the quickfire questions whose reveal has aired — see SessionState.revealedQuickfireQuestionIds. */
   @Property({ type: 'json', default: '[]' })
-  revealedKahootQuestionIds: number[] = [];
+  revealedQuickfireQuestionIds: number[] = [];
 
   /** When an admin closed this session (see GameStateService.closeSession); null while open. Closed sessions are not reloaded on boot. */
   @Property({ type: 'timestamptz', nullable: true })

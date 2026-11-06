@@ -83,8 +83,8 @@ export interface EditorRound {
   id: string;
   title: string;
   breakAfter: boolean;
-  /** See RoundConfig.kahootMode — only settable here, never via CSV/Sheets import. */
-  kahootMode: boolean;
+  /** See RoundConfig.quickfire — only settable here, never via CSV/Sheets import. */
+  quickfire: boolean;
   /** Round topic/theme — one of ROUND_CATEGORIES, or '' meaning unset. Picked from a fixed `<select>` in the editor. */
   category: string;
   /** Who wrote this round's questions — optional, blank string means unset. */
@@ -104,13 +104,13 @@ export function makeMatchPair(left = '', right = ''): EditorMatchPair {
   return { left, right };
 }
 
-/** Kahoot rounds default new questions to 1000 points (Kahoot's own convention); every other round defaults to 1. */
-export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
+/** Quickfire rounds default new questions to 1000 points (Quickfire's own convention); every other round defaults to 1. */
+export function makeQuestion(id: string, isQuickfire = false): EditorQuestion {
   return {
     id,
     type: 'multiple_choice',
     prompt: '',
-    points: isKahoot ? 1000 : 1,
+    points: isQuickfire ? 1000 : 1,
     notes: '',
     showNotesAtReveal: false,
     options: [makeOption(), makeOption()],
@@ -133,7 +133,7 @@ export function makeRound(id: string, title = ''): EditorRound {
     id,
     title,
     breakAfter: false,
-    kahootMode: false,
+    quickfire: false,
     category: '',
     author: '',
     note: '',
@@ -245,9 +245,9 @@ export function roundFromPreview(
     id,
     title: round.title,
     breakAfter: round.breakAfter,
-    // CSV/Sheets previews never carry kahootMode — it's only ever set by
+    // CSV/Sheets previews never carry quickfire — it's only ever set by
     // editing the round afterward in the manual editor.
-    kahootMode: round.kahootMode ?? false,
+    quickfire: round.quickfire ?? false,
     category: round.category ?? '',
     author: round.author ?? '',
     note: round.note ?? '',
@@ -265,7 +265,7 @@ export function roundFromPreview(
  * title matches an existing round (case/whitespace-insensitive) has its
  * questions appended to that round; every other preview round is added as a
  * brand-new round at the end. Existing rounds' own settings (breakAfter,
- * kahootMode, category, author) are left untouched by a match.
+ * quickfire, category, author) are left untouched by a match.
  */
 export function mergeRoundsFromPreview(
   currentRounds: EditorRound[],
@@ -413,7 +413,7 @@ export function describeEditorRounds(
 export interface MoveTargetRound {
   id: string;
   label: string;
-  kahootMode: boolean;
+  quickfire: boolean;
 }
 
 /** The rounds a question in round `fromIndex` may move to: every other round that can take a moved question. */
@@ -429,7 +429,7 @@ export function moveTargetRounds(
           {
             id: round.id,
             label: `${index + 1}. ${round.title.trim() || 'Untitled round'}`,
-            kahootMode: round.kahootMode,
+            quickfire: round.quickfire,
           },
         ],
   );
@@ -583,7 +583,7 @@ export function toSaveRequest(
       // last round's break is always forced on — see quiz.service.ts's
       // forceLastRoundBreak, which enforces this again server-side.
       breakAfter: index === rounds.length - 1 ? true : round.breakAfter,
-      kahootMode: round.kahootMode,
+      quickfire: round.quickfire,
       ...(round.category.trim() ? { category: round.category.trim() } : {}),
       ...(round.author.trim() ? { author: round.author.trim() } : {}),
       ...(round.note.trim()

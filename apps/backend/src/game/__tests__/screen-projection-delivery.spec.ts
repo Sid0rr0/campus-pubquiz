@@ -11,12 +11,12 @@ import {
 
 const HIDDEN_PROMPT = 'Largest planet?';
 
-describe('GameGateway — per-room state delivery with a hidden kahoot question', () => {
+describe('GameGateway — per-room state delivery with a hidden quickfire question', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
   beforeEach(async () => {
-    game = await harness.createGateway({ kahootMode: true });
+    game = await harness.createGateway({ quickfire: true });
     await game.act('START_QUIZ');
     await game.act('ADVANCE'); // -> round_intro
     await game.act('ADVANCE'); // -> question_open q0

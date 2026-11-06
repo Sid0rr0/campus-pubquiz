@@ -357,7 +357,7 @@ describe('computeSessionDetail', () => {
     expect(result.questions[0].correctCount).toBe(0);
   });
 
-  it('counts a speed-scaled kahoot answer that earned fewer than full points as correct', () => {
+  it('counts a speed-scaled quickfire answer that earned fewer than full points as correct', () => {
     const result = computeSessionDetail(
       buildInput({
         teams: [
@@ -369,7 +369,7 @@ describe('computeSessionDetail', () => {
             questionId: 10,
             roundId: 100,
             orderIndex: 0,
-            prompt: 'Kahoot Q',
+            prompt: 'Quickfire Q',
             answer: 'A',
             type: 'multiple_choice',
             points: 1000,
@@ -546,7 +546,7 @@ describe('computeSessionDetail', () => {
     expect(result.questions[0].correctCount).toBe(0);
   });
 
-  it('rates a kahoot match question at 1 when every team was correct with speed-scaled points', () => {
+  it('rates a quickfire match question at 1 when every team was correct with speed-scaled points', () => {
     const answer = (teamId: number, pointsAwarded: number) => ({
       questionId: 10,
       teamId,
@@ -568,7 +568,7 @@ describe('computeSessionDetail', () => {
             questionId: 10,
             roundId: 100,
             orderIndex: 0,
-            prompt: 'Kahoot match',
+            prompt: 'Quickfire match',
             answer: 'A',
             type: 'match',
             points: 1000,

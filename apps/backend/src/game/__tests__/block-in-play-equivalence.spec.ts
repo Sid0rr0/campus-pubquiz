@@ -31,7 +31,7 @@ const context: GameContext = {
   rounds: BLOCK_IN_PLAY_ROUNDS.map((round) => ({
     questionCount: round.questions.length,
     breakAfter: round.breakAfter,
-    kahootMode: round.kahootMode ?? false,
+    quickfire: round.quickfire ?? false,
   })),
   showRoundOverview: true,
 };
@@ -180,14 +180,14 @@ describe('the reveal views follow the Block module', () => {
     ]);
   });
 
-  it('numbers a kahoot block by its place in the round, not within the block', () => {
-    const secondKahoot = walkedProgresses().find(
+  it('numbers a quickfire block by its place in the round, not within the block', () => {
+    const secondQuickfire = walkedProgresses().find(
       (p) =>
         p.status === 'question_open' &&
         p.roundIndex === 3 &&
         p.questionIndex === 1,
     )!;
-    const session = freshSessionState(seededGame, secondKahoot);
+    const session = freshSessionState(seededGame, secondQuickfire);
 
     expect(
       getBlockSeededQuestions(session).map((q) => [

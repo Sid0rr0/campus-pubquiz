@@ -13,8 +13,8 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const KAHOOT_TIMER_SECONDS = 10;
-const HALF_TIMER_MS = (KAHOOT_TIMER_SECONDS * 1000) / 2;
+const QUICKFIRE_TIMER_SECONDS = 10;
+const HALF_TIMER_MS = (QUICKFIRE_TIMER_SECONDS * 1000) / 2;
 const FROZEN_NOW = '2024-01-01T00:00:00.000Z';
 
 const AUDIO_QUIZ: CreateGatewayOptions['rounds'] = [
@@ -96,10 +96,10 @@ const MATCH_QUIZ: CreateGatewayOptions['rounds'] = [
   },
 ];
 
-const KAHOOT_QUIZ: CreateGatewayOptions['rounds'] = [
+const QUICKFIRE_QUIZ: CreateGatewayOptions['rounds'] = [
   {
     title: 'Speed Round',
-    kahootMode: true,
+    quickfire: true,
     questions: [
       {
         type: 'multiple_choice',
@@ -228,12 +228,12 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     ).toEqual({ 'Tune Team': false, 'Abba Fan': true, Moderated: true });
   });
 
-  it('re-applies the speed scaling from the stored response time after a kahoot question was scored', async () => {
+  it('re-applies the speed scaling from the stored response time after a quickfire question was scored', async () => {
     freezeClockAt(FROZEN_NOW);
     const { game, admin } = await start({
       teamNames: ['Speedy'],
-      rounds: KAHOOT_QUIZ,
-      settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+      rounds: QUICKFIRE_QUIZ,
+      settings: { quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS },
     });
     const [team] = game.teams;
     const [questionId] = game.rounds[0].questionIds;
@@ -249,12 +249,12 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     expect(await storedPoints(game, questionId)).toEqual({ Speedy: 15 });
   });
 
-  it('speed-scales a correction made before the kahoot question locks, and keeps it through lock', async () => {
+  it('speed-scales a correction made before the quickfire question locks, and keeps it through lock', async () => {
     freezeClockAt(FROZEN_NOW);
     const { game, admin } = await start({
       teamNames: ['Speedy'],
-      rounds: KAHOOT_QUIZ,
-      settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+      rounds: QUICKFIRE_QUIZ,
+      settings: { quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS },
     });
     const [team] = game.teams;
     const [questionId] = game.rounds[0].questionIds;

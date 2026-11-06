@@ -6,7 +6,7 @@ import {
   type GameProgress,
 } from '../game-state';
 import {
-  kahootRoundAfterNormalRound,
+  quickfireRoundAfterNormalRound,
   twoRoundsWithBreakAfterSecond,
 } from './game-state-fixtures';
 
@@ -103,7 +103,7 @@ describe('getTimedPhaseKey', () => {
   });
 
   describe('a question opened behind the leaderboard', () => {
-    it('is untimed in a kahootMode round while the leaderboard is visible', () => {
+    it('is untimed in a quickfire round while the leaderboard is visible', () => {
       const behindLeaderboard = progressAt({
         status: 'question_open',
         roundIndex: 1,
@@ -111,18 +111,18 @@ describe('getTimedPhaseKey', () => {
         isLeaderboardVisible: true,
       });
       expect(
-        getTimedPhaseKey(behindLeaderboard, kahootRoundAfterNormalRound),
+        getTimedPhaseKey(behindLeaderboard, quickfireRoundAfterNormalRound),
       ).toBeNull();
     });
 
-    it('is timed in a kahootMode round once the leaderboard is dismissed', () => {
+    it('is timed in a quickfire round once the leaderboard is dismissed', () => {
       const live = progressAt({
         status: 'question_open',
         roundIndex: 1,
         questionIndex: 1,
         isLeaderboardVisible: false,
       });
-      expect(getTimedPhaseKey(live, kahootRoundAfterNormalRound)).toEqual(
+      expect(getTimedPhaseKey(live, quickfireRoundAfterNormalRound)).toEqual(
         expect.any(String),
       );
     });
@@ -134,7 +134,7 @@ describe('getTimedPhaseKey', () => {
         questionIndex: 0,
         isLeaderboardVisible: true,
       });
-      expect(getTimedPhaseKey(normal, kahootRoundAfterNormalRound)).toEqual(
+      expect(getTimedPhaseKey(normal, quickfireRoundAfterNormalRound)).toEqual(
         expect.any(String),
       );
     });

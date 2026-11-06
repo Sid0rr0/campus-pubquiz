@@ -1,6 +1,6 @@
 import {
-  isKahootAllowedType,
-  kahootTypeNames,
+  isQuickfireAllowedType,
+  quickfireTypeNames,
   checkQuestion,
   ROUND_CATEGORIES,
   ROUND_NOTE_MAX_LENGTH,
@@ -8,7 +8,7 @@ import {
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
 
-const KAHOOT_TYPES_MESSAGE = `Kahoot rounds only support ${kahootTypeNames()} questions`;
+const QUICKFIRE_TYPES_MESSAGE = `Quickfire rounds only support ${quickfireTypeNames()} questions`;
 
 /**
  * Validates a full quiz draft (manual edits and/or a CSV-import preview
@@ -76,9 +76,13 @@ function roundShapeIssues(
       roundIssue(roundIndex, 'questions', 'Round needs at least one question'),
     );
   }
-  if (round.kahootMode !== undefined && typeof round.kahootMode !== 'boolean') {
+  if (round.quickfire !== undefined && typeof round.quickfire !== 'boolean') {
     issues.push(
-      roundIssue(roundIndex, 'kahootMode', 'Kahoot mode must be true or false'),
+      roundIssue(
+        roundIndex,
+        'quickfire',
+        'Quickfire mode must be true or false',
+      ),
     );
   }
   if (
@@ -143,7 +147,7 @@ function questionIssues(
       message: issue.message,
     }));
   }
-  return round.kahootMode && !isKahootAllowedType(question.type)
-    ? [{ ...position, field: 'type', message: KAHOOT_TYPES_MESSAGE }]
+  return round.quickfire && !isQuickfireAllowedType(question.type)
+    ? [{ ...position, field: 'type', message: QUICKFIRE_TYPES_MESSAGE }]
     : [];
 }

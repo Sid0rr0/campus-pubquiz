@@ -149,15 +149,15 @@ describe('GameGateway — team answers sync on reveal entry', () => {
     expect(teamSyncs(game, socket.id)).toEqual([]);
   });
 
-  // kahootMode collapses 'locking' straight into 'reveal', skipping
+  // quickfire collapses 'locking' straight into 'reveal', skipping
   // 'reveal_intro' entirely (see getNextGameState) — without a matching
-  // branch in syncTeamAnswersOnRevealEntry, a kahootMode team's reveal
+  // branch in syncTeamAnswersOnRevealEntry, a quickfire team's reveal
   // screen would keep showing the pre-speed-scoring grade cached from
   // ANSWER_RECEIVED at submit time instead of the rescaled points.
-  it("pushes the team's own answers privately when a kahootMode question collapses locking straight into reveal", async () => {
+  it("pushes the team's own answers privately when a quickfire question collapses locking straight into reveal", async () => {
     const game = await harness.createGateway({
       teamNames: ['The Quizzards'],
-      kahootMode: true,
+      quickfire: true,
     });
     const [{ socket }] = game.teams;
     await startWithAnswer(game);

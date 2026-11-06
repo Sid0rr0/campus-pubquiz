@@ -124,7 +124,7 @@ export class QuizService {
         rounds: rounds.map((round) => ({
           questionCount: round.questions.length,
           breakAfter: round.breakAfter,
-          kahootMode: round.kahootMode,
+          quickfire: round.quickfire,
         })),
       });
       return {
@@ -145,7 +145,7 @@ export class QuizService {
                   isFinalBreak: breakNumber === structure.blockCount,
                 }
               : {}),
-            kahootMode: round.kahootMode,
+            quickfire: round.quickfire,
             questions: round.questions.getItems().map((question) => {
               const notes = questionNotesOf(question.notes);
               return {
@@ -190,7 +190,7 @@ export class QuizService {
       rounds: quiz.rounds.getItems().map((round) => ({
         title: round.title,
         breakAfter: round.breakAfter,
-        kahootMode: round.kahootMode,
+        quickfire: round.quickfire,
         ...(round.category ? { category: round.category } : {}),
         ...(round.author ? { author: round.author } : {}),
         ...(round.note ? { note: round.note } : {}),
@@ -312,7 +312,7 @@ export class QuizService {
           title: round.title,
           orderIndex: roundIndex,
           breakAfter: round.breakAfter,
-          kahootMode: round.kahootMode ?? false,
+          quickfire: round.quickfire ?? false,
           category: round.category ?? null,
           author: round.author ?? null,
           note: round.note?.trim() || null,
@@ -326,7 +326,7 @@ export class QuizService {
           onConflictMergeFields: [
             'title',
             'breakAfter',
-            'kahootMode',
+            'quickfire',
             'category',
             'author',
             'note',

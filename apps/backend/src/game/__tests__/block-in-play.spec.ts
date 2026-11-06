@@ -91,9 +91,13 @@ describe('getBlockInPlayIds', () => {
       [q(2, 0), q(2, 1)],
     ],
 
-    // Kahoot: every question is its own block
-    ['a kahoot question open', progress('question_open', 3, 1, 0), [q(3, 1)]],
-    ['a kahoot question revealed', progress('reveal', 3, 0, 0), [q(3, 0)]],
+    // Quickfire: every question is its own block
+    [
+      'a quickfire question open',
+      progress('question_open', 3, 1, 0),
+      [q(3, 1)],
+    ],
+    ['a quickfire question revealed', progress('reveal', 3, 0, 0), [q(3, 0)]],
 
     // The final round
     [
@@ -151,12 +155,12 @@ describe('getPastBlockIds', () => {
       FIRST_BLOCK,
     ],
     [
-      'a kahoot round at its first question has the earlier blocks behind it',
+      'a quickfire round at its first question has the earlier blocks behind it',
       progress('question_open', 3, 0, 0),
       [...FIRST_BLOCK, q(2, 0), q(2, 1)],
     ],
     [
-      "a kahoot round's second question has its first question behind it too",
+      "a quickfire round's second question has its first question behind it too",
       progress('question_open', 3, 1, 0),
       [...FIRST_BLOCK, q(2, 0), q(2, 1), q(3, 0)],
     ],
@@ -185,17 +189,17 @@ describe('getLastPastBlockIds', () => {
       FIRST_BLOCK,
     ],
     [
-      'a kahoot round at its first question has the block before it',
+      'a quickfire round at its first question has the block before it',
       progress('question_open', 3, 0, 0),
       [q(2, 0), q(2, 1)],
     ],
     [
-      "a kahoot round's second question has only its first question before it",
+      "a quickfire round's second question has only its first question before it",
       progress('question_open', 3, 1, 0),
       [q(3, 0)],
     ],
     [
-      'the final round has the last kahoot question before it',
+      'the final round has the last quickfire question before it',
       progress('break', 4, 1, 1),
       [q(3, 1)],
     ],

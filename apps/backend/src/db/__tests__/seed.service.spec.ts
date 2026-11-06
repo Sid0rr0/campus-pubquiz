@@ -191,7 +191,7 @@ describe('SeedService (Postgres integration)', () => {
         quiz,
         title: 'Second',
         orderIndex: 1,
-        kahootMode: true,
+        quickfire: true,
       });
       const first = em.create(Round, {
         quiz,
@@ -255,7 +255,7 @@ describe('SeedService (Postgres integration)', () => {
         note: 'Say hi',
         showNoteOnScreen: true,
       });
-      expect(rounds[1].kahootMode).toBe(true);
+      expect(rounds[1].quickfire).toBe(true);
       expect(Object.values(rounds[0].questionNotesById ?? {})).toContain(
         'Host note',
       );

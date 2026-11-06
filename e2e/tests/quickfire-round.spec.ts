@@ -1,37 +1,39 @@
 import { test as base, expect } from '../fixtures';
 import {
-  answerKahootChoice,
+  answerQuickfireChoice,
   expectTimerMove,
-  KAHOOT_ROUND,
-  seedKahootSession,
-  type KahootSessionOptions,
-} from '../support/kahoot-session';
+  QUICKFIRE_ROUND,
+  seedQuickfireSession,
+  type QuickfireSessionOptions,
+} from '../support/quickfire-session';
 import { snap } from '../support/snapshots';
 
-const { first, second } = KAHOOT_ROUND;
+const { first, second } = QUICKFIRE_ROUND;
 
-/** A correct kahoot answer is scaled by how fast it came, so only its range is checked. */
+/** A correct quickfire answer is scaled by how fast it came, so only its range is checked. */
 const POINTS_PATTERN = /^(\d+(\.5)?) \/ 3 points$/;
 
 // Long enough for all three screens to be snapshotted while the lock countdown runs.
 const MANUAL_LOCK_GRACE_SECONDS = 4;
 const TIMER_SECONDS = 1;
 
-const test = base.extend<{ kahootOptions: KahootSessionOptions }>({
-  kahootOptions: [
-    { kahootQuestionTimerSeconds: null, lockGraceSeconds: 1 },
+const test = base.extend<{ quickfireOptions: QuickfireSessionOptions }>({
+  quickfireOptions: [
+    { quickfireQuestionTimerSeconds: null, lockGraceSeconds: 1 },
     { option: true },
   ],
-  session: async ({ adminApi, kahootOptions }, use) => {
-    const quizTitle = `Kahoot ${Date.now().toString(36)}`;
-    await use(await seedKahootSession(adminApi, quizTitle, kahootOptions));
+  session: async ({ adminApi, quickfireOptions }, use) => {
+    const quizTitle = `Quickfire ${Date.now().toString(36)}`;
+    await use(
+      await seedQuickfireSession(adminApi, quizTitle, quickfireOptions),
+    );
   },
 });
 
 test.describe('questions are locked, scored and revealed one at a time', () => {
   test.use({
-    kahootOptions: {
-      kahootQuestionTimerSeconds: null,
+    quickfireOptions: {
+      quickfireQuestionTimerSeconds: null,
       lockGraceSeconds: MANUAL_LOCK_GRACE_SECONDS,
     },
   });
@@ -46,13 +48,13 @@ test.describe('questions are locked, scored and revealed one at a time', () => {
     await control.expectTeams([phoneA.teamName, phoneB.teamName]);
     await control.startQuiz();
     await control.advance('round_intro');
-    await display.expectText(KAHOOT_ROUND.title);
+    await display.expectText(QUICKFIRE_ROUND.title);
 
     // 1. The first question: Team A is right, Team B is wrong.
     await control.advance('question_open');
     await display.expectQuestion(first.prompt);
-    await answerKahootChoice(phoneA, first.right);
-    await answerKahootChoice(phoneB, first.wrong);
+    await answerQuickfireChoice(phoneA, first.right);
+    await answerQuickfireChoice(phoneB, first.wrong);
     await display.expectAnsweredCount(2, 2);
     await snap(display, 'question_open');
     await snap(phoneA, 'question_open');
@@ -83,8 +85,8 @@ test.describe('questions are locked, scored and revealed one at a time', () => {
     await control.toggleLeaderboard();
     await display.expectQuestion(second.prompt);
     await phoneA.expectQuestion(second.prompt);
-    await answerKahootChoice(phoneA, second.right);
-    await answerKahootChoice(phoneB, second.wrong);
+    await answerQuickfireChoice(phoneA, second.right);
+    await answerQuickfireChoice(phoneB, second.wrong);
 
     // 4. The second question locks and reveals the same way, then the quiz ends.
     await control.advance('locking');
@@ -98,8 +100,8 @@ test.describe('questions are locked, scored and revealed one at a time', () => {
 
 test.describe('the question timer runs the round by itself', () => {
   test.use({
-    kahootOptions: {
-      kahootQuestionTimerSeconds: TIMER_SECONDS,
+    quickfireOptions: {
+      quickfireQuestionTimerSeconds: TIMER_SECONDS,
       lockGraceSeconds: 1,
     },
   });

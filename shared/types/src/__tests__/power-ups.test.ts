@@ -68,16 +68,16 @@ describe('extraJokerRoundId', () => {
     },
   );
 
-  it('offers nothing when the next round is a kahootMode round', () => {
-    const kahootNext = extraJokerRoundId({
+  it('offers nothing when the next round is a quickfire round', () => {
+    const quickfireNext = extraJokerRoundId({
       seededGame: {
-        rounds: [rounds[0], { ...rounds[1], kahootMode: true }],
+        rounds: [rounds[0], { ...rounds[1], quickfire: true }],
       },
       openedQuestionIds: [],
       progress: { status: 'round_intro', roundIndex: 0 },
     });
 
-    expect(kahootNext).toBeNull();
+    expect(quickfireNext).toBeNull();
   });
 
   it('offers nothing in the lobby, where the settings can still turn power-ups off', () => {

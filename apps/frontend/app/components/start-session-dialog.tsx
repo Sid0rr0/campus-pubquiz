@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Dialog, Tabs } from 'radix-ui';
 import { CheckIcon, Cross2Icon } from '@radix-ui/react-icons';
 import {
-  DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS,
+  DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS,
   DEFAULT_SESSION_SETTINGS,
   type QuizSummary,
   type SessionSettings,
@@ -132,8 +132,8 @@ function defaultSettingsFor(
 ): SessionSettings {
   return {
     ...DEFAULT_SESSION_SETTINGS,
-    kahootQuestionTimerSeconds: quiz?.rounds.some((round) => round.kahootMode)
-      ? DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS
+    quickfireQuestionTimerSeconds: quiz?.rounds.some((round) => round.quickfire)
+      ? DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS
       : null,
   };
 }

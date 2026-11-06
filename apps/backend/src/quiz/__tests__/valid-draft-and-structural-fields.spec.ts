@@ -148,12 +148,12 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
     );
   });
 
-  describe('kahootMode rounds', () => {
-    it('allows a kahoot round whose questions are all auto-graded types', () => {
+  describe('quickfire rounds', () => {
+    it('allows a quickfire round whose questions are all auto-graded types', () => {
       const request = makeRequest({
         rounds: [
           makeRound({
-            kahootMode: true,
+            quickfire: true,
             questions: [
               makeQuestion({
                 type: 'multiple_choice',
@@ -180,14 +180,14 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
     });
 
     it.each(['free_text', 'closest_guess'] as const)(
-      'rejects a %s question in a kahoot round',
+      'rejects a %s question in a quickfire round',
       (type) => {
         const overrides = type === 'closest_guess' ? { answer: '1000' } : {};
         const issues = validateQuizDraft(
           makeRequest({
             rounds: [
               makeRound({
-                kahootMode: true,
+                quickfire: true,
                 questions: [makeQuestion({ type, ...overrides })],
               }),
             ],
@@ -200,17 +200,17 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
             questionIndex: 0,
             field: 'type',
             message:
-              'Kahoot rounds only support multiple choice, sort / order, match pairs and number questions',
+              'Quickfire rounds only support multiple choice, sort / order, match pairs and number questions',
           }),
         );
       },
     );
 
-    it('does not restrict question types in a non-kahoot round', () => {
+    it('does not restrict question types in a non-quickfire round', () => {
       const request = makeRequest({
         rounds: [
           makeRound({
-            kahootMode: false,
+            quickfire: false,
             questions: [makeQuestion({ type: 'free_text' })],
           }),
         ],
@@ -219,11 +219,11 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
       expect(validateQuizDraft(request)).toEqual([]);
     });
 
-    it('rejects a non-boolean kahootMode value from a malformed request body', () => {
+    it('rejects a non-boolean quickfire value from a malformed request body', () => {
       const request = makeRequest({
         rounds: [
           makeRound({
-            kahootMode: 'yes' as unknown as boolean,
+            quickfire: 'yes' as unknown as boolean,
             questions: [
               makeQuestion({
                 type: 'multiple_choice',
@@ -239,7 +239,7 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
         expect.objectContaining({
           roundIndex: 0,
           questionIndex: null,
-          field: 'kahootMode',
+          field: 'quickfire',
         }),
       );
     });
@@ -287,18 +287,18 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
       ]);
     });
 
-    it('words the kahootMode issue', () => {
+    it('words the quickfire issue', () => {
       const issues = validateQuizDraft(
         makeRequest({
-          rounds: [makeRound({ kahootMode: 'yes' as unknown as boolean })],
+          rounds: [makeRound({ quickfire: 'yes' as unknown as boolean })],
         }),
       );
 
       expect(issues).toContainEqual({
         roundIndex: 0,
         questionIndex: null,
-        field: 'kahootMode',
-        message: 'Kahoot mode must be true or false',
+        field: 'quickfire',
+        message: 'Quickfire mode must be true or false',
       });
     });
 

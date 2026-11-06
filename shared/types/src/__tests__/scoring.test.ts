@@ -3,7 +3,7 @@ import { IDK_ANSWER_VALUE } from '../answers';
 import {
   BATCH_GRADED_TYPES,
   findClosestGuesses,
-  KAHOOT_ALLOWED_TYPES,
+  QUICKFIRE_ALLOWED_TYPES,
   gradeClosestGuessBatch,
   halfPoints,
   nearestHalfPoint,
@@ -119,7 +119,7 @@ describe('scoreSubmission — sort scoring modes', () => {
     ).toEqual({ points: 1, verdict: 'correct' }); // 0.9 rounds to 1
   });
 
-  it('scales partial points by kahoot speed', () => {
+  it('scales partial points by quickfire speed', () => {
     expect(
       scoreSubmission(sort('per_item'), 'a|b|d|c', {
         responseMs: 10_000,
@@ -130,7 +130,7 @@ describe('scoreSubmission — sort scoring modes', () => {
 });
 
 describe('Number questions', () => {
-  it('scales a correct answer by the kahoot speed multiplier', () => {
+  it('scales a correct answer by the quickfire speed multiplier', () => {
     expect(
       scoreSubmission({ type: 'number', answer: '200', points: 10 }, '200', {
         responseMs: 5000,
@@ -231,7 +231,7 @@ describe('scoreSubmission — match', () => {
   );
 });
 
-describe('scoreSubmission — kahoot speed', () => {
+describe('scoreSubmission — quickfire speed', () => {
   const timerMs = 10_000;
   const speed = (responseMs: number | null) => ({ responseMs, timerMs });
 
@@ -391,14 +391,14 @@ describe('category lists', () => {
     expect(BATCH_GRADED_TYPES).toEqual(['closest_guess']);
   });
 
-  it('allows only multiple_choice, sort, match and number in kahoot rounds', () => {
-    expect([...KAHOOT_ALLOWED_TYPES].sort()).toEqual(
+  it('allows only multiple_choice, sort, match and number in quickfire rounds', () => {
+    expect([...QUICKFIRE_ALLOWED_TYPES].sort()).toEqual(
       ['match', 'multiple_choice', 'number', 'sort'].sort(),
     );
   });
 
-  it('keeps free_text out of kahoot rounds', () => {
-    expect(KAHOOT_ALLOWED_TYPES).not.toContain('free_text');
+  it('keeps free_text out of quickfire rounds', () => {
+    expect(QUICKFIRE_ALLOWED_TYPES).not.toContain('free_text');
   });
 });
 

@@ -146,13 +146,13 @@ function startTeam({ url, code, teamName, minDelay, maxDelay, tokens }) {
     if (!question || teamId === null || answeredQuestionIds.has(question.id)) {
       return;
     }
-    // Mirrors play/page.tsx's isAnswerable: a kahootMode question opened
+    // Mirrors play/page.tsx's isAnswerable: a quickfire question opened
     // right after the previous reveal sits behind the leaderboard until the
     // admin TOGGLE_LEADERBOARDs it away, and the server now rejects
     // SUBMIT_ANSWER for it until then too. Skip for now — this fires again
     // on the STATE_UPDATED that toggling produces.
     if (
-      snapshot.isCurrentRoundKahoot &&
+      snapshot.isCurrentRoundQuickfire &&
       snapshot.progress.isLeaderboardVisible
     ) {
       return;

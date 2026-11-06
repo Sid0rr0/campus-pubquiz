@@ -15,7 +15,7 @@ import {
 /** The part of a seeded round the Block module reads — a SeededRound fits. */
 interface BlockRound {
   breakAfter: boolean;
-  kahootMode?: boolean;
+  quickfire?: boolean;
   questions: readonly { id: number }[];
 }
 
@@ -31,7 +31,7 @@ function toGameContext(rounds: readonly BlockRound[]): GameContext {
     rounds: rounds.map((round) => ({
       questionCount: round.questions.length,
       breakAfter: round.breakAfter,
-      kahootMode: round.kahootMode ?? false,
+      quickfire: round.quickfire ?? false,
     })),
   };
 }
@@ -123,7 +123,7 @@ export function getBlockInPlayIds(
 
 /**
  * The indexes of the rounds holding a question of the block that starts at
- * `blockFirstQuestionId` (every question of a kahoot round is its own block).
+ * `blockFirstQuestionId` (every question of a quickfire round is its own block).
  * Empty when no question has that id.
  */
 export function getBlockRoundIndexes(
@@ -151,7 +151,7 @@ export function getBlockRoundIndexes(
 
 /**
  * The question ids of every block that finished before the one `progress` is
- * in: every round before the block's round, plus the questions of a kahoot
+ * in: every round before the block's round, plus the questions of a quickfire
  * round that come before the block's start. Same set as
  * getPastRevealedQuestions, asked of a progress and answered in ids.
  */

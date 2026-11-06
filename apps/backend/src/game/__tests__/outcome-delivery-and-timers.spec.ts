@@ -15,15 +15,19 @@ type Trigger = 'manual' | 'timer';
 
 interface Scenario {
   name: string;
-  kahootMode: boolean;
+  quickfire: boolean;
   /** Which timer the "timer" trigger relies on; the other stays out of the way. */
-  timer: 'lock' | 'kahootQuestion';
+  timer: 'lock' | 'quickfireQuestion';
 }
 
 const SCENARIOS: Scenario[] = [
-  { name: 'lock timer, normal round', kahootMode: false, timer: 'lock' },
-  { name: 'lock timer, kahoot round', kahootMode: true, timer: 'lock' },
-  { name: 'kahoot question timer', kahootMode: true, timer: 'kahootQuestion' },
+  { name: 'lock timer, normal round', quickfire: false, timer: 'lock' },
+  { name: 'lock timer, quickfire round', quickfire: true, timer: 'lock' },
+  {
+    name: 'quickfire question timer',
+    quickfire: true,
+    timer: 'quickfireQuestion',
+  },
 ];
 
 /** Room emits reduced to what a client can observe, independent of the session's join code and row ids. */
@@ -55,12 +59,12 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
   async function advanceToLocking(
     game: RealStoreGateway,
     admin: MockSocket,
-    isKahoot: boolean,
+    isQuickfire: boolean,
   ): Promise<void> {
-    // A kahoot question locks straight from its first question; a normal
+    // A quickfire question locks straight from its first question; a normal
     // round only locks after its last one (multiple_choice, free_text,
     // closest_guess, match, audio).
-    const advances = isKahoot ? 1 : 5;
+    const advances = isQuickfire ? 1 : 5;
     for (let index = 0; index < advances; index++) {
       await game.gateway.handleAdminAction(asSocket(admin), {
         action: 'ADVANCE',
@@ -79,13 +83,13 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
   ): Promise<string[]> {
     const settings: Partial<SessionSettings> = {
       lockGraceSeconds: TIMER_SECONDS,
-      kahootQuestionTimerSeconds:
-        scenario.timer === 'kahootQuestion' ? TIMER_SECONDS : null,
+      quickfireQuestionTimerSeconds:
+        scenario.timer === 'quickfireQuestion' ? TIMER_SECONDS : null,
     };
     const game = await harness.createGateway({
       teamNames: [`Quizzards ${gameCount}`],
       joinCode: nextJoinCode(),
-      kahootMode: scenario.kahootMode,
+      quickfire: scenario.quickfire,
       settings,
     });
     const admin = await game.connectAdmin();
@@ -97,7 +101,7 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
       value: 'Paris',
     });
     if (scenario.timer === 'lock') {
-      await advanceToLocking(game, admin, scenario.kahootMode);
+      await advanceToLocking(game, admin, scenario.quickfire);
     }
     game.clearEmits();
 
@@ -107,7 +111,9 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
       });
     } else {
       const timer = game.timers();
-      await (scenario.timer === 'lock' ? timer.lock : timer.kahoot).fireNow();
+      await (
+        scenario.timer === 'lock' ? timer.lock : timer.quickfire
+      ).fireNow();
     }
     return summarizeEmits(game);
   }
@@ -122,9 +128,9 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
     },
   );
 
-  it('delivers presenter context, then the state snapshot, then the team sync when a kahoot lock enters reveal', async () => {
+  it('delivers presenter context, then the state snapshot, then the team sync when a quickfire lock enters reveal', async () => {
     const emits = await runTransition(
-      { name: 'kahoot lock', kahootMode: true, timer: 'lock' },
+      { name: 'quickfire lock', quickfire: true, timer: 'lock' },
       'timer',
     );
 
@@ -137,20 +143,20 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
     ]);
   });
 
-  it('re-arms the lock timer after a kahoot question timer expiry', async () => {
+  it('re-arms the lock timer after a quickfire question timer expiry', async () => {
     const game = await harness.createGateway({
       teamNames: [`Quizzards ${gameCount}`],
       joinCode: nextJoinCode(),
-      kahootMode: true,
+      quickfire: true,
       settings: {
-        kahootQuestionTimerSeconds: TIMER_SECONDS,
+        quickfireQuestionTimerSeconds: TIMER_SECONDS,
         lockGraceSeconds: TIMER_SECONDS,
       },
     });
     const admin = await game.connectAdmin();
     await game.openFirstQuestion(admin);
 
-    await game.timers().kahoot.fireNow();
+    await game.timers().quickfire.fireNow();
     expect(game.timers().lock.isArmed()).toBe(true);
     await game.timers().lock.fireNow();
 
@@ -162,13 +168,13 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
   });
 
   describe('presses that do not go cleanly', () => {
-    async function openKahootQuestion() {
+    async function openQuickfireQuestion() {
       const game = await harness.createGateway({
         teamNames: [`Quizzards ${gameCount}`],
         joinCode: nextJoinCode(),
-        kahootMode: true,
+        quickfire: true,
         settings: {
-          kahootQuestionTimerSeconds: TIMER_SECONDS,
+          quickfireQuestionTimerSeconds: TIMER_SECONDS,
           lockGraceSeconds: TIMER_SECONDS,
         },
       });
@@ -178,8 +184,8 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
     }
 
     it('leaves the armed deadline armed when a press is refused, and firing it still advances the quiz', async () => {
-      const { game, admin } = await openKahootQuestion();
-      const dueAt = game.timers().kahoot.dueAt();
+      const { game, admin } = await openQuickfireQuestion();
+      const dueAt = game.timers().quickfire.dueAt();
       expect(dueAt).not.toBeNull();
 
       const refused = await game.gateway.handleAdminAction(asSocket(admin), {
@@ -187,13 +193,13 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
       });
 
       expect(refused).toMatchObject({ success: false });
-      expect(game.timers().kahoot.dueAt()).toBe(dueAt);
-      await game.timers().kahoot.fireNow();
+      expect(game.timers().quickfire.dueAt()).toBe(dueAt);
+      await game.timers().quickfire.fireNow();
       expect((await game.snapshot()).progress.status).toBe('locking');
     });
 
     it('leaves the timers matching the stored session when delivering a press throws', async () => {
-      const { game, admin } = await openKahootQuestion();
+      const { game, admin } = await openQuickfireQuestion();
       game.server.emit.mockImplementation(() => {
         throw new Error('socket hiccup');
       });
@@ -203,8 +209,8 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
       });
 
       // The press was stored: the question has locked, so only the lock
-      // deadline is armed and the kahoot question deadline is gone.
-      expect(game.timers().kahoot.isArmed()).toBe(false);
+      // deadline is armed and the quickfire question deadline is gone.
+      expect(game.timers().quickfire.isArmed()).toBe(false);
       expect(game.timers().lock.isArmed()).toBe(true);
       game.server.emit.mockReset();
       expect((await game.snapshot()).progress.status).toBe('locking');

@@ -84,14 +84,14 @@ describe('PlayPage — leaderboard overlay', () => {
     expect(screen.queryByText(/leaderboard/i)).not.toBeInTheDocument();
   });
 
-  it('hides a kahoot question opened behind the leaderboard until the big screen reveals it', () => {
+  it('hides a quickfire question opened behind the leaderboard until the big screen reveals it', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       teamLinkResult({
         session: {
           rounds: [
             {
-              kahootMode: true,
+              quickfire: true,
               questions: [{ prompt: 'Name a vegetable' }],
             },
           ],
@@ -130,20 +130,20 @@ describe('PlayPage — leaderboard overlay', () => {
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
-  it('renders without the question while a kahoot question is redacted behind the leaderboard, then shows it once the board is dismissed', () => {
+  it('renders without the question while a quickfire question is redacted behind the leaderboard, then shows it once the board is dismissed', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const team = {
       teamId: 'team-1',
       teamName: 'Returning Team',
       teamToken: 'team-token-1',
     };
-    const kahootRounds = [
-      { kahootMode: true, questions: [{ prompt: 'Name a planet' }] },
+    const quickfireRounds = [
+      { quickfire: true, questions: [{ prompt: 'Name a planet' }] },
     ];
     mockUseTeamLink.mockReturnValue(
       teamLinkResult({
         session: {
-          rounds: kahootRounds,
+          rounds: quickfireRounds,
           progress: { status: 'question_open', isLeaderboardVisible: true },
         },
         join: { team },
@@ -156,7 +156,7 @@ describe('PlayPage — leaderboard overlay', () => {
     mockUseTeamLink.mockReturnValue(
       teamLinkResult({
         session: {
-          rounds: kahootRounds,
+          rounds: quickfireRounds,
           progress: { status: 'question_open', isLeaderboardVisible: false },
         },
         join: { team },

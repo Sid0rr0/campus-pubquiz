@@ -9,16 +9,16 @@ import type { LeaderboardEntry } from './room-views';
  * tied on points share a rank and appear together in one step, so a tie
  * never costs the admin extra clicks that change nothing on screen.
  *
- * A kahootMode round's leaderboard only ever needs revealing up to its
- * top-5 cutoff (KAHOOT_LEADERBOARD_TOP_N, same one the display's maxRank
+ * A quickfire round's leaderboard only ever needs revealing up to its
+ * top-5 cutoff (QUICKFIRE_LEADERBOARD_TOP_N, same one the display's maxRank
  * enforces) — beyond the 5th team there's nothing left to reveal, so the
  * one-by-one walk stops there instead of requiring a click per team.
  *
- * The one exception: the leaderboard shown *between* kahoot questions (the
+ * The one exception: the leaderboard shown *between* quickfire questions (the
  * next question already sits open underneath, hidden until dismissed — see
  * advanceFromReveal) reveals its top 5 fully at once instead of one at a
- * time — kahoot's pace-driven exception. The round-end and end-of-quiz
- * leaderboards (even for a kahoot round) keep the normal suspense-building
+ * time — quickfire's pace-driven exception. The round-end and end-of-quiz
+ * leaderboards (even for a quickfire round) keep the normal suspense-building
  * one-team-at-a-time reveal, just capped to the top 5 above.
  */
 export function computeLeaderboardRevealCount(
@@ -27,14 +27,14 @@ export function computeLeaderboardRevealCount(
   newProgress: GameProgress,
   leaderboard: LeaderboardEntry[],
   currentRevealCount: number,
-  isKahootRound: boolean,
+  isQuickfireRound: boolean,
 ): number {
   const revealTarget = getLeaderboardRevealStepCount(
     leaderboard,
-    isKahootRound,
+    isQuickfireRound,
   );
   if (
-    isKahootRound &&
+    isQuickfireRound &&
     newProgress.status === 'question_open' &&
     newProgress.isLeaderboardVisible
   ) {

@@ -4,13 +4,13 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-describe('GameGateway — kahoot question hidden behind the leaderboard', () => {
+describe('GameGateway — quickfire question hidden behind the leaderboard', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
   beforeEach(async () => {
     game = await harness.createGateway({
-      kahootMode: true,
+      quickfire: true,
       teamNames: ['The Quizzards'],
     });
     // Drives q0 through question_open -> locking -> reveal -> the next
@@ -42,7 +42,7 @@ describe('GameGateway — kahoot question hidden behind the leaderboard', () => 
     );
   }
 
-  it('rejects SUBMIT_ANSWER for a kahoot question still hidden behind the leaderboard', async () => {
+  it('rejects SUBMIT_ANSWER for a quickfire question still hidden behind the leaderboard', async () => {
     await expect(submitToSecondQuestion()).resolves.toMatchObject({
       success: false,
     });
@@ -50,7 +50,7 @@ describe('GameGateway — kahoot question hidden behind the leaderboard', () => 
     expect(await storedAnswers()).toEqual([]);
   });
 
-  it('still refuses an answer to a revealed kahoot question after a step back onto it and a restart', async () => {
+  it('still refuses an answer to a revealed quickfire question after a step back onto it and a restart', async () => {
     await game.act('TOGGLE_LEADERBOARD');
     await game.act('PREVIOUS'); // -> reveal q0 (its reveal aired earlier)
     const back = await game.act('PREVIOUS'); // -> locking q0
@@ -59,7 +59,7 @@ describe('GameGateway — kahoot question hidden behind the leaderboard', () => 
       questionIndex: 0,
     });
     // At locking q0 the position alone does not mark q0 revealed, so only the
-    // persisted revealedKahootQuestionIds can keep the gate shut.
+    // persisted revealedQuickfireQuestionIds can keep the gate shut.
     const restarted = await game.restart();
     const [{ socket, teamId, teamToken }] = game.teams;
     // A restart drops sockets and connected teams: the phone rejoins by token.

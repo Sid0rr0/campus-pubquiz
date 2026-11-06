@@ -132,7 +132,7 @@ describe('QuizService (Postgres integration)', () => {
         breakAfter: true,
         breakNumber: 1,
         isFinalBreak: false,
-        kahootMode: false,
+        quickfire: false,
         questions: [
           {
             id: q1.id,
@@ -153,7 +153,7 @@ describe('QuizService (Postgres integration)', () => {
         breakAfter: false,
         breakNumber: 2,
         isFinalBreak: true,
-        kahootMode: false,
+        quickfire: false,
         questions: [],
       },
     ]);
@@ -188,11 +188,11 @@ describe('QuizService (Postgres integration)', () => {
     });
   });
 
-  it('numbers no break after a kahoot round, which has none, even with breakAfter set', async () => {
+  it('numbers no break after a quickfire round, which has none, even with breakAfter set', async () => {
     const quiz = await insertQuiz('Campus Pub Quiz Night');
     await insertRound(quiz, 'Round 1', 0, true);
-    const kahoot = await insertRound(quiz, 'Round 2', 1, true);
-    kahoot.kahootMode = true;
+    const quickfire = await insertRound(quiz, 'Round 2', 1, true);
+    quickfire.quickfire = true;
     await insertRound(quiz, 'Round 3', 2);
     await em.flush();
 
@@ -311,7 +311,7 @@ describe('QuizService (Postgres integration)', () => {
           {
             title: 'Music',
             breakAfter: true,
-            kahootMode: false,
+            quickfire: false,
             questions: [
               {
                 questionId: expect.any(Number) as number,

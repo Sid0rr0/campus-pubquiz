@@ -291,11 +291,11 @@ describe('GameGateway — buying an extra joker', () => {
     });
   });
 
-  it('refuses an extra joker for a kahootMode round', async () => {
+  it('refuses an extra joker for a quickfire round', async () => {
     const game = await night(
       {},
       {
-        rounds: THREE_ROUNDS.map((round) => ({ ...round, kahootMode: true })),
+        rounds: THREE_ROUNDS.map((round) => ({ ...round, quickfire: true })),
       },
     );
     const [alpha] = game.teams;

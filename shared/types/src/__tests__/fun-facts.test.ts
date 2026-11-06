@@ -20,7 +20,7 @@ const TEAM_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 interface RoundSpec {
   title: string;
   questionCount: number;
-  isKahoot?: boolean;
+  isQuickfire?: boolean;
   /** Ids (as numbered across the rounds) of questions that are closest_guess. */
   closestGuessIds?: number[];
 }
@@ -32,7 +32,7 @@ function roundsOf(specs: RoundSpec[]): SeededRound[] {
     id: roundIndex + 1,
     title: spec.title,
     breakAfter: true,
-    kahootMode: spec.isKahoot ?? false,
+    quickfire: spec.isQuickfire ?? false,
     questions: Array.from({ length: spec.questionCount }, () => {
       const id = nextId++;
       return {
@@ -137,17 +137,17 @@ describe('describeFunFacts', () => {
   });
 
   describe('fastest correct answer', () => {
-    const kahootRounds: RoundSpec[] = [
+    const quickfireRounds: RoundSpec[] = [
       { title: 'Warm-up', questionCount: 1 },
-      { title: 'Buzzer', questionCount: 2, isKahoot: true },
+      { title: 'Buzzer', questionCount: 2, isQuickfire: true },
       { title: 'Finale', questionCount: 1 },
     ];
-    // Break after the first kahoot question: question 2 is revealed? No — it is the block in play.
-    // Break after the second kahoot question (round 1, question 1): question 2 (kahoot) is revealed.
-    const afterSecondKahoot = breakProgress(1, 1);
+    // Break after the first quickfire question: question 2 is revealed? No — it is the block in play.
+    // Break after the second quickfire question (round 1, question 1): question 2 (quickfire) is revealed.
+    const afterSecondQuickfire = breakProgress(1, 1);
 
-    it('names the quickest correct kahoot answer with its time and question', () => {
-      const session = sessionOf(kahootRounds, afterSecondKahoot, {
+    it('names the quickest correct quickfire answer with its time and question', () => {
+      const session = sessionOf(quickfireRounds, afterSecondQuickfire, {
         answers: [
           answer(2, 0, 'correct', { responseMs: 4200 }),
           answer(2, 1, 'correct', { responseMs: 2300 }),
@@ -170,7 +170,7 @@ describe('describeFunFacts', () => {
     });
 
     it('breaks a time tie in the leaderboard name order (capitals before lowercase)', () => {
-      const session = sessionOf(kahootRounds, afterSecondKahoot, {
+      const session = sessionOf(quickfireRounds, afterSecondQuickfire, {
         answers: [
           answer(2, 0, 'correct', { responseMs: 2000, teamName: 'apple' }),
           answer(2, 1, 'correct', { responseMs: 2000, teamName: 'Zed' }),
@@ -183,7 +183,7 @@ describe('describeFunFacts', () => {
       });
     });
 
-    it('ignores response times on questions that are not kahoot', () => {
+    it('ignores response times on questions that are not quickfire', () => {
       const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
         answers: [answer(1, 0, 'correct', { responseMs: 1500 })],
       });
@@ -191,17 +191,17 @@ describe('describeFunFacts', () => {
       expect(kinds(session)).not.toContain('fastest_correct_answer');
     });
 
-    it('ignores a round that does not say whether it is kahoot', () => {
-      const session = sessionOf(kahootRounds, afterSecondKahoot, {
+    it('ignores a round that does not say whether it is quickfire', () => {
+      const session = sessionOf(quickfireRounds, afterSecondQuickfire, {
         answers: [answer(1, 0, 'correct', { responseMs: 2000 })],
       });
-      delete session.seededGame.rounds[0].kahootMode;
+      delete session.seededGame.rounds[0].quickfire;
 
       expect(kinds(session)).not.toContain('fastest_correct_answer');
     });
 
-    it('is skipped when no correct kahoot answer has a time', () => {
-      const session = sessionOf(kahootRounds, afterSecondKahoot, {
+    it('is skipped when no correct quickfire answer has a time', () => {
+      const session = sessionOf(quickfireRounds, afterSecondQuickfire, {
         answers: [
           answer(2, 0, 'correct', { responseMs: null }),
           answer(2, 1, 'incorrect', { responseMs: 800 }),
@@ -893,7 +893,7 @@ describe('describeFunFacts', () => {
         sessionOf(
           [
             { title: 'Warm-up', questionCount: 1 },
-            { title: 'Buzzer', questionCount: 2, isKahoot: true },
+            { title: 'Buzzer', questionCount: 2, isQuickfire: true },
             { title: 'Finale', questionCount: 1 },
           ],
           breakProgress(1, 1),
@@ -994,12 +994,12 @@ describe('describeFunFacts', () => {
 
     it('never feeds any fact from answers to questions or jokers of rounds not yet past', () => {
       // Rounds 1-2 are past; round 3 (questions 5-6) is the block in play, round 4
-      // (7-8, a kahoot round whose questions are blocks of their own) is ahead.
+      // (7-8, a quickfire round whose questions are blocks of their own) is ahead.
       const specs: RoundSpec[] = [
         { title: 'One', questionCount: 2 },
-        { title: 'Two', questionCount: 2, isKahoot: true },
+        { title: 'Two', questionCount: 2, isQuickfire: true },
         { title: 'Three', questionCount: 2 },
-        { title: 'Four', questionCount: 2, isKahoot: true },
+        { title: 'Four', questionCount: 2, isQuickfire: true },
       ];
       const pastAnswers = [
         answer(1, 0, 'correct'),

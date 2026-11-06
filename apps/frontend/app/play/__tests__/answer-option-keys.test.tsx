@@ -16,7 +16,7 @@ describe('AnswerForm — the options', () => {
           } as never
         }
         initialValue=""
-        isKahootMode={false}
+        isQuickfireMode={false}
         onSubmit={vi.fn()}
       />,
     );

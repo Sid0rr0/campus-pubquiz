@@ -56,7 +56,7 @@ export class BlockGradingService {
    *   1. the reveal gate — refuses leaving a break for the reveal while any
    *      question in the block is ungraded; runs before any grading write, so
    *      a refused move writes nothing
-   *   2. the kahoot speed scoring, when a kahoot question leaves 'locking'
+   *   2. the quickfire speed scoring, when a quickfire question leaves 'locking'
    *   3. the closest_guess batch, when `toProgress` is a graded status
    *   4. the whole-block grading refresh, when `toProgress` is a break status
    * Returns the graded session and the questions whose admin answer list is
@@ -67,7 +67,10 @@ export class BlockGradingService {
     toProgress: GameProgress,
   ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
     await this.assertNothingUngradedLeavingBreak(session, toProgress);
-    const speedScored = await this.ensureKahootSpeedScored(session, toProgress);
+    const speedScored = await this.ensureQuickfireSpeedScored(
+      session,
+      toProgress,
+    );
     const { session: graded, staleAnswerListIds } =
       await this.ensureBlockGraded(speedScored, toProgress);
     return {
@@ -177,9 +180,9 @@ export class BlockGradingService {
 
   /**
    * Rescales the just-locked question's points by answer speed, but only
-   * when leaving 'locking' for a kahootMode round — covers both the
+   * when leaving 'locking' for a quickfire round — covers both the
    * collapsed locking->reveal path and the ordinary locking->break_intro
-   * path (irrelevant there since a kahootMode round never takes it, but
+   * path (irrelevant there since a quickfire round never takes it, but
    * cheap to check generically). Step 2 of gradeForMove, not called from
    * outside. The scoring reads each answer's response
    * time as stored at submit, so a redundant re-run (e.g. PREVIOUS from
@@ -188,7 +191,7 @@ export class BlockGradingService {
    * ungraded entry for the scored question through the grading refresh, like
    * the other steps; the leaderboard is read afterward by the session write.
    */
-  private async ensureKahootSpeedScored(
+  private async ensureQuickfireSpeedScored(
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<SessionState> {
@@ -199,13 +202,13 @@ export class BlockGradingService {
       return session;
     }
     const round = session.seededGame.rounds[session.progress.roundIndex];
-    if (!round?.kahootMode) return session;
+    if (!round?.quickfire) return session;
 
     const question = round.questions[session.progress.questionIndex];
     await this.answerService.speedScoreAtLock(
       session.seededGame.gameSessionId,
       question,
-      session.seededGame.settings.kahootQuestionTimerSeconds,
+      session.seededGame.settings.quickfireQuestionTimerSeconds,
     );
 
     return this.gradesChanged(session, [question.id]);
@@ -295,8 +298,8 @@ export class BlockGradingService {
       .flatMap((round) =>
         round.questions.map((question) => ({
           question,
-          kahootTimerSeconds: round.kahootMode
-            ? settings.kahootQuestionTimerSeconds
+          quickfireTimerSeconds: round.quickfire
+            ? settings.quickfireQuestionTimerSeconds
             : null,
         })),
       )
@@ -304,14 +307,14 @@ export class BlockGradingService {
 
     let summaries: SessionState['closestGuessSummaries'] = {};
     const regradedQuestionIds: number[] = [];
-    for (const { question, kahootTimerSeconds } of questions) {
+    for (const { question, quickfireTimerSeconds } of questions) {
       const hasBatchRun =
         session.closestGuessSummaries[question.id] !== undefined;
       const { rescored, answers } = await this.answerService.regradeForKeyFix(
         gameSessionId,
         question,
         previousQuestions.get(question.id) ?? question,
-        kahootTimerSeconds,
+        quickfireTimerSeconds,
         hasBatchRun,
       );
       if (!rescored) continue;

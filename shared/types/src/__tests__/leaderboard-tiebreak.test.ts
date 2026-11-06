@@ -103,7 +103,7 @@ describe('getLeaderboardRevealStepCount', () => {
     expect(getLeaderboardRevealStepCount(leaderboard, false)).toBe(3);
   });
 
-  it('only counts distinct ranks within the top-5 cutoff for a kahoot round', () => {
+  it('only counts distinct ranks within the top-5 cutoff for a quickfire round', () => {
     const leaderboard = [
       entry(1, 'Alpha', 30),
       entry(2, 'Beta', 30),
