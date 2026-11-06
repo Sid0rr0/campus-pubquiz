@@ -213,16 +213,28 @@ export class TeamService {
     sortBy,
     sortOrder,
     search,
-  }: TeamsQuery): Promise<TeamsListedPayload> {
+    showQuickfireOnly = false,
+  }: Omit<TeamsQuery, 'showQuickfireOnly'> & {
+    showQuickfireOnly?: boolean;
+  }): Promise<TeamsListedPayload> {
     const knex = this.gameSessionTeams.getKnex();
     const offset = (page - 1) * pageSize;
     const namePattern = `%${escapeLike(search ?? '')}%`;
 
     const sessionsPlayed = this.endedSessions.sessionsPlayedQuery();
 
-    const teamRows = knex('teams as t')
-      .leftJoin(sessionsPlayed.as('sp'), 'sp.team_id', 't.id')
-      .where('t.name', 'ilike', namePattern)
+    // A quickfire-only team has ended sessions, all of them quickfire.
+    const matching = () => {
+      const query = knex('teams as t')
+        .leftJoin(sessionsPlayed.as('sp'), 'sp.team_id', 't.id')
+        .where('t.name', 'ilike', namePattern);
+      return showQuickfireOnly
+        ? query
+        : query.whereRaw(
+            'sp.team_id is null or sp.sessions_played <> sp.quickfire_played',
+          );
+    };
+    const teamRows = matching()
       .select('t.id', 't.name', 't.code', 't.created_at as joinedAt')
       .select(knex.raw('coalesce(sp.sessions_played, 0) as "sessionsJoined"'));
 
@@ -254,7 +266,7 @@ export class TeamService {
         .orderBy('t.id', 'asc')
         .limit(pageSize)
         .offset(offset) as Promise<TeamListRow[]>,
-      knex('teams').where('name', 'ilike', namePattern).count({ count: '*' }),
+      matching().count({ count: '*' }),
     ]);
 
     return {

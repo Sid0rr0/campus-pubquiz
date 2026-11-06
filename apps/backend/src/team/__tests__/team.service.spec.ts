@@ -93,8 +93,11 @@ describe('TeamService (Postgres integration)', () => {
     return question;
   }
 
-  async function createSecondSession(joinCode: string): Promise<number> {
-    const quiz = em.create(Quiz, { title: 'Second Quiz' });
+  async function createSecondSession(
+    joinCode: string,
+    mode: 'pub' | 'quickfire' = 'pub',
+  ): Promise<number> {
+    const quiz = em.create(Quiz, { title: 'Second Quiz', mode });
     const session = em.create(GameSession, { quiz, joinCode });
     await em.flush();
     return session.id;
@@ -550,6 +553,82 @@ describe('TeamService (Postgres integration)', () => {
         expect.objectContaining({ id: multiTeam.id, sessionsJoined: 2 }),
         expect.objectContaining({ id: bareTeam.id, sessionsJoined: 0 }),
       ]);
+    });
+
+    describe('quickfire-only teams', () => {
+      const names = async (showQuickfireOnly?: boolean) =>
+        (
+          await teamService.listAll({
+            page: 1,
+            pageSize: 20,
+            sortBy: 'joinedAt',
+            sortOrder: 'asc',
+            showQuickfireOnly,
+          })
+        ).items.map((item) => item.name);
+
+      it('hides teams whose every ended session was quickfire unless asked, and counts only the shown ones', async () => {
+        const quickfireId = await createSecondSession('QFIRE1', 'quickfire');
+        const quickfireOnly = await teamService.join(quickfireId, 'Fast Only', {
+          joinCode: 'QFIRE1',
+        });
+        const mixed = await teamService.join(sessionId, 'Mixed', {
+          joinCode: 'ABCDEF',
+        });
+        await teamService.join(quickfireId, 'ignored', {
+          teamToken: mixed.token,
+          joinCode: 'QFIRE1',
+        });
+        await createBareTeam('Never Played');
+        await markPlayed(quickfireId, quickfireOnly.id);
+        await markPlayed(quickfireId, mixed.id);
+        await markPlayed(sessionId, mixed.id);
+        await endSession(quickfireId);
+        await endSession(sessionId);
+
+        expect(await names()).toEqual(['Mixed', 'Never Played']);
+        expect(await names(true)).toEqual([
+          'Fast Only',
+          'Mixed',
+          'Never Played',
+        ]);
+        const hidden = await teamService.listAll({
+          page: 1,
+          pageSize: 20,
+          sortBy: 'joinedAt',
+          sortOrder: 'asc',
+        });
+        expect(hidden.total).toBe(2);
+      });
+
+      it('counts quickfire nights in sessions played but leaves them out of the average placing', async () => {
+        const quickfireId = await createSecondSession('QFIRE1', 'quickfire');
+        const mixed = await teamService.join(sessionId, 'Mixed', {
+          joinCode: 'ABCDEF',
+        });
+        await teamService.join(quickfireId, 'ignored', {
+          teamToken: mixed.token,
+          joinCode: 'QFIRE1',
+        });
+        await markPlayed(sessionId, mixed.id);
+        await markPlayed(quickfireId, mixed.id);
+        await endSession(sessionId);
+        await endSession(quickfireId);
+
+        const { items } = await teamService.listAll({
+          page: 1,
+          pageSize: 20,
+          sortBy: 'joinedAt',
+          sortOrder: 'asc',
+        });
+
+        expect(items).toEqual([
+          expect.objectContaining({
+            sessionsJoined: 2,
+            averagePlacing: 1,
+          }),
+        ]);
+      });
     });
 
     it('does not count a lobby or running session until it ends', async () => {

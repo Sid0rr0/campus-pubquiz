@@ -15,6 +15,7 @@ function row(totalPoints: number, maxPoints: number): TeamSessionRow {
     maxPoints,
     correctCount: 0,
     playerCount: null,
+    isQuickfire: false,
   };
 }
 
@@ -55,6 +56,26 @@ describe('summarizeTeamHistory', () => {
     });
   });
 
+  it('leaves quickfire nights out of the average placing but counts them as played', () => {
+    const summary = summarizeTeamHistory(
+      [
+        { ...row(10, 20), placing: 2 },
+        { ...row(900, 1000), placing: 1, isQuickfire: true },
+      ],
+      0,
+    );
+
+    expect(summary.sessionsPlayed).toBe(2);
+    expect(summary.averagePlacing).toBe(2);
+  });
+
+  it('has no average placing for a team that only played quickfire', () => {
+    expect(
+      summarizeTeamHistory([{ ...row(9, 10), isQuickfire: true }], 0)
+        .averagePlacing,
+    ).toBeNull();
+  });
+
   it('leaves a night with no points to win out of the average share', () => {
     const summary = summarizeTeamHistory([row(0, 0), row(5, 10)], 0);
 
@@ -91,6 +112,7 @@ describe('teamHistoryOf', () => {
     name: `Night ${gameSessionId}`,
     playedAt: '2026-10-01T19:00:00.000Z',
     playerCount,
+    isQuickfire: false,
     result: { teams, questions: [], participantCount: 6, maxPoints: 12 },
   });
 
@@ -115,6 +137,7 @@ describe('teamHistoryOf', () => {
         maxPoints: 12,
         correctCount: 4,
         playerCount: 4,
+        isQuickfire: false,
       },
       expect.objectContaining({
         gameSessionId: 12,
@@ -122,6 +145,19 @@ describe('teamHistoryOf', () => {
         playerCount: null,
       }),
     ]);
+  });
+
+  it('counts a quickfire night as played but not as a win', () => {
+    const { rows, nightsWon } = teamHistoryOf(1, [
+      {
+        ...session(10, [team(1, { wonNight: true, placing: 1 })]),
+        isQuickfire: true,
+      },
+    ]);
+
+    expect(nightsWon).toBe(0);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].isQuickfire).toBe(true);
   });
 
   it('carries a departed team through with no placing', () => {

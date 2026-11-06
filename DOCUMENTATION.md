@@ -2427,6 +2427,16 @@ The page opens on most sessions played first. An optional `search` narrows the
 list and its `total` to teams whose name contains it, ignoring case, under every
 sort.
 
+A **quickfire-only team** (see `GLOSSARY.md`) took part in at least one ended
+session and every one of them was quickfire. `GET /teams` hides such teams unless
+`showQuickfireOnly=true` (default false), in the list and in `total`; a team with no
+ended session and a team with any pub session stay listed. The directory's "Show
+quickfire-only teams" checkbox sets it, starts unchecked, is not remembered and
+resets the list to page 1. A quickfire night counts in **Sessions played** but is
+left out of **Wins** and **Average placing** (a `TeamSessionRow` carries
+`isQuickfire`; `teamHistoryOf` and `averagePlacingOf` skip it), on the team page,
+the staff team page and the directory alike.
+
 ## Leagues
 
 A **league** (see `GLOSSARY.md`) is a named competition, such as a semester's, that
@@ -2438,6 +2448,8 @@ points, the table and the public page.
   game session; unique pair, `on delete cascade` on both sides). Deleting a league
   removes only its league rows and memberships, never a session, team or answer.
   Deleting a session removes its memberships.
+- **Quickfire sessions don't count.** The league table skips any quickfire session in
+  the league (sessions of migrated quizzes; a quickfire session can't be added).
 - **Dates are a label.** They never decide membership. They decide which leagues are
   **current**: `endsOn` is today or later, where "today" is the date at the venue
   (`Europe/Prague`, `league/venue-date.ts`, since no time-zone setting exists).

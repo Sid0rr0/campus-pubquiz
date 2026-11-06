@@ -18,6 +18,10 @@ export const teamsQuerySchema = z.object({
   sortBy: z.enum(TEAMS_SORT_COLUMNS).default('joinedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
   search: z.string().trim().max(MAX_TEAMS_SEARCH_LENGTH).optional(),
+  showQuickfireOnly: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type TeamsQuery = z.infer<typeof teamsQuerySchema>;

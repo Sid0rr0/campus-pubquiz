@@ -25,6 +25,7 @@ interface FetchTeamsParams {
   sortBy: TeamsSortColumn;
   sortOrder: TeamsSortOrder;
   search?: string;
+  showQuickfireOnly?: boolean;
 }
 
 export async function fetchTeams(
@@ -38,6 +39,7 @@ export async function fetchTeams(
     sortOrder: params.sortOrder,
   });
   if (params.search) query.set('search', params.search);
+  if (params.showQuickfireOnly) query.set('showQuickfireOnly', 'true');
   const response = await fetch(`${getBackendUrl()}/teams?${query}`, {
     credentials: 'include',
     signal,

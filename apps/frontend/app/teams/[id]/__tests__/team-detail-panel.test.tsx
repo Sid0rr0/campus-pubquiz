@@ -33,6 +33,7 @@ function sessionRow(overrides: Partial<TeamSessionRow>): TeamSessionRow {
     maxPoints: 40,
     correctCount: 20,
     playerCount: 5,
+    isQuickfire: false,
     ...overrides,
   };
 }
