@@ -329,8 +329,7 @@ function jokerHolders(
               // Stryker disable next-line ConditionalExpression: a purchase with no round finds no round below
               p.roundId !== null,
           )
-          // Stryker disable next-line StringLiteral: `source` is only ever compared with 'drawn'
-          .map((p) => ({ roundId: p.roundId as number, source: 'extra' })),
+          .map((p) => ({ roundId: p.roundId as number, source: 'extra' })), // Stryker disable-line StringLiteral: `source` is only ever compared with 'drawn'
       ];
       return picks.flatMap((pick) => {
         const round = roundById.get(pick.roundId);
