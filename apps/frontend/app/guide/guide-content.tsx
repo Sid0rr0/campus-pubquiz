@@ -95,7 +95,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Running questions',
     paragraphs: [
       'Each round opens with a round title card, then Advance opens questions one by one. Teams can change answers to any question opened this block.',
-      "Advance on a block's last question starts the final countdown, then the break. In quickfire rounds every question is its own block.",
+      "Advance on a block's last question starts the final countdown, then the break. In a quickfire quiz every question is its own block.",
     ],
   },
   {
@@ -172,8 +172,9 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'To add to a saved quiz, tick "Add to quiz instead of replacing" when importing.',
     ],
     bullets: [
+      'Quiz mode (Pub or Quickfire) is fixed at creation.',
       'Round note: up to 500 characters, for Remote and the title card on Control. "Show on screen" adds the big screen; phones never see it.',
-      'Question notes: tick "Show on screen at reveal" to add them under the answer on the big screen (up to 500 characters). Leave it off for grading hints.',
+      'Question notes: tick "Show on screen at reveal" to add them under the answer on the big screen.',
       'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL).',
       `Number: the margin row has a number field and % / absolute switch. CSV: {margin: "5%"}; {scoring: …} sets ${SCORING_NOTE}.`,
       'Video: tick "Hide video (sound only)" to cover it until the reveal. In a CSV: hideVideo: true in the {…} notes group.',

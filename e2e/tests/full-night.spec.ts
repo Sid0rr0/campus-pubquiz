@@ -13,7 +13,7 @@ import type { DisplayScreen } from '../support/screens/display-screen';
 import type { PhoneScreen } from '../support/screens/phone-screen';
 import { snap } from '../support/snapshots';
 
-const { warmUp, music, film, quickFire, bonusPoints } = FULL_NIGHT;
+const { warmUp, music, film, bonusPoints } = FULL_NIGHT;
 
 // Team A gets every typed answer in the first block right and Team B only half of the first.
 const TEAM_A_AFTER_BLOCK_ONE =
@@ -22,8 +22,8 @@ const TEAM_B_AFTER_BLOCK_ONE = warmUp.capital.halfPoints + bonusPoints;
 const TEAM_A_AFTER_BLOCK_TWO =
   TEAM_A_AFTER_BLOCK_ONE + film.clip.points + film.wall.points;
 const TEAM_B_AFTER_BLOCK_TWO = TEAM_B_AFTER_BLOCK_ONE;
-const TEAM_A_FINAL = TEAM_A_AFTER_BLOCK_TWO + quickFire.badminton.points;
-const TEAM_B_FINAL = TEAM_B_AFTER_BLOCK_TWO + quickFire.football.points;
+const TEAM_A_FINAL = TEAM_A_AFTER_BLOCK_TWO;
+const TEAM_B_FINAL = TEAM_B_AFTER_BLOCK_TWO;
 
 /** The E2E build shortens the break screen's wait for its first fun fact (see `FUN_FACT_START_DELAY_MS` in `support/env.ts`); clocks are never faked. A reused build from before that change still waits 30 seconds and fails here: rebuild. */
 const FUN_FACT_WAIT_MS = 15_000;
@@ -47,15 +47,6 @@ async function answerText(
   await phoneB.expectQuestion(prompt);
   if (answers.a) await phoneA.submitText(answers.a);
   if (answers.b) await phoneB.submitText(answers.b);
-}
-
-/** A quickfire phone submits the moment a choice is tapped. */
-async function tapQuickfireChoice(
-  phone: PhoneScreen,
-  option: string,
-): Promise<void> {
-  await phone.page.getByRole('button', { name: option, exact: true }).click();
-  await phone.expectSubmitted(option);
 }
 
 async function snapAllScreens(
@@ -323,51 +314,6 @@ async function revealBlockTwo(night: Night): Promise<void> {
   await phoneB.expectRevealedPoints(0, film.wall.points);
 }
 
-async function playQuickfireRound(night: Night): Promise<void> {
-  const { control, display, phoneA, phoneB } = night;
-  await control.advance('round_intro');
-  await revealStandings(night, {
-    a: TEAM_A_AFTER_BLOCK_TWO,
-    b: TEAM_B_AFTER_BLOCK_TWO,
-  });
-  await control.toggleLeaderboard();
-  await display.expectText(quickFire.title);
-  await display.expectText(quickFire.category);
-
-  // Every quickfire question is its own block: it locks and goes straight to its reveal.
-  await control.advance('question_open');
-  await display.expectQuestion(quickFire.badminton.prompt);
-  await phoneA.expectQuestion(quickFire.badminton.prompt);
-  await tapQuickfireChoice(phoneA, quickFire.badminton.right);
-  await tapQuickfireChoice(phoneB, quickFire.badminton.wrong);
-  await control.advance('locking');
-  await display.expectLockCountdown();
-  await control.expectStatus('reveal');
-  await display.expectRevealedAnswer(quickFire.badminton.right);
-  await phoneA.expectRevealedPoints(
-    quickFire.badminton.points,
-    quickFire.badminton.points,
-  );
-  await phoneB.expectRevealedPoints(0, quickFire.badminton.points);
-
-  // The next question waits behind the standings until the quiz master hides them.
-  await control.advance('question_open');
-  await control.toggleLeaderboard();
-  await display.expectQuestion(quickFire.football.prompt);
-  await answerText(night, quickFire.football.prompt, {
-    a: quickFire.football.wrong,
-    b: quickFire.football.right,
-  });
-  await control.advance('locking');
-  await control.expectStatus('reveal');
-  await display.expectRevealedAnswer(quickFire.football.right);
-  await phoneA.expectRevealedPoints(0, quickFire.football.points);
-  await phoneB.expectRevealedPoints(
-    quickFire.football.points,
-    quickFire.football.points,
-  );
-}
-
 async function endTheNight(night: Night): Promise<void> {
   const { control, display, phoneA, phoneB } = night;
   await control.advance('ended');
@@ -447,7 +393,7 @@ test('a whole quiz night is played across the big screen, the laptop and two pho
 
   await control.advance('round_overview');
   await display.expectText(warmUp.title);
-  await display.expectText(quickFire.title);
+  await display.expectText(film.title);
   await snapAllScreens(night, 'round_overview');
 
   await openAndPlayBlockOne(night);
@@ -460,6 +406,5 @@ test('a whole quiz night is played across the big screen, the laptop and two pho
   await crossBackIntoBlockOne(night);
   await revealBlockTwo(night);
 
-  await playQuickfireRound(night);
   await endTheNight(night);
 });

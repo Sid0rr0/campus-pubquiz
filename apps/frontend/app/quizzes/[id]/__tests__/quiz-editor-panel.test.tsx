@@ -1,10 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {
-  checkQuestion,
-  decodeSheetRow,
-  quickfireTypeNames,
-} from '@campus-pubquiz/types';
+import { checkQuestion, decodeSheetRow } from '@campus-pubquiz/types';
 import { Toaster } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuizDraftApiError } from '@/app/lib/quiz-draft-api';
@@ -807,11 +803,11 @@ describe('QuizEditorPanel', () => {
     await waitFor(() =>
       expect(mockCreateQuiz).toHaveBeenCalledWith({
         title: 'Trivia Night',
+        mode: 'pub',
         rounds: [
           {
             title: 'Round 1',
             breakAfter: true,
-            quickfire: false,
             questions: [
               {
                 type: 'multiple_choice',
@@ -867,44 +863,6 @@ describe('QuizEditorPanel', () => {
     expect(
       screen.queryByText(/options must be unique/i),
     ).not.toBeInTheDocument();
-  });
-
-  it('saves quickfire: true after checking the Quickfire mode toggle', async () => {
-    const user = userEvent.setup();
-    mockCreateQuiz.mockResolvedValue({
-      quizId: 42,
-      roundCount: 1,
-      questionCount: 1,
-    });
-    renderWithQuery(<QuizEditorPanel quizId="new" />);
-    await user.click(
-      screen.getByRole('button', { name: /start from scratch/i }),
-    );
-
-    await user.type(
-      screen.getByPlaceholderText(/untitled quiz/i),
-      'Trivia Night',
-    );
-    await user.click(screen.getByLabelText(/quickfire mode/i));
-    await user.click(screen.getByRole('button', { name: /add question/i }));
-    await user.type(
-      screen.getByPlaceholderText(/question prompt/i),
-      'Capital of France?',
-    );
-    const options = screen.getAllByPlaceholderText(/option text/i);
-    await user.type(options[0], 'Paris');
-    await user.type(options[1], 'London');
-    await user.click(screen.getAllByLabelText(/mark option 1 as correct/i)[0]);
-
-    await user.click(screen.getByRole('button', { name: /save quiz/i }));
-
-    await waitFor(() =>
-      expect(mockCreateQuiz).toHaveBeenCalledWith(
-        expect.objectContaining({
-          rounds: [expect.objectContaining({ quickfire: true })],
-        }),
-      ),
-    );
   });
 
   it('saves category and author after picking a category and typing an author into the round editor', async () => {
@@ -1591,7 +1549,7 @@ describe('QuizEditorPanel', () => {
           .getAllByRole('checkbox', { name: label })
           .map((checkbox) => checkbox.hasAttribute('disabled'));
 
-      it('disables move, delete, break-after and quickfire on the current round and earlier ones, and frees the rounds after it', async () => {
+      it('disables move, delete and break-after on the current round and earlier ones, and frees the rounds after it', async () => {
         mockFetchQuizDraft.mockResolvedValue(roundsDraft(1));
         renderWithQuery(<QuizEditorPanel quizId="5" />);
         await screen.findByDisplayValue('Trivia Night');
@@ -1612,10 +1570,9 @@ describe('QuizEditorPanel', () => {
           false,
         ]);
         expect(checkboxStates(/break after/i)).toEqual([true, true, true]);
-        expect(checkboxStates(/quickfire mode/i)).toEqual([true, true, false]);
       });
 
-      it('lets a later round move up and down, change break-after and quickfire, and be deleted', async () => {
+      it('lets a later round move up and down, change break-after, and be deleted', async () => {
         mockFetchQuizDraft.mockResolvedValue(roundsDraft(0));
         renderWithQuery(<QuizEditorPanel quizId="5" />);
         await screen.findByDisplayValue('Trivia Night');
@@ -1636,7 +1593,6 @@ describe('QuizEditorPanel', () => {
           false,
         ]);
         expect(checkboxStates(/break after/i)).toEqual([true, false, true]);
-        expect(checkboxStates(/quickfire mode/i)).toEqual([true, false, false]);
       });
 
       it("saves a later round's break-after, which moves where the current block ends", async () => {
@@ -2064,10 +2020,11 @@ describe('QuizEditorPanel', () => {
       points: 2,
     };
 
-    function loadQuiz(rounds: unknown[]) {
+    function loadQuiz(mode: 'pub' | 'quickfire', rounds: unknown[]) {
       mockFetchQuizDraft.mockResolvedValue({
         id: 5,
         title: 'Trivia Night',
+        mode,
         rounds,
       });
       return renderWithQuery(<QuizEditorPanel quizId="5" />);
@@ -2084,125 +2041,57 @@ describe('QuizEditorPanel', () => {
         .filter((label) => TYPE_LABELS.includes(label));
     }
 
-    it('offers only quickfire-allowed types in a quickfire round, leaving other rounds unaffected', async () => {
-      loadQuiz([
-        {
-          title: 'Speed',
-          breakAfter: false,
-          quickfire: true,
-          questions: [multipleChoice],
-        },
-        {
-          title: 'Normal',
-          breakAfter: true,
-          quickfire: false,
-          questions: [freeText],
-        },
+    it('offers only quickfire-allowed types in a quickfire quiz and hides break-after', async () => {
+      loadQuiz('quickfire', [
+        { title: 'Speed', breakAfter: false, questions: [multipleChoice] },
       ]);
       await screen.findByDisplayValue('Speed');
 
       expect(typeLabelsInRound('Speed')).toEqual(QUICKFIRE_LABELS);
-      expect(typeLabelsInRound('Normal')).toEqual(TYPE_LABELS);
+      expect(screen.queryByLabelText(/break after/i)).not.toBeInTheDocument();
+      expect(screen.getByText('Quickfire quiz')).toBeInTheDocument();
     });
 
-    it('restores every type in the round once quickfire mode is turned off', async () => {
+    it('offers every type and the break-after toggle in a pub quiz', async () => {
+      loadQuiz('pub', [
+        { title: 'Normal', breakAfter: true, questions: [freeText] },
+      ]);
+      await screen.findByDisplayValue('Normal');
+
+      expect(typeLabelsInRound('Normal')).toEqual(TYPE_LABELS);
+      expect(screen.getByLabelText(/break after/i)).toBeInTheDocument();
+      expect(screen.getByText('Pub quiz')).toBeInTheDocument();
+    });
+
+    it('defaults a new question to 1000 points in a quickfire quiz and 1 in a pub quiz', async () => {
       const user = userEvent.setup();
-      loadQuiz([
-        {
-          title: 'Speed',
-          breakAfter: true,
-          quickfire: true,
-          questions: [multipleChoice],
-        },
+      loadQuiz('quickfire', [
+        { title: 'Speed', breakAfter: true, questions: [multipleChoice] },
       ]);
       await screen.findByDisplayValue('Speed');
-
-      await user.click(screen.getByLabelText(/quickfire mode/i));
-
-      expect(typeLabelsInRound('Speed')).toEqual(TYPE_LABELS);
+      await user.click(screen.getByRole('button', { name: /add question/i }));
+      expect(screen.getAllByDisplayValue('1000')).toHaveLength(2);
     });
 
-    it('disables the quickfire toggle with a hint naming the blocking questions, linked to the toggle', async () => {
-      loadQuiz([
-        {
-          title: 'Mixed',
-          breakAfter: true,
-          quickfire: false,
-          questions: [
-            multipleChoice,
-            freeText,
-            { ...freeText, prompt: 'Another?' },
-          ],
-        },
-      ]);
-      await screen.findByDisplayValue('Mixed');
-
-      const toggle = screen.getByLabelText(/quickfire mode/i);
-      expect(toggle).toBeDisabled();
-      const hint = screen.getByText(/change or remove questions 2, 3 first/i);
-      expect(hint).toHaveTextContent(
-        `Quickfire rounds only hold ${quickfireTypeNames()} questions`,
-      );
-      expect(toggle.getAttribute('aria-describedby')?.split(' ')).toContain(
-        hint.id,
-      );
-    });
-
-    it('enables the toggle once the blocking question is changed to an allowed type', async () => {
+    it('sends the quiz mode back unchanged on save', async () => {
       const user = userEvent.setup();
-      loadQuiz([
-        {
-          title: 'Mixed',
-          breakAfter: true,
-          quickfire: false,
-          questions: [freeText],
-        },
+      mockUpdateQuiz.mockResolvedValue({
+        quizId: 5,
+        roundCount: 1,
+        questionCount: 1,
+        updatedAt: 'x',
+      });
+      loadQuiz('quickfire', [
+        { title: 'Speed', breakAfter: true, questions: [multipleChoice] },
       ]);
-      await screen.findByDisplayValue('Mixed');
-      expect(screen.getByLabelText(/quickfire mode/i)).toBeDisabled();
-      expect(
-        screen.getByText(/change or remove question 1 first/i),
-      ).toBeInTheDocument();
+      await user.type(await screen.findByDisplayValue('Speed'), '!');
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
 
-      await user.click(screen.getByRole('button', { name: 'Multiple choice' }));
-
-      expect(screen.getByLabelText(/quickfire mode/i)).toBeEnabled();
-      expect(screen.queryByText(/change or remove/i)).not.toBeInTheDocument();
-    });
-
-    it('enables the toggle once the blocking question is deleted', async () => {
-      const user = userEvent.setup();
-      loadQuiz([
-        {
-          title: 'Mixed',
-          breakAfter: true,
-          quickfire: false,
-          questions: [multipleChoice, freeText],
-        },
-      ]);
-      await screen.findByDisplayValue('Mixed');
-      expect(screen.getByLabelText(/quickfire mode/i)).toBeDisabled();
-
-      await user.click(
-        screen.getAllByRole('button', { name: /delete question/i })[1],
-      );
-
-      expect(screen.getByLabelText(/quickfire mode/i)).toBeEnabled();
-    });
-
-    it('never changes a question type when the toggle is blocked', async () => {
-      loadQuiz([
-        {
-          title: 'Mixed',
-          breakAfter: true,
-          quickfire: false,
-          questions: [freeText],
-        },
-      ]);
-      await screen.findByDisplayValue('Mixed');
-
-      expect(screen.getByPlaceholderText(/accepted answer/i)).toHaveValue(
-        'Jupiter',
+      await waitFor(() =>
+        expect(mockUpdateQuiz).toHaveBeenCalledWith(
+          5,
+          expect.objectContaining({ mode: 'quickfire' }),
+        ),
       );
     });
   });

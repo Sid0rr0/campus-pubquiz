@@ -132,9 +132,10 @@ function defaultSettingsFor(
 ): SessionSettings {
   return {
     ...DEFAULT_SESSION_SETTINGS,
-    quickfireQuestionTimerSeconds: quiz?.rounds.some((round) => round.quickfire)
-      ? DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS
-      : null,
+    quickfireQuestionTimerSeconds:
+      quiz?.mode === 'quickfire'
+        ? DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS
+        : null,
   };
 }
 

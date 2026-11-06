@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { QuizDraftSaveRequest } from '@campus-pubquiz/types';
+import { QUIZ_MODES, type QuizDraftSaveRequest } from '@campus-pubquiz/types';
 
 /**
  * The outer shape of a quiz save body, checked at the HTTP boundary: just
@@ -10,6 +10,7 @@ import type { QuizDraftSaveRequest } from '@campus-pubquiz/types';
  */
 const envelopeSchema = z.object({
   title: z.string(),
+  mode: z.enum(QUIZ_MODES).optional(),
   loadedUpdatedAt: z.string().optional(),
   rounds: z.array(
     z.looseObject({

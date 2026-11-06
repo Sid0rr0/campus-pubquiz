@@ -17,6 +17,7 @@ import {
   type ScoringMode,
   type QuestionType,
   type QuizDraftSaveRequest,
+  type QuizMode,
 } from '@campus-pubquiz/types';
 import {
   loadAnswerDraft,
@@ -83,8 +84,6 @@ export interface EditorRound {
   id: string;
   title: string;
   breakAfter: boolean;
-  /** See RoundConfig.quickfire — only settable here, never via CSV/Sheets import. */
-  quickfire: boolean;
   /** Round topic/theme — one of ROUND_CATEGORIES, or '' meaning unset. Picked from a fixed `<select>` in the editor. */
   category: string;
   /** Who wrote this round's questions — optional, blank string means unset. */
@@ -104,7 +103,7 @@ export function makeMatchPair(left = '', right = ''): EditorMatchPair {
   return { left, right };
 }
 
-/** Quickfire rounds default new questions to 1000 points (Quickfire's own convention); every other round defaults to 1. */
+/** A quickfire quiz defaults new questions to 1000 points (Quickfire's own convention); a pub quiz defaults to 1. */
 export function makeQuestion(id: string, isQuickfire = false): EditorQuestion {
   return {
     id,
@@ -133,7 +132,6 @@ export function makeRound(id: string, title = ''): EditorRound {
     id,
     title,
     breakAfter: false,
-    quickfire: false,
     category: '',
     author: '',
     note: '',
@@ -245,9 +243,6 @@ export function roundFromPreview(
     id,
     title: round.title,
     breakAfter: round.breakAfter,
-    // CSV/Sheets previews never carry quickfire — it's only ever set by
-    // editing the round afterward in the manual editor.
-    quickfire: round.quickfire ?? false,
     category: round.category ?? '',
     author: round.author ?? '',
     note: round.note ?? '',
@@ -265,7 +260,7 @@ export function roundFromPreview(
  * title matches an existing round (case/whitespace-insensitive) has its
  * questions appended to that round; every other preview round is added as a
  * brand-new round at the end. Existing rounds' own settings (breakAfter,
- * quickfire, category, author) are left untouched by a match.
+ * category, author) are left untouched by a match.
  */
 export function mergeRoundsFromPreview(
   currentRounds: EditorRound[],
@@ -413,7 +408,6 @@ export function describeEditorRounds(
 export interface MoveTargetRound {
   id: string;
   label: string;
-  quickfire: boolean;
 }
 
 /** The rounds a question in round `fromIndex` may move to: every other round that can take a moved question. */
@@ -429,7 +423,6 @@ export function moveTargetRounds(
           {
             id: round.id,
             label: `${index + 1}. ${round.title.trim() || 'Untitled round'}`,
-            quickfire: round.quickfire,
           },
         ],
   );
@@ -574,16 +567,17 @@ export function withSyncedQuestionIds(
 export function toSaveRequest(
   title: string,
   rounds: EditorRound[],
+  mode: QuizMode,
 ): QuizDraftSaveRequest {
   return {
     title: title.trim(),
+    mode,
     rounds: rounds.map((round, index) => ({
       title: round.title.trim(),
       // The state machine has no way to reveal answers otherwise, so the
       // last round's break is always forced on — see quiz.service.ts's
       // forceLastRoundBreak, which enforces this again server-side.
       breakAfter: index === rounds.length - 1 ? true : round.breakAfter,
-      quickfire: round.quickfire,
       ...(round.category.trim() ? { category: round.category.trim() } : {}),
       ...(round.author.trim() ? { author: round.author.trim() } : {}),
       ...(round.note.trim()

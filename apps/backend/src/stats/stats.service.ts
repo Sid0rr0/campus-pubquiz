@@ -208,12 +208,13 @@ export class StatsService {
 
     const roundExtras = (await knex('rounds as r')
       .join('game_sessions as gs', 'gs.quiz_id', 'r.quiz_id')
+      .join('quizzes as qz', 'qz.id', 'r.quiz_id')
       .where('gs.id', gameSessionId)
       .select(
         'r.id as roundId',
         'r.author',
         'r.note',
-        'r.quickfire as isQuickfire',
+        knex.raw(`qz.mode = 'quickfire' as "isQuickfire"`),
       )) as Pick<
       SessionBriefRoundInputRow,
       'roundId' | 'author' | 'note' | 'isQuickfire'

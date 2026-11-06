@@ -234,6 +234,12 @@ function EditorToolbar({
         question
         {questionCount === 1 ? '' : 's'}
       </span>
+      <span
+        className="whitespace-nowrap rounded-full bg-background/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide"
+        title="A quiz's mode is chosen when it is created and can't be changed"
+      >
+        {draft.mode === 'quickfire' ? 'Quickfire quiz' : 'Pub quiz'}
+      </span>
       <QuizImportControls variant="toolbar" quizImport={quizImport} />
       <Button
         type="button"
@@ -280,12 +286,11 @@ function LiveEditNotice() {
     <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
       A session is live on this quiz — questions can still be edited, but opened
       ones keep their type and choices. The current round and the rounds before
-      it keep their place, break-after and quickfire setting; the rounds after
-      it can be added, deleted, reordered and changed. Questions can be added,
-      deleted, reordered and moved after the current round&apos;s last opened
-      question (until its block starts locking) and in the rounds after it.
-      Correcting an opened question&apos;s answer or points re-scores its
-      auto-graded answers.
+      it keep their place and break-after setting; the rounds after it can be
+      added, deleted, reordered and changed. Questions can be added, deleted,
+      reordered and moved after the current round&apos;s last opened question
+      (until its block starts locking) and in the rounds after it. Correcting an
+      opened question&apos;s answer or points re-scores its auto-graded answers.
     </p>
   );
 }
@@ -305,6 +310,7 @@ function RoundEditorItem({
 }) {
   const { rounds, editRounds, saveIssues } = draft;
   const isLast = index === rounds.length - 1;
+  const isQuickfire = draft.mode === 'quickfire';
   return (
     <div className="flex flex-col gap-4">
       <QuizRoundEditor
@@ -312,6 +318,7 @@ function RoundEditorItem({
         index={index}
         isFirst={index === 0}
         isLast={isLast}
+        isQuickfire={isQuickfire}
         {...liveEditFlagsOf(described, index)}
         moveTargetRounds={moveTargetRounds(rounds, index, described)}
         onPreviewQuestion={questionPreviewOpener(draft, index)}
@@ -337,7 +344,7 @@ function RoundEditorItem({
           )
         }
       />
-      {!isLast && <RoundSeparator isBreak={round.breakAfter} />}
+      {!isLast && <RoundSeparator isBreak={!isQuickfire && round.breakAfter} />}
     </div>
   );
 }

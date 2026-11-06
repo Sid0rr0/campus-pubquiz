@@ -896,7 +896,7 @@ re-pointed before the jokers, inside the same save). The two differ when the
 round is gone: a joker is redrawn because every team must hold one, but an extra
 joker is optional, so it is removed and its cost handed back (the balance is
 worked out from the purchase rows). That also happens when two extra jokers of a
-team would land on one round, and when the edit made the round a quickfire round. A round that survives keeps its extra jokers even
+team would land on one round. A round that survives keeps its extra jokers even
 when the row it sat on is deleted (the save stores them again from the session's
 cache of purchases, since the database drops a deleted row's purchases). Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
 and purchases stay right.
@@ -1572,6 +1572,16 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Edit the quiz title; per round, edit its title, toggle `breakAfter`, reorder
   with up/down buttons (no drag-and-drop), delete, or add questions; per
   question, edit type/prompt/options/answer/points/media.
+- The **quiz mode** (`QuizDraft.mode`, `QuizSummary.mode`) shows read-only in
+  the editor's header ("Pub quiz" / "Quickfire quiz"). In a quickfire quiz the
+  break-after toggle is hidden (`breakAfter` is ignored there), the type picker
+  offers only the quickfire-allowed types, and a new question defaults to 1000
+  points (1 in a pub quiz). A save can't change the mode: `POST /quizzes`
+  stores the `mode` it carries (absent means pub); `PUT /quizzes/:id` refuses a
+  `mode` that differs from the stored one with a `422`, and validates the draft
+  against the stored mode, so a quickfire quiz holding a type outside the
+  quickfire-allowed list is refused with the usual "Quickfire rounds only
+  support …" message.
 - Write a round's **Round note** in the round's textarea ("Round note — what
   you say before this round", with a character count). Plain text, line breaks
   kept, trimmed, at most `ROUND_NOTE_MAX_LENGTH` (500) characters, blank saved
@@ -1586,8 +1596,8 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   `author` (absent when unset) for that card, and `breakNumber` and
   `isFinalBreak` on block-ending rounds, built with `getQuizStructureSummary`
   / `getBreakNumber`: the last round always ends a block, so it carries them
-  even when its stored `breakAfter` is false. A quickfire round before the last
-  never has a break, so it gets no number even with `breakAfter` set, and the
+  even when its stored `breakAfter` is false. A round of a quickfire quiz before
+  the last never has a break, so it gets no number even with `breakAfter` set, and the
   breaks, the rules screen and the bonus deadline count only real breaks. The browser shows a B marker
   wherever they are present, and `/control` shows "Break N" ("(final)" on the
   final break) when that break is on air. The round's **Show on
@@ -1758,7 +1768,7 @@ editor's disabled controls:
   editor read it through `getRoundStructureEditing` (`frozen`,
   `after-opened` or `free` per round), and `GET /quizzes/:id` returns it as
   `liveEdit`. The current round and every earlier round keep their place,
-  `breakAfter` and `quickfire` (`isRoundReached`) and can't be deleted, even
+  `breakAfter` (`isRoundReached`) and can't be deleted, even
   while only the current round's title card is on screen; a round before the
   current round keeps exactly its questions in their order.
 - **The current round keeps its opened questions, nothing else.** Until its
@@ -1778,16 +1788,17 @@ editor's disabled controls:
   locked.
 - **After the current round, rounds are free.** Whole rounds after the
   current round of every live session can be added, deleted and reordered,
-  and their `breakAfter` and `quickfire` can change (the usual rules still
-  apply: quickfire-allowed question types, the last round always breaks). Turning
+  and their `breakAfter` can change (the usual rules still
+  apply: the last round always breaks, and a quickfire quiz keeps its
+  quickfire-allowed question types — its mode never changes). Turning
   on `breakAfter` for a later round moves where the current block ends, which
   only moves the line across questions nobody has opened. Deleting every round
   after the current one ends the quiz there. Rounds are saved by position, so
   moving a round rewrites rows by position — harmless, since only unopened
   rounds move and they have no answers or round ratings yet; ratings of played
   rounds are untouched. After the save the sessions' breaks follow the edited
-  rounds (the structure is data). Removing, moving or changing the break or
-  quickfire setting of a round at or before the current one is refused with a
+  rounds (the structure is data). Removing, moving or changing the break
+  setting of a round at or before the current one is refused with a
   `409`, and the editor disables those controls.
 - **After the current round, questions are free.** In any round after the
   current round of every live session, questions can be added, deleted,
@@ -1872,7 +1883,7 @@ reads, so an exported file re-imports as-is. `break_after`, `category`,
 `author`, `round_note`, and `show_round_note` all land on each round's last
 row (`show_round_note` is blank when the setting is off); `show_note` stays on
 its question's own row, blank when off; `match` answers are rebuilt as
-`left+right` pairs. Rounds with no questions are omitted, and `quickfire`
+`left+right` pairs. Rounds with no questions are omitted, and the quiz mode
 has no column, so it isn't exported. A `sort` or `match` question's scoring mode and a
 `number` question's margin are exported in the notes cell.
 
@@ -1984,7 +1995,13 @@ Postgres via MikroORM. Two halves of the schema:
 - **Authoring time**: `quizzes → rounds → questions`. Questions have a `type`
   (any [question type](#question-types)) plus a JSON
   payload for type-specific data (options, media URL), so new question types
-  don't need migrations.
+  don't need migrations. A quiz carries its **quiz mode** in `quizzes.mode`
+  (`pub` or `quickfire`, default `pub`), chosen at creation and never changed;
+  there is no per-round flag. `SeedService.loadQuizRounds` fills each seeded
+  round's in-memory `quickfire` flag from the quiz's mode, so the engine still
+  reads a per-round flag. The migration that introduced the column made a quiz
+  whose rounds were all quickfire (and that had at least one) `quickfire`,
+  every other quiz `pub`, and fails on a quiz mixing both kinds of round.
 - **Runtime**: `game_sessions → teams → answers`, plus `bonus_awards`,
   `session_team_jokers` and the `game_session_teams` roster join table. A session row stores the join code
   and the live progress columns (`status`, `currentRoundIndex`,

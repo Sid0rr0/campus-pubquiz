@@ -12,6 +12,7 @@ import {
   type QuizDraft,
   type QuizDraftIssue,
   type QuizDraftSaveResult,
+  type QuizMode,
   type QuizSummary,
 } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
@@ -124,12 +125,13 @@ export class QuizService {
         rounds: rounds.map((round) => ({
           questionCount: round.questions.length,
           breakAfter: round.breakAfter,
-          quickfire: round.quickfire,
+          quickfire: quiz.mode === 'quickfire',
         })),
       });
       return {
         id: quiz.id,
         title: quiz.title,
+        mode: quiz.mode,
         updatedAt: quiz.updatedAt.toISOString(),
         rounds: rounds.map((round, index) => {
           const breakNumber = getBreakNumber(index, structure);
@@ -145,7 +147,6 @@ export class QuizService {
                   isFinalBreak: breakNumber === structure.blockCount,
                 }
               : {}),
-            quickfire: round.quickfire,
             questions: round.questions.getItems().map((question) => {
               const notes = questionNotesOf(question.notes);
               return {
@@ -186,11 +187,11 @@ export class QuizService {
     return {
       id: quiz.id,
       title: quiz.title,
+      mode: quiz.mode,
       updatedAt: quiz.updatedAt.toISOString(),
       rounds: quiz.rounds.getItems().map((round) => ({
         title: round.title,
         breakAfter: round.breakAfter,
-        quickfire: round.quickfire,
         ...(round.category ? { category: round.category } : {}),
         ...(round.author ? { author: round.author } : {}),
         ...(round.note ? { note: round.note } : {}),
@@ -207,16 +208,17 @@ export class QuizService {
   async create(
     title: string,
     rounds: ImportRoundPreview[],
+    mode: QuizMode = 'pub',
   ): Promise<QuizDraftSaveResult> {
     const normalizedRounds = forceLastRoundBreak(rounds);
     // A new quiz holds no questions yet, so any id in the draft is another quiz's.
     const issues = [
-      ...validateQuizDraft({ title, rounds: normalizedRounds }),
+      ...validateQuizDraft({ title, mode, rounds: normalizedRounds }),
       ...findForeignQuestionIds([], normalizedRounds),
     ];
     if (issues.length > 0) throw new QuizDraftInvalidError(issues);
 
-    const quiz = this.quizzes.create({ title: title.trim() });
+    const quiz = this.quizzes.create({ title: title.trim(), mode });
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
     const updatedAt = await this.syncRoundsAndQuestions(
       quiz.id,
@@ -230,13 +232,25 @@ export class QuizService {
     quizId: number,
     title: string,
     rounds: ImportRoundPreview[],
+    mode?: QuizMode,
   ): Promise<QuizDraftSaveResult> {
     const normalizedRounds = forceLastRoundBreak(rounds);
-    const issues = validateQuizDraft({ title, rounds: normalizedRounds });
-    if (issues.length > 0) throw new QuizDraftInvalidError(issues);
-
     const quiz = await this.quizzes.findOne({ id: quizId });
     if (!quiz) throw new QuizNotFoundError(quizId);
+    const issues = validateQuizDraft({
+      title,
+      mode: quiz.mode,
+      rounds: normalizedRounds,
+    });
+    if (mode !== undefined && mode !== quiz.mode) {
+      issues.push({
+        roundIndex: -1,
+        questionIndex: null,
+        field: 'mode',
+        message: "A quiz's mode can't be changed",
+      });
+    }
+    if (issues.length > 0) throw new QuizDraftInvalidError(issues);
 
     quiz.title = title.trim();
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
@@ -312,7 +326,6 @@ export class QuizService {
           title: round.title,
           orderIndex: roundIndex,
           breakAfter: round.breakAfter,
-          quickfire: round.quickfire ?? false,
           category: round.category ?? null,
           author: round.author ?? null,
           note: round.note?.trim() || null,
@@ -326,7 +339,6 @@ export class QuizService {
           onConflictMergeFields: [
             'title',
             'breakAfter',
-            'quickfire',
             'category',
             'author',
             'note',

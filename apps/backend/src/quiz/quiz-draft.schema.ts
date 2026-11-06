@@ -45,7 +45,10 @@ export function validateQuizDraft(
       ...roundShapeIssues(round, roundIndex),
       ...roundTextIssues(round, roundIndex),
       ...round.questions.flatMap((question, questionIndex) =>
-        questionIssues(round, question, { roundIndex, questionIndex }),
+        questionIssues(request.mode === 'quickfire', question, {
+          roundIndex,
+          questionIndex,
+        }),
       ),
     );
   });
@@ -74,15 +77,6 @@ function roundShapeIssues(
   if (round.questions.length === 0) {
     issues.push(
       roundIssue(roundIndex, 'questions', 'Round needs at least one question'),
-    );
-  }
-  if (round.quickfire !== undefined && typeof round.quickfire !== 'boolean') {
-    issues.push(
-      roundIssue(
-        roundIndex,
-        'quickfire',
-        'Quickfire mode must be true or false',
-      ),
     );
   }
   if (
@@ -135,7 +129,7 @@ function roundTextIssues(
 }
 
 function questionIssues(
-  round: DraftRound,
+  quickfire: boolean,
   question: DraftRound['questions'][number],
   position: { roundIndex: number; questionIndex: number },
 ): QuizDraftIssue[] {
@@ -147,7 +141,7 @@ function questionIssues(
       message: issue.message,
     }));
   }
-  return round.quickfire && !isQuickfireAllowedType(question.type)
+  return quickfire && !isQuickfireAllowedType(question.type)
     ? [{ ...position, field: 'type', message: QUICKFIRE_TYPES_MESSAGE }]
     : [];
 }

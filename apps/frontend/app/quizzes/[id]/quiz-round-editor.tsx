@@ -7,8 +7,6 @@ import {
   TrashIcon,
 } from '@radix-ui/react-icons';
 import {
-  isQuickfireAllowedType,
-  quickfireTypeNames,
   ROUND_CATEGORIES,
   ROUND_NOTE_MAX_LENGTH,
   type QuizDraftIssue,
@@ -22,10 +20,7 @@ import {
   type EditorRound,
   type MoveTargetRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
-import {
-  QuizQuestionEditor,
-  type MoveTarget,
-} from '@/app/quizzes/[id]/quiz-question-editor';
+import { QuizQuestionEditor } from '@/app/quizzes/[id]/quiz-question-editor';
 
 /** DOM id for the round's card, so the outline can scroll it into view — see quiz-outline.tsx's jump-to-round button. */
 export function roundAnchorId(roundId: string): string {
@@ -37,7 +32,9 @@ interface QuizRoundEditorProps {
   index: number;
   isFirst: boolean;
   isLast: boolean;
-  /** A live session has reached this round (it is the current round or an earlier one) — it keeps its place, break-after and quickfire setting, and can't be deleted. */
+  /** The quiz is a quickfire quiz: no break-after toggle, and new questions default to 1000 points. */
+  isQuickfire: boolean;
+  /** A live session has reached this round (it is the current round or an earlier one) — it keeps its place and break-after setting, and can't be deleted. */
   isReached: boolean;
   /** The round above is reached, so this one can't move up past it. */
   isPreviousReached: boolean;
@@ -47,7 +44,7 @@ interface QuizRoundEditorProps {
   pinnedQuestionCount: number;
   /** Why the round's questions are restricted while a session is live, or undefined when they aren't. */
   structureNote?: string;
-  /** The other rounds a question here could move to — a quickfire round is dropped per question when the type doesn't fit. */
+  /** The other rounds a question here could move to. */
   moveTargetRounds: MoveTargetRound[];
   /** `dbId`s of questions opened in a live session. */
   openedQuestionIds: ReadonlySet<number>;
@@ -62,36 +59,12 @@ interface QuizRoundEditorProps {
   onPreviewQuestion?: (questionIndex: number) => void;
 }
 
-/** 1-based positions, within the round, of the questions whose type a quickfire round can't hold. */
-function quickfireBlockingPositions(round: EditorRound): number[] {
-  return round.questions.flatMap((question, index) =>
-    isQuickfireAllowedType(question.type) ? [] : [index + 1],
-  );
-}
-
-/** Where `question` may move: every candidate round except a quickfire round whose type list excludes it. Rounds are numbered by their position in the quiz. */
-function moveTargetsFor(
-  question: EditorQuestion,
-  candidates: MoveTargetRound[],
-): MoveTarget[] {
-  return candidates.flatMap((round) =>
-    round.quickfire && !isQuickfireAllowedType(question.type)
-      ? []
-      : [{ roundId: round.id, label: round.label }],
-  );
-}
-
-function formatPositions(positions: number[]): string {
-  return positions.length === 1
-    ? `question ${positions[0]}`
-    : `questions ${positions.join(', ')}`;
-}
-
 export function QuizRoundEditor({
   round,
   index,
   isFirst,
   isLast,
+  isQuickfire,
   isReached,
   isPreviousReached,
   isStructureFrozen,
@@ -133,7 +106,7 @@ export function QuizRoundEditor({
     onChange({
       questions: [
         ...round.questions,
-        makeQuestion(crypto.randomUUID(), round.quickfire),
+        makeQuestion(crypto.randomUUID(), isQuickfire),
       ],
     });
   }
@@ -161,18 +134,14 @@ export function QuizRoundEditor({
           />
           <FieldErrors issues={fieldIssues(roundLevelIssues, 'title')} />
         </div>
-        <BreakAfterToggle
-          isLast={isLast}
-          isReached={isReached}
-          breakAfter={round.breakAfter}
-          onChange={(breakAfter) => onChange({ breakAfter })}
-        />
-        <QuickfireModeToggle
-          round={round}
-          isReached={isReached}
-          onChange={onChange}
-        />
-        <FieldErrors issues={fieldIssues(roundLevelIssues, 'quickfire')} />
+        {!isQuickfire && (
+          <BreakAfterToggle
+            isLast={isLast}
+            isReached={isReached}
+            breakAfter={round.breakAfter}
+            onChange={(breakAfter) => onChange({ breakAfter })}
+          />
+        )}
         <Button
           type="button"
           onClick={onMoveUp}
@@ -248,6 +217,7 @@ export function QuizRoundEditor({
 
       <RoundQuestions
         round={round}
+        isQuickfire={isQuickfire}
         pinnedQuestionCount={pinnedQuestionCount}
         moveTargetRounds={moveTargetRounds}
         openedQuestionIds={openedQuestionIds}
@@ -293,56 +263,6 @@ function swapQuestion<Question extends { id: string }>(
   return swapped;
 }
 
-/**
- * Switching quickfire mode on is blocked while a disallowed question remains;
- * switching it off is always allowed. Types are never changed for the user.
- */
-function QuickfireModeToggle({
-  round,
-  isReached,
-  onChange,
-}: Pick<QuizRoundEditorProps, 'round' | 'isReached' | 'onChange'>) {
-  const blockingPositions = quickfireBlockingPositions(round);
-  const isQuickfireBlocked = !round.quickfire && blockingPositions.length > 0;
-  const quickfireHintId = `quickfire-mode-hint-${round.id}`;
-  const quickfireBlockedHintId = `quickfire-mode-blocked-${round.id}`;
-  return (
-    <>
-      <label
-        className="flex items-center gap-2 text-xs font-extrabold text-foreground/60"
-        title="Speed-based scoring, answer then reveal, leaderboard shows only the top teams"
-      >
-        <input
-          type="checkbox"
-          checked={round.quickfire}
-          onChange={(event) => onChange({ quickfire: event.target.checked })}
-          disabled={isQuickfireBlocked || isReached}
-          className="h-4 w-4"
-          aria-describedby={
-            isQuickfireBlocked
-              ? `${quickfireHintId} ${quickfireBlockedHintId}`
-              : quickfireHintId
-          }
-        />
-        Quickfire mode
-      </label>
-      <span id={quickfireHintId} className="sr-only">
-        Speed-based scoring, answer then reveal, leaderboard shows only the top
-        teams
-      </span>
-      {isQuickfireBlocked && (
-        <span
-          id={quickfireBlockedHintId}
-          className="text-xs font-bold text-foreground/60"
-        >
-          Quickfire rounds only hold {quickfireTypeNames()} questions — change
-          or remove {formatPositions(blockingPositions)} first.
-        </span>
-      )}
-    </>
-  );
-}
-
 function RoundNoteField({
   round,
   issues,
@@ -382,6 +302,7 @@ function RoundNoteField({
 
 function RoundQuestions({
   round,
+  isQuickfire,
   pinnedQuestionCount,
   moveTargetRounds,
   openedQuestionIds,
@@ -400,6 +321,7 @@ function RoundQuestions({
   | 'issues'
   | 'onPreviewQuestion'
   | 'onMoveQuestionToRound'
+  | 'isQuickfire'
 > & {
   onUpdate: (questionId: string, patch: Partial<EditorQuestion>) => void;
   onDelete: (questionId: string) => void;
@@ -415,8 +337,11 @@ function RoundQuestions({
           isFirstMovable={index <= pinnedQuestionCount}
           isLast={index === round.questions.length - 1}
           isPinned={index < pinnedQuestionCount}
-          moveTargets={moveTargetsFor(question, moveTargetRounds)}
-          isQuickfireRound={round.quickfire}
+          moveTargets={moveTargetRounds.map(({ id, label }) => ({
+            roundId: id,
+            label,
+          }))}
+          isQuickfireRound={isQuickfire}
           isOpened={
             question.dbId !== undefined && openedQuestionIds.has(question.dbId)
           }

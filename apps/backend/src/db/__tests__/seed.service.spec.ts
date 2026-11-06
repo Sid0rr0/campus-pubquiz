@@ -186,12 +186,14 @@ describe('SeedService (Postgres integration)', () => {
 
   describe('loadQuizRounds', () => {
     async function buildQuiz() {
-      const quiz = em.create(Quiz, { title: 'Preview quiz' });
+      const quiz = em.create(Quiz, {
+        title: 'Preview quiz',
+        mode: 'quickfire',
+      });
       const second = em.create(Round, {
         quiz,
         title: 'Second',
         orderIndex: 1,
-        quickfire: true,
       });
       const first = em.create(Round, {
         quiz,
@@ -255,11 +257,21 @@ describe('SeedService (Postgres integration)', () => {
         note: 'Say hi',
         showNoteOnScreen: true,
       });
-      expect(rounds[1].quickfire).toBe(true);
+      expect(rounds.map((round) => round.quickfire)).toEqual([true, true]);
       expect(Object.values(rounds[0].questionNotesById ?? {})).toContain(
         'Host note',
       );
       expect(await em.count(GameSession, {})).toBe(0);
+    });
+
+    it('leaves every round non-quickfire in a pub quiz', async () => {
+      const quiz = await buildQuiz();
+      quiz.mode = 'pub';
+      await em.flush();
+
+      const rounds = await seedService.loadQuizRounds(quiz.id);
+
+      expect(rounds.map((round) => round.quickfire)).toEqual([false, false]);
     });
 
     it('holds the quiz exactly as a session on it does', async () => {

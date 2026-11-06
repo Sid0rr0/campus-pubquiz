@@ -119,28 +119,6 @@ describe('findLiveEditViolations', () => {
     expect(findLiveEditViolations(current, incoming, frontier())).toEqual([]);
   });
 
-  it("rejects changing a round's quickfire", () => {
-    const current = [round()];
-    const incoming = [round({ quickfire: true })];
-
-    const issues = findLiveEditViolations(current, incoming, frontier());
-
-    expect(issues).toEqual([
-      expect.objectContaining({
-        roundIndex: 0,
-        questionIndex: null,
-        field: 'quickfire',
-      }),
-    ]);
-  });
-
-  it('treats an unset quickfire as false', () => {
-    const current = [round({ quickfire: false })];
-    const incoming = [round({ quickfire: undefined })];
-
-    expect(findLiveEditViolations(current, incoming, frontier())).toEqual([]);
-  });
-
   it('rejects adding or removing a question within a round', () => {
     const current = [round()];
     const incoming = [
@@ -644,12 +622,6 @@ describe('findLiveEditViolations — rounds after the current round', () => {
       violations: [],
     },
     {
-      name: "changes a later round's quickfire setting",
-      currentRoundIndex: 0,
-      incoming: [r0(), { ...r1(), quickfire: true }, r2()],
-      violations: [],
-    },
-    {
       name: 'moves an earlier round down past the current round',
       currentRoundIndex: 1,
       openedQuestionIds: [1, 2],
@@ -674,25 +646,11 @@ describe('findLiveEditViolations — rounds after the current round', () => {
       violations: [{ roundIndex: 1, field: 'breakAfter' }],
     },
     {
-      name: "changes the current round's quickfire setting",
-      currentRoundIndex: 1,
-      openedQuestionIds: [1, 2],
-      incoming: [r0(), { ...r1(), quickfire: true }, r2()],
-      violations: [{ roundIndex: 1, field: 'quickfire' }],
-    },
-    {
       name: "changes an earlier round's break-after",
       currentRoundIndex: 1,
       openedQuestionIds: [1, 2],
       incoming: [{ ...r0(), breakAfter: true }, r1(), r2()],
       violations: [{ roundIndex: 0, field: 'breakAfter' }],
-    },
-    {
-      name: "changes an earlier round's quickfire setting",
-      currentRoundIndex: 1,
-      openedQuestionIds: [1, 2],
-      incoming: [{ ...r0(), quickfire: true }, r1(), r2()],
-      violations: [{ roundIndex: 0, field: 'quickfire' }],
     },
     {
       name: 'inserts a round before a current round that has opened questions',
@@ -720,7 +678,7 @@ describe('findLiveEditViolations — rounds after the current round', () => {
       currentRoundIndex: 0,
       isLocking: true,
       openedQuestionIds: [1, 2],
-      incoming: [r0(), { ...r1(), quickfire: true }, r2()],
+      incoming: [r0(), { ...r1(), breakAfter: true }, r2()],
       violations: [],
     },
   ];

@@ -696,21 +696,15 @@ describe('SessionPickerPanel', () => {
     );
   });
 
-  it('prefills the quickfire question timer to 30s for a quiz with a quickfire round', async () => {
+  it('prefills the quickfire question timer to 30s for a quickfire quiz', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
       quizzes: [
         {
           id: 2,
           title: 'Speed Quiz',
-          rounds: [
-            {
-              title: 'Speed Round',
-              breakAfter: false,
-              quickfire: true,
-              questions: [],
-            },
-          ],
+          mode: 'quickfire',
+          rounds: [{ title: 'Speed Round', breakAfter: false, questions: [] }],
         },
       ],
     });
@@ -736,7 +730,7 @@ describe('SessionPickerPanel', () => {
     );
   });
 
-  it('prefills the quickfire question timer to null for a quiz with no quickfire round', async () => {
+  it('prefills the quickfire question timer to null for a pub quiz', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
       quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],

@@ -208,6 +208,22 @@
           "comment": null,
           "enumItems": [],
           "mappedType": "text"
+        },
+        "mode": {
+          "name": "mode",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'pub'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
         }
       },
       "name": "quizzes",
@@ -848,22 +864,6 @@
         },
         "break_after": {
           "name": "break_after",
-          "type": "boolean",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": "false",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "boolean"
-        },
-        "quickfire": {
-          "name": "quickfire",
           "type": "boolean",
           "unsigned": false,
           "autoincrement": false,

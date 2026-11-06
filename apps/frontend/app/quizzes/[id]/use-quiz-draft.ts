@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import {
   type LiveEditFrontier,
   type QuizDraftIssue,
+  type QuizMode,
 } from '@campus-pubquiz/types';
 import {
   createQuiz,
@@ -68,6 +69,8 @@ export interface QuizDraft {
   startFromScratch: () => void;
   title: string;
   setTitle: (title: string) => void;
+  /** The quiz's mode, shown read-only: it is chosen at creation and never changes. */
+  mode: QuizMode;
   rounds: EditorRound[];
   /** Applies a pure round edit (current rounds in, new rounds out). */
   editRounds: (edit: (rounds: EditorRound[]) => EditorRound[]) => void;
@@ -116,6 +119,8 @@ export function useQuizDraft(quizId: string): QuizDraft {
   // for that case — 'empty' only actually renders for a new quiz.
   const [phase, setPhase] = useState<QuizDraftPhase>('empty');
   const [title, setTitle] = useState('');
+  // Fixed once the quiz exists; a new quiz is a pub quiz until the creation form offers the choice.
+  const [mode, setMode] = useState<QuizMode>('pub');
   const [rounds, setRounds] = useState<EditorRound[]>([]);
   const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
   // The draft as last loaded or saved, to tell whether the editor has unsaved changes.
@@ -155,9 +160,16 @@ export function useQuizDraft(quizId: string): QuizDraft {
       roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
     );
     setTitle(draftQuery.data.title);
+    setMode(draftQuery.data.mode);
     setRounds(hydratedRounds);
     setSavedFingerprint(
-      fingerprintOf(toSaveRequest(draftQuery.data.title, hydratedRounds)),
+      fingerprintOf(
+        toSaveRequest(
+          draftQuery.data.title,
+          hydratedRounds,
+          draftQuery.data.mode,
+        ),
+      ),
     );
     setLiveEdit(draftQuery.data.liveEdit);
     setLoadedUpdatedAt(draftQuery.data.updatedAt);
@@ -197,7 +209,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
 
   const structureKey = structureKeyOf(rounds);
   const isDirty =
-    fingerprintOf(toSaveRequest(title, rounds)) !== savedFingerprint;
+    fingerprintOf(toSaveRequest(title, rounds, mode)) !== savedFingerprint;
   const hasUnsavedEdits = phase === 'editor' && isDirty;
 
   useLeaveGuard(hasUnsavedEdits);
@@ -205,7 +217,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
   // Exports what's in the editor right now (unsaved edits included), not the
   // last-saved copy — the CSV is a snapshot of the draft the admin is looking at.
   function exportCsv(): void {
-    const request = toSaveRequest(title, rounds);
+    const request = toSaveRequest(title, rounds, mode);
     downloadTextFile(
       csvFilename(request.title),
       quizToCsv(request.rounds),
@@ -223,6 +235,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
     },
     title,
     setTitle,
+    mode,
     rounds,
     editRounds: (edit) => setRounds(edit),
     applyImport: (outcome) => {
@@ -235,7 +248,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
     isRefreshingLockState: refreshLockStateMutation.isPending,
     save: () => {
       setSavedStructureKey(structureKey);
-      saveMutation.mutate(toSaveRequest(title, rounds));
+      saveMutation.mutate(toSaveRequest(title, rounds, mode));
     },
     isSaving: saveMutation.isPending,
     savedQuizId,

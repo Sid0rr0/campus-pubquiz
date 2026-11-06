@@ -98,6 +98,7 @@ export interface QuizQuestionSpec {
 export interface QuizRoundSpec {
   title: string;
   breakAfter?: boolean;
+  /** Any quickfire round makes the whole seeded quiz quickfire (the mode lives on the quiz). */
   quickfire?: boolean;
   /** Host-only round note shown on /remote while the round's intro is on air. */
   note?: string;
@@ -504,7 +505,6 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     options: CreateGatewayOptions,
   ): Promise<PlayableQuiz> {
     const em = db.orm.em.fork();
-    const quiz = em.create(Quiz, { title: 'Real Store Quiz' });
     const isDefaultQuiz = options.rounds === undefined;
     const roundSpecs: QuizRoundSpec[] = options.rounds ?? [
       {
@@ -514,13 +514,17 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         questions: Object.values(PLAYABLE_QUESTIONS),
       },
     ];
+    // The mode lives on the quiz: a spec asking for a quickfire round makes the whole quiz quickfire.
+    const quiz = em.create(Quiz, {
+      title: 'Real Store Quiz',
+      mode: roundSpecs.some((spec) => spec.quickfire) ? 'quickfire' : 'pub',
+    });
     const rounds = roundSpecs.map((spec, orderIndex) => {
       const round = em.create(Round, {
         quiz,
         title: spec.title,
         orderIndex,
         breakAfter: spec.breakAfter ?? false,
-        quickfire: spec.quickfire ?? false,
         note: spec.note,
         showNoteOnScreen: spec.showNoteOnScreen ?? false,
       });

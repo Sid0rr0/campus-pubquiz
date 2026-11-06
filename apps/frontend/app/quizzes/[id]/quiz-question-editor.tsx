@@ -47,7 +47,7 @@ interface QuizQuestionEditorProps {
   moveTargets: MoveTarget[];
   /** This specific question is opened in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
   isOpened: boolean;
-  /** The question's round is in quickfire mode, so the type picker offers only the quickfire-allowed types (Scoring's list). */
+  /** The quiz is in quickfire mode, so the type picker offers only the quickfire-allowed types (Scoring's list). */
   isQuickfireRound: boolean;
   /** Validation issues from the last rejected save that apply to this question, shown next to the field each one names. */
   issues: QuizDraftIssue[];

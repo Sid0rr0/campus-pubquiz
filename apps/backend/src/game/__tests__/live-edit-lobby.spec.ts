@@ -111,7 +111,7 @@ describe('Live edit — saving a quiz while a session waits in the lobby', () =>
 describe('Live edit — a changed round setting while a session waits in the lobby', () => {
   const harness = setupRealStoreGatewayTest();
 
-  it('takes effect in the lobby session: the break moves to the other round and the round turns quickfire', async () => {
+  it('takes effect in the lobby session: the break moves to the other round', async () => {
     const game = await harness.createGateway({
       rounds: [
         {
@@ -141,14 +141,11 @@ describe('Live edit — a changed round setting while a session waits in the lob
       rounds.map((round, index) => ({
         ...round,
         breakAfter: index === 1,
-        quickfire: index === 0,
       })),
     );
 
     const view = await game.snapshot();
     expect(view.quizStructure.breakRoundNumbers).toEqual([2, 3]);
-    await game.act('START_QUIZ');
-    expect((await game.act('ADVANCE')).isCurrentRoundQuickfire).toBe(true);
   });
 });
 

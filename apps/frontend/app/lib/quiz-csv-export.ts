@@ -61,7 +61,7 @@ function questionRow(
 /**
  * Serializes quiz rounds into the CSV format the importer reads, so an
  * exported file can be re-imported as-is. Rounds without questions have no
- * row to carry them and are omitted. Round `quickfire` has no column and is
+ * row to carry them and are omitted. The quiz mode has no column and is
  * not exported.
  */
 export function quizToCsv(rounds: readonly ImportRoundPreview[]): string {

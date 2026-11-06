@@ -75,7 +75,6 @@ describe('makeQuestion / makeRound', () => {
       id: 'r1',
       title: 'Round 1',
       breakAfter: false,
-      quickfire: false,
       category: '',
       author: '',
       note: '',
@@ -790,32 +789,6 @@ describe('roundFromPreview', () => {
     ]);
     expect(editorRound.title).toBe('History');
     expect(editorRound.breakAfter).toBe(true);
-    expect(editorRound.quickfire).toBe(false);
-  });
-
-  it('carries a true quickfire through from the preview', () => {
-    const round: ImportRoundPreview = {
-      title: 'Speed Round',
-      breakAfter: true,
-      quickfire: true,
-      questions: [
-        {
-          type: 'multiple_choice',
-          prompt: 'Q1',
-          answer: 'A',
-          points: 1,
-          options: ['A', 'B'],
-        },
-      ],
-    };
-
-    const editorRound = roundFromPreview(
-      'r1',
-      round,
-      (index) => `r1-q${index}`,
-    );
-
-    expect(editorRound.quickfire).toBe(true);
   });
 });
 
@@ -831,15 +804,15 @@ describe('toSaveRequest', () => {
       },
     ];
 
-    const request = toSaveRequest(' Trivia Night ', [round]);
+    const request = toSaveRequest(' Trivia Night ', [round], 'quickfire');
 
     expect(request).toEqual({
       title: 'Trivia Night',
+      mode: 'quickfire',
       rounds: [
         {
           title: 'History',
           breakAfter: true,
-          quickfire: false,
           questions: [
             {
               type: 'free_text',
@@ -865,30 +838,10 @@ describe('toSaveRequest', () => {
       { ...makeQuestion('q2'), type: 'free_text', correctText: 'B' },
     ];
 
-    const request = toSaveRequest('Trivia Night', [first, last]);
+    const request = toSaveRequest('Trivia Night', [first, last], 'pub');
 
     expect(request.rounds[0].breakAfter).toBe(false);
     expect(request.rounds[1].breakAfter).toBe(true);
-  });
-
-  it('carries a true quickfire through to the save request', () => {
-    const round = makeRound('r1', 'Speed Round');
-    round.quickfire = true;
-    round.questions = [
-      {
-        ...makeQuestion('q1'),
-        type: 'multiple_choice',
-        prompt: 'Q1',
-        options: [
-          { text: 'A', isCorrect: true },
-          { text: 'B', isCorrect: false },
-        ],
-      },
-    ];
-
-    const request = toSaveRequest('Trivia Night', [round]);
-
-    expect(request.rounds[0].quickfire).toBe(true);
   });
 });
 
@@ -1305,8 +1258,8 @@ describe('moveTargetRounds', () => {
 
   it('offers every other round when nothing is live', () => {
     expect(moveTargetRounds(rounds, 0, undefined)).toEqual([
-      { id: 'b', label: '2. Untitled round', quickfire: false },
-      { id: 'c', label: '3. Three', quickfire: false },
+      { id: 'b', label: '2. Untitled round' },
+      { id: 'c', label: '3. Three' },
     ]);
   });
 
@@ -1332,15 +1285,6 @@ describe('moveTargetRounds', () => {
     ]);
 
     expect(result.map((target) => target.id)).toEqual(['c']);
-  });
-
-  it('carries the quickfire flag', () => {
-    const quickfire = [
-      makeRound('a', 'One'),
-      { ...makeRound('b', 'Two'), quickfire: true },
-    ];
-
-    expect(moveTargetRounds(quickfire, 0, undefined)[0].quickfire).toBe(true);
   });
 });
 
@@ -1881,7 +1825,6 @@ describe('round settings in the editor draft', () => {
       id: 'r1',
       title: 'R',
       breakAfter: false,
-      quickfire: false,
       category: '',
       author: '',
       note: '',
@@ -1943,12 +1886,11 @@ describe('round settings in the editor draft', () => {
       showNoteOnScreen: true,
     };
 
-    const [first, second] = toSaveRequest('T', [settled, blank]).rounds;
+    const [first, second] = toSaveRequest('T', [settled, blank], 'pub').rounds;
 
     expect(first).toStrictEqual({
       title: 'R',
       breakAfter: false,
-      quickfire: false,
       category: 'History',
       author: 'Sam',
       note: 'Say hi',
@@ -1958,7 +1900,6 @@ describe('round settings in the editor draft', () => {
     expect(second).toStrictEqual({
       title: 'S',
       breakAfter: true,
-      quickfire: false,
       questions: [],
     });
   });
@@ -1966,7 +1907,7 @@ describe('round settings in the editor draft', () => {
   it('leaves the on-screen flag out of a saved note that is not shown', () => {
     const round: EditorRound = { ...makeRound('r1', 'R'), note: 'Say hi' };
 
-    expect(toSaveRequest('T', [round]).rounds[0]).not.toHaveProperty(
+    expect(toSaveRequest('T', [round], 'pub').rounds[0]).not.toHaveProperty(
       'showNoteOnScreen',
     );
   });

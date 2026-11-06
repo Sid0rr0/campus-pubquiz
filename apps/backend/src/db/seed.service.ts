@@ -135,6 +135,7 @@ export class SeedService {
 
   /** A quiz's rounds as a session's seeded game holds them — read-only and needing no session row, so a quiz preview and a session can't hold the quiz differently. */
   async loadQuizRounds(quizId: number): Promise<SeededRound[]> {
+    const { mode } = await this.quizzes.findOneOrFail(quizId);
     const roundRows = await this.rounds.find(
       { quiz: quizId },
       { orderBy: { orderIndex: 'asc' } },
@@ -151,7 +152,7 @@ export class SeedService {
         id: roundRow.id,
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
-        quickfire: roundRow.quickfire,
+        quickfire: mode === 'quickfire',
         category: roundRow.category ?? undefined,
         author: roundRow.author ?? undefined,
         note: roundRow.note ?? undefined,
@@ -212,7 +213,7 @@ export class SeedService {
         id: roundRow.id,
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
-        quickfire: roundRow.quickfire,
+        quickfire: quiz.mode === 'quickfire',
         showNoteOnScreen: roundRow.showNoteOnScreen,
         questions,
         // The hardcoded fixture carries no notes — matches what a subsequent

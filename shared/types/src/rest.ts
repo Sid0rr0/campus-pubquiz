@@ -1,5 +1,6 @@
 import type { GameStatus } from './game-state';
 import type { QuestionType } from './question-types';
+import type { QuizMode } from './quiz-mode';
 import type { SessionSettings } from './session-settings';
 
 export interface QuizSummaryQuestion {
@@ -27,14 +28,13 @@ export interface QuizSummaryRound {
   breakNumber?: number;
   /** True on the quiz's final break; present only with breakNumber. */
   isFinalBreak?: boolean;
-  /** See RoundConfig.quickfire — optional so existing QuizSummaryRound literals don't all need updating; undefined behaves as false. */
-  quickfire?: boolean;
   questions: QuizSummaryQuestion[];
 }
 
 export interface QuizSummary {
   id: number;
   title: string;
+  mode: QuizMode;
   /** ISO timestamp of the quiz's last edit, for the /sessions "Edited" column. */
   updatedAt: string;
   rounds: QuizSummaryRound[];

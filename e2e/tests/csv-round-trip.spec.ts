@@ -103,7 +103,6 @@ test('the full-night quiz exported as CSV re-imports as the same quiz', async ({
     FULL_NIGHT.warmUp.title,
     FULL_NIGHT.music.title,
     FULL_NIGHT.film.title,
-    FULL_NIGHT.quickFire.title,
     FULL_NIGHT.warmUp.planet.imageUrl,
     FULL_NIGHT.music.band.audioUrl,
     FULL_NIGHT.warmUp.note,

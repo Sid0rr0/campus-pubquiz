@@ -59,12 +59,14 @@ describe('QuizController', () => {
       {
         id: 1,
         title: 'Campus Pub Quiz Night',
+        mode: 'pub',
         updatedAt: '2026-09-16T00:00:00.000Z',
         rounds: [],
       },
       {
         id: 2,
         title: 'Imported Quiz',
+        mode: 'pub',
         updatedAt: '2026-09-16T00:00:00.000Z',
         rounds: [],
       },
@@ -84,6 +86,7 @@ describe('QuizController', () => {
       {
         id: 1,
         title: 'Campus Pub Quiz Night',
+        mode: 'pub',
         updatedAt: '2026-09-16T00:00:00.000Z',
         rounds: [],
       },
@@ -103,6 +106,7 @@ describe('QuizController', () => {
       const draft: QuizDraft = {
         id: 1,
         title: 'Trivia Night',
+        mode: 'pub',
         updatedAt: '2026-10-28T20:00:00.000Z',
         rounds: [],
       };
@@ -124,6 +128,7 @@ describe('QuizController', () => {
       const draft: QuizDraft = {
         id: 1,
         title: 'Trivia Night',
+        mode: 'pub',
         updatedAt: '2026-10-28T20:00:00.000Z',
         rounds: [],
       };
@@ -147,6 +152,7 @@ describe('QuizController', () => {
       const draft: QuizDraft = {
         id: 1,
         title: 'Trivia Night',
+        mode: 'pub',
         updatedAt: '2026-10-28T20:00:00.000Z',
         rounds: [],
       };
@@ -165,7 +171,11 @@ describe('QuizController', () => {
       await expect(
         controller.create({ title: 'Trivia Night', rounds: [] }),
       ).resolves.toBe(result);
-      expect(quizService.create).toHaveBeenCalledWith('Trivia Night', []);
+      expect(quizService.create).toHaveBeenCalledWith(
+        'Trivia Night',
+        [],
+        undefined,
+      );
     });
 
     it('maps an invalid draft to 422 with the issues attached', async () => {
