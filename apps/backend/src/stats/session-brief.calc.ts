@@ -338,6 +338,7 @@ function questionSection(
       ? [`- Answer media: ${question.media.answer}`]
       : []),
   ];
+  // Stryker disable next-line ConditionalExpression: equivalent — `playedQuestionIds` always holds every answered question, so `given.length === 0` adds nothing to the `has` check
   if (given.length === 0 && !openedIds.has(question.questionId)) {
     return [...header, '- (not played)'];
   }

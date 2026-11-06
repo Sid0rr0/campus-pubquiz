@@ -27,7 +27,7 @@ const at = (roundIndex: number, questionIndex: number) => ({
   roundIndex,
   questionIndex,
   field: 'questionId',
-  message: expect.any(String),
+  message: expect.any(String) as string,
 });
 
 describe('live-edit guard picks exactly the offending questions', () => {

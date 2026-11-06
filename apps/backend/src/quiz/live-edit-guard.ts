@@ -139,6 +139,7 @@ export function findForeignQuestionIds(
   const ownIds = new Set(
     current.flatMap((round) =>
       round.questions.flatMap(({ questionId }) =>
+        // Stryker disable next-line ConditionalExpression: equivalent — a Set holding `undefined` is never asked about it; every lookup skips ids that are undefined
         questionId === undefined ? [] : [questionId],
       ),
     ),
@@ -176,6 +177,7 @@ export function findDroppedAnsweredQuestions(
   const keptIds = new Set(
     incoming.flatMap((round) =>
       round.questions.flatMap(({ questionId }) =>
+        // Stryker disable next-line ConditionalExpression: equivalent — a Set holding `undefined` is never asked about it; every lookup skips ids that are undefined
         questionId === undefined ? [] : [questionId],
       ),
     ),
