@@ -272,6 +272,7 @@ export function buildSessionState(
         gameSessionId: 1,
         joinCode: description.joinCode ?? 'ABCDEF',
         quizTitle: 'Test Quiz',
+        quizMode: 'pub',
         customName: null,
         startedAt: new Date('2026-09-16T12:00:00.000Z'),
         rounds,

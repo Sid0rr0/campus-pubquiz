@@ -50,6 +50,42 @@ describe('LiveSessionSelect', () => {
     ).toBeInTheDocument();
   });
 
+  it('badges a quickfire session in the list and leaves a pub session plain', async () => {
+    mockFetchPublicSessions.mockResolvedValue([
+      {
+        joinCode: 'QUICK1',
+        quizId: 1,
+        quizTitle: 'Speed Round',
+        name: 'Speed Round',
+        status: 'lobby',
+        teamCount: 0,
+        isQuickfire: true,
+      },
+      {
+        joinCode: 'PUBPUB',
+        quizId: 2,
+        quizTitle: 'Pub Night',
+        name: 'Pub Night',
+        status: 'lobby',
+        teamCount: 0,
+        isQuickfire: false,
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithQuery(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
+
+    await user.click(
+      await screen.findByRole('combobox', { name: /pick the quiz/i }),
+    );
+
+    expect(
+      await screen.findByRole('option', { name: /speed round/i }),
+    ).toHaveTextContent(/quickfire/i);
+    expect(
+      screen.getByRole('option', { name: /pub night/i }),
+    ).not.toHaveTextContent(/quickfire/i);
+  });
+
   it('calls onSelectSession with the join code when an option is picked', async () => {
     mockFetchPublicSessions.mockResolvedValue([
       {
