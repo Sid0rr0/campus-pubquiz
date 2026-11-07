@@ -200,7 +200,7 @@ A one-off help a team buys with coins, in a session played with power-ups. Most 
 _Avoid_: lifeline, boost, cheat
 
 **Power-up offer**:
-What a team can buy right now and, for each power-up it can't, why not: bought now, held back only by coins or Ask the room's readiness, or not available now. One shared module answers it for both the phone's power-ups list and the server's refusal of a buy, so the two never disagree. It covers the question power-ups; the extra joker joins it later.
+What a team can buy right now and, for each power-up it can't, why not: bought now, held back only by coins or Ask the room's readiness, or not available now. One shared module answers it for both the phone's power-ups list and the server's refusal of a buy, so the two never disagree. It covers the question power-ups and the extra joker.
 _Avoid_: shop, power-up rules
 
 **Coin**:

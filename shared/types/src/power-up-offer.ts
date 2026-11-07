@@ -42,33 +42,67 @@ export interface PowerUpOfferEntry {
   outcome: OfferOutcome;
 }
 
+/** A refusal's wording, and whether only coins or Ask the room's readiness stand in the way. */
+interface Refusal {
+  reason: string;
+  heldBack: boolean;
+}
+
+const refused = (reason: string): Refusal => ({ reason, heldBack: false });
+const heldBack = (reason: string): Refusal => ({ reason, heldBack: true });
+
 const NOT_ENOUGH_COINS = 'Not enough coins';
-const WAITING = 'Waiting for more answers';
 const WRONG_ROUND = 'Only the next round can be doubled, before its intro';
-const HELD_BACK_REASONS = [NOT_ENOUGH_COINS, WAITING];
+
+/** The power-up's offer entry minus its outcome. */
+function entryOf(
+  powerUp: PowerUpId,
+  settings: PowerUpSettings,
+  purchases: readonly { powerUp: PowerUpId }[],
+) {
+  const { cost, maxUses } = settings[powerUp];
+  return {
+    powerUp,
+    cost,
+    maxUses,
+    used: purchases.filter((p) => p.powerUp === powerUp).length,
+  };
+}
+
+/** A quickfire tap locks the pick, so no question power-up can help there. */
+const worksOn = (powerUp: PowerUpId, question: OfferedQuestion) =>
+  !question.isQuickfire && powerUpApplies(powerUp, question);
 
 /** Why `powerUp` can't be bought on `question` now (worded for the team), or null. The order is the server's. */
 function refusalOf(
   powerUp: PowerUpId,
   question: OfferedQuestion | null,
   input: QuestionOfferInput,
-): string | null {
-  if (question === null) return 'Answers are locked for this question';
-  // A quickfire tap locks the pick, so no question power-up can help there.
-  if (question.isQuickfire || !powerUpApplies(powerUp, question)) {
-    return 'That power-up does not work on this question';
+): Refusal | null {
+  if (question === null) return refused('Answers are locked for this question');
+  if (!worksOn(powerUp, question)) {
+    return refused('That power-up does not work on this question');
   }
-  const { cost, maxUses } = input.settings[powerUp];
-  if (maxUses === 0) return 'That power-up is not offered';
-  const bought = input.purchases.filter((p) => p.powerUp === powerUp);
-  if (bought.length >= maxUses) {
-    return 'You have reached the limit for that power-up';
+  const { cost, maxUses, used } = entryOf(
+    powerUp,
+    input.settings,
+    input.purchases,
+  );
+  if (maxUses === 0) return refused('That power-up is not offered');
+  if (used >= maxUses) {
+    return refused('You have reached the limit for that power-up');
   }
-  if (bought.some((p) => p.questionId === question.id)) {
-    return 'You already used that power-up on this question';
+  if (
+    input.purchases.some(
+      (p) => p.powerUp === powerUp && p.questionId === question.id,
+    )
+  ) {
+    return refused('You already used that power-up on this question');
   }
-  if (input.balance < cost) return NOT_ENOUGH_COINS;
-  if (powerUp === 'ask_the_room' && !input.isRoomReady) return WAITING;
+  if (input.balance < cost) return heldBack(NOT_ENOUGH_COINS);
+  if (powerUp === 'ask_the_room' && !input.isRoomReady) {
+    return heldBack('Waiting for more answers');
+  }
   return null;
 }
 
@@ -77,18 +111,17 @@ export function questionPurchaseRefusal(
   input: QuestionOfferInput & { powerUp: PowerUpId; questionId: number },
 ): string | null {
   const { question, powerUp, questionId } = input;
-  return refusalOf(
-    powerUp,
-    question?.id === questionId ? question : null,
-    input,
+  return (
+    refusalOf(powerUp, question?.id === questionId ? question : null, input)
+      ?.reason ?? null
   );
 }
 
-function outcomeOf(reason: string | null): OfferOutcome {
-  if (reason === null) return { status: 'available' };
+function outcomeOf(refusal: Refusal | null): OfferOutcome {
+  if (refusal === null) return { status: 'available' };
   return {
-    status: HELD_BACK_REASONS.includes(reason) ? 'held_back' : 'unavailable',
-    reason,
+    status: refusal.heldBack ? 'held_back' : 'unavailable',
+    reason: refusal.reason,
   };
 }
 
@@ -99,16 +132,10 @@ export function questionPowerUpOffer(
   return POWER_UP_IDS.filter(
     (powerUp) =>
       powerUp !== 'extra_joker' && input.settings[powerUp].maxUses > 0,
-  ).map((powerUp) => {
-    const { cost, maxUses } = input.settings[powerUp];
-    return {
-      powerUp,
-      cost,
-      maxUses,
-      used: input.purchases.filter((p) => p.powerUp === powerUp).length,
-      outcome: outcomeOf(refusalOf(powerUp, input.question, input)),
-    };
-  });
+  ).map((powerUp) => ({
+    ...entryOf(powerUp, input.settings, input.purchases),
+    outcome: outcomeOf(refusalOf(powerUp, input.question, input)),
+  }));
 }
 
 /** What the extra joker's rule needs, as plain data. */
@@ -133,20 +160,24 @@ function extraJokerRefusalOf(
   input: ExtraJokerRuleInput,
   roundId: number,
   offeredRoundId: number | null,
-): string | null {
-  const { cost, maxUses } = input.settings.extra_joker;
-  if (maxUses === 0) return 'That power-up is not offered';
-  if (roundId !== offeredRoundId) return WRONG_ROUND;
+): Refusal | null {
+  const { cost, maxUses, used } = entryOf(
+    'extra_joker',
+    input.settings,
+    input.purchases,
+  );
+  if (maxUses === 0) return refused('That power-up is not offered');
+  if (roundId !== offeredRoundId) return refused(WRONG_ROUND);
   const doubled = doubledRoundIds(
     input.jokerRoundId ?? undefined,
     input.purchases,
   );
-  if (doubled.includes(roundId)) return 'That round is already doubled';
-  const used = input.purchases.filter((p) => p.powerUp === 'extra_joker');
-  if (used.length >= maxUses) {
-    return 'You have reached the limit for that power-up';
+  if (doubled.includes(roundId))
+    return refused('That round is already doubled');
+  if (used >= maxUses) {
+    return refused('You have reached the limit for that power-up');
   }
-  return input.balance < cost ? NOT_ENOUGH_COINS : null;
+  return input.balance < cost ? heldBack(NOT_ENOUGH_COINS) : null;
 }
 
 /** Why buying an extra joker for `roundId` is refused, or null when it goes through. `offeredRoundId` is what `extraJokerRoundId` says is on offer. */
@@ -156,7 +187,10 @@ export function extraJokerPurchaseRefusal(
     offeredRoundId: number | null;
   },
 ): string | null {
-  return extraJokerRefusalOf(input, input.roundId, input.offeredRoundId);
+  return (
+    extraJokerRefusalOf(input, input.roundId, input.offeredRoundId)?.reason ??
+    null
+  );
 }
 
 export interface ExtraJokerOfferEntry extends PowerUpOfferEntry {
@@ -168,19 +202,16 @@ export interface ExtraJokerOfferEntry extends PowerUpOfferEntry {
 export function extraJokerOfferEntry(
   input: ExtraJokerRuleInput & { offer: OfferedRound | null },
 ): ExtraJokerOfferEntry | null {
-  const { cost, maxUses } = input.settings.extra_joker;
-  if (maxUses === 0) return null;
+  const entry = entryOf('extra_joker', input.settings, input.purchases);
+  if (entry.maxUses === 0) return null;
   const { offer } = input;
   const offeredId = offer?.roundId ?? null;
   return {
-    powerUp: 'extra_joker',
-    cost,
-    maxUses,
-    used: input.purchases.filter((p) => p.powerUp === 'extra_joker').length,
+    ...entry,
     // With no round offered, nothing matches: the "next round only" reason.
     outcome: outcomeOf(
       offeredId === null
-        ? WRONG_ROUND
+        ? refused(WRONG_ROUND)
         : extraJokerRefusalOf(input, offeredId, offeredId),
     ),
     roundName:

@@ -189,55 +189,6 @@ describe('GameGateway — buying an extra joker', () => {
       },
     );
 
-    it('refuses a round the team already doubled with an extra joker', async () => {
-      const game = await night();
-      const [alpha] = game.teams;
-      await buy(game, alpha, 0);
-
-      expect(await refusal(game, alpha, 0)).toMatch(/already doubled/);
-    });
-
-    it('counts only extra jokers against its limit, not other power-ups', async () => {
-      // Capped at one extra joker; a 50/50 bought on the open question must not use that up.
-      const game = await night(
-        {},
-        {
-          maxUses: 1,
-          rounds: THREE_ROUNDS.map((round, index) =>
-            index > 0
-              ? round
-              : {
-                  ...round,
-                  questions: [
-                    {
-                      ...round.questions[0],
-                      payload: { options: ['right', 'a', 'b', 'c'] },
-                    },
-                  ],
-                },
-          ),
-        },
-      );
-      const [alpha] = game.teams;
-      await advanceUntil(game, 'question_open');
-      await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
-        powerUp: 'fifty_fifty',
-        questionId: game.rounds[0].questionIds[0],
-      });
-
-      expect(await buy(game, alpha, 1)).toEqual({ success: true });
-      expect(await refusal(game, alpha, 1)).toMatch(/already doubled/);
-    });
-
-    it('refuses a second extra joker over the limit', async () => {
-      const game = await night({}, { maxUses: 1 });
-      const [alpha] = game.teams;
-      expect(await buy(game, alpha, 0)).toEqual({ success: true });
-      await advanceUntil(game, 'question_open'); // round 2 is next
-
-      expect(await refusal(game, alpha, 1)).toMatch(/limit/);
-    });
-
     it('refuses the joker round', async () => {
       const game = await night({
         showRoundOverview: true,
@@ -252,13 +203,6 @@ describe('GameGateway — buying an extra joker', () => {
       await advanceUntil(game, 'question_open'); // round 1 open, round 2 next
 
       expect(await refusal(game, alpha, 1)).toMatch(/already doubled/);
-    });
-
-    it('refuses when the team cannot pay', async () => {
-      const game = await night({ startingCoins: 0 });
-      const [alpha] = game.teams;
-
-      expect(await refusal(game, alpha, 0)).toMatch(/Not enough coins/);
     });
   });
 

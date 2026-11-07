@@ -5,6 +5,7 @@ import {
   extraJokerOfferEntry,
   questionPowerUpOffer,
   type AckResult,
+  type OfferOutcome,
   type PlayersStatePayload,
   type PowerUpId,
   type PowerUpSettings,
@@ -155,12 +156,8 @@ function powerUpRows(inputs: RowInputs): PowerUpRow[] {
     isRoomReady:
       question !== null && inputs.roomReadyQuestionIds.includes(question.id),
   });
-  const rows = entries.map(
-    ({ outcome, ...entry }): PowerUpRow => ({
-      ...entry,
-      target: outcome.status === 'unavailable' ? null : 'this question',
-      heldBack: outcome.status === 'held_back' ? outcome.reason : null,
-    }),
+  const rows = entries.map(({ outcome, ...entry }) =>
+    rowOf(entry, outcome, 'this question'),
   );
   const extraJoker = extraJokerRow(inputs);
   return extraJoker ? [...rows, extraJoker] : rows;
@@ -182,10 +179,18 @@ function extraJokerRow({
   });
   if (entry === null) return null;
   const { outcome, roundName, ...rest } = entry;
+  return rowOf(rest, outcome, `the next round: ${roundName}`);
+}
+
+/** An offer entry as a row: the button's target unless unavailable, and the reason when only that holds it back. */
+function rowOf(
+  entry: Omit<PowerUpRow, 'target' | 'heldBack'>,
+  outcome: OfferOutcome,
+  target: string,
+): PowerUpRow {
   return {
-    ...rest,
-    target:
-      outcome.status === 'unavailable' ? null : `the next round: ${roundName}`,
+    ...entry,
+    target: outcome.status === 'unavailable' ? null : target,
     heldBack: outcome.status === 'held_back' ? outcome.reason : null,
   };
 }
