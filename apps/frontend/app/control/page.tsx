@@ -8,6 +8,7 @@ import {
   type AdminIndicators,
   type GameStatus,
   type QuizSummaryRound,
+  coinsShown,
 } from '@campus-pubquiz/types';
 import { useAdminSession } from '@/app/lib/use-admin-session';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
@@ -502,7 +503,9 @@ function SessionWorkspace({
             onAwardBonus={onAwardBonus}
             enabledBonusCategories={settings.enabledBonusCategories}
             coinsByTeamId={
-              settings.powerUpsEnabled
+              teams.some((team) =>
+                coinsShown(settings.powerUpsEnabled, team.coins),
+              )
                 ? Object.fromEntries(
                     teams.map((team) => [team.teamId, team.coins]),
                   )

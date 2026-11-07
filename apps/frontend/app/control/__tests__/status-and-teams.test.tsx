@@ -241,6 +241,31 @@ describe('AdminPage — status and teams', () => {
     });
   });
 
+  describe('teams table Coins column', () => {
+    const coinsHeader = () =>
+      within(screen.getByRole('table')).queryByRole('columnheader', {
+        name: /coins/i,
+      });
+
+    it.each([
+      ['power-ups off and a team holds carried coins', false, { 1: 2 }, true],
+      ['power-ups off and no team holds coins', false, {}, false],
+      ['power-ups on', true, {}, true],
+    ])('with %s', (_name, powerUpsEnabled, carriedCoins, shown) => {
+      mockUseAdminGame.mockReturnValue({
+        session: {
+          progress: { status: 'question_open' },
+          settings: { powerUpsEnabled },
+          carriedCoins,
+          leaderboard: [{ teamName: 'The Quizzards', totalPoints: 1 }],
+        },
+      });
+      renderWithQuery(<AdminPage />);
+
+      expect(Boolean(coinsHeader())).toBe(shown);
+    });
+  });
+
   it('marks the teams that have answered the current question in the sidebar', () => {
     mockUseAdminGame.mockReturnValue({
       session: {

@@ -104,6 +104,11 @@ export function coinDebtCover(
   );
 }
 
+/** Whether a team's coins are shown: power-ups on, or the team holds coins anyway (a carried coin). A quickfire session has neither. */
+export function coinsShown(powerUpsEnabled: boolean, balance: number): boolean {
+  return powerUpsEnabled || balance > 0;
+}
+
 /** The coins a bonus award earns by itself: a shot or selfie with positive points and power-ups on; else 0. */
 export function bonusCoinsEarned(
   powerUpsEnabled: boolean,

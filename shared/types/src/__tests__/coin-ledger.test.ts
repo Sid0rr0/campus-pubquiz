@@ -6,6 +6,7 @@ import {
   coinDebt,
   coinDebtCover,
   coinTakeRefusal,
+  coinsShown,
 } from '../coin-ledger';
 
 function session(
@@ -136,6 +137,15 @@ describe('coin ledger', () => {
       expect(bonusCoinsEarned(on, category, points)).toBe(coins);
     },
   );
+
+  it.each([
+    [true, 0, true],
+    [true, 3, true],
+    [false, 2, true],
+    [false, 0, false],
+  ])('coins shown: power-ups %s, balance %s', (on, balance, shown) => {
+    expect(coinsShown(on, balance)).toBe(shown);
+  });
 
   it('passed-in purchases replace the cached ones for that team only', () => {
     const s = session({ purchases: [{ teamId: 1, cost: 3 }] });

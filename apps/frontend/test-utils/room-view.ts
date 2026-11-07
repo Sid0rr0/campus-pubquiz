@@ -106,6 +106,8 @@ export interface SessionDescription {
   jokers?: Record<number, TeamJoker>;
   showdown?: { round: ActiveShowdownRoundState; revealStep?: number };
   settings?: Partial<SessionSettings>;
+  /** Coins brought from the last league night, by team id (what the quiz master's Coins column shows with power-ups off). */
+  carriedCoins?: Record<number, number>;
   /** The league the lobby shows beside the roster; omit for a session in no league. */
   leagueTop?: SessionState['leagueTop'];
 }
@@ -283,6 +285,7 @@ export function buildSessionState(
     ...description.timers,
     jokerPickEndsAt: describeJokerPickEndsAt(description),
     jokers: description.jokers ?? {},
+    carriedCoins: description.carriedCoins ?? {},
     ...(description.displayTextScale === undefined
       ? {}
       : { displayTextScale: description.displayTextScale }),
