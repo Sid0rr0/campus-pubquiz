@@ -12,6 +12,7 @@ import type { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import { LeaguesController } from '@/league/leagues.controller';
 import {
   LeagueNotFoundError,
+  QuickfireLeagueError,
   SessionNotEndedError,
   type LeagueService,
 } from '@/league/league.service';
@@ -192,6 +193,18 @@ describe('LeaguesController', () => {
   });
 
   describe('errors', () => {
+    it('adding a quickfire session is a 400 with the refusal message', async () => {
+      const { controller, service } = makeController();
+      service.addSession.mockRejectedValue(new QuickfireLeagueError());
+
+      await expect(
+        controller.addSession(1, { gameSessionId: 4 }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.addSession(1, { gameSessionId: 4 }),
+      ).rejects.toThrow(new QuickfireLeagueError().message);
+    });
+
     it('an unknown league is a 404', async () => {
       const { controller, service } = makeController();
       service.update.mockRejectedValue(new LeagueNotFoundError(9));

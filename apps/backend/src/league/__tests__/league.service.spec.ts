@@ -1,5 +1,6 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { GameStatus } from '@campus-pubquiz/types';
+import { QUICKFIRE_NO_LEAGUE_MESSAGE } from '@/session/quickfire-session-rules';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';
@@ -200,8 +201,11 @@ describe('LeagueService (Postgres integration)', () => {
       await em.flush();
 
       await expect(service.addSession(league.id, session.id)).rejects.toThrow(
-        QuickfireLeagueError,
+        new QuickfireLeagueError(),
       );
+      await expect(
+        service.addSession(league.id, session.id),
+      ).rejects.toHaveProperty('message', QUICKFIRE_NO_LEAGUE_MESSAGE);
       expect((await service.list({})).items[0]?.sessions).toEqual([]);
     });
 

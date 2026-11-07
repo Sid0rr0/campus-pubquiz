@@ -543,9 +543,23 @@ describe('QuizService (Postgres integration)', () => {
       const quiz = await em.findOneOrFail(Quiz, { id: created.quizId });
       expect(quiz.mode).toBe('quickfire');
 
-      await expect(
-        quizService.update(created.quizId, 'Quick', [VALID_ROUND], 'pub'),
-      ).rejects.toThrow(QuizDraftInvalidError);
+      const refusal = await quizService
+        .update(
+          created.quizId,
+          'Quick',
+          [{ title: 'R', breakAfter: true, questions: [mc] }],
+          'pub',
+        )
+        .catch((error: unknown) => error);
+      expect(refusal).toBeInstanceOf(QuizDraftInvalidError);
+      expect((refusal as QuizDraftInvalidError).issues).toEqual([
+        {
+          roundIndex: -1,
+          questionIndex: null,
+          field: 'mode',
+          message: "A quiz's mode can't be changed",
+        },
+      ]);
       // The stored mode also decides the type rule: free text is refused in a quickfire quiz.
       await expect(
         quizService.update(created.quizId, 'Quick', [VALID_ROUND]),
@@ -558,6 +572,18 @@ describe('QuizService (Postgres integration)', () => {
           'quickfire',
         ),
       ).resolves.toMatchObject({ quizId: created.quizId });
+    });
+
+    it('trims the title on create and on update', async () => {
+      const created = await quizService.create('  Padded  ', [VALID_ROUND]);
+      expect((await em.findOneOrFail(Quiz, { id: created.quizId })).title).toBe(
+        'Padded',
+      );
+      await quizService.update(created.quizId, '  Again  ', [VALID_ROUND]);
+      em.clear();
+      expect((await em.findOneOrFail(Quiz, { id: created.quizId })).title).toBe(
+        'Again',
+      );
     });
 
     it('rejects updating a quiz that does not exist', async () => {

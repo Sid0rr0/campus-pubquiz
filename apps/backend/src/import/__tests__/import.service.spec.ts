@@ -50,6 +50,17 @@ describe('ImportService', () => {
       ]);
     });
 
+    it('trims the title, and falls back to the default for a blank one', () => {
+      const { importService } = makeService();
+
+      expect(
+        importService.preview(VALID_CSV, '  Padded ', 'pub').quizTitle,
+      ).toBe('Padded');
+      expect(importService.preview(VALID_CSV, '   ', 'pub').quizTitle).toBe(
+        'Imported Quiz',
+      );
+    });
+
     it('reports a file-level problem as an issue instead of throwing', () => {
       const { importService } = makeService();
 
