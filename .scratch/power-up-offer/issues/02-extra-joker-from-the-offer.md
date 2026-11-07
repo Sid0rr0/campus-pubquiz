@@ -6,7 +6,7 @@ Parent spec: `.scratch/power-up-offer/spec.md`
 
 **Blocked by:** 01; `doubled-rounds` 01 (Doubled rounds module): the offer takes a team's already-doubled rounds from that rule instead of listing them itself
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Table tests at the module's interface cover every extra joker refusal reason and their order, the joker round and an earlier extra joker each blocking a round, no offered round, the title against "Round N" naming, and a request for a round other than the offered one
 - [ ] The server refuses an extra joker buy with the module's reason, the wording is unchanged, and a refused buy stores nothing and changes no balance

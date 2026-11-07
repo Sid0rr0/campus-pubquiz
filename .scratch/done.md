@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| power-up-offer | [One Power-up offer module for the server and the phone](power-up-offer/spec.md) | 3 |
 | e2e-power-ups | [E2E coverage of power-ups and coins](e2e-power-ups/spec.md) | 8 |
 | power-ups | [Power-ups and coins](power-ups/spec.md) | 9 |
 | control-on-air-panel | [Control: question detail column and on-air cards](control-on-air-panel/spec.md) | 5 |

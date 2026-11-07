@@ -6,7 +6,7 @@ Parent spec: `.scratch/doubled-rounds/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A new module of its own in shared types (not added to the joker module, so tickets 02–04 don't edit the same file) takes the team's joker round id (or none) and the team's purchases (power-up id and round id, null for question power-ups and blind purchases with no round) and returns the doubled round ids, without duplicates.
 - [ ] A session-level helper answers the same for one team from the session's jokers and its purchase list, ready for ticket 03.

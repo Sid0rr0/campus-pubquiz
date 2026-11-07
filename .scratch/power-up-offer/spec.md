@@ -1,6 +1,6 @@
 # Spec: One Power-up offer module for the server and the phone
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: —
 

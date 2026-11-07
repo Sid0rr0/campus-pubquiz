@@ -6,7 +6,7 @@ Parent spec: `.scratch/power-up-offer/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Table tests at the module's interface in `shared/types` cover every question power-up refusal reason and their order, the coins and waiting outcomes, a quickfire round, a session with nothing offered, limits counting only that power-up's uses, one use per question, and a request for a question other than the one offered
 - [ ] The server refuses a question power-up buy with the module's reason, the refusal wording is unchanged, and a refused buy stores nothing and changes no balance
