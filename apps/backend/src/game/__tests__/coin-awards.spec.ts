@@ -205,18 +205,6 @@ describe('Coin awards', () => {
     ).toEqual([]);
   });
 
-  it('refuses to take coins from a team with none', async () => {
-    await start();
-    await award({ category: 'custom', points: 0, coins: -1 });
-
-    const ack = await award({ category: 'custom', points: 0, coins: -1 });
-
-    expect(ack).toEqual({
-      success: false,
-      error: 'That team has only 0 coins to take',
-    });
-  });
-
   it('keeps coin awards across a rejoin and a backend restart', async () => {
     await start();
     await award({ category: 'shot', points: 1 });

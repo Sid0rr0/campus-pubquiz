@@ -1,6 +1,16 @@
+import type { BonusCategory } from './bonus';
+import { SHOT_SELFIE_COINS } from './power-ups';
+import type { QuizMode } from './quiz-mode';
+
+export const QUICKFIRE_NO_COIN_AWARD_MESSAGE =
+  "A quickfire session has no coins, so it can't award any";
+export const COINS_NEED_POWER_UPS_MESSAGE =
+  'Coins can only be awarded in a session with power-ups';
+
 /** The session caches the Coin ledger reads (a `SessionState` fits). */
 export interface CoinLedgerSession {
   seededGame: {
+    quizMode: QuizMode;
     settings: { powerUpsEnabled: boolean; startingCoins: number };
   };
   carriedCoins: Readonly<Record<number, number>>;
@@ -50,4 +60,57 @@ export function coinDebt(
   purchases?: readonly { cost: number }[],
 ): number {
   return Math.max(0, -rawBalance(session, teamId, purchases));
+}
+
+/** The refusal for a coin award that needs power-ups on; undefined when allowed or when no coins are given. */
+export function coinsNeedPowerUpsRefusal(
+  powerUpsEnabled: boolean,
+  coins: number | undefined,
+): string | undefined {
+  return coins && !powerUpsEnabled ? COINS_NEED_POWER_UPS_MESSAGE : undefined;
+}
+
+/** Why a coin award may not be given at all (quickfire session, power-ups off); undefined when allowed. */
+export function coinAwardRefusal(
+  session: CoinLedgerSession,
+  coins: number | undefined,
+): string | undefined {
+  const { quizMode, settings } = session.seededGame;
+  if (coins && quizMode === 'quickfire') return QUICKFIRE_NO_COIN_AWARD_MESSAGE;
+  return coinsNeedPowerUpsRefusal(settings.powerUpsEnabled, coins);
+}
+
+/** The refusal for a take (negative coins) larger than the team's balance, so a balance never hides a debt; undefined otherwise. */
+export function coinTakeRefusal(
+  session: CoinLedgerSession,
+  teamId: number,
+  coins: number | undefined,
+): string | undefined {
+  if (coins === undefined || coins >= 0) return undefined;
+  const balance = coinBalance(session, teamId);
+  if (-coins <= balance) return undefined;
+  return `That team has only ${balance} ${balance === 1 ? 'coin' : 'coins'} to take`;
+}
+
+/** The coins a covering coin award must give once the team's coin awards total `coinTotal` (a deleted award's coins were already spent); 0 when none. */
+export function coinDebtCover(
+  session: CoinLedgerSession,
+  teamId: number,
+  coinTotal: number,
+): number {
+  return coinDebt(
+    { ...session, coinAwards: { ...session.coinAwards, [teamId]: coinTotal } },
+    teamId,
+  );
+}
+
+/** The coins a bonus award earns by itself: a shot or selfie with positive points and power-ups on; else 0. */
+export function bonusCoinsEarned(
+  powerUpsEnabled: boolean,
+  category: BonusCategory,
+  points: number,
+): number {
+  return powerUpsEnabled && category !== 'custom' && points > 0
+    ? SHOT_SELFIE_COINS
+    : 0;
 }
