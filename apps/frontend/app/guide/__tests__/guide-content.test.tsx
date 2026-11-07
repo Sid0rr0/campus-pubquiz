@@ -196,7 +196,7 @@ describe('GuideContent', () => {
     }
   });
 
-  it('stays short: 1,000 to 1,300 words and no paragraph over 300 characters', () => {
+  it(`stays short: ${MIN_GUIDE_WORDS} to ${MAX_GUIDE_WORDS} words and no paragraph over ${MAX_PARAGRAPH_CHARS} characters`, () => {
     const { container } = render(<GuideContent />);
     const blocks = Array.from(
       container.querySelectorAll('h1, h2, p, li > span:last-child, a'),
@@ -208,7 +208,10 @@ describe('GuideContent', () => {
       .filter(Boolean);
 
     expect(words.length).toBeGreaterThanOrEqual(MIN_GUIDE_WORDS);
-    expect(words.length).toBeLessThanOrEqual(MAX_GUIDE_WORDS);
+    expect(
+      words.length,
+      `the guide has ${words.length} words; cut ${words.length - MAX_GUIDE_WORDS} or more`,
+    ).toBeLessThanOrEqual(MAX_GUIDE_WORDS);
     for (const paragraph of Array.from(container.querySelectorAll('p'))) {
       expect(paragraph.textContent?.length ?? 0).toBeLessThanOrEqual(
         MAX_PARAGRAPH_CHARS,
