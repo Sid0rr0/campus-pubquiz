@@ -10,6 +10,7 @@ import {
 import { readQuestionPayload } from '@/db/question-payload';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import { doubledRoundsQuery } from '@/standings/doubled-rounds-query';
 import { DISPLAY_NAME_SQL } from '@/ended-sessions-read/session-display-name';
 
 type Knex = ReturnType<GameSessionTeamRepository['getKnex']>;
@@ -412,26 +413,14 @@ export class EndedSessionsRead {
   ): Promise<{ gameSessionId: number; teamId: number; roundId: number }[]> {
     if (gameSessionIds.length === 0) return [];
     const knex: Knex = this.gameSessionTeams.getKnex();
-    const narrowed = <Q extends { where(column: string, value: number): Q }>(
-      query: Q,
-    ): Q => (teamId === undefined ? query : query.where('team_id', teamId));
-    const columns = [
-      'game_session_id as gameSessionId',
-      'team_id as teamId',
-      'round_id as roundId',
-    ];
-    type Row = { gameSessionId: number; teamId: number; roundId: number };
-    const jokers = (await narrowed(
-      knex('session_team_jokers').whereIn('game_session_id', [
-        ...gameSessionIds,
-      ]),
-    ).select(columns)) as Row[];
-    const extra = (await narrowed(
-      knex('purchases')
-        .whereIn('game_session_id', [...gameSessionIds])
-        .where('power_up', 'extra_joker'),
-    ).select(columns)) as Row[];
-    return [...jokers, ...extra];
+    return (await knex
+      .from(doubledRoundsQuery(knex, { gameSessionIds, teamId }).as('dr'))
+      .select('dr.game_session_id as gameSessionId')
+      .select('dr.team_id as teamId', 'dr.round_id as roundId')) as {
+      gameSessionId: number;
+      teamId: number;
+      roundId: number;
+    }[];
   }
 
   /** Every team that took part in the given sessions, or in any session for the given teams. */

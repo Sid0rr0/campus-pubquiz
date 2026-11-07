@@ -6,7 +6,7 @@ Parent spec: `.scratch/doubled-rounds/spec.md`
 
 **Blocked by:** 01 (Doubled rounds module)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The standings module exports one query fragment giving doubled rounds as rows of session id, team id and round id: the union of the session jokers and extra-joker purchases with a round, without duplicates.
 - [ ] The round-points query joins answers to the fragment on session, team and the answer's question's round and applies the joker multiplier when it matches, replacing the joker left join and the extra-joker `not exists` subquery. A round that is both a joker round and an extra-joker round counts double, not quadruple.

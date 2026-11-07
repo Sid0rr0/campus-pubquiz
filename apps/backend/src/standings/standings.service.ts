@@ -12,6 +12,7 @@ import {
   JOKER_MULTIPLIER,
   rankTeams,
 } from '@campus-pubquiz/types';
+import { doubledRoundsQuery } from '@/standings/doubled-rounds-query';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -50,9 +51,6 @@ interface RoundTotalRow {
   total: string | number;
 }
 
-/** SQL: the team bought an extra joker for the round of `q` in the session of `a`. */
-const EXTRA_JOKER_ON_ROUND = `select 1 from purchases ex where ex.game_session_id = a.game_session_id and ex.team_id = a.team_id and ex.round_id = q.round_id and ex.power_up = 'extra_joker'`;
-
 type Knex = ReturnType<GameSessionTeamRepository['getKnex']>;
 
 /** Narrows a query to the given sessions; every session when no ids are given. */
@@ -76,23 +74,26 @@ function roundPointsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
     inSessions(
       knex('answers as a')
         .join('questions as q', 'q.id', 'a.question_id')
-        .leftJoin('session_team_jokers as j', function joinJoker() {
-          this.on('j.game_session_id', 'a.game_session_id')
-            .andOn('j.team_id', 'a.team_id')
-            .andOn('j.round_id', 'q.round_id');
-        }),
+        .leftJoin(
+          doubledRoundsQuery(knex, { gameSessionIds }).as('dr'),
+          function joinDoubled() {
+            this.on('dr.game_session_id', 'a.game_session_id')
+              .andOn('dr.team_id', 'a.team_id')
+              .andOn('dr.round_id', 'q.round_id');
+          },
+        ),
       gameSessionIds,
       'a.game_session_id',
     )
       .groupBy('a.game_session_id', 'q.round_id', 'a.team_id')
       .select('a.game_session_id as game_session_id')
       .select('q.round_id as round_id', 'a.team_id as team_id')
-      // The joker joins on the answer's own round, so it matches only a team's
-      // joker round: that round's answer points count double (ADR 0004). A
-      // bought extra joker for the round doubles it the same way, never more.
+      // The doubled-rounds fragment matches on the answer's own round and has
+      // one row per doubled round (joker or extra joker, never both counted),
+      // so that round's answer points count double, never more (ADR 0004).
       .select(
         knex.raw(
-          `sum(a.points_awarded * case when j.id is null and not exists (${EXTRA_JOKER_ON_ROUND}) then 1 else ?::int end) as total`,
+          'sum(a.points_awarded * case when dr.round_id is null then 1 else ?::int end) as total',
           [JOKER_MULTIPLIER],
         ),
       )
