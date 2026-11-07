@@ -204,8 +204,11 @@ What a team can buy right now and, for each power-up it can't, why not: bought n
 _Avoid_: shop, power-up rules
 
 **Coin**:
-What a team spends on power-ups. Coins are never points: they count towards no score, placing or league. A team starts a session played with power-ups with the session's starting coins, plus any carried coins, and earns more from coin awards; coins left at the end of the session are lost. A team's coins never go below zero.
+What a team spends on power-ups. Coins are never points: they count towards no score, placing or league. A team starts a session played with power-ups with the session's starting coins, plus any carried coins, and earns more from coin awards; coins left at the end of the session are lost. A team's coins never go below zero. A team's balance comes from the **Coin ledger**.
 _Avoid_: points, credits, token (that's the team's reconnect credential)
+
+**Coin ledger**:
+The one module that answers a team's **Coin** balance from the session's cached state: starting coins (only with power-ups on) + carried coins + coin awards − purchase costs, never below zero, and the debt that floor hides. A caller mid-write that holds stored purchases fresher than the cache passes them in, and they replace the cached purchases for that team only.
 
 **Coin award**:
 Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award with positive points comes with a two-coin award in a session played with power-ups.

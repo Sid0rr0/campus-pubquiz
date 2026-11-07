@@ -7,13 +7,13 @@ import {
   SEAT_TAKEN_REFUSAL_MARKER,
   type SessionState,
   SOCKET_EVENTS,
+  coinBalance,
   type TeamJoker,
 } from '@campus-pubquiz/types';
 import {
   toPurchaseViews,
   type PurchaseService,
 } from '@/purchase/purchase.service';
-import { balanceAfter } from '@/game/state/purchase-changes';
 import { AnswerService } from '@/answer/answer.service';
 import type { CarriedCoinService } from '@/coins/carried-coin.service';
 import { BonusService } from '@/bonus/bonus.service';
@@ -209,7 +209,7 @@ export class TeamRosterChanges {
           team.id,
         ),
         joker,
-        coins: balanceAfter(session, team.id, purchases),
+        coins: coinBalance(session, team.id, purchases),
         hasCarriedCoin: carriedCoin > 0,
         purchases: toPurchaseViews(
           purchases,

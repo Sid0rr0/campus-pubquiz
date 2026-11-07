@@ -5,9 +5,8 @@ import {
   type SessionState,
   SOCKET_EVENTS,
   type TeamBonusAwardView,
-  coinBalanceOf,
-  coinShortfall,
-  purchaseCostsOf,
+  coinBalance,
+  coinDebt,
 } from '@campus-pubquiz/types';
 import {
   BonusAwardNotFoundError,
@@ -51,7 +50,7 @@ export class BonusAwardsChanges {
     assertCoinsAllowed(session, coins);
     // A take is refused whole when it is more than the team has, so a balance never hides a debt.
     if (coins !== undefined && coins < 0) {
-      const balance = coinBalanceOf(session, teamId);
+      const balance = coinBalance(session, teamId);
       if (-coins > balance) {
         throw new InvalidBonusAwardRefusal(
           `That team has only ${balance} ${balance === 1 ? 'coin' : 'coins'} to take`,
@@ -88,7 +87,7 @@ export class BonusAwardsChanges {
           coins: coinsGiven,
           // Only the quiz master's own coins carry the reason typed in the form.
           reason: coins ? reason?.trim() || undefined : undefined,
-          balance: coinBalanceOf(next, teamId),
+          balance: coinBalance(next, teamId),
         },
       });
     }
@@ -131,11 +130,9 @@ export class BonusAwardsChanges {
     let { coinTotal } = removed;
     // The linked coin award went with it. Coins already spent must not turn into
     // a hidden debt (the balance shows 0, not less), so a coin award covers them.
-    const shortfall = coinShortfall(
-      settings,
-      session.carriedCoins[teamId],
-      coinTotal,
-      purchaseCostsOf(session.funFactData.powerUps, teamId),
+    const shortfall = coinDebt(
+      withCoinTotal(session, teamId, coinTotal),
+      teamId,
     );
     if (shortfall > 0) {
       ({ coinTotal } = await this.refusing(() =>
