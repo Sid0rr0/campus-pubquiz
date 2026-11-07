@@ -208,7 +208,27 @@ pnpm --filter backend mutate               # backend only (DB-free slice)
 pnpm --filter frontend mutate              # frontend only (non-component modules)
 pnpm --filter backend mutate:db            # backend game/state/, services and logic modules with the DB specs (needs Docker, slow)
 pnpm --filter backend mutate:db:areas      # the same, one area at a time, each logged to .logs/mutate-db/<area>.log
+pnpm mutate:changed [base]                 # only the files changed since base (default origin/main), then their survivors
+pnpm mutate:survivors [report.json ...]    # one line per surviving or uncovered mutant, from the last runs
 ```
+
+`mutate:changed` matches the changed files against each workspace's own
+selection (the config globs, or `stryker.files.cjs` for the backend), runs one
+workspace at a time with logs in `.logs/mutate-changed/<run>.log`, and keeps
+its results in separate `reports/*-changed.json` files, so it never wipes a
+full run's results. `--list` prints what it would mutate and runs nothing.
+`mutate:survivors` reads the incremental files; when several cover one source
+file, the newest wins.
+
+**Triaging survivors.** Read every survivor before choosing what to fix: a
+file's survivor count says nothing about risk. Sort each one into:
+
+- **equivalent or cosmetic** (log text, an unobservable default, a mutant no
+  input can tell apart): leave it, or mark it with a `// Stryker disable next-line <mutator>: <reason>`
+  comment;
+- **a real gap**: one assertion kills it;
+- **a real gap in risky code** (auth, scoring, grading, coins, settling a
+  session): fix these first, even a lone survivor in a file.
 
 Runs are incremental: Stryker keeps its results in `<workspace>/reports/stryker-incremental.json`
 and on the next run only retests mutants in changed code or under changed

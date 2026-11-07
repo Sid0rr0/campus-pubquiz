@@ -10,6 +10,8 @@
     "bootstrap": "pnpm install --frozen-lockfile && pnpm --filter @campus-pubquiz/types build",
     "test": "pnpm -r test",
     "mutate": "pnpm -r --if-present mutate",
+    "mutate:changed": "node scripts/mutate-changed.mjs",
+    "mutate:survivors": "node scripts/survivors.mjs",
     "crap": "node scripts/crap.mjs",
     "crap:changed": "node scripts/crap.mjs --changed",
     "e2e": "pnpm --filter e2e run e2e",

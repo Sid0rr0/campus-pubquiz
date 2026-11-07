@@ -84,3 +84,9 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ the CRAP gate is local only, so without a trigger in the dev loop nobody runs it; tdd has no refactor step, so the check hands its findings to review.
 - **tdd, rules of the loop (2026-11-05, later)**: the refactor-target cutoff dropped from 30 to 10, matching the new `scripts/crap.mjs` threshold.
   _Why:_ the CRAP gate now fails above 10.
+- **implement-spec step 11 (2026-11-07 retro)**: the mutation recipe is now `pnpm mutate:changed origin/main`, started in the background after the PR opens; survivors are triaged per README "Triaging survivors" into a follow-up ticket, and the scores go into the PR body with `gh pr edit`.
+  _Why:_ the quickfire run held the PR for about 2 hours on the DB-backed run while the user asked for status three times, and the survivors went to a follow-up ticket anyway. The old step was a paragraph of `--mutate` rules the agent had to apply by hand.
+- **implement-spec step 4 (2026-11-07 retro)**: implementers look up an unseen path with `rg --files -g '*<name>*'` before reading it, and don't pipe after a `git` command.
+  _Why:_ quickfire-mode implementers guessed about 10 paths that don't exist (`league/league.errors.ts`, `game/state/session-summary.ts`, …); subagents don't get the SessionStart codebase map. The worktree guard refused 3 piped or scripted commands.
+- **implement browser check (2026-11-07 retro)**: a chrome-devtools `filePath` goes under `.logs/` (now gitignored as a folder).
+  _Why:_ three sessions saved snapshots to `/tmp`, which chrome-devtools refuses as outside the workspace roots.
