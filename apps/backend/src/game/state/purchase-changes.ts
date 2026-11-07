@@ -4,8 +4,7 @@ import {
   isCurrentRoundQuickfire,
   drawRemovedOptions,
   drawPin,
-  doubledRoundIds,
-  extraJokerRefusal,
+  extraJokerPurchaseRefusal,
   extraJokerRoundId,
   questionPurchaseRefusal,
   teamCoins,
@@ -255,7 +254,8 @@ export class PurchaseChanges {
 
   /**
    * A team buys an extra joker for `roundId`: refused unless it is the next
-   * round (`extraJokerRoundId`) and the rest of `extraJokerRefusal` allows it.
+   * round (`extraJokerRoundId`) and the Power-up offer
+   * (`extraJokerPurchaseRefusal`) allows it.
    * Scoring reads the stored purchase; nothing is cached on the session.
    */
   private async buyExtraJoker(
@@ -273,17 +273,13 @@ export class PurchaseChanges {
       gameSessionId,
       teamId,
     );
-    const setting = settings.powerUps.extra_joker;
-    const jokerRoundId = session.jokers[teamId]?.roundId;
-    const refusal = extraJokerRefusal({
-      setting,
-      usesInSession: records.filter(
-        (record) => record.powerUp === 'extra_joker',
-      ).length,
+    const refusal = extraJokerPurchaseRefusal({
+      settings: settings.powerUps,
+      purchases: records,
       balance: balanceAfter(session, teamId, records),
+      jokerRoundId: session.jokers[teamId]?.roundId,
       roundId,
       offeredRoundId: extraJokerRoundId(session),
-      doubledRoundIds: doubledRoundIds(jokerRoundId, records),
     });
     if (refusal !== null) throw new SessionRefusal(refusal);
 
@@ -291,7 +287,7 @@ export class PurchaseChanges {
       powerUp: 'extra_joker',
       questionId: null,
       roundId,
-      cost: setting.cost,
+      cost: settings.powerUps.extra_joker.cost,
       effect: { kind: 'extra_joker' },
     };
     return await this.store(session, teamId, records, bought, {});

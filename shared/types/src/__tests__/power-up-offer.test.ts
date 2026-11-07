@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultPowerUpSettings,
+  extraJokerOfferEntry,
+  extraJokerPurchaseRefusal,
   questionPowerUpOffer,
   questionPurchaseRefusal,
   type PowerUpId,
@@ -193,5 +195,127 @@ describe('questionPowerUpOffer', () => {
         (e) => e.outcome.status === 'unavailable',
       ),
     ).toBe(true);
+  });
+});
+
+const jokerBase = {
+  settings: { ...settings, extra_joker: { cost: 2, maxUses: 2 } },
+  purchases: [] as { powerUp: PowerUpId; roundId: number | null }[],
+  balance: 2,
+  jokerRoundId: 3 as number | null | undefined,
+};
+const offered = { roundId: 5, roundNumber: 2, title: 'Music' };
+const extra = (roundId: number) => ({
+  powerUp: 'extra_joker' as const,
+  roundId,
+});
+const jokerRefusal = (
+  patch: Partial<typeof jokerBase> = {},
+  roundId = 5,
+  offeredRoundId: number | null = 5,
+) =>
+  extraJokerPurchaseRefusal({
+    ...jokerBase,
+    ...patch,
+    roundId,
+    offeredRoundId,
+  });
+const WRONG = 'Only the next round can be doubled, before its intro';
+const DOUBLED = 'That round is already doubled';
+const LIMIT = 'You have reached the limit for that power-up';
+const notOffered = {
+  settings: { ...settings, extra_joker: { cost: 2, maxUses: 0 } },
+};
+
+describe('extraJokerPurchaseRefusal', () => {
+  it('lets a buy through below the limit and with the exact coins', () => {
+    expect(jokerRefusal({ purchases: [extra(4)] })).toBeNull();
+  });
+
+  it.each([
+    ['not offered', notOffered, 9, null, 'That power-up is not offered'],
+    ['another round than offered', {}, 6, 5, WRONG],
+    ['no round offered', {}, 5, null, WRONG],
+    ['the team joker round', { jokerRoundId: 5 }, 5, 5, DOUBLED],
+    ['an earlier extra joker on it', { purchases: [extra(5)] }, 5, 5, DOUBLED],
+    ['the limit', { purchases: [extra(1), extra(2)] }, 5, 5, LIMIT],
+    ['coins', { balance: 1 }, 5, 5, 'Not enough coins'],
+  ])('refuses %s', (_name, patch, roundId, offeredRoundId, reason) => {
+    expect(jokerRefusal(patch, roundId, offeredRoundId)).toBe(reason);
+  });
+
+  it('checks in the server order: round, doubled, limit, coins', () => {
+    const all = {
+      jokerRoundId: 5,
+      balance: 0,
+      purchases: [extra(1), extra(2)],
+    };
+    expect(jokerRefusal(all, 6)).toBe(WRONG);
+    expect(jokerRefusal(all)).toBe(DOUBLED);
+    expect(jokerRefusal({ ...all, jokerRoundId: 3 })).toBe(LIMIT);
+    expect(jokerRefusal({ ...all, jokerRoundId: 3, purchases: [] })).toBe(
+      'Not enough coins',
+    );
+  });
+
+  it('counts only extra jokers toward the limit and doubled rounds', () => {
+    expect(
+      jokerRefusal({
+        purchases: [
+          { powerUp: 'fifty_fifty', roundId: 5 },
+          { powerUp: 'fifty_fifty', roundId: 6 },
+        ],
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('extraJokerOfferEntry', () => {
+  const entry = (patch: Partial<typeof jokerBase> = {}, offer = offered) =>
+    extraJokerOfferEntry({ ...jokerBase, ...patch, offer });
+
+  it('is not there when the session does not offer it', () => {
+    expect(entry(notOffered)).toBeNull();
+  });
+
+  it('is available for the offered round, named by its title', () => {
+    expect(entry()).toEqual({
+      powerUp: 'extra_joker',
+      cost: 2,
+      maxUses: 2,
+      used: 0,
+      outcome: { status: 'available' },
+      roundName: 'Music',
+    });
+  });
+
+  it('names the round "Round N" when its title is hidden', () => {
+    expect(entry({}, { ...offered, title: '' })?.roundName).toBe('Round 2');
+  });
+
+  it('is held back by coins', () => {
+    expect(entry({ balance: 1 })?.outcome).toEqual({
+      status: 'held_back',
+      reason: 'Not enough coins',
+    });
+  });
+
+  it.each([
+    ['the joker round', { jokerRoundId: 5 }, DOUBLED],
+    ['an earlier extra joker', { purchases: [extra(5)] }, DOUBLED],
+    ['the limit', { purchases: [extra(1), extra(2)] }, LIMIT],
+  ])('is not available now with %s', (_name, patch, reason) => {
+    expect(entry(patch)?.outcome).toEqual({ status: 'unavailable', reason });
+  });
+
+  it('is not available now with no round offered, and counts its uses', () => {
+    const none = extraJokerOfferEntry({
+      ...jokerBase,
+      purchases: [extra(1)],
+      offer: null,
+    });
+    expect(none?.outcome).toEqual({ status: 'unavailable', reason: WRONG });
+    expect(none?.roundName).toBeNull();
+    expect(none?.used).toBe(1);
   });
 });

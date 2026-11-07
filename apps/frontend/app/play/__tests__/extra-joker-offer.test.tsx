@@ -96,19 +96,6 @@ describe('the extra joker card', () => {
         settings: { ...settings, extra_joker: { cost: 3, maxUses: 3 } },
       },
     ],
-    [
-      'the limit is used up',
-      {
-        purchases: [
-          {
-            powerUp: 'extra_joker',
-            questionId: null,
-            roundId: 1,
-            effect: { kind: 'extra_joker' },
-          },
-        ] satisfies PurchaseView[],
-      },
-    ],
   ])('has no button when %s', (_, overrides) => {
     list(overrides);
 

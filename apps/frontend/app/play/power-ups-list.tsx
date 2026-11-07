@@ -2,6 +2,7 @@ import { toast } from 'sonner';
 import {
   POWER_UP_DESCRIPTIONS,
   POWER_UP_LABELS,
+  extraJokerOfferEntry,
   questionPowerUpOffer,
   type AckResult,
   type PlayersStatePayload,
@@ -143,7 +144,7 @@ type RowInputs = Pick<
   | 'jokerRoundId'
 >;
 
-/** Every power-up the session offers (maxUses above 0), with what it can be used on right now: the question power-ups from the Power-up offer, the extra joker from its own rule until it joins the offer. */
+/** Every power-up the session offers (maxUses above 0), with what it can be used on right now: the question power-ups from the Power-up offer, the extra joker from the same module. */
 function powerUpRows(inputs: RowInputs): PowerUpRow[] {
   const { settings, purchases, coins, question, isQuickfire } = inputs;
   const entries = questionPowerUpOffer({
@@ -172,25 +173,20 @@ function extraJokerRow({
   extraJokerOffer: offer,
   jokerRoundId,
 }: RowInputs): PowerUpRow | null {
-  const { cost, maxUses } = settings.extra_joker;
-  if (maxUses === 0) return null;
-  const bought = purchases.filter((p) => p.powerUp === 'extra_joker');
-  const isOffered =
-    offer !== null &&
-    bought.length < maxUses &&
-    offer.roundId !== jokerRoundId &&
-    !bought.some((p) => p.roundId === offer.roundId);
+  const entry = extraJokerOfferEntry({
+    settings,
+    purchases,
+    balance: coins,
+    jokerRoundId,
+    offer,
+  });
+  if (entry === null) return null;
+  const { outcome, roundName, ...rest } = entry;
   return {
-    powerUp: 'extra_joker',
-    cost,
-    maxUses,
-    used: bought.length,
-    target: isOffered
-      ? `the next round: ${
-          offer.title === '' ? `Round ${offer.roundNumber}` : offer.title
-        }`
-      : null,
-    heldBack: isOffered && coins < cost ? 'Not enough coins' : null,
+    ...rest,
+    target:
+      outcome.status === 'unavailable' ? null : `the next round: ${roundName}`,
+    heldBack: outcome.status === 'held_back' ? outcome.reason : null,
   };
 }
 

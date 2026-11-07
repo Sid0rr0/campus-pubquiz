@@ -6,7 +6,6 @@ import {
   DEFAULT_SESSION_SETTINGS,
   drawPin,
   drawRemovedOptions,
-  extraJokerRefusal,
   extraJokerRoundId,
   fiftyFiftyLeaveCount,
   isPinOffPlace,
@@ -86,55 +85,6 @@ describe('extraJokerRoundId', () => {
   it('offers nothing once the quiz has ended', () => {
     expect(offered('ended', 0)).toBeNull();
     expect(offered('ended', 1)).toBeNull();
-  });
-});
-
-describe('extraJokerRefusal', () => {
-  const ok = {
-    setting: { cost: 2, maxUses: 2 },
-    usesInSession: 0,
-    balance: 2,
-    roundId: 5,
-    offeredRoundId: 5,
-    doubledRoundIds: [3],
-  };
-
-  it('lets a purchase through', () => {
-    expect(extraJokerRefusal(ok)).toBeNull();
-  });
-
-  it('refuses a power-up the session does not offer, before anything else', () => {
-    expect(
-      extraJokerRefusal({
-        ...ok,
-        setting: { cost: 2, maxUses: 0 },
-        roundId: 9,
-      }),
-    ).toBe('That power-up is not offered');
-  });
-
-  it('refuses any round but the one on offer, including when none is', () => {
-    const wrong = 'Only the next round can be doubled, before its intro';
-    expect(extraJokerRefusal({ ...ok, roundId: 6 })).toBe(wrong);
-    expect(extraJokerRefusal({ ...ok, offeredRoundId: null })).toBe(wrong);
-  });
-
-  it('refuses a round the team already doubles', () => {
-    expect(extraJokerRefusal({ ...ok, doubledRoundIds: [5] })).toBe(
-      'That round is already doubled',
-    );
-  });
-
-  it('refuses at the per-session limit, but not below it', () => {
-    expect(extraJokerRefusal({ ...ok, usesInSession: 2 })).toBe(
-      'You have reached the limit for that power-up',
-    );
-    expect(extraJokerRefusal({ ...ok, usesInSession: 1 })).toBeNull();
-  });
-
-  it('refuses when the balance is short of the cost, but not when it equals it', () => {
-    expect(extraJokerRefusal({ ...ok, balance: 1 })).toBe('Not enough coins');
-    expect(extraJokerRefusal({ ...ok, balance: 2 })).toBeNull();
   });
 });
 
