@@ -3,7 +3,11 @@ import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Purchase } from '@/db/entities/purchase.entity';
 import { Round } from '@/db/entities/round.entity';
 import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
-import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
+import {
+  gradable,
+  setupAnswerServiceTest,
+} from '@/answer/__tests__/answer-service-test-utils';
+import { buildStandingsService } from '@/standings/__tests__/standings-test-utils';
 import { EndedSessionsRead } from '@/ended-sessions-read/ended-sessions-read';
 import type { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
@@ -79,5 +83,48 @@ describe('Doubled rounds: SQL fragment and in-memory rule agree (Postgres integr
 
     expect(new Set(fromSql)).toEqual(new Set(fromRule));
     expect(fromSql).toHaveLength(fromRule.length);
+  });
+
+  it('doubles only the team holding a joker and an extra joker on one round, in the standings round points', async () => {
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+    state.em.create(SessionTeamJoker, {
+      gameSession: state.session,
+      team: teamA,
+      round: state.round,
+      source: 'chosen',
+    });
+    state.em.create(Purchase, {
+      gameSession: state.session,
+      team: teamA,
+      powerUp: 'extra_joker',
+      round: state.round,
+      cost: 1,
+      effect: {},
+    });
+    await state.em.flush();
+    for (const team of [teamA, teamB]) {
+      const { answerId } = await state.answerService.submit(
+        state.session.id,
+        gradable(state.question),
+        team.id,
+        'guess',
+      );
+      await state.answerService.grade(
+        state.session.id,
+        answerId,
+        gradable(state.question),
+        3,
+      );
+    }
+
+    const { leaderboard } = await buildStandingsService(state.em).forSession(
+      state.session.id,
+    );
+    const roundPoints = (name: string) =>
+      leaderboard.find((row) => row.teamName === name)?.roundPoints[0].points;
+
+    expect(roundPoints('Team A')).toBe(6);
+    expect(roundPoints('Team B')).toBe(3);
   });
 });
