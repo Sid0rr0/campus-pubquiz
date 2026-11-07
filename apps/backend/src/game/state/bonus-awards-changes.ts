@@ -17,7 +17,10 @@ import {
 import { BonusAwardNotFoundRefusal } from '@/game/state/errors/bonus-award-not-found-refusal.error';
 import { InvalidBonusAwardRefusal } from '@/game/state/errors/invalid-bonus-award-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
-import { QUICKFIRE_NO_COIN_AWARD_MESSAGE } from '@/session/quickfire-session-rules';
+import {
+  isQuickfireSession,
+  QUICKFIRE_NO_COIN_AWARD_MESSAGE,
+} from '@/session/quickfire-session-rules';
 import {
   BROADCAST_STATE_OUTCOME,
   coinSyncsFor,
@@ -178,7 +181,7 @@ type TeamNotice = { teamId: number } & (
 
 /** A quickfire session has no coins, so a coin award is refused whatever its settings say. */
 function assertCoinsAllowed(session: SessionState, coins?: number): void {
-  if (coins && session.seededGame.rounds.some((round) => round.quickfire)) {
+  if (coins && isQuickfireSession(session.seededGame)) {
     throw new InvalidBonusAwardRefusal(QUICKFIRE_NO_COIN_AWARD_MESSAGE);
   }
 }

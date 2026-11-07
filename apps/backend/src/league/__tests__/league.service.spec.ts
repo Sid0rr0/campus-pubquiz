@@ -12,7 +12,7 @@ import {
   LeagueNotFoundError,
   SessionEndedError,
   LeagueService,
-  QuickfireSessionError,
+  QuickfireLeagueError,
   SessionNotEndedError,
   SessionNotFoundError,
 } from '@/league/league.service';
@@ -200,7 +200,7 @@ describe('LeagueService (Postgres integration)', () => {
       await em.flush();
 
       await expect(service.addSession(league.id, session.id)).rejects.toThrow(
-        QuickfireSessionError,
+        QuickfireLeagueError,
       );
       expect((await service.list({})).items[0]?.sessions).toEqual([]);
     });

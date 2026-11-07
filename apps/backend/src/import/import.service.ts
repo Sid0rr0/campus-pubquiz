@@ -20,8 +20,8 @@ export class ImportService {
   /** Validates the uploaded CSV into a preview. Never writes, never throws. */
   preview(
     csvText: string,
-    quizTitle?: string,
-    mode: QuizMode = 'pub',
+    quizTitle: string | undefined,
+    mode: QuizMode,
   ): ImportPreview {
     const title = quizTitle?.trim() || DEFAULT_QUIZ_TITLE;
     try {
@@ -48,8 +48,8 @@ export class ImportService {
    */
   async previewFromUrl(
     sheetUrl: string,
-    quizTitle?: string,
-    mode: QuizMode = 'pub',
+    quizTitle: string | undefined,
+    mode: QuizMode,
   ): Promise<ImportPreview> {
     const title = quizTitle?.trim() || DEFAULT_QUIZ_TITLE;
     try {

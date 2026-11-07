@@ -29,7 +29,9 @@ function requireMode(mode: unknown): QuizMode {
   return parsed.data;
 }
 
-function requireCsvText(body: Partial<ImportRequest>): ImportRequest {
+function requireCsvText(
+  body: Partial<ImportRequest>,
+): ImportRequest & { mode: QuizMode } {
   if (typeof body.csvText !== 'string' || body.csvText.trim() === '') {
     throw new BadRequestException('csvText is required');
   }
@@ -42,7 +44,7 @@ function requireCsvText(body: Partial<ImportRequest>): ImportRequest {
 
 function requireSheetUrl(
   body: Partial<ImportFromUrlRequest>,
-): ImportFromUrlRequest {
+): ImportFromUrlRequest & { mode: QuizMode } {
   if (typeof body.sheetUrl !== 'string' || body.sheetUrl.trim() === '') {
     throw new BadRequestException('sheetUrl is required');
   }

@@ -12,7 +12,10 @@ import { LeagueSession } from '@/db/entities/league-session.entity';
 import type { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
-import { QUICKFIRE_NO_LEAGUE_MESSAGE } from '@/session/quickfire-session-rules';
+import {
+  isQuickfireSession,
+  QUICKFIRE_NO_LEAGUE_MESSAGE,
+} from '@/session/quickfire-session-rules';
 import { isCurrentLeague, venueToday } from '@/league/venue-date';
 
 export class LeagueNotFoundError extends Error {
@@ -39,7 +42,7 @@ export class SessionEndedError extends Error {
   }
 }
 
-export class QuickfireSessionError extends Error {
+export class QuickfireLeagueError extends Error {
   constructor() {
     super(QUICKFIRE_NO_LEAGUE_MESSAGE);
   }
@@ -143,7 +146,9 @@ export class LeagueService {
     );
     if (!session) throw new SessionNotFoundError(gameSessionId);
     if (session.status !== 'ended') throw new SessionNotEndedError(session.id);
-    if (session.quiz.mode === 'quickfire') throw new QuickfireSessionError();
+    if (isQuickfireSession({ quizMode: session.quiz.mode })) {
+      throw new QuickfireLeagueError();
+    }
     const existing = await this.memberships.findOne({
       league: league.id,
       gameSession: session.id,

@@ -1,4 +1,13 @@
-import type { SessionSettings } from '@campus-pubquiz/types';
+import type { QuizMode, SessionSettings } from '@campus-pubquiz/types';
+
+/** Whether a session of a quiz in this mode is a quickfire session: the one place that reads the mode. */
+export function isQuickfireSession({
+  quizMode,
+}: {
+  quizMode: QuizMode;
+}): boolean {
+  return quizMode === 'quickfire';
+}
 
 export const QUICKFIRE_NO_LEAGUE_MESSAGE =
   "A quickfire session can't be added to a league";
