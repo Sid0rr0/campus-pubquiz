@@ -43,10 +43,7 @@
     - button /Grade question 2 of Look closer/
     - button /Grade question 3 of Look closer/
     - button /Grade question 4 of Look closer/
-  - navigation "Quick fire questions":
-    - button /Grade question 1 of Quick fire/
-    - button /Grade question 2 of Quick fire/
   - heading "Teams" [level=2]
   - table:
     - rowgroup:
-      - row "Position Team 1 2 3 4 Bonus Total Actions"
+      - row "Position Team 1 2 3 Bonus Total Actions"

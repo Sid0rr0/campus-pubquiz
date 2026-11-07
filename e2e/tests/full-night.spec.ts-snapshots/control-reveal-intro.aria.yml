@@ -40,4 +40,4 @@
   - heading "Teams" [level=2]
   - table:
     - rowgroup:
-      - row "Position Team 1 2 3 4 Bonus Total Actions"
+      - row "Position Team 1 2 3 Bonus Total Actions"

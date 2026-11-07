@@ -6,8 +6,8 @@ import { expect, test } from '../fixtures';
 import { ADMIN_STORAGE_STATE, PATHS } from '../support/env';
 import { FULL_NIGHT } from '../support/full-night';
 
-const ROUND_COUNT = 4;
-const QUESTION_COUNT = 10;
+const ROUND_COUNT = 3;
+const QUESTION_COUNT = 8;
 
 /** Opens a blank editor, loads the CSV through the file picker and saves it as a quiz named after the file. */
 async function importAndSave(

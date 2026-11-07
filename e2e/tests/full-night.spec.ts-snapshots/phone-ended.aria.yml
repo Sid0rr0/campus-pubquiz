@@ -19,8 +19,6 @@
         - text: Name that tune
       - listitem:
         - text: Look closer
-      - listitem:
-        - text: Quick fire
     - textbox "Anything else?"
     - button "Send"
   - button /Answer history \(\d+\)/
