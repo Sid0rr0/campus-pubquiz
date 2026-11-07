@@ -36,6 +36,11 @@ export function RunningSessionsList({
             <div className="flex flex-col">
               <span className="font-extrabold">
                 {session.name}
+                {session.isQuickfire && (
+                  <span className="ml-2 rounded-full border border-magenta px-2 py-0.5 text-xs font-bold text-magenta">
+                    Quickfire
+                  </span>
+                )}
                 {!session.listed && (
                   <span className="ml-2 rounded-full border border-foreground/30 px-2 py-0.5 text-xs font-bold">
                     Unlisted

@@ -69,7 +69,14 @@ export function DisplaySessionPicker({
               className="flex flex-1 items-center justify-between py-3 text-left"
             >
               <span className="flex flex-col">
-                <span className="font-extrabold">{session.name}</span>
+                <span className="font-extrabold">
+                  {session.name}
+                  {session.isQuickfire && (
+                    <span className="ml-2 rounded-full border border-magenta px-2 py-0.5 text-xs font-bold text-magenta">
+                      Quickfire
+                    </span>
+                  )}
+                </span>
                 <span className="text-xs text-foreground/55">
                   {session.status} · {session.teamCount} teams ·{' '}
                   {session.joinCode}

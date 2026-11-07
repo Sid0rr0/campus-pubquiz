@@ -2,7 +2,11 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SESSION_SETTINGS, type AuthUser } from '@campus-pubquiz/types';
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type AuthUser,
+  type SessionSettings,
+} from '@campus-pubquiz/types';
 import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import { renderWithQuery } from '@/test-utils/query';
@@ -737,9 +741,13 @@ describe('SessionPickerPanel', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
+    // No coin settings are sent: a quickfire session has no coins.
+    const sent = { ...DEFAULT_SESSION_SETTINGS } as Partial<SessionSettings>;
+    delete sent.startingCoins;
+    delete sent.powerUps;
     expect(mockCreateSession).toHaveBeenCalledWith(
       2,
-      { ...DEFAULT_SESSION_SETTINGS, quickfireQuestionTimerSeconds: 30 },
+      { ...sent, quickfireQuestionTimerSeconds: 30 },
       'Speed Quiz',
       [],
     );

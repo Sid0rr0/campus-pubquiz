@@ -14,12 +14,15 @@ import { withShowRoundOverview } from '@/app/components/power-ups-settings-form'
 interface SessionSettingsFormProps {
   value: SessionSettings;
   onChange: (next: SessionSettings) => void;
+  /** A quickfire session has no jokers, so that switch is hidden. */
+  isQuickfire?: boolean;
 }
 
 /** Pure controlled form for the SessionSettings fields — shared by the creation confirm dialog and the lobby settings panel so the fields aren't duplicated in two screens. */
 export function SessionSettingsForm({
   value,
   onChange,
+  isQuickfire = false,
 }: SessionSettingsFormProps) {
   function toggleBonusCategory(category: BonusCategory): void {
     onChange({
@@ -92,7 +95,7 @@ export function SessionSettingsForm({
           className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
         />
         <span className="text-xs font-normal text-foreground/55">
-          Only applies to quickfire-mode rounds. Leave blank for unlimited time.
+          Only applies to quickfire quizzes. Leave blank for unlimited time.
         </span>
       </label>
 
@@ -173,20 +176,24 @@ export function SessionSettingsForm({
         Show round overview after rules
       </label>
 
-      <label className="flex items-center gap-2 text-sm font-extrabold">
-        <input
-          type="checkbox"
-          checked={value.jokersEnabled}
-          onChange={(event) =>
-            onChange(withJokers(value, event.target.checked))
-          }
-        />
-        Jokers
-      </label>
-      <p className="-mt-3 text-xs text-foreground/60">
-        After the round overview each team picks one round whose points count
-        double.
-      </p>
+      {!isQuickfire && (
+        <>
+          <label className="flex items-center gap-2 text-sm font-extrabold">
+            <input
+              type="checkbox"
+              checked={value.jokersEnabled}
+              onChange={(event) =>
+                onChange(withJokers(value, event.target.checked))
+              }
+            />
+            Jokers
+          </label>
+          <p className="-mt-3 text-xs text-foreground/60">
+            After the round overview each team picks one round whose points
+            count double.
+          </p>
+        </>
+      )}
 
       <label className="flex items-center gap-2 text-sm font-extrabold">
         <input

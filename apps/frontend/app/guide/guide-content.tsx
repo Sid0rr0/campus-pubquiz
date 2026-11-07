@@ -51,8 +51,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Starting a session',
     paragraphs: [
-      'Session Settings sets the rules text and bonus categories in the lobby. Then press Start Quiz.',
-      'Tick the leagues this session counts towards at the start or later in Session Settings.',
+      'Session Settings sets the rules text and bonus categories in the lobby; then press Start Quiz.',
+      'Tick the leagues this session counts towards at the start or in Session Settings.',
       'Advance shows the rules, the round overview, then the first round title card; Previous on the rules returns to the lobby.',
     ],
   },
@@ -76,10 +76,11 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Power-ups',
     paragraphs: [
-      'The "Power-ups" tab (lobby Session Settings) lets teams spend coins on helps: set starting coins, and each power-up\'s cost and uses. The Teams table has a Coins column.',
-      'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles the next round, bought before its intro).',
+      'The "Power-ups" tab (lobby Session Settings) lets teams spend coins on helps: set starting coins and each power-up\'s cost and uses. Teams shows a Coins column.',
+      'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles the next round).',
       "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off.",
       'Grading names the power-ups each answer used. Never refunded: after an answer-key fix, give the coin back with a coin award. Deleting a shot or selfie award removes its coin.',
+      'Quickfire quizzes have no jokers, power-ups, coins or leagues.',
     ],
   },
   {
@@ -87,8 +88,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'The phase timer sits beside "Quiz Master" in the sidebar, and in the mobile bar.',
       'The detail column beside the question browser shows what is on the big screen: a question with its options, a round title card (category, author, Round note) or a break card ("Break N", "(final)" on the last).',
-      'Click a question number, T or B to look ahead; the column follows the big screen again once it reaches that item.',
-      'The grading list sits full width below, for the question in the detail column; a title card or break card has none.',
+      'Click a question number, T or B to look ahead; the column follows the big screen again once it gets there.',
+      'The grading list sits full width below, for the question in the detail column; a title or break card has none.',
     ],
   },
   {
