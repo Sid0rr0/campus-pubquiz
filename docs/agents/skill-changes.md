@@ -90,3 +90,5 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ quickfire-mode implementers guessed about 10 paths that don't exist (`league/league.errors.ts`, `game/state/session-summary.ts`, …); subagents don't get the SessionStart codebase map. The worktree guard refused 3 piped or scripted commands.
 - **implement browser check (2026-11-07 retro)**: a chrome-devtools `filePath` goes under `.logs/` (now gitignored as a folder).
   _Why:_ three sessions saved snapshots to `/tmp`, which chrome-devtools refuses as outside the workspace roots.
+- **implement-spec step 11 (2026-11-07)**: the background `pnpm mutate:changed` run, its survivor ticket and the PR-body scores are gone; the user runs mutation tests separately. `mutate:changed` now defaults to the commit of its last successful run, so a separate run picks up everything since.
+  _Why:_ the mutation run made each spec run take too long.

@@ -208,7 +208,7 @@ pnpm --filter backend mutate               # backend only (DB-free slice)
 pnpm --filter frontend mutate              # frontend only (non-component modules)
 pnpm --filter backend mutate:db            # backend game/state/, services and logic modules with the DB specs (needs Docker, slow)
 pnpm --filter backend mutate:db:areas      # the same, one area at a time, each logged to .logs/mutate-db/<area>.log
-pnpm mutate:changed [base]                 # only the files changed since base (default origin/main), then their survivors
+pnpm mutate:changed [base]                 # only the files changed since base (default: the last run, else origin/main), then their survivors
 pnpm mutate:survivors [report.json ...]    # one line per surviving or uncovered mutant, from the last runs
 ```
 
@@ -216,7 +216,11 @@ pnpm mutate:survivors [report.json ...]    # one line per surviving or uncovered
 selection (the config globs, or `stryker.files.cjs` for the backend), runs one
 workspace at a time with logs in `.logs/mutate-changed/<run>.log`, and keeps
 its results in separate `reports/*-changed.json` files, so it never wipes a
-full run's results. `--list` prints what it would mutate and runs nothing.
+full run's results. Without a base it starts from the commit of the last
+successful run, recorded in `.logs/mutate-changed/last-run.json` (a failed run
+leaves it, so those files are retried), else `origin/main`; it prints the base
+and that run's date first. `--list` prints what it would mutate, runs nothing
+and records nothing.
 `mutate:survivors` reads the incremental files; when several cover one source
 file, the newest wins.
 

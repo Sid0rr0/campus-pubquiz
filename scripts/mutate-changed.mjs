@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Mutation-tests only the source files changed since <base> (default origin/main), then lists
-// the survivors with scripts/survivors.mjs.
+// Mutation-tests only the source files changed since <base>, then lists the survivors with
+// scripts/survivors.mjs. <base> defaults to the commit of the last successful run (recorded in
+// .logs/mutate-changed/last-run.json), else origin/main.
 //   node scripts/mutate-changed.mjs [base]          run
 //   node scripts/mutate-changed.mjs [base] --list   print the files each run would mutate, run nothing
 // Keeps each workspace's own file selection: `--mutate` replaces a config's globs rather than
@@ -14,6 +15,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, matchesGlob } from 'node:path';
@@ -23,10 +25,24 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const LOG_DIR = join(ROOT, '.logs', 'mutate-changed');
 const args = process.argv.slice(2);
 const listOnly = args.includes('--list');
-const base = args.find((a) => !a.startsWith('--')) ?? 'origin/main';
+const LAST_RUN = join(LOG_DIR, 'last-run.json');
+const lastRun = existsSync(LAST_RUN)
+  ? JSON.parse(readFileSync(LAST_RUN, 'utf8'))
+  : null;
+const base =
+  args.find((a) => !a.startsWith('--')) ?? lastRun?.sha ?? 'origin/main';
 
 const git = (...a) =>
   execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
+const head = git('rev-parse', 'HEAD');
+/** Marks everything up to HEAD as mutation-tested, so the next run starts here. */
+function recordRun() {
+  mkdirSync(LOG_DIR, { recursive: true });
+  writeFileSync(
+    LAST_RUN,
+    JSON.stringify({ sha: head, date: new Date().toISOString() }) + '\n',
+  );
+}
 // Against the merge base and the working tree, so uncommitted edits count too.
 const changed = git(
   'diff',
@@ -101,8 +117,12 @@ const runs = [
   },
 ].filter((run) => run.files.length > 0);
 
+console.log(
+  `Base: ${base}${base === lastRun?.sha ? ` (last run ${lastRun.date.slice(0, 10)})` : ''}, changed since then: ${changed.length} file(s)`,
+);
 if (runs.length === 0) {
   console.log(`No mutated source file changed since ${base}.`);
+  if (!listOnly) recordRun();
   process.exit(0);
 }
 if (listOnly) {
@@ -145,4 +165,6 @@ if (reports.length > 0)
     [join(ROOT, 'scripts/survivors.mjs'), ...new Set(reports)],
     { stdio: 'inherit' },
   );
+// A failed run (e.g. Docker down for backend-db) keeps the old base, so its files are retried.
+if (!failed) recordRun();
 process.exit(failed ? 1 : 0);
