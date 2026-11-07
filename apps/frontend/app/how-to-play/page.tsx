@@ -23,8 +23,15 @@ const SECTIONS: { title: string; lines: string[] }[] = [
     title: 'Scoring',
     lines: [
       "A right answer earns the question's points; the quiz master can also give half.",
-      'In a quickfire quiz each question locks on its own, and faster right answers earn more, down to half the points.',
       'The leaderboard adds up answers and bonuses. A tie can be settled by a showdown.',
+    ],
+  },
+  {
+    title: 'Quickfire quiz',
+    lines: [
+      'Some quizzes are quickfire: each question locks on its own, often on a timer, and its answer is shown before the next one.',
+      'When the question has a timer, answer fast: a right answer earns more the quicker it comes in, down to half the points.',
+      'A quickfire quiz has no jokers or power-ups.',
     ],
   },
   {

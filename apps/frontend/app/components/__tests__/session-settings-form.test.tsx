@@ -14,12 +14,14 @@ import { SessionSettingsForm } from '@/app/components/session-settings-form';
 function renderControlled(
   initial: SessionSettings,
   onChange: (next: SessionSettings) => void,
+  isQuickfire = false,
 ) {
   function Wrapper() {
     const [value, setValue] = useState(initial);
     return (
       <SessionSettingsForm
         value={value}
+        isQuickfire={isQuickfire}
         onChange={(next) => {
           setValue(next);
           onChange(next);
@@ -75,7 +77,7 @@ describe('SessionSettingsForm', () => {
 
   it('fires onChange with an updated quickfireQuestionTimerSeconds', async () => {
     const onChange = vi.fn();
-    renderControlled(DEFAULT_SESSION_SETTINGS, onChange);
+    renderControlled(DEFAULT_SESSION_SETTINGS, onChange, true);
 
     const input = screen.getByLabelText(/quickfire question timer/i);
     await userEvent.clear(input);
@@ -92,6 +94,7 @@ describe('SessionSettingsForm', () => {
     renderControlled(
       { ...DEFAULT_SESSION_SETTINGS, quickfireQuestionTimerSeconds: 30 },
       onChange,
+      true,
     );
 
     const input = screen.getByLabelText(/quickfire question timer/i);
@@ -101,6 +104,14 @@ describe('SessionSettingsForm', () => {
       ...DEFAULT_SESSION_SETTINGS,
       quickfireQuestionTimerSeconds: null,
     });
+  });
+
+  it('hides the quickfire question timer for a pub quiz', () => {
+    renderControlled(DEFAULT_SESSION_SETTINGS, vi.fn());
+
+    expect(
+      screen.queryByLabelText(/quickfire question timer/i),
+    ).not.toBeInTheDocument();
   });
 
   it('toggles a bonus category off', async () => {

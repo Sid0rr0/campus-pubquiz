@@ -14,7 +14,7 @@ import { withShowRoundOverview } from '@/app/components/power-ups-settings-form'
 interface SessionSettingsFormProps {
   value: SessionSettings;
   onChange: (next: SessionSettings) => void;
-  /** A quickfire session has no jokers, so that switch is hidden. */
+  /** A quickfire session has no jokers (switch hidden); only it has the question timer. */
   isQuickfire?: boolean;
 }
 
@@ -81,23 +81,25 @@ export function SessionSettingsForm({
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm font-extrabold">
-        Quickfire question timer (seconds)
-        <input
-          type="number"
-          min={1}
-          step={1}
-          placeholder="Unlimited"
-          value={value.quickfireQuestionTimerSeconds ?? ''}
-          onChange={(event) =>
-            updateQuickfireQuestionTimerSeconds(event.target.value)
-          }
-          className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
-        />
-        <span className="text-xs font-normal text-foreground/55">
-          Only applies to quickfire quizzes. Leave blank for unlimited time.
-        </span>
-      </label>
+      {isQuickfire && (
+        <label className="flex flex-col gap-1 text-sm font-extrabold">
+          Quickfire question timer (seconds)
+          <input
+            type="number"
+            min={1}
+            step={1}
+            placeholder="Unlimited"
+            value={value.quickfireQuestionTimerSeconds ?? ''}
+            onChange={(event) =>
+              updateQuickfireQuestionTimerSeconds(event.target.value)
+            }
+            className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
+          />
+          <span className="text-xs font-normal text-foreground/55">
+            Leave blank for unlimited time.
+          </span>
+        </label>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-extrabold">Bonus categories</span>

@@ -80,7 +80,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles the next round).',
       "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off.",
       'Grading names the power-ups each answer used. Never refunded: after an answer-key fix, give the coin back with a coin award. Deleting a shot or selfie award removes its coin.',
-      'Quickfire quizzes have no jokers, power-ups, coins or leagues.',
+    ],
+  },
+  {
+    title: 'Quickfire quizzes',
+    paragraphs: [
+      'Each quickfire question is its own block: open, countdown, reveal; no break. Timed, faster right answers score more, down to half the points.',
+      'Session Settings sets the "Quickfire question timer" (blank: no timer, full points); Advance starts the countdown early. No jokers, power-ups, coins or leagues.',
     ],
   },
   {
@@ -96,7 +102,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Running questions',
     paragraphs: [
       'Each round opens with a round title card, then Advance opens questions one by one. Teams can change answers to any question opened this block.',
-      "Advance on a block's last question starts the final countdown, then the break. In a quickfire quiz every question is its own block.",
+      "Advance on a block's last question starts the final countdown, then the break.",
     ],
   },
   {

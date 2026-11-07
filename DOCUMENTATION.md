@@ -636,7 +636,8 @@ panel show them as a "Power-ups" tab.
 **A quickfire session has none of this.** Its jokers, power-ups, coins (starting,
 carried, awarded) and leagues are dropped: the start dialog and the lobby settings
 panel hide the Jokers switch, the Power-ups tab and the league picker (the
-question timer stays, prefilled with 30 seconds), and send no coin settings.
+question timer stays, prefilled with 30 seconds; a pub session's forms hide
+it instead), and send no coin settings.
 The server refuses, with a 400, `POST /sessions` or a settings `PATCH` that
 names `jokersEnabled` or `powerUpsEnabled` true, any `startingCoins`, or any
 `leagueIds`, and a coin award (`AWARD_BONUS` with `coins`) in such a session.
