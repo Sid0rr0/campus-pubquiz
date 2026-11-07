@@ -12,6 +12,7 @@ import {
   LeagueNotFoundError,
   SessionEndedError,
   LeagueService,
+  QuickfireSessionError,
   SessionNotEndedError,
   SessionNotFoundError,
 } from '@/league/league.service';
@@ -181,6 +182,25 @@ describe('LeagueService (Postgres integration)', () => {
 
       await expect(service.addSession(league.id, live.id)).rejects.toThrow(
         SessionNotEndedError,
+      );
+      expect((await service.list({})).items[0]?.sessions).toEqual([]);
+    });
+
+    it('refuses a session of a quickfire quiz', async () => {
+      const league = await service.create(fields);
+      const quickfireQuiz = em.create(Quiz, {
+        title: 'Rapid',
+        mode: 'quickfire',
+      });
+      const session = em.create(GameSession, {
+        quiz: quickfireQuiz,
+        joinCode: 'QUICK1',
+        status: 'ended',
+      });
+      await em.flush();
+
+      await expect(service.addSession(league.id, session.id)).rejects.toThrow(
+        QuickfireSessionError,
       );
       expect((await service.list({})).items[0]?.sessions).toEqual([]);
     });

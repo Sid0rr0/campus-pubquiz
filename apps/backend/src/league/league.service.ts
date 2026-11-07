@@ -12,6 +12,7 @@ import { LeagueSession } from '@/db/entities/league-session.entity';
 import type { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import type { LeagueRepository } from '@/db/repositories/league.repository';
 import type { LeagueSessionRepository } from '@/db/repositories/league-session.repository';
+import { QUICKFIRE_NO_LEAGUE_MESSAGE } from '@/session/quickfire-session-rules';
 import { isCurrentLeague, venueToday } from '@/league/venue-date';
 
 export class LeagueNotFoundError extends Error {
@@ -35,6 +36,12 @@ export class SessionNotEndedError extends Error {
 export class SessionEndedError extends Error {
   constructor(joinCode: string) {
     super(`Session ${joinCode} has ended: its leagues can no longer be ticked`);
+  }
+}
+
+export class QuickfireSessionError extends Error {
+  constructor() {
+    super(QUICKFIRE_NO_LEAGUE_MESSAGE);
   }
 }
 
@@ -130,9 +137,13 @@ export class LeagueService {
   /** Adds an ended session to a league, current or not; adding it again changes nothing. */
   async addSession(leagueId: number, gameSessionId: number): Promise<void> {
     const league = await this.requireLeague(leagueId);
-    const session = await this.gameSessions.findOne({ id: gameSessionId });
+    const session = await this.gameSessions.findOne(
+      { id: gameSessionId },
+      { populate: ['quiz'] },
+    );
     if (!session) throw new SessionNotFoundError(gameSessionId);
     if (session.status !== 'ended') throw new SessionNotEndedError(session.id);
+    if (session.quiz.mode === 'quickfire') throw new QuickfireSessionError();
     const existing = await this.memberships.findOne({
       league: league.id,
       gameSession: session.id,

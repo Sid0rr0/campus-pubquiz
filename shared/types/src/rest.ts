@@ -75,4 +75,6 @@ export interface ActiveSessionSummary {
   startedAt: string;
   /** Whether the session is in the public game lists; staff see it either way. */
   listed: boolean;
+  /** Whether the session plays a quickfire quiz (the pickers label it). */
+  isQuickfire: boolean;
 }

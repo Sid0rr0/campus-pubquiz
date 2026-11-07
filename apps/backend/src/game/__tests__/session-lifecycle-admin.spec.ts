@@ -58,6 +58,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
           teamCount: 0,
           startedAt: await rowCreatedAt(game.joinCode),
           listed: true,
+          isQuickfire: false,
         },
       ]);
     });
@@ -249,6 +250,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
         teamCount: 0,
         startedAt: await rowCreatedAt(created.joinCode),
         listed: true,
+        isQuickfire: false,
       });
     });
 

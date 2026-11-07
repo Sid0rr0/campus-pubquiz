@@ -31,6 +31,7 @@ import { leagueIdsSchema } from '@/league/league.schema';
 import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
 import { mapLeagueErrors } from '@/league/league-http';
 import { LeagueService } from '@/league/league.service';
+import { quickfireSettingsRefusal } from '@/session/quickfire-session-rules';
 import {
   resolveSessionSettings,
   sessionSettingsPartialSchema,
@@ -120,6 +121,13 @@ export class SessionsController {
     }
     const name = parseName(body.name);
     const leagueIds = parseLeagueIds(body.leagueIds) ?? [];
+    if (await this.gameState.isQuickfireQuiz(quizId)) {
+      const refusal = quickfireSettingsRefusal(
+        parseSettingsPartial(body.settings),
+        leagueIds,
+      );
+      if (refusal) throw new BadRequestException(refusal);
+    }
     await mapLeagueErrors(() => this.leagues.assertAssignable(leagueIds));
     return this.gameState
       .createSession(quizId, settings, name, leagueIds)

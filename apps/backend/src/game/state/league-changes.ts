@@ -4,6 +4,8 @@ import type {
   SessionSettings,
   SessionState,
 } from '@campus-pubquiz/types';
+import { SessionSettingsInvalidError } from '@/game/state/errors/session-settings-invalid.error';
+import { quickfireSettingsRefusal } from '@/session/quickfire-session-rules';
 import {
   BROADCAST_STATE_OUTCOME,
   coinSyncsFor,
@@ -92,6 +94,10 @@ export class LeagueChanges {
     partial: Partial<SessionSettings>,
     leagueIds: number[] | undefined,
   ): Promise<SessionChange<SessionOutcome>> {
+    const refusal = session.seededGame.rounds.some((round) => round.quickfire)
+      ? quickfireSettingsRefusal(partial, leagueIds)
+      : undefined;
+    if (refusal) throw new SessionSettingsInvalidError(refusal);
     if (leagueIds) {
       await this.leagues.assertSessionAssignable(
         session.seededGame.joinCode,

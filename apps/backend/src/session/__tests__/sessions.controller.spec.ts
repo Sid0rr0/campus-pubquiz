@@ -37,6 +37,7 @@ function makeController() {
     listSessions: jest.fn(),
     listPublicSessions: jest.fn(),
     createSession: jest.fn(),
+    isQuickfireQuiz: jest.fn().mockResolvedValue(false),
   };
   // The real REST entry parses the request body once the session is known to
   // be live; this stand-in does the same, then records what it parsed.
@@ -80,6 +81,7 @@ function summary(
     teamCount: 0,
     startedAt: '2026-09-16T12:00:00.000Z',
     listed: true,
+    isQuickfire: false,
     ...overrides,
   };
 }
@@ -206,6 +208,37 @@ describe('SessionsController', () => {
       await expect(
         controller.create({ quizId: 2, settings: { lockGraceSeconds: -5 } }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it.each([
+      ['jokers', { jokersEnabled: true, showRoundOverview: true }, undefined],
+      ['power-ups', { powerUpsEnabled: true }, undefined],
+      ['starting coins', { startingCoins: 3 }, undefined],
+      ['a league', {}, [4]],
+    ])(
+      '400s on %s for a quickfire quiz, creating nothing',
+      async (_name, settings, leagueIds) => {
+        const { controller, gameState } = makeController();
+        gameState.isQuickfireQuiz.mockResolvedValue(true);
+
+        await expect(
+          controller.create({ quizId: 2, settings, leagueIds }),
+        ).rejects.toThrow(BadRequestException);
+        expect(gameState.createSession).not.toHaveBeenCalled();
+      },
+    );
+
+    it('creates a quickfire session with the question timer and no refused setting', async () => {
+      const { controller, gameState } = makeController();
+      gameState.isQuickfireQuiz.mockResolvedValue(true);
+      gameState.createSession.mockResolvedValue(summary());
+
+      await controller.create({
+        quizId: 2,
+        settings: { quickfireQuestionTimerSeconds: 30 },
+      });
+
+      expect(gameState.createSession).toHaveBeenCalled();
     });
 
     it('rejects a body without a numeric quizId', async () => {

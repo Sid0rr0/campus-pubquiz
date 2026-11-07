@@ -96,6 +96,7 @@ function summarizeSession(session: SessionState): ActiveSessionSummary {
     teamCount: session.teams.length,
     startedAt: seededGame.startedAt.toISOString(),
     listed: seededGame.settings.listed,
+    isQuickfire: seededGame.rounds.some((round) => round.quickfire),
   };
 }
 
@@ -342,6 +343,11 @@ export class GameStateService implements OnModuleInit {
       leagueIds,
     );
     return summarizeSession(this.sessionWrite.read(joinCode));
+  }
+
+  /** Whether the quiz is a quickfire quiz: its sessions drop jokers, power-ups, coins and leagues. */
+  async isQuickfireQuiz(quizId: number): Promise<boolean> {
+    return (await this.seedService.quizMode(quizId)) === 'quickfire';
   }
 
   private async placeNewSession(

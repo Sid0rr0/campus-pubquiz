@@ -5,6 +5,7 @@ import {
   DEFAULT_STARTING_COINS,
   defaultPowerUpSettings,
   questionNotesOf,
+  type QuizMode,
   rowToSeededQuestion,
   type SeededGame,
   type SeededRound,
@@ -131,6 +132,10 @@ export class SeedService {
           defaultPowerUpSettings(gameSessionRow.settings.showRoundOverview),
       },
     };
+  }
+
+  async quizMode(quizId: number): Promise<QuizMode> {
+    return (await this.quizzes.findOneOrFail(quizId)).mode;
   }
 
   /** A quiz's rounds as a session's seeded game holds them — read-only and needing no session row, so a quiz preview and a session can't hold the quiz differently. */
