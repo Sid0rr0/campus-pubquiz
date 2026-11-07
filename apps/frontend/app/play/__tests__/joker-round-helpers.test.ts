@@ -44,9 +44,21 @@ describe('doubledRoundsOf', () => {
       roundNumber,
       title: `R${roundNumber}`,
     });
-    const purchases = [{ round: round(1) }, { round: round(4) }, {}] as never;
+    const bought = (roundNumber: number) => ({
+      powerUp: 'extra_joker',
+      roundId: roundNumber * 10,
+      round: round(roundNumber),
+    });
+    const purchases = [
+      bought(1),
+      bought(4),
+      bought(3),
+      { powerUp: 'fifty_fifty', roundId: null },
+    ] as never;
     expect(
-      doubledRoundsOf(round(3), purchases).map((r) => r.roundNumber),
+      doubledRoundsOf({ ...round(3), roundId: 30 }, purchases).map(
+        (r) => r.roundNumber,
+      ),
     ).toEqual([1, 3, 4]);
   });
 });

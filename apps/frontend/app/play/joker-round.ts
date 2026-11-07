@@ -1,4 +1,5 @@
 import {
+  doubledRoundIds,
   jokerRoundPoints,
   type GameStatus,
   type PurchaseView,
@@ -10,15 +11,21 @@ export interface DoubledRound {
   title: string;
 }
 
-/** The rounds doubled for this team, in quiz order: its joker round and those its extra jokers are on. */
+/** The rounds doubled for this team, in quiz order: the module says which round ids, the joker round and the purchases name them. */
 export function doubledRoundsOf(
-  jokerRound: DoubledRound | undefined,
+  jokerRound: (DoubledRound & { roundId: number }) | undefined,
   purchases: readonly PurchaseView[],
 ): DoubledRound[] {
-  return [
-    ...(jokerRound ? [jokerRound] : []),
-    ...purchases.flatMap((purchase) => purchase.round ?? []),
-  ].sort((a, b) => a.roundNumber - b.roundNumber);
+  const named = new Map<number, DoubledRound>();
+  for (const purchase of purchases) {
+    if (purchase.roundId !== null && purchase.round) {
+      named.set(purchase.roundId, purchase.round);
+    }
+  }
+  if (jokerRound) named.set(jokerRound.roundId, jokerRound);
+  return doubledRoundIds(jokerRound?.roundId, purchases)
+    .flatMap((id) => named.get(id) ?? [])
+    .sort((a, b) => a.roundNumber - b.roundNumber);
 }
 
 /**
