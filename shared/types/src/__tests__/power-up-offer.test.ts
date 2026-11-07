@@ -97,6 +97,11 @@ describe('questionPurchaseRefusal', () => {
     ).toBe('You already used that power-up on this question');
   });
 
+  it('does not count another power-up used on the same question', () => {
+    const other = [{ powerUp: 'ask_the_room' as const, questionId: 7 }];
+    expect(refusal({ ...base, purchases: other }, 'fifty_fifty')).toBeNull();
+  });
+
   it('refuses when the balance is below the cost, allows when equal', () => {
     expect(refusal({ ...base, balance: 1 }, 'fifty_fifty')).toBe(
       'Not enough coins',

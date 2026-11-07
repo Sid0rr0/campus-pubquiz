@@ -46,4 +46,10 @@ describe('doubledRoundIdsOfTeam', () => {
       ),
     ).toEqual([1, 2]);
   });
+
+  it('lists only the extra jokers for a team with no joker', () => {
+    expect(doubledRoundIdsOfTeam({}, [{ teamId: 7, ...extra(2) }], 7)).toEqual([
+      2,
+    ]);
+  });
 });

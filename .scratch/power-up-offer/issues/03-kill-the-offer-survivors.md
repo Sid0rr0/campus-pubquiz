@@ -11,7 +11,7 @@ Parent spec: `.scratch/power-up-offer/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A table case in `power-up-offer.test.ts`: another power-up bought on this question does not block this one
 - [ ] A case in `doubled-rounds.test.ts`: a team with no joker entry
