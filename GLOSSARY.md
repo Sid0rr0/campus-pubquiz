@@ -184,7 +184,10 @@ _Avoid_: double points (that's the effect), 2× round, power-up (that's bought w
 
 **Joker round**:
 The round a team played its joker on: the team's points from its answers to that round's questions count double, while bonus awards never do. Once the joker pick closes every team has exactly one, chosen or drawn at random, and the quiz master can change it until that round starts.
-_Avoid_: double round, doubled round
+_Avoid_: double round, doubled round (a joker round is one kind of **Doubled round**)
+
+**Doubled round**:
+A round that counts double for a team in a session: its **Joker round**, or a round it bought an **Extra joker** for. No round counts more than double, so a round that is both is doubled once.
 
 **Joker pick**:
 The timed window after the round overview in which teams choose their joker round on their phones. It closes when its minute runs out or the quiz master moves on, and stepping back onto it reopens it with a fresh minute. A team that hasn't chosen when it closes gets a random round. It is the `joker_pick` status, switched on by the Jokers session setting, which needs the round overview.

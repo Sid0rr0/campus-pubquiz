@@ -4,6 +4,7 @@ import {
   isCurrentRoundQuickfire,
   drawRemovedOptions,
   drawPin,
+  doubledRoundIds,
   extraJokerRefusal,
   extraJokerRoundId,
   powerUpApplies,
@@ -289,14 +290,7 @@ export class PurchaseChanges {
       balance: balanceAfter(session, teamId, records),
       roundId,
       offeredRoundId: extraJokerRoundId(session),
-      doubledRoundIds: [
-        ...(jokerRoundId === undefined ? [] : [jokerRoundId]),
-        ...records.flatMap((record) =>
-          record.powerUp === 'extra_joker' && record.roundId !== null
-            ? [record.roundId]
-            : [],
-        ),
-      ],
+      doubledRoundIds: doubledRoundIds(jokerRoundId, records),
     });
     if (refusal !== null) throw new SessionRefusal(refusal);
 

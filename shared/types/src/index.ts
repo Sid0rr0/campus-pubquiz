@@ -13,6 +13,7 @@ export * from './feedback';
 export * from './session-scales';
 export * from './player-count';
 export * from './joker';
+export * from './doubled-rounds';
 export * from './showdown';
 export * from './admin-actions';
 export * from './rest';
