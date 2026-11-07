@@ -18,6 +18,10 @@ import { BonusAwardNotFoundRefusal } from '@/game/state/errors/bonus-award-not-f
 import { InvalidBonusAwardRefusal } from '@/game/state/errors/invalid-bonus-award-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
 import {
+  isQuickfireSession,
+  QUICKFIRE_NO_COIN_AWARD_MESSAGE,
+} from '@/session/quickfire-session-rules';
+import {
   BROADCAST_STATE_OUTCOME,
   coinSyncsFor,
   connectedTeamSyncs,
@@ -44,6 +48,7 @@ export class BonusAwardsChanges {
     { teamId, category, points, reason, coins }: AwardBonusPayload,
   ): Promise<SessionChange<SessionOutcome>> {
     const { settings } = session.seededGame;
+    assertCoinsAllowed(session, coins);
     // A take is refused whole when it is more than the team has, so a balance never hides a debt.
     if (coins !== undefined && coins < 0) {
       const balance = coinBalanceOf(session, teamId);
@@ -173,6 +178,13 @@ type TeamNotice = { teamId: number } & (
   | { event: typeof SOCKET_EVENTS.BONUS_AWARDED; payload: TeamBonusAwardView }
   | { event: typeof SOCKET_EVENTS.COIN_AWARDED; payload: CoinAwardedPayload }
 );
+
+/** A quickfire session has no coins, so a coin award is refused whatever its settings say. */
+function assertCoinsAllowed(session: SessionState, coins?: number): void {
+  if (coins && isQuickfireSession(session.seededGame)) {
+    throw new InvalidBonusAwardRefusal(QUICKFIRE_NO_COIN_AWARD_MESSAGE);
+  }
+}
 
 /** The session with the team's coin award total replaced (what the views read). */
 function withCoinTotal(

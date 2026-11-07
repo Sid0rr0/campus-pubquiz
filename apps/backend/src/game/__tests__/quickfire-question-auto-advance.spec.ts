@@ -10,16 +10,16 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const KAHOOT_TIMER_SECONDS = 20;
+const QUICKFIRE_TIMER_SECONDS = 20;
 
-describe('GameGateway — kahoot question auto-advance timer', () => {
+describe('GameGateway — quickfire question auto-advance timer', () => {
   const harness = setupRealStoreGatewayTest();
 
-  /** Opens the first kahoot question (question_open q0, timer armed if configured) with nothing emitted yet. */
-  async function openKahootQuestion(
+  /** Opens the first quickfire question (question_open q0, timer armed if configured) with nothing emitted yet. */
+  async function openQuickfireQuestion(
     settings: Partial<SessionSettings>,
   ): Promise<RealStoreGateway> {
-    const game = await harness.createGateway({ kahootMode: true, settings });
+    const game = await harness.createGateway({ quickfire: true, settings });
     await game.act('START_QUIZ');
     await game.act('ADVANCE'); // -> round_intro
     await game.act('ADVANCE'); // -> question_open q0
@@ -37,38 +37,40 @@ describe('GameGateway — kahoot question auto-advance timer', () => {
   }
 
   it('auto-advances question_open to locking with no admin action once the timer elapses', async () => {
-    const game = await openKahootQuestion({
-      kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
+    const game = await openQuickfireQuestion({
+      quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS,
     });
 
-    await game.timers().kahoot.fireNow();
+    await game.timers().quickfire.fireNow();
 
     expect(displayStatuses(game)).toEqual(['locking']);
   });
 
-  it('does not arm a timer when kahootQuestionTimerSeconds is null', async () => {
-    const game = await openKahootQuestion({ kahootQuestionTimerSeconds: null });
+  it('does not arm a timer when quickfireQuestionTimerSeconds is null', async () => {
+    const game = await openQuickfireQuestion({
+      quickfireQuestionTimerSeconds: null,
+    });
 
-    expect(game.timers().kahoot.isArmed()).toBe(false);
-    expect(game.timers().kahoot.dueAt()).toBeNull();
+    expect(game.timers().quickfire.isArmed()).toBe(false);
+    expect(game.timers().quickfire.dueAt()).toBeNull();
   });
 
   it('cancels the pending auto-advance when the admin acts manually before it fires', async () => {
-    const game = await openKahootQuestion({
-      kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
+    const game = await openQuickfireQuestion({
+      quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS,
     });
 
     await game.act('ADVANCE'); // manual advance -> locking
 
-    expect(game.timers().kahoot.isArmed()).toBe(false);
+    expect(game.timers().quickfire.isArmed()).toBe(false);
   });
 
   it('arms the existing lock timer normally after auto-advancing into locking', async () => {
-    const game = await openKahootQuestion({
-      kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
+    const game = await openQuickfireQuestion({
+      quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS,
     });
 
-    await game.timers().kahoot.fireNow(); // auto-advance -> locking
+    await game.timers().quickfire.fireNow(); // auto-advance -> locking
     expect(game.timers().lock.isArmed()).toBe(true);
     await game.timers().lock.fireNow(); // lock timer -> reveal
 
@@ -76,20 +78,20 @@ describe('GameGateway — kahoot question auto-advance timer', () => {
   });
 
   it('still auto-locks on the original deadline after a restart mid-question', async () => {
-    const game = await openKahootQuestion({
-      kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
+    const game = await openQuickfireQuestion({
+      quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS,
     });
     const deadline = (await game.resync('display'))
-      .kahootQuestionEndsAt as number;
+      .quickfireQuestionEndsAt as number;
 
     const restarted = await game.restart();
     restarted.clearEmits();
 
-    expect((await restarted.resync('display')).kahootQuestionEndsAt).toBe(
+    expect((await restarted.resync('display')).quickfireQuestionEndsAt).toBe(
       deadline,
     );
-    expect(restarted.timers().kahoot.dueAt()).toBe(deadline);
-    await restarted.timers().kahoot.fireNow();
+    expect(restarted.timers().quickfire.dueAt()).toBe(deadline);
+    await restarted.timers().quickfire.fireNow();
     expect(displayStatuses(restarted)).toEqual(['locking']);
   });
 });

@@ -1,5 +1,6 @@
 import type { ImportRoundPreview } from './import';
 import type { LiveEditFrontier } from './live-edit-frontier';
+import type { QuizMode } from './quiz-mode';
 
 /**
  * Full editable quiz — same round/question shape as `ImportRoundPreview`
@@ -10,6 +11,8 @@ import type { LiveEditFrontier } from './live-edit-frontier';
 export interface QuizDraft {
   id: number;
   title: string;
+  /** Fixed at creation; the editor shows it read-only. */
+  mode: QuizMode;
   rounds: ImportRoundPreview[];
   /** When the quiz last changed (ISO). The editor sends it back as `loadedUpdatedAt` so a save from an out-of-date copy is refused. */
   updatedAt: string;
@@ -28,6 +31,8 @@ export interface QuizDraftIssue {
 /** Body shared by `POST /quizzes` (create) and `PUT /quizzes/:id` (update). */
 export interface QuizDraftSaveRequest {
   title: string;
+  /** A create stores it (absent means pub); an update refuses a value that differs from the stored quiz's, since the mode never changes. */
+  mode?: QuizMode;
   rounds: ImportRoundPreview[];
   /** The `updatedAt` of the draft this save was made from. A save is refused (412) when the stored quiz has changed since. Left out by callers that don't edit a loaded copy. */
   loadedUpdatedAt?: string;

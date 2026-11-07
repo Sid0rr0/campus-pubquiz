@@ -1,7 +1,7 @@
 import {
   askTheRoomSplit,
   findQuestionOpenForAnswering,
-  isCurrentRoundKahoot,
+  isCurrentRoundQuickfire,
   drawRemovedOptions,
   drawPin,
   extraJokerRefusal,
@@ -362,10 +362,10 @@ function assertQuestionPurchaseAllowed(
     ),
     balance: balanceAfter(session, teamId, records),
     isAnswerable: question !== undefined,
-    // A kahootMode tap locks the pick, so no question power-up can help there.
+    // A quickfire tap locks the pick, so no question power-up can help there.
     applies:
       question !== undefined &&
-      !isCurrentRoundKahoot(session) &&
+      !isCurrentRoundQuickfire(session) &&
       powerUpApplies(powerUp, question),
   });
   if (refusal !== null || question === undefined) {
@@ -388,11 +388,11 @@ function rebuiltExtraJokers(
     if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
     const next = roundNowHolding(started, reloaded, bought.roundId);
     const key = `${bought.teamId}:${next}`;
-    const isKahoot =
+    const isQuickfire =
       reloaded.seededGame.rounds.find((round) => round.id === next)
-        ?.kahootMode ?? false;
-    // A round the edit made a kahootMode round is no longer doubled: refunded.
-    if (next === null || isKahoot || kept.has(key)) continue;
+        ?.quickfire ?? false;
+    // A round the edit made a quickfire round is no longer doubled: refunded.
+    if (next === null || isQuickfire || kept.has(key)) continue;
     kept.add(key);
     rebuilt.push({
       gameSessionId,

@@ -100,12 +100,14 @@ describe('QuizService (Postgres integration)', () => {
         {
           id: quizA.id,
           title: 'Campus Pub Quiz Night',
+          mode: 'pub',
           updatedAt: expect.any(String) as string,
           rounds: [],
         },
         {
           id: quizB.id,
           title: 'Imported Quiz',
+          mode: 'pub',
           updatedAt: expect.any(String) as string,
           rounds: [],
         },
@@ -132,7 +134,6 @@ describe('QuizService (Postgres integration)', () => {
         breakAfter: true,
         breakNumber: 1,
         isFinalBreak: false,
-        kahootMode: false,
         questions: [
           {
             id: q1.id,
@@ -153,7 +154,6 @@ describe('QuizService (Postgres integration)', () => {
         breakAfter: false,
         breakNumber: 2,
         isFinalBreak: true,
-        kahootMode: false,
         questions: [],
       },
     ]);
@@ -188,21 +188,17 @@ describe('QuizService (Postgres integration)', () => {
     });
   });
 
-  it('numbers no break after a kahoot round, which has none, even with breakAfter set', async () => {
+  it('numbers no break in a quickfire quiz, which has none, even with breakAfter set', async () => {
     const quiz = await insertQuiz('Campus Pub Quiz Night');
+    quiz.mode = 'quickfire';
     await insertRound(quiz, 'Round 1', 0, true);
-    const kahoot = await insertRound(quiz, 'Round 2', 1, true);
-    kahoot.kahootMode = true;
-    await insertRound(quiz, 'Round 3', 2);
+    await insertRound(quiz, 'Round 2', 1, true);
     await em.flush();
 
     const [listed] = await quizService.list();
 
-    expect(listed.rounds[1]).not.toHaveProperty('breakNumber');
-    expect(listed.rounds[2]).toMatchObject({
-      breakNumber: 2,
-      isFinalBreak: true,
-    });
+    expect(listed.mode).toBe('quickfire');
+    expect(listed.rounds[0]).not.toHaveProperty('breakNumber');
   });
 
   it("includes each question's options and correct answer", async () => {
@@ -306,12 +302,12 @@ describe('QuizService (Postgres integration)', () => {
       expect(draft).toEqual({
         id: created.quizId,
         title: 'Trivia Night',
+        mode: 'pub',
         updatedAt: created.updatedAt,
         rounds: [
           {
             title: 'Music',
             breakAfter: true,
-            kahootMode: false,
             questions: [
               {
                 questionId: expect.any(Number) as number,
@@ -529,6 +525,65 @@ describe('QuizService (Postgres integration)', () => {
       em.clear();
       const quizAfter = await em.findOneOrFail(Quiz, { id: created.quizId });
       expect(quizAfter.updatedAt.getTime()).toBeGreaterThan(updatedAtBefore);
+    });
+
+    it('stores the mode a quiz is created with and refuses a save naming another', async () => {
+      const mc = {
+        type: 'multiple_choice' as const,
+        prompt: 'Pick',
+        answer: 'A',
+        options: ['A', 'B'],
+        points: 1000,
+      };
+      const created = await quizService.create(
+        'Quick',
+        [{ title: 'R', breakAfter: true, questions: [mc] }],
+        'quickfire',
+      );
+      const quiz = await em.findOneOrFail(Quiz, { id: created.quizId });
+      expect(quiz.mode).toBe('quickfire');
+
+      const refusal = await quizService
+        .update(
+          created.quizId,
+          'Quick',
+          [{ title: 'R', breakAfter: true, questions: [mc] }],
+          'pub',
+        )
+        .catch((error: unknown) => error);
+      expect(refusal).toBeInstanceOf(QuizDraftInvalidError);
+      expect((refusal as QuizDraftInvalidError).issues).toEqual([
+        {
+          roundIndex: -1,
+          questionIndex: null,
+          field: 'mode',
+          message: "A quiz's mode can't be changed",
+        },
+      ]);
+      // The stored mode also decides the type rule: free text is refused in a quickfire quiz.
+      await expect(
+        quizService.update(created.quizId, 'Quick', [VALID_ROUND]),
+      ).rejects.toThrow(QuizDraftInvalidError);
+      await expect(
+        quizService.update(
+          created.quizId,
+          'Quick',
+          [{ title: 'R', breakAfter: true, questions: [mc] }],
+          'quickfire',
+        ),
+      ).resolves.toMatchObject({ quizId: created.quizId });
+    });
+
+    it('trims the title on create and on update', async () => {
+      const created = await quizService.create('  Padded  ', [VALID_ROUND]);
+      expect((await em.findOneOrFail(Quiz, { id: created.quizId })).title).toBe(
+        'Padded',
+      );
+      await quizService.update(created.quizId, '  Again  ', [VALID_ROUND]);
+      em.clear();
+      expect((await em.findOneOrFail(Quiz, { id: created.quizId })).title).toBe(
+        'Again',
+      );
     });
 
     it('rejects updating a quiz that does not exist', async () => {

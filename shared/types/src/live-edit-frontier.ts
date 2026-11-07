@@ -115,7 +115,7 @@ export function getOpenedPrefixLength(
   );
 }
 
-/** A round the live sessions have reached (the current round or an earlier one): it keeps its place, break-after and kahoot setting, and can't be deleted. The rounds after it can be added, deleted and reordered, and those settings can change. */
+/** A round the live sessions have reached (the current round or an earlier one): it keeps its place and break-after setting, and can't be deleted. The rounds after it can be added, deleted and reordered, and that setting can change. */
 export function isRoundReached(
   frontier: LiveEditFrontier,
   roundIndex: number,
@@ -128,7 +128,7 @@ export type RoundLockReason = 'reached' | 'block-locking';
 
 /** What the live sessions allow for one round — the single description the editor and the backend's save guard both read. */
 export interface RoundEditingDescription {
-  /** A live session has reached it: it keeps its place, break-after and kahoot setting, and can't be deleted. */
+  /** A live session has reached it: it keeps its place and break-after setting, and can't be deleted. */
   isReached: boolean;
   structureEditing: RoundStructureEditing;
   /** Questions at the start of the round that must stay in place. */

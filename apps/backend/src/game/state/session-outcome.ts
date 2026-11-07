@@ -62,7 +62,7 @@ export interface RoomReadySync extends TeamSync {
 /** The session's phase timer deadlines (epoch-ms, or null when none is due) after a write that moved any of them. */
 export interface DeadlineChange {
   questionLockAt: number | null;
-  kahootQuestionEndsAt: number | null;
+  quickfireQuestionEndsAt: number | null;
   jokerPickEndsAt: number | null;
 }
 
@@ -72,7 +72,7 @@ export interface DeadlineChange {
  */
 export const PHASE_DEADLINES = {
   questionLockAt: { label: 'Auto-lock' },
-  kahootQuestionEndsAt: { label: 'Kahoot auto-lock' },
+  quickfireQuestionEndsAt: { label: 'Quickfire auto-lock' },
   jokerPickEndsAt: { label: 'Joker pick close' },
 } satisfies Record<keyof DeadlineChange, { label: string }>;
 
@@ -168,8 +168,8 @@ export const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
 
 /**
  * Whether a transition is the one moment a team's cached grades go stale:
- * entering reveal_intro, or kahoot's collapsed lock-to-reveal, which skips
- * reveal_intro but is where ensureKahootSpeedScored rescales points.
+ * entering reveal_intro, or quickfire's collapsed lock-to-reveal, which skips
+ * reveal_intro but is where ensureQuickfireSpeedScored rescales points.
  */
 export function isRevealEntry(
   previousStatus: GameStatus,
@@ -177,9 +177,9 @@ export function isRevealEntry(
 ): boolean {
   const entersRevealIntro =
     previousStatus !== 'reveal_intro' && newStatus === 'reveal_intro';
-  const entersCollapsedKahootReveal =
+  const entersCollapsedQuickfireReveal =
     previousStatus === 'locking' && newStatus === 'reveal';
-  return entersRevealIntro || entersCollapsedKahootReveal;
+  return entersRevealIntro || entersCollapsedQuickfireReveal;
 }
 
 /**

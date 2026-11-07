@@ -94,7 +94,7 @@ function buildInput(
         orderIndex: 0,
         author: 'Alex',
         note: 'Warm-up round',
-        isKahoot: false,
+        isQuickfire: false,
       },
       {
         roundId: 101,
@@ -103,7 +103,7 @@ function buildInput(
         orderIndex: 1,
         author: null,
         note: null,
-        isKahoot: true,
+        isQuickfire: true,
       },
     ],
     roundRatings: [],
@@ -190,7 +190,7 @@ function briefOfQuestion(
         orderIndex: 0,
         author: null,
         note: null,
-        isKahoot: false,
+        isQuickfire: false,
       },
     ],
     questions: [
@@ -432,7 +432,7 @@ describe('computeSessionBrief', () => {
     ).toContain('Date: 2026-03-06');
   });
 
-  it('writes each round with category, author, note and kahoot flag, leaving out the author line when there is none', () => {
+  it('writes each round with category, author, note and quickfire flag, leaving out the author line when there is none', () => {
     const brief = computeSessionBrief(buildInput());
 
     const [, geography, speed] = brief.split(/^## (?=Round )/m);
@@ -440,9 +440,9 @@ describe('computeSessionBrief', () => {
     expect(geography).toContain('Category: Places');
     expect(geography).toContain('Author: Alex');
     expect(geography).toContain('Note: Warm-up round');
-    expect(geography).not.toMatch(/kahoot/i);
+    expect(geography).not.toMatch(/quickfire/i);
     expect(speed).toContain('Round 2: Speed Round');
-    expect(speed).toContain('Kahoot round\n');
+    expect(speed).toContain('Quickfire round\n');
     expect(speed).not.toMatch(/scale|speed:/i);
     expect(speed).not.toContain('Author');
   });
@@ -725,7 +725,7 @@ describe('computeSessionBrief layout', () => {
     orderIndex,
     author: null,
     note: null,
-    isKahoot: false,
+    isQuickfire: false,
     ...overrides,
   });
 
@@ -1047,7 +1047,7 @@ describe('computeSessionBrief layout', () => {
     expect(lines).not.toContain('## Highlights');
   });
 
-  it('writes a round with its category, author, kahoot flag and note, and one without', () => {
+  it('writes a round with its category, author, quickfire flag and note, and one without', () => {
     const lines = linesOf(
       buildInput({
         standings: standingsFor(TEAMS, []),
@@ -1056,7 +1056,7 @@ describe('computeSessionBrief layout', () => {
             title: 'Full',
             category: 'Places',
             author: 'Alex',
-            isKahoot: true,
+            isQuickfire: true,
             note: 'Warm-up',
           }),
           round(101, 1, { title: 'Bare' }),
@@ -1073,7 +1073,7 @@ describe('computeSessionBrief layout', () => {
       '## Round 1: Full',
       'Category: Places',
       'Author: Alex',
-      'Kahoot round',
+      'Quickfire round',
       'Note: Warm-up',
       'Rating: no ratings',
       '',

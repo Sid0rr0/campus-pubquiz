@@ -2,7 +2,11 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SESSION_SETTINGS, type AuthUser } from '@campus-pubquiz/types';
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type AuthUser,
+  type SessionSettings,
+} from '@campus-pubquiz/types';
 import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import { renderWithQuery } from '@/test-utils/query';
@@ -271,6 +275,21 @@ describe('SessionPickerPanel', () => {
       'href',
       '/quizzes/new',
     );
+  });
+
+  it('labels a quickfire quiz in the list and a pub quiz not', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [
+        { id: 2, title: 'Pub Quiz', mode: 'pub', rounds: [] },
+        { id: 3, title: 'Fast Quiz', mode: 'quickfire', rounds: [] },
+      ],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/fast quiz/i);
+
+    expect(screen.getAllByText('Quickfire')).toHaveLength(1);
   });
 
   it('links each listed quiz to its editor from the actions menu', async () => {
@@ -696,21 +715,15 @@ describe('SessionPickerPanel', () => {
     );
   });
 
-  it('prefills the kahoot question timer to 30s for a quiz with a kahootMode round', async () => {
+  it('prefills the quickfire question timer to 30s for a quickfire quiz', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
       quizzes: [
         {
           id: 2,
           title: 'Speed Quiz',
-          rounds: [
-            {
-              title: 'Speed Round',
-              breakAfter: false,
-              kahootMode: true,
-              questions: [],
-            },
-          ],
+          mode: 'quickfire',
+          rounds: [{ title: 'Speed Round', breakAfter: false, questions: [] }],
         },
       ],
     });
@@ -728,15 +741,19 @@ describe('SessionPickerPanel', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
+    // No coin settings are sent: a quickfire session has no coins.
+    const sent = { ...DEFAULT_SESSION_SETTINGS } as Partial<SessionSettings>;
+    delete sent.startingCoins;
+    delete sent.powerUps;
     expect(mockCreateSession).toHaveBeenCalledWith(
       2,
-      { ...DEFAULT_SESSION_SETTINGS, kahootQuestionTimerSeconds: 30 },
+      { ...sent, quickfireQuestionTimerSeconds: 30 },
       'Speed Quiz',
       [],
     );
   });
 
-  it('prefills the kahoot question timer to null for a quiz with no kahootMode round', async () => {
+  it('prefills the quickfire question timer to null for a pub quiz', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
       quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],

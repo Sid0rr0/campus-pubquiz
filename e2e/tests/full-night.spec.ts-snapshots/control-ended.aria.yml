@@ -31,16 +31,12 @@
   - navigation "Warm-up questions":
     - button /Grade question 1 of Warm-up/
     - button /Grade question 2 of Warm-up/
-  - navigation "Quick fire questions":
-    - button /Grade question 1 of Quick fire/
-    - button /Grade question 2 of Quick fire/
-    - button "Show break after Quick fire": B
   - region "Question detail":
-    - heading "How many players does a football team field?" [level=2]
+    - heading "How many keys does a standard piano have?" [level=2]
   - heading "Teams" [level=2]
   - table:
     - rowgroup:
-      - row "Position Team 1 2 3 4 Bonus Total Actions"
+      - row "Position Team 1 2 3 Bonus Total Actions"
     - rowgroup:
-      - row /1\. Team A [0-9a-f]{6} 5 1 3 2 0 11/
-      - row /2\. Team B [0-9a-f]{6} 1 0 0 2 1 4/
+      - row /1\. Team A [0-9a-f]{6} 5 1 3 0 9/
+      - row /2\. Team B [0-9a-f]{6} 1 0 0 1 2/

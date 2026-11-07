@@ -1,5 +1,6 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { GameStatus } from '@campus-pubquiz/types';
+import { QUICKFIRE_NO_LEAGUE_MESSAGE } from '@/session/quickfire-session-rules';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';
@@ -12,6 +13,7 @@ import {
   LeagueNotFoundError,
   SessionEndedError,
   LeagueService,
+  QuickfireLeagueError,
   SessionNotEndedError,
   SessionNotFoundError,
 } from '@/league/league.service';
@@ -182,6 +184,28 @@ describe('LeagueService (Postgres integration)', () => {
       await expect(service.addSession(league.id, live.id)).rejects.toThrow(
         SessionNotEndedError,
       );
+      expect((await service.list({})).items[0]?.sessions).toEqual([]);
+    });
+
+    it('refuses a session of a quickfire quiz', async () => {
+      const league = await service.create(fields);
+      const quickfireQuiz = em.create(Quiz, {
+        title: 'Rapid',
+        mode: 'quickfire',
+      });
+      const session = em.create(GameSession, {
+        quiz: quickfireQuiz,
+        joinCode: 'QUICK1',
+        status: 'ended',
+      });
+      await em.flush();
+
+      await expect(service.addSession(league.id, session.id)).rejects.toThrow(
+        new QuickfireLeagueError(),
+      );
+      await expect(
+        service.addSession(league.id, session.id),
+      ).rejects.toHaveProperty('message', QUICKFIRE_NO_LEAGUE_MESSAGE);
       expect((await service.list({})).items[0]?.sessions).toEqual([]);
     });
 

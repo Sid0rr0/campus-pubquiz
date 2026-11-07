@@ -77,6 +77,7 @@ import { LeagueTableService } from '@/league/league-table.service';
 import { LeagueService } from '@/league/league.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
+import { isQuickfireSession } from '@/session/quickfire-session-rules';
 import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 
 export { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
@@ -96,6 +97,7 @@ function summarizeSession(session: SessionState): ActiveSessionSummary {
     teamCount: session.teams.length,
     startedAt: seededGame.startedAt.toISOString(),
     listed: seededGame.settings.listed,
+    isQuickfire: isQuickfireSession(seededGame),
   };
 }
 
@@ -342,6 +344,13 @@ export class GameStateService implements OnModuleInit {
       leagueIds,
     );
     return summarizeSession(this.sessionWrite.read(joinCode));
+  }
+
+  /** Whether the quiz is a quickfire quiz: its sessions drop jokers, power-ups, coins and leagues. */
+  async isQuickfireQuiz(quizId: number): Promise<boolean> {
+    return isQuickfireSession({
+      quizMode: await this.seedService.quizMode(quizId),
+    });
   }
 
   private async placeNewSession(

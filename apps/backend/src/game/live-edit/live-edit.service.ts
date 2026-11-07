@@ -164,7 +164,7 @@ export class LiveEditService {
 
   async save(
     quizId: number,
-    { title, rounds, loadedUpdatedAt }: QuizDraftSaveRequest,
+    { title, mode, rounds, loadedUpdatedAt }: QuizDraftSaveRequest,
   ): Promise<QuizDraftSaveResult> {
     const deliveries: PendingDelivery[] = [];
     let result: QuizDraftSaveResult;
@@ -181,7 +181,12 @@ export class LiveEditService {
 
           const liveSessions = this.listLiveSessions(quizId);
           if (liveSessions.length === 0) {
-            const saved = await this.quizService.update(quizId, title, rounds);
+            const saved = await this.quizService.update(
+              quizId,
+              title,
+              rounds,
+              mode,
+            );
             await this.reloadLobbySessions(quizId, held, deliveries);
             return saved;
           }
@@ -201,7 +206,12 @@ export class LiveEditService {
             frontier.openedQuestionIds,
           );
 
-          const result = await this.quizService.update(quizId, title, rounds);
+          const result = await this.quizService.update(
+            quizId,
+            title,
+            rounds,
+            mode,
+          );
           for (const { seededGame } of liveSessions) {
             deliveries.push({
               joinCode: seededGame.joinCode,

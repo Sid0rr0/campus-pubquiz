@@ -26,6 +26,7 @@ export * from './import';
 export * from './auth';
 export * from './team';
 export * from './quiz-draft';
+export * from './quiz-mode';
 export {
   OPENED_QUESTION_FIXED_FIELDS,
   describeLiveEditRounds,
@@ -64,7 +65,7 @@ export * from './fun-facts';
 export * from './question-view-conversions';
 export * from './block-in-play';
 export * from './block-questions';
-export * from './kahoot-visibility';
+export * from './quickfire-visibility';
 export * from './admin-view-flags';
 export * from './feedback-rounds';
 export * from './closest-guess-reveal';

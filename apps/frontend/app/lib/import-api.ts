@@ -1,4 +1,8 @@
-import type { ImportPreview, ImportRowIssue } from '@campus-pubquiz/types';
+import type {
+  ImportPreview,
+  ImportRowIssue,
+  QuizMode,
+} from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 import { ApiError, readErrorBody } from '@/app/lib/api-error';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
@@ -47,13 +51,19 @@ async function postImport<T>(
 export function previewImport(
   csvText: string,
   quizTitle: string | undefined,
+  mode: QuizMode,
 ): Promise<ImportPreview> {
-  return postImport<ImportPreview>('preview', { csvText, quizTitle });
+  return postImport<ImportPreview>('preview', { csvText, quizTitle, mode });
 }
 
 export function previewImportFromUrl(
   sheetUrl: string,
   quizTitle: string | undefined,
+  mode: QuizMode,
 ): Promise<ImportPreview> {
-  return postImport<ImportPreview>('preview-from-url', { sheetUrl, quizTitle });
+  return postImport<ImportPreview>('preview-from-url', {
+    sheetUrl,
+    quizTitle,
+    mode,
+  });
 }

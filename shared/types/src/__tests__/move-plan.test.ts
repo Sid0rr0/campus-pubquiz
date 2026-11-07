@@ -212,12 +212,12 @@ describe('planMove', () => {
       expect(planMove(covered('ended', 3), 'ADVANCE').kind).toBe('blocked');
     });
 
-    it('counts a kahoot round’s reveal steps over its capped board', () => {
+    it('counts a quickfire round’s reveal steps over its capped board', () => {
       const many = Array.from({ length: 7 }, (_, index) =>
         leaderboardEntry(index + 1, `T${index + 1}`, 70 - index),
       );
-      const kahoot = sessionWith(
-        [round(1, [10, 11], { kahootMode: true })],
+      const quickfire = sessionWith(
+        [round(1, [10, 11], { quickfire: true })],
         { status: 'question_open', isLeaderboardVisible: true },
         { leaderboard: many, leaderboardRevealCount: 0 },
       );
@@ -227,7 +227,7 @@ describe('planMove', () => {
         { leaderboard: many, leaderboardRevealCount: 0 },
       );
 
-      expect(planMove(kahoot, 'ADVANCE')).toMatchObject({ placeCount: 5 });
+      expect(planMove(quickfire, 'ADVANCE')).toMatchObject({ placeCount: 5 });
       expect(planMove(normal, 'ADVANCE')).toMatchObject({ placeCount: 7 });
     });
 

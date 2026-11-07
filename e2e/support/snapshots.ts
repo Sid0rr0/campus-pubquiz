@@ -3,7 +3,7 @@
  *
  *   await snap(display, 'break_intro');
  *   await snap(phoneA, 'reveal');
- *   await snap(control, 'question_open', 'kahoot');   // optional variant
+ *   await snap(control, 'question_open', 'quickfire');   // optional variant
  *
  * - `screen` is a DisplayScreen, PhoneScreen or ControlScreen.
  * - It compares the page's ARIA structure with a snapshot file, retrying like

@@ -61,7 +61,7 @@ export class SessionBroadcaster
 
   /**
    * Runs once every module's onModuleInit has loaded the session store, so a
-   * backend restart mid-countdown or mid-kahoot-question restores its
+   * backend restart mid-countdown or mid-quickfire-question restores its
    * deadlines — otherwise nothing re-arms them until the next admin action.
    */
   onApplicationBootstrap(): void {

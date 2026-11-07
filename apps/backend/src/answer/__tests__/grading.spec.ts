@@ -1029,7 +1029,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     });
   });
 
-  describe('kahoot speed scoring (from stored response time)', () => {
+  describe('quickfire speed scoring (from stored response time)', () => {
     const TIMER_SECONDS = 10;
 
     async function createQuestion(
@@ -1358,7 +1358,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       expect(afterRestart).toEqual(withoutRestart);
     });
 
-    it('regrades a kahoot question that was never speed-scored, scaling by stored response time', async () => {
+    it('regrades a quickfire question that was never speed-scored, scaling by stored response time', async () => {
       const question = await createQuestion({ answer: 'London' });
       const team = await insertTeam('Team', 'token-1');
       await state.answerService.submit(

@@ -431,10 +431,10 @@ describe('GameGateway — buying a 50/50', () => {
       expect(await storedPurchases(game, alpha)).toEqual([]);
     });
 
-    it('refuses a question power-up in a kahootMode round, where a tap locks the pick', async () => {
+    it('refuses a question power-up in a quickfire round, where a tap locks the pick', async () => {
       const game = await night(
         {},
-        { rounds: [{ ...QUIZ[0], breakAfter: false, kahootMode: true }] },
+        { rounds: [{ ...QUIZ[0], breakAfter: false, quickfire: true }] },
       );
       const [alpha] = game.teams;
 

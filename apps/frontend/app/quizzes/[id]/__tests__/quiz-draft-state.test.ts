@@ -64,7 +64,7 @@ describe('makeQuestion / makeRound', () => {
     });
   });
 
-  it('defaults a kahoot round question to 1000 points', () => {
+  it('defaults a quickfire round question to 1000 points', () => {
     const question = makeQuestion('q1', true);
 
     expect(question.points).toBe(1000);
@@ -75,7 +75,6 @@ describe('makeQuestion / makeRound', () => {
       id: 'r1',
       title: 'Round 1',
       breakAfter: false,
-      kahootMode: false,
       category: '',
       author: '',
       note: '',
@@ -790,32 +789,6 @@ describe('roundFromPreview', () => {
     ]);
     expect(editorRound.title).toBe('History');
     expect(editorRound.breakAfter).toBe(true);
-    expect(editorRound.kahootMode).toBe(false);
-  });
-
-  it('carries a true kahootMode through from the preview', () => {
-    const round: ImportRoundPreview = {
-      title: 'Speed Round',
-      breakAfter: true,
-      kahootMode: true,
-      questions: [
-        {
-          type: 'multiple_choice',
-          prompt: 'Q1',
-          answer: 'A',
-          points: 1,
-          options: ['A', 'B'],
-        },
-      ],
-    };
-
-    const editorRound = roundFromPreview(
-      'r1',
-      round,
-      (index) => `r1-q${index}`,
-    );
-
-    expect(editorRound.kahootMode).toBe(true);
   });
 });
 
@@ -831,15 +804,15 @@ describe('toSaveRequest', () => {
       },
     ];
 
-    const request = toSaveRequest(' Trivia Night ', [round]);
+    const request = toSaveRequest(' Trivia Night ', [round], 'quickfire');
 
     expect(request).toEqual({
       title: 'Trivia Night',
+      mode: 'quickfire',
       rounds: [
         {
           title: 'History',
           breakAfter: true,
-          kahootMode: false,
           questions: [
             {
               type: 'free_text',
@@ -865,30 +838,10 @@ describe('toSaveRequest', () => {
       { ...makeQuestion('q2'), type: 'free_text', correctText: 'B' },
     ];
 
-    const request = toSaveRequest('Trivia Night', [first, last]);
+    const request = toSaveRequest('Trivia Night', [first, last], 'pub');
 
     expect(request.rounds[0].breakAfter).toBe(false);
     expect(request.rounds[1].breakAfter).toBe(true);
-  });
-
-  it('carries a true kahootMode through to the save request', () => {
-    const round = makeRound('r1', 'Speed Round');
-    round.kahootMode = true;
-    round.questions = [
-      {
-        ...makeQuestion('q1'),
-        type: 'multiple_choice',
-        prompt: 'Q1',
-        options: [
-          { text: 'A', isCorrect: true },
-          { text: 'B', isCorrect: false },
-        ],
-      },
-    ];
-
-    const request = toSaveRequest('Trivia Night', [round]);
-
-    expect(request.rounds[0].kahootMode).toBe(true);
   });
 });
 
@@ -1305,8 +1258,8 @@ describe('moveTargetRounds', () => {
 
   it('offers every other round when nothing is live', () => {
     expect(moveTargetRounds(rounds, 0, undefined)).toEqual([
-      { id: 'b', label: '2. Untitled round', kahootMode: false },
-      { id: 'c', label: '3. Three', kahootMode: false },
+      { id: 'b', label: '2. Untitled round' },
+      { id: 'c', label: '3. Three' },
     ]);
   });
 
@@ -1332,15 +1285,6 @@ describe('moveTargetRounds', () => {
     ]);
 
     expect(result.map((target) => target.id)).toEqual(['c']);
-  });
-
-  it('carries the kahoot flag', () => {
-    const kahoot = [
-      makeRound('a', 'One'),
-      { ...makeRound('b', 'Two'), kahootMode: true },
-    ];
-
-    expect(moveTargetRounds(kahoot, 0, undefined)[0].kahootMode).toBe(true);
   });
 });
 
@@ -1881,7 +1825,6 @@ describe('round settings in the editor draft', () => {
       id: 'r1',
       title: 'R',
       breakAfter: false,
-      kahootMode: false,
       category: '',
       author: '',
       note: '',
@@ -1943,12 +1886,11 @@ describe('round settings in the editor draft', () => {
       showNoteOnScreen: true,
     };
 
-    const [first, second] = toSaveRequest('T', [settled, blank]).rounds;
+    const [first, second] = toSaveRequest('T', [settled, blank], 'pub').rounds;
 
     expect(first).toStrictEqual({
       title: 'R',
       breakAfter: false,
-      kahootMode: false,
       category: 'History',
       author: 'Sam',
       note: 'Say hi',
@@ -1958,7 +1900,6 @@ describe('round settings in the editor draft', () => {
     expect(second).toStrictEqual({
       title: 'S',
       breakAfter: true,
-      kahootMode: false,
       questions: [],
     });
   });
@@ -1966,7 +1907,7 @@ describe('round settings in the editor draft', () => {
   it('leaves the on-screen flag out of a saved note that is not shown', () => {
     const round: EditorRound = { ...makeRound('r1', 'R'), note: 'Say hi' };
 
-    expect(toSaveRequest('T', [round]).rounds[0]).not.toHaveProperty(
+    expect(toSaveRequest('T', [round], 'pub').rounds[0]).not.toHaveProperty(
       'showNoteOnScreen',
     );
   });

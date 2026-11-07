@@ -48,6 +48,7 @@ export function sessionOver(
       gameSessionId: 1,
       joinCode: 'ABCDEF',
       quizTitle: 'Quiz',
+      quizMode: 'pub',
       customName: null,
       startedAt: new Date(0),
       rounds,

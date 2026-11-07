@@ -265,6 +265,11 @@ function QuizTitleCell({ quiz }: { quiz: QuizSummary }) {
     <span className="font-extrabold">
       {quiz.title} ({quiz.rounds.length} rounds | {questionCount} total
       questions)
+      {quiz.mode === 'quickfire' && (
+        <span className="ml-2 rounded-full bg-magenta/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-magenta">
+          Quickfire
+        </span>
+      )}
     </span>
   );
 }

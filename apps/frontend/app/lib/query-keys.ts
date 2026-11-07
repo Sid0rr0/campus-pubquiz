@@ -33,6 +33,7 @@ export const queryKeys = {
       sortBy: string;
       sortOrder: string;
       search: string;
+      showQuickfireOnly: boolean;
     }) => ['teams', 'list', params] as const,
     code: (teamId: number) => ['teams', 'code', teamId] as const,
     detail: (teamId: number) => ['teams', 'detail', teamId] as const,

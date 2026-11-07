@@ -45,10 +45,10 @@ const PLAIN: QuizRoundSpec = {
     },
   ],
 };
-const KAHOOT: QuizRoundSpec = {
-  title: 'Kahoot',
+const QUICKFIRE: QuizRoundSpec = {
+  title: 'Quickfire',
   breakAfter: true,
-  kahootMode: true,
+  quickfire: true,
   questions: [
     {
       type: 'multiple_choice',
@@ -57,7 +57,7 @@ const KAHOOT: QuizRoundSpec = {
       points: 2,
       payload: { options: ['A', 'B'] },
     },
-    free('Kahoot two?'),
+    free('Quickfire two?'),
   ],
 };
 const NO_BREAK: QuizRoundSpec = {
@@ -99,7 +99,7 @@ describe('Quiz preview vs a real session', () => {
 
   it('shows exactly the screen kinds a real session reaches by Advance, minus the left-out kinds', async () => {
     const game = await harness.createGateway({
-      rounds: [PLAIN, KAHOOT, NO_BREAK, LAST],
+      rounds: [PLAIN, QUICKFIRE, NO_BREAK, LAST],
       settings,
     });
 

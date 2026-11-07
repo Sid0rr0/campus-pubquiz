@@ -11,25 +11,25 @@ describe('real-store harness — phase timer controls', () => {
 
   beforeEach(async () => {
     game = await harness.createGateway({
-      kahootMode: true,
-      settings: { kahootQuestionTimerSeconds: 20 },
+      quickfire: true,
+      settings: { quickfireQuestionTimerSeconds: 20 },
     });
   });
 
-  it('arms the kahoot question timer for a kahoot question and the lock timer for its locking phase', async () => {
+  it('arms the quickfire question timer for a quickfire question and the lock timer for its locking phase', async () => {
     await game.act('START_QUIZ');
     await game.act('ADVANCE'); // -> round_intro
-    await game.act('ADVANCE'); // -> question_open, kahoot timer armed
-    const { kahoot, lock } = game.timers();
-    expect(kahoot.isArmed()).toBe(true);
+    await game.act('ADVANCE'); // -> question_open, quickfire timer armed
+    const { quickfire, lock } = game.timers();
+    expect(quickfire.isArmed()).toBe(true);
     expect(lock.isArmed()).toBe(false);
-    expect(kahoot.dueAt()).toBe(
-      (await game.resync('display')).kahootQuestionEndsAt,
+    expect(quickfire.dueAt()).toBe(
+      (await game.resync('display')).quickfireQuestionEndsAt,
     );
 
-    await kahoot.fireNow();
+    await quickfire.fireNow();
 
-    expect(kahoot.isArmed()).toBe(false);
+    expect(quickfire.isArmed()).toBe(false);
     expect(lock.isArmed()).toBe(true);
   });
 
@@ -46,7 +46,7 @@ describe('real-store harness — phase timer controls', () => {
     await game.act('START_QUIZ');
     await game.act('ADVANCE');
     await game.act('ADVANCE');
-    armedAtTestEnd = [game.timers().kahoot];
+    armedAtTestEnd = [game.timers().quickfire];
     expect(armedAtTestEnd[0].isArmed()).toBe(true);
   });
 

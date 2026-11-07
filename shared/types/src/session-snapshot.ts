@@ -27,9 +27,9 @@ import {
 } from './power-ups';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import {
-  isCurrentKahootQuestionRevealed,
-  isQuestionHiddenBehindKahootLeaderboard,
-} from './kahoot-visibility';
+  isCurrentQuickfireQuestionRevealed,
+  isQuestionHiddenBehindQuickfireLeaderboard,
+} from './quickfire-visibility';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import { questionOutcome } from './question-outcome';
 import type { SeededQuestion } from './question-views';
@@ -182,7 +182,7 @@ export function buildDisplayFields(
   DisplayStatePayload,
   | 'roundCategories'
   | 'roundAuthors'
-  | 'kahootQuestionEndsAt'
+  | 'quickfireQuestionEndsAt'
   | 'jokerPickEndsAt'
   | 'teamsCorrect'
   | 'powerUpCounts'
@@ -192,7 +192,7 @@ export function buildDisplayFields(
     powerUpCounts: describePowerUpCounts(session),
     roundCategories: rounds.map((round) => round.category ?? ''),
     roundAuthors: rounds.map((round) => round.author ?? ''),
-    kahootQuestionEndsAt: session.kahootQuestionEndsAt,
+    quickfireQuestionEndsAt: session.quickfireQuestionEndsAt,
     jokerPickEndsAt: session.jokerPickEndsAt,
     teamsCorrect: describeTeamsCorrect(session),
   };
@@ -281,8 +281,8 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     progress: session.progress,
     quizStructure: getQuizStructureSummary(getGameContext(session)),
     roundTitle: getCurrentRoundTitle(session),
-    isCurrentRoundKahoot:
-      session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ??
+    isCurrentRoundQuickfire:
+      session.seededGame.rounds[session.progress.roundIndex]?.quickfire ??
       false,
     currentQuestion: getCurrentQuestion(session),
     blockQuestions: getBlockQuestions(session),
@@ -308,15 +308,15 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
 /**
  * Whether the session's current block can be answered right now: its
  * questions are open (or locking), or a round intro sits over questions
- * already open — and never for a kahoot question still hidden behind the
- * leaderboard, and never for a kahoot question whose reveal already aired.
+ * already open — and never for a quickfire question still hidden behind the
+ * leaderboard, and never for a quickfire question whose reveal already aired.
  * The one rule behind both the players view and the answer-submission gate.
  */
 export function isBlockAnswerable(session: SessionState): boolean {
   return (
     isAnsweringStatus(session.progress.status) &&
-    !isQuestionHiddenBehindKahootLeaderboard(session) &&
-    !isCurrentKahootQuestionRevealed(session) &&
+    !isQuestionHiddenBehindQuickfireLeaderboard(session) &&
+    !isCurrentQuickfireQuestionRevealed(session) &&
     getBlockInPlayIds(session.seededGame.rounds, session.progress).length > 0
   );
 }

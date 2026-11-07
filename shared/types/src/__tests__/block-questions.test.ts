@@ -143,10 +143,11 @@ describe('getBlockSeededQuestions', () => {
   });
 
   it('numbers a partial run from its real place in the round', () => {
-    const session = sessionWith(
-      [round(1, [10, 11, 12], { kahootMode: true })],
-      { status: 'break', questionIndex: 2, furthestOpenIndex: 0 },
-    );
+    const session = sessionWith([round(1, [10, 11, 12], { quickfire: true })], {
+      status: 'break',
+      questionIndex: 2,
+      furthestOpenIndex: 0,
+    });
 
     expect(
       getBlockSeededQuestions(session).map((question) => [
@@ -259,9 +260,9 @@ describe('getPastRevealedQuestions', () => {
     ]);
   });
 
-  it('adds the finished questions of a kahoot round before the current one', () => {
+  it('adds the finished questions of a quickfire round before the current one', () => {
     const session = sessionWith(
-      [round(1, [10]), round(2, [20, 21, 22], { kahootMode: true })],
+      [round(1, [10]), round(2, [20, 21, 22], { quickfire: true })],
       {
         status: 'question_open',
         roundIndex: 1,
@@ -277,9 +278,9 @@ describe('getPastRevealedQuestions', () => {
     ]);
   });
 
-  it('adds nothing of a kahoot round at its first question', () => {
+  it('adds nothing of a quickfire round at its first question', () => {
     const session = sessionWith(
-      [round(1, [10]), round(2, [20, 21], { kahootMode: true })],
+      [round(1, [10]), round(2, [20, 21], { quickfire: true })],
       { status: 'question_open', roundIndex: 1, furthestOpenIndex: 0 },
     );
 
@@ -399,10 +400,10 @@ describe('getUpcomingQuestionPositions', () => {
     ).toEqual([1, 2, 1, 2]);
   });
 
-  it('is empty for a kahoot round, whose block is one question', () => {
+  it('is empty for a quickfire round, whose block is one question', () => {
     expect(
       upcoming({ status: 'question_open', furthestOpenIndex: 0 }, [
-        round(1, [10, 11], { kahootMode: true }),
+        round(1, [10, 11], { quickfire: true }),
       ]),
     ).toEqual([]);
   });

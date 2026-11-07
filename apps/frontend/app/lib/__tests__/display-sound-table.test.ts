@@ -49,9 +49,9 @@ describe('soundFor', () => {
     expect(soundFor(screen('reveal'), screen('ended'))).toBe('fanfare');
   });
 
-  // The table checks time-up before the reveal sting, so the Kahoot move
+  // The table checks time-up before the reveal sting, so the Quickfire move
   // locking -> reveal plays time-up, not the reveal sting. Pinned as it is.
-  it('plays time-up, not the reveal sting, on the Kahoot move from locking to a reveal', () => {
+  it('plays time-up, not the reveal sting, on the Quickfire move from locking to a reveal', () => {
     expect(soundFor(screen('locking'), screen('reveal'))).toBe('timeUp');
   });
 

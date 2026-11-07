@@ -49,7 +49,7 @@ export interface QuestionDescription extends Partial<SeededQuestion> {
 export interface RoundDescription {
   title?: string;
   breakAfter?: boolean;
-  kahootMode?: boolean;
+  quickfire?: boolean;
   category?: string;
   author?: string;
   /** Host-only round note; reaches the display view only with showNoteOnScreen. */
@@ -97,7 +97,7 @@ export interface SessionDescription {
     Pick<
       SessionState,
       | 'questionLockAt'
-      | 'kahootQuestionEndsAt'
+      | 'quickfireQuestionEndsAt'
       | 'jokerPickEndsAt'
       | 'breakEndsAt'
     >
@@ -161,7 +161,7 @@ function buildRounds(descriptions: RoundDescription[]): SeededRound[] {
     title: round.title ?? `Round ${index + 1}`,
     breakAfter: round.breakAfter ?? true,
     ...definedOnly({
-      kahootMode: round.kahootMode,
+      quickfire: round.quickfire,
       category: round.category,
       author: round.author,
       note: round.note,
@@ -272,6 +272,7 @@ export function buildSessionState(
         gameSessionId: 1,
         joinCode: description.joinCode ?? 'ABCDEF',
         quizTitle: 'Test Quiz',
+        quizMode: 'pub',
         customName: null,
         startedAt: new Date('2026-09-16T12:00:00.000Z'),
         rounds,

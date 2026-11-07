@@ -65,7 +65,7 @@ describe('countCorrectAnswers', () => {
     expect(countCorrectAnswers(payload)).toBe(1);
   });
 
-  it('counts a speed-scaled kahoot answer that earned fewer than the full points', () => {
+  it('counts a speed-scaled quickfire answer that earned fewer than the full points', () => {
     const payload = liveAnswers({
       question: { ...liveAnswers().question, points: 1000 },
       answers: [

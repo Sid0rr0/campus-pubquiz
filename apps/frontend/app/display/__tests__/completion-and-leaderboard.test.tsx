@@ -121,12 +121,12 @@ describe('DisplayPage — completion and leaderboard', () => {
     totalPoints: 6 - index,
   }));
 
-  const kahootRound = { kahootMode: true, questions: [{}, {}] };
+  const quickfireRound = { quickfire: true, questions: [{}, {}] };
 
-  it('caps the leaderboard to the top 5 while a kahoot round is active', () => {
+  it('caps the leaderboard to the top 5 while a quickfire round is active', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
-        rounds: [kahootRound],
+        rounds: [quickfireRound],
         progress: { isLeaderboardVisible: true },
         leaderboard: SIX_TEAMS,
         leaderboardRevealCount: 6,
@@ -144,11 +144,11 @@ describe('DisplayPage — completion and leaderboard', () => {
 
   it('reaches ranks 1-2 with the realistic reveal count the backend actually sends (capped at 5, not the full roster)', () => {
     // Regression test: computeLeaderboardRevealCount caps revealCount at
-    // min(KAHOOT_LEADERBOARD_TOP_N, leaderboard.length) — 5 here, not 6 —
-    // for the Kahoot between-questions leaderboard's immediate full reveal.
+    // min(QUICKFIRE_LEADERBOARD_TOP_N, leaderboard.length) — 5 here, not 6 —
+    // for the Quickfire between-questions leaderboard's immediate full reveal.
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
-        rounds: [kahootRound],
+        rounds: [quickfireRound],
         progress: { isLeaderboardVisible: true },
         leaderboard: SIX_TEAMS,
         leaderboardRevealCount: 5,
@@ -177,11 +177,11 @@ describe('DisplayPage — completion and leaderboard', () => {
 
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
-        rounds: [kahootRound],
+        rounds: [quickfireRound],
         progress: {
           status: 'question_open',
           questionIndex: 1,
-          // Every kahoot question is its own block, so it is block position 0.
+          // Every quickfire question is its own block, so it is block position 0.
           furthestOpenIndex: 0,
           isLeaderboardVisible: true,
         },
@@ -198,7 +198,7 @@ describe('DisplayPage — completion and leaderboard', () => {
     expect(screen.queryByText('30')).not.toBeInTheDocument();
   });
 
-  it('shows every team when the current round is not kahoot mode', () => {
+  it('shows every team when the current round is not quickfire mode', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
         progress: { isLeaderboardVisible: true },

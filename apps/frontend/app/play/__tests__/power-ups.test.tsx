@@ -50,11 +50,11 @@ function phone({
   buyPowerUp = vi.fn().mockResolvedValue({ success: true }),
   roomReadyQuestionIds = [],
   answers = {},
-  isKahoot = false,
+  isQuickfire = false,
 }: {
   roomReadyQuestionIds?: number[];
   answers?: Record<number, string>;
-  isKahoot?: boolean;
+  isQuickfire?: boolean;
   settings?: Partial<SessionSettings>;
   coins?: number;
   purchases?: PurchaseView[];
@@ -65,7 +65,7 @@ function phone({
   mockUseTeamLink.mockReturnValue(
     teamLinkResult({
       session: {
-        rounds: [{ kahootMode: isKahoot, questions: [question] }],
+        rounds: [{ quickfire: isQuickfire, questions: [question] }],
         progress: { status: 'question_open' },
         settings: { powerUps: defaultPowerUpSettings(false), ...settings },
       } as never,
@@ -109,8 +109,8 @@ describe('PlayPage — the power-up bar', () => {
     expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
   });
 
-  it('offers no question power-up in a kahootMode round, where a tap locks the pick', () => {
-    phone({ isKahoot: true });
+  it('offers no question power-up in a quickfire round, where a tap locks the pick', () => {
+    phone({ isQuickfire: true });
 
     expect(
       screen.queryByRole('button', { name: /^Activate/ }),

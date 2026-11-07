@@ -7,10 +7,14 @@ import { seedCsvSession } from './csv-session';
 import { PATHS } from './env';
 import type { SeededSession } from './api';
 
-const KAHOOT_CSV = path.join(PATHS.e2eRoot, 'fixtures', 'kahoot-round.csv');
+const QUICKFIRE_CSV = path.join(
+  PATHS.e2eRoot,
+  'fixtures',
+  'quickfire-round.csv',
+);
 
-/** What `fixtures/kahoot-round.csv` holds: one kahoot round of two multiple-choice questions. */
-export const KAHOOT_ROUND = {
+/** What `fixtures/quickfire-round.csv` holds: one quickfire round of two multiple-choice questions. */
+export const QUICKFIRE_ROUND = {
   title: 'Quick fire',
   first: {
     prompt: 'Which planet is known as the Red Planet?',
@@ -26,29 +30,26 @@ export const KAHOOT_ROUND = {
   },
 } as const;
 
-export interface KahootSessionOptions {
-  /** Seconds a kahoot question stays open before it locks by itself; null for no timer. */
-  kahootQuestionTimerSeconds: number | null;
+export interface QuickfireSessionOptions {
+  /** Seconds a quickfire question stays open before it locks by itself; null for no timer. */
+  quickfireQuestionTimerSeconds: number | null;
   lockGraceSeconds: number;
 }
 
 /**
- * Imports the kahoot CSV as a new quiz with its round switched to kahoot mode
- * (no CSV column sets it) and creates a session on it.
+ * Imports the quickfire CSV as a new quickfire-mode quiz (previewed with mode
+ * quickfire; no CSV column sets it) and creates a session on it.
  */
-export function seedKahootSession(
+export function seedQuickfireSession(
   api: APIRequestContext,
   quizTitle: string,
-  options: KahootSessionOptions,
+  options: QuickfireSessionOptions,
 ): Promise<SeededSession> {
-  return seedCsvSession(api, KAHOOT_CSV, quizTitle, options, (round) => ({
-    ...round,
-    kahootMode: true,
-  }));
+  return seedCsvSession(api, QUICKFIRE_CSV, quizTitle, options, 'quickfire');
 }
 
-/** A kahoot choice is sent the moment it is tapped (there is no Submit button); resolves once the server has saved it. */
-export async function answerKahootChoice(
+/** A quickfire choice is sent the moment it is tapped (there is no Submit button); resolves once the server has saved it. */
+export async function answerQuickfireChoice(
   phone: PhoneScreen,
   option: string,
 ): Promise<void> {
@@ -58,7 +59,7 @@ export async function answerKahootChoice(
 
 /**
  * The session moves to `status` with nobody pressing anything: a timer ran out.
- * Records the `move` the timer is (the kahoot question timer is a
+ * Records the `move` the timer is (the quickfire question timer is a
  * `phase_timer`, the lock countdown an `auto_advance`).
  */
 export async function expectTimerMove(

@@ -208,15 +208,16 @@ export class StatsService {
 
     const roundExtras = (await knex('rounds as r')
       .join('game_sessions as gs', 'gs.quiz_id', 'r.quiz_id')
+      .join('quizzes as qz', 'qz.id', 'r.quiz_id')
       .where('gs.id', gameSessionId)
       .select(
         'r.id as roundId',
         'r.author',
         'r.note',
-        'r.kahoot_mode as isKahoot',
+        knex.raw(`qz.mode = 'quickfire' as "isQuickfire"`),
       )) as Pick<
       SessionBriefRoundInputRow,
-      'roundId' | 'author' | 'note' | 'isKahoot'
+      'roundId' | 'author' | 'note' | 'isQuickfire'
     >[];
     const roundExtrasById = new Map(roundExtras.map((r) => [r.roundId, r]));
 
@@ -612,14 +613,14 @@ function toFeedbackTrendsSession(
 function withRoundExtras<Round>(
   round: Round,
   extras:
-    | Pick<SessionBriefRoundInputRow, 'author' | 'note' | 'isKahoot'>
+    | Pick<SessionBriefRoundInputRow, 'author' | 'note' | 'isQuickfire'>
     | undefined,
-): Round & Pick<SessionBriefRoundInputRow, 'author' | 'note' | 'isKahoot'> {
+): Round & Pick<SessionBriefRoundInputRow, 'author' | 'note' | 'isQuickfire'> {
   return {
     ...round,
     author: extras?.author ?? null,
     note: extras?.note ?? null,
-    isKahoot: extras?.isKahoot ?? false,
+    isQuickfire: extras?.isQuickfire ?? false,
   };
 }
 

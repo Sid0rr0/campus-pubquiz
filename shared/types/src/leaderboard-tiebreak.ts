@@ -1,21 +1,23 @@
 import { rankTeams } from './ranking-rule';
 import type { LeaderboardEntry } from './room-views';
 
-/** How many teams a kahootMode round's leaderboard shows — applied once, by capLeaderboard, for both the drawn board and the reveal walk's step count. */
-export const KAHOOT_LEADERBOARD_TOP_N = 5;
+/** How many teams a quickfire round's leaderboard shows — applied once, by capLeaderboard, for both the drawn board and the reveal walk's step count. */
+export const QUICKFIRE_LEADERBOARD_TOP_N = 5;
 
 /**
- * The teams a leaderboard shows: everyone, except in a kahootMode round, which
- * keeps the first KAHOOT_LEADERBOARD_TOP_N by final standing and splits a tie
+ * The teams a leaderboard shows: everyone, except in a quickfire round, which
+ * keeps the first QUICKFIRE_LEADERBOARD_TOP_N by final standing and splits a tie
  * that straddles the cutoff. The one place the cap lives — the drawn board and
  * the reveal walk's step count both read it.
  */
 export function capLeaderboard(
   leaderboard: LeaderboardEntry[],
-  isKahootRound: boolean,
+  isQuickfireRound: boolean,
 ): LeaderboardEntry[] {
   const ranked = rankTeams(leaderboard);
-  return isKahootRound ? ranked.slice(0, KAHOOT_LEADERBOARD_TOP_N) : ranked;
+  return isQuickfireRound
+    ? ranked.slice(0, QUICKFIRE_LEADERBOARD_TOP_N)
+    : ranked;
 }
 
 /**
@@ -26,9 +28,9 @@ export function capLeaderboard(
  */
 export function getLeaderboardRevealStepCount(
   leaderboard: LeaderboardEntry[],
-  isKahootRound: boolean,
+  isQuickfireRound: boolean,
 ): number {
-  const shown = capLeaderboard(leaderboard, isKahootRound);
+  const shown = capLeaderboard(leaderboard, isQuickfireRound);
   return new Set(shown.map((entry) => entry.rank)).size;
 }
 

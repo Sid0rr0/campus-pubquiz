@@ -9,7 +9,7 @@ import { describeControlAvailability } from './control-availability';
 import type { DisplayScreen } from './display-screen';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
-import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import { isQuestionHiddenBehindQuickfireLeaderboard } from './quickfire-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import { FULLY_REVEALED_STEP } from './closest-guess-reveal';
 import {
@@ -240,7 +240,7 @@ function projectPlayers({
             closestGuessRevealStep,
           ),
   };
-  return isQuestionHiddenBehindKahootLeaderboard(session)
+  return isQuestionHiddenBehindQuickfireLeaderboard(session)
     ? { ...view, currentQuestion: null, blockQuestions: [] }
     : view;
 }

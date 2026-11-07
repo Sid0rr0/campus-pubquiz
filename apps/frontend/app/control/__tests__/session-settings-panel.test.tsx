@@ -55,6 +55,33 @@ describe('SessionSettingsPanel', () => {
     mockFetchLeagues.mockResolvedValue({ items: [] });
   });
 
+  it('hides jokers, power-ups and leagues for a quickfire session and saves no coin settings', async () => {
+    mockFetchLeagues.mockResolvedValue({ items: [league(4, 'Winter', true)] });
+    renderWithQuery(
+      <SessionSettingsPanel
+        joinCode="ABCDEF"
+        settings={DEFAULT_SESSION_SETTINGS}
+        isQuickfire
+      />,
+    );
+
+    await waitFor(() => expect(mockFetchLeagues).toHaveBeenCalled());
+    expect(screen.queryByLabelText('Jokers')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('tab', { name: 'Power-ups' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Winter')).not.toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Quickfire question timer/),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    const saved = mockUpdateSessionSettings.mock.calls[0][1];
+    expect(saved).not.toHaveProperty('startingCoins');
+    expect(saved).not.toHaveProperty('powerUps');
+  });
+
   describe('league checkboxes', () => {
     it('hides the section when there are no leagues to tick', async () => {
       renderWithQuery(

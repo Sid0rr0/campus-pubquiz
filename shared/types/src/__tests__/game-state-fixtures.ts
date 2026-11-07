@@ -7,18 +7,18 @@ export const twoRoundsWithBreakAfterSecond: GameContext = {
   ],
 };
 
-/** A normal round followed by a 3-question kahootMode round — every question of round 1 is its own one-question block. */
-export const kahootRoundAfterNormalRound: GameContext = {
+/** A normal round followed by a 3-question quickfire round — every question of round 1 is its own one-question block. */
+export const quickfireRoundAfterNormalRound: GameContext = {
   rounds: [
     { questionCount: 1, breakAfter: true },
-    { questionCount: 3, breakAfter: false, kahootMode: true },
+    { questionCount: 3, breakAfter: false, quickfire: true },
   ],
 };
 
-/** A 2-question kahootMode round followed by a normal round — for testing that finishing the kahoot round's last question moves on to the next round rather than ending the quiz. */
-export const kahootRoundBeforeNormalRound: GameContext = {
+/** A 2-question quickfire round followed by a normal round — for testing that finishing the quickfire round's last question moves on to the next round rather than ending the quiz. */
+export const quickfireRoundBeforeNormalRound: GameContext = {
   rounds: [
-    { questionCount: 2, breakAfter: false, kahootMode: true },
+    { questionCount: 2, breakAfter: false, quickfire: true },
     { questionCount: 1, breakAfter: true },
   ],
 };

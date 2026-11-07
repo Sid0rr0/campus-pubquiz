@@ -103,29 +103,29 @@ describe('GameStateService — updateSessionSettings', () => {
     );
   });
 
-  it('merges and persists kahootQuestionTimerSeconds', async () => {
-    await update({ kahootQuestionTimerSeconds: 45 });
+  it('merges and persists quickfireQuestionTimerSeconds', async () => {
+    await update({ quickfireQuestionTimerSeconds: 45 });
 
     expect(settings()).toEqual({
       ...DEFAULT_SESSION_SETTINGS,
-      kahootQuestionTimerSeconds: 45,
+      quickfireQuestionTimerSeconds: 45,
     });
     const restarted = await game.restart();
     expect(
       restarted.gameState.getSnapshot(game.joinCode).settings
-        .kahootQuestionTimerSeconds,
+        .quickfireQuestionTimerSeconds,
     ).toBe(45);
   });
 
-  it('round-trips a null kahootQuestionTimerSeconds without being stripped', async () => {
-    await update({ kahootQuestionTimerSeconds: 45 });
-    await update({ kahootQuestionTimerSeconds: null });
+  it('round-trips a null quickfireQuestionTimerSeconds without being stripped', async () => {
+    await update({ quickfireQuestionTimerSeconds: 45 });
+    await update({ quickfireQuestionTimerSeconds: null });
 
-    expect(settings().kahootQuestionTimerSeconds).toBe(null);
+    expect(settings().quickfireQuestionTimerSeconds).toBe(null);
     const restarted = await game.restart();
     expect(
       restarted.gameState.getSnapshot(game.joinCode).settings
-        .kahootQuestionTimerSeconds,
+        .quickfireQuestionTimerSeconds,
     ).toBe(null);
   });
 

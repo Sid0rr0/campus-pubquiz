@@ -9,12 +9,12 @@ import type { SeededRound, SessionState } from '../session-state';
 import { round, sessionWith } from './session-fixtures';
 
 // Rounds 1 and 2 share a block (round 1 has no break), round 3 is its own, and
-// round 4 is a kahoot round where every question is its own block.
+// round 4 is a quickfire round where every question is its own block.
 const ROUNDS: SeededRound[] = [
   round(1, [1, 2], { breakAfter: false }),
   round(2, [3, 4]),
   round(3, [5]),
-  round(4, [6, 7], { kahootMode: true }),
+  round(4, [6, 7], { quickfire: true }),
 ];
 
 function at(
@@ -34,7 +34,7 @@ describe('getActiveBlockStartIndex', () => {
     expect(getActiveBlockStartIndex(at({ roundIndex: 2 }))).toBe(2);
   });
 
-  it('is the current round for a question of a kahoot round', () => {
+  it('is the current round for a question of a quickfire round', () => {
     expect(
       getActiveBlockStartIndex(at({ roundIndex: 3, questionIndex: 1 })),
     ).toBe(3);
@@ -125,7 +125,7 @@ describe('isLastQuestionBeforeBreak', () => {
     ).toBe(false);
   });
 
-  it('is true on any question of a kahoot round', () => {
+  it('is true on any question of a quickfire round', () => {
     expect(
       isLastQuestionBeforeBreak(
         at({ status: 'question_open', roundIndex: 3, questionIndex: 0 }),

@@ -7,7 +7,7 @@ export function questionId(roundIndex: number, questionIndex: number): number {
 
 function round(
   roundIndex: number,
-  overrides: Pick<SeededRound, 'breakAfter' | 'kahootMode'>,
+  overrides: Pick<SeededRound, 'breakAfter' | 'quickfire'>,
 ): SeededRound {
   const questions: SeededQuestion[] = [0, 1].map((questionIndex) => ({
     id: questionId(roundIndex, questionIndex),
@@ -26,13 +26,13 @@ function round(
 
 /**
  * Two blocks (rounds 0-1 are one block spanning two rounds; round 2 is the
- * second), a two-question kahoot round (each question its own block) and a
+ * second), a two-question quickfire round (each question its own block) and a
  * final round. Every round has two questions.
  */
 export const BLOCK_IN_PLAY_ROUNDS: SeededRound[] = [
   round(0, { breakAfter: false }),
   round(1, { breakAfter: true }),
   round(2, { breakAfter: true }),
-  round(3, { breakAfter: false, kahootMode: true }),
+  round(3, { breakAfter: false, quickfire: true }),
   round(4, { breakAfter: true }),
 ];

@@ -5,7 +5,7 @@ import {
   type GameProgress,
 } from '../game-state';
 import {
-  kahootRoundAfterNormalRound,
+  quickfireRoundAfterNormalRound,
   lobby,
   twoRoundsWithBreakAfterSecond,
 } from './game-state-fixtures';
@@ -104,7 +104,7 @@ describe('getNextGameState — furthestOpenIndex tracking', () => {
     });
   });
 
-  it('does not move furthestOpenIndex backwards when a kahoot reveal opens the next question', () => {
+  it('does not move furthestOpenIndex backwards when a quickfire reveal opens the next question', () => {
     const revealing: GameProgress = {
       ...lobby,
       status: 'reveal',
@@ -115,7 +115,7 @@ describe('getNextGameState — furthestOpenIndex tracking', () => {
     const next = getNextGameState(
       revealing,
       'ADVANCE',
-      kahootRoundAfterNormalRound,
+      quickfireRoundAfterNormalRound,
     );
     expect(next).toMatchObject({
       status: 'question_open',

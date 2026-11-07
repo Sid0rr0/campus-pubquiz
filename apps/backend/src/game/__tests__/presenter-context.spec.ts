@@ -655,13 +655,13 @@ describe('GameStateService — getPresenterContext', () => {
       });
     });
 
-    describe('a kahoot round', () => {
-      const KAHOOT_TEAMS = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'];
-      const KAHOOT_QUIZ: QuizRoundSpec[] = [
+    describe('a quickfire round', () => {
+      const QUICKFIRE_TEAMS = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'];
+      const QUICKFIRE_QUIZ: QuizRoundSpec[] = [
         {
-          title: 'Kahoot',
+          title: 'Quickfire',
           breakAfter: true,
-          kahootMode: true,
+          quickfire: true,
           questions: ['A', 'B', 'C', 'D', 'E'].map((answer) => ({
             type: 'free_text' as const,
             prompt: `Say ${answer}`,
@@ -673,12 +673,12 @@ describe('GameStateService — getPresenterContext', () => {
 
       it('agrees through the between-questions board and the round-end board with its top-5 cutoff', async () => {
         game = await harness.createGateway({
-          rounds: KAHOOT_QUIZ,
-          teamNames: KAHOOT_TEAMS,
+          rounds: QUICKFIRE_QUIZ,
+          teamNames: QUICKFIRE_TEAMS,
         });
         const answer = createAnswerer(
           game,
-          KAHOOT_QUIZ,
+          QUICKFIRE_QUIZ,
           (team, question) => question < team,
         );
 

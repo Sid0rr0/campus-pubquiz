@@ -29,7 +29,7 @@ const BETA_TEAM = {
 };
 
 /**
- * A kahoot round's board between questions: Beta (our team) is first on 10
+ * A quickfire round's board between questions: Beta (our team) is first on 10
  * points after being second on 5, Alpha slipped to second.
  */
 function boardSession(
@@ -40,7 +40,7 @@ function boardSession(
   ],
 ): SessionDescription {
   return {
-    rounds: [{ kahootMode: true, questions: [{}] }],
+    rounds: [{ quickfire: true, questions: [{}] }],
     progress: { status: 'question_open', isLeaderboardVisible: true },
     leaderboard,
     priorStandings: [
@@ -163,7 +163,7 @@ describe('PlayPage — the 2× stamp on the own leaderboard row', () => {
   it('shows no stamp for a team whose joker is on another round', () => {
     const session = {
       ...boardSession(2),
-      rounds: [{ kahootMode: true, questions: [{}] }, { questions: [{}] }],
+      rounds: [{ quickfire: true, questions: [{}] }, { questions: [{}] }],
       jokers: { 2: { roundId: 2, source: 'chosen' as const } },
     };
     mockUseTeamLink.mockReturnValue(linkFor(session, BETA_TEAM));

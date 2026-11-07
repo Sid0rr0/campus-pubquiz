@@ -8,11 +8,11 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const KAHOOT_TIMER_SECONDS = 30;
+const QUICKFIRE_TIMER_SECONDS = 30;
 const ELAPSED_MS = 5_000;
 const FROZEN_NOW = '2024-01-01T00:00:00.000Z';
 
-describe('GameGateway — kahoot question timer deadline', () => {
+describe('GameGateway — quickfire question timer deadline', () => {
   const harness = setupRealStoreGatewayTest();
 
   // Only Date is frozen (timers stay real), so the 30s deadline never fires
@@ -25,15 +25,15 @@ describe('GameGateway — kahoot question timer deadline', () => {
     restoreClock();
   });
 
-  /** What the big screen is sent — the room that carries the kahoot deadline. */
+  /** What the big screen is sent — the room that carries the quickfire deadline. */
   function displayView(game: RealStoreGateway) {
     return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
   }
 
-  function timedKahoot(options: CreateGatewayOptions = {}) {
+  function timedQuickfire(options: CreateGatewayOptions = {}) {
     return harness.createGateway({
-      kahootMode: true,
-      settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+      quickfire: true,
+      settings: { quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS },
       ...options,
     });
   }
@@ -46,54 +46,56 @@ describe('GameGateway — kahoot question timer deadline', () => {
   }
 
   it('has no deadline in the lobby', async () => {
-    const game = await timedKahoot();
+    const game = await timedQuickfire();
 
-    expect((await game.resync('display')).kahootQuestionEndsAt).toBeNull();
+    expect((await game.resync('display')).quickfireQuestionEndsAt).toBeNull();
   });
 
-  it('has no deadline on a non-kahoot round question_open', async () => {
-    const game = await timedKahoot({ kahootMode: false });
+  it('has no deadline on a non-quickfire round question_open', async () => {
+    const game = await timedQuickfire({ quickfire: false });
 
     const opened = await openFirstQuestion(game);
 
     expect(opened.progress.status).toBe('question_open');
-    expect(opened.kahootQuestionEndsAt).toBeNull();
+    expect(opened.quickfireQuestionEndsAt).toBeNull();
   });
 
-  it('has no deadline when kahootQuestionTimerSeconds is null (default settings)', async () => {
-    const game = await timedKahoot({
-      settings: { kahootQuestionTimerSeconds: null },
+  it('has no deadline when quickfireQuestionTimerSeconds is null (default settings)', async () => {
+    const game = await timedQuickfire({
+      settings: { quickfireQuestionTimerSeconds: null },
     });
 
     const opened = await openFirstQuestion(game);
 
     expect(opened.progress.status).toBe('question_open');
-    expect(opened.kahootQuestionEndsAt).toBeNull();
+    expect(opened.quickfireQuestionEndsAt).toBeNull();
   });
 
-  it('arms the deadline at phaseStartedAt + timerSeconds*1000 once a kahoot question opens', async () => {
-    const game = await timedKahoot();
+  it('arms the deadline at phaseStartedAt + timerSeconds*1000 once a quickfire question opens', async () => {
+    const game = await timedQuickfire();
 
     const opened = await openFirstQuestion(game);
 
     expect(opened.progress.status).toBe('question_open');
-    const expected = Date.now() + KAHOOT_TIMER_SECONDS * 1000;
-    expect(opened.kahootQuestionEndsAt).toBe(expected);
-    expect((await game.resync('display')).kahootQuestionEndsAt).toBe(expected);
+    const expected = Date.now() + QUICKFIRE_TIMER_SECONDS * 1000;
+    expect(opened.quickfireQuestionEndsAt).toBe(expected);
+    expect((await game.resync('display')).quickfireQuestionEndsAt).toBe(
+      expected,
+    );
   });
 
   it('clears the deadline on ADVANCE into locking', async () => {
-    const game = await timedKahoot();
+    const game = await timedQuickfire();
     await openFirstQuestion(game);
 
     const locking = await game.act('ADVANCE'); // -> locking q0
 
     expect(locking.progress.status).toBe('locking');
-    expect((await game.resync('display')).kahootQuestionEndsAt).toBeNull();
+    expect((await game.resync('display')).quickfireQuestionEndsAt).toBeNull();
   });
 
-  it('does not re-arm a deadline when PREVIOUS reopens an older, non-frontier kahoot question', async () => {
-    const game = await timedKahoot();
+  it('does not re-arm a deadline when PREVIOUS reopens an older, non-frontier quickfire question', async () => {
+    const game = await timedQuickfire();
     await openFirstQuestion(game); // q0 (live)
     await game.act('ADVANCE'); // -> locking q0
     await game.act('ADVANCE'); // -> reveal q0
@@ -107,22 +109,22 @@ describe('GameGateway — kahoot question timer deadline', () => {
 
     expect(reopened.progress.status).toBe('question_open');
     expect(reopened.progress.questionIndex).toBe(0);
-    expect(reopened.kahootQuestionEndsAt).toBeNull();
-    expect((await game.resync('display')).kahootQuestionEndsAt).toBeNull();
+    expect(reopened.quickfireQuestionEndsAt).toBeNull();
+    expect((await game.resync('display')).quickfireQuestionEndsAt).toBeNull();
   });
 
   it('re-arms the deadline against the persisted phaseStartedAt on restart, not a fresh Date.now()', async () => {
-    const game = await timedKahoot();
+    const game = await timedQuickfire();
     const opened = await openFirstQuestion(game);
     advanceClockBy(ELAPSED_MS);
 
     const restarted = await game.restart();
 
-    expect((await restarted.resync('display')).kahootQuestionEndsAt).toBe(
-      opened.kahootQuestionEndsAt,
+    expect((await restarted.resync('display')).quickfireQuestionEndsAt).toBe(
+      opened.quickfireQuestionEndsAt,
     );
-    expect(opened.kahootQuestionEndsAt).toBe(
-      Date.now() - ELAPSED_MS + KAHOOT_TIMER_SECONDS * 1000,
+    expect(opened.quickfireQuestionEndsAt).toBe(
+      Date.now() - ELAPSED_MS + QUICKFIRE_TIMER_SECONDS * 1000,
     );
   });
 });

@@ -32,8 +32,8 @@ export interface SessionSettings {
   maxPlayersPerTeam: number;
   /** Points deducted per player beyond maxPlayersPerTeam — display text only, no enforcement. Shown in the generated first /rules bullet. */
   extraPlayerPenaltyPoints: number;
-  /** Seconds a kahootMode round's question stays open before auto-locking, or null for unlimited (no timer armed). */
-  kahootQuestionTimerSeconds: number | null;
+  /** Seconds a quickfire round's question stays open before auto-locking, or null for unlimited (no timer armed). */
+  quickfireQuestionTimerSeconds: number | null;
   /** Whether teams are asked for feedback — the break card and the final form on phones. Off means the server also refuses ratings and Send. */
   collectFeedback: boolean;
   /** Whether the break screen on /display rotates fun facts. Off means the server sends the display an empty `funFacts`. */
@@ -62,8 +62,8 @@ export function hasJokersWithoutOverview(
   );
 }
 
-/** Default prefill for kahootQuestionTimerSeconds when the frontend detects the quiz being started contains a kahootMode round — see session-picker-panel.tsx. */
-export const DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS = 30;
+/** Default prefill for quickfireQuestionTimerSeconds when the frontend detects the quiz being started contains a quickfire round — see session-picker-panel.tsx. */
+export const DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS = 30;
 
 // Frozen (including its array and map fields) so no code path can ever
 // mutate this shared singleton in place: every session created with default
@@ -89,7 +89,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   }) as Partial<Record<BonusCategory, number>>,
   maxPlayersPerTeam: 6,
   extraPlayerPenaltyPoints: 2,
-  kahootQuestionTimerSeconds: null,
+  quickfireQuestionTimerSeconds: null,
   collectFeedback: true,
   funFactsEnabled: true,
   listed: true,

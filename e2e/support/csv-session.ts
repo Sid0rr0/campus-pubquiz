@@ -20,17 +20,17 @@ interface QuizSavedResponse {
 
 /**
  * Imports the CSV at `csvPath` as a new quiz titled `quizTitle`: previews it (so a bad fixture fails here) and saves what the preview parsed.
- * `mapRounds` changes a round before it is saved, for what no CSV column sets (e.g. `kahootMode`).
+ * `mode` is the quiz mode it is previewed and saved with (the CSV has no column for it); pub when omitted.
  */
 export async function importCsvQuiz(
   api: APIRequestContext,
   csvPath: string,
   quizTitle: string,
-  mapRounds: (round: QuizRound, index: number) => QuizRound = (round) => round,
+  mode: 'pub' | 'quickfire' = 'pub',
 ): Promise<number> {
   const csvText = fs.readFileSync(csvPath, 'utf8');
   const previewResponse = await api.post('/import/preview', {
-    data: { csvText, quizTitle },
+    data: { csvText, quizTitle, mode },
   });
   expect(previewResponse.ok(), 'import preview').toBe(true);
   const preview = (await previewResponse.json()) as ImportPreviewResponse;
@@ -38,7 +38,7 @@ export async function importCsvQuiz(
   expect(preview.isImportable).toBe(true);
 
   const saveResponse = await api.post('/quizzes', {
-    data: { title: quizTitle, rounds: preview.rounds.map(mapRounds) },
+    data: { title: quizTitle, mode, rounds: preview.rounds },
   });
   expect(saveResponse.ok(), `save quiz: ${await saveResponse.text()}`).toBe(
     true,
@@ -52,9 +52,9 @@ export async function seedCsvSession(
   csvPath: string,
   quizTitle: string,
   settings: SessionSettingsInput,
-  mapRounds?: (round: QuizRound, index: number) => QuizRound,
+  mode?: 'pub' | 'quickfire',
 ): Promise<SeededSession> {
-  const quizId = await importCsvQuiz(api, csvPath, quizTitle, mapRounds);
+  const quizId = await importCsvQuiz(api, csvPath, quizTitle, mode);
   const joinCode = await createSession(api, quizId, quizTitle, settings);
   return { joinCode, quizId, quizTitle };
 }

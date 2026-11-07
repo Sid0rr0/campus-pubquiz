@@ -50,6 +50,7 @@ const HISTORY: TeamPageHistory = {
       maxPoints: 40,
       correctCount: 10,
       playerCount: null,
+      isQuickfire: false,
     },
     {
       gameSessionId: 1,
@@ -63,6 +64,7 @@ const HISTORY: TeamPageHistory = {
       maxPoints: 40,
       correctCount: 2,
       playerCount: null,
+      isQuickfire: false,
     },
   ],
 };

@@ -8,7 +8,7 @@ export interface QuestionPosition {
 /**
  * True when locking the question at (roundIndex, questionIndex) ends its
  * block: either it's the last question of a round with breakAfter: true (the
- * original, round-granular rule), or the round is kahootMode — in which case
+ * original, round-granular rule), or the round is quickfire — in which case
  * every one of its questions is its own one-question block, locking, scoring,
  * and revealing independently before the next one opens.
  */
@@ -19,7 +19,7 @@ export function isBreakPointQuestion(
 ): boolean {
   const round = context.rounds[roundIndex];
   return (
-    Boolean(round.kahootMode) ||
+    Boolean(round.quickfire) ||
     (round.breakAfter && questionIndex + 1 >= round.questionCount)
   );
 }
@@ -63,7 +63,7 @@ function getNextQuestionPosition(
  * First question of the block containing (roundIndex, questionIndex):
  * walking backward, the question right after the nearest earlier break-point
  * question, or the quiz's very first question if none is found. A
- * breakAfter round's last question (or, in kahootMode, every question)
+ * breakAfter round's last question (or, in quickfire, every question)
  * closes its own block, so it belongs to the block that starts after the
  * previous break point.
  */
@@ -72,11 +72,11 @@ export function getBlockStartPosition(
   questionIndex: number,
   context: GameContext,
 ): QuestionPosition {
-  // Every kahootMode question is its own block start regardless of the
+  // Every quickfire question is its own block start regardless of the
   // previous question's round — the backward walk below only detects break
-  // points on the *previous* question, so a kahootMode round immediately
+  // points on the *previous* question, so a quickfire round immediately
   // after a non-breakpoint round would otherwise be merged into it.
-  if (context.rounds[roundIndex].kahootMode) {
+  if (context.rounds[roundIndex].quickfire) {
     return { roundIndex, questionIndex };
   }
   let current: QuestionPosition = { roundIndex, questionIndex };

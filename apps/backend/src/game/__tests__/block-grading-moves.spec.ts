@@ -424,9 +424,9 @@ describe('GameGateway — Block grading runs its steps in order for a move', () 
   });
 });
 
-const KAHOOT_ANSWER_DELAY_MS = 5_000;
+const QUICKFIRE_ANSWER_DELAY_MS = 5_000;
 
-describe('GameGateway — kahoot speed scoring when a question leaves locking', () => {
+describe('GameGateway — quickfire speed scoring when a question leaves locking', () => {
   const harness = setupRealStoreGatewayTest();
 
   beforeEach(() => {
@@ -437,7 +437,7 @@ describe('GameGateway — kahoot speed scoring when a question leaves locking', 
     restoreClock();
   });
 
-  // Scenario choice: a kahoot round leaves 'locking' straight for 'reveal' and
+  // Scenario choice: a quickfire round leaves 'locking' straight for 'reveal' and
   // never takes a break in between, so the reveal follows the speed scoring
   // directly. This pins that the scoring runs on that move and its points
   // reach the leaderboard and the ungraded set; it does not pin the ordering
@@ -448,7 +448,7 @@ describe('GameGateway — kahoot speed scoring when a question leaves locking', 
       rounds: [
         {
           title: 'Speed Round',
-          kahootMode: true,
+          quickfire: true,
           breakAfter: true,
           questions: [
             {
@@ -461,12 +461,12 @@ describe('GameGateway — kahoot speed scoring when a question leaves locking', 
           ],
         },
       ],
-      settings: { kahootQuestionTimerSeconds: 10 },
+      settings: { quickfireQuestionTimerSeconds: 10 },
     });
     const [questionId] = game.rounds[0].questionIds;
     await game.openFirstQuestion(await game.connectAdmin());
     const [{ socket, teamId }] = game.teams;
-    advanceClockBy(KAHOOT_ANSWER_DELAY_MS);
+    advanceClockBy(QUICKFIRE_ANSWER_DELAY_MS);
     await game.gateway.handleSubmitAnswer(asSocket(socket), {
       questionId,
       teamId,

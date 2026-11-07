@@ -11,7 +11,7 @@
 - main:
   - complementary:
     - heading "Quiz Master" [level=1]
-    - paragraph: /Quiz:\s+Kahoot [0-9a-z]+ [A-Z]+(-[A-Z]+){2}/
+    - paragraph: /Quiz:\s+Quickfire [0-9a-z]+ [A-Z]+(-[A-Z]+){2}/
     - paragraph: "Status: question_open"
     - paragraph: /Display:\s+R1Q1/
     - link "Open display"

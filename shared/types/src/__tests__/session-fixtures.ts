@@ -66,6 +66,7 @@ export function sessionWith(
         gameSessionId: 1,
         joinCode: 'ABCDEF',
         quizTitle: 'Test Quiz',
+        quizMode: 'pub',
         customName: null,
         startedAt: new Date('2026-09-16T12:00:00.000Z'),
         rounds,

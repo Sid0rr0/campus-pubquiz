@@ -66,9 +66,9 @@ export type RankTrend = 'up' | 'down' | 'same';
  * describeLeaderboardBoard) so every big screen draws the same thing.
  */
 export interface LeaderboardBoard {
-  /** The standings to draw, already capped (a kahoot round keeps its top five). */
+  /** The standings to draw, already capped (a quickfire round keeps its top five). */
   entries: LeaderboardEntry[];
-  /** The board to hold and count up from, then reorder into `entries` — present only for the between-questions kahoot board. */
+  /** The board to hold and count up from, then reorder into `entries` — present only for the between-questions quickfire board. */
   countUpBoard?: LeaderboardEntry[];
   /** Rank movement per team id, shown once the board settles; a team missing from the prior standings has none, and every team has none when there are none. */
   trends: Record<number, RankTrend>;
@@ -99,8 +99,8 @@ export interface StateSnapshotPayload {
   quizStructure: QuizStructureSummary;
   /** Title of the round at `progress.roundIndex` — shown big on the round_intro screen. */
   roundTitle: string;
-  /** Whether the round at `progress.roundIndex` has kahootMode set. */
-  isCurrentRoundKahoot: boolean;
+  /** Whether the round at `progress.roundIndex` has quickfire set. */
+  isCurrentRoundQuickfire: boolean;
   currentQuestion: QuestionView | null;
   /**
    * Questions open for (re-)answering: everything revealed so far in the
@@ -194,8 +194,8 @@ export interface DisplayStatePayload
   roundCategories: string[];
   /** Author of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
   roundAuthors: string[];
-  /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
-  kahootQuestionEndsAt: number | null;
+  /** Epoch-ms deadline when the currently-open quickfire question auto-locks, or null when not armed (non-quickfire round, unlimited setting, or a historical question revisited via Previous). */
+  quickfireQuestionEndsAt: number | null;
   /** Epoch-ms deadline of the open joker pick, or null when none is open. Carried apart from `screen` so the countdown music keeps playing under the join overlay, like the lock countdown. */
   jokerPickEndsAt: number | null;
   /** The revealed question's teams-correct count; null outside a reveal and on closest_guess, whose reveal names the closest teams. */
@@ -279,7 +279,7 @@ export interface AdminStatePayload
    */
   phaseElapsedMs: number | null;
 }
-/** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
+/** A team phone's view — a quickfire question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
 export interface PlayersStatePayload
   extends Omit<StateSnapshotPayload, 'revealQuestions'>, PlayersScreenFields {
   /** Which rounds the phone offers for rating right now — null when none; the same rule the server accepts a rating by. */

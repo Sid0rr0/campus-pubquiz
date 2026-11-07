@@ -43,6 +43,8 @@ export interface TeamSessionRow {
   correctCount: number;
   /** Null when the team reported no player count for the session. */
   playerCount: number | null;
+  /** A quickfire night: it counts as played, but not toward Wins or Average placing. */
+  isQuickfire: boolean;
 }
 
 /** A team's record over its ended sessions. Left sessions count as played but never as a placing. */

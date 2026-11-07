@@ -61,14 +61,14 @@ describe('DisplayPage — question lock countdown', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows a countdown ring while a kahoot question is open with a timer armed', () => {
+  it('shows a countdown ring while a quickfire question is open with a timer armed', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
-        rounds: [{ kahootMode: true, questions: [capitalOfFrance] }],
+        rounds: [{ quickfire: true, questions: [capitalOfFrance] }],
         progress: { status: 'question_open' },
-        timers: { kahootQuestionEndsAt: Date.now() + 20_000 },
+        timers: { quickfireQuestionEndsAt: Date.now() + 20_000 },
       }),
       connectionError: null,
       sendAction: vi.fn(),

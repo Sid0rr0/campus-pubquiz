@@ -100,6 +100,11 @@ export function LiveSessionSelect({
                   <Select.ItemText>{session.name}</Select.ItemText>
                   <span className="text-xs font-semibold text-foreground/55">
                     {session.joinCode}
+                    {session.isQuickfire && (
+                      <span className="ml-2 rounded-full bg-magenta/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-magenta">
+                        Quickfire
+                      </span>
+                    )}
                   </span>
                 </Select.Item>
               ))}

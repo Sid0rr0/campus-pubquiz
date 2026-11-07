@@ -358,7 +358,7 @@ describe('Screen projection — Advance/Previous availability', () => {
           revealCount: boardRevealCount(),
           stepCount: getLeaderboardRevealStepCount(
             view.leaderboard,
-            view.isCurrentRoundKahoot ?? false,
+            view.isCurrentRoundQuickfire ?? false,
           ),
           rankedTeamCount: view.leaderboard.length,
         });
@@ -501,13 +501,13 @@ describe('Screen projection — Advance/Previous availability', () => {
       });
     });
 
-    describe('a kahoot round', () => {
-      const KAHOOT_TEAMS = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'];
-      const KAHOOT_QUIZ: QuizRoundSpec[] = [
+    describe('a quickfire round', () => {
+      const QUICKFIRE_TEAMS = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'];
+      const QUICKFIRE_QUIZ: QuizRoundSpec[] = [
         {
-          title: 'Kahoot',
+          title: 'Quickfire',
           breakAfter: true,
-          kahootMode: true,
+          quickfire: true,
           questions: ['A', 'B', 'C', 'D', 'E'].map((answer) => ({
             type: 'free_text' as const,
             prompt: `Say ${answer}`,
@@ -519,8 +519,8 @@ describe('Screen projection — Advance/Previous availability', () => {
 
       beforeEach(async () => {
         game = await harness.createGateway({
-          rounds: KAHOOT_QUIZ,
-          teamNames: KAHOOT_TEAMS,
+          rounds: QUICKFIRE_QUIZ,
+          teamNames: QUICKFIRE_TEAMS,
         });
         await game.act('START_QUIZ');
       });
@@ -528,7 +528,7 @@ describe('Screen projection — Advance/Previous availability', () => {
       it('announces the between-questions board and the capped round-end board at every point', async () => {
         // Team N gets the first N questions right: six different scores.
         const answer = answerWith(
-          KAHOOT_QUIZ,
+          QUICKFIRE_QUIZ,
           (team, question) => question < team,
         );
 
@@ -554,7 +554,7 @@ describe('Screen projection — Advance/Previous availability', () => {
 
       it('announces whether Previous works at every point back from the end', async () => {
         await walkForward(
-          answerWith(KAHOOT_QUIZ, (team, question) => question < team),
+          answerWith(QUICKFIRE_QUIZ, (team, question) => question < team),
         );
 
         const steps = await walkBackward();

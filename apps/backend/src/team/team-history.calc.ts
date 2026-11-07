@@ -15,6 +15,7 @@ export interface TeamHistorySession {
   result: SessionResult;
   /** Null when the team reported no player count for the session. */
   playerCount: number | null;
+  isQuickfire: boolean;
 }
 
 /**
@@ -43,8 +44,9 @@ export function teamHistoryOf(
       maxPoints: session.result.maxPoints,
       correctCount: team.correctCount,
       playerCount: session.playerCount,
+      isQuickfire: session.isQuickfire,
     });
-    if (team.wonNight) nightsWon += 1;
+    if (team.wonNight && !session.isQuickfire) nightsWon += 1;
   }
   return { rows, nightsWon };
 }
@@ -67,7 +69,9 @@ function placingsOf(rows: readonly TeamSessionRow[]): number[] {
 export function averagePlacingOf(
   rows: readonly TeamSessionRow[],
 ): number | null {
-  return displayedAveragePlacing(placingsOf(rows));
+  return displayedAveragePlacing(
+    placingsOf(rows.filter((row) => !row.isQuickfire)),
+  );
 }
 
 /**

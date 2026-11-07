@@ -229,13 +229,13 @@ export function visibleRoundTitle(
  * no opened question whose intro has not been on air (the current round's
  * intro is on air or past in every status after the joker pick). Null when
  * there is none, in the lobby (the settings can still turn power-ups off under
- * a purchase) and when the next round is a kahootMode round.
+ * a purchase) and when the next round is a quickfire round.
  */
 export function extraJokerRoundId(session: {
   seededGame: {
     rounds: readonly {
       id: number;
-      kahootMode?: boolean;
+      quickfire?: boolean;
       questions: readonly { id: number }[];
     }[];
   };
@@ -249,8 +249,8 @@ export function extraJokerRoundId(session: {
   const next = pickableRounds(rounds, session.openedQuestionIds).find(
     (round) => rounds.indexOf(round) > lastIntroIndex,
   );
-  // A kahootMode round is never doubled this way, so it is not offered.
-  return next && !next.kahootMode ? next.id : null;
+  // A quickfire round is never doubled this way, so it is not offered.
+  return next && !next.quickfire ? next.id : null;
 }
 
 /** Why an extra joker for `roundId` is refused (worded for the team), or null when it goes through. */

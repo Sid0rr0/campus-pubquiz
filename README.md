@@ -41,7 +41,7 @@ reconnects and picks up exactly where they left off.
 ### Question types
 
 - Free text, multiple choice, sort/order, match pairs, closest guess, number (any question can also carry a picture, audio or YouTube video)
-- Kahoot-style rounds, where each question is locked, scored and revealed on
+- Quickfire rounds, where each question is locked, scored and revealed on
   its own
 
 ### Quiz authoring
@@ -207,6 +207,7 @@ pnpm --filter @campus-pubquiz/types mutate # shared/types only
 pnpm --filter backend mutate               # backend only (DB-free slice)
 pnpm --filter frontend mutate              # frontend only (non-component modules)
 pnpm --filter backend mutate:db            # backend game/state/, services and logic modules with the DB specs (needs Docker, slow)
+pnpm --filter backend mutate:db:areas      # the same, one area at a time, each logged to .logs/mutate-db/<area>.log
 ```
 
 Runs are incremental: Stryker keeps its results in `<workspace>/reports/stryker-incremental.json`
@@ -242,10 +243,17 @@ are gitignored.
   container for the run, gives each Stryker worker its own database, and
   stops the container afterwards. Separate from `pnpm mutate`, with its own
   `reports/stryker-db-incremental-v2.json` and `reports/mutation-db/` report.
-  It's slow: run one area at a time with
+  It's slow (a full run is about 9 hours), and an interrupted run saves nothing:
+  run it by area with `pnpm --filter backend mutate:db:areas [area ...]`
+  (`--list` prints the areas: a top-level `src/` folder, `game/` split by
+  subfolder). Each area logs to `.logs/mutate-db/<area>.log`, ending with its
+  clear-text report, and keeps its own `reports/stryker-db-incremental-v2-<area>.json`:
+  Stryker rewrites the incremental file with only the current run's mutants,
+  so areas sharing one file would wipe each other's results. The HTML report
+  holds only the last area run. A one-off
   `pnpm --filter backend mutate:db --mutate src/<area>/<file>.ts,src/<area>/<other>.ts`
-  (comma-separated: a repeated `--mutate` keeps only the last one);
-  incremental results carry over, so the areas add up to the full baseline.
+  (comma-separated: a repeated `--mutate` keeps only the last one) has the same
+  catch: it replaces the shared file's results with those files' alone.
   Its timeout is 3x the covered tests' time plus 30 s (the default hid
   survivors as timeouts); a file with many timeouts left is worth a one-file
   run with `--timeoutMS 120000 --timeoutFactor 5`.

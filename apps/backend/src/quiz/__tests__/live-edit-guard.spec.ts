@@ -119,28 +119,6 @@ describe('findLiveEditViolations', () => {
     expect(findLiveEditViolations(current, incoming, frontier())).toEqual([]);
   });
 
-  it("rejects changing a round's kahootMode", () => {
-    const current = [round()];
-    const incoming = [round({ kahootMode: true })];
-
-    const issues = findLiveEditViolations(current, incoming, frontier());
-
-    expect(issues).toEqual([
-      expect.objectContaining({
-        roundIndex: 0,
-        questionIndex: null,
-        field: 'kahootMode',
-      }),
-    ]);
-  });
-
-  it('treats an unset kahootMode as false', () => {
-    const current = [round({ kahootMode: false })];
-    const incoming = [round({ kahootMode: undefined })];
-
-    expect(findLiveEditViolations(current, incoming, frontier())).toEqual([]);
-  });
-
   it('rejects adding or removing a question within a round', () => {
     const current = [round()];
     const incoming = [
@@ -644,12 +622,6 @@ describe('findLiveEditViolations — rounds after the current round', () => {
       violations: [],
     },
     {
-      name: "changes a later round's kahoot setting",
-      currentRoundIndex: 0,
-      incoming: [r0(), { ...r1(), kahootMode: true }, r2()],
-      violations: [],
-    },
-    {
       name: 'moves an earlier round down past the current round',
       currentRoundIndex: 1,
       openedQuestionIds: [1, 2],
@@ -674,25 +646,11 @@ describe('findLiveEditViolations — rounds after the current round', () => {
       violations: [{ roundIndex: 1, field: 'breakAfter' }],
     },
     {
-      name: "changes the current round's kahoot setting",
-      currentRoundIndex: 1,
-      openedQuestionIds: [1, 2],
-      incoming: [r0(), { ...r1(), kahootMode: true }, r2()],
-      violations: [{ roundIndex: 1, field: 'kahootMode' }],
-    },
-    {
       name: "changes an earlier round's break-after",
       currentRoundIndex: 1,
       openedQuestionIds: [1, 2],
       incoming: [{ ...r0(), breakAfter: true }, r1(), r2()],
       violations: [{ roundIndex: 0, field: 'breakAfter' }],
-    },
-    {
-      name: "changes an earlier round's kahoot setting",
-      currentRoundIndex: 1,
-      openedQuestionIds: [1, 2],
-      incoming: [{ ...r0(), kahootMode: true }, r1(), r2()],
-      violations: [{ roundIndex: 0, field: 'kahootMode' }],
     },
     {
       name: 'inserts a round before a current round that has opened questions',
@@ -720,7 +678,7 @@ describe('findLiveEditViolations — rounds after the current round', () => {
       currentRoundIndex: 0,
       isLocking: true,
       openedQuestionIds: [1, 2],
-      incoming: [r0(), { ...r1(), kahootMode: true }, r2()],
+      incoming: [r0(), { ...r1(), breakAfter: true }, r2()],
       violations: [],
     },
   ];
@@ -1061,7 +1019,7 @@ describe('QuizLiveEditBlockedError', () => {
   it('names the number of conflicting changes and carries the issues', () => {
     const issues = [
       { roundIndex: 0, questionIndex: null, field: 'breakAfter', message: 'a' },
-      { roundIndex: 1, questionIndex: null, field: 'kahootMode', message: 'b' },
+      { roundIndex: 1, questionIndex: null, field: 'quickfire', message: 'b' },
     ];
 
     const error = new QuizLiveEditBlockedError(issues);

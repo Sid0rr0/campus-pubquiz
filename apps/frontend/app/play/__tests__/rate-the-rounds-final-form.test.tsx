@@ -29,7 +29,7 @@ function endedSession(isFeedbackCollected: boolean) {
     rounds: [
       { title: 'Music', questions: [{}] },
       { title: 'Film', questions: [{}] },
-      { title: 'Kahoot Blitz', kahootMode: true, questions: [{}] },
+      { title: 'Quickfire Blitz', quickfire: true, questions: [{}] },
     ],
     progress: { status: 'ended' as const },
     settings: { collectFeedback: isFeedbackCollected },
@@ -76,7 +76,7 @@ describe('PlayPage — the final feedback form', () => {
     renderEnded();
 
     expect(screen.getByText('Quiz complete!')).toBeInTheDocument();
-    for (const title of ['Music', 'Film', 'Kahoot Blitz']) {
+    for (const title of ['Music', 'Film', 'Quickfire Blitz']) {
       for (const stars of [1, 2, 3, 4, 5]) {
         expect(star(title, stars)).toBeInTheDocument();
       }
@@ -122,7 +122,7 @@ describe('PlayPage — the final feedback form', () => {
 
     await user.click(star('Music', 2));
 
-    expect(star('Kahoot Blitz', 3)).toBeInTheDocument();
+    expect(star('Quickfire Blitz', 3)).toBeInTheDocument();
     expect(screen.queryByText(/rated ✓ · edit/i)).not.toBeInTheDocument();
   });
 

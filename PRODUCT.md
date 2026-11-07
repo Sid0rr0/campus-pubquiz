@@ -20,7 +20,7 @@ Campus Pub Quiz is a modern replacement for paper answer sheets. It runs pub qui
 
 ## Positioning
 
-It keeps the pub quiz format and doesn't try to be a game show. Answers stay open and revisable until a block locks, the moderator grades typed answers, and answers are revealed after each block, with breaks and break reviews in between. A Kahoot-style mode is there for rounds that want per-question reveals, but it's one mode among others, not the core. Paper sheets can't score or rank themselves, and Kahoot can't run a real pub quiz.
+It keeps the pub quiz format and doesn't try to be a game show. Answers stay open and revisable until a block locks, the moderator grades typed answers, and answers are revealed after each block, with breaks and break reviews in between. A quickfire mode is there for rounds that want per-question reveals, but it's one mode among others, not the core. Paper sheets can't score or rank themselves, and Quickfire can't run a real pub quiz.
 
 ## Operating Context
 
@@ -32,7 +32,7 @@ It keeps the pub quiz format and doesn't try to be a game show. Answers stay ope
 
 ## Capabilities and Constraints
 
-- Question types: free text, multiple choice, sort/order, match pairs, closest guess, number. Any question can carry an image, audio or a YouTube clip. Kahoot rounds lock, score and reveal each question on its own.
+- Question types: free text, multiple choice, sort/order, match pairs, closest guess, number. Any question can carry an image, audio or a YouTube clip. Quickfire rounds lock, score and reveal each question on its own.
 - The server owns all game state; clients render snapshots and send intents. One backend instance, deployed together with Postgres, never on Vercel.
 - Team identity lives in localStorage. The recovery path is the team code.
 - Domain terms (block, break, break review, joker, showdown…) are defined in `GLOSSARY.md`; UI copy should use them consistently.
@@ -54,7 +54,7 @@ It keeps the pub quiz format and doesn't try to be a game show. Answers stay ope
 
 1. **Hosting over admin.** Every control-room feature should save the quiz master attention during a live night.
 2. **Never lose a team's work.** Reconnect, resync and safe live edits come before polish.
-3. **Pub quiz first, game show second.** Defaults follow the block-lock-reveal rhythm; Kahoot mode is an option, not the template.
+3. **Pub quiz first, game show second.** Defaults follow the block-lock-reveal rhythm; Quickfire mode is an option, not the template.
 4. **Digital where it adds something.** Automate scoring, ranking and media; keep the social, room-centred feel of a paper quiz.
 5. **Themeable, not branded-in.** ESN CTU is the first organiser, not the only one.
 

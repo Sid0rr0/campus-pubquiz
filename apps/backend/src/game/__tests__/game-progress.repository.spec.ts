@@ -38,7 +38,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: [],
-      revealedKahootQuestionIds: [],
+      revealedQuickfireQuestionIds: [],
     });
   });
 
@@ -57,7 +57,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: [],
-      revealedKahootQuestionIds: [],
+      revealedQuickfireQuestionIds: [],
     });
 
     const reloaded = await repository.load(sessionId);
@@ -88,7 +88,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: [],
-      revealedKahootQuestionIds: [],
+      revealedQuickfireQuestionIds: [],
     });
 
     const reloaded = await repository.load(sessionId);
@@ -141,12 +141,12 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: [4, 5, 9],
-      revealedKahootQuestionIds: [7, 8],
+      revealedQuickfireQuestionIds: [7, 8],
     });
 
     const reloaded = await repository.load(sessionId);
     expect(reloaded?.openedQuestionIds).toEqual([4, 5, 9]);
-    expect(reloaded?.revealedKahootQuestionIds).toEqual([7, 8]);
+    expect(reloaded?.revealedQuickfireQuestionIds).toEqual([7, 8]);
   });
 
   it('loads a row whose opened-questions column is null as an empty list', async () => {
@@ -188,7 +188,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: startedAt,
       phaseElapsedByKey: { 'q:0:0': 12_345 },
       openedQuestionIds: [],
-      revealedKahootQuestionIds: [],
+      revealedQuickfireQuestionIds: [],
     });
 
     const reloaded = await repository.load(sessionId);
@@ -213,7 +213,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: Date.now(),
       phaseElapsedByKey: {},
       openedQuestionIds: [],
-      revealedKahootQuestionIds: [],
+      revealedQuickfireQuestionIds: [],
     });
 
     // A later save with no live frontier (e.g. the quiz moved to an untimed
@@ -233,7 +233,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseStartedAt: null,
       phaseElapsedByKey: {},
       openedQuestionIds: [],
-      revealedKahootQuestionIds: [],
+      revealedQuickfireQuestionIds: [],
     });
 
     const reloaded = await repository.load(sessionId);

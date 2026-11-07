@@ -2,6 +2,7 @@ import type { FunFactData } from './fun-facts';
 import type { GameContext, GameProgress } from './game-state-types';
 import type { TeamJoker } from './joker';
 import type { LeagueTop } from './league';
+import type { QuizMode } from './quiz-mode';
 import type { ClosestGuessRevealData, SeededQuestion } from './question-views';
 import type { LeaderboardEntry } from './room-views';
 import {
@@ -14,13 +15,13 @@ export interface SeededRound {
   title: string;
   breakAfter: boolean;
   /**
-   * See RoundConfig.kahootMode. Optional, like questionNotesById below, so
+   * See RoundConfig.quickfire. Optional, like questionNotesById below, so
    * callers building a SeededRound needn't set it; undefined behaves as false.
    */
-  kahootMode?: boolean;
-  /** Round topic/theme — see Round.category. Optional, like kahootMode above. */
+  quickfire?: boolean;
+  /** Round topic/theme — see Round.category. Optional, like quickfire above. */
   category?: string;
-  /** Who wrote this round's questions — see Round.author. Optional, like kahootMode above. */
+  /** Who wrote this round's questions — see Round.author. Optional, like quickfire above. */
   author?: string;
   /**
    * Host-only round note — see Round.note. Like questionNotesById, it must
@@ -51,6 +52,8 @@ export interface SeededGame {
   joinCode: string;
   /** The quiz's title, refreshed whenever the game is reloaded. */
   quizTitle: string;
+  /** The quiz's mode, fixed at creation: a quickfire quiz's sessions have no jokers, power-ups, coins or leagues. */
+  quizMode: QuizMode;
   /** The session's own name; null when none was set (the display name then falls back to the quiz title). */
   customName: string | null;
   /** When the session started: its row's creation time. */
@@ -81,8 +84,8 @@ export interface SessionState {
   progress: GameProgress;
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
   questionLockAt: number | null;
-  /** Epoch-ms deadline for auto-locking the currently-open kahootMode question, or null when none is armed — see computeKahootQuestionEndsAt. */
-  kahootQuestionEndsAt: number | null;
+  /** Epoch-ms deadline for auto-locking the currently-open quickfire question, or null when none is armed — see computeQuickfireQuestionEndsAt. */
+  quickfireQuestionEndsAt: number | null;
   /** Epoch-ms deadline at which the joker pick closes and the quiz moves on by itself, or null while no pick is open — see computeJokerPickEndsAt. Like questionLockAt it is re-armed fresh (a full minute) when a restart restores a session on the pick. */
   jokerPickEndsAt: number | null;
   /** teamId -> the team's joker, for teams that have one. A cache of the stored jokers, read when the session is placed and as teams join, and updated as teams pick and as the pick closes, so the views stay synchronous. */
@@ -123,12 +126,12 @@ export interface SessionState {
    */
   openedQuestionIds: number[];
   /**
-   * Ids of the kahootMode questions whose reveal has aired, for good: their
+   * Ids of the quickfire questions whose reveal has aired, for good: their
    * answers were on the big screen, so Previous reopening their locking
    * countdown never takes answers again. Added to in settleSession, persisted
    * with the progress.
    */
-  revealedKahootQuestionIds: number[];
+  revealedQuickfireQuestionIds: number[];
   leaderboard: LeaderboardEntry[];
   /**
    * How many teams (counting up from last place) are currently revealed on
@@ -223,7 +226,7 @@ export function freshSessionState(
     seededGame,
     progress,
     questionLockAt: null,
-    kahootQuestionEndsAt: null,
+    quickfireQuestionEndsAt: null,
     jokerPickEndsAt: null,
     jokers: {},
     carriedCoins: {},
@@ -235,7 +238,7 @@ export function freshSessionState(
     phaseStartedAt: null,
     phaseElapsedByKey: {},
     openedQuestionIds: [],
-    revealedKahootQuestionIds: [],
+    revealedQuickfireQuestionIds: [],
     leaderboard: [],
     leaderboardRevealCount: 0,
     priorStandings: null,
@@ -257,7 +260,7 @@ export function getGameContext(session: SessionState): GameContext {
     rounds: session.seededGame.rounds.map((round) => ({
       questionCount: round.questions.length,
       breakAfter: round.breakAfter,
-      kahootMode: round.kahootMode ?? false,
+      quickfire: round.quickfire ?? false,
     })),
     showRoundOverview: session.seededGame.settings.showRoundOverview,
     jokersEnabled: session.seededGame.settings.jokersEnabled,

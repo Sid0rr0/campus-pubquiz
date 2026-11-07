@@ -14,6 +14,7 @@ describe('HowToPlayPage', () => {
     for (const name of [
       'Basics',
       'Scoring',
+      'Quickfire quiz',
       'Bonuses',
       'Joker',
       'Power-ups',

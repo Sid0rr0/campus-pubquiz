@@ -66,7 +66,24 @@ describe('TeamsController', () => {
         pageSize: 20,
         sortBy: 'joinedAt',
         sortOrder: 'desc',
+        showQuickfireOnly: false,
       });
+    });
+
+    it('reads showQuickfireOnly=true from the query string', async () => {
+      const { controller, teamService } = makeController();
+      teamService.listAll.mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      });
+
+      await controller.list({ showQuickfireOnly: 'true' });
+
+      expect(teamService.listAll).toHaveBeenCalledWith(
+        expect.objectContaining({ showQuickfireOnly: true }),
+      );
     });
 
     it('parses explicit query params', async () => {
@@ -88,6 +105,7 @@ describe('TeamsController', () => {
       expect(teamService.listAll).toHaveBeenCalledWith({
         page: 2,
         pageSize: 10,
+        showQuickfireOnly: false,
         sortBy: 'sessionsJoined',
         sortOrder: 'asc',
       });

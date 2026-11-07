@@ -20,7 +20,7 @@ export type ProgressMoveStep = Extract<
  * The Settle step for a progress-moving step, carried out as the action it
  * plans. A raw ADVANCE under the leaderboard settles as the action it plans —
  * ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the reveal count,
- * the kahoot timer and everything else downstream treat it identically.
+ * the quickfire timer and everything else downstream treat it identically.
  */
 export function settleMove(
   session: SessionState,

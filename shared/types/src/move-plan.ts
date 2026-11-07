@@ -168,9 +168,9 @@ function planMovement(session: SessionState, movement: Movement): MoveStep {
 }
 
 function getLeaderboardRevealSteps(session: SessionState): number {
-  const isKahoot =
-    session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ?? false;
-  return getLeaderboardRevealStepCount(session.leaderboard, isKahoot);
+  const isQuickfire =
+    session.seededGame.rounds[session.progress.roundIndex]?.quickfire ?? false;
+  return getLeaderboardRevealStepCount(session.leaderboard, isQuickfire);
 }
 
 /**

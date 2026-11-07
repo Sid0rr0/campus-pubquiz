@@ -300,8 +300,8 @@ export class AnswerService {
   /**
    * Regrade for a key fix: re-grades the stored answers to an already-shown
    * question after a live edit corrected its key, as the Grading policy
-   * decides (auto rescores every answer, kahoot speed-scaled when
-   * `kahootTimerSeconds` is given; match-or-human grades new matches correct
+   * decides (auto rescores every answer, quickfire speed-scaled when
+   * `quickfireTimerSeconds` is given; match-or-human grades new matches correct
    * and clears only automatic grades; batch re-runs only when
    * `hasBatchRun`). `previous` is the question as it stood before the edit.
    * Returns whether the question was rescored at all, and its answers.
@@ -310,7 +310,7 @@ export class AnswerService {
     gameSessionId: number,
     question: GradableQuestion,
     previous: ScoredQuestion,
-    kahootTimerSeconds: number | null,
+    quickfireTimerSeconds: number | null,
     hasBatchRun: boolean,
   ): Promise<{ rescored: boolean; answers: AnswerView[] }> {
     const rows = await this.findForQuestion(gameSessionId, question.id);
@@ -318,7 +318,7 @@ export class AnswerService {
       question,
       previous,
       rows: await this.policyRows(gameSessionId, question.id, rows),
-      kahootTimerSeconds,
+      quickfireTimerSeconds,
       hasBatchRun,
     });
     await this.applyWrites(rows, writes);
@@ -409,12 +409,12 @@ export class AnswerService {
   }
 
   /**
-   * Scales a kahootMode question's points by answer speed once it locks (the
+   * Scales a quickfire question's points by answer speed once it locks (the
    * formula lives in Scoring's speedMultiplier), reading each answer's
    * response time as stored at submit — measured from the phase start and
    * overwritten on every resubmission, so a team that revises before lock is
    * timed from its last submission. `questionTimerSeconds` is the session's
-   * configured `kahootQuestionTimerSeconds` (the real, fixed timer), not
+   * configured `quickfireQuestionTimerSeconds` (the real, fixed timer), not
    * however long the question actually stayed open — so a manual early lock
    * doesn't distort the ratio; null (unlimited) means no scaling. Re-scores
    * every row against `question`, so a key corrected before lock counts —

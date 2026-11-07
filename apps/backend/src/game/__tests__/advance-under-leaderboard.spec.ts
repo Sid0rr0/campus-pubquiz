@@ -11,7 +11,7 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const KAHOOT_TIMER_SECONDS = 30;
+const QUICKFIRE_TIMER_SECONDS = 30;
 const FROZEN_NOW = '2024-01-01T00:00:00.000Z';
 
 describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () => {
@@ -128,12 +128,12 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
     });
   });
 
-  describe('between kahoot questions', () => {
+  describe('between quickfire questions', () => {
     beforeEach(async () => {
       freezeClockAt(FROZEN_NOW);
       game = await harness.createGateway({
-        kahootMode: true,
-        settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+        quickfire: true,
+        settings: { quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS },
         teamNames: ['The Quizzards'],
       });
       await game.act('START_QUIZ');
@@ -150,21 +150,21 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
 
     it('hides the board with ADVANCE and arms the question timer exactly as the toggle does', async () => {
       expect(adminView().advanceStep).toBe('hide_leaderboard');
-      expect(displayView().kahootQuestionEndsAt).toBeNull();
+      expect(displayView().quickfireQuestionEndsAt).toBeNull();
 
       await game.act('ADVANCE');
 
       expect(adminView().progress.isLeaderboardVisible).toBe(false);
-      expect(displayView().kahootQuestionEndsAt).toBe(
-        Date.now() + KAHOOT_TIMER_SECONDS * 1000,
+      expect(displayView().quickfireQuestionEndsAt).toBe(
+        Date.now() + QUICKFIRE_TIMER_SECONDS * 1000,
       );
     });
 
     it('arms the same deadline when the toggle hides the board', async () => {
       await game.act('TOGGLE_LEADERBOARD');
 
-      expect(displayView().kahootQuestionEndsAt).toBe(
-        Date.now() + KAHOOT_TIMER_SECONDS * 1000,
+      expect(displayView().quickfireQuestionEndsAt).toBe(
+        Date.now() + QUICKFIRE_TIMER_SECONDS * 1000,
       );
     });
   });

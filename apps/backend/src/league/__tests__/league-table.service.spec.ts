@@ -150,6 +150,27 @@ describe('LeagueTableService (Postgres integration)', () => {
     ]);
   });
 
+  it('skips a quickfire session already in the league', async () => {
+    const league = await newLeague();
+    const alpha = await newTeam('Alpha');
+    const pubNight = await newSession();
+    await join(league, pubNight);
+    await play(pubNight, alpha, 4);
+    const quickfireQuiz = em.create(Quiz, { title: 'Fast', mode: 'quickfire' });
+    const quickfireNight = em.create(GameSession, {
+      quiz: quickfireQuiz,
+      joinCode: 'QFIRE1',
+      status: 'ended',
+    });
+    await em.flush();
+    await join(league, quickfireNight);
+    await play(quickfireNight, alpha, 900);
+
+    const table = await service.table(league.id);
+
+    expect(table?.rows).toMatchObject([{ leaguePoints: 6, nightsPlayed: 1 }]);
+  });
+
   it('lets a joker decide who won the night and so the league points', async () => {
     const league = await newLeague();
     const [alpha, beta] = [await newTeam('Alpha'), await newTeam('Beta')];

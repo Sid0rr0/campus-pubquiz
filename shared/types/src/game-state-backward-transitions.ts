@@ -16,7 +16,7 @@ import {
 /**
  * Steps back to the previous question, or — at a round's first question —
  * back to that round's intro card, since every round is now entered through
- * one. Never needs to jump across a round boundary directly. In a kahootMode
+ * one. Never needs to jump across a round boundary directly. In a quickfire
  * round, the previous question is already locked/scored/revealed (each
  * question is its own one-question block) — Previous re-enters its reveal
  * rather than reopening it for (re-)answering.
@@ -28,7 +28,7 @@ export function previousFromQuestionOpen(
   const round = context.rounds[progress.roundIndex];
 
   if (progress.questionIndex > 0) {
-    if (round.kahootMode) {
+    if (round.quickfire) {
       return {
         ...progress,
         status: 'reveal',
@@ -47,7 +47,7 @@ export function previousFromQuestionOpen(
  * screen (or round_overview, when context.showRoundOverview; or the joker
  * pick, reopened, when context.jokersEnabled) before round 0,
  * the previous round's last question if it ran in the same open block (no
- * break, and not kahootMode — a kahootMode round's questions are never
+ * break, and not quickfire — a quickfire round's questions are never
  * reopenable once past), or the previous block's last reveal question if a
  * break/reveal already ran.
  */
@@ -71,7 +71,7 @@ export function previousFromRoundIntro(
   const previousRoundIndex = progress.roundIndex - 1;
   const previousRound = context.rounds[previousRoundIndex];
 
-  if (!previousRound.breakAfter && !previousRound.kahootMode) {
+  if (!previousRound.breakAfter && !previousRound.quickfire) {
     return {
       ...progress,
       status: 'question_open',
@@ -182,7 +182,7 @@ export function previousFromBreakRoundIntro(
  * Steps back from a reveal question to its own round's intro card whenever
  * it's the first question of that round (mirroring previousFromQuestionOpen)
  * — otherwise just the previous reveal question in the same round. A
- * kahootMode round never has a reveal_intro to step back to (it's collapsed
+ * quickfire round never has a reveal_intro to step back to (it's collapsed
  * away) — Previous instead re-opens the locking countdown for this same
  * question.
  */
@@ -191,7 +191,7 @@ export function previousFromReveal(
   context: GameContext,
 ): GameProgress {
   const round = context.rounds[progress.roundIndex];
-  if (round.kahootMode) {
+  if (round.quickfire) {
     return { ...progress, status: 'locking' };
   }
 

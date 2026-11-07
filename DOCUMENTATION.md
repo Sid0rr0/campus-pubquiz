@@ -125,12 +125,12 @@ behaviour of each status.
 | `joker_pick`        | Every round (number, title, category, author) and a 60-second countdown to the pick's deadline; never any team's choice                                                                                                                                                                                                       | A card per round (number, title, category), the same countdown, the team's pick highlighted and "Saved ✓" after each tap; once the pick has closed, "Your joker: Round N — title" ("drawn for you" when it was drawn) and "Look at the screen"                       | `ADVANCE` from `round_overview` when Jokers is on, or `PREVIOUS` from round 0's `round_intro` (reopens it)                                           | First round's `round_intro` — closes the pick                                                                          |
 | `round_intro`       | Round title card: "ROUND N — category", title, author, and the round note when shown on screen                                                                                                                                                                                                                                | "Look at the screen" + round title, with a "2× POINTS" joker card played when it is the team's joker round and the intro comes on live; the block browser instead if questions are already open                                                                      | `ADVANCE` from `round_overview` (or `joker_pick`), from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
 | `question_open`     | The current question (prompt + media)                                                                                                                                                                                                                                                                                         | Block browser: every question opened so far in the block, answerable (last write wins)                                                                                                                                                                               | `ADVANCE` from `round_intro` or the previous question                                                                                                | Next question; the next round's `round_intro` if the block continues; `locking` on the block's last question           |
-| `locking`           | Countdown on the block's last question                                                                                                                                                                                                                                                                                        | Still answerable, with a thin bar draining to the same lock deadline as the countdown; when the block locks the phone buzzes and stamps "Locked" (live moves only, not on reconnect or Previous)                                                                     | `ADVANCE` from the block's last question                                                                                                             | `break_intro` — the block locks; a kahoot round goes straight to `reveal`                                              |
+| `locking`           | Countdown on the block's last question                                                                                                                                                                                                                                                                                        | Still answerable, with a thin bar draining to the same lock deadline as the countdown; when the block locks the phone buzzes and stamps "Locked" (live moves only, not on reconnect or Previous)                                                                     | `ADVANCE` from the block's last question                                                                                                             | `break_intro` — the block locks; a quickfire round goes straight to `reveal`                                              |
 | `break_intro`       | "BREAK N" card, break timer, bonus categories, and "Rate the rounds on your phone ★" when feedback is collected                                                                                                                                                                                                               | Block browser, read-only                                                                                                                                                                                                                                             | The block locking                                                                                                                                    | `reveal_intro` — refused while any answer in the block is ungraded                                                     |
 | `break`             | One locked question under break review (prompt + media, no answer)                                                                                                                                                                                                                                                            | Block browser, read-only                                                                                                                                                                                                                                             | `PREVIOUS` from `break_intro` (lands on the block's last question) or from a later question                                                          | The next question in the block; from the block's last question, `reveal_intro` (same ungraded check)                   |
 | `break_round_intro` | Round title card: "ROUND N", title — no answers implied                                                                                                                                                                                                                                                                       | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | `PREVIOUS` across the start of a round during break review                                                                                           | Back into `break` on the same question                                                                                 |
 | `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                                                                                                                                                                                                                                                                        | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                                        | `reveal` on that round's first question                                                                                |
-| `reveal`            | One question with its correct answer (and `answer_media_url`), and its Question notes when set to show                                                                                                                                                                                                                                                                 | Block browser with the team's answer ("Your answer", coloured by its Verdict: green correct, cyan partial, magenta incorrect or no answer), the correct answer and points; a sort answer is listed item by item, each marked ✓ or ✗ for sitting in its correct slot (not for no answer or "I don't know", and still shown when the moderator overrode the points)                                                                                            | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                                           | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
+| `reveal`            | One question with its correct answer (and `answer_media_url`), and its Question notes when set to show                                                                                                                                                                                                                                                                 | Block browser with the team's answer ("Your answer", coloured by its Verdict: green correct, cyan partial, magenta incorrect or no answer), the correct answer and points; a sort answer is listed item by item, each marked ✓ or ✗ for sitting in its correct slot (not for no answer or "I don't know", and still shown when the moderator overrode the points)                                                                                            | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a quickfire round                                                           | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
 | `ended`             | Final screen (a podium of the top three in three colours at the top, "Quiz complete!", the other teams with their places in a scrolling row like the lobby roster, and a thank-you — with "Tell us how it went on your phone ★" when feedback is collected), or an active showdown; confetti and a fanfare when the quiz ends live | "Quiz complete!", the team's final placing ("You finished 4th of 12", "Joint 2nd" for a tie; confetti for ranks 1–3), then the final feedback form (pacing and felt difficulty, then every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                                        | —                                                                                                                      |
 
 `joker_pick` belongs to no status group (it is pre-quiz like `round_overview`).
@@ -291,7 +291,7 @@ the write still counts as done (a press has already saved its progress, so
 memory must match the database and clients must hear about it): the failure is
 logged, that figure keeps its earlier value (the others still update), and the
 next write catches it up. A write that moves an
-phase timer deadline (the question lock, the kahoot question timer or the joker
+phase timer deadline (the question lock, the quickfire question timer or the joker
 pick deadline) reports the new deadlines with its outcome, and the delivery step
 re-arms that session's timers from them before anything is emitted, so the timers
 follow the session's deadlines after every change. A refused event reports nothing and
@@ -326,7 +326,7 @@ the display view carries the **Display screen** (`screen`: the screen on air wit
 marks as on air plus server-decided Advance/Previous availability and **control availability** (`controlAvailability`: what the quiz master can do right now, built from the same Display screen `/display` is sent, which the admin room itself never receives), and gives each
 roster team its player count and over-cap flag; the
 players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state; its `block` kind carries a mode of `answering`, `locked` or `revealing`), and drops anything teams haven't been shown
-yet (a kahoot question hidden behind the leaderboard is removed server-side,
+yet (a quickfire question hidden behind the leaderboard is removed server-side,
 never filtered by the client). In particular it carries only the reveal walk so
 far: `revealQuestions` holds the questions before `revealIndex`, plus the one at
 `revealIndex` once its `reveal` step is on air. A question the walk hasn't
@@ -368,8 +368,8 @@ is offered to rate right now, shared by every team's phone. It is
 
 - `kind: 'break_card'` while the session is in a break status (`break_intro`,
   `break`, `break_round_intro`), listing the rounds of the block that just
-  locked. Kahoot rounds never reach a break, so they never appear here.
-- `kind: 'final_form'` at `ended`, listing **every** round of the quiz, kahoot
+  locked. Quickfire rounds never reach a break, so they never appear here.
+- `kind: 'final_form'` at `ended`, listing **every** round of the quiz, quickfire
   rounds included, once no showdown is still being played (no showdown round, or
   the one created has been decided). A showdown being played keeps the field
   `null` and the phones on the showdown screens; a decided one lets the form
@@ -481,7 +481,7 @@ got to, and a mute that is already on applies to media that mounts later.
 | View                            | Fields                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                                                                                                                                                                                                                                                                                                                                               |
-| Display (`DisplayStatePayload`) | `screen` (the Display screen), `screenPosition` (the Screen position: grows on every forward move through the quiz, falls on Previous, unmoved by overlays and steps within a screen; the admin and players views don't carry it), `roundCategories`, `roundAuthors`, `kahootQuestionEndsAt`, `jokerPickEndsAt` (the open pick's deadline, apart from `screen` so the countdown track outlives an overlay), `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
+| Display (`DisplayStatePayload`) | `screen` (the Display screen), `screenPosition` (the Screen position: grows on every forward move through the quiz, falls on Previous, unmoved by overlays and steps within a screen; the admin and players views don't carry it), `roundCategories`, `roundAuthors`, `quickfireQuestionEndsAt`, `jokerPickEndsAt` (the open pick's deadline, apart from `screen` so the countdown track outlives an overlay), `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
 | Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`); each `teams` entry also carries the team's `joker` (round id, number, title and source, or `null`); `settableJokerRounds` (the rounds with no opened question, once the pick has opened in a session with Jokers, else empty; the `/control` joker list offers them)                                                                                                                                                        |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`, `jokerPick` (while the status is `joker_pick`: the deadline, `null` once closed, and the pickable rounds; never a team's choice), `jokerRounds` (every round's id, number and title once the pick has opened in a session with Jokers, else empty; names the team's own joker on its phone, never any team's choice)                                                                                                                                                                  |
 
@@ -491,17 +491,17 @@ A field only one room reads is added to that room's view type, not the base.
 board once and `/display` draws it as sent (the Screen projection builds it
 from the session, so a reloaded or second big screen draws the same thing):
 
-- `entries` — the standings, already capped: a kahoot round keeps the first
+- `entries` — the standings, already capped: a quickfire round keeps the first
   five by final standing, splitting a tie at the cutoff (the reveal walk's step
   count is taken over the same capped entries).
-- `countUpBoard` — present only for the between-questions kahoot board: the
+- `countUpBoard` — present only for the between-questions quickfire board: the
   prior standings of the teams in `entries`, which the board holds, counts up
   from, then reorders into `entries`. Absent everywhere else, and after a
   backend restart until the next block's first question opens (the prior
   standings are ephemeral).
 - `trends` — `up` / `down` / `same` per team id, shown once the board settles.
   The basis is the prior standings in every round: the board as it stood
-  before the block in play's first question opened (in a kahoot round, before
+  before the block in play's first question opened (in a quickfire round, before
   the question), kept through every round of the block, its break and its
   reveal. When the prior standings have more than one team all tied (e.g.
   everyone on 0), every team on them is `up`. A team missing from the basis
@@ -510,7 +510,7 @@ from the session, so a reloaded or second big screen draws the same thing):
   opens). Ranks are compared with the shared ranking rule.
 - `jokerTeamIds` — the 2× stamp: the ids of the shown teams whose joker round,
   or a round they bought an extra joker for, has a question in the block just scored, i.e. the block the prior standings
-  were taken for (in a kahoot round, each question). The server decides; it is
+  were taken for (in a quickfire round, each question). The server decides; it is
   present only while the leaderboard is on air (so a pick is never sent early)
   and only when at least one team qualifies, and a team on 0 points is flagged
   all the same. The later blocks' boards do not flag the team. After a backend
@@ -539,7 +539,7 @@ away what the big screen is still building up to: "You're 4th", or "Joint 2nd"
 for a tie group (from the competition rank). The phone vibrates once when that
 row is revealed live and the team's trend is `up`; never on a first snapshot,
 reconnect or Previous (the live-change rule), and never for a team with no
-trend. A team outside a capped kahoot board has no row.
+trend. A team outside a capped quickfire board has no row.
 
 **The reveal's teams-correct count (`teamsCorrect`).** While a question's
 `reveal` step is on air, the display view carries `{ correct, partial,
@@ -564,7 +564,7 @@ module, in this order, and skips a fact with no data:
 
 | `kind`                   | Fields                                                 | Meaning                                                                                                                                                                           |
 | ------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fastest_correct_answer` | `teamName`, `responseMs`, `question`                   | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the first team in leaderboard name order                                          |
+| `fastest_correct_answer` | `teamName`, `responseMs`, `question`                   | Quickest `correct` answer to a quickfire question (response time is a race only there); ties go to the first team in leaderboard name order                                          |
 | `toughest_question`      | `correctRate` (0-1), `question`                        | Lowest correct rate above 0 of the revealed questions, never the question `nobody_got_it` names; skipped when none is below 1; never a `closest_guess` question                   |
 | `room_split`             | `correctRate` (0-1), `question`                        | Revealed question whose correct rate is closest to one half (strictly between 0 and 1); never a `closest_guess` question                                                          |
 | `nobody_got_it`          | `question`                                             | First revealed question with no `correct` answer (a question nobody answered is skipped); never a `closest_guess` question                                                        |
@@ -587,7 +587,7 @@ as its points' share of the question's points, over every roster team. A
 correct rate says nothing and it always has a winner: it is left out of
 `toughest_question`, `room_split` and `nobody_got_it`, and out of the
 `clean_sweep` block (a block of only closest guesses has no sweep).
-`fastest_correct_answer` stays kahoot-only. The
+`fastest_correct_answer` stays quickfire-only. The
 facts about questions read only the blocks before the block in play (whose
 answers stay hidden until its reveal); the block in play contributes nothing.
 At the first break nothing is revealed, so only `bonus_awards_so_far` and the
@@ -632,6 +632,20 @@ gets the one matching its overview, and the settings form and a lobby settings
 patch that changes only `showRoundOverview` move the cost with the overview while
 it is still the default). The start dialog and the `/control` lobby settings
 panel show them as a "Power-ups" tab.
+
+**A quickfire session has none of this.** Its jokers, power-ups, coins (starting,
+carried, awarded) and leagues are dropped: the start dialog and the lobby settings
+panel hide the Jokers switch, the Power-ups tab and the league picker (the
+question timer stays, prefilled with 30 seconds; a pub session's forms hide
+it instead), and send no coin settings.
+The server refuses, with a 400, `POST /sessions` or a settings `PATCH` that
+names `jokersEnabled` or `powerUpsEnabled` true, any `startingCoins`, or any
+`leagueIds`, and a coin award (`AWARD_BONUS` with `coins`) in such a session.
+Only what a request names is checked, so a stored value never blocks an
+unrelated edit. With no league a session brings no carried coins. Bonus awards,
+the showdown, final-form feedback and the `fastest_correct_answer` fun fact work
+as in any session. `ActiveSessionSummary.isQuickfire` makes the session pickers
+show a "Quickfire" label.
 
 A team's **coins** are `teamCoins` in shared types: starting coins (only with
 power-ups on) + carried coins + coin awards − purchase costs, never below 0.
@@ -694,7 +708,7 @@ is answering. The server refuses, before storing anything, when: the question ca
 no longer be answered (a locked block, or a question not open yet; never a
 showdown), the power-up does not work on the question (the type registry's
 `powerUps` list, a 50/50 needs more than two options, and no question power-up
-works in a kahootMode round, where a tap locks the pick), the session does not
+works in a quickfire round, where a tap locks the pick), the session does not
 offer it (`maxUses: 0`), the team used it `maxUses` times already, it already ran
 on this question, or the balance is below the cost. These rules are
 `purchaseRefusal` in shared types. A purchase works in a session with power-ups off
@@ -760,7 +774,7 @@ reconnect.
 `DEFAULT_MARGIN` (10%) when the margin is 0 (exact only). It stores just
 `{ kind: 'wider_margin' }`: the margin is derived from the question's current one
 wherever it is used, so it follows a key fix. `AnswerService` grades that team's
-answer with `withWiderMargin` at submit, and on a key fix or kahoot speed score
+answer with `withWiderMargin` at submit, and on a key fix or quickfire speed score
 (`StoredAnswerRow.hasWiderMargin`). The phone shows the doubled margin text instead
 of the question's. Buying after already submitting re-grades the team's answer at
 once (`AnswerService.regradeForWiderMargin`, which keeps a grade at or above the
@@ -874,7 +888,7 @@ on offer can be bought (`extraJokerRoundId`: the first round with no opened
 question whose intro has not been on air: any status after the joker pick has
 the current round's intro on air or past, so only later rounds are offered; any
 time before that intro from the rules on, mid-block included, but never in the
-lobby, where the settings can still turn power-ups off under a purchase, and never a kahootMode round: when the next
+lobby, where the settings can still turn power-ups off under a purchase, and never a quickfire round: when the next
 round is one, nothing is offered); a round that is the team's joker round or already has an
 extra joker is refused ("That round is already doubled"), as are the usual
 limit and coin refusals. The purchase row stores `roundId` (no `questionId`)
@@ -896,7 +910,7 @@ re-pointed before the jokers, inside the same save). The two differ when the
 round is gone: a joker is redrawn because every team must hold one, but an extra
 joker is optional, so it is removed and its cost handed back (the balance is
 worked out from the purchase rows). That also happens when two extra jokers of a
-team would land on one round, and when the edit made the round a kahootMode round. A round that survives keeps its extra jokers even
+team would land on one round. A round that survives keeps its extra jokers even
 when the row it sat on is deleted (the save stores them again from the session's
 cache of purchases, since the database drops a deleted row's purchases). Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
 and purchases stay right.
@@ -1334,7 +1348,7 @@ grading behavior. Media is not a type: any question can carry a
   order; `per_item` gives the points × items in their correct slot ÷ item
   count, rounded to the nearest half point (verdict `partial`, or `incorrect`
   at 0); `one_off` gives half the points when exactly two items are swapped
-  and nothing otherwise. Kahoot speed scales the points as usual.
+  and nothing otherwise. Quickfire speed scales the points as usual.
 - **`match`** — players pair each left-hand item with a right-hand item
   (`MatchAnswer`, `apps/frontend/app/play/match-answer.tsx`); `QuestionView`
   carries the two lists separately as `options` (left) and `matchTargets`
@@ -1410,7 +1424,7 @@ grading behavior. Media is not a type: any question can carry a
   Changing the margin of an opened question is a grading-input change like a
   key fix and re-scores its answers, discarding manual overrides. So does
   changing the scoring mode of an opened sort or match question.
-  Allowed in kahoot rounds, where a correct answer is
+  Allowed in quickfire rounds, where a correct answer is
   scaled by the speed multiplier. While the question is open, the phone (under
   the prompt) and the big screen show the margin as a sentence ("Answers within 5% of the real number count
   as correct", "Answers within 5 of the real number count as correct", or
@@ -1538,7 +1552,7 @@ had graded the previous value; resubmitting the same value leaves its grade
 alone. `closest_guess` is auto-graded
 but deferred to a single batch pass once the block locks, and can be
 overridden only after that pass; every other type can be overridden at any
-time. Which list each type is in (auto-graded, kahoot-allowed) is defined once per type in the question type
+time. Which list each type is in (auto-graded, quickfire-allowed) is defined once per type in the question type
 registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`).
 
 Every answer in the admin answer list (the `ANSWERS_UPDATED` payload and the
@@ -1572,6 +1586,26 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Edit the quiz title; per round, edit its title, toggle `breakAfter`, reorder
   with up/down buttons (no drag-and-drop), delete, or add questions; per
   question, edit type/prompt/options/answer/points/media.
+- The **quiz mode** (`QuizDraft.mode`, `QuizSummary.mode`) is chosen on the
+  empty-state screen with a Pub / Quickfire radio (default Pub), before starting
+  from scratch or importing, and shows read-only in the editor's header ("Pub
+  quiz" / "Quickfire quiz"). The Sessions page's quiz list marks a quickfire quiz
+  with a "Quickfire" label. `POST /import/preview` and `POST
+  /import/preview-from-url` take the same `mode` (`pub` | `quickfire`, default
+  `pub`; anything else is a `400`) and the editor sends the draft's. The CSV
+  columns and the export are the same in both modes. A quickfire import refuses
+  a row whose type is outside the quickfire-allowed list, as a `type` issue with
+  the editor's "Quickfire rounds only support …" message, fills a blank `points`
+  cell with 1000 (1 in a pub import) and accepts `break_after` but ignores it.
+  In a quickfire quiz the
+  break-after toggle is hidden (`breakAfter` is ignored there), the type picker
+  offers only the quickfire-allowed types, and a new question defaults to 1000
+  points (1 in a pub quiz). A save can't change the mode: `POST /quizzes`
+  stores the `mode` it carries (absent means pub); `PUT /quizzes/:id` refuses a
+  `mode` that differs from the stored one with a `422`, and validates the draft
+  against the stored mode, so a quickfire quiz holding a type outside the
+  quickfire-allowed list is refused with the usual "Quickfire rounds only
+  support …" message.
 - Write a round's **Round note** in the round's textarea ("Round note — what
   you say before this round", with a character count). Plain text, line breaks
   kept, trimmed, at most `ROUND_NOTE_MAX_LENGTH` (500) characters, blank saved
@@ -1586,8 +1620,8 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   `author` (absent when unset) for that card, and `breakNumber` and
   `isFinalBreak` on block-ending rounds, built with `getQuizStructureSummary`
   / `getBreakNumber`: the last round always ends a block, so it carries them
-  even when its stored `breakAfter` is false. A kahoot round before the last
-  never has a break, so it gets no number even with `breakAfter` set, and the
+  even when its stored `breakAfter` is false. A round of a quickfire quiz before
+  the last never has a break, so it gets no number even with `breakAfter` set, and the
   breaks, the rules screen and the bonus deadline count only real breaks. The browser shows a B marker
   wherever they are present, and `/control` shows "Break N" ("(final)" on the
   final break) when that break is on air. The round's **Show on
@@ -1682,7 +1716,7 @@ or counted. It is a read of the quiz.
 - **Orders**, switched with a toggle on the page and kept in the URL as
   `?mode=night` (the default is left out, and the choice survives a refresh):
   - `answer_after_question` (the default): each round's title card, then each
-    question followed by its revealed answer. Kahoot rounds look the same.
+    question followed by its revealed answer. Quickfire rounds look the same.
   - `night` ("like the night"): the screens in the order the room sees them:
     the round overview, round title cards, a block's questions, the break
     intro, the reveal intro, then that block's reveals, block after block. The
@@ -1758,7 +1792,7 @@ editor's disabled controls:
   editor read it through `getRoundStructureEditing` (`frozen`,
   `after-opened` or `free` per round), and `GET /quizzes/:id` returns it as
   `liveEdit`. The current round and every earlier round keep their place,
-  `breakAfter` and `kahootMode` (`isRoundReached`) and can't be deleted, even
+  `breakAfter` (`isRoundReached`) and can't be deleted, even
   while only the current round's title card is on screen; a round before the
   current round keeps exactly its questions in their order.
 - **The current round keeps its opened questions, nothing else.** Until its
@@ -1778,16 +1812,17 @@ editor's disabled controls:
   locked.
 - **After the current round, rounds are free.** Whole rounds after the
   current round of every live session can be added, deleted and reordered,
-  and their `breakAfter` and `kahootMode` can change (the usual rules still
-  apply: kahoot-allowed question types, the last round always breaks). Turning
+  and their `breakAfter` can change (the usual rules still
+  apply: the last round always breaks, and a quickfire quiz keeps its
+  quickfire-allowed question types — its mode never changes). Turning
   on `breakAfter` for a later round moves where the current block ends, which
   only moves the line across questions nobody has opened. Deleting every round
   after the current one ends the quiz there. Rounds are saved by position, so
   moving a round rewrites rows by position — harmless, since only unopened
   rounds move and they have no answers or round ratings yet; ratings of played
   rounds are untouched. After the save the sessions' breaks follow the edited
-  rounds (the structure is data). Removing, moving or changing the break or
-  kahoot setting of a round at or before the current one is refused with a
+  rounds (the structure is data). Removing, moving or changing the break
+  setting of a round at or before the current one is refused with a
   `409`, and the editor disables those controls.
 - **After the current round, questions are free.** In any round after the
   current round of every live session, questions can be added, deleted,
@@ -1832,13 +1867,13 @@ added to whenever a press settles, so they survive a backend restart. A
 session saved before this existed has none stored and derives them from its
 position on restore.
 
-A kahoot question whose reveal has aired stays closed to answers for the rest
+A quickfire question whose reveal has aired stays closed to answers for the rest
 of the session: Previous can step back onto its `locking` countdown, but the
 answer is already on the big screen, so submitting is refused with "Answers are
 locked for this question" and the phone shows no answer input. Each session
-stores these ids (`game_sessions.revealed_kahoot_question_ids`, default `[]`),
+stores these ids (`game_sessions.revealed_quickfire_question_ids`, default `[]`),
 added to whenever a press settles into `reveal`, so they survive a restart. A
-session saved before this existed has none stored; on restore every kahoot
+session saved before this existed has none stored; on restore every quickfire
 question it has moved past counts as revealed, derived from its position.
 
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
@@ -1846,7 +1881,7 @@ If an opened question's Answer key (its `answer`, `points` and the
 `scoringMode` or `margin` its type carries) changed, its existing answers are
 re-graded (`BlockGradingService.regradeForKeyFix`): auto-graded types
 (`multiple_choice`/`sort`/`match`/`number`) re-score every answer — overwriting any
-manual override, e.g. adjusted `per_item` credit on a sort or match question — and re-apply kahoot
+manual override, e.g. adjusted `per_item` credit on a sort or match question — and re-apply quickfire
 speed scaling (kept to the nearest half point, so a half-credit match never
 rounds back up to full points) from the response time stored on each answer at submit (so it
 survives a backend restart, and a correction made before the question locks is
@@ -1872,7 +1907,7 @@ reads, so an exported file re-imports as-is. `break_after`, `category`,
 `author`, `round_note`, and `show_round_note` all land on each round's last
 row (`show_round_note` is blank when the setting is off); `show_note` stays on
 its question's own row, blank when off; `match` answers are rebuilt as
-`left+right` pairs. Rounds with no questions are omitted, and `kahootMode`
+`left+right` pairs. Rounds with no questions are omitted, and the quiz mode
 has no column, so it isn't exported. A `sort` or `match` question's scoring mode and a
 `number` question's margin are exported in the notes cell.
 
@@ -1984,7 +2019,13 @@ Postgres via MikroORM. Two halves of the schema:
 - **Authoring time**: `quizzes → rounds → questions`. Questions have a `type`
   (any [question type](#question-types)) plus a JSON
   payload for type-specific data (options, media URL), so new question types
-  don't need migrations.
+  don't need migrations. A quiz carries its **quiz mode** in `quizzes.mode`
+  (`pub` or `quickfire`, default `pub`), chosen at creation and never changed;
+  there is no per-round flag. `SeedService.loadQuizRounds` fills each seeded
+  round's in-memory `quickfire` flag from the quiz's mode, so the engine still
+  reads a per-round flag. The migration that introduced the column made a quiz
+  whose rounds were all quickfire (and that had at least one) `quickfire`,
+  every other quiz `pub`, and fails on a quiz mixing both kinds of round.
 - **Runtime**: `game_sessions → teams → answers`, plus `bonus_awards`,
   `session_team_jokers` and the `game_session_teams` roster join table. A session row stores the join code
   and the live progress columns (`status`, `currentRoundIndex`,
@@ -2134,7 +2175,7 @@ total and average, never counted as zero.
   it as the **Players** column, "—" when null. The column is not sortable.
 
 A question's **correct rate** credits each answer by its verdict, never by the
-question type: `correct` counts in full (a speed-scaled kahoot answer too),
+question type: `correct` counts in full (a speed-scaled quickfire answer too),
 `partial` counts as its points' share of the question's points (between 0 and 1),
 and `incorrect` or ungraded counts nothing. The rate is the summed credit divided
 by the participant count, and the hardest and easiest question highlights use it.
@@ -2208,7 +2249,7 @@ the brief is data only.
   the same team count (departed teams included), so the figures match the page.
 - **Contents:** the session name, date and team count; each round with its
   number, title, category, author (line absent when none), round note and a
-  kahoot flag; each question with its number, type, prompt, correct answer,
+  quickfire flag; each question with its number, type, prompt, correct answer,
   points, notes (without the `{…}` settings group; blank notes left out), a
   media flag, and answered, correct and partial counts with the correct rate
   (none for `closest_guess`).
@@ -2225,8 +2266,8 @@ the brief is data only.
   not itemised), share of max points and player count, in the Session result's
   order and ties. **Highlights** name the hardest and easiest question by round
   and question number with its prompt, by the stats page's rules
-  (`closest_guess` never counts). A kahoot round is marked with a plain
-  "Kahoot round" line.
+  (`closest_guess` never counts). A quickfire round is marked with a plain
+  "Quickfire round" line.
   Each round carries its star rating (average and count, or "no ratings") and
   its correct rate (absent when the round has no question with a rate).
   **Feedback** lists topic suggestions grouped by `groupTopics` with counts and
@@ -2410,6 +2451,16 @@ The page opens on most sessions played first. An optional `search` narrows the
 list and its `total` to teams whose name contains it, ignoring case, under every
 sort.
 
+A **quickfire-only team** (see `GLOSSARY.md`) took part in at least one ended
+session and every one of them was quickfire. `GET /teams` hides such teams unless
+`showQuickfireOnly=true` (default false), in the list and in `total`; a team with no
+ended session and a team with any pub session stay listed. The directory's "Show
+quickfire-only teams" checkbox sets it, starts unchecked, is not remembered and
+resets the list to page 1. A quickfire night counts in **Sessions played** but is
+left out of **Wins** and **Average placing** (a `TeamSessionRow` carries
+`isQuickfire`; `teamHistoryOf` and `averagePlacingOf` skip it), on the team page,
+the staff team page and the directory alike.
+
 ## Leagues
 
 A **league** (see `GLOSSARY.md`) is a named competition, such as a semester's, that
@@ -2421,6 +2472,8 @@ points, the table and the public page.
   game session; unique pair, `on delete cascade` on both sides). Deleting a league
   removes only its league rows and memberships, never a session, team or answer.
   Deleting a session removes its memberships.
+- **Quickfire sessions don't count.** The league table skips any quickfire session in
+  the league (sessions of migrated quizzes; a quickfire session can't be added).
 - **Dates are a label.** They never decide membership. They decide which leagues are
   **current**: `endsOn` is today or later, where "today" is the date at the venue
   (`Europe/Prague`, `league/venue-date.ts`, since no time-zone setting exists).
@@ -2436,8 +2489,9 @@ points, the table and the public page.
     ones;
   - `POST /leagues/:id/sessions` with `{ gameSessionId }` and
     `DELETE /leagues/:id/sessions/:gameSessionId`. Only an **ended** session can be
-    added (a lobby or live session is a 409, an unknown league or session a 404).
-    Adding twice changes nothing; removing a session that is not in the league is a
+    added (a lobby or live session is a 409, an unknown league or session a 404),
+    and a **quickfire** session never (400: "A quickfire session can't be added to a
+    league"). Adding twice changes nothing; removing a session that is not in the league is a
     no-op. Both work for any league, current or not.
 - **Staff read** (admin and moderator): `GET /leagues` lists leagues, newest first, each
   with `current` and its `sessions` (id, join code, display name, played-at).

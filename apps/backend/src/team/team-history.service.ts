@@ -152,6 +152,7 @@ export class TeamHistoryService {
           name: participation.displayName,
           playedAt: participation.playedAt.toISOString(),
           result,
+          isQuickfire: participation.isQuickfire,
           playerCount:
             playerCounts.get(participation.gameSessionId)?.get(teamId) ?? null,
         });

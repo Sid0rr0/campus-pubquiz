@@ -25,7 +25,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1530;
+const MAX_GUIDE_WORDS = 1560;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -49,6 +49,15 @@ describe('GuideContent', () => {
     expect(text).toContain('Rate these rounds');
     expect(text).toContain('Quiz complete!');
     expect(text).toContain('session stats');
+  });
+
+  it('explains a quickfire quiz: one-question blocks, speed scoring and its timer', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Quickfire quizzes');
+    expect(text).toContain('question is its own block');
+    expect(text).toContain('down to half the points');
+    expect(text).toContain('"Quickfire question timer"');
   });
 
   it('explains the Jokers setting and how to run the joker pick', () => {

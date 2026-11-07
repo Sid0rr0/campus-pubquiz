@@ -100,11 +100,11 @@ describe('GameGateway — the 2× stamp on the leaderboard', () => {
     expect(await stampedOnPhone(game)).toEqual([]);
   });
 
-  it('stamps after each question of a kahoot joker round', async () => {
+  it('stamps after each question of a quickfire joker round', async () => {
     const game = await jokerNight([
       {
-        title: 'Kahoot',
-        kahootMode: true,
+        title: 'Quickfire',
+        quickfire: true,
         breakAfter: true,
         questions: [question(1), question(2)],
       },

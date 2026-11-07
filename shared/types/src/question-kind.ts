@@ -66,7 +66,7 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   csv: QuestionCsvCodec;
   gradingMode: GradingMode;
   /** Its own field, never derived from `gradingMode`: free_text grades itself on a match but is excluded (ADR 0001). */
-  kahootAllowed: boolean;
+  quickfireAllowed: boolean;
   /** How the reveal shows the question: its answer, or the step-by-step closest-guess reveal. Its own field, never derived from `gradingMode`. */
   revealKind: 'answer' | 'closest_guess';
   /** Which per-type grading settings the question carries beyond its answer and points (see answer-key.ts). */
@@ -104,7 +104,7 @@ export const QUESTION_KINDS: {
     payload: freeTextPayloadSchema,
     csv: answerOnlyCsv,
     gradingMode: 'match-or-human',
-    kahootAllowed: false,
+    quickfireAllowed: false,
     gradingSettings: [],
     scoringModes: [],
   },
@@ -123,7 +123,7 @@ export const QUESTION_KINDS: {
     payload: multipleChoicePayloadSchema,
     csv: choicesCsv,
     gradingMode: 'auto',
-    kahootAllowed: true,
+    quickfireAllowed: true,
     gradingSettings: [],
     scoringModes: [],
   },
@@ -143,7 +143,7 @@ export const QUESTION_KINDS: {
     payload: sortPayloadSchema,
     csv: sortCsv,
     gradingMode: 'auto',
-    kahootAllowed: true,
+    quickfireAllowed: true,
     gradingSettings: ['scoringMode'],
     scoringModes: SCORING_MODES_BY_TYPE.sort,
   },
@@ -163,7 +163,7 @@ export const QUESTION_KINDS: {
     payload: matchPayloadSchema,
     csv: matchCsv,
     gradingMode: 'auto',
-    kahootAllowed: true,
+    quickfireAllowed: true,
     gradingSettings: ['scoringMode'],
     scoringModes: SCORING_MODES_BY_TYPE.match,
   },
@@ -183,7 +183,7 @@ export const QUESTION_KINDS: {
     payload: closestGuessPayloadSchema,
     csv: answerOnlyCsv,
     gradingMode: 'batch',
-    kahootAllowed: false,
+    quickfireAllowed: false,
     gradingSettings: [],
     scoringModes: [],
   },
@@ -202,7 +202,7 @@ export const QUESTION_KINDS: {
     payload: numberPayloadSchema,
     csv: answerOnlyCsv,
     gradingMode: 'auto',
-    kahootAllowed: true,
+    quickfireAllowed: true,
     gradingSettings: ['margin'],
     scoringModes: [],
   },

@@ -9,6 +9,7 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
+import { QuizDraftInvalidError } from '@/quiz/quiz.service';
 
 const freeText = (prompt: string, points = 1) => ({
   type: 'free_text' as const,
@@ -94,6 +95,16 @@ describe('Live edit — saving a quiz while sessions play it', () => {
     (
       await game.inRequestContext(() => game.quizService.findDraftById(quizId))
     )?.rounds[roundIndex].questions.map((question) => question.prompt);
+
+  it('refuses a save naming another mode, leaving the stored quiz alone', async () => {
+    const request = await draftEdited(withPrompt(0, 'Edited'));
+
+    await expect(
+      save({ ...request, mode: 'quickfire' }),
+    ).rejects.toBeInstanceOf(QuizDraftInvalidError);
+
+    expect(await storedPrompts()).toEqual(['Q1', 'Q2', 'Q3']);
+  });
 
   it('refuses a save that deletes the next question when the press opening it lands first, leaving the on-air question alone', async () => {
     const request = await draftEdited(withoutQuestion(0, 1)); // drop Q2

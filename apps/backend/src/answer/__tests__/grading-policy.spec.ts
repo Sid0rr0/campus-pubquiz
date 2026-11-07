@@ -325,7 +325,7 @@ describe('Grading policy: key fix', () => {
         question: { ...AUTO, answer: 'Lyon' },
         previous: AUTO,
         rows: [row({ value: 'Lyon' }), graded('Paris', 'correct', 2)],
-        kahootTimerSeconds: null,
+        quickfireTimerSeconds: null,
         hasBatchRun: false,
       });
       expect(result).toEqual({
@@ -337,13 +337,13 @@ describe('Grading policy: key fix', () => {
       });
     });
 
-    it('speed-scales from the stored response time when a kahoot timer is given', () => {
+    it('speed-scales from the stored response time when a quickfire timer is given', () => {
       const fix = (responseMs: number) =>
         gradeOnKeyFix({
           question: AUTO,
           previous: AUTO,
           rows: [row({ value: 'Paris', responseMs })],
-          kahootTimerSeconds: 10,
+          quickfireTimerSeconds: 10,
           hasBatchRun: false,
         }).writes[0];
       expect(fix(0)).toEqual({ kind: 'set', points: 2, verdict: 'correct' });
@@ -356,18 +356,18 @@ describe('Grading policy: key fix', () => {
         question: AUTO,
         previous: AUTO,
         rows: [row({ value: 'Paris', responseMs: 5000 })],
-        kahootTimerSeconds: 10,
+        quickfireTimerSeconds: 10,
         hasBatchRun: false,
       }).writes;
       expect(write).toEqual({ kind: 'set', points: 1.5, verdict: 'correct' });
     });
 
-    it('applies no speed scaling, not even half-point rounding, without a kahoot timer', () => {
+    it('applies no speed scaling, not even half-point rounding, without a quickfire timer', () => {
       const [write] = gradeOnKeyFix({
         question: { ...AUTO, points: 2.3 },
         previous: AUTO,
         rows: [row({ value: 'Paris', responseMs: 5000 })],
-        kahootTimerSeconds: null,
+        quickfireTimerSeconds: null,
         hasBatchRun: false,
       }).writes;
       expect(write).toEqual({ kind: 'set', points: 2.3, verdict: 'correct' });
@@ -379,7 +379,7 @@ describe('Grading policy: key fix', () => {
           question: AUTO,
           previous: AUTO,
           rows: [],
-          kahootTimerSeconds: null,
+          quickfireTimerSeconds: null,
           hasBatchRun: false,
         }),
       ).toEqual({ rescored: true, writes: [] });
@@ -392,7 +392,7 @@ describe('Grading policy: key fix', () => {
         question: { ...MATCH_OR_HUMAN, answer: 'pear' },
         previous: MATCH_OR_HUMAN,
         rows,
-        kahootTimerSeconds: null,
+        quickfireTimerSeconds: null,
         hasBatchRun: false,
       });
 
@@ -452,7 +452,7 @@ describe('Grading policy: key fix', () => {
         question: BATCH,
         previous: BATCH,
         rows: [row({ value: '990' }), row({ value: '500' })],
-        kahootTimerSeconds: null,
+        quickfireTimerSeconds: null,
         hasBatchRun,
       });
 

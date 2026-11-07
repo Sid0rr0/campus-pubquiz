@@ -187,6 +187,7 @@ function AdminPageContent() {
           <SessionSettingsPanel
             joinCode={snapshot.joinCode}
             settings={settings}
+            isQuickfire={snapshot.isCurrentRoundQuickfire}
           />
         ) : (
           <SessionWorkspace

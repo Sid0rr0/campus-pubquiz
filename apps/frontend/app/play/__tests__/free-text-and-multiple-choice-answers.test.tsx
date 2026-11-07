@@ -569,12 +569,12 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     );
   });
 
-  describe('Kahoot mode multiple-choice', () => {
-    function kahootSession({ isKahoot = true } = {}) {
+  describe('Quickfire mode multiple-choice', () => {
+    function quickfireSession({ isQuickfire = true } = {}) {
       return {
         rounds: [
           {
-            kahootMode: isKahoot,
+            quickfire: isQuickfire,
             questions: [
               {
                 type: 'multiple_choice' as const,
@@ -594,7 +594,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
         teamLinkResult({
-          session: kahootSession(),
+          session: quickfireSession(),
           join: {
             team: {
               teamId: 'team-1',
@@ -624,7 +624,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
         teamLinkResult({
-          session: kahootSession(),
+          session: quickfireSession(),
           join: {
             team: {
               teamId: 'team-1',
@@ -651,7 +651,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       mockUseTeamLink.mockReturnValue(
         teamLinkResult({
-          session: kahootSession(),
+          session: quickfireSession(),
           join: {
             team: {
               teamId: 'team-1',
@@ -675,12 +675,12 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       );
     });
 
-    it('leaves non-Kahoot multiple-choice behavior untouched (Submit button, IDK button, staged pick)', async () => {
+    it('leaves non-Quickfire multiple-choice behavior untouched (Submit button, IDK button, staged pick)', async () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
         teamLinkResult({
-          session: kahootSession({ isKahoot: false }),
+          session: quickfireSession({ isQuickfire: false }),
           join: {
             team: {
               teamId: 'team-1',

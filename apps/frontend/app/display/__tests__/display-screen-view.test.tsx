@@ -99,7 +99,7 @@ describe('DisplayScreenView — without a live context', () => {
       powerUpCounts: [],
       joinCode: 'ABCDEF',
       isConnected: true,
-      kahootQuestionEndsAt: null,
+      quickfireQuestionEndsAt: null,
       onPickAnotherGame: () => undefined,
       onWinnerCelebrated: () => undefined,
     };
@@ -226,7 +226,7 @@ describe('DisplayScreenView — without a live context', () => {
       powerUpCounts: [],
       joinCode: 'ABCDEF',
       isConnected: true,
-      kahootQuestionEndsAt: null,
+      quickfireQuestionEndsAt: null,
       onPickAnotherGame: () => undefined,
       onWinnerCelebrated: () => undefined,
     };

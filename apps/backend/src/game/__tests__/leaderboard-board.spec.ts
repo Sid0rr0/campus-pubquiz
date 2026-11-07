@@ -1,5 +1,5 @@
 import {
-  KAHOOT_LEADERBOARD_TOP_N,
+  QUICKFIRE_LEADERBOARD_TOP_N,
   SOCKET_ROOMS,
   type DisplayStatePayload,
   type GameAction,
@@ -17,7 +17,7 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const KAHOOT_TIMER_SECONDS = 10;
+const QUICKFIRE_TIMER_SECONDS = 10;
 const BONUS_POINTS = 3;
 const BIG_BONUS_POINTS = 6;
 const TEAM_COUNT = 7;
@@ -34,21 +34,21 @@ describe('GameGateway — the leaderboard description on the display view', () =
     restoreClock();
   });
 
-  /** A kahoot round of two questions, opened on its first question. */
-  async function openKahootRound(teamNames: string[]): Promise<void> {
+  /** A quickfire round of two questions, opened on its first question. */
+  async function openQuickfireRound(teamNames: string[]): Promise<void> {
     game = await harness.createGateway({
       teamNames,
       rounds: [
         {
           title: 'Speed Round',
-          kahootMode: true,
+          quickfire: true,
           questions: [
             CAPITAL_QUESTION,
             { ...CAPITAL_QUESTION, prompt: 'Capital of UK?' },
           ],
         },
       ],
-      settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+      settings: { quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS },
     });
     await game.act('START_QUIZ');
     await game.act('ADVANCE'); // -> round_intro
@@ -87,9 +87,9 @@ describe('GameGateway — the leaderboard description on the display view', () =
     for (const action of actions) await game.act(action);
   }
 
-  describe('between kahoot questions', () => {
+  describe('between quickfire questions', () => {
     it('caps the entries at the top five and counts up the same teams from the old totals', async () => {
-      await openKahootRound(
+      await openQuickfireRound(
         Array.from({ length: TEAM_COUNT }, (_, index) => `Team ${index}`),
       );
       await actAll(['ADVANCE', 'ADVANCE']); // -> reveal
@@ -98,7 +98,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
 
       const { entries, countUpBoard } = board();
 
-      expect(entries).toHaveLength(KAHOOT_LEADERBOARD_TOP_N);
+      expect(entries).toHaveLength(QUICKFIRE_LEADERBOARD_TOP_N);
       expect(entries[0].teamId).toBe(game.teams[TEAM_COUNT - 1].teamId);
       expect(countUpBoard?.map((entry) => entry.teamId).sort()).toEqual(
         entries.map((entry) => entry.teamId).sort(),
@@ -109,7 +109,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
 
     it('reveals the whole capped board at once, with one step per rank of the entries', async () => {
-      await openKahootRound(
+      await openQuickfireRound(
         Array.from({ length: TEAM_COUNT }, (_, index) => `Team ${index}`),
       );
       await actAll(['ADVANCE', 'ADVANCE']);
@@ -122,7 +122,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
 
     it('gives every team up when everyone was tied before', async () => {
-      await openKahootRound(['First', 'Second']);
+      await openQuickfireRound(['First', 'Second']);
       await actAll(['ADVANCE', 'ADVANCE']);
       await awardBonus(0);
       await game.act('ADVANCE');
@@ -134,7 +134,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
 
     it('counts a bonus awarded on air as movement on the board that follows', async () => {
-      await openKahootRound(['First', 'Second']);
+      await openQuickfireRound(['First', 'Second']);
       await awardBonus(0); // on air: the board is frozen when the question opens
       await actAll(['ADVANCE', 'ADVANCE']);
       await awardBonus(1, BIG_BONUS_POINTS);
@@ -150,7 +150,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
 
     it('counts up from the board before the question, however many answers landed on air', async () => {
-      await openKahootRound(['First', 'Second']);
+      await openQuickfireRound(['First', 'Second']);
       await submitAnswers(game, ['Paris', 'London']); // First scores on air
       await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE']); // -> q1 behind the board
 
@@ -164,7 +164,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
 
     it('compares trends against the standings before the last question when its answers landed on air', async () => {
-      await openKahootRound(['First', 'Second']);
+      await openQuickfireRound(['First', 'Second']);
       await submitAnswers(game, ['Paris', 'London']);
       await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE', 'TOGGLE_LEADERBOARD']);
       await submitAnswers(game, ['London', 'Paris'], { questionIndex: 1 }); // Second draws level
@@ -177,7 +177,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
 
     it('gives a team that was not on the previous board no trend', async () => {
-      await openKahootRound(['First', 'Second']);
+      await openQuickfireRound(['First', 'Second']);
       await awardBonus(0);
       await actAll(['ADVANCE', 'ADVANCE']);
       await game.act('ADVANCE');
@@ -190,7 +190,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
 
     it('sends a resyncing big screen the same description as one connected throughout', async () => {
-      await openKahootRound(['First', 'Second']);
+      await openQuickfireRound(['First', 'Second']);
       await awardBonus(0);
       await actAll(['ADVANCE', 'ADVANCE']);
       await awardBonus(1, BIG_BONUS_POINTS);
@@ -202,9 +202,9 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
   });
 
-  describe('at the end of a kahoot round', () => {
+  describe('at the end of a quickfire round', () => {
     async function reachQuizEnd(): Promise<void> {
-      await openKahootRound(['First', 'Second']);
+      await openQuickfireRound(['First', 'Second']);
       await awardBonus(0); // on air during q0
       await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE']); // -> q1 behind the board
       await game.act('TOGGLE_LEADERBOARD');
@@ -232,13 +232,13 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
   });
 
-  describe('at the end of a kahoot round (also the quiz end) with an untouched prior board', () => {
+  describe('at the end of a quickfire round (also the quiz end) with an untouched prior board', () => {
     /** Plays both questions with nothing scored before the last one, then awards `bonuses` at its reveal and advances to the end. */
     async function reachEndAwarding(
       teamNames: string[],
       bonuses: number[],
     ): Promise<void> {
-      await openKahootRound(teamNames);
+      await openQuickfireRound(teamNames);
       await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE']); // -> q1 behind the board
       await game.act('TOGGLE_LEADERBOARD');
       await actAll(['ADVANCE', 'ADVANCE']); // -> reveal
@@ -264,7 +264,7 @@ describe('GameGateway — the leaderboard description on the display view', () =
       );
 
       const { entries, countUpBoard } = board();
-      expect(entries).toHaveLength(KAHOOT_LEADERBOARD_TOP_N);
+      expect(entries).toHaveLength(QUICKFIRE_LEADERBOARD_TOP_N);
       expect(entries.map((entry) => entry.rank)).toEqual([1, 2, 3, 4, 5]);
       expect(entries.map((entry) => entry.teamId)).not.toContain(
         game.teams[TEAM_COUNT - 1].teamId,

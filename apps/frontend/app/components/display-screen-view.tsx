@@ -47,7 +47,7 @@ export interface DisplayLiveContext {
   isMediaPaused?: boolean;
   isDisplaySoundMuted?: boolean;
   mediaReplayToken?: number;
-  kahootQuestionEndsAt: number | null;
+  quickfireQuestionEndsAt: number | null;
   onPickAnotherGame: () => void;
   onWinnerCelebrated: () => void;
 }
@@ -237,7 +237,7 @@ function QuestionView({
       }
       autoplayMedia={settings.autoplayMedia}
       {...media}
-      kahootQuestionEndsAt={live?.kahootQuestionEndsAt}
+      quickfireQuestionEndsAt={live?.quickfireQuestionEndsAt}
     />
   );
 }

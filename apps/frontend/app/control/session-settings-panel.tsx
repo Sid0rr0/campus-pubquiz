@@ -13,7 +13,10 @@ import {
   useTickableLeagues,
 } from '@/app/components/league-checkboxes';
 import { queryKeys } from '@/app/lib/query-keys';
-import { PowerUpsSettingsForm } from '@/app/components/power-ups-settings-form';
+import {
+  PowerUpsSettingsForm,
+  withoutCoinSettings,
+} from '@/app/components/power-ups-settings-form';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { SessionApiError, updateSessionSettings } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
@@ -22,12 +25,15 @@ import { Button } from '@/app/components/button';
 interface SessionSettingsPanelProps {
   joinCode: string;
   settings: SessionSettings;
+  /** A quickfire session has no jokers, power-ups, coins or leagues. */
+  isQuickfire?: boolean;
 }
 
 /** Lobby-only settings editor — any field can keep changing right up until START_QUIZ locks them in. */
 export function SessionSettingsPanel({
   joinCode,
   settings,
+  isQuickfire = false,
 }: SessionSettingsPanelProps) {
   const queryClient = useQueryClient();
   const [value, setValue] = useState<SessionSettings>(settings);
@@ -73,10 +79,7 @@ export function SessionSettingsPanel({
       <h2 className="font-display text-xl">Session Settings</h2>
       <Tabs.Root defaultValue="settings" className="flex flex-col gap-3">
         <Tabs.List className="flex gap-1 border-b border-foreground/15">
-          {[
-            ['settings', 'Settings'],
-            ['power-ups', 'Power-ups'],
-          ].map(([tab, label]) => (
+          {tabsFor(isQuickfire).map(([tab, label]) => (
             <Tabs.Trigger
               key={tab}
               value={tab}
@@ -87,28 +90,32 @@ export function SessionSettingsPanel({
           ))}
         </Tabs.List>
         <Tabs.Content value="settings">
-          <SessionSettingsForm value={value} onChange={setValue} />
+          <SessionSettingsForm
+            value={value}
+            onChange={setValue}
+            isQuickfire={isQuickfire}
+          />
         </Tabs.Content>
-        <Tabs.Content value="power-ups">
-          <PowerUpsSettingsForm value={value} onChange={setValue} />
-        </Tabs.Content>
+        {!isQuickfire && (
+          <Tabs.Content value="power-ups">
+            <PowerUpsSettingsForm value={value} onChange={setValue} />
+          </Tabs.Content>
+        )}
       </Tabs.Root>
-      <LeagueCheckboxes
-        leagues={leagues}
-        selected={pickedLeagueIds ?? memberOf}
-        onChange={setPickedLeagueIds}
-      />
+      {!isQuickfire && (
+        <LeagueCheckboxes
+          leagues={leagues}
+          selected={pickedLeagueIds ?? memberOf}
+          onChange={setPickedLeagueIds}
+        />
+      )}
       <Button
         type="button"
         disabled={saveMutation.isPending}
         variant="solid-flat"
         size="md"
         onClick={() =>
-          saveMutation.mutate(
-            pickedLeagueIds === null
-              ? value
-              : { ...value, leagueIds: pickedLeagueIds },
-          )
+          saveMutation.mutate(savePayload(value, pickedLeagueIds, isQuickfire))
         }
         className="w-fit self-end disabled:opacity-40"
       >
@@ -116,4 +123,26 @@ export function SessionSettingsPanel({
       </Button>
     </section>
   );
+}
+
+/** A quickfire session has no power-ups, so no tab for them. */
+function tabsFor(isQuickfire: boolean): string[][] {
+  return isQuickfire
+    ? [['settings', 'Settings']]
+    : [
+        ['settings', 'Settings'],
+        ['power-ups', 'Power-ups'],
+      ];
+}
+
+/** What Save sends: the settings (a quickfire session sends no coin settings) and, once ticked by hand, the leagues. */
+function savePayload(
+  value: SessionSettings,
+  pickedLeagueIds: number[] | null,
+  isQuickfire: boolean,
+): UpdateSessionSettingsPayload {
+  const settings = isQuickfire ? withoutCoinSettings(value) : value;
+  return pickedLeagueIds === null
+    ? settings
+    : { ...settings, leagueIds: pickedLeagueIds };
 }

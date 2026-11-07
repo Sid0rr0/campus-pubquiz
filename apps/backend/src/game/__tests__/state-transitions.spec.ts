@@ -10,8 +10,8 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const KAHOOT_TIMER_SECONDS = 3;
-const KAHOOT_ANSWER_DELAY_MS = 1_500;
+const QUICKFIRE_TIMER_SECONDS = 3;
+const QUICKFIRE_ANSWER_DELAY_MS = 1_500;
 
 describe('GameGateway — state transitions', () => {
   const harness = setupRealStoreGatewayTest();
@@ -316,11 +316,11 @@ describe('GameGateway — state transitions', () => {
     expect(restored.currentQuestion?.id).toBe(questionId(0, 0));
   });
 
-  describe('kahootMode round', () => {
-    const KAHOOT_ROUNDS: QuizRoundSpec[] = [
+  describe('quickfire round', () => {
+    const QUICKFIRE_ROUNDS: QuizRoundSpec[] = [
       {
         title: 'Speed Round',
-        kahootMode: true,
+        quickfire: true,
         questions: [
           {
             type: 'multiple_choice',
@@ -339,19 +339,19 @@ describe('GameGateway — state transitions', () => {
         ],
       },
     ];
-    const KAHOOT_TO_FIRST_QUESTION: GameAction[] = [
+    const QUICKFIRE_TO_FIRST_QUESTION: GameAction[] = [
       'START_QUIZ',
       'ADVANCE', // -> round_intro
       'ADVANCE', // -> question_open q0
     ];
-    let kahoot: RealStoreGateway;
+    let quickfire: RealStoreGateway;
 
     beforeEach(async () => {
-      kahoot = await harness.createGateway({
-        joinCode: 'KAHOOT',
-        rounds: KAHOOT_ROUNDS,
+      quickfire = await harness.createGateway({
+        joinCode: 'QUICKFIRE',
+        rounds: QUICKFIRE_ROUNDS,
         teamNames: ['Speedy'],
-        settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+        settings: { quickfireQuestionTimerSeconds: QUICKFIRE_TIMER_SECONDS },
       });
       // Only Date is frozen (timers stay real): how long a question has been
       // open is whatever the test advances the clock by. Frozen at the real
@@ -364,24 +364,24 @@ describe('GameGateway — state transitions', () => {
     });
 
     it('locks, speed-scores, and reveals each question one at a time, skipping break/reveal_intro entirely', async () => {
-      const [{ socket: team, teamId }] = kahoot.teams;
-      const [firstId, secondId] = kahoot.rounds[0].questionIds;
-      await actAll(KAHOOT_TO_FIRST_QUESTION, kahoot);
+      const [{ socket: team, teamId }] = quickfire.teams;
+      const [firstId, secondId] = quickfire.rounds[0].questionIds;
+      await actAll(QUICKFIRE_TO_FIRST_QUESTION, quickfire);
 
       // Answering halfway through the question timer is worth less than the
       // full 10 points once the speed scaling is applied at lock time.
-      advanceClockBy(KAHOOT_ANSWER_DELAY_MS);
-      await kahoot.gateway.handleSubmitAnswer(asSocket(team), {
+      advanceClockBy(QUICKFIRE_ANSWER_DELAY_MS);
+      await quickfire.gateway.handleSubmitAnswer(asSocket(team), {
         questionId: firstId,
         teamId,
         value: 'Paris',
       });
 
-      const locking = await kahoot.act('ADVANCE');
+      const locking = await quickfire.act('ADVANCE');
       expect(locking.progress.status).toBe('locking');
       expect(locking.currentQuestion?.id).toBe(firstId);
 
-      const reveal = await kahoot.act('ADVANCE');
+      const reveal = await quickfire.act('ADVANCE');
       expect(reveal.progress.status).toBe('reveal');
       expect(reveal.progress.revealIndex).toBe(0);
       const scored = reveal.leaderboard.find(
@@ -390,22 +390,22 @@ describe('GameGateway — state transitions', () => {
       expect(scored?.totalPoints).toBeGreaterThan(0);
       expect(scored?.totalPoints).toBeLessThan(10);
 
-      const nextOpen = await kahoot.act('ADVANCE');
+      const nextOpen = await quickfire.act('ADVANCE');
       expect(nextOpen.progress.status).toBe('question_open');
       expect(nextOpen.progress.questionIndex).toBe(1);
       expect(nextOpen.currentQuestion?.id).toBe(secondId);
 
-      await kahoot.act('ADVANCE'); // hides the between-questions board
-      await kahoot.act('ADVANCE'); // -> locking q1
-      const secondReveal = await kahoot.act('ADVANCE');
+      await quickfire.act('ADVANCE'); // hides the between-questions board
+      await quickfire.act('ADVANCE'); // -> locking q1
+      const secondReveal = await quickfire.act('ADVANCE');
       expect(secondReveal.progress.status).toBe('reveal');
 
-      const ended = await kahoot.act('ADVANCE');
+      const ended = await quickfire.act('ADVANCE');
       expect(ended.progress.status).toBe('ended');
     });
 
     it('never checks for ungraded answers, since the locking->reveal collapse never passes through break/break_intro', async () => {
-      // A human-graded audio answer stays ungraded; if the kahoot
+      // A human-graded audio answer stays ungraded; if the quickfire
       // locking->reveal collapse ever routed through the break/break_intro
       // ungraded-answers gate, ADVANCE would reject.
       const withUngraded = await harness.createGateway({
@@ -414,7 +414,7 @@ describe('GameGateway — state transitions', () => {
         rounds: [
           {
             title: 'Speed Round',
-            kahootMode: true,
+            quickfire: true,
             questions: [
               { type: 'free_text', prompt: 'Which band?', answer: 'Queen' },
             ],
@@ -422,7 +422,7 @@ describe('GameGateway — state transitions', () => {
         ],
       });
       const [{ socket: team, teamId }] = withUngraded.teams;
-      await actAll(KAHOOT_TO_FIRST_QUESTION, withUngraded);
+      await actAll(QUICKFIRE_TO_FIRST_QUESTION, withUngraded);
       await withUngraded.gateway.handleSubmitAnswer(asSocket(team), {
         questionId: withUngraded.rounds[0].questionIds[0],
         teamId,
@@ -435,44 +435,44 @@ describe('GameGateway — state transitions', () => {
       });
     });
 
-    it('steps backward through kahoot questions with PREVIOUS', async () => {
+    it('steps backward through quickfire questions with PREVIOUS', async () => {
       await actAll(
         [
-          ...KAHOOT_TO_FIRST_QUESTION,
+          ...QUICKFIRE_TO_FIRST_QUESTION,
           'ADVANCE', // -> locking q0
           'ADVANCE', // -> reveal q0
           'ADVANCE', // -> question_open q1, hidden behind the board
           'ADVANCE', // hides the board
         ],
-        kahoot,
+        quickfire,
       );
 
-      const backToReveal = await kahoot.act('PREVIOUS');
+      const backToReveal = await quickfire.act('PREVIOUS');
       expect(backToReveal.progress.status).toBe('reveal');
       expect(backToReveal.progress.questionIndex).toBe(0);
 
-      const backToLocking = await kahoot.act('PREVIOUS');
+      const backToLocking = await quickfire.act('PREVIOUS');
       expect(backToLocking.progress.status).toBe('locking');
       expect(backToLocking.progress.questionIndex).toBe(0);
     });
 
     it('does not re-score a question if PREVIOUS reopens locking and ADVANCE re-reveals it', async () => {
-      const [{ socket: team, teamId }] = kahoot.teams;
-      await actAll(KAHOOT_TO_FIRST_QUESTION, kahoot);
-      advanceClockBy(KAHOOT_ANSWER_DELAY_MS);
-      await kahoot.gateway.handleSubmitAnswer(asSocket(team), {
-        questionId: kahoot.rounds[0].questionIds[0],
+      const [{ socket: team, teamId }] = quickfire.teams;
+      await actAll(QUICKFIRE_TO_FIRST_QUESTION, quickfire);
+      advanceClockBy(QUICKFIRE_ANSWER_DELAY_MS);
+      await quickfire.gateway.handleSubmitAnswer(asSocket(team), {
+        questionId: quickfire.rounds[0].questionIds[0],
         teamId,
         value: 'Paris',
       });
-      await kahoot.act('ADVANCE'); // -> locking q0
-      const reveal = await kahoot.act('ADVANCE'); // -> reveal q0 (scores once)
+      await quickfire.act('ADVANCE'); // -> locking q0
+      const reveal = await quickfire.act('ADVANCE'); // -> reveal q0 (scores once)
       const scoredOnce = reveal.leaderboard.find(
         (entry) => entry.teamId === teamId,
       )?.totalPoints;
-      await kahoot.act('PREVIOUS'); // -> back to locking q0
+      await quickfire.act('PREVIOUS'); // -> back to locking q0
 
-      const revealAgain = await kahoot.act('ADVANCE'); // -> reveal q0 again
+      const revealAgain = await quickfire.act('ADVANCE'); // -> reveal q0 again
       expect(revealAgain.progress.status).toBe('reveal');
       expect(
         revealAgain.leaderboard.find((entry) => entry.teamId === teamId)
@@ -480,16 +480,16 @@ describe('GameGateway — state transitions', () => {
       ).toBe(scoredOnce);
     });
 
-    it('refuses answers to a kahoot question once it was revealed, even after PREVIOUS reopens locking', async () => {
-      const [{ socket: team, teamId }] = kahoot.teams;
-      const questionId = kahoot.rounds[0].questionIds[0];
-      await actAll(KAHOOT_TO_FIRST_QUESTION, kahoot);
-      await kahoot.act('ADVANCE'); // -> locking q0
-      await kahoot.act('ADVANCE'); // -> reveal q0, the answer is on the big screen
-      await kahoot.act('PREVIOUS'); // -> back to locking q0
+    it('refuses answers to a quickfire question once it was revealed, even after PREVIOUS reopens locking', async () => {
+      const [{ socket: team, teamId }] = quickfire.teams;
+      const questionId = quickfire.rounds[0].questionIds[0];
+      await actAll(QUICKFIRE_TO_FIRST_QUESTION, quickfire);
+      await quickfire.act('ADVANCE'); // -> locking q0
+      await quickfire.act('ADVANCE'); // -> reveal q0, the answer is on the big screen
+      await quickfire.act('PREVIOUS'); // -> back to locking q0
 
       await expect(
-        kahoot.gateway.handleSubmitAnswer(asSocket(team), {
+        quickfire.gateway.handleSubmitAnswer(asSocket(team), {
           questionId,
           teamId,
           value: 'Paris',

@@ -11,8 +11,8 @@ interface QuestionOpenScreenProps {
   mediaReplayToken?: number;
   isMediaPaused?: boolean;
   isDisplaySoundMuted?: boolean;
-  /** Epoch-ms deadline when a kahootMode question auto-locks, or null/undefined when no timer is armed. */
-  kahootQuestionEndsAt?: number | null;
+  /** Epoch-ms deadline when a quickfire question auto-locks, or null/undefined when no timer is armed. */
+  quickfireQuestionEndsAt?: number | null;
 }
 
 export function QuestionOpenScreen({
@@ -23,16 +23,16 @@ export function QuestionOpenScreen({
   mediaReplayToken,
   isMediaPaused,
   isDisplaySoundMuted,
-  kahootQuestionEndsAt,
+  quickfireQuestionEndsAt,
 }: QuestionOpenScreenProps) {
   const countClassName =
     'pt-8 text-display-2xl font-extrabold tracking-wide text-foreground/55';
   return (
     <div className="flex min-h-0 flex-1 flex-col px-16 pb-8 pt-16 text-center">
-      {kahootQuestionEndsAt != null && (
+      {quickfireQuestionEndsAt != null && (
         <QuestionLockCountdown
-          key={`kahoot-ring-${kahootQuestionEndsAt}`}
-          lockAt={kahootQuestionEndsAt}
+          key={`quickfire-ring-${quickfireQuestionEndsAt}`}
+          lockAt={quickfireQuestionEndsAt}
         />
       )}
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8">

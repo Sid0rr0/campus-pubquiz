@@ -7,10 +7,10 @@ import { resolveAnswerKind } from '../answer-kind';
 import { SCORING_MODES } from '../scoring-mode';
 import {
   BATCH_GRADED_TYPES,
-  KAHOOT_ALLOWED_TYPES,
+  QUICKFIRE_ALLOWED_TYPES,
   hasNumericAnswerKey,
   joinNames,
-  kahootTypeNames,
+  quickfireTypeNames,
 } from '../scoring';
 
 type Verdict = 'valid' | 'invalid';
@@ -240,25 +240,25 @@ const CASES: ParityCase[] = [
 
 interface GradingFlags {
   gradingMode: 'auto' | 'batch' | 'match-or-human';
-  kahootAllowed: boolean;
+  quickfireAllowed: boolean;
 }
 
 const EXPECTED_FLAGS: Record<QuestionType, GradingFlags> = {
   free_text: {
     gradingMode: 'match-or-human',
-    kahootAllowed: false,
+    quickfireAllowed: false,
   },
   multiple_choice: {
     gradingMode: 'auto',
-    kahootAllowed: true,
+    quickfireAllowed: true,
   },
-  sort: { gradingMode: 'auto', kahootAllowed: true },
-  match: { gradingMode: 'auto', kahootAllowed: true },
+  sort: { gradingMode: 'auto', quickfireAllowed: true },
+  match: { gradingMode: 'auto', quickfireAllowed: true },
   closest_guess: {
     gradingMode: 'batch',
-    kahootAllowed: false,
+    quickfireAllowed: false,
   },
-  number: { gradingMode: 'auto', kahootAllowed: true },
+  number: { gradingMode: 'auto', quickfireAllowed: true },
 };
 
 /** Issue messages the import path produces for `question` (empty when valid). */
@@ -304,10 +304,10 @@ describe('question kind registry', () => {
 
 describe('question kind grading flags', () => {
   it.each(QUESTION_TYPES)(
-    "%s matches today's grading mode and kahoot-allowed",
+    "%s matches today's grading mode and quickfire-allowed",
     (type) => {
-      const { gradingMode, kahootAllowed } = QUESTION_KINDS[type];
-      expect({ gradingMode, kahootAllowed }).toEqual(EXPECTED_FLAGS[type]);
+      const { gradingMode, quickfireAllowed } = QUESTION_KINDS[type];
+      expect({ gradingMode, quickfireAllowed }).toEqual(EXPECTED_FLAGS[type]);
     },
   );
 
@@ -317,7 +317,9 @@ describe('question kind grading flags', () => {
       expect(BATCH_GRADED_TYPES.includes(type)).toBe(
         kind.gradingMode === 'batch',
       );
-      expect(KAHOOT_ALLOWED_TYPES.includes(type)).toBe(kind.kahootAllowed);
+      expect(QUICKFIRE_ALLOWED_TYPES.includes(type)).toBe(
+        kind.quickfireAllowed,
+      );
     }
   });
 
@@ -341,14 +343,14 @@ describe('question kind grading flags', () => {
     );
   });
 
-  it('names the kahoot-accepted types by lowercased label, in picker order, with "and" before the last', () => {
-    expect(kahootTypeNames()).toBe(
+  it('names the quickfire-accepted types by lowercased label, in picker order, with "and" before the last', () => {
+    expect(quickfireTypeNames()).toBe(
       'multiple choice, sort / order, match pairs and number',
     );
     const names = QUESTION_TYPES.filter(
-      (type) => QUESTION_KINDS[type].kahootAllowed,
+      (type) => QUESTION_KINDS[type].quickfireAllowed,
     ).map((type) => QUESTION_KINDS[type].label.toLowerCase());
-    expect(kahootTypeNames()).toBe(
+    expect(quickfireTypeNames()).toBe(
       `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`,
     );
   });
@@ -362,9 +364,9 @@ describe('question kind grading flags', () => {
     expect(joinNames(names)).toBe(expected);
   });
 
-  it('keeps free_text out of kahoot rounds although it grades itself on a match (ADR 0001)', () => {
+  it('keeps free_text out of quickfire rounds although it grades itself on a match (ADR 0001)', () => {
     expect(QUESTION_KINDS.free_text.gradingMode).toBe('match-or-human');
-    expect(QUESTION_KINDS.free_text.kahootAllowed).toBe(false);
+    expect(QUESTION_KINDS.free_text.quickfireAllowed).toBe(false);
   });
 });
 

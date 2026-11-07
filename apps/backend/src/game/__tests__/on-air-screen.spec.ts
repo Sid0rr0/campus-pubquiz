@@ -319,10 +319,10 @@ describe('Screen projection — the named on-air screen', () => {
     });
   });
 
-  describe('a kahoot round', () => {
+  describe('a quickfire round', () => {
     beforeEach(async () => {
       game = await harness.createGateway({
-        kahootMode: true,
+        quickfire: true,
         teamNames: ['First', 'Second'],
       });
       await game.act('START_QUIZ');
@@ -334,7 +334,7 @@ describe('Screen projection — the named on-air screen', () => {
       expect(displayView().screen.kind).toBe('question');
     });
 
-    it('shows the leaderboard over the next, already-open question and counts it up between kahoot questions', async () => {
+    it('shows the leaderboard over the next, already-open question and counts it up between quickfire questions', async () => {
       await game.act('ADVANCE'); // locking
       await game.act('ADVANCE'); // reveal
       await game.act('ADVANCE'); // q2 behind the leaderboard

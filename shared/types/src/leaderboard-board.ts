@@ -1,9 +1,9 @@
 import { getBlockInPlay, getBlockRoundIndexes } from './block-in-play';
 import { isGradedStatus, isQuestionOnAirStatus } from './game-state-groups';
 import {
-  isCurrentRoundKahoot,
-  isQuestionHiddenBehindKahootLeaderboard,
-} from './kahoot-visibility';
+  isCurrentRoundQuickfire,
+  isQuestionHiddenBehindQuickfireLeaderboard,
+} from './quickfire-visibility';
 import { capLeaderboard } from './leaderboard-tiebreak';
 import { rankTeams } from './ranking-rule';
 import type {
@@ -123,7 +123,7 @@ function firstQuestionIdOfBlockOnAir(session: SessionState): number | null {
  * the block has landed yet, so it is the board before the block. A later
  * question or round of the block, Previous and Advance back into its first
  * question, and a leaderboard toggle over it take nothing, since the prior
- * standings are already this block's. In a kahoot round every question is its
+ * standings are already this block's. In a quickfire round every question is its
  * own block. Pure: the Session write applies it once per write, before the
  * new standings are read.
  */
@@ -191,8 +191,8 @@ function describeJokerTeamIds(
 
 /**
  * The leaderboard the big screen draws, decided once on the server: the
- * entries (capped for a kahoot round), the board to count up from (only for
- * the between-questions kahoot board, where the next question is already open
+ * entries (capped for a quickfire round), the board to count up from (only for
+ * the between-questions quickfire board, where the next question is already open
  * underneath), and each team's trend.
  */
 export function describeLeaderboardBoard(
@@ -200,12 +200,12 @@ export function describeLeaderboardBoard(
 ): LeaderboardBoard {
   const entries = capLeaderboard(
     session.leaderboard,
-    isCurrentRoundKahoot(session),
+    isCurrentRoundQuickfire(session),
   );
-  const isBetweenKahootQuestions =
+  const isBetweenQuickfireQuestions =
     session.progress.status === 'question_open' &&
-    isQuestionHiddenBehindKahootLeaderboard(session);
-  const countUpBoard = isBetweenKahootQuestions
+    isQuestionHiddenBehindQuickfireLeaderboard(session);
+  const countUpBoard = isBetweenQuickfireQuestions
     ? describeCountUpBoard(session, entries)
     : undefined;
   const jokerTeamIds = describeJokerTeamIds(session, entries);

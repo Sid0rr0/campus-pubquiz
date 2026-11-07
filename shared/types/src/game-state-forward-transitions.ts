@@ -44,7 +44,7 @@ export function advanceFromQuestionOpen(
   }
 
   // Last question of the round, but it isn't a break point (breakAfter:
-  // false, not kahootMode) — questions stay open and the block continues
+  // false, not quickfire) — questions stay open and the block continues
   // into the next round without locking anything yet.
   const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
   if (isLastRound) {
@@ -112,14 +112,14 @@ export function advanceFromReveal(
 ): GameProgress {
   const round = context.rounds[progress.roundIndex];
 
-  // Kahoot rounds resolve one question at a time — after showing this
+  // Quickfire rounds resolve one question at a time — after showing this
   // question's reveal, hop straight into the next question within the same
   // round (a fresh one-question block) instead of treating the round as a
   // finished multi-question block. The next question is opened immediately
   // but sits behind the leaderboard (isLeaderboardVisible: true), same as a
   // finished block below — the admin reveals it via TOGGLE_LEADERBOARD once
   // teams have seen the standings update.
-  if (round.kahootMode && progress.questionIndex + 1 < round.questionCount) {
+  if (round.quickfire && progress.questionIndex + 1 < round.questionCount) {
     const questionIndex = progress.questionIndex + 1;
     return {
       ...progress,

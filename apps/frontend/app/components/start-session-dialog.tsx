@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Dialog, Tabs } from 'radix-ui';
 import { CheckIcon, Cross2Icon } from '@radix-ui/react-icons';
 import {
-  DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS,
+  DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS,
   DEFAULT_SESSION_SETTINGS,
   type QuizSummary,
   type SessionSettings,
@@ -20,7 +20,10 @@ import {
   useTickableLeagues,
 } from '@/app/components/league-checkboxes';
 import { RoundsList } from '@/app/components/rounds-list';
-import { PowerUpsSettingsForm } from '@/app/components/power-ups-settings-form';
+import {
+  PowerUpsSettingsForm,
+  withoutCoinSettings,
+} from '@/app/components/power-ups-settings-form';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 
 interface StartSessionDialogProps {
@@ -41,10 +44,17 @@ export function StartSessionDialog({
     useSessionDraft(quiz);
   const { leagues } = useTickableLeagues();
   const createMutation = useCreateSession(onCreated, onClose);
+  const isQuickfire = isQuickfireQuiz(quiz);
+  const quizTitle = quiz?.title ?? '';
 
   function handleConfirm(): void {
     if (!quiz) return;
-    createMutation.mutate({ quizId: quiz.id, settings, name, leagueIds });
+    createMutation.mutate({
+      quizId: quiz.id,
+      settings: settingsToSend(settings, isQuickfire),
+      name,
+      leagueIds,
+    });
   }
 
   return (
@@ -58,7 +68,7 @@ export function StartSessionDialog({
         <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex max-h-[85vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl bg-white p-5">
           <Dialog.Title className="font-display text-xl">
-            Start &quot;{quiz?.title}&quot;?
+            Start &quot;{quizTitle}&quot;?
           </Dialog.Title>
           <label className="flex flex-col gap-1 text-sm font-extrabold">
             Session name
@@ -66,16 +76,19 @@ export function StartSessionDialog({
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder={quiz?.title ?? ''}
+              placeholder={quizTitle}
               className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
             />
           </label>
-          <LeagueCheckboxes
-            leagues={leagues}
-            selected={leagueIds}
-            onChange={setLeagueIds}
-          />
+          {!isQuickfire && (
+            <LeagueCheckboxes
+              leagues={leagues}
+              selected={leagueIds}
+              onChange={setLeagueIds}
+            />
+          )}
           <SessionTabs
+            isQuickfire={isQuickfire}
             rounds={quiz?.rounds}
             settings={settings}
             onSettingsChange={setSettings}
@@ -127,13 +140,25 @@ function useSessionDraft(quiz: StartSessionDialogProps['quiz']) {
   return { settings, setSettings, name, setName, leagueIds, setLeagueIds };
 }
 
+function isQuickfireQuiz(quiz: StartSessionDialogProps['quiz']): boolean {
+  return quiz?.mode === 'quickfire';
+}
+
+/** A quickfire session has no coins, so it sends none of the coin settings. */
+function settingsToSend(
+  settings: SessionSettings,
+  isQuickfire: boolean,
+): Partial<SessionSettings> {
+  return isQuickfire ? withoutCoinSettings(settings) : settings;
+}
+
 function defaultSettingsFor(
   quiz: StartSessionDialogProps['quiz'],
 ): SessionSettings {
   return {
     ...DEFAULT_SESSION_SETTINGS,
-    kahootQuestionTimerSeconds: quiz?.rounds.some((round) => round.kahootMode)
-      ? DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS
+    quickfireQuestionTimerSeconds: isQuickfireQuiz(quiz)
+      ? DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS
       : null,
   };
 }
@@ -146,7 +171,7 @@ function useCreateSession(
   return useMutation({
     mutationFn: (variables: {
       quizId: number;
-      settings: SessionSettings;
+      settings: Partial<SessionSettings>;
       name: string;
       leagueIds: number[];
     }) =>
@@ -173,10 +198,12 @@ function useCreateSession(
 }
 
 function SessionTabs({
+  isQuickfire,
   rounds,
   settings,
   onSettingsChange,
 }: {
+  isQuickfire: boolean;
   rounds: NonNullable<StartSessionDialogProps['quiz']>['rounds'] | undefined;
   settings: SessionSettings;
   onSettingsChange: (settings: SessionSettings) => void;
@@ -196,22 +223,30 @@ function SessionTabs({
         >
           Settings
         </Tabs.Trigger>
-        <Tabs.Trigger
-          value="power-ups"
-          className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
-        >
-          Power-ups
-        </Tabs.Trigger>
+        {!isQuickfire && (
+          <Tabs.Trigger
+            value="power-ups"
+            className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
+          >
+            Power-ups
+          </Tabs.Trigger>
+        )}
       </Tabs.List>
       <Tabs.Content value="overview">
         {rounds && <RoundsList rounds={rounds} />}
       </Tabs.Content>
       <Tabs.Content value="settings">
-        <SessionSettingsForm value={settings} onChange={onSettingsChange} />
+        <SessionSettingsForm
+          value={settings}
+          onChange={onSettingsChange}
+          isQuickfire={isQuickfire}
+        />
       </Tabs.Content>
-      <Tabs.Content value="power-ups">
-        <PowerUpsSettingsForm value={settings} onChange={onSettingsChange} />
-      </Tabs.Content>
+      {!isQuickfire && (
+        <Tabs.Content value="power-ups">
+          <PowerUpsSettingsForm value={settings} onChange={onSettingsChange} />
+        </Tabs.Content>
+      )}
     </Tabs.Root>
   );
 }

@@ -299,13 +299,13 @@ describe('GameGateway — rating the rounds in the break', () => {
       return (playersView(game).feedback?.rounds ?? []).map((r) => r.title);
     }
 
-    it('is the feedback field at ended and lists every round, kahoot rounds included', async () => {
+    it('is the feedback field at ended and lists every round, quickfire rounds included', async () => {
       const game = await harness.createGateway({
         teamNames: ['The Quizzards'],
         rounds: [
           THREE_ROUNDS[0],
           THREE_ROUNDS[1],
-          { ...THREE_ROUNDS[2], kahootMode: true },
+          { ...THREE_ROUNDS[2], quickfire: true },
         ],
       });
       await game.act('START_QUIZ');
@@ -322,16 +322,16 @@ describe('GameGateway — rating the rounds in the break', () => {
       });
     });
 
-    it('never lists a kahoot round on a break card, and lists it at ended', async () => {
+    it('never lists a quickfire round on a break card, and lists it at ended', async () => {
       const game = await harness.createGateway({
         teamNames: ['The Quizzards'],
         rounds: [
           THREE_ROUNDS[0],
-          { ...THREE_ROUNDS[1], breakAfter: false, kahootMode: true },
+          { ...THREE_ROUNDS[1], breakAfter: false, quickfire: true },
         ],
       });
       await game.act('START_QUIZ');
-      const kahootId = game.rounds[1].id;
+      const quickfireId = game.rounds[1].id;
 
       let snapshot = await game.snapshot();
       for (let i = 0; i < MAX_ADVANCES; i += 1) {
@@ -339,7 +339,7 @@ describe('GameGateway — rating the rounds in the break', () => {
         if (snapshot.progress.status === 'ended') break;
         expect(
           field?.kind === 'break_card' ? field.rounds : [],
-        ).not.toContainEqual(expect.objectContaining({ id: kahootId }));
+        ).not.toContainEqual(expect.objectContaining({ id: quickfireId }));
         snapshot = await game.act('ADVANCE');
       }
 

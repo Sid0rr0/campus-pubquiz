@@ -6,6 +6,7 @@ import {
 import {
   InvalidLeagueIdsError,
   LeagueNotFoundError,
+  QuickfireLeagueError,
   SessionEndedError,
   SessionNotEndedError,
   SessionNotFoundError,
@@ -29,7 +30,10 @@ export async function mapLeagueErrors<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run();
   } catch (error) {
-    if (error instanceof InvalidLeagueIdsError) {
+    if (
+      error instanceof InvalidLeagueIdsError ||
+      error instanceof QuickfireLeagueError
+    ) {
       throw new BadRequestException(error.message);
     }
     if (

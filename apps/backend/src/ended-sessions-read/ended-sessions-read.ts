@@ -36,6 +36,7 @@ export interface EndedSessionHeader {
   quizTitle: string;
   playedAt: Date;
   maxPoints: number;
+  isQuickfire: boolean;
 }
 
 /** An ended session a team took part in. */
@@ -115,6 +116,7 @@ interface HeaderRow {
   quiz_title: string;
   played_at: string | Date;
   max_points: string | number;
+  is_quickfire: boolean;
 }
 
 function headerOf(row: HeaderRow): EndedSessionHeader {
@@ -127,6 +129,7 @@ function headerOf(row: HeaderRow): EndedSessionHeader {
     quizTitle: row.quiz_title,
     playedAt: new Date(row.played_at),
     maxPoints: Number(row.max_points),
+    isQuickfire: row.is_quickfire,
   };
 }
 
@@ -195,21 +198,30 @@ export class EndedSessionsRead {
 
   /**
    * Sessions played per team as a query to join, sort by and page:
-   * `team_id` and `sessions_played`, the count of ended sessions the team took
-   * part in. Teams that took part in none have no row; join with a coalesce.
+   * `team_id`, `sessions_played` (the count of ended sessions the team took
+   * part in) and `quickfire_played` (how many of those were quickfire). Teams that took part in none have no row; join with a coalesce.
    */
   sessionsPlayedQuery() {
     const knex: Knex = this.gameSessionTeams.getKnex();
     return this.participantsQuery()
       .join(
-        this.endedSessionsQuery().clearSelect().select('gs.id').as('ended_gs'),
+        this.endedSessionsQuery()
+          .clearSelect()
+          .select('gs.id')
+          .select(knex.raw(`qz.mode = 'quickfire' as is_quickfire`))
+          .as('ended_gs'),
         'ended_gs.id',
         'p.game_session_id',
       )
       .groupBy('p.team_id')
       .clearSelect()
       .select('p.team_id as team_id')
-      .select(knex.raw('count(*) as sessions_played'));
+      .select(knex.raw('count(*) as sessions_played'))
+      .select(
+        knex.raw(
+          'count(*) filter (where ended_gs.is_quickfire) as quickfire_played',
+        ),
+      );
   }
 
   /**
@@ -233,11 +245,13 @@ export class EndedSessionsRead {
       .select('qz.title as quiz_title')
       .select('gs.created_at as played_at');
     return withMaxPoints
-      ? query.select(
-          knex.raw(
-            `(select coalesce(sum(mq.points), 0) from rounds mr join questions mq on mq.round_id = mr.id where mr.quiz_id = gs.quiz_id) as max_points`,
-          ),
-        )
+      ? query
+          .select(
+            knex.raw(
+              `(select coalesce(sum(mq.points), 0) from rounds mr join questions mq on mq.round_id = mr.id where mr.quiz_id = gs.quiz_id) as max_points`,
+            ),
+          )
+          .select(knex.raw(`qz.mode = 'quickfire' as is_quickfire`))
       : query;
   }
 

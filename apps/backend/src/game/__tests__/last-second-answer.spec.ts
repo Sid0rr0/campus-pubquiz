@@ -23,10 +23,10 @@ const CLOSEST_GUESS_ROUND: QuizRoundSpec[] = [
   },
 ];
 
-const KAHOOT_ROUND: QuizRoundSpec[] = [
+const QUICKFIRE_ROUND: QuizRoundSpec[] = [
   {
     title: 'Speed Round',
-    kahootMode: true,
+    quickfire: true,
     questions: [
       {
         type: 'multiple_choice',
@@ -165,9 +165,9 @@ describe('GameGateway — a last-second answer either counts or is refused', () 
     },
   );
 
-  describe('kahoot question, against the press that locks it', () => {
+  describe('quickfire question, against the press that locks it', () => {
     async function toLocking() {
-      const opened = await openQuestion(KAHOOT_ROUND);
+      const opened = await openQuestion(QUICKFIRE_ROUND);
       await submit(opened.game, 0, opened.questionId, 'Paris');
       await opened.game.act('ADVANCE'); // -> locking
       opened.game.clearEmits();

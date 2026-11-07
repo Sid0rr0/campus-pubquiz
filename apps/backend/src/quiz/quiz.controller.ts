@@ -86,7 +86,11 @@ export class QuizController {
   async create(@Body() body: unknown): Promise<QuizDraftSaveResult> {
     const draft = parseDraftBody(body);
     try {
-      return await this.quizService.create(draft.title, draft.rounds);
+      return await this.quizService.create(
+        draft.title,
+        draft.rounds,
+        draft.mode,
+      );
     } catch (error) {
       throw toQuizHttpError(error);
     }

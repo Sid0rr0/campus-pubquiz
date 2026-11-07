@@ -88,6 +88,7 @@ const sessions = [night1, night2].map((result, index) => ({
   playedAt: new Date(2026, 0, index + 1).toISOString(),
   result,
   playerCount: null,
+  isQuickfire: false,
 }));
 
 describe('the league and the team page agree on a night', () => {

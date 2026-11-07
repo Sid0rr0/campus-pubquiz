@@ -29,7 +29,7 @@ export interface SessionBriefRoundInputRow extends SessionDetailRoundInputRow {
   /** The round's free-text author as stored. */
   author: string | null;
   note: string | null;
-  isKahoot: boolean;
+  isQuickfire: boolean;
 }
 
 export interface SessionBriefQuestionInputRow extends SessionDetailQuestionInputRow {
@@ -227,7 +227,7 @@ function roundSection(
     `## Round ${roundNumber}: ${round.title}`,
     ...(round.category ? [`Category: ${round.category}`] : []),
     ...(round.author ? [`Author: ${round.author}`] : []),
-    ...(round.isKahoot ? ['Kahoot round'] : []),
+    ...(round.isQuickfire ? ['Quickfire round'] : []),
     ...(round.note ? [`Note: ${round.note}`] : []),
     rating
       ? `Rating: ${rating.average.toFixed(1)} stars (${plural(rating.count, 'rating')})`

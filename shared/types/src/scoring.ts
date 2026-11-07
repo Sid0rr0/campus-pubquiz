@@ -30,7 +30,7 @@ export type ScoredQuestion = GradingSettingsSource & {
   points: number;
 };
 
-/** Kahoot speed inputs: how long the team took and the configured timer. Either null means no scaling. */
+/** Quickfire speed inputs: how long the team took and the configured timer. Either null means no scaling. */
 export interface SpeedContext {
   responseMs: number | null;
   timerMs: number | null;
@@ -48,11 +48,13 @@ export const BATCH_GRADED_TYPES = typesWhere(
 );
 
 /**
- * The only types a kahoot round accepts. Its own entry field rather than
+ * The only types a quickfire round accepts. Its own entry field rather than
  * derived from the grading mode: free_text grades at submit but would turn
  * the speed race into typing speed and spelling (see ADR 0001).
  */
-export const KAHOOT_ALLOWED_TYPES = typesWhere((kind) => kind.kahootAllowed);
+export const QUICKFIRE_ALLOWED_TYPES = typesWhere(
+  (kind) => kind.quickfireAllowed,
+);
 
 /** Names as a sentence list: commas, and "and" before the last ("a, b and c"); one name alone, nothing for none. */
 export function joinNames(names: readonly string[]): string {
@@ -61,13 +63,18 @@ export function joinNames(names: readonly string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-/** The kahoot-accepted types as people read them: lowercased labels in type-picker order, commas and "and" before the last ("multiple choice, sort / order and number"). */
-export function kahootTypeNames(): string {
+/** The quickfire-accepted types as people read them: lowercased labels in type-picker order, commas and "and" before the last ("multiple choice, sort / order and number"). */
+export function quickfireTypeNames(): string {
   return joinNames(
-    KAHOOT_ALLOWED_TYPES.map((type) =>
+    QUICKFIRE_ALLOWED_TYPES.map((type) =>
       QUESTION_KINDS[type].label.toLowerCase(),
     ),
   );
+}
+
+/** The refusal for a question whose type a quickfire quiz doesn't accept: the editor's save check and the importer show the same text. */
+export function quickfireTypesMessage(): string {
+  return `Quickfire rounds only support ${quickfireTypeNames()} questions`;
 }
 
 /** Whether the type carries a margin: how far an answer may be from the key and still be correct (Number only). */
@@ -80,8 +87,8 @@ export function hasNumericAnswerKey(type: QuestionType): boolean {
   return resolveAnswerKind({ type }) === 'number';
 }
 
-export function isKahootAllowedType(type: QuestionType): boolean {
-  return KAHOOT_ALLOWED_TYPES.includes(type);
+export function isQuickfireAllowedType(type: QuestionType): boolean {
+  return QUICKFIRE_ALLOWED_TYPES.includes(type);
 }
 
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
@@ -106,7 +113,7 @@ export function withWiderMargin<Q extends ScoredQuestion>(question: Q): Q {
   return margin ? { ...question, margin: widenedMargin(margin) } : question;
 }
 
-/** Kahoot's `1 - fraction/2`: full points answered instantly, a 50% floor at or past the timer, 1 when speed can't be judged. */
+/** Quickfire's `1 - fraction/2`: full points answered instantly, a 50% floor at or past the timer, 1 when speed can't be judged. */
 export function speedMultiplier(speed: SpeedContext): number {
   if (speed.responseMs === null || speed.timerMs === null) return 1;
   const fraction = Math.min(Math.max(speed.responseMs / speed.timerMs, 0), 1);

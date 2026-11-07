@@ -39,7 +39,7 @@ export class AnswersChanges {
   /**
    * A team's answer arrived from `socketId`. Refuses it when the question is
    * no longer open or the socket doesn't own the team's seat (both checked
-   * before the answer is stored); otherwise measures the kahoot response time
+   * before the answer is stored); otherwise measures the quickfire response time
    * from the phase start, stores the answer, runs the answer refresh and
    * replies "answer received" to the sender.
    */

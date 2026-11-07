@@ -38,6 +38,7 @@ export function TeamsDirectoryPanel() {
     { id: 'sessionsJoined', desc: true },
   ]);
   const [search, setSearch] = useState('');
+  const [showQuickfireOnly, setShowQuickfireOnly] = useState(false);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 20,
@@ -55,6 +56,7 @@ export function TeamsDirectoryPanel() {
     pageSize: pagination.pageSize,
     ...sortParamsOf(sorting),
     search: trimmedSearch,
+    showQuickfireOnly,
   };
 
   const teamsQuery = useQuery({
@@ -109,20 +111,33 @@ export function TeamsDirectoryPanel() {
         </p>
       )}
 
-      <label className="flex max-w-sm flex-col gap-1 text-sm font-bold">
-        Search teams
-        <input
-          type="search"
-          value={search}
-          maxLength={MAX_TEAMS_SEARCH_LENGTH}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            // The match count changes, so the current page may no longer exist.
-            setPagination((old) => ({ ...old, pageIndex: 0 }));
-          }}
-          className="rounded-lg border-2 border-foreground/30 bg-transparent px-3 py-2 font-normal"
-        />
-      </label>
+      <div className="flex flex-wrap items-end gap-6">
+        <label className="flex max-w-sm flex-col gap-1 text-sm font-bold">
+          Search teams
+          <input
+            type="search"
+            value={search}
+            maxLength={MAX_TEAMS_SEARCH_LENGTH}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              // The match count changes, so the current page may no longer exist.
+              setPagination((old) => ({ ...old, pageIndex: 0 }));
+            }}
+            className="rounded-lg border-2 border-foreground/30 bg-transparent px-3 py-2 font-normal"
+          />
+        </label>
+        <label className="flex items-center gap-2 py-2 text-sm font-bold">
+          <input
+            type="checkbox"
+            checked={showQuickfireOnly}
+            onChange={(event) => {
+              setShowQuickfireOnly(event.target.checked);
+              setPagination((old) => ({ ...old, pageIndex: 0 }));
+            }}
+          />
+          Show quickfire-only teams
+        </label>
+      </div>
 
       <SortableTable
         table={table}

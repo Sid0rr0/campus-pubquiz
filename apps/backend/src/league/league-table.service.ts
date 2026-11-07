@@ -132,7 +132,9 @@ export class LeagueTableService {
     const sessionRows = (await this.endedSessions
       .endedSessionsQuery()
       .join('league_sessions as ls', 'ls.game_session_id', 'gs.id')
-      .where('ls.league_id', leagueId)) as { game_session_id: number }[];
+      .where('ls.league_id', leagueId)
+      // Sessions of migrated quickfire quizzes may still sit in a league.
+      .where('qz.mode', '!=', 'quickfire')) as { game_session_id: number }[];
     const sessionIds = sessionRows.map((row) => row.game_session_id);
     if (sessionIds.length === 0) return [];
 

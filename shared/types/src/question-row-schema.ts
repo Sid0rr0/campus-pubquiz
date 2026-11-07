@@ -6,6 +6,7 @@ import type {
 } from './import';
 import { QUESTION_KINDS, type QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
+import type { QuizMode } from './quiz-mode';
 import { ROUND_CATEGORIES } from './round-category';
 import { ROUND_NOTE_MAX_LENGTH } from './round-note';
 import { hasVideoMedia } from './media';
@@ -32,9 +33,9 @@ import {
  * of issue paths back to sheet column names.
  */
 
-// CSV/Sheets rows never carry kahootMode (it's manual-editor-only), so a
-// blank points cell always falls back to the non-kahoot default.
-const DEFAULT_POINTS = 1;
+// A blank points cell falls back to the quiz mode's default: a quickfire
+// quiz scores in the thousands, a pub quiz in ones.
+const DEFAULT_POINTS: Record<QuizMode, number> = { pub: 1, quickfire: 1000 };
 
 // Case-insensitive lookup so "science & nature" in a sheet still resolves to
 // the canonical "Science & nature" — authors shouldn't have to match casing
@@ -105,6 +106,7 @@ export function sheetFieldForIssue(issue: QuestionIssue): string {
 export function decodeSheetRow(
   row: SheetRow,
   type: QuestionType,
+  mode: QuizMode = 'pub',
 ): {
   meta: unknown;
   question: { type: QuestionType } & Record<string, unknown>;
@@ -154,7 +156,8 @@ export function decodeSheetRow(
       ...(row.showNote.trim() === '1' && questionNotesOf(freeNotes) !== null
         ? { showNotesAtReveal: true }
         : {}),
-      points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
+      points:
+        trimmedPoints === '' ? DEFAULT_POINTS[mode] : Number(trimmedPoints),
       mediaUrl,
       answerMediaUrl,
       ...clipFieldsFromNotes({ mediaUrl, answerMediaUrl }, clip),
@@ -181,7 +184,7 @@ function invalidKeyMessage(key: string, type: QuestionType): string {
  * back as the same question. Round-level cells (break_after, category,
  * author, round_note, show_round_note) are written only on the round's last row — the importer lets any
  * row carry them, and the last is where authors conventionally put them.
- * Fields with no column (questionId, round kahootMode) are not written; the
+ * Fields with no column (questionId, round quickfire) are not written; the
  * margin and match scoring mode travel in the notes group.
  */
 export function encodeSheetRow(

@@ -444,7 +444,7 @@ describe('RemotePage — content', () => {
     expect(screen.getByText(/1 correct/i)).toBeInTheDocument();
   });
 
-  it('counts a speed-scaled kahoot answer with fewer than full points as correct', () => {
+  it('counts a speed-scaled quickfire answer with fewer than full points as correct', () => {
     mockUseAdminGame.mockReturnValue({
       session: {
         progress: { status: 'question_open' },

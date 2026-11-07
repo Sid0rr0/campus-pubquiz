@@ -17,8 +17,8 @@ import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 export interface AnswerInputProps {
   question: QuestionView;
   initialValue: string;
-  /** Active round's Kahoot-style speed scoring flag: a tapped choice submits immediately and locks. */
-  isKahootMode: boolean;
+  /** Active round's quickfire speed scoring flag: a tapped choice submits immediately and locks. */
+  isQuickfireMode: boolean;
   onSubmit: (value: string) => void;
   /** A pin the team bought on this sort or match question. */
   pin?: PinEffect;
@@ -126,7 +126,7 @@ function ChoiceOption({
 function ChoiceInput({
   question,
   initialValue,
-  isKahootMode,
+  isQuickfireMode,
   onSubmit,
   removedOptions = NO_ITEMS,
   idkButton,
@@ -136,7 +136,7 @@ function ChoiceInput({
   const isSubmitted = value !== '' && value === initialValue;
 
   function handleOptionClick(option: string) {
-    if (isKahootMode) {
+    if (isQuickfireMode) {
       if (hasAnswered) return;
       setHasAnswered(true);
       setValue(option);
@@ -156,18 +156,18 @@ function ChoiceInput({
           index={index}
           isChosen={option === value}
           isRemoved={removedOptions.includes(option)}
-          isLocked={isKahootMode && hasAnswered}
+          isLocked={isQuickfireMode && hasAnswered}
           onClick={() => handleOptionClick(option)}
         />
       ))}
-      {!isKahootMode && (
+      {!isQuickfireMode && (
         <SubmitAnswerButton
           isSubmitted={isSubmitted}
           disabled={value === ''}
           onClick={() => onSubmit(value)}
         />
       )}
-      {!isKahootMode && idkButton}
+      {!isQuickfireMode && idkButton}
     </div>
   );
 }

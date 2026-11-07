@@ -39,7 +39,7 @@ describe('ImportService', () => {
       const { importService } = makeService();
 
       // Act
-      const preview = importService.preview(VALID_CSV, 'Trivia Night');
+      const preview = importService.preview(VALID_CSV, 'Trivia Night', 'pub');
 
       // Assert
       expect(preview.isImportable).toBe(true);
@@ -50,10 +50,25 @@ describe('ImportService', () => {
       ]);
     });
 
+    it('trims the title, and falls back to the default for a blank one', () => {
+      const { importService } = makeService();
+
+      expect(
+        importService.preview(VALID_CSV, '  Padded ', 'pub').quizTitle,
+      ).toBe('Padded');
+      expect(importService.preview(VALID_CSV, '   ', 'pub').quizTitle).toBe(
+        'Imported Quiz',
+      );
+    });
+
     it('reports a file-level problem as an issue instead of throwing', () => {
       const { importService } = makeService();
 
-      const preview = importService.preview('not,a,quiz\nsheet,at,all');
+      const preview = importService.preview(
+        'not,a,quiz\nsheet,at,all',
+        undefined,
+        'pub',
+      );
 
       expect(preview.isImportable).toBe(false);
       expect(preview.issues).toHaveLength(1);
@@ -63,7 +78,7 @@ describe('ImportService', () => {
     it('defaults the quiz title when none is provided', () => {
       const { importService } = makeService();
 
-      const preview = importService.preview(VALID_CSV);
+      const preview = importService.preview(VALID_CSV, undefined, 'pub');
 
       expect(preview.quizTitle).toBe('Imported Quiz');
     });
@@ -79,6 +94,7 @@ describe('ImportService', () => {
       const preview = await importService.previewFromUrl(
         SHEET_URL,
         'Trivia Night',
+        'pub',
       );
 
       // Assert
@@ -97,7 +113,11 @@ describe('ImportService', () => {
         sheetName: 'Trivia Night',
       });
 
-      const preview = await importService.previewFromUrl(SHEET_URL);
+      const preview = await importService.previewFromUrl(
+        SHEET_URL,
+        undefined,
+        'pub',
+      );
 
       expect(preview.quizTitle).toBe('Trivia Night');
     });
@@ -112,6 +132,7 @@ describe('ImportService', () => {
       const preview = await importService.previewFromUrl(
         SHEET_URL,
         'Custom Title',
+        'pub',
       );
 
       expect(preview.quizTitle).toBe('Custom Title');
@@ -123,7 +144,11 @@ describe('ImportService', () => {
         new SheetFetchError('Could not fetch that sheet'),
       );
 
-      const preview = await importService.previewFromUrl(SHEET_URL);
+      const preview = await importService.previewFromUrl(
+        SHEET_URL,
+        undefined,
+        'pub',
+      );
 
       expect(preview.isImportable).toBe(false);
       expect(preview.issues).toEqual([
@@ -140,6 +165,8 @@ describe('ImportService', () => {
 
       const preview = await importService.previewFromUrl(
         'https://evil.com/spreadsheets/d/abc123',
+        undefined,
+        'pub',
       );
 
       expect(preview.isImportable).toBe(false);

@@ -166,7 +166,7 @@ function DisplayStage({
     roundTitles,
     roundCategories,
     roundAuthors,
-    kahootQuestionEndsAt,
+    quickfireQuestionEndsAt,
     teamsCorrect,
     powerUpCounts,
     leagueTop,
@@ -230,7 +230,7 @@ function DisplayStage({
               isMediaPaused: progress.isMediaPaused,
               isDisplaySoundMuted,
               mediaReplayToken: progress.mediaReplayToken,
-              kahootQuestionEndsAt,
+              quickfireQuestionEndsAt,
               onPickAnotherGame,
               onWinnerCelebrated: sound.markWinnerCelebrated,
             }}

@@ -66,6 +66,36 @@ describe('TeamsDirectoryPanel', () => {
     );
   });
 
+  it('hides quickfire-only teams until the checkbox is ticked, then returns to page 1', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<TeamsDirectoryPanel />);
+    await waitFor(() => screen.getByText('The Quizzards'));
+    const checkbox = screen.getByRole('checkbox', {
+      name: 'Show quickfire-only teams',
+    });
+    expect(checkbox).not.toBeChecked();
+    expect(mockFetchTeams).toHaveBeenLastCalledWith(
+      expect.objectContaining({ showQuickfireOnly: false }),
+      expect.anything(),
+    );
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await waitFor(() =>
+      expect(mockFetchTeams).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 2 }),
+        expect.anything(),
+      ),
+    );
+
+    await user.click(checkbox);
+
+    await waitFor(() =>
+      expect(mockFetchTeams).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1, showQuickfireOnly: true }),
+        expect.anything(),
+      ),
+    );
+  });
+
   it('searches by the trimmed name from page 1', async () => {
     const user = userEvent.setup();
     renderWithQuery(<TeamsDirectoryPanel />);

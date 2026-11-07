@@ -1,6 +1,6 @@
 import { getBlockInPlayIds, getPastBlockIds } from './block-in-play';
 import { getTimedPhaseKey } from './game-state-timed-phase';
-import { currentKahootQuestionId } from './kahoot-visibility';
+import { currentQuickfireQuestionId } from './quickfire-visibility';
 import type { GameAction, GameContext, GameProgress } from './game-state-types';
 import { computeLeaderboardRevealCount } from './leaderboard-reveal';
 import { JOKER_PICK_SECONDS } from './joker';
@@ -46,9 +46,9 @@ export interface SettleInput {
 
 /**
  * Returns the session with every progress-dependent field consistent with
- * `progress`: the phase timer, the auto-lock, kahoot and joker pick deadlines, the break
+ * `progress`: the phase timer, the auto-lock, quickfire and joker pick deadlines, the break
  * end time, the leaderboard reveal count and the closest_guess step. The
- * order is fixed — the phase timer first, since the kahoot deadline reads it.
+ * order is fixed — the phase timer first, since the quickfire deadline reads it.
  */
 export function settleSession({
   session,
@@ -79,9 +79,9 @@ export function settleSession({
       session.openedQuestionIds,
       openedImpliedAt(session, progress),
     ),
-    revealedKahootQuestionIds: growIds(
-      session.revealedKahootQuestionIds,
-      revealedKahootImpliedAt(session, progress),
+    revealedQuickfireQuestionIds: growIds(
+      session.revealedQuickfireQuestionIds,
+      revealedQuickfireImpliedAt(session, progress),
     ),
     livePhaseKey,
     phaseStartedAt,
@@ -96,10 +96,10 @@ export function settleSession({
             settings.lockGraceSeconds * 1000,
             now,
           ),
-    kahootQuestionEndsAt: computeKahootQuestionEndsAt(
+    quickfireQuestionEndsAt: computeQuickfireQuestionEndsAt(
       progress,
       context,
-      settings.kahootQuestionTimerSeconds,
+      settings.quickfireQuestionTimerSeconds,
       livePhaseKey,
       phaseStartedAt,
     ),
@@ -111,8 +111,8 @@ export function settleSession({
       progress,
       session.leaderboard,
       session.leaderboardRevealCount,
-      // Stryker disable next-line OptionalChaining,BooleanLiteral: equivalent, the progress's round always exists (getPastBlockIds above would throw otherwise) and getGameContext always sets kahootMode
-      context.rounds[progress.roundIndex]?.kahootMode ?? false,
+      // Stryker disable next-line OptionalChaining,BooleanLiteral: equivalent, the progress's round always exists (getPastBlockIds above would throw otherwise) and getGameContext always sets quickfire
+      context.rounds[progress.roundIndex]?.quickfire ?? false,
     ),
     revealStep: revealStepAfterMove(session, progress, action),
   };
@@ -129,24 +129,24 @@ function computeQuestionLockAt(
 
 /**
  * Armed only while `question_open` IS the live frontier phase (not a
- * Previous-revisited historical question) in a kahootMode round with a
+ * Previous-revisited historical question) in a quickfire round with a
  * per-session timer configured. Anchored to phaseStartedAt, the moment this
  * question genuinely opened, so it stays accurate across a backend restart.
  */
-function computeKahootQuestionEndsAt(
+function computeQuickfireQuestionEndsAt(
   progress: GameProgress,
   context: GameContext,
-  kahootQuestionTimerSeconds: number | null,
+  quickfireQuestionTimerSeconds: number | null,
   livePhaseKey: string | null,
   phaseStartedAt: number | null,
 ): number | null {
   if (progress.status !== 'question_open') return null;
-  if (kahootQuestionTimerSeconds === null) return null;
+  if (quickfireQuestionTimerSeconds === null) return null;
   // Stryker disable next-line OptionalChaining: equivalent, a question_open progress always points at an existing round
-  if (!context.rounds[progress.roundIndex]?.kahootMode) return null;
+  if (!context.rounds[progress.roundIndex]?.quickfire) return null;
   if (phaseStartedAt === null) return null;
   if (getTimedPhaseKey(progress, context) !== livePhaseKey) return null;
-  return phaseStartedAt + kahootQuestionTimerSeconds * 1000;
+  return phaseStartedAt + quickfireQuestionTimerSeconds * 1000;
 }
 
 /**
@@ -214,17 +214,17 @@ function openedImpliedAt(
 }
 
 /**
- * The kahoot questions `progress` has moved past (earlier rounds, and earlier
- * questions of its own kahoot round, each of which was revealed to get past)
+ * The quickfire questions `progress` has moved past (earlier rounds, and earlier
+ * questions of its own quickfire round, each of which was revealed to get past)
  * and the one it is revealing now.
  */
-function revealedKahootImpliedAt(
+function revealedQuickfireImpliedAt(
   session: SessionState,
   progress: GameProgress,
 ): number[] {
   const { rounds } = session.seededGame;
   const passed = rounds.flatMap((round, roundIndex) =>
-    round.kahootMode && roundIndex <= progress.roundIndex
+    round.quickfire && roundIndex <= progress.roundIndex
       ? round.questions
           .slice(
             0,
@@ -235,7 +235,7 @@ function revealedKahootImpliedAt(
           .map((question) => question.id)
       : [],
   );
-  const questionId = currentKahootQuestionId(rounds, progress);
+  const questionId = currentQuickfireQuestionId(rounds, progress);
   const revealing =
     progress.status === 'reveal' && questionId !== undefined
       ? [questionId]
