@@ -8,7 +8,7 @@ Parent spec: `.scratch/coin-ledger/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The deletion-with-spent-coins spec asserts the covering award's reason text
+- [x] The deletion-with-spent-coins spec asserts the covering award's reason text
 - [ ] `pnpm --filter backend mutate:db` shows the `:133` mutant killed
