@@ -1,5 +1,5 @@
 import {
-  coinBalanceOf,
+  coinBalance,
   type GameStatus,
   type ServerToClientProtocol,
   type SessionState,
@@ -206,7 +206,7 @@ export function coinSyncsFor(
   return connectedTeamSyncs(session, teamIds).map((sync) => ({
     ...sync,
     payload: {
-      balance: coinBalanceOf(session, sync.teamId),
+      balance: coinBalance(session, sync.teamId),
       hasCarriedCoin: (session.carriedCoins[sync.teamId] ?? 0) > 0,
     },
   }));

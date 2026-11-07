@@ -647,8 +647,11 @@ the showdown, final-form feedback and the `fastest_correct_answer` fun fact work
 as in any session. `ActiveSessionSummary.isQuickfire` makes the session pickers
 show a "Quickfire" label.
 
-A team's **coins** are `teamCoins` in shared types: starting coins (only with
+A team's **coins** come from the Coin ledger (`coin-ledger.ts` in shared types): starting coins (only with
 power-ups on) + carried coins + coin awards − purchase costs, never below 0.
+Coins are shown (`coinsShown`) when power-ups are on or the team's balance is above 0;
+`/play` and `/control` both ask that rule, so the Coins column appears in `/control`'s
+Teams table whenever a phone would show coins, including carried coins with power-ups off.
 The starting coins, the carried coins, the coin awards and the purchases all count.
 The balance is sent as
 `coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
@@ -716,7 +719,7 @@ too, for a team that has coins. It is a row in the `purchases` table (team,
 session, power-up, question or round, the cost paid, and the **stored effect** as
 JSON, parsed on read by `purchaseEffectSchema`): the effect is drawn once at
 purchase and never changes, so a reconnect or backend restart shows the same
-thing. The balance subtracts the sum of the `cost` column through `teamCoins`,
+thing. The balance subtracts the sum of the `cost` column through the Coin ledger,
 nowhere else. The buying team's phones get `TEAM_PURCHASES_SYNCED`
 (`{ purchases, coins }`) and `JOIN_ACCEPTED` carries the same `purchases`; the admin
 room is refreshed (the Coins column and the answer list). A later power-up adds a

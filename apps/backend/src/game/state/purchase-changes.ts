@@ -7,7 +7,7 @@ import {
   extraJokerPurchaseRefusal,
   extraJokerRoundId,
   questionPurchaseRefusal,
-  teamCoins,
+  coinBalance,
   textHint,
   type BuyPowerUpPayload,
   type PowerUpId,
@@ -32,20 +32,6 @@ import {
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
 import { requireSeat } from '@/game/state/session-updates.util';
-
-/** The team's coins after `records`: the session's cached carried coin and coin awards (decided elsewhere) and the stored purchases. The one place purchases subtract, through the shared balance. */
-export function balanceAfter(
-  session: SessionState,
-  teamId: number,
-  records: readonly PurchaseRecord[],
-): number {
-  return teamCoins(
-    session.seededGame.settings,
-    session.carriedCoins[teamId],
-    session.coinAwards[teamId],
-    records.reduce((sum, { cost }) => sum + cost, 0),
-  );
-}
 
 function fiftyFiftyEffect(
   question: SeededQuestion,
@@ -197,7 +183,7 @@ export class PurchaseChanges {
             reloaded.seededGame,
             reloaded.progress.status,
           ),
-          coins: balanceAfter(reloaded, sync.teamId, records),
+          coins: coinBalance(reloaded, sync.teamId, records),
         },
       });
     }
@@ -234,7 +220,7 @@ export class PurchaseChanges {
         session.seededGame,
         session.progress.status,
       ),
-      coins: balanceAfter(session, teamId, all),
+      coins: coinBalance(session, teamId, all),
     };
     return {
       session,
@@ -276,7 +262,7 @@ export class PurchaseChanges {
     const refusal = extraJokerPurchaseRefusal({
       settings: settings.powerUps,
       purchases: records,
-      balance: balanceAfter(session, teamId, records),
+      balance: coinBalance(session, teamId, records),
       jokerRoundId: session.jokers[teamId]?.roundId,
       roundId,
       offeredRoundId: extraJokerRoundId(session),
@@ -346,7 +332,7 @@ function assertQuestionPurchaseAllowed(
   const refusal = questionPurchaseRefusal({
     settings: session.seededGame.settings.powerUps,
     purchases: records,
-    balance: balanceAfter(session, teamId, records),
+    balance: coinBalance(session, teamId, records),
     question: question
       ? { ...question, isQuickfire: isCurrentRoundQuickfire(session) }
       : null,

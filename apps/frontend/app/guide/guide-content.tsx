@@ -76,9 +76,9 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Power-ups',
     paragraphs: [
-      'The "Power-ups" tab (lobby Session Settings) lets teams spend coins on helps: set starting coins and each power-up\'s cost and uses. Teams shows a Coins column.',
+      'The "Power-ups" tab (lobby Session Settings) lets teams spend coins: set starting coins and each power-up\'s cost and uses. Teams shows a Coins column.',
       'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles the next round).',
-      "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off.",
+      "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off (Teams shows them).",
       'Grading names the power-ups each answer used. Never refunded: after an answer-key fix, give the coin back with a coin award. Deleting a shot or selfie award removes its coin.',
     ],
   },

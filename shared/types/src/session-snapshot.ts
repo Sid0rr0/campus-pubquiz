@@ -9,6 +9,7 @@ import {
   getRevealQuestions,
   getUpcomingQuestionPositions,
 } from './block-questions';
+import { coinBalance } from './coin-ledger';
 import { isAnsweringStatus } from './game-state-groups';
 import {
   hasJokerPickOpened,
@@ -21,7 +22,6 @@ import { getQuizStructureSummary } from './game-state-structure';
 import {
   extraJokerRoundId,
   powerUpCountsFor,
-  coinBalanceOf,
   visibleRoundTitle,
   type PowerUpCount,
 } from './power-ups';
@@ -224,7 +224,7 @@ export function buildAdminFields(
           // Stryker disable next-line ConditionalExpression: equivalent for the `true &&` variant, null > number is false anyway; the null guard is for the type checker
           playerCount !== null && playerCount > maxPlayersPerTeam,
         joker: describeAdminTeamJoker(session, team.teamId),
-        coins: coinBalanceOf(session, team.teamId),
+        coins: coinBalance(session, team.teamId),
       };
     }),
     ungradedQuestionIds: session.ungradedQuestionIds,

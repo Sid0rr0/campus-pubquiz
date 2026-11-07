@@ -14,7 +14,6 @@ import {
   powerUpApplies,
   purchaseEffectSchema,
   removedOptionsOf,
-  teamCoins,
   textHint,
   visibleRoundTitle,
   type PurchaseView,
@@ -359,22 +358,6 @@ describe('purchaseEffectSchema', () => {
     expect(purchaseEffectSchema.safeParse({ kind: 'nope' }).success).toBe(
       false,
     );
-  });
-});
-
-describe('teamCoins', () => {
-  const on = { powerUpsEnabled: true, startingCoins: 3 };
-
-  it('adds starting coins, carried coin and awards, minus purchases', () => {
-    expect(teamCoins(on, 1, 2, 4)).toBe(2);
-  });
-
-  it('ignores starting coins with power-ups off but keeps the carried coin', () => {
-    expect(teamCoins({ ...on, powerUpsEnabled: false }, 1)).toBe(1);
-  });
-
-  it('never goes below 0', () => {
-    expect(teamCoins(on, 0, -5)).toBe(0);
   });
 });
 

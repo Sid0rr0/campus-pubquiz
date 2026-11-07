@@ -8,6 +8,7 @@ export * from './answers';
 export * from './team-presence';
 export * from './session-settings';
 export * from './bonus';
+export * from './coin-ledger';
 export * from './power-ups';
 export * from './power-up-offer';
 export * from './feedback';

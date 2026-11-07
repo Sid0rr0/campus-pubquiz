@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   BONUS_CATEGORIES,
-  SHOT_SELFIE_COINS,
+  bonusCoinsEarned,
+  coinsNeedPowerUpsRefusal,
   type BonusAwardAdminView,
   type BonusCategory,
   type CoinAwardAdminView,
@@ -180,17 +181,18 @@ export class BonusService {
       points,
     });
     em.persist(bonusAward);
-    // A shot or selfie earns coins of its own, which go with the award; a penalty earns none.
-    if (!powerUpsEnabled || category === 'custom' || points <= 0) return 0;
+    // A shot or selfie earns coins of its own, which go with the award.
+    const earned = bonusCoinsEarned(powerUpsEnabled, category, points);
+    if (earned === 0) return 0;
     em.persist(
       this.coinAwards.create({
         gameSession: gameSessionId,
         team: teamId,
-        coins: SHOT_SELFIE_COINS,
+        coins: earned,
         bonusAward,
       }),
     );
-    return SHOT_SELFIE_COINS;
+    return earned;
   }
 
   /** The sum of each team's coin awards in the session, by team id (teams with none are absent). */
@@ -313,11 +315,8 @@ function assertAwardAmounts(
   if (!Number.isFinite(points) || (points === 0 && manualCoins === 0)) {
     throw new InvalidBonusAwardError('Bonus points must be a non-zero number');
   }
-  if (manualCoins !== 0 && !powerUpsEnabled) {
-    throw new InvalidBonusAwardError(
-      'Coins can only be awarded in a session with power-ups',
-    );
-  }
+  const refusal = coinsNeedPowerUpsRefusal(powerUpsEnabled, manualCoins);
+  if (refusal) throw new InvalidBonusAwardError(refusal);
 }
 
 function assertAwardCategory(

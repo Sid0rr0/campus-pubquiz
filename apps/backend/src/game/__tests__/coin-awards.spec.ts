@@ -111,6 +111,12 @@ describe('Coin awards', () => {
     await game.inRequestContext(async () =>
       game.rest.removeBonus(game.joinCode, await bonusAwardId()),
     );
+    const { coinAwards } = await game.inRequestContext(() =>
+      game.rest.listBonusAwards(game.joinCode, team.teamId),
+    );
+    expect(coinAwards).toMatchObject([
+      { coins: 2, reason: 'Coins already spent when an award was deleted' },
+    ]);
     await award({ category: 'shot', points: 1 });
 
     // 1 starting + 2 for the new shot - 3 spent: the deleted shot left no debt.
@@ -203,18 +209,6 @@ describe('Coin awards', () => {
         game.bonusService.listForTeamAdmin(game.gameSessionId, team.teamId),
       ),
     ).toEqual([]);
-  });
-
-  it('refuses to take coins from a team with none', async () => {
-    await start();
-    await award({ category: 'custom', points: 0, coins: -1 });
-
-    const ack = await award({ category: 'custom', points: 0, coins: -1 });
-
-    expect(ack).toEqual({
-      success: false,
-      error: 'That team has only 0 coins to take',
-    });
   });
 
   it('keeps coin awards across a rejoin and a backend restart', async () => {

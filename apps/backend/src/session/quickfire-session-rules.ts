@@ -11,8 +11,6 @@ export function isQuickfireSession({
 
 export const QUICKFIRE_NO_LEAGUE_MESSAGE =
   "A quickfire session can't be added to a league";
-export const QUICKFIRE_NO_COIN_AWARD_MESSAGE =
-  "A quickfire session has no coins, so it can't award any";
 
 /**
  * The refusal for a settings patch (and league ticks) aimed at a quickfire

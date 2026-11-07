@@ -3,7 +3,11 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
-import { isShowingLastBreak, type PowerUpId } from '@campus-pubquiz/types';
+import {
+  coinsShown,
+  isShowingLastBreak,
+  type PowerUpId,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinTicket } from '@/app/components/join-form';
@@ -335,7 +339,7 @@ function sidePanelsOf(
       : null;
   // The same condition as the shop: a team with coins sees it even in a session without power-ups (a carried coin).
   const powerUpsList =
-    team && (settings.powerUpsEnabled || team.coins > 0)
+    team && coinsShown(settings.powerUpsEnabled, team.coins)
       ? powerUpsListOf({
           view,
           team,
@@ -729,5 +733,7 @@ function shownCoins(
   settings: PlayerView['settings'],
   team: JoinedTeam,
 ): number | undefined {
-  return settings.powerUpsEnabled || team?.coins ? team?.coins : undefined;
+  return coinsShown(settings.powerUpsEnabled, team?.coins ?? 0)
+    ? team?.coins
+    : undefined;
 }
