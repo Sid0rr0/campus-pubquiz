@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| coin-ledger | [One Coin ledger for a team's coins and the coin rules](coin-ledger/spec.md) | 4 |
 | power-up-offer | [One Power-up offer module for the server and the phone](power-up-offer/spec.md) | 3 |
 | e2e-power-ups | [E2E coverage of power-ups and coins](e2e-power-ups/spec.md) | 8 |
 | power-ups | [Power-ups and coins](power-ups/spec.md) | 9 |
