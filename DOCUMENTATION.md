@@ -633,6 +633,19 @@ patch that changes only `showRoundOverview` move the cost with the overview whil
 it is still the default). The start dialog and the `/control` lobby settings
 panel show them as a "Power-ups" tab.
 
+**A quickfire session has none of this.** Its jokers, power-ups, coins (starting,
+carried, awarded) and leagues are dropped: the start dialog and the lobby settings
+panel hide the Jokers switch, the Power-ups tab and the league picker (the
+question timer stays, prefilled with 30 seconds), and send no coin settings.
+The server refuses, with a 400, `POST /sessions` or a settings `PATCH` that
+names `jokersEnabled` or `powerUpsEnabled` true, any `startingCoins`, or any
+`leagueIds`, and a coin award (`AWARD_BONUS` with `coins`) in such a session.
+Only what a request names is checked, so a stored value never blocks an
+unrelated edit. With no league a session brings no carried coins. Bonus awards,
+the showdown, final-form feedback and the `fastest_correct_answer` fun fact work
+as in any session. `ActiveSessionSummary.isQuickfire` makes the session pickers
+show a "Quickfire" label.
+
 A team's **coins** are `teamCoins` in shared types: starting coins (only with
 power-ups on) + carried coins + coin awards − purchase costs, never below 0.
 The starting coins, the carried coins, the coin awards and the purchases all count.
@@ -2475,8 +2488,9 @@ points, the table and the public page.
     ones;
   - `POST /leagues/:id/sessions` with `{ gameSessionId }` and
     `DELETE /leagues/:id/sessions/:gameSessionId`. Only an **ended** session can be
-    added (a lobby or live session is a 409, an unknown league or session a 404).
-    Adding twice changes nothing; removing a session that is not in the league is a
+    added (a lobby or live session is a 409, an unknown league or session a 404),
+    and a **quickfire** session never (400: "A quickfire session can't be added to a
+    league"). Adding twice changes nothing; removing a session that is not in the league is a
     no-op. Both work for any league, current or not.
 - **Staff read** (admin and moderator): `GET /leagues` lists leagues, newest first, each
   with `current` and its `sessions` (id, join code, display name, played-at).
