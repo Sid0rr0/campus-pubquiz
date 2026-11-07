@@ -3,12 +3,15 @@ import {
   createImportPreview,
   checkQuestion,
   decodeSheetRow,
+  isQuickfireAllowedType,
+  quickfireTypesMessage,
   sheetFieldForIssue,
   sheetRowMetaSchema,
   type ImportPreview,
   type ImportQuestionPreview,
   type ImportRowIssue,
   type QuestionType,
+  type QuizMode,
   type SheetRow,
 } from '@campus-pubquiz/types';
 
@@ -39,33 +42,38 @@ function normalizeType(rawType: string): string {
     .replace(/[\s-]+/g, '_');
 }
 
+/** Why a row's type cell is refused (removed, unknown, or outside a quickfire quiz's list), or null when it is fine. */
+function typeRefusal(
+  rawType: string,
+  type: string,
+  mode: QuizMode,
+): string | null {
+  if (REMOVED_QUESTION_TYPES.includes(type)) {
+    return `Question type "${rawType.trim()}" was removed — use free_text (or multiple_choice if the row has options) and keep the media_url.`;
+  }
+  if (!(QUESTION_TYPES as readonly string[]).includes(type)) {
+    return `Unknown question type "${rawType.trim()}" — expected one of: ${QUESTION_TYPES.join(', ')}`;
+  }
+  return mode === 'quickfire' && !isQuickfireAllowedType(type as QuestionType)
+    ? quickfireTypesMessage()
+    : null;
+}
+
 /**
  * Validates one raw sheet row into a question preview, or the list of
  * per-field issues that block it. Never throws — broken rows become issues.
  */
-export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
+export function parseQuestionRow(
+  row: SheetRow,
+  mode: QuizMode = 'pub',
+): ParsedQuestionRow {
   const type = normalizeType(row.type);
-  if (REMOVED_QUESTION_TYPES.includes(type)) {
+  const typeMessage = typeRefusal(row.type, type, mode);
+  if (typeMessage !== null) {
     return {
       ok: false,
       issues: [
-        {
-          rowNumber: row.rowNumber,
-          field: 'type',
-          message: `Question type "${row.type.trim()}" was removed — use free_text (or multiple_choice if the row has options) and keep the media_url.`,
-        },
-      ],
-    };
-  }
-  if (!(QUESTION_TYPES as readonly string[]).includes(type)) {
-    return {
-      ok: false,
-      issues: [
-        {
-          rowNumber: row.rowNumber,
-          field: 'type',
-          message: `Unknown question type "${row.type.trim()}" — expected one of: ${QUESTION_TYPES.join(', ')}`,
-        },
+        { rowNumber: row.rowNumber, field: 'type', message: typeMessage },
       ],
     };
   }
@@ -75,7 +83,7 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     question: candidate,
     sheetAnswerIssue,
     clipIssues,
-  } = decodeSheetRow(row, type as QuestionType);
+  } = decodeSheetRow(row, type as QuestionType, mode);
   const parsedMeta = sheetRowMetaSchema.safeParse(meta);
   const checkedQuestion = checkQuestion(candidate);
   // The answer issue only when the schema passed: a failing pairing is already
@@ -138,11 +146,12 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
 export function assembleImportPreview(
   quizTitle: string,
   rows: SheetRow[],
+  mode: QuizMode = 'pub',
 ): ImportPreview {
   const issues: ImportRowIssue[] = [];
   const roundsByTitle = new Map<string, RoundCells>();
   for (const row of rows) {
-    const result = parseQuestionRow(row);
+    const result = parseQuestionRow(row, mode);
     if (result.ok) {
       addRowToRound(roundsByTitle, result);
     } else {

@@ -1,3 +1,5 @@
+import type { QuizMode } from './quiz-mode';
+
 /**
  * One data row of the imported sheet, raw cell strings as exported by the
  * Google Sheets CSV endpoint. `rowNumber` is 1-based and counts the header,
@@ -68,6 +70,8 @@ export interface ImportPreview {
 export interface ImportRequest {
   csvText: string;
   quizTitle?: string;
+  /** The mode of the quiz being imported into; absent means pub. */
+  mode?: QuizMode;
 }
 
 /**
@@ -78,6 +82,8 @@ export interface ImportRequest {
 export interface ImportFromUrlRequest {
   sheetUrl: string;
   quizTitle?: string;
+  /** The mode of the quiz being imported into; absent means pub. */
+  mode?: QuizMode;
 }
 
 export function createImportPreview(

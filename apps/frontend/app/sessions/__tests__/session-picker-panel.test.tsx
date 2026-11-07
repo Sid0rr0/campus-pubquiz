@@ -273,6 +273,21 @@ describe('SessionPickerPanel', () => {
     );
   });
 
+  it('labels a quickfire quiz in the list and a pub quiz not', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [
+        { id: 2, title: 'Pub Quiz', mode: 'pub', rounds: [] },
+        { id: 3, title: 'Fast Quiz', mode: 'quickfire', rounds: [] },
+      ],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/fast quiz/i);
+
+    expect(screen.getAllByText('Quickfire')).toHaveLength(1);
+  });
+
   it('links each listed quiz to its editor from the actions menu', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,

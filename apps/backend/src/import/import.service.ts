@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { createImportPreview, type ImportPreview } from '@campus-pubquiz/types';
+import {
+  createImportPreview,
+  type ImportPreview,
+  type QuizMode,
+} from '@campus-pubquiz/types';
 import { assembleImportPreview } from '@/import/question-row.schema';
 import { parseSheetCsv, SheetFormatError } from '@/import/sheet-csv.parser';
 import {
@@ -14,10 +18,14 @@ const DEFAULT_QUIZ_TITLE = 'Imported Quiz';
 @Injectable()
 export class ImportService {
   /** Validates the uploaded CSV into a preview. Never writes, never throws. */
-  preview(csvText: string, quizTitle?: string): ImportPreview {
+  preview(
+    csvText: string,
+    quizTitle?: string,
+    mode: QuizMode = 'pub',
+  ): ImportPreview {
     const title = quizTitle?.trim() || DEFAULT_QUIZ_TITLE;
     try {
-      return assembleImportPreview(title, parseSheetCsv(csvText));
+      return assembleImportPreview(title, parseSheetCsv(csvText), mode);
     } catch (error) {
       const message =
         error instanceof SheetFormatError
@@ -41,11 +49,12 @@ export class ImportService {
   async previewFromUrl(
     sheetUrl: string,
     quizTitle?: string,
+    mode: QuizMode = 'pub',
   ): Promise<ImportPreview> {
     const title = quizTitle?.trim() || DEFAULT_QUIZ_TITLE;
     try {
       const { csvText, sheetName } = await this.fetchSheetCsvText(sheetUrl);
-      return this.preview(csvText, quizTitle ?? sheetName);
+      return this.preview(csvText, quizTitle ?? sheetName, mode);
     } catch (error) {
       const message =
         error instanceof SheetFetchError

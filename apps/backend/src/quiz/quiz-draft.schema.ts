@@ -1,14 +1,12 @@
 import {
   isQuickfireAllowedType,
-  quickfireTypeNames,
+  quickfireTypesMessage,
   checkQuestion,
   ROUND_CATEGORIES,
   ROUND_NOTE_MAX_LENGTH,
   type QuizDraftIssue,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
-
-const QUICKFIRE_TYPES_MESSAGE = `Quickfire rounds only support ${quickfireTypeNames()} questions`;
 
 /**
  * Validates a full quiz draft (manual edits and/or a CSV-import preview
@@ -142,6 +140,6 @@ function questionIssues(
     }));
   }
   return quickfire && !isQuickfireAllowedType(question.type)
-    ? [{ ...position, field: 'type', message: QUICKFIRE_TYPES_MESSAGE }]
+    ? [{ ...position, field: 'type', message: quickfireTypesMessage() }]
     : [];
 }

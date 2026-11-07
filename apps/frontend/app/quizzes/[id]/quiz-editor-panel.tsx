@@ -7,7 +7,11 @@ import {
   FilePlusIcon,
   PlusIcon,
 } from '@radix-ui/react-icons';
-import { type QuizDraftIssue } from '@campus-pubquiz/types';
+import {
+  QUIZ_MODES,
+  type QuizDraftIssue,
+  type QuizMode,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import {
   previewPosition,
@@ -33,6 +37,11 @@ import { QuizRoundEditor } from '@/app/quizzes/[id]/quiz-round-editor';
 interface QuizEditorPanelProps {
   quizId: string;
 }
+
+const MODE_LABELS: Record<QuizMode, string> = {
+  pub: 'Pub',
+  quickfire: 'Quickfire',
+};
 
 const EMPTY_OPENED_QUESTION_IDS: ReadonlySet<number> = new Set();
 
@@ -60,6 +69,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const quizImport = useQuizImport({
     rounds: draft.rounds,
     title: draft.title,
+    mode: draft.mode,
     isEditorShowing: draft.phase === 'editor',
     onApply: draft.applyImport,
   });
@@ -111,6 +121,24 @@ function EditorStartScreen({
           Sheets link to edit from there.
         </p>
       </div>
+      <fieldset className="flex flex-col items-center gap-2">
+        <legend className="mb-1 text-xs font-extrabold uppercase tracking-wide text-foreground/60">
+          Quiz mode (can&apos;t be changed later)
+        </legend>
+        <div className="flex gap-4 text-sm font-extrabold">
+          {QUIZ_MODES.map((option) => (
+            <label key={option} className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="quiz-mode"
+                checked={draft.mode === option}
+                onChange={() => draft.setMode(option)}
+              />
+              {MODE_LABELS[option]}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <div className="flex flex-wrap justify-center gap-4">
         <Button
           type="button"
@@ -238,7 +266,7 @@ function EditorToolbar({
         className="whitespace-nowrap rounded-full bg-background/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide"
         title="A quiz's mode is chosen when it is created and can't be changed"
       >
-        {draft.mode === 'quickfire' ? 'Quickfire quiz' : 'Pub quiz'}
+        {MODE_LABELS[draft.mode]} quiz
       </span>
       <QuizImportControls variant="toolbar" quizImport={quizImport} />
       <Button

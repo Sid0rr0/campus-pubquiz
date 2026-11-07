@@ -1572,8 +1572,18 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Edit the quiz title; per round, edit its title, toggle `breakAfter`, reorder
   with up/down buttons (no drag-and-drop), delete, or add questions; per
   question, edit type/prompt/options/answer/points/media.
-- The **quiz mode** (`QuizDraft.mode`, `QuizSummary.mode`) shows read-only in
-  the editor's header ("Pub quiz" / "Quickfire quiz"). In a quickfire quiz the
+- The **quiz mode** (`QuizDraft.mode`, `QuizSummary.mode`) is chosen on the
+  empty-state screen with a Pub / Quickfire radio (default Pub), before starting
+  from scratch or importing, and shows read-only in the editor's header ("Pub
+  quiz" / "Quickfire quiz"). The Sessions page's quiz list marks a quickfire quiz
+  with a "Quickfire" label. `POST /import/preview` and `POST
+  /import/preview-from-url` take the same `mode` (`pub` | `quickfire`, default
+  `pub`; anything else is a `400`) and the editor sends the draft's. The CSV
+  columns and the export are the same in both modes. A quickfire import refuses
+  a row whose type is outside the quickfire-allowed list, as a `type` issue with
+  the editor's "Quickfire rounds only support …" message, fills a blank `points`
+  cell with 1000 (1 in a pub import) and accepts `break_after` but ignores it.
+  In a quickfire quiz the
   break-after toggle is hidden (`breakAfter` is ignored there), the type picker
   offers only the quickfire-allowed types, and a new question defaults to 1000
   points (1 in a pub quiz). A save can't change the mode: `POST /quizzes`

@@ -41,7 +41,26 @@ describe('ImportController', () => {
       });
 
       expect(response).toBe(preview);
-      expect(importService.preview).toHaveBeenCalledWith(CSV, 'Trivia Night');
+      expect(importService.preview).toHaveBeenCalledWith(
+        CSV,
+        'Trivia Night',
+        'pub',
+      );
+    });
+
+    it('passes a quickfire mode through and rejects an unknown one', () => {
+      const { controller, importService } = makeController();
+
+      controller.preview({ csvText: CSV, mode: 'quickfire' });
+
+      expect(importService.preview).toHaveBeenCalledWith(
+        CSV,
+        undefined,
+        'quickfire',
+      );
+      expect(() =>
+        controller.preview({ csvText: CSV, mode: 'kahoot' as 'pub' }),
+      ).toThrow(BadRequestException);
     });
 
     it('rejects a body without csvText', () => {
@@ -76,7 +95,19 @@ describe('ImportController', () => {
       expect(importService.previewFromUrl).toHaveBeenCalledWith(
         SHEET_URL,
         'Trivia Night',
+        'pub',
       );
+    });
+
+    it('rejects an unknown mode', () => {
+      const { controller } = makeController();
+
+      expect(() =>
+        controller.previewFromUrl({
+          sheetUrl: SHEET_URL,
+          mode: 'x' as 'pub',
+        }),
+      ).toThrow(BadRequestException);
     });
 
     it('rejects a body without sheetUrl', () => {

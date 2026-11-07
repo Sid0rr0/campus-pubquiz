@@ -89,6 +89,29 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByPlaceholderText(/round title/i)).toHaveValue('Round 1');
   });
 
+  it('lets a new quiz be made quickfire: the choice shows in the editor and goes to the import', async () => {
+    const user = userEvent.setup();
+    mockPreviewImport.mockResolvedValue({
+      quizTitle: 'q',
+      rounds: [],
+      issues: [],
+      isImportable: false,
+    });
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+
+    expect(screen.getByRole('radio', { name: 'Pub' })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: 'Quickfire' }));
+    await user.upload(screen.getByLabelText(/import csv/i), makeCsvFile());
+
+    await waitFor(() =>
+      expect(mockPreviewImport).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.anything(),
+        'quickfire',
+      ),
+    );
+  });
+
   it('loads an existing quiz into the editor', async () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
@@ -1830,6 +1853,7 @@ describe('QuizEditorPanel', () => {
     expect(mockPreviewImport).toHaveBeenCalledWith(
       expect.any(String),
       'science-round',
+      'pub',
     );
     expect(screen.getByDisplayValue('science-round')).toBeInTheDocument();
   });
@@ -1839,6 +1863,7 @@ describe('QuizEditorPanel', () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
       title: 'Trivia Night',
+      mode: 'pub',
       rounds: [{ title: 'History', breakAfter: true, questions: [] }],
     });
     mockPreviewImport.mockResolvedValue({
@@ -1862,6 +1887,7 @@ describe('QuizEditorPanel', () => {
     expect(mockPreviewImport).toHaveBeenCalledWith(
       expect.any(String),
       'Trivia Night',
+      'pub',
     );
     expect(screen.getByDisplayValue('Trivia Night')).toBeInTheDocument();
   });
@@ -1977,7 +2003,11 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByPlaceholderText(/question prompt/i)).toHaveValue(
       'Largest planet?',
     );
-    expect(mockPreviewImportFromUrl).toHaveBeenCalledWith(SHEET_URL, undefined);
+    expect(mockPreviewImportFromUrl).toHaveBeenCalledWith(
+      SHEET_URL,
+      undefined,
+      'pub',
+    );
     expect(mockCreateQuiz).not.toHaveBeenCalled();
   });
 

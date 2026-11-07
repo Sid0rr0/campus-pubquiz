@@ -52,6 +52,7 @@ function renderImport(
     rounds?: EditorRound[];
     title?: string;
     isEditorShowing?: boolean;
+    mode?: 'pub' | 'quickfire';
   } = {},
 ) {
   const onApply = vi.fn();
@@ -66,6 +67,7 @@ function renderImport(
       useQuizImport({
         rounds: options.rounds ?? existing,
         title: options.title ?? '',
+        mode: options.mode ?? 'pub',
         isEditorShowing: options.isEditorShowing ?? true,
         onApply,
       }),
@@ -113,7 +115,11 @@ describe('importing a CSV file', () => {
     await act(() => result.current.handleCsvFile(event));
 
     expect(target.value).toBe('');
-    expect(mockPreviewImport).toHaveBeenCalledWith('round,type\n', 'Pub Night');
+    expect(mockPreviewImport).toHaveBeenCalledWith(
+      'round,type\n',
+      'Pub Night',
+      'pub',
+    );
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
     expect(
       onApply.mock.calls[0][0].rounds.map((r: EditorRound) => r.title),
@@ -299,6 +305,7 @@ describe('importing a Google Sheet', () => {
       expect(mockPreviewImportFromUrl).toHaveBeenCalledWith(
         'https://sheet/1',
         'Mine',
+        'pub',
       ),
     );
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
@@ -315,6 +322,22 @@ describe('importing a Google Sheet', () => {
       expect(mockPreviewImportFromUrl).toHaveBeenCalledWith(
         'https://sheet/1',
         undefined,
+        'pub',
+      ),
+    );
+  });
+
+  it('sends the quiz mode with the link', async () => {
+    const { result } = renderImport({ mode: 'quickfire' });
+    act(() => result.current.setSheetUrlInput('https://sheet/1'));
+
+    act(() => result.current.handleSheetUrlSubmit(formEvent().event));
+
+    await waitFor(() =>
+      expect(mockPreviewImportFromUrl).toHaveBeenCalledWith(
+        'https://sheet/1',
+        undefined,
+        'quickfire',
       ),
     );
   });

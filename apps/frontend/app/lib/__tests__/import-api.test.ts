@@ -24,7 +24,11 @@ describe('import-api', () => {
       });
       global.fetch = fetchMock as unknown as typeof fetch;
 
-      const result = await previewImport('csv,text', 'Trivia Night');
+      const result = await previewImport(
+        'csv,text',
+        'Trivia Night',
+        'quickfire',
+      );
 
       expect(result).toEqual(preview);
       expect(fetchMock).toHaveBeenCalledWith(
@@ -38,6 +42,7 @@ describe('import-api', () => {
           body: JSON.stringify({
             csvText: 'csv,text',
             quizTitle: 'Trivia Night',
+            mode: 'quickfire',
           }),
         }),
       );
@@ -50,7 +55,7 @@ describe('import-api', () => {
         json: () => Promise.resolve({ message: 'Invalid or expired session' }),
       }) as unknown as typeof fetch;
 
-      await expect(previewImport('csv', undefined)).rejects.toThrow(
+      await expect(previewImport('csv', undefined, 'pub')).rejects.toThrow(
         'Invalid or expired session',
       );
     });
@@ -70,7 +75,11 @@ describe('import-api', () => {
       });
       global.fetch = fetchMock as unknown as typeof fetch;
 
-      const result = await previewImportFromUrl(SHEET_URL, 'Trivia Night');
+      const result = await previewImportFromUrl(
+        SHEET_URL,
+        'Trivia Night',
+        'pub',
+      );
 
       expect(result).toEqual(preview);
       expect(fetchMock).toHaveBeenCalledWith(
@@ -81,6 +90,7 @@ describe('import-api', () => {
           body: JSON.stringify({
             sheetUrl: SHEET_URL,
             quizTitle: 'Trivia Night',
+            mode: 'pub',
           }),
         }),
       );
@@ -93,9 +103,9 @@ describe('import-api', () => {
         json: () => Promise.resolve({ message: 'Could not fetch that sheet' }),
       }) as unknown as typeof fetch;
 
-      await expect(previewImportFromUrl(SHEET_URL, undefined)).rejects.toThrow(
-        'Could not fetch that sheet',
-      );
+      await expect(
+        previewImportFromUrl(SHEET_URL, undefined, 'pub'),
+      ).rejects.toThrow('Could not fetch that sheet');
     });
   });
 });

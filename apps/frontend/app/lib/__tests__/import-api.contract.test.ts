@@ -18,20 +18,24 @@ describeApiClient(
   [
     {
       name: 'previewImport',
-      call: () => previewImport('a,b', 'Friday'),
+      call: () => previewImport('a,b', 'Friday', 'pub'),
       url: `${BASE}/import/preview`,
       init: {
         method: 'POST',
         credentials: 'include',
         headers: { ...JSON_TYPE, ...CSRF },
-        body: JSON.stringify({ csvText: 'a,b', quizTitle: 'Friday' }),
+        body: JSON.stringify({
+          csvText: 'a,b',
+          quizTitle: 'Friday',
+          mode: 'pub',
+        }),
       },
       fallback: 'Import request failed',
       okBody: { rounds: [] },
     },
     {
       name: 'previewImportFromUrl',
-      call: () => previewImportFromUrl('https://sheet', 'Friday'),
+      call: () => previewImportFromUrl('https://sheet', 'Friday', 'pub'),
       url: `${BASE}/import/preview-from-url`,
       init: {
         method: 'POST',
@@ -40,6 +44,7 @@ describeApiClient(
         body: JSON.stringify({
           sheetUrl: 'https://sheet',
           quizTitle: 'Friday',
+          mode: 'pub',
         }),
       },
       fallback: 'Import request failed',
@@ -56,7 +61,9 @@ it('defaults to no issues when the reply lists none', async () => {
     json: () => Promise.resolve({}),
   }) as unknown as typeof fetch;
 
-  const error = await previewImport('a', undefined).catch((e: unknown) => e);
+  const error = await previewImport('a', undefined, 'pub').catch(
+    (e: unknown) => e,
+  );
 
   expect((error as ImportApiError).issues).toEqual([]);
 });
@@ -69,7 +76,9 @@ it('carries the row issues the server listed', async () => {
     json: () => Promise.resolve({ message: 'Invalid', issues }),
   }) as unknown as typeof fetch;
 
-  const error = await previewImport('a', undefined).catch((e: unknown) => e);
+  const error = await previewImport('a', undefined, 'pub').catch(
+    (e: unknown) => e,
+  );
 
   expect((error as ImportApiError).issues).toEqual(issues);
 });

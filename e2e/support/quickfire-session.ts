@@ -37,8 +37,8 @@ export interface QuickfireSessionOptions {
 }
 
 /**
- * Imports the quickfire CSV as a new quickfire-mode quiz (no CSV column sets
- * the mode) and creates a session on it.
+ * Imports the quickfire CSV as a new quickfire-mode quiz (previewed with mode
+ * quickfire; no CSV column sets it) and creates a session on it.
  */
 export function seedQuickfireSession(
   api: APIRequestContext,

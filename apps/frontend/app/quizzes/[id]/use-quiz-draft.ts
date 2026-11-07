@@ -71,6 +71,8 @@ export interface QuizDraft {
   setTitle: (title: string) => void;
   /** The quiz's mode, shown read-only: it is chosen at creation and never changes. */
   mode: QuizMode;
+  /** Picks the mode of a new quiz, before it is saved. */
+  setMode: (mode: QuizMode) => void;
   rounds: EditorRound[];
   /** Applies a pure round edit (current rounds in, new rounds out). */
   editRounds: (edit: (rounds: EditorRound[]) => EditorRound[]) => void;
@@ -119,7 +121,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
   // for that case — 'empty' only actually renders for a new quiz.
   const [phase, setPhase] = useState<QuizDraftPhase>('empty');
   const [title, setTitle] = useState('');
-  // Fixed once the quiz exists; a new quiz is a pub quiz until the creation form offers the choice.
+  // Chosen on the new-quiz screen (pub by default); fixed once the quiz exists.
   const [mode, setMode] = useState<QuizMode>('pub');
   const [rounds, setRounds] = useState<EditorRound[]>([]);
   const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
@@ -236,6 +238,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
     title,
     setTitle,
     mode,
+    setMode,
     rounds,
     editRounds: (edit) => setRounds(edit),
     applyImport: (outcome) => {

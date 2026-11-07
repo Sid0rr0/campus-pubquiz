@@ -1,3 +1,4 @@
+import { quickfireTypesMessage } from '@campus-pubquiz/types';
 import { parseQuestionRow } from '@/import/question-row.schema';
 import { makeRow } from '@/import/__tests__/question-row-test-utils';
 
@@ -55,6 +56,55 @@ describe('parseQuestionRow - multiple choice and common fields', () => {
     if (result.ok) {
       expect(result.question.points).toBe(1);
     }
+  });
+
+  describe('in a quickfire quiz', () => {
+    const choice = {
+      type: 'multiple_choice',
+      options: 'Jupiter|Mars',
+      answer: 'Jupiter',
+    };
+
+    it('fills a blank points cell with 1000 and keeps a given one', () => {
+      const blank = parseQuestionRow(
+        makeRow({ ...choice, points: '' }),
+        'quickfire',
+      );
+      const given = parseQuestionRow(
+        makeRow({ ...choice, points: '500' }),
+        'quickfire',
+      );
+
+      expect(blank.ok && blank.question.points).toBe(1000);
+      expect(given.ok && given.question.points).toBe(500);
+    });
+
+    it('accepts break_after without complaint', () => {
+      const result = parseQuestionRow(
+        makeRow({ ...choice, breakAfter: '1' }),
+        'quickfire',
+      );
+
+      expect(result.ok).toBe(true);
+    });
+
+    it('refuses a type a quickfire quiz does not accept, with the editor message', () => {
+      const result = parseQuestionRow(
+        makeRow({ type: 'free_text' }),
+        'quickfire',
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        issues: [
+          {
+            rowNumber: 2,
+            field: 'type',
+            message: quickfireTypesMessage(),
+          },
+        ],
+      });
+    });
   });
 
   it('rejects an unknown question type', () => {

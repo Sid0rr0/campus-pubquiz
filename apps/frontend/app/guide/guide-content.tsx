@@ -168,16 +168,16 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Creating a quiz',
     paragraphs: [
-      '"New Quiz" on the Sessions page opens the editor. Fill rounds in by hand or import a CSV.',
+      '"New Quiz" on the Sessions page opens the editor. Fill rounds by hand or import a CSV.',
       'To add to a saved quiz, tick "Add to quiz instead of replacing" when importing.',
     ],
     bullets: [
-      'Quiz mode (Pub or Quickfire) is fixed at creation.',
-      'Round note: up to 500 characters, for Remote and the title card on Control. "Show on screen" adds the big screen; phones never see it.',
-      'Question notes: tick "Show on screen at reveal" to add them under the answer on the big screen.',
-      'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL).',
+      "Pick the mode (Pub or Quickfire) first; it's permanent. Quickfire imports refuse other types; blank points become 1000.",
+      'Round note: up to 500 characters, for Remote and the Control title card. "Show on screen" adds the big screen; phones never see it.',
+      'Question notes: tick "Show on screen at reveal" to show them under the answer.',
+      'Media: paste a picture, audio, YouTube or video link into Media URL (or Answer media URL).',
       `Number: the margin row has a number field and % / absolute switch. CSV: {margin: "5%"}; {scoring: …} sets ${SCORING_NOTE}.`,
-      'Video: tick "Hide video (sound only)" to cover it until the reveal. In a CSV: hideVideo: true in the {…} notes group.',
+      'Video: tick "Hide video (sound only)" to cover it until the reveal. CSV: hideVideo: true in the {…} notes group.',
       'Clip and Reveal times take seconds, M:SS or H:MM:SS. Blank Reveal times replay the clip; 0 plays it whole. CSV: {start: "1:22", end: "2:20", revealStart: "2:30"}.',
       `CSV: one row per question; a round ends a block once any row has break_after = 1. By hand, fill category, author, round_note, show_round_note (1 shows it on screen), notes and show_note (1 shows them at the reveal). The type column takes ${CSV_TYPE_IDENTIFIERS}.`,
     ],

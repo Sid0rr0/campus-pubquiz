@@ -20,7 +20,7 @@ interface QuizSavedResponse {
 
 /**
  * Imports the CSV at `csvPath` as a new quiz titled `quizTitle`: previews it (so a bad fixture fails here) and saves what the preview parsed.
- * `mode` is the quiz mode it is saved with (the CSV has no column for it); pub when omitted.
+ * `mode` is the quiz mode it is previewed and saved with (the CSV has no column for it); pub when omitted.
  */
 export async function importCsvQuiz(
   api: APIRequestContext,
@@ -30,7 +30,7 @@ export async function importCsvQuiz(
 ): Promise<number> {
   const csvText = fs.readFileSync(csvPath, 'utf8');
   const previewResponse = await api.post('/import/preview', {
-    data: { csvText, quizTitle },
+    data: { csvText, quizTitle, mode },
   });
   expect(previewResponse.ok(), 'import preview').toBe(true);
   const preview = (await previewResponse.json()) as ImportPreviewResponse;

@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { ImportPreview } from '@campus-pubquiz/types';
+import type { ImportPreview, QuizMode } from '@campus-pubquiz/types';
 import {
   ImportApiError,
   previewImport,
@@ -18,6 +18,8 @@ import {
 interface UseQuizImportOptions {
   rounds: EditorRound[];
   title: string;
+  /** The mode of the quiz being built: the server checks and defaults the rows by it. */
+  mode: QuizMode;
   /** Whether the editor (not the empty state) is showing — "add to quiz" only applies there. */
   isEditorShowing: boolean;
   /** Applies an import's new rounds and title to the draft. */
@@ -42,6 +44,7 @@ const REPLACE_PROMPT =
 export function useQuizImport({
   rounds,
   title,
+  mode,
   isEditorShowing,
   onApply,
 }: UseQuizImportOptions): QuizImport {
@@ -75,14 +78,14 @@ export function useQuizImport({
 
   const previewMutation = useMutation({
     mutationFn: ({ csvText, title }: { csvText: string; title: string }) =>
-      previewImport(csvText, blankToUndefined(title)),
+      previewImport(csvText, blankToUndefined(title), mode),
     onSuccess: handleImportPreview,
     onError: (error) => handleImportError(error, 'Could not read that CSV.'),
   });
 
   const previewFromUrlMutation = useMutation({
     mutationFn: (sheetUrl: string) =>
-      previewImportFromUrl(sheetUrl, blankToUndefined(title.trim())),
+      previewImportFromUrl(sheetUrl, blankToUndefined(title.trim()), mode),
     onSuccess: handleImportPreview,
     onError: (error) =>
       handleImportError(error, 'Could not fetch that Google Sheet.'),

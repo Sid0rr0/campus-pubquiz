@@ -72,6 +72,11 @@ export function quickfireTypeNames(): string {
   );
 }
 
+/** The refusal for a question whose type a quickfire quiz doesn't accept: the editor's save check and the importer show the same text. */
+export function quickfireTypesMessage(): string {
+  return `Quickfire rounds only support ${quickfireTypeNames()} questions`;
+}
+
 /** Whether the type carries a margin: how far an answer may be from the key and still be correct (Number only). */
 export function hasMarginType(type: QuestionType): boolean {
   return QUESTION_KINDS[type].gradingSettings.includes('margin');

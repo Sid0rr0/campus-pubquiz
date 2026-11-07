@@ -6,7 +6,7 @@ Parent spec: `.scratch/quickfire-mode/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `POST /quizzes` and the import endpoints take `mode` (Zod-validated, default `pub`).
 - [ ] A quickfire import refuses rows with a non-quickfire-allowed type, using the editor's message, and fills a blank `points` cell with 1000; `break_after` is accepted and ignored. CSV columns unchanged; export unchanged.
