@@ -1,6 +1,7 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import { formatAnswer, type Verdict } from './answer-kind';
+import { doubledRoundIdsOfTeam } from './doubled-rounds';
 import { jokerRoundPoints } from './joker';
 import type { PowerUpId } from './power-ups';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
@@ -319,25 +320,15 @@ function jokerHolders(
     .sort((a, b) => compareTeamNames(a.teamName, b.teamName))
     .flatMap((team) => {
       const joker = session.jokers[team.teamId];
-      const picks = [
-        ...(joker ? [{ roundId: joker.roundId, source: joker.source }] : []),
-        ...session.funFactData.powerUps
-          .filter(
-            (p) =>
-              p.teamId === team.teamId &&
-              p.powerUp === 'extra_joker' &&
-              // Stryker disable next-line ConditionalExpression: a purchase with no round finds no round below
-              p.roundId !== null,
-          )
-          .map((p) => ({
-            roundId: p.roundId as number,
-            // Stryker disable next-line StringLiteral: `source` is only ever compared with 'drawn'
-            source: 'extra',
-          })),
-      ];
-      return picks.flatMap((pick) => {
-        const round = roundById.get(pick.roundId);
-        return round ? [{ team, joker: pick, round }] : [];
+      return doubledRoundIdsOfTeam(
+        session.jokers,
+        session.funFactData.powerUps,
+        team.teamId,
+      ).flatMap((roundId) => {
+        const round = roundById.get(roundId);
+        // Stryker disable next-line StringLiteral: `source` is only ever compared with 'drawn'
+        const source = roundId === joker?.roundId ? joker.source : 'extra';
+        return round ? [{ team, joker: { roundId, source }, round }] : [];
       });
     });
 }

@@ -1,4 +1,5 @@
 import { getBlockInPlay, getBlockRoundIndexes } from './block-in-play';
+import { doubledRoundIdsOfTeam } from './doubled-rounds';
 import { isGradedStatus, isQuestionOnAirStatus } from './game-state-groups';
 import {
   isCurrentRoundQuickfire,
@@ -173,19 +174,13 @@ function describeJokerTeamIds(
     ),
   );
   return entries
-    .filter(({ teamId }) => {
-      const joker = session.jokers[teamId];
-      return (
-        (joker !== undefined && blockRoundIds.has(joker.roundId)) ||
-        session.funFactData.powerUps.some(
-          (purchase) =>
-            purchase.teamId === teamId &&
-            purchase.powerUp === 'extra_joker' &&
-            purchase.roundId !== null &&
-            blockRoundIds.has(purchase.roundId),
-        )
-      );
-    })
+    .filter(({ teamId }) =>
+      doubledRoundIdsOfTeam(
+        session.jokers,
+        session.funFactData.powerUps,
+        teamId,
+      ).some((roundId) => blockRoundIds.has(roundId)),
+    )
     .map(({ teamId }) => teamId);
 }
 
