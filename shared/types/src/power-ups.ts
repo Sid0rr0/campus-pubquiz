@@ -368,29 +368,6 @@ export function powerUpApplies(
   return powerUp !== 'fifty_fifty' || (question.options?.length ?? 0) > 2;
 }
 
-/** Why a purchase is refused (worded for the team), or null when it goes through. */
-export function purchaseRefusal(input: {
-  setting: PowerUpSetting;
-  /** How many times the team has bought this power-up this session. */
-  usesInSession: number;
-  isUsedOnQuestion: boolean;
-  balance: number;
-  isAnswerable: boolean;
-  applies: boolean;
-}): string | null {
-  if (!input.isAnswerable) return 'Answers are locked for this question';
-  if (!input.applies) return 'That power-up does not work on this question';
-  if (input.setting.maxUses === 0) return 'That power-up is not offered';
-  if (input.usesInSession >= input.setting.maxUses) {
-    return 'You have reached the limit for that power-up';
-  }
-  if (input.isUsedOnQuestion) {
-    return 'You already used that power-up on this question';
-  }
-  if (input.balance < input.setting.cost) return 'Not enough coins';
-  return null;
-}
-
 /** The options the team's 50/50s on the question removed. */
 export function removedOptionsOf(
   questionId: number,

@@ -196,8 +196,12 @@ _Avoid_: joker vote, joker selection
 ## Power-ups
 
 **Power-up**:
-A one-off help a team buys with coins, in a session played with power-ups. Most act on one question and can be used once per question while it can still be answered: **50/50**, **first letter** and **letter count** (free text: the key's first letter, or its letters as blanks), **pin one** (sort or match: one item's right place or one right pair, locked in) and **wider margin**. The extra joker acts on a round. Showdowns take no power-ups. The quiz master chooses which power-ups a session offers, what each costs and how many times a team may use each in the session. A used power-up is never refunded.
+A one-off help a team buys with coins, in a session played with power-ups. Most act on one question and can be used once per question while it can still be answered: **50/50**, **first letter** and **letter count** (free text: the key's first letter, or its letters as blanks), **pin one** (sort or match: one item's right place or one right pair, locked in) and **wider margin**. The extra joker acts on a round. Showdowns take no power-ups. The quiz master chooses which power-ups a session offers, what each costs and how many times a team may use each in the session. A used power-up is never refunded. What a team can buy right now is the **Power-up offer**.
 _Avoid_: lifeline, boost, cheat
+
+**Power-up offer**:
+What a team can buy right now and, for each power-up it can't, why not: bought now, held back only by coins or Ask the room's readiness, or not available now. One shared module answers it for both the phone's power-ups list and the server's refusal of a buy, so the two never disagree. It covers the question power-ups; the extra joker joins it later.
+_Avoid_: shop, power-up rules
 
 **Coin**:
 What a team spends on power-ups. Coins are never points: they count towards no score, placing or league. A team starts a session played with power-ups with the session's starting coins, plus any carried coins, and earns more from coin awards; coins left at the end of the session are lost. A team's coins never go below zero.

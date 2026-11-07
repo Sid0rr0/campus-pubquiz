@@ -711,7 +711,7 @@ showdown), the power-up does not work on the question (the type registry's
 works in a quickfire round, where a tap locks the pick), the session does not
 offer it (`maxUses: 0`), the team used it `maxUses` times already, it already ran
 on this question, or the balance is below the cost. These rules are
-`purchaseRefusal` in shared types. A purchase works in a session with power-ups off
+`questionPurchaseRefusal` (the Power-up offer) in shared types. A purchase works in a session with power-ups off
 too, for a team that has coins. It is a row in the `purchases` table (team,
 session, power-up, question or round, the cost paid, and the **stored effect** as
 JSON, parsed on read by `purchaseEffectSchema`): the effect is drawn once at

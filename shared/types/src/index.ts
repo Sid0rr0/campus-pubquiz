@@ -9,6 +9,7 @@ export * from './team-presence';
 export * from './session-settings';
 export * from './bonus';
 export * from './power-ups';
+export * from './power-up-offer';
 export * from './feedback';
 export * from './session-scales';
 export * from './player-count';

@@ -117,11 +117,12 @@ describe('PlayPage — the power-up bar', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows only the power-ups that apply to the question type', () => {
+  it('lists a power-up that does not apply to the question under "Not available now"', () => {
     phone({
       question: { type: 'closest_guess', prompt: 'How many?', points: 1 },
     });
 
+    expect(screen.getAllByText('Not available now').length).toBeGreaterThan(0);
     expect(
       screen.queryByRole('button', { name: /^Activate/ }),
     ).not.toBeInTheDocument();
@@ -187,18 +188,15 @@ describe('PlayPage — the power-up bar', () => {
     expect(buy).toHaveBeenCalledWith('ask_the_room', 1);
   });
 
-  it('does not offer a 50/50 on a two-option question', () => {
-    phone({ question: { ...FRANCE, options: ['Paris', 'London'] } });
-
-    expect(screen.queryByRole('button', { name: 'Activate 50/50' })).toBeNull();
-  });
-
-  it('disables a power-up the team cannot afford', () => {
+  it('disables a power-up the team cannot afford, even Ask the room while it waits', () => {
     phone({ coins: 0, settings: { powerUpsEnabled: true } });
 
+    const fifty = screen.getByRole('button', { name: 'Activate 50/50' });
+    expect(fifty).toBeDisabled();
+    expect(fifty).toHaveTextContent('Not enough coins');
     expect(
-      screen.getByRole('button', { name: 'Activate 50/50' }),
-    ).toBeDisabled();
+      screen.getByRole('button', { name: 'Activate Ask the room' }),
+    ).toHaveTextContent('Not enough coins');
   });
 
   it('hides a power-up the session does not offer', () => {
