@@ -183,6 +183,8 @@ export function buildQuizPreview(
     joinCode: '',
     // Stryker disable next-line StringLiteral: equivalent, no display screen projection reads the quiz title
     quizTitle: '',
+    // Stryker disable next-line StringLiteral: equivalent, no display screen projection reads the quiz mode (rounds carry the quickfire flag)
+    quizMode: 'pub',
     customName: null,
     startedAt: new Date(0),
     rounds: [...rounds],

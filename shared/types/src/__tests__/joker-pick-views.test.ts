@@ -16,6 +16,7 @@ function jokerNight(): SessionState {
     gameSessionId: 1,
     joinCode: 'ABCDEF',
     quizTitle: 'Quiz',
+    quizMode: 'pub',
     customName: null,
     startedAt: new Date(0),
     rounds: [1, 2].map((number) => ({

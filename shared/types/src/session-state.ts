@@ -2,6 +2,7 @@ import type { FunFactData } from './fun-facts';
 import type { GameContext, GameProgress } from './game-state-types';
 import type { TeamJoker } from './joker';
 import type { LeagueTop } from './league';
+import type { QuizMode } from './quiz-mode';
 import type { ClosestGuessRevealData, SeededQuestion } from './question-views';
 import type { LeaderboardEntry } from './room-views';
 import {
@@ -51,6 +52,8 @@ export interface SeededGame {
   joinCode: string;
   /** The quiz's title, refreshed whenever the game is reloaded. */
   quizTitle: string;
+  /** The quiz's mode, fixed at creation: a quickfire quiz's sessions have no jokers, power-ups, coins or leagues. */
+  quizMode: QuizMode;
   /** The session's own name; null when none was set (the display name then falls back to the quiz title). */
   customName: string | null;
   /** When the session started: its row's creation time. */
