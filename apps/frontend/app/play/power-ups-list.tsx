@@ -1,10 +1,11 @@
 import { toast } from 'sonner';
 import {
   POWER_UP_DESCRIPTIONS,
-  POWER_UP_IDS,
   POWER_UP_LABELS,
-  powerUpApplies,
+  extraJokerOfferEntry,
+  questionPowerUpOffer,
   type AckResult,
+  type OfferOutcome,
   type PlayersStatePayload,
   type PowerUpId,
   type PowerUpSettings,
@@ -20,6 +21,8 @@ export interface PowerUpsListProps {
   coins: number;
   /** The question being answered right now, or null when nothing can be answered. */
   question: QuestionView | null;
+  /** Whether the current round is a quickfire round: the Power-up offer then offers no question power-up. */
+  isQuickfire: boolean;
   /** Questions on which the server says Ask the room is ready: a flag only, the phone never learns how many teams answered. */
   roomReadyQuestionIds: number[];
   onBuy: (powerUp: PowerUpId, questionId: number) => Promise<AckResult>;
@@ -46,6 +49,7 @@ export function PowerUpsList({
   purchases,
   coins,
   question,
+  isQuickfire,
   roomReadyQuestionIds,
   onBuy,
   extraJokerOffer,
@@ -56,7 +60,9 @@ export function PowerUpsList({
   const rows = powerUpRows({
     settings,
     purchases,
+    coins,
     question,
+    isQuickfire,
     roomReadyQuestionIds,
     extraJokerOffer,
     jokerRoundId,
@@ -92,7 +98,6 @@ export function PowerUpsList({
               <AvailablePowerUp
                 key={row.powerUp}
                 row={row}
-                coins={coins}
                 onActivate={() => void activate(row.powerUp)}
               />
             ))}
@@ -124,67 +129,70 @@ interface PowerUpRow {
   used: number;
   /** What the activation button buys it for, or null when it can't be used right now. */
   target: string | null;
-  isWaiting: boolean;
+  /** Why the activation button is disabled, when only that stands in the way. */
+  heldBack: string | null;
 }
 
 type RowInputs = Pick<
   PowerUpsListProps,
   | 'settings'
   | 'purchases'
+  | 'coins'
   | 'question'
+  | 'isQuickfire'
   | 'roomReadyQuestionIds'
   | 'extraJokerOffer'
   | 'jokerRoundId'
 >;
 
-/** Every power-up the session offers (maxUses above 0), with what it can be used on right now. */
+/** Every power-up the session offers (maxUses above 0), with what it can be used on right now: the question power-ups from the Power-up offer, the extra joker from the same module. */
 function powerUpRows(inputs: RowInputs): PowerUpRow[] {
-  const { settings, purchases, question, roomReadyQuestionIds } = inputs;
-  return POWER_UP_IDS.filter((powerUp) => settings[powerUp].maxUses > 0).map(
-    (powerUp) => {
-      const { cost, maxUses } = settings[powerUp];
-      const bought = purchases.filter((p) => p.powerUp === powerUp);
-      const target =
-        bought.length >= maxUses ? null : targetOf(powerUp, bought, inputs);
-      const isWaiting =
-        powerUp === 'ask_the_room' &&
-        question !== null &&
-        !roomReadyQuestionIds.includes(question.id);
-      return { powerUp, cost, maxUses, used: bought.length, target, isWaiting };
-    },
+  const { settings, purchases, coins, question, isQuickfire } = inputs;
+  const entries = questionPowerUpOffer({
+    settings,
+    purchases,
+    balance: coins,
+    question: question && { ...question, isQuickfire },
+    isRoomReady:
+      question !== null && inputs.roomReadyQuestionIds.includes(question.id),
+  });
+  const rows = entries.map(({ outcome, ...entry }) =>
+    rowOf(entry, outcome, 'this question'),
   );
+  const extraJoker = extraJokerRow(inputs);
+  return extraJoker ? [...rows, extraJoker] : rows;
 }
 
-function targetOf(
-  powerUp: PowerUpId,
-  bought: readonly PurchaseView[],
-  { question, extraJokerOffer, jokerRoundId }: RowInputs,
-): string | null {
-  if (powerUp === 'extra_joker') {
-    return extraJokerTarget(bought, extraJokerOffer, jokerRoundId);
-  }
-  return question !== null &&
-    powerUpApplies(powerUp, question) &&
-    !bought.some((p) => p.questionId === question.id)
-    ? 'this question'
-    : null;
+function extraJokerRow({
+  settings,
+  purchases,
+  coins,
+  extraJokerOffer: offer,
+  jokerRoundId,
+}: RowInputs): PowerUpRow | null {
+  const entry = extraJokerOfferEntry({
+    settings,
+    purchases,
+    balance: coins,
+    jokerRoundId,
+    offer,
+  });
+  if (entry === null) return null;
+  const { outcome, roundName, ...rest } = entry;
+  return rowOf(rest, outcome, `the next round: ${roundName}`);
 }
 
-function extraJokerTarget(
-  bought: readonly PurchaseView[],
-  offer: PowerUpsListProps['extraJokerOffer'],
-  jokerRoundId: number | null,
-): string | null {
-  if (
-    offer === null ||
-    offer.roundId === jokerRoundId ||
-    bought.some((p) => p.roundId === offer.roundId)
-  ) {
-    return null;
-  }
-  return `the next round: ${
-    offer.title === '' ? `Round ${offer.roundNumber}` : offer.title
-  }`;
+/** An offer entry as a row: the button's target unless unavailable, and the reason when only that holds it back. */
+function rowOf(
+  entry: Omit<PowerUpRow, 'target' | 'heldBack'>,
+  outcome: OfferOutcome,
+  target: string,
+): PowerUpRow {
+  return {
+    ...entry,
+    target: outcome.status === 'unavailable' ? null : target,
+    heldBack: outcome.status === 'held_back' ? outcome.reason : null,
+  };
 }
 
 /** Asks the server for the purchase; null when there is nothing to buy it for. */
@@ -208,14 +216,11 @@ function buyFor(
 
 function AvailablePowerUp({
   row,
-  coins,
   onActivate,
 }: {
   row: PowerUpRow;
-  coins: number;
   onActivate: () => void;
 }) {
-  const isShort = coins < row.cost;
   return (
     <li className="rounded-xl border border-foreground/15 bg-white px-4 py-3">
       <PowerUpDetails {...row} />
@@ -224,14 +229,10 @@ function AvailablePowerUp({
         variant="solid-flat"
         className="mt-3 min-h-12 w-full px-3 py-1.5 disabled:bg-foreground/10 disabled:text-foreground/70"
         aria-label={`Activate ${POWER_UP_LABELS[row.powerUp]}`}
-        disabled={row.isWaiting || isShort}
+        disabled={row.heldBack !== null}
         onClick={onActivate}
       >
-        {row.isWaiting
-          ? 'Waiting for more answers'
-          : isShort
-            ? 'Not enough coins'
-            : `Activate for ${row.target}`}
+        {row.heldBack ?? `Activate for ${row.target}`}
       </Button>
     </li>
   );

@@ -4,10 +4,9 @@ import {
   isCurrentRoundQuickfire,
   drawRemovedOptions,
   drawPin,
-  extraJokerRefusal,
+  extraJokerPurchaseRefusal,
   extraJokerRoundId,
-  powerUpApplies,
-  purchaseRefusal,
+  questionPurchaseRefusal,
   teamCoins,
   textHint,
   type BuyPowerUpPayload,
@@ -117,10 +116,8 @@ export class PurchaseChanges {
 
   /**
    * A team buys `powerUp` for a question from `socketId`. Refused unless the
-   * socket owns a team's seat and the shared rule (`purchaseRefusal`) allows
-   * it: the question can be answered and the power-up works on it, the session
-   * offers it, the limit is not used, it has not run on this question, and the
-   * balance covers the cost. Stores the purchase with its drawn effect, tells
+   * socket owns a team's seat and the Power-up offer (`questionPurchaseRefusal`)
+   * allows it. Stores the purchase with its drawn effect, tells
    * the team's own phones its purchases and coins, and refreshes the admin
    * room (the team's coins and the answer list showing what the answer used).
    */
@@ -144,11 +141,14 @@ export class PurchaseChanges {
       gameSessionId,
       teamId,
     );
-    const setting = settings.powerUps[powerUp];
+    const otherAnswers =
+      powerUp === 'ask_the_room' && question
+        ? await this.otherTeamsAnswers(gameSessionId, questionId, teamId)
+        : [];
     assertQuestionPurchaseAllowed(
       session,
       request,
-      { teamId, records },
+      { teamId, records, otherAnswers },
       question,
     );
 
@@ -156,15 +156,8 @@ export class PurchaseChanges {
       powerUp,
       questionId,
       roundId: null,
-      cost: setting.cost,
-      effect: effectOf(
-        powerUp,
-        question,
-        this.random,
-        powerUp === 'ask_the_room'
-          ? await this.otherTeamsAnswers(gameSessionId, questionId, teamId)
-          : [],
-      ),
+      cost: settings.powerUps[powerUp].cost,
+      effect: effectOf(powerUp, question, this.random, otherAnswers),
     };
     // An answer already given was graded without the wider margin: grade it
     // again and send the team its answers, so it need not submit twice.
@@ -261,7 +254,8 @@ export class PurchaseChanges {
 
   /**
    * A team buys an extra joker for `roundId`: refused unless it is the next
-   * round (`extraJokerRoundId`) and the rest of `extraJokerRefusal` allows it.
+   * round (`extraJokerRoundId`) and the Power-up offer
+   * (`extraJokerPurchaseRefusal`) allows it.
    * Scoring reads the stored purchase; nothing is cached on the session.
    */
   private async buyExtraJoker(
@@ -279,24 +273,13 @@ export class PurchaseChanges {
       gameSessionId,
       teamId,
     );
-    const setting = settings.powerUps.extra_joker;
-    const jokerRoundId = session.jokers[teamId]?.roundId;
-    const refusal = extraJokerRefusal({
-      setting,
-      usesInSession: records.filter(
-        (record) => record.powerUp === 'extra_joker',
-      ).length,
+    const refusal = extraJokerPurchaseRefusal({
+      settings: settings.powerUps,
+      purchases: records,
       balance: balanceAfter(session, teamId, records),
+      jokerRoundId: session.jokers[teamId]?.roundId,
       roundId,
       offeredRoundId: extraJokerRoundId(session),
-      doubledRoundIds: [
-        ...(jokerRoundId === undefined ? [] : [jokerRoundId]),
-        ...records.flatMap((record) =>
-          record.powerUp === 'extra_joker' && record.roundId !== null
-            ? [record.roundId]
-            : [],
-        ),
-      ],
     });
     if (refusal !== null) throw new SessionRefusal(refusal);
 
@@ -304,7 +287,7 @@ export class PurchaseChanges {
       powerUp: 'extra_joker',
       questionId: null,
       roundId,
-      cost: setting.cost,
+      cost: settings.powerUps.extra_joker.cost,
       effect: { kind: 'extra_joker' },
     };
     return await this.store(session, teamId, records, bought, {});
@@ -345,32 +328,37 @@ export class PurchaseChanges {
   }
 }
 
-/** Throws the shared rule's refusal (`purchaseRefusal`) for a question power-up; narrows `question` to one open for answering. */
+/** Throws the Power-up offer's refusal for a question power-up; narrows `question` to one open for answering. */
 function assertQuestionPurchaseAllowed(
   session: SessionState,
   { powerUp, questionId }: { powerUp: PowerUpId; questionId: number },
-  { teamId, records }: { teamId: number; records: readonly PurchaseRecord[] },
+  {
+    teamId,
+    records,
+    otherAnswers,
+  }: {
+    teamId: number;
+    records: readonly PurchaseRecord[];
+    otherAnswers: readonly string[];
+  },
   question: SeededQuestion | undefined,
 ): asserts question is SeededQuestion {
-  const refusal = purchaseRefusal({
-    setting: session.seededGame.settings.powerUps[powerUp],
-    usesInSession: records.filter((record) => record.powerUp === powerUp)
-      .length,
-    isUsedOnQuestion: records.some(
-      (record) =>
-        record.powerUp === powerUp && record.questionId === questionId,
-    ),
+  const refusal = questionPurchaseRefusal({
+    settings: session.seededGame.settings.powerUps,
+    purchases: records,
     balance: balanceAfter(session, teamId, records),
-    isAnswerable: question !== undefined,
-    // A quickfire tap locks the pick, so no question power-up can help there.
-    applies:
+    question: question
+      ? { ...question, isQuickfire: isCurrentRoundQuickfire(session) }
+      : null,
+    isRoomReady:
       question !== undefined &&
-      !isCurrentRoundQuickfire(session) &&
-      powerUpApplies(powerUp, question),
+      askTheRoomSplit(question.options ?? [], otherAnswers) !== null,
+    powerUp,
+    questionId,
   });
-  if (refusal !== null || question === undefined) {
-    throw new SessionRefusal(refusal ?? 'Answers are locked for this question');
-  }
+  if (refusal !== null) throw new SessionRefusal(refusal);
+  // The offer only passes a question that is open for answering.
+  if (question === undefined) throw new Error('Question missing');
 }
 
 /** The extra jokers that still stand after a live edit, each moved to the round now holding its questions. */

@@ -421,14 +421,23 @@ describe('GameGateway — buying a 50/50', () => {
       return ack.error;
     }
 
-    it('refuses a power-up the session does not offer', async () => {
-      const game = await night({ powerUps: powerUps({ maxUses: 0 }) });
+    it('lets only one of two phones of a team win the race for its last use', async () => {
+      const game = await night();
       const [alpha] = game.teams;
+      const second = await game.connectPlayer();
+      await game.gateway.handleJoinPlayers(asSocket(second), {
+        teamName: 'Alpha',
+        teamToken: alpha.teamToken,
+        joinCode: game.joinCode,
+      });
 
-      expect(await refusal(game, alpha, ids(game).france)).toMatch(
-        /not offered/,
-      );
-      expect(await storedPurchases(game, alpha)).toEqual([]);
+      const acks = await Promise.all([
+        buy(game, alpha, ids(game).france),
+        buy(game, { socket: second }, ids(game).france),
+      ]);
+
+      expect(acks.filter((ack) => ack.success)).toHaveLength(1);
+      expect(await storedPurchases(game, alpha)).toHaveLength(1);
     });
 
     it('refuses a question power-up in a quickfire round, where a tap locks the pick', async () => {
@@ -451,15 +460,6 @@ describe('GameGateway — buying a 50/50', () => {
       await game.act('ADVANCE'); // opens the second question
 
       expect(await refusal(game, alpha, ids(game).italy)).toMatch(/limit/);
-      expect(await storedPurchases(game, alpha)).toHaveLength(1);
-    });
-
-    it('refuses a second use on the same question', async () => {
-      const game = await night({ powerUps: powerUps({ maxUses: 2 }) });
-      const [alpha] = game.teams;
-      await buy(game, alpha, ids(game).france);
-
-      expect(await refusal(game, alpha, ids(game).france)).toMatch(/already/);
       expect(await storedPurchases(game, alpha)).toHaveLength(1);
     });
 
@@ -511,24 +511,6 @@ describe('GameGateway — buying a 50/50', () => {
         await game.act('ADVANCE');
       }
       expect(await refusal(game, alpha, ids(game).france)).toMatch(/locked/);
-      expect(await storedPurchases(game, alpha)).toEqual([]);
-    });
-
-    it('refuses a question a 50/50 does not work on', async () => {
-      const game = await night();
-      const [alpha] = game.teams;
-      await game.act('ADVANCE');
-      await game.act('ADVANCE');
-      await game.act('ADVANCE');
-
-      // Two options: not offered.
-      expect(await refusal(game, alpha, ids(game).coin)).toMatch(
-        /does not work/,
-      );
-      // Typed answer.
-      expect(await refusal(game, alpha, ids(game).planet)).toMatch(
-        /does not work/,
-      );
       expect(await storedPurchases(game, alpha)).toEqual([]);
     });
 

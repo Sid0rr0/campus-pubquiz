@@ -495,12 +495,10 @@ function powerUpsListOf({
 }) {
   const { phoneScreen, settings } = view;
   // The activation buttons live in the power-ups cards: the question being answered right now, and the next round's extra joker.
-  // None in a quickfire round: a tap locks the pick, so no question power-up can help.
   const answeringQuestion =
     phoneScreen.kind === 'block' &&
     phoneScreen.mode === 'answering' &&
-    view.isAnswerable &&
-    !view.isCurrentRoundQuickfire
+    view.isAnswerable
       ? selectedQuestion
       : null;
   return {
@@ -508,6 +506,7 @@ function powerUpsListOf({
     purchases: myPurchases,
     coins: team.coins,
     question: answeringQuestion,
+    isQuickfire: view.isCurrentRoundQuickfire,
     roomReadyQuestionIds,
     onBuy: async (powerUp: PowerUpId, questionId: number) => {
       const result = await buyPowerUp(powerUp, questionId);

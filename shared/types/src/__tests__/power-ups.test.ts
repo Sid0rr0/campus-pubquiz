@@ -6,7 +6,6 @@ import {
   DEFAULT_SESSION_SETTINGS,
   drawPin,
   drawRemovedOptions,
-  extraJokerRefusal,
   extraJokerRoundId,
   fiftyFiftyLeaveCount,
   isPinOffPlace,
@@ -14,7 +13,6 @@ import {
   POWER_UP_LABELS,
   powerUpApplies,
   purchaseEffectSchema,
-  purchaseRefusal,
   removedOptionsOf,
   teamCoins,
   textHint,
@@ -87,55 +85,6 @@ describe('extraJokerRoundId', () => {
   it('offers nothing once the quiz has ended', () => {
     expect(offered('ended', 0)).toBeNull();
     expect(offered('ended', 1)).toBeNull();
-  });
-});
-
-describe('extraJokerRefusal', () => {
-  const ok = {
-    setting: { cost: 2, maxUses: 2 },
-    usesInSession: 0,
-    balance: 2,
-    roundId: 5,
-    offeredRoundId: 5,
-    doubledRoundIds: [3],
-  };
-
-  it('lets a purchase through', () => {
-    expect(extraJokerRefusal(ok)).toBeNull();
-  });
-
-  it('refuses a power-up the session does not offer, before anything else', () => {
-    expect(
-      extraJokerRefusal({
-        ...ok,
-        setting: { cost: 2, maxUses: 0 },
-        roundId: 9,
-      }),
-    ).toBe('That power-up is not offered');
-  });
-
-  it('refuses any round but the one on offer, including when none is', () => {
-    const wrong = 'Only the next round can be doubled, before its intro';
-    expect(extraJokerRefusal({ ...ok, roundId: 6 })).toBe(wrong);
-    expect(extraJokerRefusal({ ...ok, offeredRoundId: null })).toBe(wrong);
-  });
-
-  it('refuses a round the team already doubles', () => {
-    expect(extraJokerRefusal({ ...ok, doubledRoundIds: [5] })).toBe(
-      'That round is already doubled',
-    );
-  });
-
-  it('refuses at the per-session limit, but not below it', () => {
-    expect(extraJokerRefusal({ ...ok, usesInSession: 2 })).toBe(
-      'You have reached the limit for that power-up',
-    );
-    expect(extraJokerRefusal({ ...ok, usesInSession: 1 })).toBeNull();
-  });
-
-  it('refuses when the balance is short of the cost, but not when it equals it', () => {
-    expect(extraJokerRefusal({ ...ok, balance: 1 })).toBe('Not enough coins');
-    expect(extraJokerRefusal({ ...ok, balance: 2 })).toBeNull();
   });
 });
 
@@ -335,63 +284,6 @@ describe('powerUpApplies', () => {
 
   it('does not offer 50/50 on a type that has no options to remove', () => {
     expect(powerUpApplies('fifty_fifty', { type: 'free_text' })).toBe(false);
-  });
-});
-
-describe('purchaseRefusal', () => {
-  const ok = {
-    setting: { cost: 1, maxUses: 1 },
-    usesInSession: 0,
-    isUsedOnQuestion: false,
-    balance: 1,
-    isAnswerable: true,
-    applies: true,
-  };
-
-  it('allows a purchase nothing speaks against', () => {
-    expect(purchaseRefusal(ok)).toBeNull();
-  });
-
-  it('refuses a question that can no longer be answered', () => {
-    expect(purchaseRefusal({ ...ok, isAnswerable: false })).toMatch(/locked/i);
-  });
-
-  it('refuses a power-up that does not apply to the question', () => {
-    expect(purchaseRefusal({ ...ok, applies: false })).toMatch(/question/i);
-  });
-
-  it('refuses a power-up the session does not offer', () => {
-    expect(
-      purchaseRefusal({ ...ok, setting: { cost: 1, maxUses: 0 } }),
-    ).toMatch(/not offered/i);
-  });
-
-  it('refuses once the session limit is used up', () => {
-    expect(purchaseRefusal({ ...ok, usesInSession: 1 })).toMatch(/limit/i);
-    expect(
-      purchaseRefusal({
-        ...ok,
-        setting: { cost: 1, maxUses: 2 },
-        usesInSession: 1,
-      }),
-    ).toBeNull();
-  });
-
-  it('refuses a power-up already used on this question', () => {
-    expect(purchaseRefusal({ ...ok, isUsedOnQuestion: true })).toMatch(
-      /already/i,
-    );
-  });
-
-  it('refuses when the balance is below the cost, allows when equal', () => {
-    expect(purchaseRefusal({ ...ok, balance: 0 })).toMatch(/coin/i);
-    expect(
-      purchaseRefusal({
-        ...ok,
-        setting: { cost: 2, maxUses: 1 },
-        balance: 2,
-      }),
-    ).toBeNull();
   });
 });
 
