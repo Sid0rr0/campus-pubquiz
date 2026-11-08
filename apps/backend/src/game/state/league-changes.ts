@@ -1,14 +1,11 @@
 import { Logger } from '@nestjs/common';
-import type {
-  LeagueTop,
-  SessionSettings,
-  SessionState,
+import {
+  quizModeSettingsRefusal,
+  type LeagueTop,
+  type SessionSettings,
+  type SessionState,
 } from '@campus-pubquiz/types';
 import { SessionSettingsInvalidError } from '@/game/state/errors/session-settings-invalid.error';
-import {
-  isQuickfireSession,
-  quickfireSettingsRefusal,
-} from '@/session/quickfire-session-rules';
 import {
   BROADCAST_STATE_OUTCOME,
   coinSyncsFor,
@@ -97,9 +94,11 @@ export class LeagueChanges {
     partial: Partial<SessionSettings>,
     leagueIds: number[] | undefined,
   ): Promise<SessionChange<SessionOutcome>> {
-    const refusal = isQuickfireSession(session.seededGame)
-      ? quickfireSettingsRefusal(partial, leagueIds)
-      : undefined;
+    const refusal = quizModeSettingsRefusal(
+      session.seededGame.quizMode,
+      partial,
+      leagueIds,
+    );
     if (refusal) throw new SessionSettingsInvalidError(refusal);
     if (leagueIds) {
       await this.leagues.assertSessionAssignable(

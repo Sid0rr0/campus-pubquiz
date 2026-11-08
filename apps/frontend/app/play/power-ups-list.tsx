@@ -21,8 +21,6 @@ export interface PowerUpsListProps {
   coins: number;
   /** The question being answered right now, or null when nothing can be answered. */
   question: QuestionView | null;
-  /** Whether the current round is a quickfire round: the Power-up offer then offers no question power-up. */
-  isQuickfire: boolean;
   /** Questions on which the server says Ask the room is ready: a flag only, the phone never learns how many teams answered. */
   roomReadyQuestionIds: number[];
   onBuy: (powerUp: PowerUpId, questionId: number) => Promise<AckResult>;
@@ -49,7 +47,6 @@ export function PowerUpsList({
   purchases,
   coins,
   question,
-  isQuickfire,
   roomReadyQuestionIds,
   onBuy,
   extraJokerOffer,
@@ -62,7 +59,6 @@ export function PowerUpsList({
     purchases,
     coins,
     question,
-    isQuickfire,
     roomReadyQuestionIds,
     extraJokerOffer,
     jokerRoundId,
@@ -139,7 +135,6 @@ type RowInputs = Pick<
   | 'purchases'
   | 'coins'
   | 'question'
-  | 'isQuickfire'
   | 'roomReadyQuestionIds'
   | 'extraJokerOffer'
   | 'jokerRoundId'
@@ -147,12 +142,12 @@ type RowInputs = Pick<
 
 /** Every power-up the session offers (maxUses above 0), with what it can be used on right now: the question power-ups from the Power-up offer, the extra joker from the same module. */
 function powerUpRows(inputs: RowInputs): PowerUpRow[] {
-  const { settings, purchases, coins, question, isQuickfire } = inputs;
+  const { settings, purchases, coins, question } = inputs;
   const entries = questionPowerUpOffer({
     settings,
     purchases,
     balance: coins,
-    question: question && { ...question, isQuickfire },
+    question,
     isRoomReady:
       question !== null && inputs.roomReadyQuestionIds.includes(question.id),
   });

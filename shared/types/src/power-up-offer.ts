@@ -7,12 +7,11 @@ import {
 } from './power-ups';
 import type { QuestionType } from './question-types';
 
-/** The question a power-up would be bought for: one that can be answered now, and whether its round is a quickfire round. */
+/** The question a power-up would be bought for: one that can be answered now. */
 export interface OfferedQuestion {
   id: number;
   type: QuestionType;
   options?: readonly string[];
-  isQuickfire: boolean;
 }
 
 /** What the offer needs, as plain data: the same on the server and the phone. */
@@ -69,10 +68,6 @@ function entryOf(
   };
 }
 
-/** A quickfire tap locks the pick, so no question power-up can help there. */
-const worksOn = (powerUp: PowerUpId, question: OfferedQuestion) =>
-  !question.isQuickfire && powerUpApplies(powerUp, question);
-
 /** Why `powerUp` can't be bought on `question` now (worded for the team), or null. The order is the server's. */
 function refusalOf(
   powerUp: PowerUpId,
@@ -80,7 +75,7 @@ function refusalOf(
   input: QuestionOfferInput,
 ): Refusal | null {
   if (question === null) return refused('Answers are locked for this question');
-  if (!worksOn(powerUp, question)) {
+  if (!powerUpApplies(powerUp, question)) {
     return refused('That power-up does not work on this question');
   }
   const { cost, maxUses, used } = entryOf(

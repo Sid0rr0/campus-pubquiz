@@ -228,14 +228,13 @@ export function visibleRoundTitle(
  * The round an extra joker can be bought for right now: the first round with
  * no opened question whose intro has not been on air (the current round's
  * intro is on air or past in every status after the joker pick). Null when
- * there is none, in the lobby (the settings can still turn power-ups off under
- * a purchase) and when the next round is a quickfire round.
+ * there is none and in the lobby (the settings can still turn power-ups off
+ * under a purchase).
  */
 export function extraJokerRoundId(session: {
   seededGame: {
     rounds: readonly {
       id: number;
-      quickfire?: boolean;
       questions: readonly { id: number }[];
     }[];
   };
@@ -249,8 +248,7 @@ export function extraJokerRoundId(session: {
   const next = pickableRounds(rounds, session.openedQuestionIds).find(
     (round) => rounds.indexOf(round) > lastIntroIndex,
   );
-  // A quickfire round is never doubled this way, so it is not offered.
-  return next && !next.quickfire ? next.id : null;
+  return next ? next.id : null;
 }
 
 /** How many options a 50/50 leaves: half, rounded down, never fewer than two. */

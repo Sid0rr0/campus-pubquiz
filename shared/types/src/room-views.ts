@@ -24,6 +24,7 @@ import type {
   UpcomingQuestionPosition,
 } from './question-views';
 import type { QuestionType } from './question-types';
+import type { QuizMode } from './quiz-mode';
 import type { SessionSettings } from './session-settings';
 import type { ActiveShowdownView } from './showdown';
 
@@ -99,6 +100,8 @@ export interface StateSnapshotPayload {
   quizStructure: QuizStructureSummary;
   /** Title of the round at `progress.roundIndex` — shown big on the round_intro screen. */
   roundTitle: string;
+  /** The session's quiz mode, fixed at creation: what /control asks to decide which settings to show and send. */
+  quizMode: QuizMode;
   /** Whether the round at `progress.roundIndex` has quickfire set. */
   isCurrentRoundQuickfire: boolean;
   currentQuestion: QuestionView | null;

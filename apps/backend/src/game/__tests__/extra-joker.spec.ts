@@ -235,19 +235,6 @@ describe('GameGateway — buying an extra joker', () => {
     });
   });
 
-  it('refuses an extra joker for a quickfire round', async () => {
-    const game = await night(
-      {},
-      {
-        rounds: THREE_ROUNDS.map((round) => ({ ...round, quickfire: true })),
-      },
-    );
-    const [alpha] = game.teams;
-
-    expect(await refusal(game, alpha, 0)).toMatch(/next round/);
-    expect(await stored(game, alpha)).toEqual([]);
-  });
-
   describe('default cost in the lobby', () => {
     const costAfter = async (
       settings: Partial<SessionSettings>,

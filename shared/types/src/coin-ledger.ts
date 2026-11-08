@@ -1,9 +1,7 @@
 import type { BonusCategory } from './bonus';
 import { SHOT_SELFIE_COINS } from './power-ups';
-import type { QuizMode } from './quiz-mode';
+import { coinAwardModeRefusal, type QuizMode } from './quiz-mode';
 
-export const QUICKFIRE_NO_COIN_AWARD_MESSAGE =
-  "A quickfire session has no coins, so it can't award any";
 export const COINS_NEED_POWER_UPS_MESSAGE =
   'Coins can only be awarded in a session with power-ups';
 
@@ -76,8 +74,10 @@ export function coinAwardRefusal(
   coins: number | undefined,
 ): string | undefined {
   const { quizMode, settings } = session.seededGame;
-  if (coins && quizMode === 'quickfire') return QUICKFIRE_NO_COIN_AWARD_MESSAGE;
-  return coinsNeedPowerUpsRefusal(settings.powerUpsEnabled, coins);
+  return (
+    coinAwardModeRefusal(quizMode, coins) ??
+    coinsNeedPowerUpsRefusal(settings.powerUpsEnabled, coins)
+  );
 }
 
 /** The refusal for a take (negative coins) larger than the team's balance, so a balance never hides a debt; undefined otherwise. */

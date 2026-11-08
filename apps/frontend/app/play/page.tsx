@@ -510,7 +510,6 @@ function powerUpsListOf({
     purchases: myPurchases,
     coins: team.coins,
     question: answeringQuestion,
-    isQuickfire: view.isCurrentRoundQuickfire,
     roomReadyQuestionIds,
     onBuy: async (powerUp: PowerUpId, questionId: number) => {
       const result = await buyPowerUp(powerUp, questionId);

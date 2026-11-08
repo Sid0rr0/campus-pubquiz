@@ -50,11 +50,9 @@ function phone({
   buyPowerUp = vi.fn().mockResolvedValue({ success: true }),
   roomReadyQuestionIds = [],
   answers = {},
-  isQuickfire = false,
 }: {
   roomReadyQuestionIds?: number[];
   answers?: Record<number, string>;
-  isQuickfire?: boolean;
   settings?: Partial<SessionSettings>;
   coins?: number;
   purchases?: PurchaseView[];
@@ -65,7 +63,7 @@ function phone({
   mockUseTeamLink.mockReturnValue(
     teamLinkResult({
       session: {
-        rounds: [{ quickfire: isQuickfire, questions: [question] }],
+        rounds: [{ questions: [question] }],
         progress: { status: 'question_open' },
         settings: { powerUps: defaultPowerUpSettings(false), ...settings },
       } as never,
@@ -107,14 +105,6 @@ describe('PlayPage — the power-up bar', () => {
     );
 
     expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
-  });
-
-  it('offers no question power-up in a quickfire round, where a tap locks the pick', () => {
-    phone({ isQuickfire: true });
-
-    expect(
-      screen.queryByRole('button', { name: /^Activate/ }),
-    ).not.toBeInTheDocument();
   });
 
   it('lists a power-up that does not apply to the question under "Not available now"', () => {

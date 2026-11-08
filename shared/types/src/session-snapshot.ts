@@ -281,6 +281,7 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     progress: session.progress,
     quizStructure: getQuizStructureSummary(getGameContext(session)),
     roundTitle: getCurrentRoundTitle(session),
+    quizMode: session.seededGame.quizMode,
     isCurrentRoundQuickfire:
       session.seededGame.rounds[session.progress.roundIndex]?.quickfire ??
       false,

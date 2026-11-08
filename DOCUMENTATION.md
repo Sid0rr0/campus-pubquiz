@@ -462,6 +462,7 @@ view for a room.
 | `leaderboard`     | Graded totals, recomputed after every grade or bonus award                                                                             |
 | `joinCode`        | Six-character code for this game session                                                                                               |
 | `teams`           | Connected/registered teams                                                                                                             |
+| `quizMode`        | The session's quiz mode (`pub` or `quickfire`); `/control` asks it which settings to show and send. `isCurrentRoundQuickfire` stays, per round, for `/play` and the big screen |
 
 The base also holds the other fields every room reads (quiz structure,
 `questionLockAt`, settings, showdown state, `revealQuestions`). The closest_guess

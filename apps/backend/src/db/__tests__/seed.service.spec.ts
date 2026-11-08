@@ -289,6 +289,46 @@ describe('SeedService (Postgres integration)', () => {
     });
   });
 
+  describe('settings a stored session plays with', () => {
+    async function loadWithStoredSettings(mode: 'pub' | 'quickfire') {
+      const first = await seedFirstGame();
+      const quiz = await em.findOneOrFail(Quiz, { id: first.quizId });
+      quiz.mode = mode;
+      const created = await seedService.createSession(first.quizId, {
+        ...first.settings,
+        jokersEnabled: true,
+        powerUpsEnabled: true,
+        startingCoins: 5,
+      });
+      await em.flush();
+      return seedService.loadGame(
+        first.quizId,
+        created.gameSessionId,
+        created.joinCode,
+      );
+    }
+
+    it('switches jokers, power-ups and coins off for a quickfire quiz', async () => {
+      const game = await loadWithStoredSettings('quickfire');
+
+      expect(game.settings).toMatchObject({
+        jokersEnabled: false,
+        powerUpsEnabled: false,
+        startingCoins: 0,
+      });
+    });
+
+    it('loads a pub quiz row unchanged', async () => {
+      const game = await loadWithStoredSettings('pub');
+
+      expect(game.settings).toMatchObject({
+        jokersEnabled: true,
+        powerUpsEnabled: true,
+        startingCoins: 5,
+      });
+    });
+  });
+
   describe('summary facts on the loaded game', () => {
     it('carries the quiz title, custom name and session start time', async () => {
       const first = await seedFirstGame();

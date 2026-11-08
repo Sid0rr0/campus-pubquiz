@@ -61,7 +61,7 @@ describe('SessionSettingsPanel', () => {
       <SessionSettingsPanel
         joinCode="ABCDEF"
         settings={DEFAULT_SESSION_SETTINGS}
-        isQuickfire
+        mode="quickfire"
       />,
     );
 
@@ -82,11 +82,36 @@ describe('SessionSettingsPanel', () => {
     expect(saved).not.toHaveProperty('powerUps');
   });
 
+  it('shows jokers, the power-ups tab, leagues and no question timer for a pub session and saves the coin settings', async () => {
+    mockFetchLeagues.mockResolvedValue({ items: [league(4, 'Winter', true)] });
+    renderWithQuery(
+      <SessionSettingsPanel
+        joinCode="ABCDEF"
+        settings={DEFAULT_SESSION_SETTINGS}
+        mode="pub"
+      />,
+    );
+
+    expect(await screen.findByLabelText('Winter')).toBeInTheDocument();
+    expect(screen.getByLabelText('Jokers')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Power-ups' })).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/Quickfire question timer/),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    const saved = mockUpdateSessionSettings.mock.calls[0][1];
+    expect(saved).toHaveProperty('startingCoins');
+    expect(saved).toHaveProperty('powerUps');
+  });
+
   describe('league checkboxes', () => {
     it('hides the section when there are no leagues to tick', async () => {
       renderWithQuery(
         <SessionSettingsPanel
           joinCode="ABCDEF"
+          mode="pub"
           settings={DEFAULT_SESSION_SETTINGS}
         />,
       );
@@ -107,6 +132,7 @@ describe('SessionSettingsPanel', () => {
       renderWithQuery(
         <SessionSettingsPanel
           joinCode="ABCDEF"
+          mode="pub"
           settings={DEFAULT_SESSION_SETTINGS}
         />,
       );
@@ -127,6 +153,7 @@ describe('SessionSettingsPanel', () => {
       renderWithQuery(
         <SessionSettingsPanel
           joinCode="ABCDEF"
+          mode="pub"
           settings={DEFAULT_SESSION_SETTINGS}
         />,
       );
@@ -146,6 +173,7 @@ describe('SessionSettingsPanel', () => {
     renderWithQuery(
       <SessionSettingsPanel
         joinCode="ABCDEF"
+        mode="pub"
         settings={DEFAULT_SESSION_SETTINGS}
       />,
     );
@@ -165,6 +193,7 @@ describe('SessionSettingsPanel', () => {
     renderWithQuery(
       <SessionSettingsPanel
         joinCode="ABCDEF"
+        mode="pub"
         settings={DEFAULT_SESSION_SETTINGS}
       />,
     );
@@ -182,6 +211,7 @@ describe('SessionSettingsPanel', () => {
     renderWithQuery(
       <SessionSettingsPanel
         joinCode="ABCDEF"
+        mode="pub"
         settings={DEFAULT_SESSION_SETTINGS}
       />,
     );
@@ -201,6 +231,7 @@ describe('SessionSettingsPanel', () => {
     const { rerender } = renderWithQuery(
       <SessionSettingsPanel
         joinCode="ABCDEF"
+        mode="pub"
         settings={DEFAULT_SESSION_SETTINGS}
       />,
     );
@@ -208,6 +239,7 @@ describe('SessionSettingsPanel', () => {
     rerender(
       <SessionSettingsPanel
         joinCode="ABCDEF"
+        mode="pub"
         settings={{ ...DEFAULT_SESSION_SETTINGS, lockGraceSeconds: 30 }}
       />,
     );
@@ -220,6 +252,7 @@ describe('SessionSettingsPanel', () => {
     const { rerender } = renderWithQuery(
       <SessionSettingsPanel
         joinCode="ABCDEF"
+        mode="pub"
         settings={DEFAULT_SESSION_SETTINGS}
       />,
     );
@@ -230,6 +263,7 @@ describe('SessionSettingsPanel', () => {
     rerender(
       <SessionSettingsPanel
         joinCode="ABCDEF"
+        mode="pub"
         settings={structuredClone(DEFAULT_SESSION_SETTINGS)}
       />,
     );
@@ -246,6 +280,7 @@ describe('SessionSettingsPanel', () => {
       <>
         <SessionSettingsPanel
           joinCode="ABCDEF"
+          mode="pub"
           settings={DEFAULT_SESSION_SETTINGS}
         />
         <Toaster />

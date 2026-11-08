@@ -24,7 +24,6 @@ function list(overrides: Partial<PowerUpsListProps> = {}) {
       purchases={[]}
       coins={7}
       question={null}
-      isQuickfire={false}
       roomReadyQuestionIds={[]}
       onBuy={vi.fn()}
       extraJokerOffer={{ roundId: 7, roundNumber: 2, title: 'Music' }}
