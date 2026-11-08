@@ -10,6 +10,7 @@ import {
   QuizDraftInvalidError,
   QuizNotFoundError,
   QuizService,
+  QuizStaleSaveError,
 } from '@/quiz/quiz.service';
 import {
   advanceClockBy,
@@ -831,5 +832,168 @@ describe('QuizService (Postgres integration)', () => {
     it('throws QuizNotFoundError for a missing quiz', async () => {
       await expect(quizService.remove(999)).rejects.toThrow(QuizNotFoundError);
     });
+  });
+
+  describe('what a save leaves alone', () => {
+    const LONG_AGO = new Date('2026-01-01T00:00:00Z');
+    const two = (prefix: string): ImportRoundPreview[] =>
+      [0, 1].map((n) => ({
+        title: `${prefix} round ${n}`,
+        breakAfter: true,
+        category: 'History',
+        author: 'Ana',
+        questions: [
+          {
+            type: 'free_text',
+            prompt: `${prefix} a${n}`,
+            answer: 'x',
+            points: 1,
+          },
+          {
+            type: 'free_text',
+            prompt: `${prefix} b${n}`,
+            answer: 'y',
+            points: 1,
+          },
+        ],
+      }));
+
+    it('keeps the other quizzes untouched while one is saved with fewer rounds and a mix of keyed questions', async () => {
+      freezeClockAt(FROZEN_NOW);
+      const mine = await quizService.create('Mine', two('mine'));
+      const other = await quizService.create('Other', two('other'));
+      const before = await em
+        .fork()
+        .find(
+          Question,
+          { round: { quiz: other.quizId } },
+          { orderBy: { id: 'asc' } },
+        );
+      const otherBefore = await em
+        .fork()
+        .findOneOrFail(Quiz, { id: other.quizId });
+      advanceClockBy(CLOCK_STEP_MS);
+      const draft = await quizService.findDraftById(mine.quizId);
+      const [first] = draft!.rounds[0].questions;
+
+      await quizService.update(mine.quizId, 'Mine', [
+        {
+          ...two('mine')[0],
+          questions: [
+            { ...first, prompt: 'mine kept' },
+            { type: 'free_text', prompt: 'mine fresh', answer: 'z', points: 1 },
+          ],
+        },
+      ]);
+
+      const after = await em
+        .fork()
+        .find(
+          Question,
+          { round: { quiz: other.quizId } },
+          { orderBy: { id: 'asc' } },
+        );
+      expect(after.map((q) => [q.id, q.orderIndex, q.prompt])).toEqual(
+        before.map((q) => [q.id, q.orderIndex, q.prompt]),
+      );
+      expect(await em.fork().count(Round, { quiz: other.quizId })).toBe(2);
+      const otherAfter = await em
+        .fork()
+        .findOneOrFail(Quiz, { id: other.quizId });
+      expect(otherAfter.updatedAt).toEqual(otherBefore.updatedAt);
+      expect(await em.fork().count(Round, { quiz: mine.quizId })).toBe(1);
+      expect(
+        await em.fork().count(Question, { round: { quiz: mine.quizId } }),
+      ).toBe(2);
+    });
+
+    it('keeps when each round and question was first stored, however it is keyed', async () => {
+      const created = await quizService.create('Trivia', two('t').slice(0, 1));
+      await em.nativeUpdate(Round, {}, { createdAt: LONG_AGO });
+      await em.nativeUpdate(Question, {}, { createdAt: LONG_AGO });
+      const draft = await quizService.findDraftById(created.quizId);
+      const [idKeyed, slotKeyed] = draft!.rounds[0].questions;
+
+      await quizService.update(created.quizId, 'Trivia', [
+        {
+          ...draft!.rounds[0],
+          questions: [idKeyed, { ...slotKeyed, questionId: undefined }],
+        },
+      ]);
+
+      const rounds = await em.fork().find(Round, {});
+      const questions = await em.fork().find(Question, {});
+      expect(rounds.map((r) => r.createdAt)).toEqual([LONG_AGO]);
+      expect(questions.map((q) => q.createdAt)).toEqual([LONG_AGO, LONG_AGO]);
+    });
+
+    it('stores and reads back a round category and author, and nothing for a round without', async () => {
+      const created = await quizService.create('Trivia', [
+        two('t')[0],
+        { ...two('t')[1], category: undefined, author: undefined },
+      ]);
+
+      const draft = await quizService.findDraftById(created.quizId);
+
+      expect(draft!.rounds[0]).toMatchObject({
+        category: 'History',
+        author: 'Ana',
+      });
+      expect(draft!.rounds[1]).not.toHaveProperty('category');
+      expect(draft!.rounds[1]).not.toHaveProperty('author');
+    });
+  });
+
+  describe('the quiz list payload', () => {
+    it('gives options and match targets only to the questions that have them', async () => {
+      const quiz = await insertQuiz('Night');
+      const round = await insertRound(quiz, 'Round 1', 0);
+      const plain = await insertQuestion(round, 'Plain?', 0);
+      const matching = em.create(Question, {
+        round,
+        orderIndex: 1,
+        type: 'match',
+        prompt: 'Match',
+        answer: 'x',
+        payload: {
+          options: ['Italy', 'France'],
+          matchTargets: ['Rome', 'Paris'],
+        },
+        points: 1,
+      });
+      await em.flush();
+
+      const [{ rounds }] = await quizService.list();
+      const [plainSummary, matchSummary] = rounds[0].questions;
+
+      expect(plainSummary.id).toBe(plain.id);
+      expect(Object.keys(plainSummary)).not.toContain('options');
+      expect(Object.keys(plainSummary)).not.toContain('matchTargets');
+      expect(matchSummary).toMatchObject({
+        id: matching.id,
+        options: ['Italy', 'France'],
+        matchTargets: ['Rome', 'Paris'],
+      });
+    });
+  });
+
+  it('knows which quizzes exist', async () => {
+    const quiz = await insertQuiz('Night');
+
+    expect(await quizService.exists(quiz.id)).toBe(true);
+    expect(await quizService.exists(quiz.id + 1000)).toBe(false);
+  });
+
+  it('words its errors for the editor', () => {
+    const stale = new QuizStaleSaveError(7);
+    expect(stale.name).toBe('QuizStaleSaveError');
+    const invalid = new QuizDraftInvalidError([]);
+    expect(invalid.name).toBe('QuizDraftInvalidError');
+    expect(invalid.message).toBe(
+      'The quiz has 0 validation issue(s) — fix them before saving',
+    );
+    const missing = new QuizNotFoundError(7);
+    expect(missing.name).toBe('QuizNotFoundError');
+    expect(missing.message).toBe('Quiz 7 does not exist');
   });
 });

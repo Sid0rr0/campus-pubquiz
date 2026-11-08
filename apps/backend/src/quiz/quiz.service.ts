@@ -431,6 +431,7 @@ export class QuizService {
 
     for (const storedRound of storedRounds) {
       const draftRound = rounds[storedRound.orderIndex];
+      // Stryker disable next-line ArrayDeclaration: equivalent, a round the draft dropped keeps no position either way and loses all its unkept questions.
       const slotKeyedPositions = (draftRound?.questions ?? []).flatMap(
         (question, position) => (isIdKeyed(question) ? [] : [position]),
       );
@@ -458,6 +459,7 @@ export class QuizService {
     let tempOrderIndex = -1;
     for (const round of rounds) {
       for (const question of round.questions) {
+        // Stryker disable next-line ConditionalExpression: equivalent, an update keyed by an undefined id matches no row.
         if (!isIdKeyed(question)) continue;
         await questionRepo.nativeUpdate(
           { id: question.questionId },

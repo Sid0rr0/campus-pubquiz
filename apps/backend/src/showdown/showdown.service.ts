@@ -161,19 +161,23 @@ export class ShowdownService {
   }
 
   private async resolveWithin(roundId: number): Promise<ShowdownResolution> {
+    // Stryker disable ObjectLiteral,ArrayDeclaration: equivalent, a team reference already carries the id read from it.
     const round = await this.showdownRounds.findOneOrFail(roundId, {
       populate: ['winnerTeam'],
     });
+    // Stryker restore ObjectLiteral,ArrayDeclaration
     if (round.resolvedAt != null) {
       return { winnerTeamId: round.winnerTeam?.id ?? null, isTie: round.isTie };
     }
 
     const rows = await this.showdownRoundTeams.find(
       { showdownRound: roundId },
+      // Stryker disable next-line ObjectLiteral,ArrayDeclaration: equivalent, a team reference already carries the id read from it.
       { populate: ['team'] },
     );
     const isClosest = findClosestGuesses(
       round.answer,
+      // Stryker disable next-line StringLiteral: equivalent, any text that is not a number never wins, as the blank does.
       rows.map((row) => row.guess ?? ''),
     );
     const closest = rows.filter((_, index) => isClosest[index]);

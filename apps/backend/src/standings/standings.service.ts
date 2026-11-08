@@ -302,6 +302,7 @@ export class StandingsService {
       .endedSessionsQuery()
       .whereIn('gs.id', [...gameSessionIds])) as { game_session_id: number }[];
     const endedIds = endedRows.map((row) => row.game_session_id);
+    // Stryker disable next-line ConditionalExpression: equivalent, an empty `whereIn` matches nothing so the rest returns the same empty map
     if (endedIds.length === 0) return results;
 
     const [standings, questionRows, answerRows] = await Promise.all([
@@ -398,6 +399,7 @@ export class StandingsService {
     if (gameSessionIds.length === 0) return [];
     const knex = this.gameSessionTeams.getKnex();
     const ids = [...gameSessionIds];
+    // Stryker disable next-line ObjectLiteral: equivalent, the totals are filtered to the requested sessions where they are read, so a wider participant list only costs time.
     const participants = this.endedSessionsRead.participantsQuery({
       gameSessionIds: ids,
     });

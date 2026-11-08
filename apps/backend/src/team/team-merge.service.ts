@@ -107,6 +107,7 @@ export class TeamMergeService {
 
   private runOn(em: EntityManager, transacting: boolean): Run {
     const connection = em.getConnection();
+    // Stryker disable next-line ArrayDeclaration: equivalent, the driver ignores parameters a statement has no placeholder for.
     return (sql, params = []) =>
       connection.execute(
         sql,
@@ -118,6 +119,7 @@ export class TeamMergeService {
 
   /** Every other team with its sessions played and, if it can't be merged with this one, why. */
   async candidates(teamId: number): Promise<TeamMergeCandidate[]> {
+    // Stryker disable next-line BooleanLiteral: equivalent, outside a transaction there is no transaction context to use.
     const run = this.runOn(this.em, false);
     const team = await this.findTeam(run, teamId);
     const others = (await run(
@@ -141,6 +143,7 @@ export class TeamMergeService {
     teamId: number,
     otherTeamId: number,
   ): Promise<TeamMergePairPreview> {
+    // Stryker disable next-line BooleanLiteral: equivalent, outside a transaction there is no transaction context to use.
     const run = this.runOn(this.em, false);
     const [team, other] = await this.loadPair(run, teamId, otherTeamId);
     await this.assertEligible(run, team, other);
@@ -186,9 +189,11 @@ export class TeamMergeService {
 
       const kept = newerOf(team, other);
       const duplicate = kept.id === team.id ? other : team;
-      const joined = [team, other]
-        .map((row) => new Date(row.created_at))
-        .reduce((a, b) => (a <= b ? a : b));
+      const joined = new Date(
+        Math.min(
+          ...[team, other].map((row) => new Date(row.created_at).getTime()),
+        ),
+      );
 
       for (const [table, column] of TEAM_COLUMNS) {
         await run(`update ${table} set ${column} = ? where ${column} = ?`, [
@@ -249,6 +254,7 @@ export class TeamMergeService {
     const refusals = new Map<number, TeamMergeRefusal | null>(
       others.map((other) => [other.id, null]),
     );
+    // Stryker disable next-line ConditionalExpression: equivalent, with no others the checks below have nothing to refuse.
     if (others.length === 0) return refusals;
 
     const shared = (await run(
@@ -321,6 +327,8 @@ export class TeamMergeService {
 function newerOf(a: TeamRow, b: TeamRow): TeamRow {
   const timeA = new Date(a.created_at).getTime();
   const timeB = new Date(b.created_at).getTime();
+  // Stryker disable next-line EqualityOperator: equivalent, the equal case never reaches the comparison.
   if (timeA !== timeB) return timeA > timeB ? a : b;
+  // Stryker disable next-line EqualityOperator: equivalent, the two ids differ, as a team is never merged with itself.
   return a.id > b.id ? a : b;
 }

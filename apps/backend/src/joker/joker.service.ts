@@ -47,6 +47,7 @@ export class JokerService {
     const drawnTeamIds = [...(await this.listForSession(gameSessionId))]
       .filter(([, joker]) => joker.source === 'drawn')
       .map(([teamId]) => teamId);
+    // Stryker disable next-line ConditionalExpression,EqualityOperator: equivalent, deleting the drawn jokers of a session that has none removes nothing.
     if (drawnTeamIds.length > 0) {
       await this.jokers.nativeDelete({
         gameSession: gameSessionId,

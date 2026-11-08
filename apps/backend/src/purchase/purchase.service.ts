@@ -96,6 +96,7 @@ export class PurchaseService {
 
   /** Deletes purchases, which hands their cost back: the balance is worked out from the rows. */
   async remove(ids: readonly number[]): Promise<void> {
+    // Stryker disable next-line ConditionalExpression: equivalent, an empty whereIn deletes nothing.
     if (ids.length === 0) return;
     await this.purchases.getKnex()('purchases').whereIn('id', ids).delete();
   }

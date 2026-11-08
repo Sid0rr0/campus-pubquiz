@@ -60,6 +60,7 @@ export class PlayerCountService {
     teamIds?: readonly number[],
   ): Promise<Map<number, Map<number, number>>> {
     const result = new Map<number, Map<number, number>>();
+    // Stryker disable next-line ConditionalExpression: equivalent, an empty whereIn matches no rows.
     if (gameSessionIds.length === 0) return result;
     let query = this.playerCounts
       .getKnex()('session_player_counts')

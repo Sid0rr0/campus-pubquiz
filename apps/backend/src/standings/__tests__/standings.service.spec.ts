@@ -497,4 +497,57 @@ describe('StandingsService (Postgres integration)', () => {
     ).toEqual(['There Team']);
     expect(bySession.get(state.session.id)?.leaderboard[0].totalPoints).toBe(2);
   });
+
+  it('hands the fun facts each answer with its response time, or none when it has none', async () => {
+    const question = await addQuestion(1);
+    const fast = await insertTeam('Fast', 'token-fast');
+    const slow = await insertTeam('Slow', 'token-slow');
+    state.em.create(Answer, {
+      gameSession: state.session,
+      question,
+      team: fast,
+      value: 'guess',
+      pointsAwarded: 1,
+      responseMs: 1234,
+    });
+    state.em.create(Answer, {
+      gameSession: state.session,
+      question,
+      team: slow,
+      value: 'guess',
+      pointsAwarded: 0,
+    });
+    await state.em.flush();
+
+    const { answers } = await standings.funFactData(state.session.id);
+
+    expect(answers.map((a) => [a.teamName, a.responseMs]).sort()).toEqual([
+      ['Fast', 1234],
+      ['Slow', null],
+    ]);
+  });
+
+  it('ranks only the sessions it is asked about', async () => {
+    const question = await addQuestion(1);
+    const here = await insertTeam('Here', 'token-here');
+    await scoreAnswer(question, here.id, 1);
+    const elsewhere = state.em.create(GameSession, {
+      quiz: state.session.quiz,
+      joinCode: 'OTHER1',
+    });
+    const away = state.em.create(Team, {
+      name: 'Away',
+      token: 'token-away',
+      code: 'code-away',
+    });
+    state.em.create(GameSessionTeam, { gameSession: elsewhere, team: away });
+    await state.em.flush();
+
+    const result = await standings.forSessions([state.session.id]);
+
+    expect([...result.keys()]).toEqual([state.session.id]);
+    expect(
+      result.get(state.session.id)!.leaderboard.map((r) => r.teamName),
+    ).toEqual(['Here']);
+  });
 });

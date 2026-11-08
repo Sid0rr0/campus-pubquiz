@@ -1,5 +1,5 @@
 import type { MediaStorage } from '@/media/media-storage';
-import { MediaService, UnsupportedImageError } from '@/media/media.service';
+import { MediaService } from '@/media/media.service';
 
 const PNG_BYTES = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -44,7 +44,10 @@ describe('MediaService.uploadImage', () => {
 
     await expect(
       service.uploadImage(Buffer.from('<script>alert(1)</script>')),
-    ).rejects.toBeInstanceOf(UnsupportedImageError);
+    ).rejects.toMatchObject({
+      name: 'UnsupportedImageError',
+      message: 'File is not a supported image (JPEG, PNG, GIF, WebP or AVIF)',
+    });
     expect(put).not.toHaveBeenCalled();
   });
 

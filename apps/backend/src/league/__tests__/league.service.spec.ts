@@ -13,7 +13,6 @@ import type { LeagueSessionRepository } from '@/db/repositories/league-session.r
 import {
   InvalidLeagueIdsError,
   LeagueNotFoundError,
-  SessionEndedError,
   LeagueService,
   QuickfireLeagueError,
   SessionNotEndedError,
@@ -121,7 +120,10 @@ describe('LeagueService (Postgres integration)', () => {
 
     it('treats an unknown league as not found', async () => {
       await expect(service.move(9999, 'up')).rejects.toThrow(
-        LeagueNotFoundError,
+        new LeagueNotFoundError(9999),
+      );
+      await expect(service.move(9999, 'up')).rejects.toThrow(
+        'League 9999 does not exist',
       );
     });
   });
@@ -140,6 +142,15 @@ describe('LeagueService (Postgres integration)', () => {
       startsOn: '2026-09-07',
       endsOn: '2026-12-21',
     });
+  });
+
+  it('numbers each new league one above the top one', async () => {
+    await service.create({ ...fields, name: 'A' });
+    await service.create({ ...fields, name: 'B' });
+    await service.create({ ...fields, name: 'C' });
+
+    const stored = await em.fork().find(League, {}, { orderBy: { id: 'asc' } });
+    expect(stored.map((league) => league.sortOrder)).toEqual([1, 2, 3]);
   });
 
   it('updating or deleting an unknown league is a not-found error', async () => {
@@ -184,7 +195,10 @@ describe('LeagueService (Postgres integration)', () => {
       const live = await createSession('lobby');
 
       await expect(service.addSession(league.id, live.id)).rejects.toThrow(
-        SessionNotEndedError,
+        new SessionNotEndedError(live.id),
+      );
+      await expect(service.addSession(league.id, live.id)).rejects.toThrow(
+        `Session ${live.id} has not ended: only ended sessions can be added`,
       );
       expect((await service.list({})).items[0]?.sessions).toEqual([]);
     });
@@ -216,11 +230,76 @@ describe('LeagueService (Postgres integration)', () => {
       const session = await createSession();
 
       await expect(service.addSession(league.id, 999)).rejects.toThrow(
-        SessionNotFoundError,
+        'Session 999 does not exist',
       );
       await expect(service.addSession(999, session.id)).rejects.toThrow(
         LeagueNotFoundError,
       );
+    });
+
+    /** A service on a fresh entity manager, as a request gets: nothing is loaded beforehand. */
+    function freshService() {
+      const fresh = em.fork();
+      return new LeagueService(
+        fresh.getRepository<League, LeagueRepository>(League),
+        fresh.getRepository<LeagueSession, LeagueSessionRepository>(
+          LeagueSession,
+        ),
+        fresh.getRepository<GameSession, GameSessionRepository>(GameSession),
+      );
+    }
+
+    it('reads the quiz of the session itself, not one already loaded', async () => {
+      const league = await service.create(fields);
+      const quickfireQuiz = em.create(Quiz, {
+        title: 'Rapid',
+        mode: 'quickfire',
+      });
+      const session = em.create(GameSession, {
+        quiz: quickfireQuiz,
+        joinCode: 'QUICK2',
+        status: 'ended',
+      });
+      await em.flush();
+
+      await expect(
+        freshService().addSession(league.id, session.id),
+      ).rejects.toThrow(QuickfireLeagueError);
+    });
+
+    it('lists a league sessions by session id, each with its quiz title', async () => {
+      const league = await service.create(fields);
+      const first = await createSession('ended');
+      const second = await createSession('ended');
+      await service.addSession(league.id, second.id);
+      await service.addSession(league.id, first.id);
+
+      const [listed] = (await freshService().list({})).items;
+
+      expect(listed.sessions.map((s) => [s.gameSessionId, s.name])).toEqual([
+        [first.id, 'Movie Night'],
+        [second.id, 'Movie Night'],
+      ]);
+    });
+
+    it('removes only that membership', async () => {
+      const league = await service.create(fields);
+      const other = await service.create({ ...fields, name: 'Other' });
+      const kept = await createSession();
+      const dropped = await createSession();
+      await service.addSession(league.id, kept.id);
+      await service.addSession(league.id, dropped.id);
+      await service.addSession(other.id, dropped.id);
+
+      await service.removeSession(league.id, dropped.id);
+
+      const items = (await service.list({})).items;
+      const sessionsOf = (id: number) =>
+        items
+          .find((league) => league.id === id)
+          ?.sessions.map((s) => s.gameSessionId);
+      expect(sessionsOf(league.id)).toEqual([kept.id]);
+      expect(sessionsOf(other.id)).toEqual([dropped.id]);
     });
 
     it('removes a session from the league only', async () => {
@@ -316,8 +395,17 @@ describe('LeagueService (Postgres integration)', () => {
 
       await expect(
         service.setSessionLeagues(session.joinCode, [a.id, 9999], now),
-      ).rejects.toThrow(InvalidLeagueIdsError);
+      ).rejects.toThrow(`Not a current league: 9999`);
       expect(await leagueIdsOf(session)).toEqual([]);
+    });
+
+    it('names every league that cannot be ticked', async () => {
+      const past = await service.create(pastFields);
+      const session = await createSession('lobby');
+
+      await expect(
+        service.setSessionLeagues(session.joinCode, [past.id, 9999], now),
+      ).rejects.toThrow(`Not a current league: ${past.id}, 9999`);
     });
 
     it('rejects a league that is no longer current', async () => {
@@ -354,7 +442,9 @@ describe('LeagueService (Postgres integration)', () => {
 
       await expect(
         service.setSessionLeagues(session.joinCode, [a.id], now),
-      ).rejects.toThrow(SessionEndedError);
+      ).rejects.toThrow(
+        `Session ${session.joinCode} has ended: its leagues can no longer be ticked`,
+      );
       expect(await leagueIdsOf(session)).toEqual([]);
     });
 

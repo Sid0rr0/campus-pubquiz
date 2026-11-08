@@ -114,6 +114,7 @@ export class LeagueTableService {
     const positions: TeamLeaguePosition[] = [];
     for (const table of tables) {
       const row = table?.rows.find((r) => r.teamId === teamId);
+      // Stryker disable next-line ConditionalExpression,EqualityOperator: equivalent, every row carries at least the participation point.
       if (!table || !row || row.leaguePoints <= 0) continue;
       positions.push({
         leagueId: table.id,
@@ -136,6 +137,7 @@ export class LeagueTableService {
       // Sessions of migrated quickfire quizzes may still sit in a league.
       .where('qz.mode', '!=', 'quickfire')) as { game_session_id: number }[];
     const sessionIds = sessionRows.map((row) => row.game_session_id);
+    // Stryker disable next-line ConditionalExpression: equivalent, no sessions read no results and yield no nights.
     if (sessionIds.length === 0) return [];
 
     const results = await this.standings.resultsForSessions(sessionIds);

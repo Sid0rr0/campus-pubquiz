@@ -138,10 +138,30 @@ describe('ImportService', () => {
       expect(preview.quizTitle).toBe('Custom Title');
     });
 
+    it('reports an unexpected failure as a generic issue, under the trimmed title', async () => {
+      const { importService } = makeService();
+      mockedFetchSheetCsv.mockRejectedValue(new Error('socket hang up'));
+
+      const preview = await importService.previewFromUrl(
+        SHEET_URL,
+        '  Padded ',
+        'pub',
+      );
+
+      expect(preview.quizTitle).toBe('Padded');
+      expect(preview.issues).toEqual([
+        {
+          rowNumber: 1,
+          field: 'sheetUrl',
+          message: 'Could not fetch that sheet',
+        },
+      ]);
+    });
+
     it('reports a fetch failure as an issue instead of throwing', async () => {
       const { importService } = makeService();
       mockedFetchSheetCsv.mockRejectedValue(
-        new SheetFetchError('Could not fetch that sheet'),
+        new SheetFetchError('That sheet is private'),
       );
 
       const preview = await importService.previewFromUrl(
@@ -155,7 +175,7 @@ describe('ImportService', () => {
         {
           rowNumber: 1,
           field: 'sheetUrl',
-          message: 'Could not fetch that sheet',
+          message: 'That sheet is private',
         },
       ]);
     });

@@ -30,7 +30,8 @@ export class ImportService {
       const message =
         error instanceof SheetFormatError
           ? error.message
-          : 'Could not read the CSV file';
+          : // Stryker disable next-line StringLiteral: unreachable fallback, the CSV parser wraps every failure in a SheetFormatError.
+            'Could not read the CSV file';
       return createImportPreview(
         title,
         [],

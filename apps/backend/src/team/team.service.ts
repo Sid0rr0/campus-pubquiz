@@ -78,12 +78,12 @@ function sortByAveragePlacing(
   sortOrder: TeamsSortOrder,
 ): TeamListItem[] {
   const direction = sortOrder === 'asc' ? 1 : -1;
-  return [...items].sort((a, b) => {
-    if (a.averagePlacing === null && b.averagePlacing === null) return 0;
-    if (a.averagePlacing === null) return 1;
-    if (b.averagePlacing === null) return -1;
-    return direction * (a.averagePlacing - b.averagePlacing);
-  });
+  const placed = items.filter((item) => item.averagePlacing !== null);
+  const unplaced = items.filter((item) => item.averagePlacing === null);
+  placed.sort(
+    (a, b) => direction * ((a.averagePlacing ?? 0) - (b.averagePlacing ?? 0)),
+  );
+  return [...placed, ...unplaced];
 }
 
 export interface TeamIdentity {
@@ -362,6 +362,7 @@ export class TeamService {
         createdAt: now,
         updatedAt: now,
       },
+      // Stryker disable next-line ArrayDeclaration: equivalent, without conflict fields the upsert falls back to the table's composite primary key, the same two columns.
       { onConflictFields: ['gameSession', 'team'], onConflictAction: 'ignore' },
     );
   }
@@ -375,9 +376,12 @@ export class TeamService {
     joinCode: string | undefined,
   ): Promise<void> {
     const normalized = joinCode?.trim().toUpperCase();
+    // Stryker disable BlockStatement,CallExpression,ConditionalExpression: equivalent, no code at all fails the comparison below with the same error.
     if (!normalized) {
       throw new InvalidJoinCodeError();
     }
+    // Stryker restore BlockStatement,CallExpression,ConditionalExpression
+    // Stryker disable next-line ObjectLiteral,ArrayDeclaration: equivalent, a projection only loads less.
     const session = await this.gameSessions.findOne(gameSessionId, {
       fields: ['joinCode'],
     });

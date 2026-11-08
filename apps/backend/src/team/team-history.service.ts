@@ -130,9 +130,11 @@ export class TeamHistoryService {
     const results = new Map<number, TeamSessionResults>(
       teamIds.map((teamId) => [teamId, { rows: [], nightsWon: 0 }]),
     );
+    // Stryker disable next-line ConditionalExpression: equivalent, no teams have no participations either.
     if (teamIds.length === 0) return results;
 
     const participations = await this.endedSessions.participations(teamIds);
+    // Stryker disable next-line ConditionalExpression: equivalent, with no participations the loops below add nothing.
     if (participations.length === 0) return results;
 
     const sessionIds = [...new Set(participations.map((p) => p.gameSessionId))];

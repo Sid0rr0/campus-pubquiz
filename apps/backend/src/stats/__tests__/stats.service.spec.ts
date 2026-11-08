@@ -154,6 +154,27 @@ describe('StatsService (Postgres integration)', () => {
     expect(result.maxPoints).toBe(6);
   });
 
+  it.each([
+    ['asc', ['SMALL1', 'BIG001']],
+    ['desc', ['BIG001', 'SMALL1']],
+  ] as const)(
+    'orders sessions by maxPoints %s',
+    async (sortOrder, expected) => {
+      const small = await createQuiz('Small', [[1]]);
+      const big = await createQuiz('Big', [[5, 5]]);
+      await createSession(big.quiz, 'BIG001', 'ended');
+      await createSession(small.quiz, 'SMALL1', 'ended');
+
+      const { items } = await statsService.listPlayedSessions({
+        ...defaultQuery,
+        sortBy: 'maxPoints',
+        sortOrder,
+      });
+
+      expect(items.map((item) => item.joinCode)).toEqual(expected);
+    },
+  );
+
   it('reports a zero teamCount and null winner fields when no teams joined', async () => {
     const { quiz } = await createQuiz('Quiz C', [[1]]);
     await createSession(quiz, 'EMPTY1', 'ended');
@@ -1071,7 +1092,7 @@ describe('StatsService (Postgres integration)', () => {
     it('rejects an unknown leagueId as not found', async () => {
       await expect(
         statsService.getFeedbackTrends({ leagueId: 9999 }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(new NotFoundException('League 9999 does not exist'));
     });
 
     it('carries no team id or name', async () => {
@@ -1283,6 +1304,22 @@ describe('StatsService (Postgres integration)', () => {
       const expected = [newerMore.id, olderMore.id, fewer.id];
       expect(result.bestRounds.map((r) => r.sessionId)).toEqual(expected);
       expect(result.worstRounds.map((r) => r.sessionId)).toEqual(expected);
+    });
+
+    it('breaks a full tie by the higher session id', async () => {
+      const first = await ratedRound('BW20', '2026-10-01T19:00:00Z', [4, 4, 4]);
+      const second = await ratedRound(
+        'BW21',
+        '2026-10-01T19:00:00Z',
+        [4, 4, 4],
+      );
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.bestRounds.map((r) => r.sessionId)).toEqual([
+        second.id,
+        first.id,
+      ]);
     });
 
     it('uses the session name when set and honours the range and the feedback setting', async () => {

@@ -112,7 +112,10 @@ describe('TeamService (Postgres integration)', () => {
 
       await expect(
         teamService.join(sessionId, 'Racers', { joinCode: 'ABCDEF' }),
-      ).rejects.toMatchObject({ name: 'TeamNameTakenError' });
+      ).rejects.toMatchObject({
+        name: 'TeamNameTakenError',
+        message: 'Team name "Racers" is already taken',
+      });
       lookup.mockRestore();
     });
 
@@ -153,6 +156,40 @@ describe('TeamService (Postgres integration)', () => {
     });
 
     expect(second.code).toBe('FRESH-CODE-FOX');
+  });
+
+  it('gives up after five codes that are all taken', async () => {
+    const first = await teamService.join(sessionId, 'First', {
+      joinCode: 'ABCDEF',
+    });
+    const draw: jest.MockedFunction<typeof generateJoinCode> =
+      jest.mocked(generateJoinCode);
+    draw.mockClear();
+    for (let draws = 0; draws < 5; draws += 1) {
+      draw.mockReturnValueOnce(first.code);
+    }
+
+    await expect(
+      teamService.join(sessionId, 'Second', { joinCode: 'ABCDEF' }),
+    ).rejects.toThrow('Could not find an unused team code');
+    expect(draw).toHaveBeenCalledTimes(5);
+  });
+
+  it('words its errors', () => {
+    const required = new TeamCodeRequiredError('Quizzards');
+    expect(required.name).toBe('TeamCodeRequiredError');
+    expect(required.message).toContain(
+      'Team name "Quizzards" is already registered',
+    );
+    expect(new TeamCodeAttemptsError()).toMatchObject({
+      name: 'TeamCodeAttemptsError',
+      message:
+        'Too many wrong team codes for that name — wait ten minutes, or ask the moderator for the team code',
+    });
+    expect(new InvalidJoinCodeError()).toMatchObject({
+      name: 'InvalidJoinCodeError',
+      message: 'Invalid game code — check the code on the screen and try again',
+    });
   });
 
   it('accepts a join code regardless of casing and surrounding whitespace', async () => {
@@ -235,6 +272,9 @@ describe('TeamService (Postgres integration)', () => {
           teamCode: created.code,
         }),
       ).rejects.toThrow(TeamCodeAttemptsError);
+      await expect(
+        teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' }),
+      ).rejects.toThrow(TeamCodeRequiredError);
     });
 
     it('allows codes again once the lockout window has passed', async () => {
@@ -255,7 +295,7 @@ describe('TeamService (Postgres integration)', () => {
     });
 
     it('does not count a missing code, nor a wrong code for another team', async () => {
-      await teamService.join(sessionId, 'The Quizzards', {
+      const quizzards = await teamService.join(sessionId, 'The Quizzards', {
         joinCode: 'ABCDEF',
       });
       const other = await teamService.join(sessionId, 'Saturn Fans', {
@@ -273,6 +313,55 @@ describe('TeamService (Postgres integration)', () => {
         teamCode: other.code,
       });
       expect(rejoined.id).toBe(other.id);
+      const own = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+        teamCode: quizzards.code,
+      });
+      expect(own.id).toBe(quizzards.id);
+    });
+
+    it('starts the count again after a right code', async () => {
+      const created = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+      });
+      await guessWrong('The Quizzards', MAX_WRONG_CODES - 1);
+      await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+        teamCode: created.code,
+      });
+      await guessWrong('The Quizzards', MAX_WRONG_CODES - 1);
+
+      const again = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+        teamCode: created.code,
+      });
+      expect(again.id).toBe(created.id);
+    });
+
+    it('opens the window again at exactly ten minutes, and counts afresh from then', async () => {
+      const start = Date.now();
+      const now = jest.spyOn(Date, 'now').mockReturnValue(start);
+      const created = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+      });
+      await guessWrong('The Quizzards', MAX_WRONG_CODES);
+
+      now.mockReturnValue(start + LOCKOUT_MS - 1);
+      await expect(
+        teamService.join(sessionId, 'The Quizzards', {
+          joinCode: 'ABCDEF',
+          teamCode: created.code,
+        }),
+      ).rejects.toThrow(TeamCodeAttemptsError);
+
+      now.mockReturnValue(start + LOCKOUT_MS);
+      await guessWrong('The Quizzards', MAX_WRONG_CODES);
+      await expect(
+        teamService.join(sessionId, 'The Quizzards', {
+          joinCode: 'ABCDEF',
+          teamCode: created.code,
+        }),
+      ).rejects.toThrow(TeamCodeAttemptsError);
     });
 
     it('lets a phone with its team token in whatever the lockout', async () => {
@@ -361,6 +450,26 @@ describe('TeamService (Postgres integration)', () => {
 
     const rows = await em.find(GameSessionTeam, {});
     expect(rows).toHaveLength(1);
+  });
+
+  it('keeps when a team first joined the session when a second device joins', async () => {
+    const created = await teamService.join(sessionId, 'The Quizzards', {
+      joinCode: 'ABCDEF',
+    });
+    const longAgo = new Date('2026-01-01T00:00:00Z');
+    await em.nativeUpdate(
+      GameSessionTeam,
+      { team: created.id },
+      { createdAt: longAgo },
+    );
+
+    await teamService.join(sessionId, 'The Quizzards', {
+      joinCode: 'ABCDEF',
+      teamCode: created.code,
+    });
+
+    const [row] = await em.fork().find(GameSessionTeam, { team: created.id });
+    expect(row.createdAt).toEqual(longAgo);
   });
 
   it('reuses the same team across sessions when the token is valid and the new session join code matches', async () => {
@@ -730,16 +839,19 @@ describe('TeamService (Postgres integration)', () => {
 
     it('sorts by sessions played ascending, fewer ended sessions first', async () => {
       const session2Id = await createSecondSession('GHIJKL');
-      const fewer = await teamService.join(sessionId, 'Fewer Sessions', {
+      const more = await teamService.join(sessionId, 'More Sessions', {
         joinCode: 'ABCDEF',
       });
-      const more = await teamService.join(sessionId, 'More Sessions', {
+      const fewer = await teamService.join(sessionId, 'Fewer Sessions', {
         joinCode: 'ABCDEF',
       });
       await teamService.join(session2Id, 'ignored', {
         teamToken: more.token,
         joinCode: 'GHIJKL',
       });
+      await markPlayed(sessionId, more.id);
+      await markPlayed(session2Id, more.id);
+      await markPlayed(sessionId, fewer.id);
       await endSession(sessionId);
       await endSession(session2Id);
 
@@ -845,6 +957,50 @@ describe('TeamService (Postgres integration)', () => {
         expect(asc.map((item) => item.name)).toEqual(['Ace', 'Bee', 'Bare']);
         expect(desc.map((item) => item.name)).toEqual(['Bee', 'Ace', 'Bare']);
         expect(asc[2].averagePlacing).toBeNull();
+      });
+
+      it('orders by placing, not by id, and keeps tied teams in id order', async () => {
+        await playEndedSession({ Bee: 20, Ace: 30, Cat: 10, Dan: 10 });
+
+        const asc = await listByAveragePlacing('asc');
+        const desc = await listByAveragePlacing('desc');
+
+        expect(asc.map((item) => item.name)).toEqual([
+          'Ace',
+          'Bee',
+          'Cat',
+          'Dan',
+        ]);
+        expect(desc.map((item) => item.name)).toEqual([
+          'Cat',
+          'Dan',
+          'Bee',
+          'Ace',
+        ]);
+      });
+
+      it('orders teams with no placing by id after the placed ones, however they were created', async () => {
+        await createBareTeam('Bare1');
+        await playEndedSession({ Ace: 20, Bee: 10, Cat: 5 });
+        await createBareTeam('Bare2');
+
+        const asc = await listByAveragePlacing('asc');
+        const desc = await listByAveragePlacing('desc');
+
+        expect(asc.map((item) => item.name)).toEqual([
+          'Ace',
+          'Bee',
+          'Cat',
+          'Bare1',
+          'Bare2',
+        ]);
+        expect(desc.map((item) => item.name)).toEqual([
+          'Cat',
+          'Bee',
+          'Ace',
+          'Bare1',
+          'Bare2',
+        ]);
       });
 
       it('paginates over the placing order', async () => {

@@ -112,7 +112,8 @@ export class LeagueService {
     const index = ordered.findIndex((league) => league.id === id);
     if (index === -1) throw new LeagueNotFoundError(id);
     const target = index + (direction === 'up' ? -1 : 1);
-    if (target < 0 || target >= ordered.length) return;
+    // Past the bottom the splice below clamps to the end, so only the top needs a guard.
+    if (target < 0) return;
     // Re-number the whole list so equal sort orders can never make a swap a no-op.
     const [moved] = ordered.splice(index, 1);
     ordered.splice(target, 0, moved);
@@ -229,8 +230,10 @@ export class LeagueService {
     now: Date,
   ): Promise<void> {
     const wanted = [...new Set(leagueIds)];
+    // Stryker disable next-line ConditionalExpression: equivalent, no ids finds no leagues and leaves nothing bad.
     if (wanted.length === 0) return;
     const today = venueToday(now);
+    // Stryker disable next-line ObjectLiteral: equivalent, fetching every league only adds ones that were not asked for.
     const found = await this.leagues.find({ id: { $in: wanted } });
     const tickable = new Set(
       found
@@ -259,6 +262,7 @@ export class LeagueService {
       { league: league.id },
       {
         populate: ['gameSession.quiz'],
+        // Stryker disable next-line ObjectLiteral: kept for a guaranteed order, but Postgres already returns these rows in primary-key order, so no test can tell.
         orderBy: { gameSession: { id: 'asc' } },
       },
     );

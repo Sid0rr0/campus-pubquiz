@@ -1,4 +1,6 @@
+import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { InvalidBonusAwardError } from '@/bonus/bonus.service';
 import { InvalidShowdownError } from '@/showdown/showdown.service';
 import { setupShowdownServiceTest } from '@/showdown/__tests__/showdown-service-test-utils';
@@ -332,5 +334,209 @@ describe('ShowdownService (Postgres integration)', () => {
 
     const resolution = await state.showdownService.resolve(round.id);
     expect(resolution).toEqual({ winnerTeamId: teamB.id, isTie: false });
+  });
+
+  describe('refusing a round', () => {
+    async function teams() {
+      const a = await insertTeam('Team A', 'token-a');
+      const b = await insertTeam('Team B', 'token-b');
+      return [
+        { teamId: a.id, teamName: 'Team A' },
+        { teamId: b.id, teamName: 'Team B' },
+      ];
+    }
+
+    it.each([
+      [
+        'one team',
+        1,
+        'Q',
+        '100',
+        5,
+        'A showdown needs at least two tied teams',
+      ],
+      ['a blank question', 2, '  ', '100', 5, 'A showdown needs a question'],
+      ['a blank answer', 2, 'Q', '   ', 5, 'A showdown answer must be numeric'],
+      [
+        'a word for an answer',
+        2,
+        'Q',
+        'many',
+        5,
+        'A showdown answer must be numeric',
+      ],
+      [
+        'no points',
+        2,
+        'Q',
+        '100',
+        0,
+        'Showdown points must be a positive number',
+      ],
+      [
+        'negative points',
+        2,
+        'Q',
+        '100',
+        -1,
+        'Showdown points must be a positive number',
+      ],
+      [
+        'infinite points',
+        2,
+        'Q',
+        '100',
+        Infinity,
+        'Showdown points must be a positive number',
+      ],
+    ])(
+      'says why for %s',
+      async (_name, count, question, answer, points, message) => {
+        const participants = (await teams()).slice(0, count);
+
+        const attempt = state.showdownService.createRound(
+          state.session.id,
+          participants,
+          question,
+          answer,
+          points,
+        );
+
+        await expect(attempt).rejects.toMatchObject({
+          name: 'InvalidShowdownError',
+          message,
+        });
+      },
+    );
+
+    it('says a round is already in progress', async () => {
+      const participants = await teams();
+      await state.showdownService.createRound(
+        state.session.id,
+        participants,
+        'Q1',
+        '100',
+        5,
+      );
+
+      await expect(
+        state.showdownService.createRound(
+          state.session.id,
+          participants,
+          'Q2',
+          '100',
+          5,
+        ),
+      ).rejects.toThrow(
+        'A showdown round is already in progress for this session',
+      );
+    });
+  });
+
+  it('stores the trimmed question and answer, numbers rounds within the session, and starts open', async () => {
+    const participants = [
+      {
+        teamId: (await insertTeam('Team A', 'token-a')).id,
+        teamName: 'Team A',
+      },
+      {
+        teamId: (await insertTeam('Team B', 'token-b')).id,
+        teamName: 'Team B',
+      },
+    ];
+    const otherSession = state.em.create(GameSession, {
+      quiz: state.session.quiz,
+      joinCode: 'ZZZZZZ',
+    });
+    await state.em.flush();
+    await state.showdownService.createRound(
+      otherSession.id,
+      participants,
+      'Elsewhere',
+      '1',
+      1,
+    );
+
+    const round = await state.showdownService.createRound(
+      state.session.id,
+      participants,
+      '  How many?  ',
+      ' 100 ',
+      5,
+    );
+
+    expect(round).toMatchObject({
+      question: 'How many?',
+      answer: '100',
+      winnerTeamId: null,
+      isTie: false,
+      resolved: false,
+    });
+    const stored = await state.em
+      .fork()
+      .findOneOrFail(ShowdownRound, { id: round.id });
+    expect(stored).toMatchObject({
+      question: 'How many?',
+      answer: '100',
+      orderIndex: 0,
+    });
+  });
+
+  describe('guesses and resolution', () => {
+    async function openRound(session = state.session) {
+      const a = await insertTeam(`A${session.id}`, `ta${session.id}`);
+      const b = await insertTeam(`B${session.id}`, `tb${session.id}`);
+      const round = await state.showdownService.createRound(
+        session.id,
+        [
+          { teamId: a.id, teamName: a.name },
+          { teamId: b.id, teamName: b.name },
+        ],
+        'Q',
+        '100',
+        5,
+      );
+      return { a, b, round };
+    }
+
+    it('refuses a guess once the round is resolved', async () => {
+      const { a, round } = await openRound();
+      await state.showdownService.submitGuess(round.id, a.id, '90');
+      await state.showdownService.resolve(round.id);
+
+      await expect(
+        state.showdownService.submitGuess(round.id, a.id, '99'),
+      ).rejects.toThrow('This showdown round is no longer accepting guesses');
+    });
+
+    it('names a team that is not seated', async () => {
+      const { round } = await openRound();
+      const outsider = await insertTeam('Outsider', 'token-o');
+
+      await expect(
+        state.showdownService.submitGuess(round.id, outsider.id, '1'),
+      ).rejects.toThrow('Your team is not part of this showdown round');
+    });
+
+    it("decides a round from its own guesses, not another round's", async () => {
+      const mine = await openRound();
+      const otherSession = state.em.create(GameSession, {
+        quiz: state.session.quiz,
+        joinCode: 'YYYYYY',
+      });
+      await state.em.flush();
+      const theirs = await openRound(otherSession);
+      await state.showdownService.submitGuess(
+        theirs.round.id,
+        theirs.a.id,
+        '100',
+      );
+      await state.showdownService.submitGuess(mine.round.id, mine.a.id, '90');
+      await state.showdownService.submitGuess(mine.round.id, mine.b.id, '50');
+
+      const resolution = await state.showdownService.resolve(mine.round.id);
+
+      expect(resolution).toEqual({ winnerTeamId: mine.a.id, isTie: false });
+    });
   });
 });

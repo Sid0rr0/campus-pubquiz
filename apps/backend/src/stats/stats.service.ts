@@ -526,6 +526,7 @@ export class StatsService {
         .orderBy([
           { column: 'gs.created_at', order: 'desc' },
           { column: 'gs.id', order: 'desc' },
+          // Stryker disable next-line StringLiteral: equivalent, an unrecognised direction sorts ascending, the same as 'asc'.
           { column: 'r.order_index', order: 'asc' },
         ])
         .limit(TREND_ROUNDS_LIMIT)
@@ -620,6 +621,7 @@ function withRoundExtras<Round>(
     ...round,
     author: extras?.author ?? null,
     note: extras?.note ?? null,
+    // Stryker disable next-line BooleanLiteral: unreachable default, every round of an ended session has its extras row.
     isQuickfire: extras?.isQuickfire ?? false,
   };
 }

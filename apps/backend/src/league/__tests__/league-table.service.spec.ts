@@ -316,8 +316,8 @@ describe('LeagueTableService (Postgres integration)', () => {
       const older = await newLeague('Older');
       const newer = await newLeague('Newer');
       const lobby = await newSession('lobby');
-      await join(newer, lobby);
       await join(older, lobby);
+      await join(newer, lobby);
 
       expect((await service.topFor(lobby.id))?.name).toBe('Newer');
     });

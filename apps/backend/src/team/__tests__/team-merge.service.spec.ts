@@ -1,5 +1,5 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
-import type { GameStatus } from '@campus-pubquiz/types';
+import { teamMergeRefusalReason, type GameStatus } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { CoinAward } from '@/db/entities/coin-award.entity';
@@ -40,6 +40,7 @@ import {
   TeamMergeNotFoundError,
   TeamMergeRefusedError,
   TeamMergeService,
+  refusalMessage,
 } from '@/team/team-merge.service';
 import { TeamCodeRequiredError, TeamService } from '@/team/team.service';
 import { useTestDatabase } from '@/test-db/test-database';
@@ -668,6 +669,149 @@ describe('TeamMergeService (Postgres integration)', () => {
       await expect(merge.pairPreview(old.id, rival.id)).rejects.toBeInstanceOf(
         TeamMergeRefusedError,
       );
+    });
+  });
+
+  describe('what the merge says and does', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    const text = (sql: unknown) => (typeof sql === 'string' ? sql : '');
+
+    it('words each refusal', async () => {
+      const { old, newer } = await scenario();
+      await expect(
+        merge.merge(old.id, 9999, 'Quizzly Bears'),
+      ).rejects.toMatchObject({
+        name: 'TeamMergeNotFoundError',
+        message: 'Team 9999 not found',
+      });
+      await expect(
+        merge.merge(old.id, old.id, 'Quizzly Bears'),
+      ).rejects.toMatchObject({
+        name: 'TeamMergeRefusedError',
+        message: 'A team can’t be merged with itself',
+      });
+      await expect(
+        merge.merge(old.id, newer.id, 'Neither'),
+      ).rejects.toMatchObject({
+        name: 'TeamMergeRefusedError',
+        message: 'The name must be one of the two teams’ current names',
+      });
+    });
+
+    it('capitalises the shared-session reason and leaves the other as it is', () => {
+      const shared = refusalMessage({
+        kind: 'shared_session',
+        sessionNames: ['Night 1'],
+      });
+      const reason = teamMergeRefusalReason({
+        kind: 'shared_session',
+        sessionNames: ['Night 1'],
+      });
+      expect(shared).toBe(
+        `${reason.charAt(0).toUpperCase()}${reason.slice(1)}, so they can't be merged`,
+      );
+      expect(shared.charAt(0)).toBe(shared.charAt(0).toUpperCase());
+      const unended = {
+        kind: 'unended_session',
+        teamId: 1,
+        teamName: 'A',
+      } as const;
+      expect(refusalMessage(unended)).toBe(teamMergeRefusalReason(unended));
+    });
+
+    it('takes the earlier joined date whichever team is named first', async () => {
+      const { old, newer } = await scenario();
+
+      await merge.merge(old.id, newer.id, 'Quizzly Bears');
+      em.clear();
+
+      const kept = await em.findOneOrFail(Team, newer.id);
+      expect(kept.createdAt).toEqual(new Date('2026-01-01'));
+    });
+
+    it.each([
+      ['the newer team named first', 'newer-first'],
+      ['the older team named first', 'older-first'],
+    ])('keeps the newer team (%s)', async (_label, order) => {
+      const { old, newer } = await scenario();
+      const [first, second] =
+        order === 'newer-first' ? [newer, old] : [old, newer];
+
+      const preview = await merge.pairPreview(first.id, second.id);
+
+      expect(preview.newerTeamId).toBe(newer.id);
+    });
+
+    it('keeps the later-created team even when it has the lower id', async () => {
+      const later = await newTeam('Later', new Date('2026-05-01'));
+      const earlier = await newTeam('Earlier', new Date('2026-01-01'));
+
+      const preview = await merge.pairPreview(earlier.id, later.id);
+
+      expect(preview.newerTeamId).toBe(later.id);
+    });
+
+    it.each([
+      ['lower id named first', true],
+      ['higher id named first', false],
+    ])(
+      'keeps the higher id when both were created together (%s)',
+      async (_label, lowFirst) => {
+        const when = new Date('2026-03-01');
+        const low = await newTeam('Low', when);
+        const high = await newTeam('High', when);
+        const [first, second] = lowFirst ? [low, high] : [high, low];
+
+        const preview = await merge.pairPreview(first.id, second.id);
+
+        expect(preview.newerTeamId).toBe(high.id);
+      },
+    );
+
+    it('locks both rows, lowest id first, only when there are two teams', async () => {
+      const { old, newer } = await scenario();
+      const execute = jest.spyOn(em.getConnection(), 'execute');
+
+      await merge.merge(newer.id, old.id, 'Quizzly Bearz');
+
+      const locks = execute.mock.calls.filter(([sql]) =>
+        text(sql).includes('for update'),
+      );
+      expect(locks).toHaveLength(1);
+      expect(locks[0][1]).toEqual([newer.id, old.id]);
+      execute.mockClear();
+      await expect(
+        merge.merge(newer.id, newer.id, 'Quizzly Bearz'),
+      ).rejects.toThrow();
+      expect(
+        execute.mock.calls.filter(([sql]) => text(sql).includes('for update')),
+      ).toHaveLength(0);
+    });
+
+    it('rolls every repointed row back when the merge fails part way', async () => {
+      const { old, newer } = await scenario();
+      const before = await snapshot();
+      const connection = em.getConnection();
+      const execute = connection.execute.bind(connection) as (
+        ...args: unknown[]
+      ) => Promise<never>;
+      jest
+        .spyOn(connection, 'execute')
+        .mockImplementation((...args: unknown[]) => {
+          if (text(args[0]).startsWith('delete from teams'))
+            throw new Error('boom');
+          return execute(...args);
+        });
+
+      await expect(
+        merge.merge(old.id, newer.id, 'Quizzly Bears'),
+      ).rejects.toThrow('boom');
+
+      jest.restoreAllMocks();
+      expect(await snapshot()).toBe(before);
     });
   });
 });
