@@ -3,6 +3,7 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
+import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { League } from '@/db/entities/league.entity';
@@ -69,28 +70,43 @@ describe('Carried coin', () => {
    */
   async function playNight(
     team: Team,
-    options: { inLeague: boolean; ratedRounds: number[]; answered?: boolean },
+    options: {
+      inLeague: boolean;
+      ratedRounds: number[];
+      answered?: boolean;
+      /** A quiz without rounds, the team taking part through a bonus award. */
+      roundless?: boolean;
+    },
   ): Promise<void> {
     const em = game.orm.em.fork();
     const quiz = em.create(Quiz, { title: 'Past quiz' });
-    const rounds = [0, 1].map((index) =>
+    const rounds = (options.roundless ? [] : [0, 1]).map((index) =>
       em.create(Round, { quiz, title: `Round ${index}`, orderIndex: index }),
     );
-    const question = em.create(Question, {
-      round: rounds[0],
-      orderIndex: 0,
-      type: 'free_text',
-      prompt: 'Q',
-      answer: 'a',
-      points: 1,
-    });
+    const question = options.roundless
+      ? undefined
+      : em.create(Question, {
+          round: rounds[0],
+          orderIndex: 0,
+          type: 'free_text',
+          prompt: 'Q',
+          answer: 'a',
+          points: 1,
+        });
     joinCounter += 1;
     const session = em.create(GameSession, {
       quiz,
       joinCode: `PAST${joinCounter}`,
       status: 'ended',
     });
-    if (options.answered !== false) {
+    if (options.roundless) {
+      em.create(BonusAward, {
+        gameSession: session,
+        team: em.getReference(Team, team.id),
+        category: 'shot',
+        points: 1,
+      });
+    } else if (options.answered !== false && question) {
       em.create(Answer, {
         gameSession: session,
         question,
@@ -115,6 +131,8 @@ describe('Carried coin', () => {
     await em.flush();
   }
 
+  let lastJoinHasCarriedCoin: boolean | undefined;
+
   /** Joins `team` by its token and returns the coins its JOIN_ACCEPTED carried. */
   async function joinReplyCoins(
     team: Team,
@@ -129,8 +147,12 @@ describe('Carried coin', () => {
     });
     lastDevice.set(team.id, device.id);
     const [, payload] = (
-      device.emit.mock.calls as [string, { coins: number }][]
+      device.emit.mock.calls as [
+        string,
+        { coins: number; hasCarriedCoin: boolean },
+      ][]
     ).find(([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED)!;
+    lastJoinHasCarriedCoin = payload.hasCarriedCoin;
     return payload.coins;
   }
 
@@ -193,6 +215,21 @@ describe('Carried coin', () => {
     expect(adminCoins()).toEqual({ Quizzards: 0 });
   });
 
+  it('brings no coin when the last league night had no rounds to rate', async () => {
+    await putCurrentSessionInLeague();
+    const team = await seedTeam('Quizzards');
+    await playNight(team, {
+      inLeague: true,
+      ratedRounds: [],
+      roundless: true,
+    });
+    await joinReplyCoins(team);
+
+    await game.act('START_QUIZ');
+
+    expect(adminCoins()).toEqual({ Quizzards: 0 });
+  });
+
   it('brings no coin when the session is in no league', async () => {
     const team = await seedTeam('Quizzards');
     await playNight(team, { inLeague: true, ratedRounds: [0, 1] });
@@ -209,6 +246,7 @@ describe('Carried coin', () => {
     await playNight(team, { inLeague: true, ratedRounds: [0, 1] });
     await game.act('START_QUIZ');
     expect(await joinReplyCoins(team)).toBe(CARRIED_COINS);
+    expect(lastJoinHasCarriedCoin).toBe(true);
 
     const em = game.orm.em.fork();
     await em.nativeDelete(LeagueSession, {

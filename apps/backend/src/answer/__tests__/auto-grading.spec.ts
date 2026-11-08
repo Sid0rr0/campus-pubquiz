@@ -1,4 +1,6 @@
 import { IDK_ANSWER_VALUE } from '@campus-pubquiz/types';
+import { Answer } from '@/db/entities/answer.entity';
+import { Purchase } from '@/db/entities/purchase.entity';
 import { Question } from '@/db/entities/question.entity';
 import {
   gradable,
@@ -577,6 +579,132 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       );
       expect(answer.pointsAwarded).toBe(4);
       expect(answer.verdict).toBe('correct');
+    });
+
+    describe('a wider margin', () => {
+      const OLD = new Date('2026-01-01T00:00:00Z');
+
+      async function answered(value: string) {
+        const question = await numberQuestion();
+        const team = await insertTeam('The Quizzards', 'token-1');
+        await state.answerService.submit(
+          state.session.id,
+          gradable(question),
+          team.id,
+          value,
+        );
+        const row = await state.em.findOneOrFail(Answer, {
+          question: question.id,
+          team: team.id,
+        });
+        return { question, team, row };
+      }
+
+      it('doubles the margin only for the team that bought it, not for one that bought another power-up', async () => {
+        const question = await numberQuestion();
+        const buyer = await insertTeam('Buyer', 'token-1');
+        const other = await insertTeam('Other', 'token-2');
+        state.em.create(Purchase, {
+          gameSession: state.session,
+          team: buyer,
+          powerUp: 'wider_margin',
+          question,
+          cost: 2,
+          effect: { kind: 'wider_margin' },
+        });
+        state.em.create(Purchase, {
+          gameSession: state.session,
+          team: other,
+          powerUp: 'pin_one',
+          question,
+          cost: 2,
+          effect: { kind: 'pin_one', item: 'a', position: 0 },
+        });
+        await state.em.flush();
+
+        for (const team of [buyer, other]) {
+          await state.answerService.submit(
+            state.session.id,
+            gradable(question),
+            team.id,
+            '280', // outside 10%, inside the doubled 20%
+          );
+        }
+
+        const points = Object.fromEntries(
+          (
+            await state.answerService.listForQuestion(
+              state.session.id,
+              question.id,
+            )
+          ).map((a) => [a.teamName, a.pointsAwarded]),
+        );
+        expect(points).toEqual({ Buyer: 4, Other: 0 });
+      });
+
+      it('re-grades an answer given before the purchase', async () => {
+        const { question, team } = await answered('280');
+
+        await state.answerService.regradeForWiderMargin(
+          state.session.id,
+          gradable(question),
+          team.id,
+        );
+
+        const [answer] = await state.answerService.listForQuestion(
+          state.session.id,
+          question.id,
+        );
+        expect(answer.pointsAwarded).toBe(4);
+        expect(answer.verdict).toBe('correct');
+      });
+
+      it.each([
+        ['equal to', 4],
+        ['above', 5],
+      ])(
+        'leaves a grade %s the widened score untouched',
+        async (_name, points) => {
+          const { question, team, row } = await answered('280');
+          row.pointsAwarded = points;
+          row.verdict = 'correct';
+          row.gradedAt = OLD;
+          await state.em.flush();
+
+          await state.answerService.regradeForWiderMargin(
+            state.session.id,
+            gradable(question),
+            team.id,
+          );
+
+          const [answer] = await state.answerService.listForQuestion(
+            state.session.id,
+            question.id,
+          );
+          expect(answer.pointsAwarded).toBe(points);
+          expect(new Date(answer.gradedAt!)).toEqual(OLD);
+        },
+      );
+
+      it('grades an answer still ungraded even when it stays wrong', async () => {
+        const { question, team, row } = await answered('500');
+        row.gradedAt = null;
+        row.verdict = null;
+        await state.em.flush();
+
+        await state.answerService.regradeForWiderMargin(
+          state.session.id,
+          gradable(question),
+          team.id,
+        );
+
+        const [answer] = await state.answerService.listForQuestion(
+          state.session.id,
+          question.id,
+        );
+        expect(answer.gradedAt).not.toBeNull();
+        expect(answer.verdict).toBe('incorrect');
+      });
     });
   });
 });

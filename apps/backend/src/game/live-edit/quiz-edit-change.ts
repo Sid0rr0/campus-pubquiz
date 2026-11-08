@@ -59,23 +59,10 @@ export function quizEditChange(
       jokerSyncs,
       purchaseSyncs,
     };
-    if (regradeQuestionIds.length === 0) {
-      return {
-        session: reloaded,
-        outcome: broadcast,
-        touchedScores: true,
-      };
-    }
-
+    // With nothing to regrade (or nothing re-scored) this comes back with the
+    // session unchanged and no questions or teams, i.e. a plain broadcast.
     const { session, regradedQuestionIds, answeringTeamIds } =
       await grading.regradeForKeyFix(reloaded, started, regradeQuestionIds);
-    if (regradedQuestionIds.length === 0) {
-      return {
-        session,
-        outcome: broadcast,
-        touchedScores: true,
-      };
-    }
 
     const teamSyncs = connectedTeamSyncs(
       session,

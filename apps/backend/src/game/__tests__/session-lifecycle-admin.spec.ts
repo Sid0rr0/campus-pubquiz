@@ -279,6 +279,27 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
   });
 
   describe('closeSession', () => {
+    it('says which status blocked the close', async () => {
+      await createOtherSession();
+
+      await expect(game.gameState.closeSession(game.joinCode)).rejects.toThrow(
+        'still in progress (status: "lobby")',
+      );
+    });
+
+    it('holds a session by its database id until it is closed', async () => {
+      await createOtherSession();
+      const { gameSessionId } = game;
+      expect(game.gameState.isHeld(gameSessionId)).toBe(true);
+      expect(game.gameState.isHeld(gameSessionId + 1000)).toBe(false);
+
+      await game.act('START_QUIZ');
+      await game.act('END_QUIZ');
+      await game.gameState.closeSession(game.joinCode);
+
+      expect(game.gameState.isHeld(gameSessionId)).toBe(false);
+    });
+
     it('rejects closing a session that has not ended yet', async () => {
       await createOtherSession();
       await game.act('START_QUIZ');

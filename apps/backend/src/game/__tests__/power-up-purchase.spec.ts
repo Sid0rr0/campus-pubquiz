@@ -133,6 +133,7 @@ describe('GameGateway — buying a 50/50', () => {
       const ack = await buy(game, alpha, france);
 
       expect(ack).toEqual({ success: true });
+      expect(syncsTo(game, alpha)).toHaveLength(1);
       const [sync] = syncsTo(game, alpha);
       expect(sync.coins).toBe(1);
       expect(sync.purchases).toHaveLength(1);
@@ -149,6 +150,15 @@ describe('GameGateway — buying a 50/50', () => {
       expect(removed).not.toContain('Paris');
       expect(removed.every((option) => OPTIONS.includes(option))).toBe(true);
       expect(syncsTo(game, bravo)).toEqual([]);
+    });
+
+    it('does not regrade the answers, which only a wider margin does', async () => {
+      const game = await night();
+      const regrade = jest.spyOn(game.answerService, 'regradeForWiderMargin');
+
+      await buy(game, game.teams[0], ids(game).france);
+
+      expect(regrade).not.toHaveBeenCalled();
     });
 
     it('draws the removed options with the random source, once', async () => {
@@ -375,6 +385,60 @@ describe('GameGateway — buying a 50/50', () => {
         (joinedWith(second) as unknown as { roomReadyQuestionIds: number[] })
           .roomReadyQuestionIds,
       ).toEqual([france]);
+    });
+
+    describe('on a rejoin', () => {
+      async function rejoinedReadyIds(
+        game: RealStoreGateway,
+        team: JoinedTeam,
+      ) {
+        const second = await game.connectPlayer();
+        await game.gateway.handleJoinPlayers(asSocket(second), {
+          teamName: 'A',
+          teamToken: team.teamToken,
+          joinCode: game.joinCode,
+          previousSocketId: team.socket.id,
+        });
+        return (
+          joinedWith(second) as unknown as { roomReadyQuestionIds: number[] }
+        ).roomReadyQuestionIds;
+      }
+
+      it('lists no question while the room is not ready', async () => {
+        const { game, answer, teams } = await room();
+        await answer(teams[1], 'Paris');
+
+        expect(await rejoinedReadyIds(game, teams[0])).toEqual([]);
+      });
+
+      it('lists no question, and sends no readiness, when the session offers no Ask the room', async () => {
+        const game = await night(
+          {
+            powerUps: {
+              ...DEFAULT_SESSION_SETTINGS.powerUps,
+              ask_the_room: { cost: 1, maxUses: 0 },
+            },
+          },
+          { teamNames: ['A', 'B', 'C', 'D'] },
+        );
+        const { france } = ids(game);
+        for (const team of game.teams.slice(1)) {
+          await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+            questionId: france,
+            teamId: team.teamId,
+            value: 'Paris',
+          });
+        }
+
+        expect(await rejoinedReadyIds(game, game.teams[0])).toEqual([]);
+        expect(
+          game
+            .roomEmits()
+            .filter(
+              (emit) => emit.event === SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
+            ),
+        ).toEqual([]);
+      });
     });
 
     it('stores the split without the buyer, and the split survives a rejoin', async () => {

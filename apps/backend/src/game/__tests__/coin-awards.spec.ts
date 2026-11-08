@@ -52,6 +52,21 @@ describe('Coin awards', () => {
     return first.id;
   }
 
+  it('leaves the carried coin of a team joining in the lobby to the start, and decides it for a late joiner', async () => {
+    game = await harness.createGateway({
+      settings: { powerUpsEnabled: true, startingCoins: 1 },
+    });
+    const decide = jest.spyOn(game.carriedCoinService, 'decide');
+
+    await game.joinTeam('Early');
+    expect(decide).not.toHaveBeenCalled();
+
+    await game.act('START_QUIZ');
+    decide.mockClear();
+    await game.joinTeam('Late');
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+
   it('gives a shot a linked +2 coins, toasts it, and takes it away with the deleted bonus award', async () => {
     await start();
 
@@ -153,6 +168,22 @@ describe('Coin awards', () => {
 
     expect(adminCoins()).toBe(1);
     expect(emitted(SOCKET_EVENTS.COIN_AWARDED)).toEqual([]);
+  });
+
+  it.each([
+    ['  Trivia hero  ', 'Trivia hero'],
+    ['   ', undefined],
+  ])('toasts the reason %j as %j', async (reason, shown) => {
+    await start();
+
+    await award({ category: 'custom', points: 0, coins: 3, reason });
+
+    expect(emitted(SOCKET_EVENTS.COIN_AWARDED)).toEqual([
+      {
+        rooms: [team.socket.id],
+        payload: { coins: 3, reason: shown, balance: 4 },
+      },
+    ]);
   });
 
   it('gives coins alone with 0 points, with no bonus award and no bonus toast', async () => {

@@ -40,6 +40,7 @@ function fiftyFiftyEffect(
   return {
     kind: 'fifty_fifty',
     removedOptions: drawRemovedOptions(
+      // Stryker disable next-line ArrayDeclaration: equivalent, the offer only passes a question that has options.
       question.options ?? [],
       question.answer,
       random,
@@ -51,7 +52,9 @@ function askTheRoomEffect(
   question: SeededQuestion,
   otherAnswers: readonly string[],
 ): PurchaseEffect {
+  // Stryker disable next-line ArrayDeclaration: equivalent, the offer only passes a question that has options.
   const split = askTheRoomSplit(question.options ?? [], otherAnswers);
+  // Stryker disable next-line StringLiteral,ConditionalExpression: equivalent, the offer already refused a room that is not ready.
   if (split === null) throw new SessionRefusal('Waiting for more answers');
   return { kind: 'ask_the_room', split };
 }
@@ -84,6 +87,7 @@ function effectOf(
     case 'pin_one':
       return drawPin(question.answer, random);
     default:
+      // Stryker disable next-line StringLiteral: unreachable, the switch covers every power-up.
       throw new Error(`No effect is defined for the ${powerUp} power-up`);
   }
 }
@@ -127,10 +131,12 @@ export class PurchaseChanges {
       gameSessionId,
       teamId,
     );
+    // Stryker disable ConditionalExpression,LogicalOperator,ArrayDeclaration: equivalent, only Ask the room reads the other answers, and it is refused without an open question.
     const otherAnswers =
       powerUp === 'ask_the_room' && question
         ? await this.otherTeamsAnswers(gameSessionId, questionId, teamId)
         : [];
+    // Stryker restore ConditionalExpression,LogicalOperator,ArrayDeclaration
     assertQuestionPurchaseAllowed(
       session,
       request,
@@ -336,14 +342,17 @@ function assertQuestionPurchaseAllowed(
     question: question
       ? { ...question, isQuickfire: isCurrentRoundQuickfire(session) }
       : null,
+    // Stryker disable ConditionalExpression,ArrayDeclaration: equivalent, only Ask the room reads this, and it is refused without an open question.
     isRoomReady:
       question !== undefined &&
       askTheRoomSplit(question.options ?? [], otherAnswers) !== null,
+    // Stryker restore ConditionalExpression,ArrayDeclaration
     powerUp,
     questionId,
   });
   if (refusal !== null) throw new SessionRefusal(refusal);
   // The offer only passes a question that is open for answering.
+  // Stryker disable next-line StringLiteral,ConditionalExpression: unreachable guard for the type narrowing.
   if (question === undefined) throw new Error('Question missing');
 }
 
@@ -359,14 +368,11 @@ function rebuiltExtraJokers(
   const kept = new Set<string>();
   const rebuilt: NewPurchase[] = [];
   for (const bought of started.funFactData.powerUps) {
+    // Stryker disable next-line ConditionalExpression: equivalent, only extra jokers have a round id, so `roundId === null` alone skips the rest.
     if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
     const next = roundNowHolding(started, reloaded, bought.roundId);
     const key = `${bought.teamId}:${next}`;
-    const isQuickfire =
-      reloaded.seededGame.rounds.find((round) => round.id === next)
-        ?.quickfire ?? false;
-    // A round the edit made a quickfire round is no longer doubled: refunded.
-    if (next === null || isQuickfire || kept.has(key)) continue;
+    if (next === null || kept.has(key)) continue;
     kept.add(key);
     rebuilt.push({
       gameSessionId,

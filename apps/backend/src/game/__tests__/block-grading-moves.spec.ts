@@ -485,4 +485,31 @@ describe('GameGateway — quickfire speed scoring when a question leaves locking
     ]);
     expect(revealed.ungradedQuestionIds).toEqual([]);
   });
+
+  it('does not speed-score a question locking in a round that is not quickfire', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Team A'],
+      rounds: [
+        {
+          title: 'Pub Round',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'multiple_choice',
+              prompt: 'Capital of France?',
+              answer: 'Paris',
+              points: 10,
+              payload: { options: ['Paris', 'London'] },
+            },
+          ],
+        },
+      ],
+    });
+    const speedScore = jest.spyOn(game.answerService, 'speedScoreAtLock');
+    await game.openFirstQuestion(await game.connectAdmin());
+    await game.act('ADVANCE'); // -> locking
+    await game.act('ADVANCE'); // leaves locking
+
+    expect(speedScore).not.toHaveBeenCalled();
+  });
 });

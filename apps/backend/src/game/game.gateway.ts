@@ -398,9 +398,11 @@ export class GameGateway
     const data = client.data;
     data.refusedJoins = (data.refusedJoins ?? 0) + 1;
     if (data.refusedJoins >= MAX_REFUSED_JOINS) {
+      // Stryker disable StringLiteral,CallExpression: log copy; nothing reads it.
       this.logger.warn(
         `Disconnecting ${client.id}: ${data.refusedJoins} refused joins`,
       );
+      // Stryker restore StringLiteral,CallExpression
       client.disconnect();
     }
   }

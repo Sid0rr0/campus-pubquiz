@@ -58,4 +58,12 @@ describe('GameGateway — refused joins per socket', () => {
 
     expect(phone.disconnect).not.toHaveBeenCalled();
   });
+
+  it('lets a team rejoin when the socket holding its seat is no longer on the server', async () => {
+    game.server.sockets.sockets.delete(team.socket.id);
+
+    await expect(rejoinWithoutTakeover()).resolves.toMatchObject({
+      success: true,
+    });
+  });
 });

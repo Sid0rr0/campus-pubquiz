@@ -107,6 +107,7 @@ export class SessionSettingsChanges {
     // The extra joker's cost follows the overview while it is still the default.
     if (
       partial.powerUps === undefined &&
+      // Stryker disable next-line ConditionalExpression: equivalent, with the overview unchanged the default cost it recomputes is the stored one.
       partial.showRoundOverview !== undefined &&
       stored.powerUps.extra_joker.cost ===
         defaultExtraJokerCost(stored.showRoundOverview)

@@ -265,6 +265,24 @@ describe('GameGateway — buying an extra joker', () => {
       expect(await costAfter({}, { showRoundOverview: true })).toBe(6);
     });
 
+    it('keeps the cost of a patch that sets the power-ups together with the overview', async () => {
+      const powerUps = {
+        ...DEFAULT_SESSION_SETTINGS.powerUps,
+        extra_joker: { cost: 7, maxUses: 1 },
+      };
+      expect(await costAfter({}, { showRoundOverview: true, powerUps })).toBe(
+        7,
+      );
+    });
+
+    it('keeps the cost of a patch that sets only the power-ups', async () => {
+      const powerUps = {
+        ...DEFAULT_SESSION_SETTINGS.powerUps,
+        extra_joker: { cost: 7, maxUses: 1 },
+      };
+      expect(await costAfter({}, { powerUps })).toBe(7);
+    });
+
     it('stays where the quiz master put it', async () => {
       const powerUps = {
         ...DEFAULT_SESSION_SETTINGS.powerUps,
@@ -296,7 +314,10 @@ describe('GameGateway — buying an extra joker', () => {
         roundId: game.rounds[0].id,
       });
 
-      expect(ack).toMatchObject({ success: false });
+      expect(ack).toEqual({
+        success: false,
+        error: 'That round is already doubled by an extra joker',
+      });
     });
 
     it('cannot be stacked by the quiz master setting the same round', async () => {
@@ -308,7 +329,36 @@ describe('GameGateway — buying an extra joker', () => {
         roundId: game.rounds[0].id,
       });
 
-      expect(ack).toMatchObject({ success: false });
+      expect(ack).toEqual({
+        success: false,
+        error: 'That round is already doubled by an extra joker',
+      });
+    });
+
+    it('never draws the doubled round for a team that did not pick', async () => {
+      const game = await harness.createGateway({
+        rounds: THREE_ROUNDS,
+        teamNames: ['Alpha'],
+        jokerRandom: () => 0, // always the first round still drawable
+        settings: {
+          powerUpsEnabled: true,
+          startingCoins: 10,
+          showRoundOverview: true,
+          jokersEnabled: true,
+        },
+      });
+      await game.act('START_QUIZ');
+      await buy(game, game.teams[0], 0);
+      await game.act('ADVANCE'); // -> round_overview
+      await game.act('ADVANCE'); // -> joker_pick
+      await game.act('ADVANCE'); // the pick closes, Alpha is dealt a joker
+
+      const joker = await game.inRequestContext(() =>
+        game.jokerService.listForSession(game.gameSessionId),
+      );
+      expect([...joker]).toEqual([
+        [game.teams[0].teamId, { roundId: game.rounds[1].id, source: 'drawn' }],
+      ]);
     });
   });
 });

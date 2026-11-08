@@ -21,8 +21,9 @@ describe('SessionBroadcaster — disconnectUser', () => {
 
     game.broadcaster.disconnectUser(TEST_ADMIN_USER.id);
 
-    expect(first.disconnect).toHaveBeenCalled();
-    expect(second.disconnect).toHaveBeenCalled();
+    // true closes the underlying connection, not just the namespace.
+    expect(first.disconnect).toHaveBeenCalledWith(true);
+    expect(second.disconnect).toHaveBeenCalledWith(true);
   });
 
   it("leaves other users' admin sockets and player sockets connected", async () => {

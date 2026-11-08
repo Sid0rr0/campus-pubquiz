@@ -143,6 +143,25 @@ describe('EndedSessionsRead (Postgres integration)', () => {
     ).toEqual([]);
   });
 
+  it('leaves out the same team in another session when narrowed to one session', async () => {
+    const team = await insertTeam('Mine', 'token-m');
+    const elsewhere = state.em.create(GameSession, {
+      quiz: state.session.quiz,
+      joinCode: 'ELSEWH',
+    });
+    state.em.create(GameSessionTeam, { gameSession: elsewhere, team });
+    await state.em.flush();
+
+    expect(
+      await read.participants({
+        gameSessionIds: [state.session.id],
+        teamIds: [team.id],
+      }),
+    ).toEqual([
+      { gameSessionId: state.session.id, teamId: team.id, isOnRoster: true },
+    ]);
+  });
+
   describe('sessions played per team', () => {
     const endSession = () =>
       state.em.nativeUpdate(

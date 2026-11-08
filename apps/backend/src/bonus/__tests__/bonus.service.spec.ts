@@ -150,13 +150,37 @@ describe('BonusService', () => {
     const { service, repo, gameSessionTeams } = createService(false);
 
     await expect(service.award(101, 31, 'shot', 1)).rejects.toThrow(
-      InvalidBonusAwardError,
+      new InvalidBonusAwardError('Team is not part of this game session'),
     );
     expect(gameSessionTeams.findOne).toHaveBeenCalledWith({
       gameSession: 101,
       team: 31,
     });
     expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it('names its errors', () => {
+    expect(new InvalidBonusAwardError('x').name).toBe('InvalidBonusAwardError');
+    expect(new BonusAwardNotFoundError('x').name).toBe(
+      'BonusAwardNotFoundError',
+    );
+  });
+
+  it('does not check the cap for a coins-only award of zero points', async () => {
+    const { service, repo } = createService();
+
+    await service.award(
+      101,
+      31,
+      'shot',
+      0,
+      undefined,
+      BONUS_CATEGORIES,
+      { shot: 0 },
+      { powerUpsEnabled: true, manual: 2 },
+    );
+
+    expect(repo.countAwards).not.toHaveBeenCalled();
   });
 
   it('defaults to allowing every BonusCategory when no enabledCategories is passed', async () => {
@@ -320,6 +344,22 @@ describe('BonusService', () => {
           createdAt: '2026-01-01T00:00:00.000Z',
         },
       });
+    });
+
+    it('drops a reason passed with an update to a predefined-category award', async () => {
+      const award = {
+        id: 9,
+        team: { id: 31 },
+        category: 'shot',
+        points: 1,
+        reason: undefined as string | undefined,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      const { service } = createServiceWithAward(award);
+
+      await service.update(101, 9, 2, '  not for shots ');
+
+      expect(award.reason).toBeUndefined();
     });
 
     it('trims and stores an updated reason for a custom-category award', async () => {

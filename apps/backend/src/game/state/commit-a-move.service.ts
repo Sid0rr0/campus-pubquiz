@@ -236,6 +236,7 @@ export class MoveCommitter {
     step: Extract<MoveStep, { kind: 'reveal_step' }>,
   ): Promise<SessionState> {
     const { session, reveal, isFinal } = step;
+    // Stryker disable next-line ConditionalExpression: equivalent, a showdown round is only active while its own reveal plays.
     if (reveal !== 'showdown' || !isFinal || !session.activeShowdownRound) {
       return session;
     }

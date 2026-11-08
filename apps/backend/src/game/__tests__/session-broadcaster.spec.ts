@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { SOCKET_EVENTS } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
@@ -6,6 +7,10 @@ import { setupRealStoreGatewayTest } from '@/game/__tests__/real-store-test-util
 
 describe('SessionBroadcaster', () => {
   const harness = setupRealStoreGatewayTest();
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   it('throws a clear error and emits nothing when delivering before attach', async () => {
     const game = await harness.createGateway();
@@ -84,6 +89,7 @@ describe('SessionBroadcaster', () => {
       jest
         .spyOn(game.gameState, 'refreshLeagueTops')
         .mockRejectedValue(new Error('db down'));
+      const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
       game.clearEmits();
 
       await expect(
@@ -91,6 +97,10 @@ describe('SessionBroadcaster', () => {
       ).resolves.toBeUndefined();
 
       expect(game.roomEmits()).toEqual([]);
+      expect(logged).toHaveBeenCalledWith(
+        'League top refresh failed',
+        expect.stringContaining('db down'),
+      );
     });
 
     it('keeps broadcasting the other lobbies when one broadcast fails', async () => {
@@ -102,6 +112,7 @@ describe('SessionBroadcaster', () => {
         .spyOn(game.broadcaster, 'broadcastState')
         .mockRejectedValueOnce('socket gone')
         .mockResolvedValueOnce(undefined);
+      const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
       await expect(
         game.broadcaster.refreshLeagueLobbies('SKIPME'),
@@ -109,6 +120,10 @@ describe('SessionBroadcaster', () => {
 
       expect(refreshLeagueTops).toHaveBeenCalledWith('SKIPME');
       expect(broadcastState.mock.calls).toEqual([['BROKEN'], ['HEALTH']]);
+      expect(logged).toHaveBeenCalledWith(
+        'League top broadcast failed for session BROKEN',
+        'socket gone',
+      );
     });
   });
 

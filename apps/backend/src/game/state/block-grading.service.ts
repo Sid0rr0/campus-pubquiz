@@ -108,6 +108,7 @@ export class BlockGradingService {
     toProgress: GameProgress,
   ): Promise<void> {
     const { status } = session.progress;
+    // Stryker disable next-line ConditionalExpression: equivalent, the other moves into reveal_intro start from a reveal, where the gate already passed and no answer can be ungraded.
     const isLeavingBreak = status === 'break_intro' || status === 'break';
     if (!isLeavingBreak || toProgress.status !== 'reveal_intro') return;
 
@@ -147,6 +148,7 @@ export class BlockGradingService {
         gradesAtLock(question) &&
         session.closestGuessSummaries[question.id] === undefined,
     );
+    // Stryker disable next-line ConditionalExpression: equivalent, an empty batch only runs a refresh of nothing.
     if (unsummarized.length === 0) return { session, staleAnswerListIds: [] };
 
     let summaries = session.closestGuessSummaries;
@@ -211,6 +213,7 @@ export class BlockGradingService {
       session.seededGame.settings.quickfireQuestionTimerSeconds,
     );
 
+    // Stryker disable next-line ArrayDeclaration: equivalent, quickfire types are auto-graded so the question is never in the ungraded set.
     return this.gradesChanged(session, [question.id]);
   }
 

@@ -180,6 +180,7 @@ export class LiveEditService {
           });
 
           const liveSessions = this.listLiveSessions(quizId);
+          // Stryker disable next-line ConditionalExpression,BlockStatement: equivalent — with no live session the path below saves the same way: an empty frontier flags nothing and regrades nothing.
           if (liveSessions.length === 0) {
             const saved = await this.quizService.update(
               quizId,
@@ -277,10 +278,12 @@ export class LiveEditService {
       try {
         await this.broadcaster.deliver(joinCode, outcome);
       } catch (error) {
+        // Stryker disable StringLiteral,CallExpression: log output; nothing reads it.
         this.logger.error(
           `Could not deliver the live-edit outcome to ${joinCode}`,
           error instanceof Error ? error.stack : String(error),
         );
+        // Stryker restore StringLiteral,CallExpression
         failures.push(error);
       }
     }

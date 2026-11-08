@@ -417,6 +417,7 @@ export class EndedSessionsRead {
     gameSessionIds: readonly number[],
     { teamId }: { teamId?: number } = {},
   ): Promise<{ gameSessionId: number; teamId: number; roundId: number }[]> {
+    // Stryker disable next-line ConditionalExpression: equivalent — an empty whereIn matches no rows, so the result is [] either way.
     if (gameSessionIds.length === 0) return [];
     const knex: Knex = this.gameSessionTeams.getKnex();
     return (await knex

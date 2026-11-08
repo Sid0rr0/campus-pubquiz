@@ -307,6 +307,40 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(answer.gradedAt).not.toBeNull();
   });
 
+  it('keeps the original creation time when a same-value resubmit keeps the grade', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      gradable(state.question),
+      team.id,
+      'Banana',
+    );
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(state.question),
+      1,
+    );
+    const created = new Date('2026-01-01T00:00:00Z');
+    await state.em.nativeUpdate(
+      Answer,
+      { id: submitted.answerId },
+      { createdAt: created },
+    );
+
+    await state.answerService.submit(
+      state.session.id,
+      gradable(state.question),
+      team.id,
+      'Banana',
+    );
+
+    const stored = await state.em
+      .fork()
+      .findOneOrFail(Answer, { id: submitted.answerId });
+    expect(stored.createdAt).toEqual(created);
+  });
+
   it('resets a moderator-graded free_text answer to ungraded when the team changes it to another non-match', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(

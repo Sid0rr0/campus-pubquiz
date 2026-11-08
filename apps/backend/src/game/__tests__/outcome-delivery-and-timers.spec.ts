@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   SOCKET_EVENTS,
   type GameStatus,
@@ -51,6 +52,10 @@ function summarizeEmits(game: RealStoreGateway): string[] {
 describe('GameGateway — outcome delivery and timer-driven advance', () => {
   const harness = setupRealStoreGatewayTest();
   let gameCount = 0;
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   function nextJoinCode(): string {
     return `TIMER${gameCount++}`;
@@ -217,5 +222,26 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
       await game.timers().lock.fireNow();
       expect((await game.snapshot()).progress.status).toBe('reveal');
     });
+  });
+
+  it('logs and survives a timed ADVANCE that fails', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Quizzards'],
+      joinCode: nextJoinCode(),
+      settings: { lockGraceSeconds: TIMER_SECONDS },
+    });
+    const admin = await game.connectAdmin();
+    await game.openFirstQuestion(admin);
+    await advanceToLocking(game, admin, false);
+    jest
+      .spyOn(game.gameState, 'advanceOnExpiry')
+      .mockRejectedValue(new Error('boom'));
+    const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+
+    await expect(game.timers().lock.fireNow()).resolves.toBeUndefined();
+
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining('ADVANCE failed: boom'),
+    );
   });
 });

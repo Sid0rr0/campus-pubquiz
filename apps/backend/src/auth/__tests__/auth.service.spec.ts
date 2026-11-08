@@ -52,6 +52,31 @@ function createFakeSessionService() {
   };
 }
 
+describe('auth errors', () => {
+  it.each([
+    [
+      () => new InvalidCredentialsError(),
+      'InvalidCredentialsError',
+      'Invalid username or password',
+    ],
+    [
+      () => new AccountPendingError(),
+      'AccountPendingError',
+      'Your account is awaiting admin approval',
+    ],
+    [
+      () => new AccountDeactivatedError(),
+      'AccountDeactivatedError',
+      'Your account has been deactivated',
+    ],
+    [() => new UserNotFoundError(5), 'UserNotFoundError', 'User 5 not found'],
+  ])('%#: names itself and says why', (make, name, message) => {
+    const error = make();
+    expect(error.name).toBe(name);
+    expect(error.message).toBe(message);
+  });
+});
+
 describe('AuthService', () => {
   describe('register', () => {
     it('creates a pending moderator with a bcrypt-hashed password', async () => {
@@ -75,6 +100,33 @@ describe('AuthService', () => {
       };
       expect(createdArgs.passwordHash).not.toBe('hunter2');
       expect(repo.persistAndFlush).toHaveBeenCalled();
+    });
+
+    it('trims the username it stores', async () => {
+      const repo = createFakeUserRepository();
+      const service = new AuthService(
+        repo as unknown as UserRepository,
+        createFakeSessionService() as unknown as SessionService,
+      );
+
+      await service.register('  alice  ', 'hunter2');
+
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ username: 'alice' }),
+      );
+    });
+
+    it('rethrows any other failure to save the user', async () => {
+      const repo = createFakeUserRepository();
+      repo.persistAndFlush.mockRejectedValueOnce(new Error('db down'));
+      const service = new AuthService(
+        repo as unknown as UserRepository,
+        createFakeSessionService() as unknown as SessionService,
+      );
+
+      await expect(service.register('alice', 'hunter2')).rejects.toThrow(
+        'db down',
+      );
     });
 
     it('resolves silently on a unique constraint violation (no username enumeration)', async () => {
@@ -167,6 +219,28 @@ describe('AuthService', () => {
       await expect(service.login('alice', 'hunter2')).rejects.toThrow(
         AccountDeactivatedError,
       );
+    });
+
+    it('ignores whitespace around the username', async () => {
+      const passwordHash = await bcrypt.hash('hunter2', 10);
+      const repo = createFakeUserRepository([
+        { id: 2, username: 'zed', passwordHash: 'x', status: 'active' },
+        {
+          id: 1,
+          username: 'alice',
+          passwordHash,
+          role: 'moderator',
+          status: 'active',
+        },
+      ]);
+      const service = new AuthService(
+        repo as unknown as UserRepository,
+        createFakeSessionService() as unknown as SessionService,
+      );
+
+      const result = await service.login('  alice ', 'hunter2');
+
+      expect(result.user.username).toBe('alice');
     });
 
     it('returns a session token and AuthUser for a correct, active login', async () => {
@@ -338,6 +412,10 @@ describe('AuthService', () => {
       );
 
       const result = await service.listUsers();
+
+      expect(repo.findAll).toHaveBeenCalledWith({
+        orderBy: { createdAt: 'asc' },
+      });
 
       expect(result.pending).toHaveLength(1);
       expect(result.active).toHaveLength(1);

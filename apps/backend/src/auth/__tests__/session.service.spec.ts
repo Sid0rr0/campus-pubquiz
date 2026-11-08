@@ -111,6 +111,30 @@ describe('SessionService', () => {
       },
     );
 
+    it('looks the session up by token hash with its user loaded', async () => {
+      const repo = createFakeSessionRepository(undefined);
+      const service = new SessionService(repo as unknown as SessionRepository);
+
+      await service.validate('some-token');
+
+      expect(repo.findOne).toHaveBeenCalledWith(
+        { tokenHash: hashToken('some-token') },
+        { populate: ['user'] },
+      );
+    });
+
+    it('treats a session expiring at this very instant as expired', async () => {
+      const session = {
+        tokenHash: hashToken('edge-token'),
+        user: createUser(),
+        expiresAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      const repo = createFakeSessionRepository(session);
+      const service = new SessionService(repo as unknown as SessionRepository);
+
+      expect(await service.validate('edge-token')).toBeNull();
+    });
+
     it('returns the mapped AuthUser and slides expiresAt forward on success', async () => {
       const user = createUser({ id: 7, username: 'bob', role: 'admin' });
       const session = {

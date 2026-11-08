@@ -170,6 +170,7 @@ function emitReply(sender: Pick<GameSocket, 'emit'>, reply: SocketReply): void {
     case SOCKET_EVENTS.JOIN_ACCEPTED:
       sender.emit(reply.event, reply.payload);
       return;
+    // Stryker disable next-line ConditionalExpression: equivalent — unreachable, the cases above cover every reply (the `satisfies never` is the compile-time guard).
     default:
       return reply satisfies never;
   }
@@ -190,6 +191,7 @@ function emitNotice(
     case SOCKET_EVENTS.COIN_AWARDED:
       target.emit(notice.event, notice.payload);
       return;
+    // Stryker disable next-line ConditionalExpression: equivalent — unreachable, the cases above cover every notice (the `satisfies never` is the compile-time guard).
     default:
       return notice satisfies never;
   }

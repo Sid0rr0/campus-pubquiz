@@ -145,6 +145,15 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     expect(pointsByTeam(atReveal)).toEqual(pointsByTeam(atBreak));
   });
 
+  it('batch-grades the closest_guess question once, however many moves follow the lock', async () => {
+    const game = await startWithGuesses(GUESSES);
+    const gradeAtLock = jest.spyOn(game.answerService, 'gradeAtLock');
+
+    await actAll(game, TO_REVEAL);
+
+    expect(gradeAtLock).toHaveBeenCalledTimes(1);
+  });
+
   it('walks ADVANCE through all 5 cumulative reveal steps before moving to the next question', async () => {
     const game = await startWithGuesses(GUESSES);
     const step0 = await actAll(game, TO_REVEAL);

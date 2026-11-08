@@ -87,6 +87,7 @@ function upsertGradeOf(write: GradeWrite, now: Date) {
       };
     case 'keep':
       return {
+        // Stryker disable next-line ObjectLiteral: equivalent — the column defaults to 0, so a fresh insert reads the same without it.
         values: { pointsAwarded: 0 },
         mergeFields: UNGRADED_MERGE_FIELDS,
       };
@@ -116,6 +117,7 @@ export class AnswerService {
     // (last-write-wins until lock): the policy decides what survives.
     const existing = await this.answers.findOne(
       { gameSession: gameSessionId, question: questionId, team: teamId },
+      // Stryker disable next-line ArrayDeclaration,ObjectLiteral: a column projection; loading every column reads the same two.
       { fields: ['value', 'gradedAt'] },
     );
     const write = gradeOnSubmit(
@@ -148,6 +150,7 @@ export class AnswerService {
       },
     );
 
+    // Stryker disable next-line ObjectLiteral: a column projection; loading every column reads the same name.
     const team = await this.teams.findOneOrFail(teamId, { fields: ['name'] });
 
     return {
@@ -236,6 +239,7 @@ export class AnswerService {
     gameSessionId: number,
     questionIds: number[],
   ): Promise<number[]> {
+    // Stryker disable next-line ConditionalExpression: equivalent — an empty `whereIn` below returns no rows, so the result is [] either way.
     if (questionIds.length === 0) return [];
     const knex = this.answers.getKnex();
     const rows = (await knex('answers')
@@ -363,6 +367,7 @@ export class AnswerService {
     writes: readonly GradeWrite[],
   ): Promise<void> {
     const now = new Date();
+    // Stryker disable next-line BooleanLiteral: equivalent — flushing with nothing changed is a no-op.
     let isChanged = false;
     rows.forEach((row, index) => {
       const write = writes[index];
@@ -378,6 +383,7 @@ export class AnswerService {
         row.gradedAt = null;
       }
     });
+    // Stryker disable next-line ConditionalExpression: equivalent — flushing with nothing changed is a no-op.
     if (isChanged) await this.answers.getEntityManager().flush();
   }
 

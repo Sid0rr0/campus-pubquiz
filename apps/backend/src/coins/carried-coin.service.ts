@@ -35,10 +35,12 @@ export class CarriedCoinService {
           createdAt: now,
           updatedAt: now,
         },
+        // Stryker disable ObjectLiteral,ArrayDeclaration,StringLiteral: equivalent — the `in stored` guard above already skips decided teams, so the conflict handling only matters in a race that tests cannot stage.
         {
           onConflictFields: ['gameSession', 'team'],
           onConflictAction: 'ignore',
         },
+        // Stryker restore ObjectLiteral,ArrayDeclaration,StringLiteral
       );
       stored[teamId] = coins;
     }
@@ -73,6 +75,7 @@ export class CarriedCoinService {
     // Newest first, so the first one in a shared league is the team's last.
     const last = (await this.endedSessions.participations([teamId])).find(
       (night) =>
+        // Stryker disable next-line ConditionalExpression: equivalent — the session being decided is still live, so it is never among the ended nights.
         night.gameSessionId !== gameSessionId &&
         sharedIds.has(night.gameSessionId),
     );

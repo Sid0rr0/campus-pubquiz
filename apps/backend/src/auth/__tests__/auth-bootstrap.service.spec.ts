@@ -109,6 +109,33 @@ describe('AuthBootstrapService', () => {
     );
   });
 
+  it('creates the admin beside an unrelated user instead of promoting that one', async () => {
+    process.env = {
+      ...originalEnv,
+      BOOTSTRAP_ADMIN_USERNAME: 'root',
+      BOOTSTRAP_ADMIN_PASSWORD: 'plain-pw',
+    };
+    const other: Partial<User> = {
+      id: 3,
+      username: 'someone-else',
+      role: 'moderator',
+      status: 'pending',
+    };
+    const repo = createFakeUserRepository([other]);
+    const service = new AuthBootstrapService(
+      repo as unknown as UserRepository,
+      createFakeOrm(),
+    );
+
+    await service.onModuleInit();
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'root', role: 'admin' }),
+    );
+    expect(other.role).toBe('moderator');
+    expect(other.status).toBe('pending');
+  });
+
   it('promotes an existing non-admin user with a matching username instead of creating a new row', async () => {
     process.env = {
       ...originalEnv,
