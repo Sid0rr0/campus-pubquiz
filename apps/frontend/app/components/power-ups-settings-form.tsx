@@ -132,16 +132,6 @@ export function PowerUpsSettingsForm({
   );
 }
 
-/** A quickfire session has no coins, so its settings go to the server without the coin fields (the server refuses starting coins). */
-export function withoutCoinSettings(
-  value: SessionSettings,
-): Partial<SessionSettings> {
-  const rest: Partial<SessionSettings> = { ...value };
-  delete rest.startingCoins;
-  delete rest.powerUps;
-  return rest;
-}
-
 /** Applies a round overview change; the extra joker's cost follows it (4 with the overview, 3 without) while it still holds the old default. */
 export function withShowRoundOverview(
   value: SessionSettings,

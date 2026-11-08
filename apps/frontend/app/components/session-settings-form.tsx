@@ -1,7 +1,9 @@
 import { Cross2Icon, PlusIcon } from '@radix-ui/react-icons';
 import {
   BONUS_CATEGORIES,
+  quizModeAllows,
   type BonusCategory,
+  type QuizMode,
   type SessionSettings,
 } from '@campus-pubquiz/types';
 import {
@@ -14,15 +16,15 @@ import { withShowRoundOverview } from '@/app/components/power-ups-settings-form'
 interface SessionSettingsFormProps {
   value: SessionSettings;
   onChange: (next: SessionSettings) => void;
-  /** A quickfire session has no jokers (switch hidden); only it has the question timer. */
-  isQuickfire?: boolean;
+  /** The quiz mode decides whether the joker switch and the question timer show. */
+  mode: QuizMode;
 }
 
 /** Pure controlled form for the SessionSettings fields — shared by the creation confirm dialog and the lobby settings panel so the fields aren't duplicated in two screens. */
 export function SessionSettingsForm({
   value,
   onChange,
-  isQuickfire = false,
+  mode,
 }: SessionSettingsFormProps) {
   function toggleBonusCategory(category: BonusCategory): void {
     onChange({
@@ -81,7 +83,7 @@ export function SessionSettingsForm({
         />
       </label>
 
-      {isQuickfire && (
+      {quizModeAllows(mode, 'questionTimer') && (
         <label className="flex flex-col gap-1 text-sm font-extrabold">
           Quickfire question timer (seconds)
           <input
@@ -178,7 +180,7 @@ export function SessionSettingsForm({
         Show round overview after rules
       </label>
 
-      {!isQuickfire && (
+      {quizModeAllows(mode, 'jokers') && (
         <>
           <label className="flex items-center gap-2 text-sm font-extrabold">
             <input

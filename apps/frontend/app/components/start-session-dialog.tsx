@@ -8,6 +8,9 @@ import { CheckIcon, Cross2Icon } from '@radix-ui/react-icons';
 import {
   DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS,
   DEFAULT_SESSION_SETTINGS,
+  quizModeAllows,
+  settingsToSend,
+  type QuizMode,
   type QuizSummary,
   type SessionSettings,
 } from '@campus-pubquiz/types';
@@ -20,10 +23,7 @@ import {
   useTickableLeagues,
 } from '@/app/components/league-checkboxes';
 import { RoundsList } from '@/app/components/rounds-list';
-import {
-  PowerUpsSettingsForm,
-  withoutCoinSettings,
-} from '@/app/components/power-ups-settings-form';
+import { PowerUpsSettingsForm } from '@/app/components/power-ups-settings-form';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 
 interface StartSessionDialogProps {
@@ -44,14 +44,14 @@ export function StartSessionDialog({
     useSessionDraft(quiz);
   const { leagues } = useTickableLeagues();
   const createMutation = useCreateSession(onCreated, onClose);
-  const isQuickfire = isQuickfireQuiz(quiz);
+  const mode = modeOf(quiz);
   const quizTitle = quiz?.title ?? '';
 
   function handleConfirm(): void {
     if (!quiz) return;
     createMutation.mutate({
       quizId: quiz.id,
-      settings: settingsToSend(settings, isQuickfire),
+      settings: settingsToSend(mode, settings),
       name,
       leagueIds,
     });
@@ -80,7 +80,7 @@ export function StartSessionDialog({
               className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
             />
           </label>
-          {!isQuickfire && (
+          {quizModeAllows(mode, 'leagues') && (
             <LeagueCheckboxes
               leagues={leagues}
               selected={leagueIds}
@@ -88,7 +88,7 @@ export function StartSessionDialog({
             />
           )}
           <SessionTabs
-            isQuickfire={isQuickfire}
+            mode={mode}
             rounds={quiz?.rounds}
             settings={settings}
             onSettingsChange={setSettings}
@@ -140,16 +140,8 @@ function useSessionDraft(quiz: StartSessionDialogProps['quiz']) {
   return { settings, setSettings, name, setName, leagueIds, setLeagueIds };
 }
 
-function isQuickfireQuiz(quiz: StartSessionDialogProps['quiz']): boolean {
-  return quiz?.mode === 'quickfire';
-}
-
-/** A quickfire session has no coins, so it sends none of the coin settings. */
-function settingsToSend(
-  settings: SessionSettings,
-  isQuickfire: boolean,
-): Partial<SessionSettings> {
-  return isQuickfire ? withoutCoinSettings(settings) : settings;
+function modeOf(quiz: StartSessionDialogProps['quiz']): QuizMode {
+  return quiz?.mode ?? 'pub';
 }
 
 function defaultSettingsFor(
@@ -157,7 +149,7 @@ function defaultSettingsFor(
 ): SessionSettings {
   return {
     ...DEFAULT_SESSION_SETTINGS,
-    quickfireQuestionTimerSeconds: isQuickfireQuiz(quiz)
+    quickfireQuestionTimerSeconds: quizModeAllows(modeOf(quiz), 'questionTimer')
       ? DEFAULT_QUICKFIRE_QUESTION_TIMER_SECONDS
       : null,
   };
@@ -198,12 +190,12 @@ function useCreateSession(
 }
 
 function SessionTabs({
-  isQuickfire,
+  mode,
   rounds,
   settings,
   onSettingsChange,
 }: {
-  isQuickfire: boolean;
+  mode: QuizMode;
   rounds: NonNullable<StartSessionDialogProps['quiz']>['rounds'] | undefined;
   settings: SessionSettings;
   onSettingsChange: (settings: SessionSettings) => void;
@@ -223,7 +215,7 @@ function SessionTabs({
         >
           Settings
         </Tabs.Trigger>
-        {!isQuickfire && (
+        {quizModeAllows(mode, 'powerUps') && (
           <Tabs.Trigger
             value="power-ups"
             className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
@@ -239,10 +231,10 @@ function SessionTabs({
         <SessionSettingsForm
           value={settings}
           onChange={onSettingsChange}
-          isQuickfire={isQuickfire}
+          mode={mode}
         />
       </Tabs.Content>
-      {!isQuickfire && (
+      {quizModeAllows(mode, 'powerUps') && (
         <Tabs.Content value="power-ups">
           <PowerUpsSettingsForm value={settings} onChange={onSettingsChange} />
         </Tabs.Content>

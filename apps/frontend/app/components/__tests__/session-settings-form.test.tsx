@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { SessionSettings } from '@campus-pubquiz/types';
+import type { QuizMode, SessionSettings } from '@campus-pubquiz/types';
 import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 
@@ -14,14 +14,14 @@ import { SessionSettingsForm } from '@/app/components/session-settings-form';
 function renderControlled(
   initial: SessionSettings,
   onChange: (next: SessionSettings) => void,
-  isQuickfire = false,
+  mode: QuizMode = 'pub',
 ) {
   function Wrapper() {
     const [value, setValue] = useState(initial);
     return (
       <SessionSettingsForm
         value={value}
-        isQuickfire={isQuickfire}
+        mode={mode}
         onChange={(next) => {
           setValue(next);
           onChange(next);
@@ -77,7 +77,7 @@ describe('SessionSettingsForm', () => {
 
   it('fires onChange with an updated quickfireQuestionTimerSeconds', async () => {
     const onChange = vi.fn();
-    renderControlled(DEFAULT_SESSION_SETTINGS, onChange, true);
+    renderControlled(DEFAULT_SESSION_SETTINGS, onChange, 'quickfire');
 
     const input = screen.getByLabelText(/quickfire question timer/i);
     await userEvent.clear(input);
@@ -94,7 +94,7 @@ describe('SessionSettingsForm', () => {
     renderControlled(
       { ...DEFAULT_SESSION_SETTINGS, quickfireQuestionTimerSeconds: 30 },
       onChange,
-      true,
+      'quickfire',
     );
 
     const input = screen.getByLabelText(/quickfire question timer/i);
@@ -106,12 +106,19 @@ describe('SessionSettingsForm', () => {
     });
   });
 
-  it('hides the quickfire question timer for a pub quiz', () => {
+  it('hides the quickfire question timer and shows jokers for a pub quiz', () => {
     renderControlled(DEFAULT_SESSION_SETTINGS, vi.fn());
 
     expect(
       screen.queryByLabelText(/quickfire question timer/i),
     ).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^jokers$/i)).toBeInTheDocument();
+  });
+
+  it('hides jokers for a quickfire quiz', () => {
+    renderControlled(DEFAULT_SESSION_SETTINGS, vi.fn(), 'quickfire');
+
+    expect(screen.queryByLabelText(/^jokers$/i)).not.toBeInTheDocument();
   });
 
   it('toggles a bonus category off', async () => {
@@ -120,6 +127,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={onChange}
+        mode="pub"
       />,
     );
 
@@ -171,6 +179,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={vi.fn()}
+        mode="pub"
       />,
     );
 
@@ -188,6 +197,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={onChange}
+        mode="pub"
       />,
     );
 
@@ -205,6 +215,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={onChange}
+        mode="pub"
       />,
     );
 
@@ -222,6 +233,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={onChange}
+        mode="pub"
       />,
     );
 
@@ -244,6 +256,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={{ ...DEFAULT_SESSION_SETTINGS, showRoundOverview: false }}
         onChange={onChange}
+        mode="pub"
       />,
     );
     const toggle = screen.getByLabelText(/^jokers$/i);
@@ -271,6 +284,7 @@ describe('SessionSettingsForm', () => {
           jokersEnabled: true,
         }}
         onChange={vi.fn()}
+        mode="pub"
       />,
     );
 
@@ -285,6 +299,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={{ ...DEFAULT_SESSION_SETTINGS, showRoundOverview: true }}
         onChange={vi.fn()}
+        mode="pub"
       />,
     );
 
@@ -297,6 +312,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={onChange}
+        mode="pub"
       />,
     );
     const toggle = screen.getByLabelText(/collect feedback/i);
@@ -316,6 +332,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={onChange}
+        mode="pub"
       />,
     );
     const toggle = screen.getByLabelText(/fun facts on the break screen/i);
@@ -335,6 +352,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={onChange}
+        mode="pub"
       />,
     );
     const toggle = screen.getByLabelText(/show in the game list/i);
@@ -354,6 +372,7 @@ describe('SessionSettingsForm', () => {
       <SessionSettingsForm
         value={DEFAULT_SESSION_SETTINGS}
         onChange={onChange}
+        mode="pub"
       />,
     );
 
@@ -391,6 +410,7 @@ describe('SessionSettingsForm', () => {
           rules: ['Rule one.', 'Rule two.'],
         }}
         onChange={onChange}
+        mode="pub"
       />,
     );
 

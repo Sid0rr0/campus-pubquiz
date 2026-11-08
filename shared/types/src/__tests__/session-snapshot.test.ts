@@ -410,6 +410,18 @@ describe('the snapshot', () => {
       ).isCurrentRoundQuickfire,
     ).toBe(true);
   });
+
+  it('carries the session quiz mode', () => {
+    const session = sessionOver(rounds, progressAt('question_open'));
+
+    expect(buildSnapshot(session).quizMode).toBe('pub');
+    expect(
+      buildSnapshot({
+        ...session,
+        seededGame: { ...session.seededGame, quizMode: 'quickfire' },
+      }).quizMode,
+    ).toBe('quickfire');
+  });
 });
 
 describe('isJokerPickOpen', () => {

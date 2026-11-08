@@ -4,19 +4,19 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs } from 'radix-ui';
 import { toast } from 'sonner';
-import type {
-  SessionSettings,
-  UpdateSessionSettingsPayload,
+import {
+  quizModeAllows,
+  settingsToSend,
+  type QuizMode,
+  type SessionSettings,
+  type UpdateSessionSettingsPayload,
 } from '@campus-pubquiz/types';
 import {
   LeagueCheckboxes,
   useTickableLeagues,
 } from '@/app/components/league-checkboxes';
 import { queryKeys } from '@/app/lib/query-keys';
-import {
-  PowerUpsSettingsForm,
-  withoutCoinSettings,
-} from '@/app/components/power-ups-settings-form';
+import { PowerUpsSettingsForm } from '@/app/components/power-ups-settings-form';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { SessionApiError, updateSessionSettings } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
@@ -25,15 +25,15 @@ import { Button } from '@/app/components/button';
 interface SessionSettingsPanelProps {
   joinCode: string;
   settings: SessionSettings;
-  /** A quickfire session has no jokers, power-ups, coins or leagues. */
-  isQuickfire?: boolean;
+  /** The session's quiz mode: decides which settings show and are sent. */
+  mode: QuizMode;
 }
 
 /** Lobby-only settings editor — any field can keep changing right up until START_QUIZ locks them in. */
 export function SessionSettingsPanel({
   joinCode,
   settings,
-  isQuickfire = false,
+  mode,
 }: SessionSettingsPanelProps) {
   const queryClient = useQueryClient();
   const [value, setValue] = useState<SessionSettings>(settings);
@@ -79,7 +79,7 @@ export function SessionSettingsPanel({
       <h2 className="font-display text-xl">Session Settings</h2>
       <Tabs.Root defaultValue="settings" className="flex flex-col gap-3">
         <Tabs.List className="flex gap-1 border-b border-foreground/15">
-          {tabsFor(isQuickfire).map(([tab, label]) => (
+          {tabsFor(mode).map(([tab, label]) => (
             <Tabs.Trigger
               key={tab}
               value={tab}
@@ -90,19 +90,15 @@ export function SessionSettingsPanel({
           ))}
         </Tabs.List>
         <Tabs.Content value="settings">
-          <SessionSettingsForm
-            value={value}
-            onChange={setValue}
-            isQuickfire={isQuickfire}
-          />
+          <SessionSettingsForm value={value} onChange={setValue} mode={mode} />
         </Tabs.Content>
-        {!isQuickfire && (
+        {quizModeAllows(mode, 'powerUps') && (
           <Tabs.Content value="power-ups">
             <PowerUpsSettingsForm value={value} onChange={setValue} />
           </Tabs.Content>
         )}
       </Tabs.Root>
-      {!isQuickfire && (
+      {quizModeAllows(mode, 'leagues') && (
         <LeagueCheckboxes
           leagues={leagues}
           selected={pickedLeagueIds ?? memberOf}
@@ -115,7 +111,7 @@ export function SessionSettingsPanel({
         variant="solid-flat"
         size="md"
         onClick={() =>
-          saveMutation.mutate(savePayload(value, pickedLeagueIds, isQuickfire))
+          saveMutation.mutate(savePayload(value, pickedLeagueIds, mode))
         }
         className="w-fit self-end disabled:opacity-40"
       >
@@ -125,23 +121,23 @@ export function SessionSettingsPanel({
   );
 }
 
-/** A quickfire session has no power-ups, so no tab for them. */
-function tabsFor(isQuickfire: boolean): string[][] {
-  return isQuickfire
-    ? [['settings', 'Settings']]
-    : [
+/** A mode without power-ups has no tab for them. */
+function tabsFor(mode: QuizMode): string[][] {
+  return quizModeAllows(mode, 'powerUps')
+    ? [
         ['settings', 'Settings'],
         ['power-ups', 'Power-ups'],
-      ];
+      ]
+    : [['settings', 'Settings']];
 }
 
-/** What Save sends: the settings (a quickfire session sends no coin settings) and, once ticked by hand, the leagues. */
+/** What Save sends: the settings the mode allows and, once ticked by hand, the leagues. */
 function savePayload(
   value: SessionSettings,
   pickedLeagueIds: number[] | null,
-  isQuickfire: boolean,
+  mode: QuizMode,
 ): UpdateSessionSettingsPayload {
-  const settings = isQuickfire ? withoutCoinSettings(value) : value;
+  const settings = settingsToSend(mode, value);
   return pickedLeagueIds === null
     ? settings
     : { ...settings, leagueIds: pickedLeagueIds };
