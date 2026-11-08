@@ -6,7 +6,7 @@ Parent spec: `.scratch/doubled-rounds/spec.md`
 
 **Blocked by:** 01 (Doubled rounds module)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The leaderboard board badges a team when any of its doubled rounds is a round of the block in play; a team doubling through an extra joker is badged the same as one doubling through its joker.
 - [ ] Fun facts' joker holders are built from each roster team's doubled rounds, keeping the "round must exist in the quiz" and "on the roster" filters and the joker's source (chosen / drawn / set by the quiz master / extra) the facts use.
