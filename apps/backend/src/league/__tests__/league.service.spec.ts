@@ -1,6 +1,8 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
-import type { GameStatus } from '@campus-pubquiz/types';
-import { QUICKFIRE_NO_LEAGUE_MESSAGE } from '@/session/quickfire-session-rules';
+import {
+  QUICKFIRE_NO_LEAGUE_MESSAGE,
+  type GameStatus,
+} from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';

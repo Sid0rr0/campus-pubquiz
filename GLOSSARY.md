@@ -16,7 +16,7 @@ The questions of the current block a session has reached. While answering, those
 _Avoid_: current block, active block
 
 **Quiz mode**:
-How a quiz is played, chosen when the quiz is created and never changed: a **pub quiz** (answers stay open until a block locks, then a break, then the reveal) or a **quickfire quiz**. Every round of a quiz plays in its mode; a quiz never mixes the two.
+How a quiz is played, chosen when the quiz is created and never changed: a **pub quiz** (answers stay open until a block locks, then a break, then the reveal) or a **quickfire quiz**. Every round of a quiz plays in its mode; a quiz never mixes the two. A quickfire quiz's sessions have no jokers, power-ups, coins or leagues.
 
 **Quickfire quiz**:
 A quiz where every question is its own block, so each one is locked, scored and revealed before the next, and a faster correct answer scores more.

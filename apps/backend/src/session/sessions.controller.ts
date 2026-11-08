@@ -13,6 +13,7 @@ import {
 import {
   hasJokersWithoutOverview,
   JOKERS_NEED_OVERVIEW_MESSAGE,
+  quizModeSettingsRefusal,
   type ActiveSessionSummary,
   type CreateSessionPayload,
   type SessionSettings,
@@ -31,7 +32,6 @@ import { leagueIdsSchema } from '@/league/league.schema';
 import { mapUnknownLiveSession } from '@/game/rest/live-session-http';
 import { mapLeagueErrors } from '@/league/league-http';
 import { LeagueService } from '@/league/league.service';
-import { quickfireSettingsRefusal } from '@/session/quickfire-session-rules';
 import {
   resolveSessionSettings,
   sessionSettingsPartialSchema,
@@ -122,7 +122,8 @@ export class SessionsController {
     const name = parseName(body.name);
     const leagueIds = parseLeagueIds(body.leagueIds) ?? [];
     if (await this.gameState.isQuickfireQuiz(quizId)) {
-      const refusal = quickfireSettingsRefusal(
+      const refusal = quizModeSettingsRefusal(
+        'quickfire',
         parseSettingsPartial(body.settings),
         leagueIds,
       );
