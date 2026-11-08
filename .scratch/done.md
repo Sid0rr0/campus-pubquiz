@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| quiz-mode-module | [One shared Quiz mode module: what a quickfire quiz turns off](quiz-mode-module/spec.md) | 4 |
 | doubled-rounds | [One Doubled rounds module for the Joker and the Extra joker](doubled-rounds/spec.md) | 4 |
 | coin-ledger | [One Coin ledger for a team's coins and the coin rules](coin-ledger/spec.md) | 4 |
 | power-up-offer | [One Power-up offer module for the server and the phone](power-up-offer/spec.md) | 3 |
