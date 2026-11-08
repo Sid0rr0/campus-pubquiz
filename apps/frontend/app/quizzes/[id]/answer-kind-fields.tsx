@@ -8,6 +8,10 @@ import {
 } from '@radix-ui/react-icons';
 import {
   DEFAULT_MARGIN,
+  MAX_CLUES,
+  MIN_CLUES,
+  QUESTION_KINDS,
+  clueValues,
   gradingSettingsOf,
   OPENED_QUESTION_FIXED_FIELDS,
   isScoringModeOf,
@@ -396,6 +400,111 @@ function SortFields({
   );
 }
 
+/** A Clue question: the ordered clues (kept in `sortItems`, vaguest first), what a right answer is worth on each, and the typed answer. */
+function ClueFields(props: AnswerFieldsProps) {
+  const { question, issues, isOpened, onChange } = props;
+  const clues = question.sortItems;
+  const filled = clues.filter((clue) => clue.trim() !== '').length;
+
+  function moveClue(clueIndex: number, direction: -1 | 1): void {
+    const targetIndex = clueIndex + direction;
+    if (targetIndex < 0 || targetIndex >= clues.length) return;
+    const moved = [...clues];
+    [moved[clueIndex], moved[targetIndex]] = [
+      moved[targetIndex],
+      moved[clueIndex],
+    ];
+    onChange({ sortItems: moved });
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-extrabold text-foreground/60">
+        Clues, vaguest first ({MIN_CLUES} to {MAX_CLUES}; the room sees them one
+        at a time)
+      </p>
+      {clues.map((clue, clueIndex) => (
+        <div key={clueIndex} className="flex items-center gap-2">
+          <span className="w-5 shrink-0 text-center font-display text-cyan">
+            {clueIndex + 1}
+          </span>
+          <input
+            value={clue}
+            onChange={(event) =>
+              onChange({
+                sortItems: clues.map((text, i) =>
+                  i === clueIndex ? event.target.value : text,
+                ),
+              })
+            }
+            disabled={isFixedOnOpened(isOpened, 'options')}
+            placeholder="Clue text"
+            className={TEXT_INPUT_CLASS}
+          />
+          <Button
+            type="button"
+            onClick={() => moveClue(clueIndex, -1)}
+            disabled={isFixedOnOpened(isOpened, 'options') || clueIndex === 0}
+            variant="icon"
+            size="icon-sm"
+            aria-label={`Move clue ${clueIndex + 1} up`}
+          >
+            <ArrowUpIcon aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => moveClue(clueIndex, 1)}
+            disabled={
+              isFixedOnOpened(isOpened, 'options') ||
+              clueIndex === clues.length - 1
+            }
+            variant="icon"
+            size="icon-sm"
+            aria-label={`Move clue ${clueIndex + 1} down`}
+          >
+            <ArrowDownIcon aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() =>
+              onChange({ sortItems: clues.filter((_, i) => i !== clueIndex) })
+            }
+            disabled={
+              isFixedOnOpened(isOpened, 'options') || clues.length <= MIN_CLUES
+            }
+            variant="icon-danger"
+            size="icon-sm"
+            aria-label={`Remove clue ${clueIndex + 1}`}
+          >
+            <Cross2Icon aria-hidden="true" />
+          </Button>
+        </div>
+      ))}
+      <FieldErrors issues={fieldIssues(issues, 'options')} />
+      <Button
+        type="button"
+        onClick={() => onChange({ sortItems: [...clues, ''] })}
+        disabled={
+          isFixedOnOpened(isOpened, 'options') || clues.length >= MAX_CLUES
+        }
+        variant="outline-dashed"
+        size="xs"
+        className="self-start"
+      >
+        <PlusIcon aria-hidden="true" />
+        Add clue
+      </Button>
+      {filled >= MIN_CLUES && (
+        <p className="text-xs font-extrabold text-foreground/60">
+          A right answer is worth {clueValues(filled).join(' · ')} points (clue
+          1 to {filled})
+        </p>
+      )}
+      <TypedAnswerField {...props} inputType="text" />
+    </div>
+  );
+}
+
 function MatchFields({
   question,
   issues,
@@ -502,6 +611,8 @@ const ANSWER_KIND_FIELDS = {
 
 /** The answer fields for the question's answer kind, resolved from its type. */
 export function AnswerSection(props: AnswerFieldsProps) {
-  const Fields = ANSWER_KIND_FIELDS[resolveAnswerKind(props.question)];
+  const Fields = QUESTION_KINDS[props.question.type].hasClues
+    ? ClueFields
+    : ANSWER_KIND_FIELDS[resolveAnswerKind(props.question)];
   return <Fields {...props} />;
 }

@@ -1166,7 +1166,7 @@
         },
         "points": {
           "name": "points",
-          "type": "int",
+          "type": "real",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -1178,7 +1178,7 @@
           "default": "1",
           "comment": null,
           "enumItems": [],
-          "mappedType": "integer"
+          "mappedType": "float"
         }
       },
       "name": "questions",

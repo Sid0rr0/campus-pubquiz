@@ -7,6 +7,7 @@ import {
   quickfireTypesMessage,
   sheetFieldForIssue,
   sheetRowMetaSchema,
+  withDerivedPoints,
   type ImportPreview,
   type ImportQuestionPreview,
   type ImportRowIssue,
@@ -128,7 +129,7 @@ export function parseQuestionRow(
     roundNote: round_note ?? '',
     showRoundNote: show_round_note,
     // The validated input, never the schema's parsed output (see checkQuestion).
-    question: candidate as unknown as ImportQuestionPreview,
+    question: withDerivedPoints(candidate as unknown as ImportQuestionPreview),
   };
 }
 

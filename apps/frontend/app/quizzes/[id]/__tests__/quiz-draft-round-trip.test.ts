@@ -73,6 +73,16 @@ const VIDEO_QUESTIONS: Record<QuestionType, ImportQuestionPreview> = {
     mediaUrl: VIDEO,
     ...clip,
   },
+  clues: {
+    ...base,
+    type: 'clues',
+    answer: 'Einstein',
+    options: ['Vague', 'Sharper', 'Giveaway'],
+    // Three clues: the stored points are derived.
+    points: 1.5,
+    mediaUrl: VIDEO,
+    ...clip,
+  },
 };
 
 /** draft -> preview -> stored fields (the real codec) -> preview -> draft. */

@@ -301,7 +301,7 @@ describe('checkQuestion', () => {
           path: ['type'],
           code: 'invalid_value',
           message:
-            'Unknown question type — expected one of: multiple_choice, free_text, sort, match, closest_guess, number',
+            'Unknown question type — expected one of: multiple_choice, free_text, sort, match, closest_guess, number, clues',
         },
       ],
     });

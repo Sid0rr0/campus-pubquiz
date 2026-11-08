@@ -63,6 +63,13 @@ const QUESTION_BY_TYPE: Record<QuestionType, ImportQuestionPreview> = {
     points: 2,
     mediaUrl: 'https://example.com/wall.jpg',
   },
+  clues: {
+    type: 'clues',
+    prompt: 'Who am I?',
+    options: ['I was born in 1879', 'I wrote about relativity', 'E = mc²'],
+    answer: 'Einstein',
+    points: 1.5,
+  },
 };
 
 /** Media is carried by any type: a free text question with a clipped YouTube video. */

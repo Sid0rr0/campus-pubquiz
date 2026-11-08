@@ -1323,7 +1323,7 @@ a dead end:
 ## Question Types
 
 `QuestionType` is one of `free_text`, `multiple_choice`, `sort`, `match`,
-`closest_guess`, or `number`. Each has its own submission format and
+`closest_guess`, `number`, or `clues`. Each has its own submission format and
 grading behavior. Media is not a type: any question can carry a
 `media_url` and an `answer_media_url` (see [Media on any question](#media-on-any-question)).
 
@@ -1443,6 +1443,31 @@ grading behavior. Media is not a type: any question can carry a
   Number question with no stored margin is sent with the default, and
   `closest_guess` and every other type are sent without one. The screens show
   margin text from the view alone and never ask the question type registry.
+- **`clues`** — the **Clue question** (label "Clue question"): 2 to 8 ordered
+  clues and a typed answer. Teams type their answer like `free_text`, with the
+  same grading mode (`match-or-human`): an exact match (trimmed,
+  case-insensitive) is graded correct at submit for the question's points,
+  anything else waits for the quiz master. It is excluded from quickfire, takes
+  no power-ups and uses the plain answer reveal. **The clues ride in the
+  question's `options`** (the field choice and sort questions use), so the
+  stored payload, the preview and the sheet carry them there, in order; the
+  registry flag `hasClues` marks the type. **Points are derived**: always
+  clues × 0.5 (`cluePoints`, `shared/types/src/clue-value.ts`), whatever the
+  sheet's `points` cell or the editor's form says. Import (`parseQuestionRow`)
+  and draft save (`previewToStoredFields`) both apply `withDerivedPoints`, and
+  the import preview shows the derived value, so `Question.points` is stored as
+  a half-point `real` (like `Answer.pointsAwarded`). A right answer on clue `k`
+  of `N` is worth `0.5 × (N − k + 1)` (`clueValue`/`clueValues`: 5 clues are
+  2.5 · 2 · 1.5 · 1 · 0.5), the value the editor lists next to the clues.
+  The preview schema (`cluesPreviewSchema`) refuses fewer than 2 or more than 8
+  clues, a clue containing `|` and an empty answer. **Editor:** picking the type
+  shows a clue list (add, delete, move up/down) and the per-clue value line in
+  place of the points field. **No clue leaves the server before the reveal**:
+  `toQuestionView`, the admin question context and the presenter's screen
+  preview drop `options` for a `hasClues` type (`withoutClues`), and only the
+  reveal views carry them. For now a Clue question plays like `free_text` and
+  every right answer scores the first-clue value; stepping through the clues in
+  a session is not built yet.
 
 ### Media on any question
 
@@ -1891,7 +1916,7 @@ rounds back up to full points) from the response time stored on each answer at s
 survives a backend restart, and a correction made before the question locks is
 speed-scaled like any other); an already-graded `closest_guess` re-runs its batch,
 overwriting any override like the auto-graded types;
-`match-or-human` types (`free_text` only) grade answers that
+`match-or-human` types (`free_text` and `clues`) grade answers that
 match the corrected key correct, keep the admin's grade on a non-matching
 answer, and send any other non-matching answer back to ungraded — including
 one that was auto-graded correct under the old key (told apart by re-running
@@ -1975,8 +2000,11 @@ Sheet row format (one row per question):
 round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author | round_note | show_round_note | show_note
 ```
 
-`type` is one of the six [Question Types](#question-types) above — see
-that section for what each needs in `options` and `answer`. A row typed
+`type` is one of the seven [Question Types](#question-types) above — see
+that section for what each needs in `options` and `answer`. (A `clues` row
+holds its clues in `options` separated by `|`, vaguest first, and the answer in
+`answer`; whatever its `points` cell says is replaced by clues × 0.5, and
+export writes the derived value, so export → import comes back unchanged.) A row typed
 `audio` or `youtube` (an older export) is rejected on its `type` cell with
 `Question type "audio" was removed — use free_text (or multiple_choice if the
 row has options) and keep the media_url.`; there are no silent aliases.

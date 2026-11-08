@@ -32,6 +32,7 @@ import {
 } from './quickfire-visibility';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import { questionOutcome } from './question-outcome';
+import { withoutClues } from './question-view-conversions';
 import type { SeededQuestion } from './question-views';
 import type {
   AdminQuestionContext,
@@ -356,7 +357,7 @@ export function buildAdminQuestionContext(
     );
     if (questionOffset === -1) continue;
 
-    const question = round.questions[questionOffset];
+    const question = withoutClues(round.questions[questionOffset]);
     return {
       type: question.type,
       prompt: question.prompt,

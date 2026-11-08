@@ -2371,4 +2371,118 @@ describe('QuizEditorPanel', () => {
       ).not.toHaveLength(0);
     });
   });
+
+  describe('Clue question', () => {
+    async function startWithClueQuestion(
+      user: ReturnType<typeof userEvent.setup>,
+    ) {
+      renderWithQuery(<QuizEditorPanel quizId="new" />);
+      await user.click(
+        screen.getByRole('button', { name: /start from scratch/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /add question/i }));
+      await user.click(screen.getByRole('button', { name: /clue question/i }));
+    }
+
+    it('swaps the points field for a clue list and the per-clue values', async () => {
+      const user = userEvent.setup();
+      await startWithClueQuestion(user);
+
+      expect(screen.queryByLabelText(/^points$/i)).not.toBeInTheDocument();
+      const clues = screen.getAllByPlaceholderText(/clue text/i);
+      expect(clues).toHaveLength(2);
+
+      for (const [index, text] of ['One', 'Two', 'Three'].entries()) {
+        if (index >= clues.length) {
+          await user.click(screen.getByRole('button', { name: /add clue/i }));
+        }
+        await user.type(
+          screen.getAllByPlaceholderText(/clue text/i)[index],
+          text,
+        );
+      }
+
+      expect(
+        screen.getByText(/worth 1\.5 · 1 · 0\.5 points/i),
+      ).toBeInTheDocument();
+    });
+
+    it('reorders and deletes clues, and stops at 8', async () => {
+      const user = userEvent.setup();
+      await startWithClueQuestion(user);
+      await user.type(screen.getAllByPlaceholderText(/clue text/i)[0], 'First');
+      await user.type(
+        screen.getAllByPlaceholderText(/clue text/i)[1],
+        'Second',
+      );
+
+      await user.click(
+        screen.getByRole('button', { name: /move clue 1 down/i }),
+      );
+      expect(
+        screen
+          .getAllByPlaceholderText(/clue text/i)
+          .map((i) => (i as HTMLInputElement).value),
+      ).toEqual(['Second', 'First']);
+
+      for (let i = 0; i < 6; i += 1) {
+        await user.click(screen.getByRole('button', { name: /add clue/i }));
+      }
+      expect(screen.getByRole('button', { name: /add clue/i })).toBeDisabled();
+
+      await user.click(screen.getByRole('button', { name: /remove clue 8/i }));
+      expect(screen.getAllByPlaceholderText(/clue text/i)).toHaveLength(7);
+    });
+
+    it('saves the clues in order with the answer', async () => {
+      const user = userEvent.setup();
+      mockCreateQuiz.mockResolvedValue({
+        quizId: 42,
+        roundCount: 1,
+        questionCount: 1,
+      });
+      await startWithClueQuestion(user);
+      await user.type(screen.getByPlaceholderText(/question prompt/i), 'Who?');
+      await user.type(screen.getAllByPlaceholderText(/clue text/i)[0], 'Vague');
+      await user.type(screen.getAllByPlaceholderText(/clue text/i)[1], 'Sharp');
+      await user.type(
+        screen.getByPlaceholderText(/accepted answer/i),
+        'Einstein',
+      );
+
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+      await waitFor(() =>
+        expect(mockCreateQuiz).toHaveBeenCalledWith(
+          expect.objectContaining({
+            rounds: [
+              expect.objectContaining({
+                questions: [
+                  expect.objectContaining({
+                    type: 'clues',
+                    options: ['Vague', 'Sharp'],
+                    answer: 'Einstein',
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ),
+      );
+    });
+
+    it('is not offered in a quickfire quiz', async () => {
+      const user = userEvent.setup();
+      renderWithQuery(<QuizEditorPanel quizId="new" />);
+      await user.click(screen.getByRole('radio', { name: 'Quickfire' }));
+      await user.click(
+        screen.getByRole('button', { name: /start from scratch/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /add question/i }));
+
+      expect(
+        screen.queryByRole('button', { name: /clue question/i }),
+      ).not.toBeInTheDocument();
+    });
+  });
 });

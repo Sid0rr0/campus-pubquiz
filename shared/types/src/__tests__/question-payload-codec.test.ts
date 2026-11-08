@@ -22,6 +22,7 @@ const VALID_STORED: Record<QuestionType, unknown> = {
   },
   closest_guess: {},
   number: { margin: { value: 5, unit: 'absolute' } },
+  clues: { options: ['vague', 'sharp'] },
 };
 
 /** Malformed JSON per type: the wrong shape for a field that type reads. */
@@ -34,6 +35,7 @@ const MALFORMED_STORED: Record<QuestionType, unknown> = {
   match: { options: ['x'], matchTargets: 'nope' },
   closest_guess: 'not an object',
   number: { margin: { value: '5', unit: 'absolute' } },
+  clues: { options: 'vague|sharp' },
 };
 
 describe('question payload codec', () => {

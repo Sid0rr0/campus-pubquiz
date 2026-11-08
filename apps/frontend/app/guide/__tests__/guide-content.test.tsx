@@ -25,7 +25,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1560;
+const MAX_GUIDE_WORDS = 1640;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {

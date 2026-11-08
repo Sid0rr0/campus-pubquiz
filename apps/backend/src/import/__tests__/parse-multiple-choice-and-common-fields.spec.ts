@@ -130,7 +130,7 @@ describe('parseQuestionRow - multiple choice and common fields', () => {
       issues: [
         expect.objectContaining({
           message:
-            'Unknown question type "karaoke" — expected one of: multiple_choice, free_text, sort, match, closest_guess, number',
+            'Unknown question type "karaoke" — expected one of: multiple_choice, free_text, sort, match, closest_guess, number, clues',
         }),
       ],
     });
