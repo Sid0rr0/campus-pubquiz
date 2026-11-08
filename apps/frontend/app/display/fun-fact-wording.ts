@@ -68,6 +68,18 @@ const FUN_FACT_LINES: {
     prompt: fact.question.prompt,
     answer: fact.question.answer,
   }),
+  clue_cracked_early: (fact) => ({
+    headline: fact.teamNames.join(', '),
+    detail: `Cracked it early: ${questionLabel(fact.question)} on ${fact.clue === 1 ? 'the first clue' : `clue ${fact.clue}`}`,
+    prompt: fact.question.prompt,
+    answer: fact.question.answer,
+  }),
+  clue_last_gasp: (fact) => ({
+    headline: `Nobody got it until clue ${fact.clue}`,
+    detail: questionLabel(fact.question),
+    prompt: fact.question.prompt,
+    answer: fact.question.answer,
+  }),
   clean_sweep: (fact) => ({
     headline: fact.teamNames.join(', '),
     detail: 'Clean sweep: every question right in the last block',

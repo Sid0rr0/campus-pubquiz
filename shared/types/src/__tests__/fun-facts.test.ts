@@ -463,6 +463,69 @@ describe('describeFunFacts', () => {
     });
   });
 
+  describe('clue questions', () => {
+    // Question 1 is a 4-clue Clue question; round 1 is revealed, round 2 is in play.
+    function clueSession(answers: FunFactAnswer[]): SessionState {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, { answers });
+      const [first, ...rest] = session.seededGame.rounds[0].questions;
+      session.seededGame.rounds[0].questions = [
+        { ...first, type: 'clues', options: ['a', 'b', 'c', 'd'] },
+        ...rest,
+      ];
+      const second = session.seededGame.rounds[1].questions;
+      session.seededGame.rounds[1].questions = [
+        { ...second[0], type: 'clues', options: ['a', 'b', 'c', 'd'] },
+        ...second.slice(1),
+      ];
+      return session;
+    }
+    const clued = (
+      questionId: number,
+      team: number,
+      clue: number,
+      verdict: FunFactAnswer['verdict'] = 'correct',
+    ) => answer(questionId, team, verdict, { clue });
+
+    it('names the teams with the earliest correct answer, which came before the last clue', () => {
+      const facts = describeFunFacts(
+        clueSession([clued(1, 1, 2), clued(1, 0, 2), clued(1, 2, 4)]),
+      );
+      expect(facts.find((f) => f.kind === 'clue_cracked_early')).toEqual({
+        kind: 'clue_cracked_early',
+        teamNames: ['Alpha', 'Bravo'],
+        clue: 2,
+        question: expect.objectContaining({ questionId: 1 }),
+      });
+      expect(facts.find((f) => f.kind === 'clue_last_gasp')).toMatchObject({
+        clue: 2,
+      });
+    });
+
+    it('skips cracked-early when the earliest correct answer came on the last clue', () => {
+      const facts = kinds(clueSession([clued(1, 0, 4), clued(1, 1, 4)]));
+      expect(facts).not.toContain('clue_cracked_early');
+      expect(facts).toContain('clue_last_gasp');
+    });
+
+    it('skips last-gasp when the earliest correct answer came on clue 1', () => {
+      const facts = kinds(clueSession([clued(1, 0, 1), clued(1, 1, 3)]));
+      expect(facts).toContain('clue_cracked_early');
+      expect(facts).not.toContain('clue_last_gasp');
+    });
+
+    it('ignores incorrect answers, and says nothing when nobody got it', () => {
+      const facts = kinds(clueSession([clued(1, 0, 1, 'incorrect')]));
+      expect(facts).not.toContain('clue_cracked_early');
+      expect(facts).not.toContain('clue_last_gasp');
+    });
+
+    it('never draws from the block in play', () => {
+      const facts = kinds(clueSession([clued(3, 0, 1), clued(3, 1, 3)]));
+      expect(facts).not.toContain('clue_cracked_early');
+      expect(facts).not.toContain('clue_last_gasp');
+    });
+  });
+
   describe('clean sweep', () => {
     it('lists the teams that got every question of the last revealed block fully correct', () => {
       const session = sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
