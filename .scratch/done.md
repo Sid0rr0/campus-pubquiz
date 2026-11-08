@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| clue-question | [Clue question type, worth less with every clue shown](clue-question/spec.md) | 5 |
 | play-page-wiring | [The /play page as plain wiring](play-page-wiring/spec.md) | 2 |
 | quiz-mode-module | [One shared Quiz mode module: what a quickfire quiz turns off](quiz-mode-module/spec.md) | 4 |
 | doubled-rounds | [One Doubled rounds module for the Joker and the Extra joker](doubled-rounds/spec.md) | 4 |
