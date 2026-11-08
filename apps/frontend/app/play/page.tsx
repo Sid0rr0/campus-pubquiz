@@ -332,7 +332,7 @@ function BlockBrowser({
   jokerMarks,
   onSubmitAnswer,
 }: {
-  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myPurchases'>;
+  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myAnswerClues' | 'myPurchases'>;
   team: JoinedTeam;
   selectedQuestion: SelectedQuestion;
   revealQuestion: BrowserState['revealQuestion'];
@@ -362,6 +362,7 @@ function BlockBrowser({
         revealQuestion={revealQuestion}
         isQuickfireMode={view.isCurrentRoundQuickfire}
         myAnswers={myAnswers}
+        myAnswerClue={game.myAnswerClues[selectedQuestion.id]}
         myAnswerPoints={selectedResult.points}
         myAnswerVerdict={selectedResult.verdict}
         myAnswerJokerExtra={selectedResult.jokerExtra}

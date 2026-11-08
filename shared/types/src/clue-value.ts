@@ -8,6 +8,11 @@ export function clueValue(clueCount: number, clue: number): number {
   return CLUE_STEP * (clueCount - clue + 1);
 }
 
+/** What a right answer locked in on clue `clue` is worth, from the question's points (its first-clue value) alone: for readers that don't hold the clues. */
+export function clueValueFromPoints(points: number, clue: number): number {
+  return points - CLUE_STEP * (clue - 1);
+}
+
 /** Every clue's value, first clue (the most) to last (half a point). */
 export function clueValues(clueCount: number): number[] {
   return Array.from({ length: clueCount }, (_, index) =>

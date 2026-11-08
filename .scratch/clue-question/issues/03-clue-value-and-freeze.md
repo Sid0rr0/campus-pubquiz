@@ -25,7 +25,7 @@ Update DOCUMENTATION.md (the Answer Lifecycle exception to last-write-wins, and 
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Submitting records the highest clue shown, and a migration adds the column
 - [ ] A changed answer is refused once a newer clue is shown, an unchanged resubmission is accepted, and changes on the last clue are accepted (answer service spec against Postgres)

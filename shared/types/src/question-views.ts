@@ -19,6 +19,8 @@ export interface QuestionView {
   clueCount?: number;
   /** Clue question only: what a right answer is worth now, from the highest clue shown. */
   clueValue?: number;
+  /** Clue question only: the highest clue shown (1-based); an answer locked in on an earlier clue is frozen. */
+  highestClue?: number;
   /** Match only: the right-hand items, in the order shown to players. */
   matchTargets?: string[];
   /** Match only: unset is resolved by the Answer key (answer-key.ts); readers go through it. */

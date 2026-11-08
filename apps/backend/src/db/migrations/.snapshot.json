@@ -3627,6 +3627,22 @@
           "comment": null,
           "enumItems": [],
           "mappedType": "integer"
+        },
+        "clue": {
+          "name": "clue",
+          "type": "int",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
         }
       },
       "name": "answers",

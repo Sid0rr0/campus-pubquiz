@@ -9,6 +9,7 @@ import {
 import { NotFoundError } from '@mikro-orm/core';
 import {
   AnswerGradeRefusedError,
+  AnswerLockedError,
   AnswerService,
 } from '@/answer/answer.service';
 import type { BlockGradingService } from '@/game/state/block-grading.service';
@@ -58,13 +59,22 @@ export class AnswersChanges {
       session.phaseStartedAt === null
         ? null
         : Date.now() - session.phaseStartedAt;
-    const submitted = await this.answerService.submit(
-      session.seededGame.gameSessionId,
-      question,
-      teamId,
-      value,
-      responseMs,
-    );
+    let submitted: Awaited<ReturnType<AnswerService['submit']>>;
+    try {
+      submitted = await this.answerService.submit(
+        session.seededGame.gameSessionId,
+        question,
+        teamId,
+        value,
+        responseMs,
+        session.highestClueShown[questionId] ?? null,
+      );
+    } catch (error) {
+      if (error instanceof AnswerLockedError) {
+        throw new SessionRefusal(error.message);
+      }
+      throw error;
+    }
 
     const refreshed = await this.refreshAnswers(session, questionId);
     return {
@@ -83,6 +93,7 @@ export class AnswersChanges {
               pointsAwarded: submitted.pointsAwarded,
               gradedAt: submitted.gradedAt,
               verdict: submitted.verdict,
+              clue: submitted.clue,
             },
           },
         ],

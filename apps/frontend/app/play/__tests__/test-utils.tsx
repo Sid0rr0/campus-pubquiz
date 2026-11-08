@@ -51,6 +51,7 @@ export function teamLinkResult({
         submitShowdownGuess: vi.fn(),
         myAnswers: {},
         myAnswerGrades: {},
+        myAnswerClues: {},
         myBonusAwards: [],
         myRoundRatings: {},
         myFeedback: { comment: '', topics: [] },

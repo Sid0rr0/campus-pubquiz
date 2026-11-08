@@ -44,12 +44,14 @@ export function clueViewFields(
   question: SeededQuestion,
   shown: number,
   highest: number,
-): Pick<QuestionView, 'clues' | 'clueCount' | 'clueValue'> {
+): Pick<QuestionView, 'clues' | 'clueCount' | 'clueValue' | 'highestClue'> {
   const all = question.options ?? [];
   if (!QUESTION_KINDS[question.type].hasClues || shown === 0) return {};
+  const highestShown = Math.max(highest, shown);
   return {
     clues: all.slice(0, shown),
     clueCount: all.length,
-    clueValue: clueValue(all.length, Math.max(highest, shown)),
+    clueValue: clueValue(all.length, highestShown),
+    highestClue: highestShown,
   };
 }

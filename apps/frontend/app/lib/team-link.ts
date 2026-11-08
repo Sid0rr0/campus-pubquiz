@@ -70,6 +70,15 @@ function buildMyAnswers(answers: TeamAnswerView[]): Record<number, string> {
   );
 }
 
+/** The clue each Clue question answer was locked in on, by question id; other answers have none. */
+function buildMyAnswerClues(answers: TeamAnswerView[]): Record<number, number> {
+  return Object.fromEntries(
+    answers.flatMap(({ questionId, clue }) =>
+      clue ? [[questionId, clue]] : [],
+    ),
+  );
+}
+
 function toGrade(answer: {
   pointsAwarded: number;
   gradedAt: string;
@@ -165,6 +174,8 @@ export interface TeamLinkState {
   /** The team's own saved answers by question id. */
   myAnswers: Record<number, string>;
   myAnswerGrades: Record<number, MyAnswerGrade>;
+  /** The clue each Clue question answer was locked in on, by question id. */
+  myAnswerClues: Record<number, number>;
   /** Every bonus award this team has received so far this session, in award order. */
   myBonusAwards: TeamBonusAwardView[];
   /** What the join carried plus every rating the server acknowledged since. */
@@ -326,6 +337,7 @@ const EMPTY_TEAM_DATA = {
   isLinked: false,
   myAnswers: {},
   myAnswerGrades: {},
+  myAnswerClues: {},
   myBonusAwards: [],
   myRoundRatings: {},
   myFeedback: EMPTY_FEEDBACK,
@@ -645,6 +657,7 @@ function teamDataFromJoin(payload: JoinAcceptedPayload) {
   return {
     myAnswers: buildMyAnswers(answers),
     myAnswerGrades: buildMyAnswerGrades(answers),
+    myAnswerClues: buildMyAnswerClues(answers),
     myBonusAwards: payload.bonusAwards ?? [],
     myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
     myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
@@ -716,6 +729,9 @@ function receiveAnswer(
     ...state,
     myAnswers: { ...state.myAnswers, [payload.questionId]: payload.value },
     myAnswerGrades,
+    myAnswerClues: payload.clue
+      ? { ...state.myAnswerClues, [payload.questionId]: payload.clue }
+      : state.myAnswerClues,
   });
 }
 
@@ -962,6 +978,7 @@ const INPUT_HANDLERS: {
       ...state,
       myAnswers: buildMyAnswers(input.answers),
       myAnswerGrades: buildMyAnswerGrades(input.answers),
+      myAnswerClues: buildMyAnswerClues(input.answers),
     }),
   bonusAwardsSynced: (state, input) =>
     unchanged({ ...state, myBonusAwards: input.bonusAwards }),

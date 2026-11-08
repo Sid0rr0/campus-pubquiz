@@ -1150,6 +1150,14 @@ itself — the display and other players just see counts.
    answer to a question the session doesn't hold.
 2. **Upsert** — answers are keyed `(gameSession, question, team)`;
    re-submitting overwrites (last-write-wins is the desired pub-quiz behavior).
+   The one exception is the Clue question (`clues`): its answer records the
+   clue it was locked in on (`answers.clue`, the highest clue shown when it was
+   created or its value last changed), and a resubmission with a different
+   value is refused ("Your answer is locked in: a new clue has been shown")
+   once that clue is below the highest clue shown. An unchanged resubmission is
+   accepted and keeps its clue; answers on the last clue stay changeable until
+   the block locks; a team that hasn't answered can still answer later, at the
+   highest clue's value.
 3. **Acknowledge** — the submitter gets `ANSWER_RECEIVED`, which the phone
    uses to tick its checkmarks and flash a short "Saved ✓" (an accepted
    submit only, never a refused one); the admin room gets the full `ANSWERS_UPDATED`
@@ -1158,7 +1166,10 @@ itself — the display and other players just see counts.
 4. **Grade** — the admin can grade an answer as soon as it arrives (0 / half
    / full points, where half is exactly half the question's points: 0.5 on a
    1-point question), and must finish any remaining grading in the `break`:
-   leaving it is refused while an answer in the block is ungraded. If a team
+   leaving it is refused while an answer in the block is ungraded. (A Clue
+   answer has no half grade: a hand grade must be exactly 0 or the answer's
+   clue value, anything else is refused, and `/control` shows only those two
+   buttons.) If a team
    changes a hand-graded (`free_text`) answer, its grade is cleared,
    since it belonged to the old value. Grades are written to the answer row;
    grading an answer twice is prevented in the UI. Exception: `closest_guess` answers are graded automatically once the
@@ -1484,9 +1495,19 @@ grading behavior. Media is not a type: any question can carry a
   the highest clue shown for any other), `clueCount` and `clueValue` (what a
   right answer is worth from the highest clue shown); `options` stays empty
   until the reveal. The big screen and the phone list `clues` under the prompt,
-  growing with each step; `/control` and `/remote` show "Clue N of M". Scoring
-  by clue (a team's own clue number, the freeze, hand grades) is not built yet:
-  every right answer still scores the first-clue value.
+  growing with each step; `/control` and `/remote` show "Clue N of M".
+  **Scoring by clue:** `highestClue` on those views is the highest clue shown.
+  An exact match is graded correct at submit with the answer's own clue value
+  (`atClue` in `scoring.ts` sets the points to that clue's value for grading);
+  anything else waits for the quiz master, whose grade is 0 or that value. A
+  key fix re-scores each answer at its own clue value, and a hand grade on a
+  non-matching answer survives. A joker doubles the result as usual. **Phone:**
+  "Worth N points now"; next to Send, while a clue is left to show, "Once the
+  next clue is shown, you can't change this answer."; a frozen answer shows
+  read-only as "Locked in on clue N · worth X points"; the reveal adds "You
+  answered on clue N". The team's own clue number rides on `TeamAnswerView.clue`
+  and `AnswerReceivedPayload.clue`; `/control`'s `AnswerView.clue` shows
+  "Clue N" on each answer.
 
 ### Media on any question
 

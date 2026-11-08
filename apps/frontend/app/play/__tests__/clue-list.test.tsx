@@ -18,6 +18,8 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
+const TEAM = { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' };
+
 describe('PlayPage — a Clue question', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -53,5 +55,91 @@ describe('PlayPage — a Clue question', () => {
     expect(screen.getByText('Vague')).toBeInTheDocument();
     expect(screen.getByText('Sharper')).toBeInTheDocument();
     expect(screen.queryByText('Giveaway')).not.toBeInTheDocument();
+  });
+
+  const clueSession = (clueStep: number, highest: number) => ({
+    rounds: [
+      {
+        questions: [
+          {
+            type: 'clues' as const,
+            prompt: 'Who am I?',
+            options: ['Vague', 'Sharper', 'Giveaway'],
+            points: 1.5,
+          },
+        ],
+      },
+    ],
+    progress: { status: 'question_open' as const },
+    clueStep,
+    highestClueShown: { 1: highest },
+  });
+
+  it('shows what an answer is worth now and warns that the next clue freezes it', () => {
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({ session: clueSession(1, 2), join: { team: TEAM } }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText('Worth 1 points now')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Once the next clue is shown, you can't change this answer.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('gives no warning on the last clue', () => {
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({ session: clueSession(2, 3), join: { team: TEAM } }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText('Worth 0.5 points now')).toBeInTheDocument();
+    expect(screen.queryByText(/can't change this answer/)).toBeNull();
+  });
+
+  it('says on the reveal which clue the team answered on', () => {
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'clues',
+                  prompt: 'Who am I?',
+                  answer: 'Marie Curie',
+                  options: ['Vague', 'Sharper', 'Giveaway'],
+                  points: 1.5,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'reveal', revealIndex: 0 },
+        },
+        join: { team: TEAM },
+        game: { myAnswers: { 1: 'Marie Curie' }, myAnswerClues: { 1: 2 } },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText('You answered on clue 2')).toBeInTheDocument();
+  });
+
+  it('shows an answer frozen by a newer clue read-only', () => {
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: clueSession(1, 2),
+        join: { team: TEAM },
+        game: { myAnswers: { 1: 'Curie' }, myAnswerClues: { 1: 1 } },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(
+      screen.getByText(/Locked in on clue 1 · worth\s+1.5 points/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 });
