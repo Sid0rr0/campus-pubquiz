@@ -6,7 +6,7 @@ Parent spec: `.scratch/play-page-wiring/spec.md`
 
 **Blocked by:** 01 (Measure the page, and move the joker derivations out); skip it if 01 closed as `wontfix`
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Each helper 01 marked pass-through (expected: the power-ups card's props and the side panels) is inlined where its panel renders; one whose inlining puts a function over the CRAP limit of 10 stays, with a narrow interface instead.
 - [ ] Page components take the fields and callbacks they use, not whole results of the question browser, saved-confirmation or power-up moment hooks or the opened questions. A small named type for values that always travel together is fine; a type that only renames a hook's return is not.
@@ -14,3 +14,7 @@ Parent spec: `.scratch/play-page-wiring/spec.md`
 - [ ] No component moves to its own file unless it gains its own test.
 - [ ] The 26 page-level test files pass unchanged.
 - [ ] `pnpm crap:changed` passes.
+
+## Comments
+
+`sidePanelsOf` and `shownCoins` are inlined. `powerUpsListOf` stays: inlining it put `JoinedPlayScreen` at CRAP 10.6, so it now owns the shop-visibility condition too, which keeps the screen at 8. The hook results are gone from props: the screen takes the browser, saved-confirmation and power-up moment fields it reads; `ConnectionNotices` takes three fields; the status, feedback and browser components take `Pick<TeamGame, ...>` of the fields they use. The question browser's props are unchanged (the blocking specs already collapsed them). Page tests pass unchanged; CRAP max is 10.0.

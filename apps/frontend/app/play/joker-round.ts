@@ -2,8 +2,10 @@ import {
   doubledRoundIds,
   jokerRoundPoints,
   type GameStatus,
+  type PlayersStatePayload,
   type PurchaseView,
 } from '@campus-pubquiz/types';
+import type { OpenedQuestionEntry } from '@/app/play/opened-questions';
 
 /** A round that counts double for this team, by number and title ("" when the team bought it blind). */
 export interface DoubledRound {
@@ -26,6 +28,62 @@ export function doubledRoundsOf(
   return doubledRoundIds(jokerRound?.roundId, purchases)
     .flatMap((id) => named.get(id) ?? [])
     .sort((a, b) => a.roundNumber - b.roundNumber);
+}
+
+/** The rounds this team's joker (and any extra joker) doubles, and whether the title card or the selected question is in one. */
+export function jokerMarksOf(
+  view: Pick<
+    PlayersStatePayload,
+    'jokerRounds' | 'phoneScreen' | 'blockQuestions'
+  >,
+  myJoker: { roundId: number } | null,
+  purchases: readonly PurchaseView[],
+  selectedQuestionId: number | undefined,
+) {
+  const jokerRound = view.jokerRounds.find(
+    (round) => round.roundId === myJoker?.roundId,
+  );
+  const doubledRounds = doubledRoundsOf(jokerRound, purchases);
+  const doubledRoundNumbers = doubledRounds.map((round) => round.roundNumber);
+  const { phoneScreen } = view;
+  const selectedRoundNumber = view.blockQuestions.find(
+    (question) => question.id === selectedQuestionId,
+  )?.roundNumber;
+  return {
+    doubledRounds,
+    doubledRoundNumbers,
+    isJokerTitleCard:
+      phoneScreen.kind === 'round_title' &&
+      doubledRoundNumbers.includes(phoneScreen.roundNumber),
+    isJokerQuestion:
+      selectedRoundNumber !== undefined &&
+      doubledRoundNumbers.includes(selectedRoundNumber),
+  };
+}
+
+/** The selected question's points, verdict and joker bonus, once graded (all null with no selection or no graded entry). */
+export function selectedResultOf(
+  openedQuestions: readonly OpenedQuestionEntry[],
+  selectedQuestionId: number | undefined,
+  doubledRoundNumbers: readonly number[],
+) {
+  const entry =
+    selectedQuestionId === undefined
+      ? undefined
+      : openedQuestions.find(
+          (candidate) => candidate.id === selectedQuestionId,
+        );
+  return {
+    points: entry?.pointsAwarded ?? null,
+    verdict: entry?.verdict ?? null,
+    jokerExtra: entry
+      ? jokerExtraPoints(
+          entry.pointsAwarded,
+          entry.roundNumber,
+          doubledRoundNumbers,
+        )
+      : null,
+  };
 }
 
 /**
