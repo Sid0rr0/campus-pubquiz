@@ -92,3 +92,5 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ three sessions saved snapshots to `/tmp`, which chrome-devtools refuses as outside the workspace roots.
 - **implement-spec step 11 (2026-11-07)**: the background `pnpm mutate:changed` run, its survivor ticket and the PR-body scores are gone; the user runs mutation tests separately. `mutate:changed` now defaults to the commit of its last successful run, so a separate run picks up everything since.
   _Why:_ the mutation run made each spec run take too long.
+- **implement-spec steps 8, 10, 11 (2026-11-08)**: moving the spec to `.scratch/done.md` / `overview.md` is now the last commit of the PR, made in step 11 right after the rebase onto the latest main; the post-merge "move to done on `main`" step is gone.
+  _Why:_ the separate commit on `main` after the merge was an extra step that is easy to forget and bypasses review.
