@@ -70,11 +70,20 @@ function buildMyAnswers(answers: TeamAnswerView[]): Record<number, string> {
   );
 }
 
-/** The clue each Clue question answer was locked in on, by question id; other answers have none. */
-function buildMyAnswerClues(answers: TeamAnswerView[]): Record<number, number> {
+export interface MyAnswerClue {
+  clue: number;
+  value: number;
+}
+
+/** The clue each Clue question answer was locked in on and what it is worth there, by question id; other answers have none. */
+function buildMyAnswerClues(
+  answers: TeamAnswerView[],
+): Record<number, MyAnswerClue> {
   return Object.fromEntries(
-    answers.flatMap(({ questionId, clue }) =>
-      clue ? [[questionId, clue]] : [],
+    answers.flatMap(({ questionId, clue, clueValue }) =>
+      clue && clueValue != null
+        ? [[questionId, { clue, value: clueValue }]]
+        : [],
     ),
   );
 }
@@ -174,8 +183,8 @@ export interface TeamLinkState {
   /** The team's own saved answers by question id. */
   myAnswers: Record<number, string>;
   myAnswerGrades: Record<number, MyAnswerGrade>;
-  /** The clue each Clue question answer was locked in on, by question id. */
-  myAnswerClues: Record<number, number>;
+  /** The clue each Clue question answer was locked in on, and what it is worth there, by question id. */
+  myAnswerClues: Record<number, MyAnswerClue>;
   /** Every bonus award this team has received so far this session, in award order. */
   myBonusAwards: TeamBonusAwardView[];
   /** What the join carried plus every rating the server acknowledged since. */
@@ -729,9 +738,16 @@ function receiveAnswer(
     ...state,
     myAnswers: { ...state.myAnswers, [payload.questionId]: payload.value },
     myAnswerGrades,
-    myAnswerClues: payload.clue
-      ? { ...state.myAnswerClues, [payload.questionId]: payload.clue }
-      : state.myAnswerClues,
+    myAnswerClues:
+      payload.clue && payload.clueValue != null
+        ? {
+            ...state.myAnswerClues,
+            [payload.questionId]: {
+              clue: payload.clue,
+              value: payload.clueValue,
+            },
+          }
+        : state.myAnswerClues,
   });
 }
 

@@ -5,6 +5,7 @@ import { doubledRoundIdsOfTeam } from './doubled-rounds';
 import { jokerRoundPoints } from './joker';
 import type { PowerUpId } from './power-ups';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
+import { QUESTION_KINDS } from './question-kind';
 import { questionOutcome } from './question-outcome';
 import type { QuestionType } from './question-types';
 import { compareTeamNames } from './ranking-rule';
@@ -159,8 +160,9 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
       isQuickfire: round.quickfire ?? false,
       type: question.type,
       points: question.points,
-      clueCount:
-        question.type === 'clues' ? (question.options?.length ?? 0) : 0,
+      clueCount: QUESTION_KINDS[question.type].hasClues
+        ? (question.options?.length ?? 0)
+        : 0,
     })),
   );
 }
@@ -254,7 +256,7 @@ function firstClueFact(
   ) => FunFact,
 ): FunFact | null {
   for (const question of revealed) {
-    if (question.type !== 'clues') continue;
+    if (!QUESTION_KINDS[question.type].hasClues) continue;
     const correct = answers.filter(
       (a) =>
         a.questionId === question.questionId &&

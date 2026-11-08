@@ -27,6 +27,7 @@ const liveAnswers = {
       powerUps: [],
       verdict: null,
       clue: 3,
+      clueValue: 1.5,
     },
   ],
 };
@@ -61,5 +62,19 @@ describe('AnswersPanel — a Clue question', () => {
       screen.getByRole('button', { name: 'Grade The Quizzards full points' }),
     );
     expect(onGrade).toHaveBeenCalledWith(41, 1.5);
+  });
+
+  it('offers no custom amount, only wrong or right', () => {
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers}
+        teams={[{ teamId: 1, teamName: 'The Quizzards', isConnected: true }]}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole('button', { name: /custom points/ }),
+    ).not.toBeInTheDocument();
   });
 });

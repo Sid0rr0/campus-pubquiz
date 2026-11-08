@@ -419,4 +419,52 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     expect(events).not.toContain(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED);
     expect(lastAdminLeaderboard(game)).toEqual(leaderboardBefore);
   });
+
+  it('leaves a moderator grade on an opened Clue question alone when a save carries stale points', async () => {
+    const { game, admin } = await start({
+      teamNames: ['Curie Fans'],
+      rounds: [
+        {
+          title: 'People',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'clues',
+              prompt: 'Who am I?',
+              answer: 'Marie Curie',
+              points: 1.5, // three clues: half a point each
+              payload: { options: ['Vague', 'Sharper', 'Giveaway'] },
+            },
+          ],
+        },
+      ],
+    });
+    const [team] = game.teams;
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(admin);
+    await submit(game, team, questionId, 'Curie');
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: answer.answerId,
+      pointsAwarded: 1.5,
+    });
+    game.clearEmits();
+
+    // The editor still sends the points it was loaded with, or any other number.
+    await game.saveQuizEdit((rounds) =>
+      rounds.map((round) => ({
+        ...round,
+        questions: round.questions.map((question) => ({
+          ...question,
+          points: 9,
+        })),
+      })),
+    );
+
+    expect(await storedPoints(game, questionId)).toEqual({ 'Curie Fans': 1.5 });
+    const events = game.roomEmits().map((emit) => emit.event);
+    expect(events).not.toContain(SOCKET_EVENTS.ANSWERS_UPDATED);
+  });
 });

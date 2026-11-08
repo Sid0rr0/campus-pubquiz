@@ -94,6 +94,7 @@ export class AnswersChanges {
               gradedAt: submitted.gradedAt,
               verdict: submitted.verdict,
               clue: submitted.clue,
+              clueValue: submitted.clueValue,
             },
           },
         ],

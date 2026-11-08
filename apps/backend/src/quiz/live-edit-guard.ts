@@ -1,6 +1,7 @@
 import {
   OPENED_QUESTION_FIXED_FIELDS,
   answerKeyOf,
+  withDerivedPoints,
   describeLiveEditRounds,
   isSameAnswerKey,
   type ImportQuestionPreview,
@@ -376,9 +377,10 @@ export function findRegradeQuestionIds(
         questionId !== undefined &&
         openedIds.has(questionId) &&
         incomingQuestion?.questionId === questionId &&
+        // Compared as saved: a Clue question's points are derived, not as entered.
         !isSameAnswerKey(
           answerKeyOf(currentQuestion),
-          answerKeyOf(incomingQuestion),
+          answerKeyOf(withDerivedPoints(incomingQuestion)),
         );
       return needsRegrade ? [questionId] : [];
     }),

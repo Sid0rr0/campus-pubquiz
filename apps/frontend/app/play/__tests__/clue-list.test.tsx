@@ -119,7 +119,10 @@ describe('PlayPage — a Clue question', () => {
           progress: { status: 'reveal', revealIndex: 0 },
         },
         join: { team: TEAM },
-        game: { myAnswers: { 1: 'Marie Curie' }, myAnswerClues: { 1: 2 } },
+        game: {
+          myAnswers: { 1: 'Marie Curie' },
+          myAnswerClues: { 1: { clue: 2, value: 1 } },
+        },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -132,7 +135,10 @@ describe('PlayPage — a Clue question', () => {
       teamLinkResult({
         session: clueSession(1, 2),
         join: { team: TEAM },
-        game: { myAnswers: { 1: 'Curie' }, myAnswerClues: { 1: 1 } },
+        game: {
+          myAnswers: { 1: 'Curie' },
+          myAnswerClues: { 1: { clue: 1, value: 1.5 } },
+        },
       }),
     );
     renderWithQuery(<PlayPage />);

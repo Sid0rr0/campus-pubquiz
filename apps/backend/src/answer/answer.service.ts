@@ -9,6 +9,7 @@ import type {
 } from '@campus-pubquiz/types';
 import {
   atClue,
+  clueValueFromPoints,
   QUESTION_KINDS,
   verdictForManualGrade,
   withWiderMargin,
@@ -39,6 +40,7 @@ export interface SubmittedAnswer {
   gradedAt: string | null;
   verdict: Verdict | null;
   clue: number | null;
+  clueValue: number | null;
 }
 
 /** A hand grade the Grading policy turns down; its message is for the quiz master. */
@@ -203,6 +205,7 @@ export class AnswerService {
       gradedAt: answer.gradedAt?.toISOString() ?? null,
       verdict: answer.verdict,
       clue: answer.clue,
+      clueValue: clue === null ? null : graded.points,
     };
   }
 
@@ -297,10 +300,10 @@ export class AnswerService {
     gameSessionId: number,
     teamId: number,
   ): Promise<TeamAnswerView[]> {
-    const rows = await this.answers.find({
-      gameSession: gameSessionId,
-      team: teamId,
-    });
+    const rows = await this.answers.find(
+      { gameSession: gameSessionId, team: teamId },
+      { populate: ['question'] },
+    );
     return rows.map((row) => ({
       questionId: row.question.id,
       value: row.value,
@@ -308,6 +311,7 @@ export class AnswerService {
       gradedAt: row.gradedAt?.toISOString() ?? null,
       verdict: row.verdict,
       clue: row.clue,
+      clueValue: clueValueOf(row),
     }));
   }
 
@@ -512,5 +516,14 @@ function toAnswerView(row: Answer, powerUps: PowerUpId[]): AnswerView {
     gradedAt: row.gradedAt?.toISOString() ?? null,
     verdict: row.verdict,
     clue: row.clue,
+    clueValue: clueValueOf(row),
   };
+}
+
+/** What a right answer is worth at the clue the row was locked in on (the question's points are its first-clue value); null for any other type. */
+function clueValueOf(row: Answer): number | null {
+  if (!QUESTION_KINDS[row.question.type].hasClues || row.clue === null) {
+    return null;
+  }
+  return clueValueFromPoints(row.question.points, row.clue);
 }

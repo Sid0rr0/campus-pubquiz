@@ -1,5 +1,4 @@
 import {
-  clueValue,
   formatAnswer,
   isHttpUrl,
   isPinOffPlace,
@@ -18,6 +17,7 @@ import type {
   QuestionView,
   Verdict,
 } from '@campus-pubquiz/types';
+import type { MyAnswerClue } from '@/app/lib/team-link';
 import { yourAnswerTextClass } from '@/app/play/verdict-card';
 import { ClueList } from '@/app/components/clue-list';
 import { NumberMarginText } from '@/app/components/number-margin-text';
@@ -61,8 +61,8 @@ interface QuestionBrowserProps {
   /** Active round's quickfire speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
   isQuickfireMode: boolean;
   myAnswers: Record<number, string>;
-  /** The clue the selected Clue question's answer was locked in on, once sent. */
-  myAnswerClue?: number;
+  /** The clue the selected Clue question's answer was locked in on and what it is worth there, once sent. */
+  myAnswerClue?: MyAnswerClue;
   /** Points awarded for the selected question's answer, null until graded. */
   myAnswerPoints: number | null;
   /** How the selected question's answer was judged, null until graded; colours "Your answer" on the reveal. */
@@ -201,12 +201,14 @@ export function QuestionBrowser({
  */
 function clueFreezeOf(
   { highestClue, clueCount }: QuestionBrowserProps['selectedQuestion'],
-  myAnswerClue: number | undefined,
+  myAnswerClue: MyAnswerClue | undefined,
 ) {
   const isClueQuestion = highestClue !== undefined && clueCount !== undefined;
   return {
     frozenClue:
-      isClueQuestion && myAnswerClue !== undefined && myAnswerClue < highestClue
+      isClueQuestion &&
+      myAnswerClue !== undefined &&
+      myAnswerClue.clue < highestClue
         ? myAnswerClue
         : null,
     isFreezable: isClueQuestion && highestClue < clueCount,
@@ -232,17 +234,10 @@ function CluesShown({
 }
 
 /** A Clue answer a newer clue has frozen, shown read-only in place of the answer form. */
-function FrozenAnswer({
-  question,
-  clue,
-}: {
-  question: QuestionBrowserProps['selectedQuestion'];
-  clue: number;
-}) {
+function FrozenAnswer({ clue, value }: MyAnswerClue) {
   return (
     <p className="text-center text-lg font-extrabold text-magenta">
-      Locked in on clue {clue} · worth{' '}
-      {clueValue(question.clueCount ?? 0, clue)} points
+      Locked in on clue {clue} · worth {value} points
     </p>
   );
 }
@@ -268,7 +263,7 @@ function AnswerArea({
   onSubmit: (value: string) => void;
 }) {
   if (clueFreeze.frozenClue !== null) {
-    return <FrozenAnswer question={question} clue={clueFreeze.frozenClue} />;
+    return <FrozenAnswer {...clueFreeze.frozenClue} />;
   }
   return (
     // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
@@ -458,7 +453,7 @@ function RevealedAnswer({
 }: {
   revealQuestion: NonNullable<QuestionBrowserProps['revealQuestion']>;
   myAnswer: string | undefined;
-  myAnswerClue: number | undefined;
+  myAnswerClue: MyAnswerClue | undefined;
   myAnswerPoints: QuestionBrowserProps['myAnswerPoints'];
   myAnswerJokerExtra: QuestionBrowserProps['myAnswerJokerExtra'];
   verdictTextClass: string;
@@ -491,7 +486,7 @@ function RevealedAnswer({
       )}
       {myAnswerClue !== undefined && (
         <p className="text-sm font-extrabold text-foreground/55">
-          You answered on clue {myAnswerClue}
+          You answered on clue {myAnswerClue.clue}
         </p>
       )}
     </div>

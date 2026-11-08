@@ -2,7 +2,6 @@
 
 import { motion } from 'motion/react';
 import {
-  clueValueFromPoints,
   formatAnswer,
   QUESTION_KINDS,
   halfPoints,
@@ -137,6 +136,11 @@ function AnswerRow({
   );
 }
 
+/** The points the answer is graded at, or null while it is not graded. */
+function gradedPointsOf(answer: AnswerView | null): number | null {
+  return answer?.gradingState === 'graded' ? answer.pointsAwarded : null;
+}
+
 /** The custom amount and the grade buttons, the current grade marked. */
 function GradeControls({
   teamName,
@@ -148,12 +152,8 @@ function GradeControls({
   isClueQuestion: boolean;
 }) {
   // A Clue answer is graded right (its clue's value) or wrong, never half.
-  const options = gradeOptions(
-    answer?.clue ? clueValueFromPoints(maxPoints, answer.clue) : maxPoints,
-    !isClueQuestion,
-  );
-  const gradedPoints =
-    answer?.gradingState === 'graded' ? answer.pointsAwarded : null;
+  const options = gradeOptions(answer?.clueValue ?? maxPoints, !isClueQuestion);
+  const gradedPoints = gradedPointsOf(answer);
   const isCustomGrade =
     gradedPoints !== null &&
     !options.some((option) => option.value === gradedPoints);
@@ -166,13 +166,15 @@ function GradeControls({
         <span className="sr-only">Awarded {gradedPoints} points</span>
       )}
       <div className="flex items-center gap-1.5">
-        <CustomGradeControl
-          teamName={teamName}
-          currentAmount={answer?.pointsAwarded ?? 0}
-          isSelected={isCustomGrade}
-          isDisabled={answer === null}
-          onConfirm={grade}
-        />
+        {!isClueQuestion && (
+          <CustomGradeControl
+            teamName={teamName}
+            currentAmount={answer?.pointsAwarded ?? 0}
+            isSelected={isCustomGrade}
+            isDisabled={answer === null}
+            onConfirm={grade}
+          />
+        )}
         {options.map(({ display, ariaSuffix, value }) => (
           <GradeOptionButton
             key={display}

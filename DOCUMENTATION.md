@@ -1509,7 +1509,9 @@ grading behavior. Media is not a type: any question can carry a
   read-only as "Locked in on clue N · worth X points"; the reveal adds "You
   answered on clue N". The team's own clue number rides on `TeamAnswerView.clue`
   and `AnswerReceivedPayload.clue`; `/control`'s `AnswerView.clue` shows
-  "Clue N" on each answer.
+  "Clue N" on each answer. All three also carry `clueValue`, what a right
+  answer is worth at that clue (null for other types), so no client recomputes
+  it; `/control` grades a Clue answer only 0 or that value (no custom amount).
 
 ### Media on any question
 

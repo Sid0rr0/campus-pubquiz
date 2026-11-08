@@ -36,6 +36,8 @@ export interface AnswerReceivedPayload {
   verdict: Verdict | null;
   /** Clue question only: the clue (1-based) the answer was locked in on; null for every other type. */
   clue?: number | null;
+  /** Clue question only: what a right answer is worth at that clue; null for every other type. */
+  clueValue?: number | null;
 }
 
 export interface TeamAnswerView {
@@ -48,6 +50,8 @@ export interface TeamAnswerView {
   verdict: Verdict | null;
   /** Clue question only: the clue (1-based) the answer was locked in on; null for every other type. With the question's `highestClue`, it says whether the answer is frozen. */
   clue?: number | null;
+  /** Clue question only: what a right answer is worth at that clue; null for every other type. */
+  clueValue?: number | null;
 }
 
 /**
@@ -74,6 +78,8 @@ export interface AnswerView {
   powerUps: PowerUpId[];
   /** Clue question only: the clue (1-based) the answer was locked in on; null for every other type. */
   clue?: number | null;
+  /** Clue question only: what a right answer is worth at that clue; null for every other type. */
+  clueValue?: number | null;
 }
 
 export interface AnswersUpdatedPayload {
