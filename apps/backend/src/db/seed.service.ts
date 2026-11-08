@@ -10,6 +10,7 @@ import {
   type SeededGame,
   type SeededRound,
   type SessionSettings,
+  settingsForMode,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -116,7 +117,8 @@ export class SeedService {
       startedAt: gameSessionRow.createdAt,
       rounds,
       // Sessions stored before the "Collect feedback" / "Fun facts" settings have no such field: they count as on.
-      settings: {
+      // The quiz's mode then switches off what it disallows, whatever the stored row says.
+      settings: settingsForMode(quiz.mode, {
         ...gameSessionRow.settings,
         collectFeedback: gameSessionRow.settings.collectFeedback ?? true,
         funFactsEnabled: gameSessionRow.settings.funFactsEnabled ?? true,
@@ -131,7 +133,7 @@ export class SeedService {
         powerUps:
           gameSessionRow.settings.powerUps ??
           defaultPowerUpSettings(gameSessionRow.settings.showRoundOverview),
-      },
+      }),
     };
   }
 

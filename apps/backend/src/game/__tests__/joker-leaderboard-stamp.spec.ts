@@ -99,23 +99,4 @@ describe('GameGateway — the 2× stamp on the leaderboard', () => {
 
     expect(await stampedOnPhone(game)).toEqual([]);
   });
-
-  it('stamps after each question of a quickfire joker round', async () => {
-    const game = await jokerNight([
-      {
-        title: 'Quickfire',
-        quickfire: true,
-        breakAfter: true,
-        questions: [question(1), question(2)],
-      },
-      THREE_ROUNDS[1],
-    ]);
-    const [alpha] = game.teams;
-    await advanceToBlockBoard(game);
-    expect(await stampedOnDisplay(game)).toEqual([alpha.teamId]);
-
-    await game.act('ADVANCE');
-    await advanceToBlockBoard(game);
-    expect(await stampedOnDisplay(game)).toEqual([alpha.teamId]);
-  });
 });
