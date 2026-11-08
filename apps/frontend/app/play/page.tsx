@@ -29,7 +29,8 @@ import { JokerMoment } from '@/app/play/joker-moment';
 import {
   doubledRoundsOf,
   isJokerRoundPlayed,
-  jokerExtraPoints,
+  jokerMarksOf,
+  selectedResultOf,
 } from '@/app/play/joker-round';
 import { ReconnectingBar } from '@/app/play/reconnecting-bar';
 import {
@@ -420,57 +421,6 @@ function ConnectingScreen({
       </Button>
     </main>
   );
-}
-
-/** The rounds this team's joker (and any extra joker) doubles, and where that shows. */
-function jokerMarksOf(
-  view: PlayerView,
-  myJoker: TeamGame['myJoker'],
-  myPurchases: TeamGame['myPurchases'],
-  selectedQuestionId: number | undefined,
-) {
-  const jokerRound = view.jokerRounds.find(
-    (round) => round.roundId === myJoker?.roundId,
-  );
-  const doubledRounds = doubledRoundsOf(jokerRound, myPurchases);
-  const doubledRoundNumbers = doubledRounds.map((round) => round.roundNumber);
-  const { phoneScreen } = view;
-  const selectedRoundNumber = view.blockQuestions.find(
-    (question) => question.id === selectedQuestionId,
-  )?.roundNumber;
-  return {
-    doubledRounds,
-    doubledRoundNumbers,
-    isJokerTitleCard:
-      phoneScreen.kind === 'round_title' &&
-      doubledRoundNumbers.includes(phoneScreen.roundNumber),
-    isJokerQuestion:
-      selectedRoundNumber !== undefined &&
-      doubledRoundNumbers.includes(selectedRoundNumber),
-  };
-}
-
-/** The selected question's points, verdict and joker bonus, once graded. */
-function selectedResultOf(
-  openedQuestions: ReturnType<typeof buildOpenedQuestions>,
-  selectedQuestionId: number | undefined,
-  doubledRoundNumbers: readonly number[],
-) {
-  const entry =
-    selectedQuestionId === undefined
-      ? undefined
-      : openedQuestions.find(
-          (candidate) => candidate.id === selectedQuestionId,
-        );
-  return {
-    points: entry?.pointsAwarded ?? null,
-    verdict: entry?.verdict ?? null,
-    jokerExtra: entry
-      ? jokerExtraPoints(entry.pointsAwarded, entry.roundNumber, [
-          ...doubledRoundNumbers,
-        ])
-      : null,
-  };
 }
 
 /** The power-ups card's props for a joined team. */
