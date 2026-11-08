@@ -228,8 +228,8 @@ export function visibleRoundTitle(
  * The round an extra joker can be bought for right now: the first round with
  * no opened question whose intro has not been on air (the current round's
  * intro is on air or past in every status after the joker pick). Null when
- * there is none, in the lobby (the settings can still turn power-ups off under
- * a purchase) and when the next round is a quickfire round.
+ * there is none and in the lobby (the settings can still turn power-ups off
+ * under a purchase).
  */
 export function extraJokerRoundId(session: {
   seededGame: {
