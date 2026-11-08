@@ -45,14 +45,14 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'Build the quiz, then check it with Quiz preview (in the editor, quiz list or waiting session), not a throwaway session.',
       'Put /display on the big screen and /control on your laptop; teams use phones.',
-      'A block is a run of rounds graded and revealed together, ending at a break (after the last round too).',
+      'A block is a run of rounds graded and revealed together, ending at a break.',
     ],
   },
   {
     title: 'Starting a session',
     paragraphs: [
       'Session Settings sets the rules text and bonus categories in the lobby; then press Start Quiz.',
-      'Tick the leagues this session counts towards at the start or in Session Settings.',
+      'Tick the leagues this session counts towards in Session Settings.',
       'Advance shows the rules, the round overview, then the first round title card; Previous on the rules returns to the lobby.',
     ],
   },
@@ -60,7 +60,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Unlisted sessions',
     paragraphs: [
       'The "Show in the game list" switch in Session Settings (lobby only) hides a session from the game list; yours marks it "Unlisted".',
-      'Open display on Control shows the big screen. Teams join by scanning its QR code, or "Have a game code?" and typing it.',
+      'Open display on Control shows the big screen. Teams join by scanning its QR code, or "Have a game code?".',
     ],
   },
   {
@@ -85,7 +85,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Quickfire quizzes',
     paragraphs: [
-      'Each quickfire question is its own block: open, countdown, reveal; no break. Timed, faster right answers score more, down to half the points.',
+      'Each quickfire question is its own block: open, countdown, reveal; no break. Faster right answers score more, down to half the points.',
       'Session Settings sets the "Quickfire question timer" (blank: no timer, full points); Advance starts the countdown early. No jokers, power-ups, coins or leagues.',
     ],
   },
@@ -106,10 +106,17 @@ const GUIDE_SECTIONS: GuideSection[] = [
     ],
   },
   {
+    title: 'Clue questions',
+    paragraphs: [
+      'Advance shows the next clue, and on the last clue moves on. Previous hides a clue, but the room has seen it, so scoring keeps it.',
+      "A right answer is worth half a point per clue not yet seen, counting the latest. A team's answer freezes once a new clue is shown (not on the last). Grade right or wrong; no half.",
+    ],
+  },
+  {
     title: 'Media and sound',
     paragraphs: [
       'On a video or audio question, Pause and "Play again" sit below the Leaderboard row on Control.',
-      'The Display sound toggle mutes the big screen.',
+      'Display sound mutes the big screen.',
     ],
   },
   {
@@ -123,7 +130,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'The break and break review',
     paragraphs: [
-      'When a block ends, answers close and the big screen shows a break card with a timer. Break End Time sets or extends it.',
+      'When a block ends, answers close and the big screen shows a break card with a timer. Break End Time extends it.',
       "Previous steps back through the block's questions, answers hidden: the break review.",
     ],
   },
@@ -137,7 +144,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Leaderboard, late joiners and ties',
     paragraphs: [
       'Show or hide the leaderboard any time; Advance then reveals one rank at a time, from last place up.',
-      'Join overlay on Control shows the QR code and join code on the big screen for late teams.',
+      'Join overlay on Control shows the QR and join code for late teams.',
       'When teams tie for first, the Showdown panel offers a tiebreak.',
     ],
   },
@@ -161,7 +168,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      'Remote (Sessions page) is a phone page with Previous, Advance and leaderboard controls, a next-up preview and your notes.',
+      'Remote (Sessions page) is a phone page with Previous, Advance, leaderboard controls, a next-up preview and your notes.',
       'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,
@@ -169,20 +176,20 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Ending',
     paragraphs: [
-      'The quiz ends after the last reveal or with End Quiz; Close Session then shuts it down.',
+      'The quiz ends after the last reveal or with End Quiz; Close Session shuts it down.',
     ],
   },
   {
     title: 'Creating a quiz',
     paragraphs: [
       '"New Quiz" on the Sessions page opens the editor. Fill rounds by hand or import a CSV.',
-      'To add to a saved quiz, tick "Add to quiz instead of replacing" when importing.',
+      'To add to a saved quiz, tick "Add to quiz instead of replacing".',
     ],
     bullets: [
       "Pick the mode (Pub or Quickfire) first; it's permanent. Quickfire imports refuse other types; blank points become 1000.",
       'Round note: up to 500 characters, for Remote and the Control title card. "Show on screen" adds the big screen; phones never see it.',
       'Question notes: tick "Show on screen at reveal" to show them under the answer.',
-      'Media: paste a picture, audio, YouTube or video link into Media URL (or Answer media URL).',
+      'Media: paste a picture, audio, YouTube or video link into Media URL.',
       `Number: the margin row has a number field and % / absolute switch. CSV: {margin: "5%"}; {scoring: …} sets ${SCORING_NOTE}.`,
       'Video: tick "Hide video (sound only)" to cover it until the reveal. CSV: hideVideo: true in the {…} notes group.',
       'Clip and Reveal times take seconds, M:SS or H:MM:SS. Blank Reveal times replay the clip; 0 plays it whole. CSV: {start: "1:22", end: "2:20", revealStart: "2:30"}.',

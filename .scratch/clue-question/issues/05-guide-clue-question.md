@@ -12,7 +12,7 @@ This ticket holds all of the spec's `/guide` text, and no other ticket touches t
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The `/guide` page has a Clue question section covering the points above
 - [ ] The guide's word-cap test passes

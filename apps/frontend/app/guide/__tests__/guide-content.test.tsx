@@ -279,6 +279,18 @@ describe('GuideContent', () => {
     expect(text).toContain('grading list sits full width below');
   });
 
+  it('explains running a Clue question: advance, previous, value, freeze and grading', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Advance shows the next clue');
+    expect(text).toContain('the room has seen it, so scoring keeps it');
+    expect(text).toContain(
+      'half a point per clue not yet seen, counting the latest',
+    );
+    expect(text).toContain('answer freezes once a new clue is shown');
+    expect(text).toContain('Grade right or wrong; no half');
+  });
+
   it('says grading can start before the break and must finish in it', () => {
     const text = renderGuideText();
 
