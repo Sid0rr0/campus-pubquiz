@@ -9,11 +9,13 @@ import {
   extractYoutubeVideoId,
   isHttpUrl,
   isVideoUrl,
+  QUESTION_KINDS,
   resolveAnswerKind,
   resolveRevealClip,
   type QuestionView,
   type SeededQuestion,
 } from '@campus-pubquiz/types';
+import { ClueList } from '@/app/components/clue-list';
 import {
   QUESTION_BODIES,
   REVEAL_BODIES,
@@ -105,9 +107,19 @@ function QuestionText({
   hasRevealEntrance: boolean;
 }) {
   const answerKind = resolveAnswerKind(question);
+  // Asked: the clues shown so far. Revealed: every clue, which ride in `options`.
+  const clues =
+    question.clues ??
+    (QUESTION_KINDS[question.type].hasClues ? question.options : undefined);
+  const clueList = clues && <ClueList clues={clues} />;
   if (question.answer === undefined) {
     const QuestionBody = QUESTION_BODIES[answerKind];
-    return <QuestionBody question={question} />;
+    return (
+      <>
+        {clueList}
+        <QuestionBody question={question} />
+      </>
+    );
   }
   const reveal = REVEAL_BODIES[answerKind]({
     question,
@@ -117,6 +129,7 @@ function QuestionText({
   });
   return (
     <>
+      {clueList}
       {reveal.lead}
       {reveal.body}
     </>
@@ -388,6 +401,7 @@ export type QuestionDisplayQuestion = Pick<
   | 'mediaEndSeconds'
   | 'isVideoHidden'
   | 'options'
+  | 'clues'
   | 'matchTargets'
   | 'margin'
 > &

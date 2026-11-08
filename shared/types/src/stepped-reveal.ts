@@ -1,11 +1,16 @@
+import {
+  clueQuestionAsked,
+  clueRevealDescriptor,
+  clueStartStep,
+} from './clue-reveal';
 import { closestGuessRevealDescriptor } from './closest-guess-reveal';
 import type { GameAction, GameProgress } from './game-state-types';
 import type { Movement } from './move-plan';
 import type { SessionState } from './session-state';
 import { showdownRevealDescriptor } from './showdown-reveal';
 
-/** The reveals that walk one line per Advance. */
-export type SteppedRevealKind = 'closest_guess' | 'showdown';
+/** The reveals that walk one line per Advance (`clues` walks a Clue question's clues while it is asked). */
+export type SteppedRevealKind = 'closest_guess' | 'showdown' | 'clues';
 
 /** What happens on a press past an end of a reveal: stay put, or let the state machine move on. */
 export type RevealEnd = 'hold' | 'fall_through';
@@ -85,6 +90,8 @@ function descriptorOnAir(
       descriptor: showdownRevealDescriptor(session.activeShowdownRound),
     };
   }
+  const clue = clueQuestionAsked(session, progress);
+  if (clue) return { reveal: 'clues', descriptor: clueRevealDescriptor(clue) };
   const closestGuess = closestGuessRevealDescriptor(session, progress);
   return closestGuess
     ? { reveal: 'closest_guess', descriptor: closestGuess }
@@ -113,8 +120,37 @@ export function revealStartStep(
   progress: GameProgress,
   action: GameAction | null,
 ): number {
+  // The clue walk lands on the highest clue shown, not by the usual rule.
+  const clue = clueQuestionAsked(session, progress);
+  if (clue) return clueStartStep(session, clue);
   const onAir = descriptorOnAir(session, progress);
   return onAir ? startStepOf(onAir.descriptor, action) : 0;
+}
+
+/** Whether `progress` stays on the Clue question that `session` has on air (the lock countdown, an overlay), so its clue stays up. */
+function isSameClueQuestion(
+  session: SessionState,
+  progress: GameProgress,
+): boolean {
+  const current = clueQuestionAsked(session, session.progress);
+  return (
+    current !== null &&
+    current === clueQuestionAsked(session, progress) &&
+    session.progress.roundIndex === progress.roundIndex &&
+    session.progress.questionIndex === progress.questionIndex
+  );
+}
+
+/** The session with the clue on air counted as shown: raises the question's highest clue shown, never lowers it. */
+export function withClueShown(session: SessionState): SessionState {
+  const clue = clueQuestionAsked(session, session.progress);
+  if (!clue) return session;
+  const shown = session.revealStep + 1;
+  if ((session.highestClueShown[clue.id] ?? 0) >= shown) return session;
+  return {
+    ...session,
+    highestClueShown: { ...session.highestClueShown, [clue.id]: shown },
+  };
 }
 
 /** Whether `next` leaves the reveal that `current` has on air still on air: the same reveal question, or the ended screen (the showdown). */
@@ -140,7 +176,11 @@ export function revealStepAfterMove(
   progress: GameProgress,
   action: GameAction | null,
 ): number {
-  if (action !== null && isSameRevealOnAir(session.progress, progress)) {
+  if (
+    action !== null &&
+    (isSameRevealOnAir(session.progress, progress) ||
+      isSameClueQuestion(session, progress))
+  ) {
     return session.revealStep;
   }
   return revealStartStep(session, progress, action);
@@ -169,7 +209,7 @@ export function stepRevealOnAir(
   return {
     kind: 'step',
     reveal: onAir.reveal,
-    session: { ...session, revealStep: move.step },
+    session: withClueShown({ ...session, revealStep: move.step }),
     isFinal: move.isFinal,
   };
 }

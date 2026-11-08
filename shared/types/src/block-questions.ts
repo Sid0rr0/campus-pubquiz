@@ -1,4 +1,5 @@
 import { getBlockInPlay } from './block-in-play';
+import { clueQuestionAsked, clueViewFields } from './clue-reveal';
 import {
   getBlockEndPosition,
   getBlockStartPosition,
@@ -77,7 +78,21 @@ export function getCurrentQuestion(session: SessionState): QuestionView | null {
     session.seededGame.rounds[session.progress.roundIndex]?.questions[
       session.progress.questionIndex
     ];
-  return question ? toQuestionView(question) : null;
+  return question
+    ? withShownClues(session, question, toQuestionView(question))
+    : null;
+}
+
+/** The view with a Clue question's clues shown so far: up to the step on air for the question being asked, up to the highest clue shown for any other. */
+function withShownClues<V extends QuestionView>(
+  session: SessionState,
+  question: SeededQuestion,
+  view: V,
+): V {
+  const highest = session.highestClueShown[question.id] ?? 0;
+  const onAir = clueQuestionAsked(session, session.progress);
+  const shown = onAir?.id === question.id ? session.revealStep + 1 : highest;
+  return { ...view, ...clueViewFields(question, shown, highest) };
 }
 
 /**
@@ -174,7 +189,9 @@ export function getPastRevealedQuestions(
  * and the big screen.
  */
 export function getBlockQuestions(session: SessionState): BlockQuestionView[] {
-  return getBlockSeededQuestions(session).map(toBlockQuestionView);
+  return getBlockSeededQuestions(session).map((question) =>
+    withShownClues(session, question, toBlockQuestionView(question)),
+  );
 }
 
 /**

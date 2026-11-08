@@ -13,6 +13,12 @@ export interface QuestionView {
    * reveal (left[i] pairs with answer.split('|')[i]).
    */
   options?: string[];
+  /** Clue question only: the clues shown so far, in order. The clues beyond the one on air never leave the server (`options` stays empty until the reveal). */
+  clues?: string[];
+  /** Clue question only: how many clues the question has in all. */
+  clueCount?: number;
+  /** Clue question only: what a right answer is worth now, from the highest clue shown. */
+  clueValue?: number;
   /** Match only: the right-hand items, in the order shown to players. */
   matchTargets?: string[];
   /** Match only: unset is resolved by the Answer key (answer-key.ts); readers go through it. */

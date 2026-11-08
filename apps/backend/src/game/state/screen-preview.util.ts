@@ -197,6 +197,14 @@ function describeRevealStep(
   if (reveal === 'closest_guess') {
     return { ...describeScreen(session), body: 'Next closest-guess step' };
   }
+  if (reveal === 'clues') {
+    return after.revealStep === session.revealStep
+      ? null
+      : {
+          ...describeScreen(session),
+          body: `Clue ${after.revealStep + 1} on the big screen`,
+        };
+  }
   return after.revealStep === session.revealStep
     ? null
     : { heading: 'Showdown', body: `Reveal step ${after.revealStep}` };

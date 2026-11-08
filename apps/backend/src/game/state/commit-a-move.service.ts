@@ -89,12 +89,20 @@ export class MoveCommitter {
         throw step.cause;
       case 'showdown_waiting':
         throw new ShowdownGuessesPendingError();
-      case 'reveal_step':
+      case 'reveal_step': {
+        // A clue going on air is the one ephemeral step that must survive a restart.
+        if (step.reveal === 'clues') {
+          await this.progressRepository.save(
+            step.session.seededGame.gameSessionId,
+            toPersistedProgress(step.session),
+          );
+        }
         return {
           session: await this.resolveShowdownIfFinished(step),
           outcome: BROADCAST_STATE_OUTCOME,
           touchedScores: true,
         };
+      }
       case 'transition':
       case 'grading_pending':
       case 'leaderboard_reveal':
@@ -133,6 +141,7 @@ export class MoveCommitter {
         ...refreshed,
         openedQuestionIds: saved?.openedQuestionIds ?? [],
         revealedQuickfireQuestionIds: saved?.revealedQuickfireQuestionIds ?? [],
+        highestClueShown: saved?.highestClueShown ?? {},
       },
       progress,
       step: { kind: 'place' },
@@ -261,5 +270,6 @@ function toPersistedProgress(session: SessionState): PersistedGameProgress {
     phaseElapsedByKey: session.phaseElapsedByKey,
     openedQuestionIds: session.openedQuestionIds,
     revealedQuickfireQuestionIds: session.revealedQuickfireQuestionIds,
+    highestClueShown: session.highestClueShown,
   };
 }

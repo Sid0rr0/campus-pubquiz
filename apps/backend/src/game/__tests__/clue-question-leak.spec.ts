@@ -11,8 +11,8 @@ import {
 const CLUES = ['Born in a tiny village', 'Wrote on relativity', 'E equals mc'];
 
 // Screen-projection test: a Clue question's clues ride in `options`, and none
-// may reach the display, the phones or the admin before the reveal.
-describe('GameGateway — a Clue question never leaks a clue before the reveal', () => {
+// may reach the display, the phones or the admin before it is shown.
+describe('GameGateway — a Clue question shows its clues one at a time', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
@@ -49,33 +49,83 @@ describe('GameGateway — a Clue question never leaks a clue before the reveal',
     );
   };
 
-  it('keeps every clue out of the display, the phones and the admin until the reveal, then sends them all', async () => {
-    // The admin's view of a locked block carries its revealed questions
-    // untrimmed, so the admin is checked while the block is still being asked.
-    const whileAsking: GameAction[] = [
-      'START_QUIZ',
-      'ADVANCE', // round_intro
-      'ADVANCE', // the Clue question
+  const shownTo = (view: string): string[] =>
+    CLUES.filter((clue) => view.includes(clue));
+
+  const toTheQuestion: GameAction[] = ['START_QUIZ', 'ADVANCE', 'ADVANCE'];
+
+  async function actAll(
+    target: RealStoreGateway,
+    actions: GameAction[],
+  ): Promise<void> {
+    for (const action of actions) await target.act(action);
+  }
+
+  it('opens on clue 1 and shows one more clue to the screens, phones and admin on each Advance', async () => {
+    await actAll(game, toTheQuestion);
+    expect(shownTo(sentToScreensAndPhones())).toEqual([CLUES[0]]);
+    expect(shownTo(JSON.stringify(await game.snapshot()))).toEqual([CLUES[0]]);
+
+    game.clearEmits();
+    await game.act('ADVANCE');
+    const view = await game.snapshot();
+    expect(view.progress).toMatchObject({
+      status: 'question_open',
+      questionIndex: 0,
+    });
+    expect(shownTo(sentToScreensAndPhones())).toEqual(CLUES.slice(0, 2));
+    expect(view.currentQuestion).toMatchObject({
+      clues: CLUES.slice(0, 2),
+      clueCount: 3,
+    });
+  });
+
+  it('hides the latest clue on Previous and comes back to the highest clue shown', async () => {
+    await actAll(game, [...toTheQuestion, 'ADVANCE', 'ADVANCE']); // clue 3
+    await game.act('PREVIOUS'); // clue 2 on screen
+    game.clearEmits();
+    await game.act('PREVIOUS'); // clue 1 on screen
+    expect(shownTo(sentToScreensAndPhones())).toEqual([CLUES[0]]);
+
+    await game.act('PREVIOUS'); // clue 1: back to the round intro
+    const advanced = await game.act('ADVANCE'); // and forward onto the question
+    expect(advanced.progress.status).toBe('question_open');
+    expect(advanced.currentQuestion).toMatchObject({ clues: CLUES });
+  });
+
+  it('keeps every clue out of the screens until it is shown, then sends all of them at the reveal', async () => {
+    // Advance on the last clue moves on to the filler; locking, break and
+    // reveal_intro follow. The clues never shown must stay unsent.
+    await actAll(game, toTheQuestion);
+    game.clearEmits();
+    await actAll(game, [
+      'ADVANCE', // clue 2
+      'ADVANCE', // clue 3
       'ADVANCE', // filler
-    ];
-    const afterAsking: GameAction[] = [
       'ADVANCE', // locking
       'ADVANCE', // break_intro
       'ADVANCE', // reveal_intro
-    ];
-    for (const [step, action] of [...whileAsking, ...afterAsking].entries()) {
-      await game.act(action);
-      const toScreens = sentToScreensAndPhones();
-      for (const clue of CLUES) expect(toScreens).not.toContain(clue);
-      if (step < whileAsking.length) {
-        const toAdmin = JSON.stringify(await game.snapshot());
-        for (const clue of CLUES) expect(toAdmin).not.toContain(clue);
-      }
-      game.clearEmits();
-    }
-
+    ]);
     await game.act('ADVANCE'); // reveal
-    const atReveal = sentToScreensAndPhones();
-    for (const clue of CLUES) expect(atReveal).toContain(clue);
+    expect(shownTo(sentToScreensAndPhones())).toEqual(CLUES);
+  });
+
+  it('sends no clue past the one on air after Previous hides the latest', async () => {
+    await actAll(game, [...toTheQuestion, 'ADVANCE', 'ADVANCE']); // clue 3
+    game.clearEmits();
+    await game.act('PREVIOUS');
+    expect(shownTo(sentToScreensAndPhones())).toEqual(CLUES.slice(0, 2));
+  });
+
+  it('resumes the clue walk on the highest clue shown after a restart', async () => {
+    await actAll(game, [...toTheQuestion, 'ADVANCE', 'ADVANCE']); // clue 3
+    await game.act('PREVIOUS'); // clue 2 on screen, highest 3
+
+    const restarted = await game.restart();
+    const view = await restarted.snapshot();
+
+    expect(view.currentQuestion).toMatchObject({ clues: CLUES });
+    const next = await restarted.act('ADVANCE'); // the last clue: on to the filler
+    expect(next.progress.questionIndex).toBe(1);
   });
 });

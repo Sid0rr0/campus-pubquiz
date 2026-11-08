@@ -18,6 +18,7 @@ import type {
   Verdict,
 } from '@campus-pubquiz/types';
 import { yourAnswerTextClass } from '@/app/play/verdict-card';
+import { ClueList } from '@/app/components/clue-list';
 import { NumberMarginText } from '@/app/components/number-margin-text';
 import { QuestionDisplay } from '@/app/display/question-display';
 import {
@@ -215,6 +216,7 @@ function OpenQuestion({
       <h1 className="text-balance font-display text-2xl leading-tight">
         {question.prompt}
       </h1>
+      {question.clues && <ClueList clues={question.clues} />}
       <NumberMarginText
         question={
           question.margin && hasWiderMargin

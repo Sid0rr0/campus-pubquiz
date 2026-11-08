@@ -28,6 +28,7 @@ export class GameSession extends BaseEntity {
     | 'phaseElapsedByKey'
     | 'openedQuestionIds'
     | 'revealedQuickfireQuestionIds'
+    | 'highestClueShown'
     | 'closedAt';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
@@ -86,6 +87,10 @@ export class GameSession extends BaseEntity {
   /** Ids of the quickfire questions whose reveal has aired — see SessionState.revealedQuickfireQuestionIds. */
   @Property({ type: 'json', default: '[]' })
   revealedQuickfireQuestionIds: number[] = [];
+
+  /** Question id -> the highest clue shown for a Clue question — see SessionState.highestClueShown. */
+  @Property({ type: 'json', default: '{}' })
+  highestClueShown: Record<number, number> = {};
 
   /** When an admin closed this session (see GameStateService.closeSession); null while open. Closed sessions are not reloaded on boot. */
   @Property({ type: 'timestamptz', nullable: true })

@@ -566,6 +566,22 @@
           "enumItems": [],
           "mappedType": "json"
         },
+        "highest_clue_shown": {
+          "name": "highest_clue_shown",
+          "type": "jsonb",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "json"
+        },
         "closed_at": {
           "name": "closed_at",
           "type": "timestamptz",

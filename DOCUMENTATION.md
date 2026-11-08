@@ -1462,12 +1462,31 @@ grading behavior. Media is not a type: any question can carry a
   The preview schema (`cluesPreviewSchema`) refuses fewer than 2 or more than 8
   clues, a clue containing `|` and an empty answer. **Editor:** picking the type
   shows a clue list (add, delete, move up/down) and the per-clue value line in
-  place of the points field. **No clue leaves the server before the reveal**:
+  place of the points field. **No clue leaves the server before it is shown**:
   `toQuestionView`, the admin question context and the presenter's screen
   preview drop `options` for a `hasClues` type (`withoutClues`), and only the
-  reveal views carry them. For now a Clue question plays like `free_text` and
-  every right answer scores the first-clue value; stepping through the clues in
-  a session is not built yet.
+  reveal views carry them (all of them, including clues never shown).
+  **Showing the clues:** while a Clue question is asked (`question_open` or
+  `locking`) the quiz master steps through its clues with Advance and Previous,
+  a third kind (`clues`) of the Stepped reveal beside `closest_guess` and
+  `showdown`: one step per clue, falling through at both ends, never waiting on
+  its first Advance. The question opens on clue 1; Advance shows the next clue
+  and, on the last clue, moves to the next question; Previous hides the latest
+  clue on screen and, on clue 1, goes back to the question before. The on-screen
+  step is the ephemeral `revealStep`; the **highest clue shown** per question
+  (`SessionState.highestClueShown`, question id → 1-based clue) only grows,
+  Previous never lowers it, and it is saved with the game progress
+  (`game_sessions.highest_clue_shown`, written on every clue step too). Landing
+  on the question again, forward or by Previous from the question after, and
+  restoring after a restart, put the walk on the highest clue shown. **Views:**
+  the question views (`currentQuestion`, `blockQuestions`; every room) carry
+  `clues` (the clues up to the step on air for the question being asked, up to
+  the highest clue shown for any other), `clueCount` and `clueValue` (what a
+  right answer is worth from the highest clue shown); `options` stays empty
+  until the reveal. The big screen and the phone list `clues` under the prompt,
+  growing with each step; `/control` and `/remote` show "Clue N of M". Scoring
+  by clue (a team's own clue number, the freeze, hand grades) is not built yet:
+  every right answer still scores the first-clue value.
 
 ### Media on any question
 
