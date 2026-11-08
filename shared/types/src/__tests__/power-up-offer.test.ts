@@ -13,7 +13,6 @@ const mc = {
   id: 7,
   type: 'multiple_choice' as const,
   options: ['a', 'b', 'c', 'd'],
-  isQuickfire: false,
 };
 const settings: PowerUpSettings = defaultPowerUpSettings(true);
 const base = {
@@ -53,15 +52,6 @@ describe('questionPurchaseRefusal', () => {
       refusal(
         { ...base, question: { ...mc, options: ['a', 'b'] } },
         'fifty_fifty',
-      ),
-    ).toBe('That power-up does not work on this question');
-  });
-
-  it('refuses every question power-up in a quickfire round', () => {
-    expect(
-      refusal(
-        { ...base, question: { ...mc, isQuickfire: true } },
-        'ask_the_room',
       ),
     ).toBe('That power-up does not work on this question');
   });
@@ -191,15 +181,6 @@ describe('questionPowerUpOffer', () => {
       status: 'unavailable',
       reason: 'Answers are locked for this question',
     });
-  });
-
-  it('makes everything unavailable in a quickfire round', () => {
-    const quick = { ...base, question: { ...mc, isQuickfire: true } };
-    expect(
-      questionPowerUpOffer(quick).every(
-        (e) => e.outcome.status === 'unavailable',
-      ),
-    ).toBe(true);
   });
 });
 

@@ -235,7 +235,6 @@ export function extraJokerRoundId(session: {
   seededGame: {
     rounds: readonly {
       id: number;
-      quickfire?: boolean;
       questions: readonly { id: number }[];
     }[];
   };
@@ -249,8 +248,7 @@ export function extraJokerRoundId(session: {
   const next = pickableRounds(rounds, session.openedQuestionIds).find(
     (round) => rounds.indexOf(round) > lastIntroIndex,
   );
-  // A quickfire round is never doubled this way, so it is not offered.
-  return next && !next.quickfire ? next.id : null;
+  return next ? next.id : null;
 }
 
 /** How many options a 50/50 leaves: half, rounded down, never fewer than two. */

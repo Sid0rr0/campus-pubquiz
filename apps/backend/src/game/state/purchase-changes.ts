@@ -1,7 +1,6 @@
 import {
   askTheRoomSplit,
   findQuestionOpenForAnswering,
-  isCurrentRoundQuickfire,
   drawRemovedOptions,
   drawPin,
   extraJokerPurchaseRefusal,
@@ -339,9 +338,7 @@ function assertQuestionPurchaseAllowed(
     settings: session.seededGame.settings.powerUps,
     purchases: records,
     balance: coinBalance(session, teamId, records),
-    question: question
-      ? { ...question, isQuickfire: isCurrentRoundQuickfire(session) }
-      : null,
+    question: question ?? null,
     // Stryker disable ConditionalExpression,ArrayDeclaration: equivalent, only Ask the room reads this, and it is refused without an open question.
     isRoomReady:
       question !== undefined &&
