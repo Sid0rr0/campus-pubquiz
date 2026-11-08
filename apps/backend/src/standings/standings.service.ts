@@ -272,6 +272,7 @@ export class StandingsService {
           (a, b) =>
             b.totalPoints - a.totalPoints ||
             compareTeamNames(a.teamName, b.teamName) ||
+            // Stryker disable next-line ArithmeticOperator: equivalent, team names are unique so the name compare is never 0 for two teams
             a.teamId - b.teamId,
         );
       result.set(gameSessionId, {
@@ -293,6 +294,7 @@ export class StandingsService {
     gameSessionIds: readonly number[],
   ): Promise<Map<number, SessionResult>> {
     const results = new Map<number, SessionResult>();
+    // Stryker disable next-line ConditionalExpression: equivalent, an empty `whereIn` matches nothing so the ended-ids check returns the same map
     if (gameSessionIds.length === 0) return results;
     const knex = this.gameSessionTeams.getKnex();
 
@@ -434,6 +436,7 @@ export class StandingsService {
   private async loadRounds(
     gameSessionIds: readonly number[],
   ): Promise<RoundRow[]> {
+    // Stryker disable next-line ConditionalExpression: equivalent, an empty `whereIn` matches no rows
     if (gameSessionIds.length === 0) return [];
     const knex = this.gameSessionTeams.getKnex();
     return (await knex('rounds as r')
@@ -447,6 +450,7 @@ export class StandingsService {
   private async loadRoundTotals(
     gameSessionIds: readonly number[],
   ): Promise<RoundTotalRow[]> {
+    // Stryker disable next-line ConditionalExpression: equivalent, an empty `whereIn` matches no rows
     if (gameSessionIds.length === 0) return [];
     const knex = this.gameSessionTeams.getKnex();
     return (await knex

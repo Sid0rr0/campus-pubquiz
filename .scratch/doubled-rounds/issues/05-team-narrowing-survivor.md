@@ -6,8 +6,8 @@ Parent spec: `.scratch/doubled-rounds/spec.md`
 
 **Blocked by:** None
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A DB-backed spec seeds two teams that double different rounds in one session and asserts the single-team read marks only the asked team's rounds.
+- [x] Resolved as equivalent, not a missing test: `night` only looks the set up by `teamId:roundId` of answers it already narrowed to the team, so no observable output differs when `{ teamId }` becomes `{}`. Marked with a Stryker disable comment.
 
 Other survivors triaged as not this spec's gap: `standings.service.ts` lines 273/275 (rank tiebreak), 296/437/450 (empty-ids early return, equivalent), 332/333 (per-session filter of already-narrowed rows) are untouched code from before the spec.

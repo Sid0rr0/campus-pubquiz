@@ -340,10 +340,16 @@ export class EndedSessionsRead {
     )) as NightAnswerRow[];
 
     // Which round each team doubled: an answer to a question of it is a joker answer.
+    // The set is only looked up by `teamId:roundId` of the (already narrowed) answers, so
+    // other teams' rounds in it are never read: the narrowing only saves rows.
     const doubledRounds = new Set(
-      (await this.doubledRounds([gameSessionId], { teamId })).map(
-        (row) => `${row.teamId}:${row.roundId}`,
-      ),
+      (
+        await this.doubledRounds(
+          [gameSessionId],
+          // Stryker disable next-line ObjectLiteral: equivalent, answers are narrowed to the team so extra rows are never looked up
+          { teamId },
+        )
+      ).map((row) => `${row.teamId}:${row.roundId}`),
     );
     const roundIdByQuestion = new Map(
       questionRows.map((row) => [row.questionId, row.roundId]),

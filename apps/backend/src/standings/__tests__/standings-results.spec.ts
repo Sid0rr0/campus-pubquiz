@@ -1,5 +1,7 @@
 import { BonusAward } from '@/db/entities/bonus-award.entity';
+import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Team } from '@/db/entities/team.entity';
 import { Question } from '@/db/entities/question.entity';
 import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
 import {
@@ -103,6 +105,48 @@ describe('StandingsService.resultsForSessions (Postgres integration)', () => {
     expect(result.teams[0].wonNight).toBe(true);
     expect(result.maxPoints).toBe(state.question.points);
     expect(result.questions[0].answeredCount).toBe(2);
+  });
+
+  it("counts only each session's own answers when several sessions of one quiz are asked for", async () => {
+    const here = await insertTeam('Here', 'token-h');
+    const otherSession = state.em.create(GameSession, {
+      quiz: state.round.quiz,
+      joinCode: 'OTHER1',
+      status: 'ended',
+    });
+    const there = state.em.create(Team, {
+      name: 'There',
+      token: 'token-t',
+      code: 'code-token-t',
+    });
+    state.em.create(GameSessionTeam, {
+      gameSession: otherSession,
+      team: there,
+    });
+    await state.em.flush();
+    await score(state.question, here.id, 1);
+    const { answerId } = await state.answerService.submit(
+      otherSession.id,
+      gradable(state.question),
+      there.id,
+      'guess',
+    );
+    await state.answerService.grade(
+      otherSession.id,
+      answerId,
+      gradable(state.question),
+      1,
+    );
+    await endSession();
+
+    const results = await standings.resultsForSessions([
+      state.session.id,
+      otherSession.id,
+    ]);
+
+    for (const id of [state.session.id, otherSession.id]) {
+      expect(results.get(id)!.questions[0].answeredCount).toBe(1);
+    }
   });
 
   it('reads only ended sessions', async () => {

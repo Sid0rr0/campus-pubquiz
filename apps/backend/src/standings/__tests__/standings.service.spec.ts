@@ -446,6 +446,19 @@ describe('StandingsService (Postgres integration)', () => {
     expect(result.winner).toBeUndefined();
   });
 
+  it('orders departed teams by total before name, so a lower total with an earlier name goes last', async () => {
+    const early = await insertTeam('Aaa', 'token-1');
+    const late = await insertTeam('Zzz', 'token-2');
+    await scoreAnswer(state.question, early.id, 1);
+    await scoreAnswer(state.question, late.id, 4);
+    await removeFromRoster(early);
+    await removeFromRoster(late);
+
+    const result = await standings.forSession(state.session.id);
+
+    expect(result.departed.map((t) => t.teamName)).toEqual(['Zzz', 'Aaa']);
+  });
+
   it("returns each session's own standings when asked for several at once", async () => {
     const otherSession = state.em.create(GameSession, {
       quiz: state.round.quiz,
