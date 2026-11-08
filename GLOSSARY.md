@@ -62,6 +62,14 @@ _Avoid_: audio-only (a question's media can itself be plain sound)
 How a question is answered: typed text, a number, picking a choice, putting items in order, or pairing items up. Question type says what a question asks teams to do; answer kind says how they enter the answer, and it is worked out from the type. Branch on this, not on the type, when behaviour differs by how a question is answered.
 _Avoid_: input kind (the registry field that is its default)
 
+**Clue question**:
+A question type where the quiz master shows clues to the whole room one at a time, and teams type their answer. A right answer is worth half a point for every clue the room had not yet seen when the team answered, counting the latest clue shown, so on a five-clue question 2.5 on the first clue down to 0.5 on the last; the clues set the question's points, and an answer is graded only right or wrong. Once another clue is shown, a team's answer can no longer be changed.
+_Avoid_: help points, hint question
+
+**Clue**:
+One line of a clue question, shown to the room by the quiz master. Showing the next clue is not a reveal: a reveal shows answers.
+_Avoid_: hint (that's what a free-text power-up gives one team)
+
 **Showdown**:
 A tiebreak played between teams tied on the leaderboard, in which every tied team guesses at once and the guesses are then revealed one by one in a fixed seat order, then the answer and the winner. A **Stepped reveal** that holds at both ends, and whose first Advance waits until every team has guessed.
 _Avoid_: tiebreaker round, sudden death
@@ -162,7 +170,7 @@ _Avoid_: reveal type, reveal mode
 The step-by-step reveal of a closest_guess question: the question; then the smallest guess, the highest guess, the correct answer and the closest teams, one more line per Advance (one step when nobody guessed). A **Stepped reveal** that falls through to the next screen at both ends. Its disclosure is sent to each screen already trimmed to the step on air, so the reveal screen draws what it is sent and never sees a step number.
 
 **Stepped reveal**:
-The walk one line per Advance, and back one per Previous, that the **Closest-guess reveal** and the **Showdown** share. One module owns it: it knows which stepped reveal is on air, keeps the session's single ephemeral step counter (`revealStep`), and decides what a press does (a new step, a hold at an end, a fall-through to the next screen, or a wait). Each reveal only supplies its step count, what happens at its ends, a guard on the first Advance and its own lines. The step survives every action that leaves the reveal on air, including the leaderboard and the join overlay; only a different reveal restarts it. Read a reveal's step through the module, never the raw counter, so composing a showdown during another reveal disturbs neither.
+The walk one line per Advance, and back one per Previous, that the **Closest-guess reveal** and the **Showdown** share, and that a **Clue question** uses to show its clues (not a reveal, but the same walk). One module owns it: it knows which stepped reveal is on air, keeps the session's single ephemeral step counter (`revealStep`), and decides what a press does (a new step, a hold at an end, a fall-through to the next screen, or a wait). Each reveal only supplies its step count, what happens at its ends, a guard on the first Advance and its own lines. The step survives every action that leaves the reveal on air, including the leaderboard and the join overlay; only a different reveal restarts it. Read a reveal's step through the module, never the raw counter, so composing a showdown during another reveal disturbs neither.
 
 **Auto-advance**:
 A phone setting, on by default and remembered on that phone. On, the block browser follows the big screen's current question and reveal step; off, the team browses the block freely with previous/next.

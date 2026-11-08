@@ -7,6 +7,7 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
 | quickfire-mode | [Quickfire is a quiz mode, not a round setting](quickfire-mode/spec.md) | 5 | none |
+| clue-question | [Clue question type, worth less with every clue shown](clue-question/spec.md) | 5 | none |
 
 ## Won't do
 
