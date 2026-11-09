@@ -345,7 +345,7 @@ The teams of a league ranked by league points; teams level on points are split b
 _Avoid_: league leaderboard, standings (that's one session)
 
 **League top**:
-The name and top five rows of the league table of a session's league (the most recently created one if it is in several), shown on the big screen lobby. Sent to the display only, and `null` when the session is in no league.
+The name and top five rows of the league table of a session's league (the most recently created one if it is in several), shown on the big screen lobby. Sent to the display only, and `null` when the session is in no league. Redrawn when the league table may have changed: another session ended or its scores changed after it ended, the league was edited, or two teams were merged.
 
 ## Game status
 

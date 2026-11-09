@@ -1304,7 +1304,7 @@ table (`GameSessionTeam`).
     counts, showdown seats and the showdown winner) moves to the kept team, the
     older team is deleted (freeing its name) and the kept team takes the name.
     Every derived read (team history, team page, league table, stats) shows the
-    merged team at once.
+    merged team at once, and every live lobby re-reads its league top.
   - **Eligibility**, re-checked inside the transaction (`team-merge.service.ts`,
     shared by both previews): refused, changing nothing, when the two teams are
     the same or either is unknown, when the name is neither team's current name,
@@ -2639,7 +2639,8 @@ points, the table and the public page.
   writes the settings or the memberships, so a refused PATCH stores nothing) and
   whenever an admin edits or deletes a league or adds or removes one of its sessions
   (`LeaguesController` re-reads every live session, then broadcasts the state of those
-  whose league changed), so a reconnecting or second big screen gets it in its first
+  whose league changed) or merges two teams (`TeamsController` does the same after
+  `POST /teams/:id/merge`), so a reconnecting or second big screen gets it in its first
   snapshot. It is read at placement and on league changes only, never on score writes
   (an answer, grade or bonus), because a league table counts only ended sessions and so
   can't change from this session's scoring; it is not one of the **Live results**. A failed read is logged and leaves the

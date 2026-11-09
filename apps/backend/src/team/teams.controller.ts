@@ -30,6 +30,7 @@ import {
 } from '@/team/team-merge.schema';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { RolesGuard } from '@/auth/roles.guard';
+import { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import { SessionGuard } from '@/auth/session.guard';
 import { TeamService } from '@/team/team.service';
 import { teamsQuerySchema } from '@/team/teams-query.schema';
@@ -42,6 +43,7 @@ export class TeamsController {
     private readonly teamService: TeamService,
     private readonly teamHistory: TeamHistoryService,
     private readonly teamMerge: TeamMergeService,
+    private readonly liveSession: LiveSessionRest,
   ) {}
 
   @Get()
@@ -96,9 +98,12 @@ export class TeamsController {
         parsed.error.issues[0]?.message ?? 'Invalid body',
       );
     }
-    return this.mergeOutcome(() =>
+    const merged = await this.mergeOutcome(() =>
       this.teamMerge.merge(id, parsed.data.otherTeamId, parsed.data.name),
     );
+    // A merge combines two teams' rows in ended sessions' league tables.
+    await this.liveSession.refreshLeagueLobbies();
+    return merged;
   }
 
   /** Maps the merge module's errors to 404 (unknown team) and 409 (refused). */

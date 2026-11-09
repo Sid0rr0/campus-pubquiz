@@ -10,6 +10,7 @@ import {
   type TeamMergeService,
 } from '@/team/team-merge.service';
 import type { TeamHistoryService } from '@/team/team-history.service';
+import type { LiveSessionRest } from '@/game/rest/live-session-rest.service';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { TeamsController } from '@/team/teams.controller';
@@ -27,12 +28,16 @@ function makeController() {
     pairPreview: jest.fn(),
     merge: jest.fn(),
   };
+  const liveSession = {
+    refreshLeagueLobbies: jest.fn().mockResolvedValue(undefined),
+  };
   const controller = new TeamsController(
     teamService as unknown as TeamService,
     teamHistory as unknown as TeamHistoryService,
     teamMerge as unknown as TeamMergeService,
+    liveSession as unknown as LiveSessionRest,
   );
-  return { controller, teamService, teamHistory, teamMerge };
+  return { controller, teamService, teamHistory, teamMerge, liveSession };
 }
 
 describe('TeamsController', () => {
@@ -205,6 +210,27 @@ describe('TeamsController', () => {
         controller.merge(7, { otherTeamId: 8, name: 'Quizzly Bears' }),
       ).resolves.toEqual({ keptTeamId: 8 });
       expect(teamMerge.merge).toHaveBeenCalledWith(7, 8, 'Quizzly Bears');
+    });
+
+    it('refreshes the lobby league of every live session after merging', async () => {
+      const { controller, teamMerge, liveSession } = makeController();
+      teamMerge.merge.mockResolvedValue({ keptTeamId: 8 });
+
+      await controller.merge(7, { otherTeamId: 8, name: 'A' });
+      expect(liveSession.refreshLeagueLobbies).toHaveBeenCalledTimes(1);
+      expect(teamMerge.merge.mock.invocationCallOrder[0]).toBeLessThan(
+        liveSession.refreshLeagueLobbies.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('does not refresh lobbies when the merge is refused', async () => {
+      const { controller, teamMerge, liveSession } = makeController();
+      teamMerge.merge.mockRejectedValue(new TeamMergeRefusedError('no'));
+
+      await expect(
+        controller.merge(7, { otherTeamId: 8, name: 'A' }),
+      ).rejects.toThrow(ConflictException);
+      expect(liveSession.refreshLeagueLobbies).not.toHaveBeenCalled();
     });
 
     it.each([
