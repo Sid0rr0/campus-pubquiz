@@ -135,13 +135,13 @@ export function TeamsDirectoryPanel() {
               setPagination((old) => ({ ...old, pageIndex: 0 }));
             }}
           />
-          Show quickfire-only teams
+          Only quickfire-only teams
         </label>
       </div>
 
       <SortableTable
         table={table}
-        emptyMessage={emptyMessageFor(trimmedSearch)}
+        emptyMessage={emptyMessageFor(trimmedSearch, showQuickfireOnly)}
       />
 
       <DirectoryPager table={table} pageIndex={pagination.pageIndex} />
@@ -299,6 +299,9 @@ function DirectoryPager({
 
 const NO_TEAMS: TeamListItem[] = [];
 
-function emptyMessageFor(search: string): string {
-  return search ? 'No teams match.' : 'No teams have joined yet.';
+function emptyMessageFor(search: string, quickfireOnly: boolean): string {
+  if (search) return 'No teams match.';
+  return quickfireOnly
+    ? 'No quickfire-only teams.'
+    : 'No teams have joined yet.';
 }

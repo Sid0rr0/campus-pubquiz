@@ -676,7 +676,7 @@ describe('TeamService (Postgres integration)', () => {
           })
         ).items.map((item) => item.name);
 
-      it('hides teams whose every ended session was quickfire unless asked, and counts only the shown ones', async () => {
+      it('lists either the other teams or, when asked, only the teams whose every ended session was quickfire, and counts only the shown ones', async () => {
         const quickfireId = await createSecondSession('QFIRE1', 'quickfire');
         const quickfireOnly = await teamService.join(quickfireId, 'Fast Only', {
           joinCode: 'QFIRE1',
@@ -696,18 +696,30 @@ describe('TeamService (Postgres integration)', () => {
         await endSession(sessionId);
 
         expect(await names()).toEqual(['Mixed', 'Never Played']);
-        expect(await names(true)).toEqual([
-          'Fast Only',
-          'Mixed',
-          'Never Played',
-        ]);
-        const hidden = await teamService.listAll({
+        expect(await names(true)).toEqual(['Fast Only']);
+        const total = async (showQuickfireOnly?: boolean) =>
+          (
+            await teamService.listAll({
+              page: 1,
+              pageSize: 20,
+              sortBy: 'joinedAt',
+              sortOrder: 'asc',
+              showQuickfireOnly,
+            })
+          ).total;
+        expect(await total()).toBe(2);
+        expect(await total(true)).toBe(1);
+        const searched = await teamService.listAll({
           page: 1,
           pageSize: 20,
           sortBy: 'joinedAt',
           sortOrder: 'asc',
+          search: 'never',
         });
-        expect(hidden.total).toBe(2);
+        expect(searched.items.map((item) => item.name)).toEqual([
+          'Never Played',
+        ]);
+        expect(searched.total).toBe(1);
       });
 
       it('counts quickfire nights in sessions played but leaves them out of the average placing', async () => {

@@ -66,12 +66,12 @@ describe('TeamsDirectoryPanel', () => {
     );
   });
 
-  it('hides quickfire-only teams until the checkbox is ticked, then returns to page 1', async () => {
+  it('lists only quickfire-only teams once the checkbox is ticked, then returns to page 1', async () => {
     const user = userEvent.setup();
     renderWithQuery(<TeamsDirectoryPanel />);
     await waitFor(() => screen.getByText('The Quizzards'));
     const checkbox = screen.getByRole('checkbox', {
-      name: 'Show quickfire-only teams',
+      name: 'Only quickfire-only teams',
     });
     expect(checkbox).not.toBeChecked();
     expect(mockFetchTeams).toHaveBeenLastCalledWith(
@@ -94,6 +94,23 @@ describe('TeamsDirectoryPanel', () => {
         expect.anything(),
       ),
     );
+  });
+
+  it('says there are no quickfire-only teams when the ticked list is empty', async () => {
+    const user = userEvent.setup();
+    mockFetchTeams.mockResolvedValue({ ...PAYLOAD, items: [], total: 0 });
+    renderWithQuery(<TeamsDirectoryPanel />);
+    expect(
+      await screen.findByText('No teams have joined yet.'),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('checkbox', { name: 'Only quickfire-only teams' }),
+    );
+
+    expect(
+      await screen.findByText('No quickfire-only teams.'),
+    ).toBeInTheDocument();
   });
 
   it('searches by the trimmed name from page 1', async () => {

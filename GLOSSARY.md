@@ -265,7 +265,7 @@ A team took part in a session if it has an answer or bonus award stored for it. 
 The ended sessions a team took part in. Shown the same in the team directory and on the team page. Quickfire nights count.
 
 **Quickfire-only team**:
-A team that took part in at least one ended session, all of them quickfire quizzes. A team with no ended session yet, or with any pub quiz night, is not one. The team directory hides quickfire-only teams unless asked to show them.
+A team that took part in at least one ended session, all of them quickfire quizzes. A team with no ended session yet, or with any pub quiz night, is not one. The team directory lists either the other teams or, when asked, only the quickfire-only teams; it never lists both at once.
 
 **Merge**:
 Making two teams that are the same real team into one, after the team joined a later night under another name. The **kept team** carries on with both teams' sessions and either team's name; the **duplicate team** stops existing. Two teams that took part in the same session can't be merged, and a merge can't be undone.

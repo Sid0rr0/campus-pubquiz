@@ -229,9 +229,9 @@ export class TeamService {
         .leftJoin(sessionsPlayed.as('sp'), 'sp.team_id', 't.id')
         .where('t.name', 'ilike', namePattern);
       return showQuickfireOnly
-        ? query
+        ? query.whereRaw('sp.sessions_played = sp.quickfire_played')
         : query.whereRaw(
-            'sp.team_id is null or sp.sessions_played <> sp.quickfire_played',
+            '(sp.team_id is null or sp.sessions_played <> sp.quickfire_played)',
           );
     };
     const teamRows = matching()

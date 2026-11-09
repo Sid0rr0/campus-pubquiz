@@ -2551,11 +2551,13 @@ list and its `total` to teams whose name contains it, ignoring case, under every
 sort.
 
 A **quickfire-only team** (see `GLOSSARY.md`) took part in at least one ended
-session and every one of them was quickfire. `GET /teams` hides such teams unless
-`showQuickfireOnly=true` (default false), in the list and in `total`; a team with no
-ended session and a team with any pub session stay listed. The directory's "Show
-quickfire-only teams" checkbox sets it, starts unchecked, is not remembered and
-resets the list to page 1. A quickfire night counts in **Sessions played** but is
+session and every one of them was quickfire. `GET /teams` lists either the other
+teams (default) or, with `showQuickfireOnly=true`, only the quickfire-only teams,
+in the list and in `total`; a team with no ended session and a team with any pub
+session are only in the default list, so no list holds every team. The directory's
+"Only quickfire-only teams" checkbox sets it, starts unchecked, is not remembered
+and resets the list to page 1; its empty list reads "No quickfire-only teams."
+(with no search). A quickfire night counts in **Sessions played** but is
 left out of **Wins** and **Average placing** (a `TeamSessionRow` carries
 `isQuickfire`; `teamHistoryOf` and `averagePlacingOf` skip it), on the team page,
 the staff team page and the directory alike.
