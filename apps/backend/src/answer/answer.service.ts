@@ -10,6 +10,7 @@ import type {
 import {
   atClue,
   clueValueFromPoints,
+  isNonAnswer,
   QUESTION_KINDS,
   verdictForManualGrade,
   withWiderMargin,
@@ -62,7 +63,9 @@ export class AnswerLockedError extends Error {
 /**
  * The clue a submission is recorded on (null for any other type): an
  * unchanged value keeps its clue, a changed one takes the highest clue shown,
- * unless the stored answer's clue is already below it, which freezes it.
+ * unless the stored answer's clue is already below it, which freezes it. A
+ * stored blank or "I don't know" says nothing, so it never freezes: that is how
+ * a team clears its answer to wait for the next clue.
  */
 function clueToRecord(
   question: GradableQuestion,
@@ -75,7 +78,9 @@ function clueToRecord(
   if (existing === null) return highest;
   const stored = existing.clue ?? highest;
   if (existing.value === value) return stored;
-  if (stored < highest) throw new AnswerLockedError();
+  if (stored < highest && !isNonAnswer(existing.value)) {
+    throw new AnswerLockedError();
+  }
   return highest;
 }
 

@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -147,5 +148,66 @@ describe('PlayPage — a Clue question', () => {
       screen.getByText(/Locked in on clue 1 · worth\s+1.5 points/),
     ).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('clears an answer that could still freeze, and offers no clearing once it is cleared', async () => {
+    const submitAnswer = vi.fn();
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: clueSession(1, 2),
+        join: { team: TEAM },
+        game: { submitAnswer, myAnswers: { 1: 'Curie' } },
+      }),
+    );
+    const { rerender } = renderWithQuery(<PlayPage />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Clear my answer' }),
+    );
+
+    expect(submitAnswer).toHaveBeenCalledWith(1, 7, '');
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: clueSession(1, 2),
+        join: { team: TEAM },
+        game: { submitAnswer, myAnswers: { 1: '' } },
+      }),
+    );
+    rerender(<PlayPage />);
+    expect(
+      screen.queryByRole('button', { name: 'Clear my answer' }),
+    ).toBeNull();
+  });
+
+  it('offers no clearing on the last clue, where the answer cannot freeze', () => {
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: clueSession(2, 3),
+        join: { team: TEAM },
+        game: { myAnswers: { 1: 'Curie' } },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(
+      screen.queryByRole('button', { name: 'Clear my answer' }),
+    ).toBeNull();
+  });
+
+  it('does not treat a cleared answer on an older clue as locked in', () => {
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: clueSession(1, 2),
+        join: { team: TEAM },
+        game: {
+          myAnswers: { 1: '' },
+          myAnswerClues: { 1: { clue: 1, value: 1.5 } },
+        },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.queryByText(/Locked in on clue/)).toBeNull();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 });

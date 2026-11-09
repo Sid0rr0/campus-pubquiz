@@ -1159,7 +1159,10 @@ itself — the display and other players just see counts.
    once that clue is below the highest clue shown. An unchanged resubmission is
    accepted and keeps its clue; answers on the last clue stay changeable until
    the block locks; a team that hasn't answered can still answer later, at the
-   highest clue's value.
+   highest clue's value. A blank answer or "I don't know" says nothing, so it
+   never freezes: the phone's "Clear my answer" button (shown while a clue is
+   left to show) submits a blank, and the team can answer again on a later
+   clue at that clue's value.
 3. **Acknowledge** — the submitter gets `ANSWER_RECEIVED`, which the phone
    uses to tick its checkmarks and flash a short "Saved ✓" (an accepted
    submit only, never a refused one); the admin room gets the full `ANSWERS_UPDATED`

@@ -115,6 +115,50 @@ describe('AnswerService (Postgres integration) - Clue question answers', () => {
     expect(await answerOf(question)).toMatchObject({ clue: 1 });
   });
 
+  it.each(['', '__idk__'])(
+    'lets a team that cleared its answer (%j) answer on a later clue at that clue value',
+    async (cleared) => {
+      const question = await clueQuestion();
+      const team = await insertTeam('The Quizzards', 'token-1');
+      const submit = (value: string, clue: number) =>
+        state.answerService.submit(
+          state.session.id,
+          gradable(question),
+          team.id,
+          value,
+          null,
+          clue,
+        );
+      await submit('Curie', 1);
+      await submit(cleared, 1);
+
+      await submit('Marie Curie', 3);
+
+      expect(await answerOf(question)).toMatchObject({
+        value: 'Marie Curie',
+        clue: 3,
+        pointsAwarded: 1.5,
+      });
+    },
+  );
+
+  it('still refuses to clear an answer a newer clue has frozen', async () => {
+    const question = await clueQuestion();
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submit = (value: string, clue: number) =>
+      state.answerService.submit(
+        state.session.id,
+        gradable(question),
+        team.id,
+        value,
+        null,
+        clue,
+      );
+    await submit('Curie', 1);
+
+    await expect(submit('', 2)).rejects.toThrow(AnswerLockedError);
+  });
+
   it('accepts a change on the same clue, and on the last clue, at the current clue', async () => {
     const question = await clueQuestion();
     const team = await insertTeam('The Quizzards', 'token-1');

@@ -23,6 +23,11 @@ export interface SubmitAnswerPayload {
 // Stryker disable next-line StringLiteral: accepted, a sentinel constant (CODING_STANDARDS "Tests"); every user compares against the export
 export const IDK_ANSWER_VALUE = '__idk__';
 
+/** Whether a stored answer says nothing: blank (a taken-back answer) or "I don't know". */
+export function isNonAnswer(value: string): boolean {
+  return value === '' || value === IDK_ANSWER_VALUE;
+}
+
 export interface AnswerReceivedPayload {
   questionId: number;
   teamId: number;

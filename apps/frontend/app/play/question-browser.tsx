@@ -1,6 +1,7 @@
 import {
   formatAnswer,
   isHttpUrl,
+  isNonAnswer,
   isPinOffPlace,
   removedOptionsOf,
   resolveAnswerKind,
@@ -197,17 +198,20 @@ export function QuestionBrowser({
 /**
  * Where a Clue answer stands against the clues shown: frozen (its clue is below
  * the highest shown, so a new clue was shown since) or still freezable (a clue
- * is left to show).
+ * is left to show). A cleared answer (blank or "I don't know") never freezes.
  */
 function clueFreezeOf(
   { highestClue, clueCount }: QuestionBrowserProps['selectedQuestion'],
   myAnswerClue: MyAnswerClue | undefined,
+  myAnswer: string | undefined,
 ) {
   const isClueQuestion = highestClue !== undefined && clueCount !== undefined;
   return {
     frozenClue:
       isClueQuestion &&
       myAnswerClue !== undefined &&
+      myAnswer !== undefined &&
+      !isNonAnswer(myAnswer) &&
       myAnswerClue.clue < highestClue
         ? myAnswerClue
         : null,
@@ -269,7 +273,12 @@ function AnswerArea({
     // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
     <div hidden={!isAnswerable}>
       <AnswerForm
-        key={question.id}
+        // A Clue question's form restarts when its answer is cleared, so the box doesn't keep the cleared text.
+        key={
+          clueFreeze.isFreezable
+            ? `${question.id}:${isNonAnswer(initialValue)}`
+            : question.id
+        }
         question={question}
         // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
         removedOptions={removedOptions}
@@ -279,9 +288,20 @@ function AnswerArea({
         onSubmit={onSubmit}
       />
       {clueFreeze.isFreezable && (
-        <p className="mt-2 text-center text-sm font-extrabold text-foreground/55">
-          Once the next clue is shown, you can&apos;t change this answer.
-        </p>
+        <>
+          <p className="mt-2 text-center text-sm font-extrabold text-foreground/55">
+            Once the next clue is shown, you can&apos;t change this answer.
+          </p>
+          {!isNonAnswer(initialValue) && (
+            <Button
+              type="button"
+              onClick={() => onSubmit('')}
+              className="mt-2 flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-dashed border-foreground/35 bg-transparent px-4 text-base font-extrabold text-foreground/55"
+            >
+              Clear my answer
+            </Button>
+          )}
+        </>
       )}
     </div>
   );
@@ -349,7 +369,7 @@ function OpenQuestion({
           removedOptions={removedOptionsOf(question.id, purchases)}
           isQuickfireMode={isQuickfireMode}
           pin={pin}
-          clueFreeze={clueFreezeOf(question, myAnswerClue)}
+          clueFreeze={clueFreezeOf(question, myAnswerClue, myAnswer)}
           onSubmit={(value) => onSubmitAnswer(question.id, team.teamId, value)}
         />
       )}
