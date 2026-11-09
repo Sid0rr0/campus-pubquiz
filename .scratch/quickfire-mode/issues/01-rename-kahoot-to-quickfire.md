@@ -6,7 +6,7 @@ Parent spec: `.scratch/quickfire-mode/spec.md`
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Identifiers and files renamed across `shared/types`, backend, frontend, e2e and `scripts/` (`kahoot-visibility.ts`, `KAHOOT_ALLOWED_TYPES`, `kahootQuestionTimerSeconds`, `kahootQuestionEndsAt`, `revealedKahootQuestionIds`, the `kahoot-*.spec.ts` files, `e2e/fixtures/kahoot-round.csv`, …). The per-round `kahootMode` becomes `quickfire` for now; ticket 02 moves it to the quiz.
 - [ ] A migration renames `rounds.kahoot_mode` and `game_sessions.revealed_kahoot_question_ids`; the stored `kahootQuestionTimerSeconds` session setting key is migrated in its JSON too, if settings are stored as JSON.

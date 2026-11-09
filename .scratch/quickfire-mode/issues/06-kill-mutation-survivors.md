@@ -6,7 +6,7 @@ Parent spec: `.scratch/quickfire-mode/spec.md`
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
 Scores from the spec's final run: shared/types 99.70%, backend DB-free 100%, frontend 97.25%, backend DB-backed (`mutate:db`) 86.93% (79+ survivors, 151 timed out; log: `/tmp/mut/be-db.log` on the author's machine, rerun `pnpm --filter backend mutate:db --mutate <files>`).
 

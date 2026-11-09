@@ -6,7 +6,7 @@ Parent spec: `.scratch/quickfire-mode/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Server refuses, for a quickfire session: `jokersEnabled` or `powerUpsEnabled` true, starting coins, a coin award, and adding the session to a league (at creation and later). No carried coins are granted (follows from no league, check it).
 - [ ] Start dialog and lobby settings for a quickfire quiz hide jokers, power-ups, coins and the league picker, and always show the question timer (prefilled 30 s).

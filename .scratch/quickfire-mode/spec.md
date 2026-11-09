@@ -1,6 +1,6 @@
 # Spec: Quickfire is a quiz mode, not a round setting
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

@@ -6,7 +6,7 @@ Parent spec: `.scratch/quickfire-mode/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Migration adds `quizzes.mode`, sets `quickfire` where every round is quickfire (and there is at least one round), `pub` otherwise, throws on a quiz mixing both, then drops `rounds.quickfire`. Spec covers the three cases.
 - [ ] `seed.service.ts` / session state fill every round's in-memory quickfire flag from the quiz's mode; engine logic and its specs are otherwise untouched.

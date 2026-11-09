@@ -6,7 +6,7 @@ Parent spec: `.scratch/quickfire-mode/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] League table skips any quickfire session in the league (migrated history).
 - [ ] Team page, staff team page and team directory: Sessions played counts quickfire nights; Wins and Average placing don't.
