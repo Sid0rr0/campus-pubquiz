@@ -569,6 +569,8 @@ module, in this order, and skips a fact with no data:
 | `toughest_question`      | `correctRate` (0-1), `question`                        | Lowest correct rate above 0 of the revealed questions, never the question `nobody_got_it` names; skipped when none is below 1; never a `closest_guess` question                   |
 | `room_split`             | `correctRate` (0-1), `question`                        | Revealed question whose correct rate is closest to one half (strictly between 0 and 1); never a `closest_guess` question                                                          |
 | `nobody_got_it`          | `question`                                             | First revealed question with no `correct` answer (a question nobody answered is skipped); never a `closest_guess` question                                                        |
+| `clue_cracked_early`     | `teamNames`, `clue`, `question`                        | Clue question: the first revealed one whose earliest `correct` answer came on a clue before the last; names the teams that answered on that clue, in leaderboard name order           |
+| `clue_last_gasp`         | `clue`, `question`                                     | Clue question: the first revealed one whose earliest `correct` answer came after clue 1; `clue` is that earliest clue. A Clue question nobody got is `nobody_got_it`'s                  |
 | `clean_sweep`            | `teamNames`                                            | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted                             |
 | `joker_favourite_round`  | `roundNumber`, `roundTitle`, `teamCount`               | Jokers on only: the round most teams have as their joker, and how many; a tie goes to the earlier round; names no team                                                            |
 | `joker_snubbed_round`    | `roundNumber`, `roundTitle`                            | Jokers on only: the first round no team has as its joker; skipped when every round is someone's joker; names no team                                                              |
@@ -1150,6 +1152,17 @@ itself — the display and other players just see counts.
    answer to a question the session doesn't hold.
 2. **Upsert** — answers are keyed `(gameSession, question, team)`;
    re-submitting overwrites (last-write-wins is the desired pub-quiz behavior).
+   The one exception is the Clue question (`clues`): its answer records the
+   clue it was locked in on (`answers.clue`, the highest clue shown when it was
+   created or its value last changed), and a resubmission with a different
+   value is refused ("Your answer is locked in: a new clue has been shown")
+   once that clue is below the highest clue shown. An unchanged resubmission is
+   accepted and keeps its clue; answers on the last clue stay changeable until
+   the block locks; a team that hasn't answered can still answer later, at the
+   highest clue's value. A blank answer or "I don't know" says nothing, so it
+   never freezes: the phone's "Clear my answer" button (shown while a clue is
+   left to show) submits a blank, and the team can answer again on a later
+   clue at that clue's value.
 3. **Acknowledge** — the submitter gets `ANSWER_RECEIVED`, which the phone
    uses to tick its checkmarks and flash a short "Saved ✓" (an accepted
    submit only, never a refused one); the admin room gets the full `ANSWERS_UPDATED`
@@ -1158,7 +1171,10 @@ itself — the display and other players just see counts.
 4. **Grade** — the admin can grade an answer as soon as it arrives (0 / half
    / full points, where half is exactly half the question's points: 0.5 on a
    1-point question), and must finish any remaining grading in the `break`:
-   leaving it is refused while an answer in the block is ungraded. If a team
+   leaving it is refused while an answer in the block is ungraded. (A Clue
+   answer has no half button: `/control` shows wrong and right, where right is
+   the answer's clue value; any other amount goes through Custom, and is judged
+   correct at or above that value, partial below it.) If a team
    changes a hand-graded (`free_text`) answer, its grade is cleared,
    since it belonged to the old value. Grades are written to the answer row;
    grading an answer twice is prevented in the UI. Exception: `closest_guess` answers are graded automatically once the
@@ -1323,7 +1339,7 @@ a dead end:
 ## Question Types
 
 `QuestionType` is one of `free_text`, `multiple_choice`, `sort`, `match`,
-`closest_guess`, or `number`. Each has its own submission format and
+`closest_guess`, `number`, or `clues`. Each has its own submission format and
 grading behavior. Media is not a type: any question can carry a
 `media_url` and an `answer_media_url` (see [Media on any question](#media-on-any-question)).
 
@@ -1443,6 +1459,62 @@ grading behavior. Media is not a type: any question can carry a
   Number question with no stored margin is sent with the default, and
   `closest_guess` and every other type are sent without one. The screens show
   margin text from the view alone and never ask the question type registry.
+- **`clues`** — the **Clue question** (label "Clue question"): 2 to 8 ordered
+  clues and a typed answer. Teams type their answer like `free_text`, with the
+  same grading mode (`match-or-human`): an exact match (trimmed,
+  case-insensitive) is graded correct at submit for the question's points,
+  anything else waits for the quiz master. It is excluded from quickfire, takes
+  no power-ups and uses the plain answer reveal. **The clues ride in the
+  question's `options`** (the field choice and sort questions use), so the
+  stored payload, the preview and the sheet carry them there, in order; the
+  registry flag `hasClues` marks the type. **Points are derived**: always
+  clues × 0.5 (`cluePoints`, `shared/types/src/clue-value.ts`), whatever the
+  sheet's `points` cell or the editor's form says. Import (`parseQuestionRow`)
+  and draft save (`previewToStoredFields`) both apply `withDerivedPoints`, and
+  the import preview shows the derived value, so `Question.points` is stored as
+  a half-point `real` (like `Answer.pointsAwarded`). A right answer on clue `k`
+  of `N` is worth `0.5 × (N − k + 1)` (`clueValue`/`clueValues`: 5 clues are
+  2.5 · 2 · 1.5 · 1 · 0.5), the value the editor lists next to the clues.
+  The preview schema (`cluesPreviewSchema`) refuses fewer than 2 or more than 8
+  clues, a clue containing `|` and an empty answer. **Editor:** picking the type
+  shows a clue list (add, delete, move up/down) and the per-clue value line in
+  place of the points field. **No clue leaves the server before it is shown**:
+  `toQuestionView`, the admin question context and the presenter's screen
+  preview drop `options` for a `hasClues` type (`withoutClues`), and only the
+  reveal views carry them (all of them, including clues never shown).
+  **Showing the clues:** while a Clue question is asked (`question_open` or
+  `locking`) the quiz master steps through its clues with Advance and Previous,
+  a third kind (`clues`) of the Stepped reveal beside `closest_guess` and
+  `showdown`: one step per clue, falling through at both ends, never waiting on
+  its first Advance. The question opens on clue 1; Advance shows the next clue
+  and, on the last clue, moves to the next question; Previous hides the latest
+  clue on screen and, on clue 1, goes back to the question before. The on-screen
+  step is the ephemeral `revealStep`; the **highest clue shown** per question
+  (`SessionState.highestClueShown`, question id → 1-based clue) only grows,
+  Previous never lowers it, and it is saved with the game progress
+  (`game_sessions.highest_clue_shown`, written on every clue step too). Landing
+  on the question again, forward or by Previous from the question after, and
+  restoring after a restart, put the walk on the highest clue shown. **Views:**
+  the question views (`currentQuestion`, `blockQuestions`; every room) carry
+  `clues` (the clues up to the step on air for the question being asked, up to
+  the highest clue shown for any other), `clueCount` and `clueValue` (what a
+  right answer is worth from the highest clue shown); `options` stays empty
+  until the reveal. The big screen and the phone list `clues` under the prompt,
+  growing with each step; `/control` and `/remote` show "Clue N of M".
+  **Scoring by clue:** `highestClue` on those views is the highest clue shown.
+  An exact match is graded correct at submit with the answer's own clue value
+  (`atClue` in `scoring.ts` sets the points to that clue's value for grading);
+  anything else waits for the quiz master, whose grade is 0 or that value. A
+  key fix re-scores each answer at its own clue value, and a hand grade on a
+  non-matching answer survives. A joker doubles the result as usual. **Phone:**
+  "Worth N points now"; next to Send, while a clue is left to show, "Once the
+  next clue is shown, you can't change this answer."; a frozen answer shows
+  read-only as "Locked in on clue N · worth X points"; the reveal adds "You
+  answered on clue N". The team's own clue number rides on `TeamAnswerView.clue`
+  and `AnswerReceivedPayload.clue`; `/control`'s `AnswerView.clue` shows
+  "Clue N" on each answer. All three also carry `clueValue`, what a right
+  answer is worth at that clue (null for other types), so no client recomputes
+  it; `/control` grades a Clue answer only 0 or that value (no custom amount).
 
 ### Media on any question
 
@@ -1891,7 +1963,7 @@ rounds back up to full points) from the response time stored on each answer at s
 survives a backend restart, and a correction made before the question locks is
 speed-scaled like any other); an already-graded `closest_guess` re-runs its batch,
 overwriting any override like the auto-graded types;
-`match-or-human` types (`free_text` only) grade answers that
+`match-or-human` types (`free_text` and `clues`) grade answers that
 match the corrected key correct, keep the admin's grade on a non-matching
 answer, and send any other non-matching answer back to ungraded — including
 one that was auto-graded correct under the old key (told apart by re-running
@@ -1975,8 +2047,11 @@ Sheet row format (one row per question):
 round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author | round_note | show_round_note | show_note
 ```
 
-`type` is one of the six [Question Types](#question-types) above — see
-that section for what each needs in `options` and `answer`. A row typed
+`type` is one of the seven [Question Types](#question-types) above — see
+that section for what each needs in `options` and `answer`. (A `clues` row
+holds its clues in `options` separated by `|`, vaguest first, and the answer in
+`answer`; whatever its `points` cell says is replaced by clues × 0.5, and
+export writes the derived value, so export → import comes back unchanged.) A row typed
 `audio` or `youtube` (an older export) is rejected on its `type` cell with
 `Question type "audio" was removed — use free_text (or multiple_choice if the
 row has options) and keep the media_url.`; there are no silent aliases.

@@ -3,6 +3,7 @@
 import { motion } from 'motion/react';
 import {
   formatAnswer,
+  QUESTION_KINDS,
   halfPoints,
   POWER_UP_LABELS,
   type AnswerView,
@@ -33,15 +34,19 @@ function gradingSortRank(answer: AnswerView | null): number {
   }
 }
 
-function gradeOptions(maxPoints: number): GradeOption[] {
+function gradeOptions(maxPoints: number, hasHalf: boolean): GradeOption[] {
   const half = halfPoints(maxPoints);
   return [
     { display: '0', ariaSuffix: '0 points', value: 0 },
-    {
-      display: `Half (${half})`,
-      ariaSuffix: 'half points',
-      value: half,
-    },
+    ...(hasHalf
+      ? [
+          {
+            display: `Half (${half})`,
+            ariaSuffix: 'half points',
+            value: half,
+          },
+        ]
+      : []),
     {
       display: `Full (${maxPoints})`,
       ariaSuffix: 'full points',
@@ -60,6 +65,15 @@ interface AnswerRowProps {
   onGrade: (answerId: number, points: number) => void;
 }
 
+/** The clue a Clue question's answer was locked in on; nothing for any other answer. */
+function ClueBadge({ clue }: { clue: number | null | undefined }) {
+  return clue ? (
+    <span className="shrink-0 text-xs font-extrabold text-cyan">
+      Clue {clue}
+    </span>
+  ) : null;
+}
+
 function AnswerRow({
   teamName,
   answer,
@@ -69,6 +83,7 @@ function AnswerRow({
   onGrade,
 }: AnswerRowProps) {
   const hasAnswered = answer !== null;
+  const isClueQuestion = QUESTION_KINDS[questionType].hasClues;
   // The server says when an answer is graded in one batch at the lock (such as
   // a closest_guess answer); until then there's nothing to override.
   const isAwaitingBatch =
@@ -103,6 +118,7 @@ function AnswerRow({
             })
           : 'No answer yet'}
       </span>
+      <ClueBadge clue={answer?.clue} />
       {isAwaitingBatch ? (
         <span className="text-sm font-extrabold text-foreground/55">
           Graded when the block locks
@@ -112,6 +128,7 @@ function AnswerRow({
           teamName={teamName}
           answer={answer}
           maxPoints={maxPoints}
+          isClueQuestion={isClueQuestion}
           onGrade={onGrade}
         />
       )}
@@ -119,16 +136,24 @@ function AnswerRow({
   );
 }
 
+/** The points the answer is graded at, or null while it is not graded. */
+function gradedPointsOf(answer: AnswerView | null): number | null {
+  return answer?.gradingState === 'graded' ? answer.pointsAwarded : null;
+}
+
 /** The custom amount and the grade buttons, the current grade marked. */
 function GradeControls({
   teamName,
   answer,
   maxPoints,
+  isClueQuestion,
   onGrade,
-}: Pick<AnswerRowProps, 'teamName' | 'answer' | 'maxPoints' | 'onGrade'>) {
-  const options = gradeOptions(maxPoints);
-  const gradedPoints =
-    answer?.gradingState === 'graded' ? answer.pointsAwarded : null;
+}: Pick<AnswerRowProps, 'teamName' | 'answer' | 'maxPoints' | 'onGrade'> & {
+  isClueQuestion: boolean;
+}) {
+  // A Clue answer's buttons are wrong or right (its clue's value); any other amount goes through Custom.
+  const options = gradeOptions(answer?.clueValue ?? maxPoints, !isClueQuestion);
+  const gradedPoints = gradedPointsOf(answer);
   const isCustomGrade =
     gradedPoints !== null &&
     !options.some((option) => option.value === gradedPoints);
@@ -148,6 +173,7 @@ function GradeControls({
           isDisabled={answer === null}
           onConfirm={grade}
         />
+
         {options.map(({ display, ariaSuffix, value }) => (
           <GradeOptionButton
             key={display}

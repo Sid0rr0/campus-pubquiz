@@ -1,5 +1,6 @@
 import {
   ANSWER_FORMATS,
+  QUESTION_KINDS,
   isSameOrder,
   resolveAnswerKind,
   type AnswerKind,
@@ -132,14 +133,34 @@ const ANSWER_KIND_DRAFTS = {
   match: matchDraft,
 } satisfies { readonly [K in AnswerKind]: AnswerKindDraft };
 
+/** A Clue question: the clues sit in the draft's `sortItems` (in order), the typed answer in `correctText`. */
+const cluesDraft: AnswerKindDraft = {
+  load: (question) => ({
+    correctText: question.answer,
+    ...(question.options && question.options.length > 0
+      ? { sortItems: [...question.options] }
+      : {}),
+  }),
+  save: (question) => ({
+    answer: question.correctText.trim(),
+    options: nonBlank(question.sortItems),
+  }),
+};
+
+function draftFor(type: EditorQuestion['type']): AnswerKindDraft {
+  return QUESTION_KINDS[type].hasClues
+    ? cluesDraft
+    : ANSWER_KIND_DRAFTS[resolveAnswerKind({ type })];
+}
+
 /** The draft fields a stored question fills, by the answer kind its type gives it. */
 export function loadAnswerDraft(
   question: ImportQuestionPreview,
 ): Partial<EditorQuestion> {
-  return ANSWER_KIND_DRAFTS[resolveAnswerKind(question)].load(question);
+  return draftFor(question.type).load(question);
 }
 
 /** The answer fields to save for a draft, by the answer kind its type gives it. */
 export function saveAnswerDraft(question: EditorQuestion): SavedAnswer {
-  return ANSWER_KIND_DRAFTS[resolveAnswerKind(question)].save(question);
+  return draftFor(question.type).save(question);
 }

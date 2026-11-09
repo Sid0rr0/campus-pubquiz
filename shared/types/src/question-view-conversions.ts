@@ -7,6 +7,7 @@ import type {
   SeededQuestion,
 } from './question-views';
 import { gradingSettingsOf } from './answer-key';
+import { QUESTION_KINDS } from './question-kind';
 
 /**
  * The question's margin, resolved by the Answer key, for a type that has one;
@@ -17,16 +18,30 @@ export function marginOf(question: GradingSettingsSource): Margin | undefined {
   return gradingSettingsOf(question).margin ?? undefined;
 }
 
+/**
+ * The question without its clues, for every view that is not the reveal: a
+ * Clue question keeps its clues in `options`, and none may leave the server
+ * before it is shown (a view that shows clues adds the shown ones itself).
+ */
+export function withoutClues<
+  Q extends { type: SeededQuestion['type']; options?: string[] },
+>(question: Q): Q {
+  if (!QUESTION_KINDS[question.type].hasClues) return question;
+  const { options: _clues, ...rest } = question;
+  return rest as Q;
+}
+
 // Strips the correct answer: this projection is what leaves the process via
 // currentQuestion/blockQuestions, broadcast to every phone and the big screen.
 export function toQuestionView(question: SeededQuestion): QuestionView {
   const margin = marginOf(question);
+  const { options } = withoutClues(question);
   return {
     id: question.id,
     type: question.type,
     prompt: question.prompt,
     points: question.points,
-    ...(question.options !== undefined ? { options: question.options } : {}),
+    ...(options !== undefined ? { options } : {}),
     ...(question.matchTargets !== undefined
       ? { matchTargets: question.matchTargets }
       : {}),

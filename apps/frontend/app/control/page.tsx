@@ -17,6 +17,7 @@ import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { useToastOnError } from '@/app/lib/use-toast-on-error';
+import { ClueStatus } from '@/app/control/clue-status';
 import { TeamsTable } from '@/app/control/teams-table';
 import { DesktopSidebar } from '@/app/control/desktop-sidebar';
 import { AnswersPanel } from '@/app/control/answers-panel';
@@ -454,6 +455,7 @@ function SessionWorkspace({
   return (
     <>
       <>
+        <ClueStatus question={currentQuestion} />
         <div className="flex flex-col gap-3 md:flex-row md:items-start">
           <div className="md:max-w-[60%] md:flex-none">
             <QuestionBrowserPanel

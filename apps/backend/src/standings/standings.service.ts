@@ -170,6 +170,7 @@ export class StandingsService {
         .select(
           'a.points_awarded as pointsAwarded',
           'a.response_ms as responseMs',
+          'a.clue as clue',
         ) as Promise<FunFactAnswer[]>,
       knex('bonus_awards')
         .where('game_session_id', gameSessionId)

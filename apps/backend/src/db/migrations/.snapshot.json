@@ -566,6 +566,22 @@
           "enumItems": [],
           "mappedType": "json"
         },
+        "highest_clue_shown": {
+          "name": "highest_clue_shown",
+          "type": "jsonb",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "json"
+        },
         "closed_at": {
           "name": "closed_at",
           "type": "timestamptz",
@@ -1166,7 +1182,7 @@
         },
         "points": {
           "name": "points",
-          "type": "int",
+          "type": "real",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -1178,7 +1194,7 @@
           "default": "1",
           "comment": null,
           "enumItems": [],
-          "mappedType": "integer"
+          "mappedType": "float"
         }
       },
       "name": "questions",
@@ -3598,6 +3614,22 @@
         },
         "response_ms": {
           "name": "response_ms",
+          "type": "int",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "clue": {
+          "name": "clue",
           "type": "int",
           "unsigned": false,
           "autoincrement": false,

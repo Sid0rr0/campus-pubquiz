@@ -6,7 +6,7 @@ import { computeLeaderboardRevealCount } from './leaderboard-reveal';
 import { JOKER_PICK_SECONDS } from './joker';
 import { computePhaseTimerFields } from './phase-timer';
 import { getGameContext, type SessionState } from './session-state';
-import { revealStepAfterMove } from './stepped-reveal';
+import { revealStepAfterMove, withClueShown } from './stepped-reveal';
 
 /** The persisted half of the phase timer — what a restart restores exactly. */
 export interface SavedPhaseTimer {
@@ -72,7 +72,7 @@ export function settleSession({
       now,
     );
 
-  return {
+  return withClueShown({
     ...session,
     progress,
     openedQuestionIds: growIds(
@@ -115,7 +115,7 @@ export function settleSession({
       context.rounds[progress.roundIndex]?.quickfire ?? false,
     ),
     revealStep: revealStepAfterMove(session, progress, action),
-  };
+  });
 }
 
 /** Armed only while in the 'locking' countdown, so a gateway timer can advance into the break without the admin clicking Advance. */

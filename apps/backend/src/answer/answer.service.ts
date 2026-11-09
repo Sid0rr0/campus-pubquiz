@@ -7,7 +7,14 @@ import type {
   TeamAnswerView,
   Verdict,
 } from '@campus-pubquiz/types';
-import { verdictForManualGrade, withWiderMargin } from '@campus-pubquiz/types';
+import {
+  atClue,
+  clueValueFromPoints,
+  isNonAnswer,
+  QUESTION_KINDS,
+  verdictForManualGrade,
+  withWiderMargin,
+} from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
@@ -33,6 +40,8 @@ export interface SubmittedAnswer {
   pointsAwarded: number;
   gradedAt: string | null;
   verdict: Verdict | null;
+  clue: number | null;
+  clueValue: number | null;
 }
 
 /** A hand grade the Grading policy turns down; its message is for the quiz master. */
@@ -41,6 +50,38 @@ export class AnswerGradeRefusedError extends Error {
     super(message);
     this.name = 'AnswerGradeRefusedError';
   }
+}
+
+/** A resubmission a Clue question refuses because a new clue has been shown since the answer was locked in; its message is for the team. */
+export class AnswerLockedError extends Error {
+  constructor() {
+    super('Your answer is locked in: a new clue has been shown');
+    this.name = 'AnswerLockedError';
+  }
+}
+
+/**
+ * The clue a submission is recorded on (null for any other type): an
+ * unchanged value keeps its clue, a changed one takes the highest clue shown,
+ * unless the stored answer's clue is already below it, which freezes it. A
+ * stored blank or "I don't know" says nothing, so it never freezes: that is how
+ * a team clears its answer to wait for the next clue.
+ */
+function clueToRecord(
+  question: GradableQuestion,
+  existing: { value: string; clue: number | null } | null,
+  value: string,
+  highestClueShown: number | null,
+): number | null {
+  if (!QUESTION_KINDS[question.type].hasClues) return null;
+  const highest = highestClueShown ?? 1;
+  if (existing === null) return highest;
+  const stored = existing.clue ?? highest;
+  if (existing.value === value) return stored;
+  if (stored < highest && !isNonAnswer(existing.value)) {
+    throw new AnswerLockedError();
+  }
+  return highest;
 }
 
 /** A question as grading sees it: the scoring inputs plus the id its answers hang off. SeededQuestion satisfies it. */
@@ -52,16 +93,19 @@ type MergeField =
   | 'pointsAwarded'
   | 'gradedAt'
   | 'verdict'
-  | 'responseMs';
+  | 'responseMs'
+  | 'clue';
 
 const UNGRADED_MERGE_FIELDS: MergeField[] = [
   'value',
   'updatedAt',
   'responseMs',
+  'clue',
 ];
 const GRADED_MERGE_FIELDS: MergeField[] = [
   'value',
   'updatedAt',
+  'clue',
   'pointsAwarded',
   'gradedAt',
   'verdict',
@@ -109,6 +153,7 @@ export class AnswerService {
     teamId: number,
     value: string,
     responseMs: number | null = null,
+    highestClueShown: number | null = null,
   ): Promise<SubmittedAnswer> {
     const questionId = question.id;
     // Whether this submission sets, clears or keeps the stored grade is the
@@ -118,12 +163,14 @@ export class AnswerService {
     const existing = await this.answers.findOne(
       { gameSession: gameSessionId, question: questionId, team: teamId },
       // Stryker disable next-line ArrayDeclaration,ObjectLiteral: a column projection; loading every column reads the same two.
-      { fields: ['value', 'gradedAt'] },
+      { fields: ['value', 'gradedAt', 'clue'] },
     );
+    const clue = clueToRecord(question, existing, value, highestClueShown);
+    const graded = atClue(question, clue);
     const write = gradeOnSubmit(
       (await this.widerMarginTeamIds(gameSessionId, questionId)).has(teamId)
-        ? withWiderMargin(question)
-        : question,
+        ? withWiderMargin(graded)
+        : graded,
       value,
       existing,
     );
@@ -139,6 +186,7 @@ export class AnswerService {
         team: teamId,
         value,
         responseMs,
+        clue,
         ...grade.values,
         createdAt: now,
         updatedAt: now,
@@ -161,6 +209,8 @@ export class AnswerService {
       pointsAwarded: answer.pointsAwarded,
       gradedAt: answer.gradedAt?.toISOString() ?? null,
       verdict: answer.verdict,
+      clue: answer.clue,
+      clueValue: clue === null ? null : graded.points,
     };
   }
 
@@ -194,6 +244,7 @@ export class AnswerService {
       verdict: row.verdict,
       pointsAwarded: row.pointsAwarded,
       hasWiderMargin: wider.has(row.team.id),
+      clue: row.clue,
     }));
   }
 
@@ -254,16 +305,18 @@ export class AnswerService {
     gameSessionId: number,
     teamId: number,
   ): Promise<TeamAnswerView[]> {
-    const rows = await this.answers.find({
-      gameSession: gameSessionId,
-      team: teamId,
-    });
+    const rows = await this.answers.find(
+      { gameSession: gameSessionId, team: teamId },
+      { populate: ['question'] },
+    );
     return rows.map((row) => ({
       questionId: row.question.id,
       value: row.value,
       pointsAwarded: row.pointsAwarded,
       gradedAt: row.gradedAt?.toISOString() ?? null,
       verdict: row.verdict,
+      clue: row.clue,
+      clueValue: clueValueOf(row),
     }));
   }
 
@@ -296,7 +349,11 @@ export class AnswerService {
       );
     }
     answer.pointsAwarded = pointsAwarded;
-    answer.verdict = verdictForManualGrade(question, pointsAwarded);
+    // A Clue answer is judged against its own clue's value, not the question's first-clue points.
+    answer.verdict = verdictForManualGrade(
+      atClue(question, answer.clue),
+      pointsAwarded,
+    );
     answer.gradedAt = new Date();
     await this.answers.getEntityManager().flush();
   }
@@ -457,5 +514,15 @@ function toAnswerView(row: Answer, powerUps: PowerUpId[]): AnswerView {
     gradingState: gradingStateOf(row.question, row),
     gradedAt: row.gradedAt?.toISOString() ?? null,
     verdict: row.verdict,
+    clue: row.clue,
+    clueValue: clueValueOf(row),
   };
+}
+
+/** What a right answer is worth at the clue the row was locked in on (the question's points are its first-clue value); null for any other type. */
+function clueValueOf(row: Answer): number | null {
+  if (!QUESTION_KINDS[row.question.type].hasClues || row.clue === null) {
+    return null;
+  }
+  return clueValueFromPoints(row.question.points, row.clue);
 }

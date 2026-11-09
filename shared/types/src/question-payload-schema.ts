@@ -49,6 +49,11 @@ export const matchPayloadSchema = z.object({
 
 export const closestGuessPayloadSchema = z.object(media);
 
+export const cluesPayloadSchema = z.object({
+  ...media,
+  options: stringList,
+});
+
 export const numberPayloadSchema = z.object({
   ...media,
   margin: z
@@ -68,4 +73,5 @@ export type QuestionPayload = MergedOptional<
   | z.infer<typeof matchPayloadSchema>
   | z.infer<typeof closestGuessPayloadSchema>
   | z.infer<typeof numberPayloadSchema>
+  | z.infer<typeof cluesPayloadSchema>
 >;

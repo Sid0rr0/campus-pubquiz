@@ -13,6 +13,7 @@ import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 import { MediaPauseButton } from '@/app/control/media-pause-button';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
+import { ClueStatus } from '@/app/control/clue-status';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { useAdminMediaPauseShortcut } from '@/app/control/use-admin-keyboard-shortcuts';
@@ -216,6 +217,7 @@ function RemoteStatusBar({
             {answeredTeamIds.length}/{teams.length} teams answered
           </p>
         )}
+        <ClueStatus question={snapshot.currentQuestion} />
         {liveAnswers && (
           <p className="text-sm font-bold text-cyan">
             {countCorrectAnswers(liveAnswers)} correct

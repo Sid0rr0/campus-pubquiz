@@ -25,7 +25,8 @@ export class Answer extends BaseEntity {
     | 'pointsAwarded'
     | 'gradedAt'
     | 'verdict'
-    | 'responseMs';
+    | 'responseMs'
+    | 'clue';
 
   @ManyToOne(() => GameSession, { deleteRule: 'cascade' })
   gameSession!: GameSession;
@@ -59,4 +60,9 @@ export class Answer extends BaseEntity {
   // this column existed, or when the question had no tracked open time.
   @Property({ type: 'integer', nullable: true })
   responseMs: number | null = null;
+
+  // Clue question only: the highest clue shown when the answer was created or
+  // its value last changed (1-based); null for every other type.
+  @Property({ type: 'integer', nullable: true })
+  clue: number | null = null;
 }

@@ -90,6 +90,10 @@ export interface SessionDescription {
   priorStandings?: LeaderboardDescription[];
   /** The closest_guess reveal sub-step on air (0-indexed); the phone is sent each step's stats and answer only once it is reached. */
   closestGuessRevealStep?: number;
+  /** The clue on air of a Clue question being asked (0-indexed: 0 is clue 1). */
+  clueStep?: number;
+  /** The highest clue shown (1-based) by question id; defaults to none. */
+  highestClueShown?: Record<number, number>;
   /** The verdict of each team's answer, by question id (the teams-correct count of the reveal reads them from the fun fact data). */
   answerVerdicts?: Record<number, FunFactAnswer['verdict'][]>;
   /** `jokerPickEndsAt` defaults to a minute from now while the status is `joker_pick` (an open pick); pass `null` for a closed one. */
@@ -309,7 +313,9 @@ export function buildSessionState(
     revealStep:
       description.showdown?.revealStep ??
       description.closestGuessRevealStep ??
+      description.clueStep ??
       0,
+    highestClueShown: description.highestClueShown ?? {},
     funFactData: {
       powerUps: [],
       answers: Object.entries(description.answerVerdicts ?? {}).flatMap(

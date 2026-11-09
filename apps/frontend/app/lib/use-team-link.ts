@@ -41,6 +41,7 @@ import {
 import {
   initialTeamLink,
   teamLink,
+  type MyAnswerClue,
   type MyAnswerGrade,
   type TeamLinkCommand,
   type TeamLinkInput,
@@ -113,6 +114,8 @@ export interface TeamLinkGame {
   myAnswers: Record<number, string>;
   /** The team's own points awarded by question id, present only once that question's answer is graded. */
   myAnswerGrades: Record<number, MyAnswerGrade>;
+  /** The clue each Clue question answer was locked in on, and what it is worth there, by question id. */
+  myAnswerClues: Record<number, MyAnswerClue>;
   /** Every bonus award this team has received so far this session, in award order. */
   myBonusAwards: TeamBonusAwardView[];
   /** The team's saved round ratings by round id: what the join payload last carried plus every rating the server has acknowledged since (a tap that never reached the server is not in it). */
@@ -571,6 +574,7 @@ function teamGameFields(
     view: viewWithSeat(snapshot, link.isLinked),
     myAnswers: link.myAnswers,
     myAnswerGrades: link.myAnswerGrades,
+    myAnswerClues: link.myAnswerClues,
     myBonusAwards: link.myBonusAwards,
     myRoundRatings: link.myRoundRatings,
     myFeedback: link.myFeedback,

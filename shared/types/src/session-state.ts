@@ -132,6 +132,12 @@ export interface SessionState {
    * with the progress.
    */
   revealedQuickfireQuestionIds: number[];
+  /**
+   * Question id -> the highest clue (1-based) shown for a Clue question, for
+   * good: Previous hiding a clue never lowers it. Raised by the Stepped reveal
+   * module whenever a clue goes on air; persisted with the progress.
+   */
+  highestClueShown: Record<number, number>;
   leaderboard: LeaderboardEntry[];
   /**
    * How many teams (counting up from last place) are currently revealed on
@@ -165,7 +171,7 @@ export interface SessionState {
   answeredTeamIdsByQuestion: Record<number, number[]>;
   /** teamId -> socket.id of the one device currently connected as that team. */
   connectedTeamSockets: Record<number, string>;
-  /** The step counter of the stepped reveal on air (the closest-guess reveal or the showdown) — ephemeral, not persisted. Read it through the Stepped reveal module, never raw: it means nothing while no stepped reveal is on air. */
+  /** The step counter of the stepped reveal on air (the closest-guess reveal, the showdown or a Clue question's clue walk) — ephemeral, not persisted. Read it through the Stepped reveal module, never raw: it means nothing while no stepped reveal is on air. */
   revealStep: number;
   /** Cached per-question closest_guess grading/summary, keyed by questionId — computed once when a block locks, ephemeral like leaderboardRevealCount. */
   closestGuessSummaries: Record<number, ClosestGuessRevealData>;
@@ -239,6 +245,7 @@ export function freshSessionState(
     phaseElapsedByKey: {},
     openedQuestionIds: [],
     revealedQuickfireQuestionIds: [],
+    highestClueShown: {},
     leaderboard: [],
     leaderboardRevealCount: 0,
     priorStandings: null,

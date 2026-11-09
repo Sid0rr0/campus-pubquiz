@@ -25,7 +25,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1560;
+const MAX_GUIDE_WORDS = 1640;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -277,6 +277,18 @@ describe('GuideContent', () => {
     expect(text).toContain('Click a question number, T or B');
     expect(text).toContain('follows the big screen again');
     expect(text).toContain('grading list sits full width below');
+  });
+
+  it('explains running a Clue question: advance, previous, value, freeze and grading', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Advance shows the next clue');
+    expect(text).toContain('the room has seen it, so scoring keeps it');
+    expect(text).toContain(
+      'half a point per clue not yet seen, counting the latest',
+    );
+    expect(text).toContain('answer freezes once a new clue is shown');
+    expect(text).toContain('Grade right or wrong; Custom for other amounts');
   });
 
   it('says grading can start before the break and must finish in it', () => {

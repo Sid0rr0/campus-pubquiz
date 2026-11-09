@@ -11,6 +11,7 @@ export const QUESTION_TYPES = [
   'match',
   'closest_guess',
   'number',
+  'clues',
 ] as const;
 
 export type QuestionType = (typeof QUESTION_TYPES)[number];

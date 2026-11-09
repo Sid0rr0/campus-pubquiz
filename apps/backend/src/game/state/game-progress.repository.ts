@@ -10,6 +10,7 @@ export type PersistedGameProgress = SavedPhaseTimer & {
   /** Load turns a session saved before opened questions were tracked into an empty list; settle derives them from the position. */
   openedQuestionIds: number[];
   revealedQuickfireQuestionIds: number[];
+  highestClueShown: Record<number, number>;
 };
 
 @Injectable()
@@ -38,6 +39,7 @@ export class GameProgressRepository {
     session.phaseElapsedByKey = data.phaseElapsedByKey;
     session.openedQuestionIds = data.openedQuestionIds;
     session.revealedQuickfireQuestionIds = data.revealedQuickfireQuestionIds;
+    session.highestClueShown = data.highestClueShown;
     await this.gameSessions.getEntityManager().flush();
   }
 
@@ -72,6 +74,7 @@ export class GameProgressRepository {
       phaseElapsedByKey: session.phaseElapsedByKey,
       openedQuestionIds: session.openedQuestionIds ?? [],
       revealedQuickfireQuestionIds: session.revealedQuickfireQuestionIds,
+      highestClueShown: session.highestClueShown,
     };
   }
 }

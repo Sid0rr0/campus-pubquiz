@@ -707,4 +707,59 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       });
     });
   });
+
+  describe('clue questions', () => {
+    // Five clues store 2.5 points: the first-clue value.
+    async function clueQuestion() {
+      const question = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'clues',
+        prompt: 'Who am I?',
+        answer: 'Einstein',
+        points: 2.5,
+        payload: { options: ['a', 'b', 'c', 'd', 'e'] },
+      });
+      await state.em.flush();
+      return question;
+    }
+
+    it('grades an exact-match answer correct at the first-clue value', async () => {
+      const question = await clueQuestion();
+      const team = await insertTeam('The Quizzards', 'token-1');
+
+      await state.answerService.submit(
+        state.session.id,
+        gradable(question),
+        team.id,
+        ' einstein ',
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        question.id,
+      );
+      expect(answer.pointsAwarded).toBe(2.5);
+      expect(answer.verdict).toBe('correct');
+    });
+
+    it('leaves any other answer for the quiz master', async () => {
+      const question = await clueQuestion();
+      const team = await insertTeam('The Quizzards', 'token-1');
+
+      await state.answerService.submit(
+        state.session.id,
+        gradable(question),
+        team.id,
+        'Newton',
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        question.id,
+      );
+      expect(answer.gradedAt).toBeNull();
+      expect(answer.verdict).toBeNull();
+    });
+  });
 });

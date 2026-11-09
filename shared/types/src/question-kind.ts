@@ -1,10 +1,12 @@
 import type { z } from 'zod';
+import { cluePoints } from './clue-value';
 import { questionNotesOf } from './notes-group';
 import type { PowerUpId } from './power-ups';
 import { REVEAL_NOTES_MAX_LENGTH } from './round-note';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
 import {
   closestGuessPreviewSchema,
+  cluesPreviewSchema,
   freeTextPreviewSchema,
   matchPreviewSchema,
   multipleChoicePreviewSchema,
@@ -14,6 +16,7 @@ import {
 } from './question-preview-schema';
 import {
   closestGuessPayloadSchema,
+  cluesPayloadSchema,
   freeTextPayloadSchema,
   matchPayloadSchema,
   multipleChoicePayloadSchema,
@@ -51,6 +54,8 @@ export type AnswerInputKind = 'text' | 'number' | 'choice' | 'sort' | 'match';
  */
 export interface QuestionKind<T extends QuestionType = QuestionType> {
   type: T;
+  /** Whether `options` holds the question's ordered clues; a clue never leaves the server before it is shown. Its own field: the type's input kind is a plain typed answer. */
+  hasClues: boolean;
   /** The name the quiz editor's type picker shows. */
   label: string;
   /** One moderator-facing sentence for the `/guide` page: how to author the question and how it is graded. */
@@ -90,6 +95,7 @@ export const QUESTION_KINDS: {
 } = {
   free_text: {
     type: 'free_text',
+    hasClues: false,
     hasCorrectRate: true,
     briefWrongAnswers: 'typed',
     powerUps: ['first_letter', 'letter_count'],
@@ -110,6 +116,7 @@ export const QUESTION_KINDS: {
   },
   multiple_choice: {
     type: 'multiple_choice',
+    hasClues: false,
     hasCorrectRate: true,
     briefWrongAnswers: 'options',
     powerUps: ['fifty_fifty', 'ask_the_room'],
@@ -129,6 +136,7 @@ export const QUESTION_KINDS: {
   },
   sort: {
     type: 'sort',
+    hasClues: false,
     hasCorrectRate: true,
     briefWrongAnswers: 'none',
     powerUps: ['pin_one'],
@@ -149,6 +157,7 @@ export const QUESTION_KINDS: {
   },
   match: {
     type: 'match',
+    hasClues: false,
     hasCorrectRate: true,
     briefWrongAnswers: 'none',
     powerUps: ['pin_one'],
@@ -169,6 +178,7 @@ export const QUESTION_KINDS: {
   },
   closest_guess: {
     type: 'closest_guess',
+    hasClues: false,
     hasCorrectRate: false,
     briefWrongAnswers: 'spread',
     powerUps: [],
@@ -189,6 +199,7 @@ export const QUESTION_KINDS: {
   },
   number: {
     type: 'number',
+    hasClues: false,
     hasCorrectRate: true,
     briefWrongAnswers: 'typed',
     powerUps: ['wider_margin'],
@@ -206,7 +217,43 @@ export const QUESTION_KINDS: {
     gradingSettings: ['margin'],
     scoringModes: [],
   },
+  clues: {
+    type: 'clues',
+    hasClues: true,
+    hasCorrectRate: true,
+    briefWrongAnswers: 'typed',
+    powerUps: [],
+    revealKind: 'answer',
+    label: 'Clue question',
+    moderatorNote:
+      'List 2 to 8 clues in the options, pipe-separated and vaguest first, and the answer in the answer cell. Points are half a point per clue, whatever the points cell says. An exact answer grades itself; you judge the rest.',
+    playerNote:
+      "Type the answer. The sooner you get it, the more it is worth. Capitals don't matter; the quiz master judges anything that isn't an exact match.",
+    inputKind: 'text',
+    schema: cluesPreviewSchema,
+    payload: cluesPayloadSchema,
+    csv: choicesCsv,
+    gradingMode: 'match-or-human',
+    quickfireAllowed: false,
+    gradingSettings: [],
+    scoringModes: [],
+  },
 };
+
+/**
+ * A preview with the fields the kind derives filled in: a Clue question's
+ * points are half a point per clue, whatever was entered. Import and draft
+ * save both store the result.
+ */
+export function withDerivedPoints<
+  Q extends { type: QuestionType; options?: string[]; points: number },
+>(question: Q): Q {
+  const { options } = question;
+  // A clue row without options is malformed (the schema refuses it); keep its points.
+  return QUESTION_KINDS[question.type].hasClues && options
+    ? { ...question, points: cluePoints(options.length) }
+    : question;
+}
 
 export interface QuestionIssue {
   path: PropertyKey[];

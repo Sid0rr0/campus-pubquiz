@@ -12,7 +12,7 @@ Update DOCUMENTATION.md's question types and CSV sections. Any `/guide` text goe
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `clues` is in the question type registry with the settings above, and the registry parity tests pass
 - [ ] The preview schema refuses 1 clue, 9 clues, a clue containing `|` and an empty answer, each with a clear message

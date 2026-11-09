@@ -5,6 +5,7 @@ import { doubledRoundIdsOfTeam } from './doubled-rounds';
 import { jokerRoundPoints } from './joker';
 import type { PowerUpId } from './power-ups';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
+import { QUESTION_KINDS } from './question-kind';
 import { questionOutcome } from './question-outcome';
 import type { QuestionType } from './question-types';
 import { compareTeamNames } from './ranking-rule';
@@ -20,6 +21,8 @@ export interface FunFactAnswer {
   pointsAwarded: number;
   /** Final submission time minus the question's open time; null when untracked. */
   responseMs: number | null;
+  /** Clue question only: the clue (1-based) on air when the answer was locked in; null or absent otherwise. */
+  clue?: number | null;
 }
 
 /** One bonus award, as far as fun facts need it. */
@@ -96,6 +99,20 @@ export type FunFact =
       question: FunFactQuestion;
     }
   | { kind: 'nobody_got_it'; question: FunFactQuestion }
+  | {
+      kind: 'clue_cracked_early';
+      /** The teams whose correct answer came on the earliest clue. */
+      teamNames: string[];
+      /** That clue, 1-based; always before the last one. */
+      clue: number;
+      question: FunFactQuestion;
+    }
+  | {
+      kind: 'clue_last_gasp';
+      /** The clue (1-based, after the first) of the question's earliest correct answer. */
+      clue: number;
+      question: FunFactQuestion;
+    }
   | { kind: 'clean_sweep'; teamNames: string[] }
   | {
       kind: 'joker_favourite_round';
@@ -128,6 +145,8 @@ interface RevealedQuestion extends FunFactQuestion {
   isQuickfire: boolean;
   type: QuestionType;
   points: number;
+  /** A Clue question's clue count; 0 for every other type. */
+  clueCount: number;
 }
 
 function listQuestions(session: SessionState): RevealedQuestion[] {
@@ -141,6 +160,9 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
       isQuickfire: round.quickfire ?? false,
       type: question.type,
       points: question.points,
+      clueCount: QUESTION_KINDS[question.type].hasClues
+        ? (question.options?.length ?? 0)
+        : 0,
     })),
   );
 }
@@ -220,6 +242,37 @@ function outcomesOf(
       },
     ];
   });
+}
+
+/** The first revealed Clue question whose earliest correct answer satisfies `qualifies`, as a fact; answers without a clue are ignored. */
+function firstClueFact(
+  revealed: readonly RevealedQuestion[],
+  answers: readonly FunFactAnswer[],
+  qualifies: (clue: number, clueCount: number) => boolean,
+  toFact: (
+    question: FunFactQuestion,
+    clue: number,
+    teamNames: string[],
+  ) => FunFact,
+): FunFact | null {
+  for (const question of revealed) {
+    if (!QUESTION_KINDS[question.type].hasClues) continue;
+    const correct = answers.filter(
+      (a) =>
+        a.questionId === question.questionId &&
+        a.verdict === 'correct' &&
+        typeof a.clue === 'number',
+    );
+    if (correct.length === 0) continue;
+    const clue = Math.min(...correct.map((a) => a.clue!));
+    if (!qualifies(clue, question.clueCount)) continue;
+    const teamNames = correct
+      .filter((a) => a.clue === clue)
+      .map((a) => a.teamName)
+      .sort(compareTeamNames);
+    return toFact(toFunFactQuestion(question), clue, teamNames);
+  }
+  return null;
 }
 
 function cleanSweep(
@@ -497,6 +550,23 @@ export function describeFunFacts(session: SessionState): FunFact[] {
     nobody
       ? { kind: 'nobody_got_it', question: toFunFactQuestion(nobody.question) }
       : null,
+    firstClueFact(
+      revealed,
+      answers,
+      (clue, clueCount) => clue < clueCount,
+      (question, clue, teamNames) => ({
+        kind: 'clue_cracked_early',
+        teamNames,
+        clue,
+        question,
+      }),
+    ),
+    firstClueFact(
+      revealed,
+      answers,
+      (clue) => clue > 1,
+      (question, clue) => ({ kind: 'clue_last_gasp', clue, question }),
+    ),
     cleanSweep(session, revealed, answers),
     ...jokerFacts(session, answers, pastIds),
     bonusAwardsSoFar(session.funFactData),

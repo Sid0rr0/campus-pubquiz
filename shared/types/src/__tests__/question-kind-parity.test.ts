@@ -168,6 +168,32 @@ const CASES: ParityCase[] = [
     verdict: 'invalid',
   },
 
+  // clues
+  {
+    name: 'clues with three clues and an answer',
+    question: q({ type: 'clues', options: ['a', 'b', 'c'], answer: 'X' }),
+    verdict: 'valid',
+  },
+  {
+    name: 'clues with a single clue',
+    question: q({ type: 'clues', options: ['a'], answer: 'X' }),
+    verdict: 'invalid',
+  },
+  {
+    name: 'clues with nine clues',
+    question: q({
+      type: 'clues',
+      options: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'],
+      answer: 'X',
+    }),
+    verdict: 'invalid',
+  },
+  {
+    name: 'clues with an empty answer',
+    question: q({ type: 'clues', options: ['a', 'b'], answer: '' }),
+    verdict: 'invalid',
+  },
+
   // sort
   {
     name: 'sort whose answer reorders the options',
@@ -259,6 +285,7 @@ const EXPECTED_FLAGS: Record<QuestionType, GradingFlags> = {
     quickfireAllowed: false,
   },
   number: { gradingMode: 'auto', quickfireAllowed: true },
+  clues: { gradingMode: 'match-or-human', quickfireAllowed: false },
 };
 
 /** Issue messages the import path produces for `question` (empty when valid). */
@@ -290,9 +317,10 @@ describe('question kind registry', () => {
     }
   });
 
-  it('lists the six known question types once each', () => {
+  it('lists the seven known question types once each', () => {
     expect([...QUESTION_TYPES].sort()).toEqual([
       'closest_guess',
+      'clues',
       'free_text',
       'match',
       'multiple_choice',

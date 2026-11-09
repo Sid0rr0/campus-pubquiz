@@ -9,6 +9,7 @@ const EXPECTED = {
   match: { label: 'Match pairs', inputKind: 'match' },
   closest_guess: { label: 'Closest guess', inputKind: 'number' },
   number: { label: 'Number', inputKind: 'number' },
+  clues: { label: 'Clue question', inputKind: 'text' },
 } as const;
 
 /** The `/guide` copy per type, pinned so an accidental edit shows up in review. */
@@ -24,6 +25,8 @@ const MODERATOR_NOTES = {
     'The answer is a number. Graded in one batch once the block locks: every team tied for the closest guess gets full points and everyone else gets zero. From then on you can override any mark by hand.',
   number:
     'The answer is a number, and the question carries a margin (10% of the answer unless the editor says otherwise). An answer within the margin, edges included, is graded correct when a team submits; anything else is graded incorrect. Teams answer on a number keypad, and you can override any mark by hand.',
+  clues:
+    'List 2 to 8 clues in the options, pipe-separated and vaguest first, and the answer in the answer cell. Points are half a point per clue, whatever the points cell says. An exact answer grades itself; you judge the rest.',
 } as const;
 
 describe('question kind presentation', () => {
@@ -31,7 +34,7 @@ describe('question kind presentation', () => {
     expect(QUESTION_KINDS[type].moderatorNote).toBe(MODERATOR_NOTES[type]);
   });
 
-  it('lists exactly the six types, in the editor picker order', () => {
+  it('lists exactly the seven types, in the editor picker order', () => {
     expect([...QUESTION_TYPES]).toEqual([
       'multiple_choice',
       'free_text',
@@ -39,6 +42,7 @@ describe('question kind presentation', () => {
       'match',
       'closest_guess',
       'number',
+      'clues',
     ]);
     expect([...QUESTION_TYPES]).toEqual(Object.keys(EXPECTED));
   });

@@ -45,6 +45,7 @@ export class Question extends BaseEntity {
   @Property({ type: 'jsonb' })
   payload: Record<string, unknown> = {};
 
-  @Property({ default: 1 })
+  // 'float' (Postgres real): a Clue question stores half points (clues x 0.5).
+  @Property({ type: 'float', default: 1 })
   points: number = 1;
 }

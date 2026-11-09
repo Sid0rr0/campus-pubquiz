@@ -2,6 +2,7 @@ round,type,question,options,answer,points,media_url,answer_media_url,notes,break
 General Knowledge,free_text,What is the capital of France?,,Paris,1,,,Paris has been the French capital for about a thousand years.,,,,,,1
 General Knowledge,multiple_choice,Which planet is known as the Red Planet?,Mars|Venus|Jupiter|Mercury,Mars,1,,,,,,,,,
 General Knowledge,closest_guess,How many bones are in the adult human skeleton?,,206,2,,,,,,,,,
+General Knowledge,clues,Who am I?,I was born in 1879|I won a Nobel Prize in Physics|I wrote about relativity,Albert Einstein,1.5,,,,,,,,,
 General Knowledge,number,How tall is the Eiffel Tower in metres?,,330,2,,https://example.com/images/eiffel-tower.jpg,,,General knowledge,Sample Author,"Warm-up round: welcome everyone, remind teams to pick a name and keep phones face up.",,
 Music & Movies,free_text,Name the song playing in this clip.,,Bohemian Rhapsody,2,https://example.com/audio/mystery-clip.mp3,,,,,,,,
 Music & Movies,free_text,Which movie is this trailer clip from?,,Sample Movie Title,2,https://www.youtube.com/watch?v=dQw4w9WgXcQ,,"{start: ""55"", end: ""88""}",,,,,,

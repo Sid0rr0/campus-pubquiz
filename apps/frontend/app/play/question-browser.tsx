@@ -1,6 +1,7 @@
 import {
   formatAnswer,
   isHttpUrl,
+  isNonAnswer,
   isPinOffPlace,
   removedOptionsOf,
   resolveAnswerKind,
@@ -17,7 +18,9 @@ import type {
   QuestionView,
   Verdict,
 } from '@campus-pubquiz/types';
+import type { MyAnswerClue } from '@/app/lib/team-link';
 import { yourAnswerTextClass } from '@/app/play/verdict-card';
+import { ClueList } from '@/app/components/clue-list';
 import { NumberMarginText } from '@/app/components/number-margin-text';
 import { QuestionDisplay } from '@/app/display/question-display';
 import {
@@ -59,6 +62,8 @@ interface QuestionBrowserProps {
   /** Active round's quickfire speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
   isQuickfireMode: boolean;
   myAnswers: Record<number, string>;
+  /** The clue the selected Clue question's answer was locked in on and what it is worth there, once sent. */
+  myAnswerClue?: MyAnswerClue;
   /** Points awarded for the selected question's answer, null until graded. */
   myAnswerPoints: number | null;
   /** How the selected question's answer was judged, null until graded; colours "Your answer" on the reveal. */
@@ -127,6 +132,7 @@ export function QuestionBrowser({
   revealQuestion,
   isQuickfireMode,
   myAnswers,
+  myAnswerClue,
   myAnswerPoints,
   myAnswerVerdict,
   myAnswerJokerExtra = null,
@@ -167,6 +173,7 @@ export function QuestionBrowser({
         <RevealedAnswer
           revealQuestion={revealQuestion}
           myAnswer={myAnswer}
+          myAnswerClue={myAnswerClue}
           myAnswerPoints={myAnswerPoints}
           myAnswerJokerExtra={myAnswerJokerExtra}
           verdictTextClass={verdictTextClass}
@@ -178,10 +185,123 @@ export function QuestionBrowser({
           team={team}
           question={selectedQuestion}
           myAnswer={myAnswer}
+          myAnswerClue={myAnswerClue}
           isQuickfireMode={isQuickfireMode}
           onSubmitAnswer={onSubmitAnswer}
           purchases={purchases}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Where a Clue answer stands against the clues shown: frozen (its clue is below
+ * the highest shown, so a new clue was shown since) or still freezable (a clue
+ * is left to show). A cleared answer (blank or "I don't know") never freezes.
+ */
+function clueFreezeOf(
+  { highestClue, clueCount }: QuestionBrowserProps['selectedQuestion'],
+  myAnswerClue: MyAnswerClue | undefined,
+  myAnswer: string | undefined,
+) {
+  const isClueQuestion = highestClue !== undefined && clueCount !== undefined;
+  return {
+    frozenClue:
+      isClueQuestion &&
+      myAnswerClue !== undefined &&
+      myAnswer !== undefined &&
+      !isNonAnswer(myAnswer) &&
+      myAnswerClue.clue < highestClue
+        ? myAnswerClue
+        : null,
+    isFreezable: isClueQuestion && highestClue < clueCount,
+  };
+}
+
+/** A Clue question's clues shown so far and what an answer is worth now. */
+function CluesShown({
+  question,
+}: {
+  question: QuestionBrowserProps['selectedQuestion'];
+}) {
+  return (
+    <>
+      {question.clues && <ClueList clues={question.clues} />}
+      {question.clueValue !== undefined && (
+        <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
+          Worth {question.clueValue} points now
+        </p>
+      )}
+    </>
+  );
+}
+
+/** A Clue answer a newer clue has frozen, shown read-only in place of the answer form. */
+function FrozenAnswer({ clue, value }: MyAnswerClue) {
+  return (
+    <p className="text-center text-lg font-extrabold text-magenta">
+      Locked in on clue {clue} · worth {value} points
+    </p>
+  );
+}
+
+/** The answer form, or a Clue answer a newer clue froze; a Clue question warns next to Send while the answer could still freeze. */
+function AnswerArea({
+  question,
+  isAnswerable,
+  initialValue,
+  removedOptions,
+  isQuickfireMode,
+  pin,
+  clueFreeze,
+  onSubmit,
+}: {
+  question: QuestionBrowserProps['selectedQuestion'];
+  isAnswerable: boolean;
+  initialValue: string;
+  removedOptions: ReturnType<typeof removedOptionsOf>;
+  isQuickfireMode: boolean;
+  pin: ReturnType<typeof pinFor>;
+  clueFreeze: ReturnType<typeof clueFreezeOf>;
+  onSubmit: (value: string) => void;
+}) {
+  if (clueFreeze.frozenClue !== null) {
+    return <FrozenAnswer {...clueFreeze.frozenClue} />;
+  }
+  return (
+    // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
+    <div hidden={!isAnswerable}>
+      <AnswerForm
+        // A Clue question's form restarts when its answer is cleared, so the box doesn't keep the cleared text.
+        key={
+          clueFreeze.isFreezable
+            ? `${question.id}:${isNonAnswer(initialValue)}`
+            : question.id
+        }
+        question={question}
+        // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
+        removedOptions={removedOptions}
+        initialValue={initialValue}
+        isQuickfireMode={isQuickfireMode}
+        pin={pin}
+        onSubmit={onSubmit}
+      />
+      {clueFreeze.isFreezable && (
+        <>
+          <p className="mt-2 text-center text-sm font-extrabold text-foreground/55">
+            Once the next clue is shown, you can&apos;t change this answer.
+          </p>
+          {!isNonAnswer(initialValue) && (
+            <Button
+              type="button"
+              onClick={() => onSubmit('')}
+              className="mt-2 flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-dashed border-foreground/35 bg-transparent px-4 text-base font-extrabold text-foreground/55"
+            >
+              Clear my answer
+            </Button>
+          )}
+        </>
       )}
     </div>
   );
@@ -194,12 +314,18 @@ function OpenQuestion({
   team,
   question,
   myAnswer,
+  myAnswerClue,
   isQuickfireMode,
   onSubmitAnswer,
   purchases,
 }: Pick<
   QuestionBrowserProps,
-  'mode' | 'isAnswerable' | 'team' | 'isQuickfireMode' | 'onSubmitAnswer'
+  | 'mode'
+  | 'isAnswerable'
+  | 'team'
+  | 'isQuickfireMode'
+  | 'onSubmitAnswer'
+  | 'myAnswerClue'
 > & {
   question: QuestionBrowserProps['selectedQuestion'];
   myAnswer: string | undefined;
@@ -215,6 +341,7 @@ function OpenQuestion({
       <h1 className="text-balance font-display text-2xl leading-tight">
         {question.prompt}
       </h1>
+      <CluesShown question={question} />
       <NumberMarginText
         question={
           question.margin && hasWiderMargin
@@ -235,21 +362,16 @@ function OpenQuestion({
         isRoomSplitShown={isAnswering && team !== null}
       />
       {mode === 'answering' && team && (
-        // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
-        <div hidden={!isAnswerable}>
-          <AnswerForm
-            key={question.id}
-            question={question}
-            // A 50/50 greys its removed options out for good, so a reconnect shows the same choices.
-            removedOptions={removedOptionsOf(question.id, purchases)}
-            initialValue={myAnswer ?? ''}
-            isQuickfireMode={isQuickfireMode}
-            pin={pin}
-            onSubmit={(value) =>
-              onSubmitAnswer(question.id, team.teamId, value)
-            }
-          />
-        </div>
+        <AnswerArea
+          question={question}
+          isAnswerable={isAnswerable}
+          initialValue={myAnswer ?? ''}
+          removedOptions={removedOptionsOf(question.id, purchases)}
+          isQuickfireMode={isQuickfireMode}
+          pin={pin}
+          clueFreeze={clueFreezeOf(question, myAnswerClue, myAnswer)}
+          onSubmit={(value) => onSubmitAnswer(question.id, team.teamId, value)}
+        />
       )}
       <ModeNote mode={mode} />
     </>
@@ -344,12 +466,14 @@ function PrevNextNav({
 function RevealedAnswer({
   revealQuestion,
   myAnswer,
+  myAnswerClue,
   myAnswerPoints,
   myAnswerJokerExtra,
   verdictTextClass,
 }: {
   revealQuestion: NonNullable<QuestionBrowserProps['revealQuestion']>;
   myAnswer: string | undefined;
+  myAnswerClue: MyAnswerClue | undefined;
   myAnswerPoints: QuestionBrowserProps['myAnswerPoints'];
   myAnswerJokerExtra: QuestionBrowserProps['myAnswerJokerExtra'];
   verdictTextClass: string;
@@ -378,6 +502,11 @@ function RevealedAnswer({
               {`🃏 +${myAnswerJokerExtra}`}
             </span>
           )}
+        </p>
+      )}
+      {myAnswerClue !== undefined && (
+        <p className="text-sm font-extrabold text-foreground/55">
+          You answered on clue {myAnswerClue.clue}
         </p>
       )}
     </div>

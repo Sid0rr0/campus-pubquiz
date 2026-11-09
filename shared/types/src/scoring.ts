@@ -11,6 +11,7 @@ import {
   type Verdict,
 } from './answer-kind';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
+import { clueValue } from './clue-value';
 import { parseFiniteNumber, widenedMargin } from './margin';
 import { halfPoints, nearestHalfPoint } from './score-math';
 
@@ -28,7 +29,21 @@ export type { ScoreResult, Verdict };
 export type ScoredQuestion = GradingSettingsSource & {
   answer: string;
   points: number;
+  /** A Clue question's clues; their count sets what each clue is worth. */
+  options?: readonly string[] | null;
 };
+
+/** The question as an answer locked in on `clue` is graded against: a Clue question's points become that clue's value. Any other question passes through. */
+export function atClue<Q extends ScoredQuestion>(
+  question: Q,
+  clue: number | null,
+): Q {
+  if (!QUESTION_KINDS[question.type].hasClues || clue === null) return question;
+  return {
+    ...question,
+    points: clueValue(question.options?.length ?? 0, clue),
+  };
+}
 
 /** Quickfire speed inputs: how long the team took and the configured timer. Either null means no scaling. */
 export interface SpeedContext {

@@ -13,6 +13,7 @@ import {
   type ScreenPreview,
   type SessionState,
   SOCKET_ROOMS,
+  withoutClues,
 } from '@campus-pubquiz/types';
 
 function describeBreakIntro(session: SessionState): ScreenPreview {
@@ -53,7 +54,7 @@ function questionText(
     seededGame.rounds[screen.roundIndex]?.questions[screen.questionIndex];
   return {
     heading: `R${screen.roundIndex + 1} Q${screen.questionIndex + 1}`,
-    ...(question ? { question } : {}),
+    ...(question ? { question: withoutClues(question) } : {}),
   };
 }
 
@@ -195,6 +196,14 @@ function describeRevealStep(
 ): ScreenPreview | null {
   if (reveal === 'closest_guess') {
     return { ...describeScreen(session), body: 'Next closest-guess step' };
+  }
+  if (reveal === 'clues') {
+    return after.revealStep === session.revealStep
+      ? null
+      : {
+          ...describeScreen(session),
+          body: `Clue ${after.revealStep + 1} on the big screen`,
+        };
   }
   return after.revealStep === session.revealStep
     ? null

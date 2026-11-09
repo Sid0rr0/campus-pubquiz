@@ -380,6 +380,34 @@ describe('RemotePage — content', () => {
     expect(screen.getByText('2/3 teams answered')).toBeInTheDocument();
   });
 
+  it('shows which clue of a Clue question is on air', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'clues',
+                prompt: 'Who am I?',
+                options: ['Vague', 'Sharper', 'Giveaway'],
+                points: 1.5,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
+        clueStep: 1,
+        highestClueShown: { 1: 2 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('Clue 2 of 3')).toBeInTheDocument();
+  });
+
   it('shows how many teams answered correctly once graded', () => {
     mockUseAdminGame.mockReturnValue({
       session: {

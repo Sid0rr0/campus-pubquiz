@@ -1,4 +1,5 @@
 import {
+  atClue,
   gradeClosestGuessBatch,
   IDK_ANSWER_VALUE,
   matchesKey,
@@ -142,6 +143,8 @@ export interface StoredAnswerRow extends StoredAnswerGrade {
   pointsAwarded: number;
   /** Whether the answering team bought a wider margin on this question: graded against the widened one. */
   hasWiderMargin?: boolean;
+  /** The clue a Clue question's answer was locked in on; its points are that clue's value. */
+  clue?: number | null;
 }
 
 export interface KeyFixInput {
@@ -171,7 +174,7 @@ function isGradedAutomatically(
   key: ScoredQuestion,
   stored: StoredAnswerRow,
 ): boolean {
-  const score = gradeAtSubmit(key, stored.value);
+  const score = gradeAtSubmit(atClue(key, stored.clue ?? null), stored.value);
   return (
     score !== null &&
     stored.gradedAt !== null &&
@@ -210,7 +213,10 @@ const KEY_FIX: Record<GradingMode, (input: KeyFixInput) => KeyFixResult> = {
   'match-or-human': ({ question, previous, rows }) => ({
     rescored: true,
     writes: rows.map((row) => {
-      const score = gradeAtSubmit(question, row.value);
+      const score = gradeAtSubmit(
+        atClue(question, row.clue ?? null),
+        row.value,
+      );
       if (score) return setOf(score);
       return isGradedAutomatically(previous, row) ? CLEAR : KEEP;
     }),

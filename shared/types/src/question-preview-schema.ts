@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_CLUES, MIN_CLUES } from './clue-value';
 import { MARGIN_UNITS, parseFiniteNumber } from './margin';
 import { SCORING_MODES_BY_TYPE } from './scoring-mode';
 import type { MergedOptional } from './merged-shape';
@@ -71,6 +72,29 @@ const baseQuestionFields = {
 export const freeTextPreviewSchema = z.object({
   type: z.literal('free_text'),
   ...baseQuestionFields,
+  mediaUrl: httpUrl.optional(),
+});
+
+/**
+ * A Clue question: 2-8 clues in `options`, a typed answer. Its points are
+ * derived (see `withDerivedPoints`), so whatever the sheet or form carries is
+ * accepted here and replaced.
+ */
+export const cluesPreviewSchema = z.object({
+  type: z.literal('clues'),
+  ...baseQuestionFields,
+  points: z.number('Points must be a number'),
+  options: z
+    .array(
+      z
+        .string()
+        .min(1, 'A clue must not be empty')
+        .refine((clue) => !clue.includes(LIST_SEPARATOR), {
+          error: `A clue must not contain "${LIST_SEPARATOR}"`,
+        }),
+    )
+    .min(MIN_CLUES, `Provide at least ${MIN_CLUES} clues`)
+    .max(MAX_CLUES, `Provide at most ${MAX_CLUES} clues`),
   mediaUrl: httpUrl.optional(),
 });
 
@@ -214,7 +238,8 @@ type PreviewInput =
   | z.input<typeof closestGuessPreviewSchema>
   | z.input<typeof numberPreviewSchema>
   | z.input<typeof sortPreviewSchema>
-  | z.input<typeof matchPreviewSchema>;
+  | z.input<typeof matchPreviewSchema>
+  | z.input<typeof cluesPreviewSchema>;
 
 export type ImportQuestionPreview = MergedOptional<PreviewInput> &
   Pick<PreviewInput, 'type' | 'prompt' | 'answer' | 'points'>;

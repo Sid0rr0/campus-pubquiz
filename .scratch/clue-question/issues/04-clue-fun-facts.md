@@ -11,7 +11,7 @@ Update DOCUMENTATION.md where fun facts are listed. Any `/guide` text goes in ti
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Both facts appear with the right teams, question and clue (fun-facts tests)
 - [ ] Neither fact draws from the block in play

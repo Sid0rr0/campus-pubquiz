@@ -65,6 +65,36 @@ describe('describeFunFactLine', () => {
     });
   });
 
+  it('words a Clue question cracked early', () => {
+    const fact = {
+      kind: 'clue_cracked_early' as const,
+      teamNames: ['Ants', 'Bees'],
+      question: QUESTION,
+    };
+    expect(describeFunFactLine({ ...fact, clue: 1 })).toEqual({
+      headline: 'Ants, Bees',
+      detail: 'Cracked it early: Round 2 · Q3 on the first clue',
+      ...ABOUT_QUESTION,
+    });
+    expect(describeFunFactLine({ ...fact, clue: 3 }).detail).toBe(
+      'Cracked it early: Round 2 · Q3 on clue 3',
+    );
+  });
+
+  it('words a Clue question only cracked late', () => {
+    expect(
+      describeFunFactLine({
+        kind: 'clue_last_gasp',
+        clue: 5,
+        question: QUESTION,
+      }),
+    ).toEqual({
+      headline: 'Nobody got it until clue 5',
+      detail: 'Round 2 · Q3',
+      ...ABOUT_QUESTION,
+    });
+  });
+
   it('lists the clean sweep teams separated by comma and space', () => {
     expect(
       describeFunFactLine({ kind: 'clean_sweep', teamNames: ['Ants', 'Bees'] }),

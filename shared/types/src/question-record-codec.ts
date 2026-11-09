@@ -1,6 +1,10 @@
 import type { ImportQuestionPreview } from './import';
 import { resolveAnswerKind, type AnswerKind } from './answer-kind';
-import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
+import {
+  QUESTION_KINDS,
+  withDerivedPoints,
+  type GradingSettingName,
+} from './question-kind';
 import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
 import type { SeededQuestion } from './question-views';
@@ -64,6 +68,7 @@ type FieldRule =
   | { when: 'set' }
   | { when: 'answer-kind'; kinds: readonly AnswerKind[] }
   | { when: 'grading-setting' }
+  | { when: 'clues' }
   | { when: 'question-video' }
   | { when: 'either-video' };
 
@@ -86,6 +91,7 @@ const FIELD_TABLE: readonly FieldTableRow[] = [
     when: 'answer-kind',
     kinds: ['choice', 'sort', 'match'],
   },
+  { field: 'options', when: 'clues' },
   { field: 'matchTargets', when: 'answer-kind', kinds: ['match'] },
   { field: 'mediaUrl', when: 'set' },
   { field: 'answerMediaUrl', when: 'set' },
@@ -119,6 +125,8 @@ function carries(
       return true;
     case 'answer-kind':
       return row.kinds.includes(resolveAnswerKind({ type }));
+    case 'clues':
+      return QUESTION_KINDS[type].hasClues;
     case 'grading-setting':
       return QUESTION_KINDS[type].gradingSettings.some(
         (name) => name === row.field,
@@ -290,7 +298,7 @@ export function previewToStoredFields(
     type: preview.type,
     prompt: preview.prompt,
     answer: preview.answer,
-    points: preview.points,
+    points: withDerivedPoints(preview).points,
     notes: preview.notes ?? null,
     showNotesAtReveal:
       preview.showNotesAtReveal === true &&

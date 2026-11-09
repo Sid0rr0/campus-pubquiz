@@ -177,17 +177,19 @@ export function QuizQuestionEditor({
             </Button>
           ))}
         </div>
-        <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
-          Points
-          <input
-            type="number"
-            value={question.points}
-            onChange={(event) =>
-              onChange({ points: Number(event.target.value) || 0 })
-            }
-            className="w-16 rounded-lg border-2 border-foreground/25 px-2 py-1 text-sm font-extrabold text-foreground disabled:opacity-50"
-          />
-        </label>
+        {!QUESTION_KINDS[question.type].hasClues && (
+          <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
+            Points
+            <input
+              type="number"
+              value={question.points}
+              onChange={(event) =>
+                onChange({ points: Number(event.target.value) || 0 })
+              }
+              className="w-16 rounded-lg border-2 border-foreground/25 px-2 py-1 text-sm font-extrabold text-foreground disabled:opacity-50"
+            />
+          </label>
+        )}
       </div>
       <FieldErrors issues={fieldIssues(issues, 'type')} />
       <FieldErrors issues={fieldIssues(issues, 'points')} />

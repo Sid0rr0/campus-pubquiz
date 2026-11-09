@@ -39,6 +39,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseElapsedByKey: {},
       openedQuestionIds: [],
       revealedQuickfireQuestionIds: [],
+      highestClueShown: {},
     });
   });
 
@@ -58,6 +59,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseElapsedByKey: {},
       openedQuestionIds: [],
       revealedQuickfireQuestionIds: [],
+      highestClueShown: {},
     });
 
     const reloaded = await repository.load(sessionId);
@@ -89,6 +91,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseElapsedByKey: {},
       openedQuestionIds: [],
       revealedQuickfireQuestionIds: [],
+      highestClueShown: {},
     });
 
     const reloaded = await repository.load(sessionId);
@@ -142,11 +145,13 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseElapsedByKey: {},
       openedQuestionIds: [4, 5, 9],
       revealedQuickfireQuestionIds: [7, 8],
+      highestClueShown: { 12: 3 },
     });
 
     const reloaded = await repository.load(sessionId);
     expect(reloaded?.openedQuestionIds).toEqual([4, 5, 9]);
     expect(reloaded?.revealedQuickfireQuestionIds).toEqual([7, 8]);
+    expect(reloaded?.highestClueShown).toEqual({ 12: 3 });
   });
 
   it('loads a row whose opened-questions column is null as an empty list', async () => {
@@ -189,6 +194,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseElapsedByKey: { 'q:0:0': 12_345 },
       openedQuestionIds: [],
       revealedQuickfireQuestionIds: [],
+      highestClueShown: {},
     });
 
     const reloaded = await repository.load(sessionId);
@@ -214,6 +220,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseElapsedByKey: {},
       openedQuestionIds: [],
       revealedQuickfireQuestionIds: [],
+      highestClueShown: {},
     });
 
     // A later save with no live frontier (e.g. the quiz moved to an untimed
@@ -234,6 +241,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       phaseElapsedByKey: {},
       openedQuestionIds: [],
       revealedQuickfireQuestionIds: [],
+      highestClueShown: {},
     });
 
     const reloaded = await repository.load(sessionId);

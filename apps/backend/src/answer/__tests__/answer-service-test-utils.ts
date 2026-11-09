@@ -19,14 +19,16 @@ import { useTestDatabase } from '@/test-db/test-database';
 
 /** A seeded question row as the session holds it: its type and resolved Answer key, the shape submit and hand grade are given. */
 export function gradable(row: Question): GradableQuestion {
+  const payload = readQuestionPayload(row);
   return {
     id: row.id,
     type: row.type,
+    options: payload.options,
     ...answerKeyOf({
       type: row.type,
       answer: row.answer,
       points: row.points,
-      ...readQuestionPayload(row),
+      ...payload,
     }),
   };
 }

@@ -117,6 +117,14 @@ const BASE: Record<QuestionType, ImportQuestionPreview> = {
     points: 3,
     margin: { value: 5, unit: 'absolute' },
   },
+  // Two clues: the stored points are derived, so they must already be 1.
+  clues: {
+    type: 'clues',
+    prompt: 'Q?',
+    answer: 'A',
+    points: 1,
+    options: ['first', 'second'],
+  },
 };
 
 /** The fields a clip carries for this media case, written out independently of the codec. */
@@ -139,7 +147,14 @@ function allowedClip(media: MediaCase) {
 }
 
 function rowOf(type: QuestionType, answer: string): StoredQuestionRow {
-  return { id: 7, type, prompt: 'Q?', answer, points: 3, notes: null };
+  return {
+    id: 7,
+    type,
+    prompt: 'Q?',
+    answer,
+    points: BASE[type].points,
+    notes: null,
+  };
 }
 
 const CASES = QUESTION_TYPES.flatMap((type) =>
@@ -268,7 +283,12 @@ describe('question record codec round trip', () => {
       });
       const fromRow = rowToPreview({ id: 7, ...stored }, stray);
       const seeded = rowToSeededQuestion(rowOf(type, 'A'), stray);
-      const allowsOptions = ['multiple_choice', 'sort', 'match'].includes(type);
+      const allowsOptions = [
+        'multiple_choice',
+        'sort',
+        'match',
+        'clues',
+      ].includes(type);
 
       for (const output of [stored.payload, fromRow, seeded]) {
         expect('options' in output).toBe(allowsOptions);

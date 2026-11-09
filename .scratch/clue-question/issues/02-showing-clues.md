@@ -22,7 +22,7 @@ Update DOCUMENTATION.md (the Clue question entry and the Advance/Previous behavi
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Stepped reveal tests: Advance steps clue by clue and then falls through, Previous steps back and falls through at clue 1, and the first Advance never waits
 - [ ] Returning onto the question, forward or backward, lands on the highest clue shown, and the highest clue shown never drops on Previous

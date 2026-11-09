@@ -325,6 +325,33 @@ describe('QuizService (Postgres integration)', () => {
         ],
       });
     });
+
+    it('stores a clue question with its clues in order and half a point per clue, whatever points were sent', async () => {
+      const created = await quizService.create('Who am I', [
+        {
+          title: 'Clues',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'clues',
+              prompt: 'Who am I?',
+              options: ['Vague', 'Sharper', 'Giveaway'],
+              answer: 'Einstein',
+              points: 7,
+            },
+          ],
+        },
+      ]);
+
+      const draft = await quizService.findDraftById(created.quizId);
+
+      expect(draft!.rounds[0].questions[0]).toMatchObject({
+        type: 'clues',
+        options: ['Vague', 'Sharper', 'Giveaway'],
+        answer: 'Einstein',
+        points: 1.5,
+      });
+    });
   });
 
   describe('create', () => {
