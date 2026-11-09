@@ -288,7 +288,7 @@ describe('GuideContent', () => {
       'half a point per clue not yet seen, counting the latest',
     );
     expect(text).toContain('answer freezes once a new clue is shown');
-    expect(text).toContain('Grade right or wrong; no half');
+    expect(text).toContain('Grade right or wrong; Custom for other amounts');
   });
 
   it('says grading can start before the break and must finish in it', () => {

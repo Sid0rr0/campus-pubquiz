@@ -151,7 +151,7 @@ function GradeControls({
 }: Pick<AnswerRowProps, 'teamName' | 'answer' | 'maxPoints' | 'onGrade'> & {
   isClueQuestion: boolean;
 }) {
-  // A Clue answer is graded right (its clue's value) or wrong, never half.
+  // A Clue answer's buttons are wrong or right (its clue's value); any other amount goes through Custom.
   const options = gradeOptions(answer?.clueValue ?? maxPoints, !isClueQuestion);
   const gradedPoints = gradedPointsOf(answer);
   const isCustomGrade =
@@ -166,15 +166,14 @@ function GradeControls({
         <span className="sr-only">Awarded {gradedPoints} points</span>
       )}
       <div className="flex items-center gap-1.5">
-        {!isClueQuestion && (
-          <CustomGradeControl
-            teamName={teamName}
-            currentAmount={answer?.pointsAwarded ?? 0}
-            isSelected={isCustomGrade}
-            isDisabled={answer === null}
-            onConfirm={grade}
-          />
-        )}
+        <CustomGradeControl
+          teamName={teamName}
+          currentAmount={answer?.pointsAwarded ?? 0}
+          isSelected={isCustomGrade}
+          isDisabled={answer === null}
+          onConfirm={grade}
+        />
+
         {options.map(({ display, ariaSuffix, value }) => (
           <GradeOptionButton
             key={display}

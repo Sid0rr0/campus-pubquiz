@@ -64,7 +64,7 @@ describe('AnswersPanel — a Clue question', () => {
     expect(onGrade).toHaveBeenCalledWith(41, 1.5);
   });
 
-  it('offers no custom amount, only wrong or right', () => {
+  it('still offers a custom amount', () => {
     render(
       <AnswersPanel
         liveAnswers={liveAnswers}
@@ -74,7 +74,7 @@ describe('AnswersPanel — a Clue question', () => {
     );
 
     expect(
-      screen.queryByRole('button', { name: /custom points/ }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: /custom points/ }),
+    ).toBeInTheDocument();
   });
 });

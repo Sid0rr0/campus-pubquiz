@@ -1172,9 +1172,9 @@ itself — the display and other players just see counts.
    / full points, where half is exactly half the question's points: 0.5 on a
    1-point question), and must finish any remaining grading in the `break`:
    leaving it is refused while an answer in the block is ungraded. (A Clue
-   answer has no half grade: a hand grade must be exactly 0 or the answer's
-   clue value, anything else is refused, and `/control` shows only those two
-   buttons.) If a team
+   answer has no half button: `/control` shows wrong and right, where right is
+   the answer's clue value; any other amount goes through Custom, and is judged
+   correct at or above that value, partial below it.) If a team
    changes a hand-graded (`free_text`) answer, its grade is cleared,
    since it belonged to the old value. Grades are written to the answer row;
    grading an answer twice is prevented in the UI. Exception: `closest_guess` answers are graded automatically once the

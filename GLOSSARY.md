@@ -63,7 +63,7 @@ How a question is answered: typed text, a number, picking a choice, putting item
 _Avoid_: input kind (the registry field that is its default)
 
 **Clue question**:
-A question type where the quiz master shows clues to the whole room one at a time, and teams type their answer. A right answer is worth half a point for every clue the room had not yet seen when the team answered, counting the latest clue shown, so on a five-clue question 2.5 on the first clue down to 0.5 on the last; the clues set the question's points, and an answer is graded only right or wrong. Once another clue is shown, a team's answer can no longer be changed.
+A question type where the quiz master shows clues to the whole room one at a time, and teams type their answer. A right answer is worth half a point for every clue the room had not yet seen when the team answered, counting the latest clue shown, so on a five-clue question 2.5 on the first clue down to 0.5 on the last; the clues set the question's points, and the quiz master's grade buttons are wrong or right (any other amount goes through Custom). Once another clue is shown, a team's answer can no longer be changed.
 _Avoid_: help points, hint question
 
 **Clue**:

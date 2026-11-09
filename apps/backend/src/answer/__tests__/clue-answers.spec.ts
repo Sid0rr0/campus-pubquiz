@@ -1,8 +1,5 @@
 import { Question } from '@/db/entities/question.entity';
-import {
-  AnswerGradeRefusedError,
-  AnswerLockedError,
-} from '@/answer/answer.service';
+import { AnswerLockedError } from '@/answer/answer.service';
 import {
   gradable,
   regradeMatchOrHuman,
@@ -201,7 +198,7 @@ describe('AnswerService (Postgres integration) - Clue question answers', () => {
     });
   });
 
-  it('refuses a hand grade other than 0 or the answer clue value', async () => {
+  it('takes any hand-graded amount, judging it against the answer clue value', async () => {
     const question = await clueQuestion();
     const team = await insertTeam('The Quizzards', 'token-1');
     const { answerId } = await state.answerService.submit(
@@ -220,10 +217,13 @@ describe('AnswerService (Postgres integration) - Clue question answers', () => {
         points,
       );
 
-    await expect(grade(1)).rejects.toThrow(AnswerGradeRefusedError);
-    await expect(grade(2.5)).rejects.toThrow(AnswerGradeRefusedError);
-    await grade(2);
+    await grade(1);
+    expect(await answerOf(question)).toMatchObject({
+      pointsAwarded: 1,
+      verdict: 'partial',
+    });
 
+    await grade(2);
     expect(await answerOf(question)).toMatchObject({
       pointsAwarded: 2,
       verdict: 'correct',

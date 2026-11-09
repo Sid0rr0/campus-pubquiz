@@ -348,18 +348,12 @@ export class AnswerService {
         `${question.type} answers can only be graded by hand once the block locks`,
       );
     }
-    const asLockedIn = atClue(question, answer.clue);
-    if (
-      QUESTION_KINDS[question.type].hasClues &&
-      pointsAwarded !== 0 &&
-      pointsAwarded !== asLockedIn.points
-    ) {
-      throw new AnswerGradeRefusedError(
-        `A Clue answer is worth 0 or ${asLockedIn.points} points`,
-      );
-    }
     answer.pointsAwarded = pointsAwarded;
-    answer.verdict = verdictForManualGrade(asLockedIn, pointsAwarded);
+    // A Clue answer is judged against its own clue's value, not the question's first-clue points.
+    answer.verdict = verdictForManualGrade(
+      atClue(question, answer.clue),
+      pointsAwarded,
+    );
     answer.gradedAt = new Date();
     await this.answers.getEntityManager().flush();
   }
