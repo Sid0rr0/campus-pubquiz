@@ -94,3 +94,5 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ the mutation run made each spec run take too long.
 - **implement-spec steps 8, 10, 11 (2026-11-08)**: moving the spec to `.scratch/done.md` / `overview.md` is now the last commit of the PR, made in step 11 right after the rebase onto the latest main; the post-merge "move to done on `main`" step is gone.
   _Why:_ the separate commit on `main` after the merge was an extra step that is easy to forget and bypasses review.
+- **implement (2026-11-09)**: after `code-review`, run `ponytail:ponytail-review` on the same range, fix both reviews' findings, and repeat `ponytail-review` on the fixes until it reports no Must fix.
+  _Why:_ matches implement-spec step 7; `code-review` alone misses behaviour bugs the connected code shows.
