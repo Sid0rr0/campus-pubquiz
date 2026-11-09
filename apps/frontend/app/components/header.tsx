@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 interface HeaderProps {
@@ -19,8 +20,9 @@ export function Header({
     >
       <Link
         href="/"
-        className="shrink-0 rounded-lg font-display text-display-xl font-extrabold text-magenta focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-magenta"
+        className="flex shrink-0 items-center gap-2 rounded-lg font-display text-display-xl font-extrabold text-magenta focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-magenta"
       >
+        <Image src="/cpq.svg" alt="" width={40} height={40} priority />
         Campus Pub Quiz
       </Link>
       {center && (
