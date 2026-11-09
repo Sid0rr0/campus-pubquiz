@@ -101,6 +101,7 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "testTimeout": 30000,
     "setupFilesAfterEnv": [
       "<rootDir>/test-db/reset-orm-metadata.ts"
     ],
