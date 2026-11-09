@@ -13,7 +13,7 @@ import {
   pauseMedia,
   player,
   replayMedia,
-  resumeMedia,
+  playMedia,
 } from '../support/media-controls';
 import { importMediaNight, MEDIA_NIGHT } from '../support/media-night';
 import { expect, test as base } from '../fixtures';
@@ -66,7 +66,7 @@ test('each kind of media gets its player, the controls drive it, and the reveal 
   await expectPlaying(player(display, 'question-audio'));
   await pauseMedia(control);
   await expectPaused(player(display, 'question-audio'));
-  await resumeMedia(control);
+  await playMedia(control);
   await expectPlaying(player(display, 'question-audio'));
   await replayMedia(control);
   await expectPlaying(player(display, 'question-audio'));
@@ -99,7 +99,7 @@ test('each kind of media gets its player, the controls drive it, and the reveal 
   await expect(questionEmbed).toHaveAttribute('src', youtube.questionSrc);
   await questionEmbed.evaluate((embed) => embed.setAttribute('data-e2e', '1'));
   await pauseMedia(control);
-  await resumeMedia(control);
+  await playMedia(control);
   await replayMedia(control);
   await expect(questionEmbed).not.toHaveAttribute('data-e2e', '1');
   await expect(questionEmbed).toHaveAttribute('src', youtube.questionSrc);

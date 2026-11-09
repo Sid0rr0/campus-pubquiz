@@ -142,6 +142,23 @@ describe('planMove', () => {
     it('never gates an action that is not about media', () => {
       expect(planMove(playing(undefined), 'END_QUIZ').kind).toBe('transition');
     });
+
+    it('lands paused when the session does not autoplay media', () => {
+      const session = inBlock('question_open', { questionIndex: 0 });
+      const noAutoplay: SessionState = {
+        ...session,
+        seededGame: {
+          ...session.seededGame,
+          settings: { ...session.seededGame.settings, autoplayMedia: false },
+        },
+      };
+
+      const step = planMove(noAutoplay, 'ADVANCE');
+
+      expect(step.kind === 'transition' && step.progress.isMediaPaused).toBe(
+        true,
+      );
+    });
   });
 
   describe('under the join overlay', () => {

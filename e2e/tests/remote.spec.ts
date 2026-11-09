@@ -93,7 +93,7 @@ test('part of a block is driven from the presenter remote while the big screen f
   await remote.pause();
   await expect.poll(() => isAudioPaused(audioElement)).toBe(true);
   await remote.matchSnapshot('question_open-audio-paused');
-  await remote.resume();
+  await remote.play();
   await expect.poll(() => isAudioPaused(audioElement)).toBe(false);
 
   // 6. The YouTube question: replay restarts the player and fullscreen enlarges it.

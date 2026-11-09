@@ -397,6 +397,41 @@ describe('getNextGameState — media pause', () => {
     );
     expect(join.isMediaPaused).toBe(true);
   });
+
+  describe('with autoplay media off', () => {
+    const noAutoplay = {
+      ...twoRoundsWithBreakAfterSecond,
+      autoplayMedia: false,
+    };
+
+    it('lands on the next question paused, so the first press plays it', () => {
+      const next = getNextGameState(open, 'ADVANCE', noAutoplay);
+      expect(next.questionIndex).toBe(1);
+      expect(next.isMediaPaused).toBe(true);
+    });
+
+    it('lands on the previous question paused, even after it played', () => {
+      const next = getNextGameState(
+        { ...open, questionIndex: 1, furthestOpenIndex: 1 },
+        'PREVIOUS',
+        noAutoplay,
+      );
+      expect(next.isMediaPaused).toBe(true);
+    });
+
+    it('plays the clip on the first pause toggle', () => {
+      const landed = getNextGameState(open, 'ADVANCE', noAutoplay);
+      expect(
+        getNextGameState(landed, 'TOGGLE_MEDIA_PAUSE', noAutoplay)
+          .isMediaPaused,
+      ).toBe(false);
+    });
+
+    it('leaves a playing clip playing when only an overlay is toggled', () => {
+      const board = getNextGameState(open, 'TOGGLE_LEADERBOARD', noAutoplay);
+      expect(board.isMediaPaused).toBeFalsy();
+    });
+  });
 });
 
 describe('getNextGameState — illegal transitions and config guards', () => {

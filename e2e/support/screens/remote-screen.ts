@@ -65,15 +65,13 @@ export class RemoteScreen {
   async pause(): Promise<void> {
     await this.page.getByRole('button', { name: 'Pause', exact: true }).click();
     await expect(
-      this.page.getByRole('button', { name: 'Resume', exact: true }),
+      this.page.getByRole('button', { name: 'Play', exact: true }),
     ).toBeVisible();
     recordMove('media_pause');
   }
 
-  async resume(): Promise<void> {
-    await this.page
-      .getByRole('button', { name: 'Resume', exact: true })
-      .click();
+  async play(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Play', exact: true }).click();
     await expect(
       this.page.getByRole('button', { name: 'Pause', exact: true }),
     ).toBeVisible();

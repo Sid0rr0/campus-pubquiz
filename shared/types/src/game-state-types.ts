@@ -61,6 +61,12 @@ export interface GameContext {
    * showRoundOverview; undefined behaves as false.
    */
   jokersEnabled?: boolean;
+  /**
+   * The session's Autoplay media setting. Off, every move lands with
+   * isMediaPaused set, so the media's first Play starts it. Optional;
+   * undefined behaves as true (autoplay).
+   */
+  autoplayMedia?: boolean;
 }
 
 export interface GameProgress {
@@ -96,9 +102,10 @@ export interface GameProgress {
   /**
    * Whether /display has the current question's playing media (YouTube or
    * audio) paused — toggled by TOGGLE_MEDIA_PAUSE. Server-owned so a display
-   * that reconnects mid-pause comes back paused. Reset by every action that
-   * moves the quiz (and by REPLAY_MEDIA); only the leaderboard/join overlays
-   * leave it set. Optional, like isMediaFullscreen; undefined behaves as false.
+   * that reconnects mid-pause comes back paused. Every action that moves the
+   * quiz resets it, to false, or to true when GameContext.autoplayMedia is
+   * off; REPLAY_MEDIA clears it; only the leaderboard/join overlays leave it.
+   * Optional, like isMediaFullscreen; undefined behaves as false.
    */
   isMediaPaused?: boolean;
   /**

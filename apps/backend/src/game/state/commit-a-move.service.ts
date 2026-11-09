@@ -125,7 +125,7 @@ export class MoveCommitter {
     session: SessionState,
     saved: PersistedGameProgress | null,
   ): Promise<SessionState> {
-    const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
+    const progress = restoredProgress(session, saved);
     // The ungraded cache and the closest_guess summaries live in memory
     // only; they must be rebuilt so /control, showdown eligibility and a
     // closest_guess reveal walk are right straight away.
@@ -260,6 +260,19 @@ export class MoveCommitter {
     };
     return { ...session, activeShowdownRound: resolvedRound };
   }
+}
+
+/** The progress a placed session starts from: the saved one, or the lobby. */
+function restoredProgress(
+  session: SessionState,
+  saved: PersistedGameProgress | null,
+): GameProgress {
+  const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
+  // Whether the clip is paused is not stored: without autoplay it stands
+  // still until Play, so a restart must not let a connected display start it.
+  return session.seededGame.settings.autoplayMedia === false
+    ? { ...progress, isMediaPaused: true }
+    : progress;
 }
 
 function toPersistedProgress(session: SessionState): PersistedGameProgress {

@@ -217,20 +217,25 @@ applies it in place, without remounting anything: a YouTube embed (loaded with
 `enablejsapi=1`) gets an IFrame API `pauseVideo`/`playVideo` `postMessage`
 command, and a question `<audio>` or video-file `<video>` element (including a
 video-file answer at reveal) is `pause()`d/`play()`ed. Every
-action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
-`REPLAY_MEDIA` resets it; the leaderboard and join overlay toggles leave it
-alone. `/control` and `/remote` show Pause/Resume only while media is playing on
-the big screen: an open question whose media is a video (YouTube or file) or
-audio, or a reveal showing answer media of that kind, else the question's own
-(the media the reveal shows). A closest-guess reveal plays nothing before the
+action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) resets it:
+to playing, or, with the session's `autoplayMedia` off, to paused, since the
+media stands still until the moderator's first Play. `REPLAY_MEDIA` clears it.
+The leaderboard and join overlay toggles leave it alone. The flag is not stored: a
+restarted backend rebuilds it from the setting, so with `autoplayMedia` off a
+clip stays paused until Play, and with it on a clip that was paused comes back
+playing. `/control` and
+`/remote` show Pause/Play only while media is playing on the big screen: an
+open question or a break review question whose media is a video (YouTube or
+file) or audio, or a reveal showing answer media of that kind, else the
+question's own (the media the reveal shows). A closest-guess reveal plays nothing before the
 answer step, so neither button is offered until the walk reaches it. The admin view's `controlAvailability`
 (`canReplayMedia`, `canPauseMedia`, plus start/end/close, the join overlay
 toggle, answer status and the teams tied for first) is read from the Display
-screen on air, so the buttons and `/display` can't disagree. On `/remote`, Space pauses/resumes while the
+screen on air, so the buttons and `/display` can't disagree. On `/remote`, Space pauses/plays while the
 button is shown, under the same rules as on `/control` (ignored in form fields,
 with modifier keys and for a held key's repeats); it is `/remote`'s only shortcut. Browsers may refuse the
-display's `play()` on resume if it has had no user interaction (autoplay
-policy); a rejection is ignored and the moderator can press Resume again. A
+display's `play()` if it has had no user interaction (autoplay
+policy); a rejection is ignored and the moderator can press Play again. A
 standing pause is re-applied to a video file once it has loaded. "Play again"
 (`REPLAY_MEDIA`) is offered whenever the media shown is a video (YouTube or
 file) or audio, at reveal too; a YouTube answer replays by remounting its

@@ -56,7 +56,7 @@ export const ADMIN_SHORTCUTS: Readonly<Record<AdminShortcutId, AdminShortcut>> =
     toggleMediaPause: {
       key: ' ',
       keyName: 'Space',
-      description: 'Pause or resume the clip, when Pause shows.',
+      description: 'Pause or play the clip, when shown.',
     },
     toggleDisplayMute: {
       key: 'm',

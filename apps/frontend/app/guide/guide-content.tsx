@@ -115,7 +115,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Media and sound',
     paragraphs: [
-      'On a video or audio question, Pause and "Play again" sit below the Leaderboard row on Control.',
+      'Pause and "Play again" show for video or audio, in break too. With autoplay off, press Play.',
       'Display sound mutes the big screen.',
     ],
   },

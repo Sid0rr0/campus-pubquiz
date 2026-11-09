@@ -73,7 +73,7 @@ describe('AdminActions — media playback row', () => {
 
     expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute(
       'title',
-      `Pause or resume (${ADMIN_SHORTCUTS.toggleMediaPause.keyName})`,
+      `Pause or play (${ADMIN_SHORTCUTS.toggleMediaPause.keyName})`,
     );
     expect(
       screen.getByRole('button', { name: 'Fullscreen media' }),
@@ -89,10 +89,10 @@ describe('AdminActions — media playback row', () => {
     );
   });
 
-  it('shows Resume while the media is paused', () => {
+  it('shows Play while the media is paused', () => {
     renderActions({ canPauseMedia: true, isMediaPaused: true });
 
-    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Pause' }),
     ).not.toBeInTheDocument();

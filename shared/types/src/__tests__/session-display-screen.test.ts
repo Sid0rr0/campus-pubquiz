@@ -459,15 +459,23 @@ describe('getPlayingMediaUrl', () => {
     ).toBeUndefined();
   });
 
-  it.each([
-    { kind: 'lobby' },
-    { kind: 'break_review', question: { mediaUrl: 'q.mp3' } },
-    { kind: 'blank' },
-  ])('plays nothing on $kind', (screen) => {
+  it('plays a break-review question’s own media', () => {
     expect(
-      getPlayingMediaUrl(screen as unknown as DisplayScreen),
-    ).toBeUndefined();
+      getPlayingMediaUrl({
+        kind: 'break_review',
+        question: { mediaUrl: 'q.mp3' },
+      } as unknown as DisplayScreen),
+    ).toBe('q.mp3');
   });
+
+  it.each([{ kind: 'lobby' }, { kind: 'blank' }])(
+    'plays nothing on $kind',
+    (screen) => {
+      expect(
+        getPlayingMediaUrl(screen as unknown as DisplayScreen),
+      ).toBeUndefined();
+    },
+  );
 });
 
 describe('assembleDisplayScreen', () => {

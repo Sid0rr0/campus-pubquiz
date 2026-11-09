@@ -100,6 +100,7 @@ export interface DisplayScreenInput {
 export function getPlayingMediaUrl(screen: DisplayScreen): string | undefined {
   switch (screen.kind) {
     case 'question':
+    case 'break_review':
       return screen.question.mediaUrl;
     case 'reveal':
       return screen.question.revealKind === 'closest_guess_pending'

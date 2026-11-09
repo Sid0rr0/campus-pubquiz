@@ -206,16 +206,24 @@ describe('Screen projection — control availability: closest_guess reveal', () 
   });
 });
 
+describe('Screen projection — control availability: break review', () => {
+  it("follows the reviewed question's own media", () => {
+    const q = [question(1, { mediaUrl: YOUTUBE })];
+    expect(media(session(q, { status: 'break' }))).toEqual(PLAYING);
+  });
+
+  it('offers nothing when the reviewed question has an image', () => {
+    const q = [question(1, { mediaUrl: IMAGE })];
+    expect(media(session(q, { status: 'break' }))).toEqual(NO_MEDIA);
+  });
+});
+
 describe('Screen projection — control availability: screens that play nothing', () => {
   const q = [question(1, { mediaUrl: YOUTUBE })];
 
   it('offers nothing while the question is locking', () => {
     const state = session(q, { status: 'locking' }, { questionLockAt: 1 });
     expect(media(state)).toEqual(NO_MEDIA);
-  });
-
-  it('offers nothing in break review', () => {
-    expect(media(session(q, { status: 'break' }))).toEqual(NO_MEDIA);
   });
 
   it('offers nothing on a title card', () => {

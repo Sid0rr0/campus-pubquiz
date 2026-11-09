@@ -789,11 +789,11 @@ describe('RemotePage — content', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows Resume while the media is paused', () => {
+  it('shows Play while the media is paused', () => {
     mockOpenQuestionWithMedia('https://youtu.be/dQw4w9WgXcQ', vi.fn(), true);
     renderWithQuery(<RemotePage />);
 
-    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
   });
 
   it('names the Space key in the Pause button tooltip', () => {

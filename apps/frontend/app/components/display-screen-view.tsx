@@ -285,7 +285,7 @@ function BreakReviewView({
     <BreakReviewScreen
       question={screen.question}
       autoplayMedia={settings.autoplayMedia}
-      isDisplaySoundMuted={media.isDisplaySoundMuted}
+      {...media}
     />
   );
 }

@@ -12,7 +12,7 @@ export interface UseAdminKeyboardShortcutsOptions {
   isLeaderboardVisible: boolean;
   /** Whether the join overlay can be toggled now: after the lobby and before the quiz ends. */
   canToggleJoinOverlay: boolean;
-  /** Whether the Pause/Resume button is shown: an open question with pausable media. */
+  /** Whether the Pause/Play button is shown: an open question with pausable media. */
   canPauseMedia: boolean;
   isDisplaySoundMuted: boolean;
   sendAction: (action: GameAction) => void;
@@ -49,14 +49,14 @@ function isShortcutCandidate(event: KeyboardEvent): boolean {
 }
 
 export interface UseAdminMediaPauseShortcutOptions {
-  /** Whether the Pause/Resume button is shown. */
+  /** Whether the Pause/Play button is shown. */
   canPauseMedia: boolean;
   sendAction: (action: GameAction) => void;
 }
 
 /**
- * /remote's only shortcut: Space pauses/resumes the media, under the same
- * rules as on /control (only while the Pause/Resume button is shown, ignored
+ * /remote's only shortcut: Space pauses/plays the media, under the same
+ * rules as on /control (only while the Pause/Play button is shown, ignored
  * in form fields and chords, left to the browser otherwise).
  */
 export function useAdminMediaPauseShortcut({
@@ -85,7 +85,7 @@ export function useAdminMediaPauseShortcut({
 /**
  * Left/Right send PREVIOUS/ADVANCE whenever the server's announced step
  * allows it (the server resolves what a leaderboard press means); Up/Down show/hide the leaderboard; F toggles a fullscreen view of the
- * current question's media on /display; Space pauses/resumes it (only while
+ * current question's media on /display; Space pauses/plays it (only while
  * the Pause button is shown); M toggles the big-screen mute. Letter keys match
  * either case. Ignored while focus is in a form field so typing a password or
  * a grade isn't hijacked.

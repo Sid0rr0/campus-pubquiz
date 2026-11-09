@@ -18,6 +18,21 @@ const TWO_ROUNDS = [
   { title: 'Science', questions: [{ prompt: 'Largest planet?' }] },
 ];
 
+/** A live context with no teams, for screens whose live parts aren't under test. */
+const LIVE = {
+  teams: [],
+  answeredTeamIds: [],
+  leaderboard: [],
+  leagueTop: null,
+  teamsCorrect: null,
+  powerUpCounts: [],
+  joinCode: 'ABCDEF',
+  isConnected: true,
+  quickfireQuestionEndsAt: null,
+  onPickAnotherGame: () => undefined,
+  onWinnerCelebrated: () => undefined,
+};
+
 /** Draws the on-air screen of the described session with no live context. */
 function drawWithoutLiveContext(description: SessionDescription) {
   const view = roomView(SOCKET_ROOMS.DISPLAY, {
@@ -217,20 +232,6 @@ describe('DisplayScreenView — without a live context', () => {
   });
 
   describe('answer media at reveal', () => {
-    const LIVE = {
-      teams: [],
-      answeredTeamIds: [],
-      leaderboard: [],
-      leagueTop: null,
-      teamsCorrect: null,
-      powerUpCounts: [],
-      joinCode: 'ABCDEF',
-      isConnected: true,
-      quickfireQuestionEndsAt: null,
-      onPickAnotherGame: () => undefined,
-      onWinnerCelebrated: () => undefined,
-    };
-
     function drawReveal(live: Partial<DisplayLiveContext>) {
       const view = roomView(SOCKET_ROOMS.DISPLAY, {
         teams: TEAMS,
@@ -300,6 +301,96 @@ describe('DisplayScreenView — without a live context', () => {
       );
 
       expect(video.currentTime).toBe(0);
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+      vi.restoreAllMocks();
+    });
+  });
+
+  describe('question media in break review', () => {
+    function drawBreakReview(
+      live: Partial<DisplayLiveContext>,
+      mediaUrl = 'https://example.com/tune.mp3',
+    ) {
+      const view = roomView(SOCKET_ROOMS.DISPLAY, {
+        teams: TEAMS,
+        rounds: [
+          {
+            questions: [
+              {
+                prompt: 'Name this tune.',
+                mediaUrl,
+              },
+              { prompt: 'Name this flag.' },
+            ],
+          },
+        ],
+        progress: {
+          status: 'break',
+          roundIndex: 0,
+          questionIndex: 1,
+          revealIndex: 0,
+        },
+      });
+      const element = (
+        <DisplayScreenView
+          screen={view.screen}
+          quiz={{
+            settings: view.settings,
+            quizStructure: view.quizStructure,
+            roundTitles: view.roundTitles,
+            roundCategories: view.roundCategories,
+            roundAuthors: view.roundAuthors,
+          }}
+          live={{ ...LIVE, ...live }}
+        />
+      );
+      return { element, ...render(element) };
+    }
+
+    it('pauses and plays the question audio in place', () => {
+      const pause = vi
+        .spyOn(HTMLMediaElement.prototype, 'pause')
+        .mockImplementation(() => undefined);
+      const play = vi
+        .spyOn(HTMLMediaElement.prototype, 'play')
+        .mockResolvedValue(undefined);
+      const { rerender, element } = drawBreakReview({ isMediaPaused: false });
+      expect(screen.getByText('Name this tune.')).toBeInTheDocument();
+
+      rerender(
+        cloneElement(element, { live: { ...LIVE, isMediaPaused: true } }),
+      );
+      expect(pause).toHaveBeenCalledTimes(1);
+
+      rerender(
+        cloneElement(element, { live: { ...LIVE, isMediaPaused: false } }),
+      );
+      expect(play).toHaveBeenCalledTimes(1);
+      vi.restoreAllMocks();
+    });
+
+    it('raises the question image fullscreen', () => {
+      drawBreakReview(
+        { isMediaFullscreen: true },
+        'https://example.com/flag.png',
+      );
+
+      expect(
+        screen.getByTestId('break-image').closest('.fixed.inset-0'),
+      ).not.toBeNull();
+    });
+
+    it('plays the question audio again from the top on REPLAY_MEDIA', () => {
+      vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+      const { rerender, element } = drawBreakReview({ mediaReplayToken: 0 });
+      const audio = screen.getByTestId('break-audio') as HTMLAudioElement;
+      audio.currentTime = 12;
+
+      rerender(
+        cloneElement(element, { live: { ...LIVE, mediaReplayToken: 1 } }),
+      );
+
+      expect(audio.currentTime).toBe(0);
       expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
       vi.restoreAllMocks();
     });

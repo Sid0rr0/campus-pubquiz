@@ -271,5 +271,6 @@ export function getGameContext(session: SessionState): GameContext {
     })),
     showRoundOverview: session.seededGame.settings.showRoundOverview,
     jokersEnabled: session.seededGame.settings.jokersEnabled,
+    autoplayMedia: session.seededGame.settings.autoplayMedia,
   };
 }

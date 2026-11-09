@@ -59,7 +59,7 @@ function applyTransition(
 ): GameProgress {
   return (
     applyMediaAction(progress, action) ??
-    applyMoveAction(settleMedia(progress, action), action, context)
+    applyMoveAction(settleMedia(progress, action, context), action, context)
   );
 }
 
@@ -128,16 +128,21 @@ function applyMoveAction(
   }
 }
 
-function settleMedia(progress: GameProgress, action: GameAction): GameProgress {
+function settleMedia(
+  progress: GameProgress,
+  action: GameAction,
+  context: GameContext,
+): GameProgress {
   // Pause belongs to the question on screen: anything that moves the quiz on
-  // (or back) resumes it. Only the two overlays leave the media paused, since
-  // the quiz carries on underneath them.
-  if (
-    progress.isMediaPaused &&
-    action !== 'TOGGLE_LEADERBOARD' &&
-    action !== 'TOGGLE_JOIN_OVERLAY'
-  ) {
-    progress = { ...progress, isMediaPaused: false };
+  // (or back) resets it, to playing, or to paused when the session doesn't
+  // autoplay (the media stands still, so the first press plays it). Only the
+  // two overlays leave it alone, since the quiz carries on underneath them.
+  const landsPaused = context.autoplayMedia === false;
+  const isPaused = progress.isMediaPaused ?? false;
+  const isOverlayToggle =
+    action === 'TOGGLE_LEADERBOARD' || action === 'TOGGLE_JOIN_OVERLAY';
+  if (isPaused !== landsPaused && !isOverlayToggle) {
+    progress = { ...progress, isMediaPaused: landsPaused };
   }
 
   // The fullscreen view is tied to whatever's currently on screen, so any

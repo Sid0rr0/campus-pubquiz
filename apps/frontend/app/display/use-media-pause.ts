@@ -114,7 +114,7 @@ function usePauseFollowing(
         element.pause();
       } else {
         // Browsers may reject play() (autoplay policy); a rejection is ignored
-        // and the moderator can pause/resume again.
+        // and the moderator can press Play again.
         element.play()?.catch(() => undefined);
       }
     }

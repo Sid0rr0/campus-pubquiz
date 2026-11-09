@@ -1,5 +1,5 @@
 /**
- * The media controls of /control (Pause, Resume, Play again, Fullscreen) and
+ * The media controls of /control (Pause, Play, Play again, Fullscreen) and
  * what they do to the player on /display. Each action records its move for the
  * coverage registry.
  */
@@ -49,17 +49,17 @@ export async function expectNoPauseButton(
   control: ControlScreen,
 ): Promise<void> {
   await expect(mediaButton(control, 'Pause')).toHaveCount(0);
-  await expect(mediaButton(control, 'Resume')).toHaveCount(0);
+  await expect(mediaButton(control, 'Play')).toHaveCount(0);
 }
 
 export async function pauseMedia(control: ControlScreen): Promise<void> {
   await mediaButton(control, 'Pause').click();
-  await expect(mediaButton(control, 'Resume')).toBeVisible();
+  await expect(mediaButton(control, 'Play')).toBeVisible();
   recordMove('media_pause');
 }
 
-export async function resumeMedia(control: ControlScreen): Promise<void> {
-  await mediaButton(control, 'Resume').click();
+export async function playMedia(control: ControlScreen): Promise<void> {
+  await mediaButton(control, 'Play').click();
   await expect(mediaButton(control, 'Pause')).toBeVisible();
 }
 

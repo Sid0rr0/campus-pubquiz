@@ -8,7 +8,7 @@ import { ADMIN_SHORTCUTS } from '@/app/control/admin-keyboard-shortcuts';
 interface MediaPauseButtonProps {
   /** Whether the open question has YouTube or audio media on /display to pause — see isPausableMediaUrl. Renders nothing otherwise. */
   canPause: boolean;
-  /** GameProgress.isMediaPaused — flips the label between Pause and Resume. */
+  /** GameProgress.isMediaPaused — flips the label between Pause and Play. */
   isPaused: boolean;
   onAction: (action: GameAction) => void;
   className?: string;
@@ -23,14 +23,14 @@ export function MediaPauseButton({
 }: MediaPauseButtonProps) {
   if (!canPause) return null;
 
-  const label = isPaused ? 'Resume' : 'Pause';
+  const label = isPaused ? 'Play' : 'Pause';
   return (
     <Button
       type="button"
       variant="outline"
       size="lg"
       aria-label={label}
-      title={`Pause or resume (${ADMIN_SHORTCUTS.toggleMediaPause.keyName})`}
+      title={`Pause or play (${ADMIN_SHORTCUTS.toggleMediaPause.keyName})`}
       onClick={() => onAction('TOGGLE_MEDIA_PAUSE')}
       className={`flex-1 ${className}`}
     >

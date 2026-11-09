@@ -93,6 +93,38 @@ describe('useMediaPause', () => {
     expect(video.play).toHaveBeenCalledTimes(1);
   });
 
+  describe('a screen that mounts paused (autoplay off), then gets Play', () => {
+    it('plays a YouTube embed that was held paused on load', () => {
+      const { result, rerender } = renderHook(
+        ({ paused }) => useMediaPause(paused),
+        { initialProps: { paused: true } },
+      );
+      const { iframe, postMessage } = fakeIframe();
+      result.current.youtubeRef.current = iframe;
+      result.current.onYoutubeLoad();
+      postMessage.mockClear();
+
+      rerender({ paused: false });
+
+      expect(commandsSent(postMessage)).toEqual(['playVideo']);
+    });
+
+    it('plays a video file that was held paused on load', () => {
+      const { result, rerender } = renderHook(
+        ({ paused }) => useMediaPause(paused),
+        { initialProps: { paused: true } },
+      );
+      const video = fakeMedia();
+      result.current.videoRef.current = asVideo(video);
+      result.current.onVideoReady();
+      expect(video.pause).toHaveBeenCalledTimes(1);
+
+      rerender({ paused: false });
+
+      expect(video.play).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('onYoutubeLoad', () => {
     it('sends nothing when the game is neither paused nor muted', () => {
       const { result } = renderHook(() => useMediaPause(false, 0, 0, false));
