@@ -689,7 +689,8 @@ describe('GameStateService — getPresenterContext', () => {
         );
         expect(boards.length).toBeGreaterThan(5);
         expect(result.disagreements).toEqual([]);
-      });
+        // 6 teams × 5 questions: ~0.6s alone, past Jest's 5s default under full-suite load
+      }, 30_000);
     });
 
     describe('an ended quiz with an active showdown', () => {
