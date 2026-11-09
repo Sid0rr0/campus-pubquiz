@@ -9,7 +9,7 @@ function decidedKey(joinCode: string): string {
   return `${DECIDED_KEY_PREFIX}${joinCode}`;
 }
 
-/** Whether this phone's team dismissed the late player count card for this session. Storage may be blocked (private browsing), in which case nothing is remembered. */
+/** Whether this phone's team tapped "Later" on the late player count card for this session, so it starts folded. Storage may be blocked (private browsing), in which case nothing is remembered. */
 export function readPlayerCountPromptDismissed(joinCode: string): boolean {
   try {
     return window.localStorage.getItem(dismissedKey(joinCode)) === '1';
@@ -18,12 +18,12 @@ export function readPlayerCountPromptDismissed(joinCode: string): boolean {
   }
 }
 
-/** Remembers on this phone that the late player count card was dismissed for this session. */
+/** Remembers on this phone that "Later" was tapped on the late player count card for this session. */
 export function writePlayerCountPromptDismissed(joinCode: string): void {
   try {
     window.localStorage.setItem(dismissedKey(joinCode), '1');
   } catch {
-    // Without storage the card is hidden for this page load only.
+    // Without storage the card starts open again on a reload.
   }
 }
 

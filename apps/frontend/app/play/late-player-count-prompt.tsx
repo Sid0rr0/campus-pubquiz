@@ -23,11 +23,12 @@ interface LatePlayerCountPromptProps {
 
 /**
  * The player count card for a team that joined after the lobby without a
- * count: asked once, over whatever screen it landed on, with a dismiss that
+ * count: asked once, over whatever screen it landed on, with a "Later" that
  * this phone remembers. Whether to ask is decided once per session, when the
  * join first lands, and remembered on this phone, so a reconnect with a count
  * never asks, a lobby joiner is not asked after a mid-quiz reload, and a saved
- * count folds the card instead of removing it. Stepping back to the lobby hands
+ * count folds the card instead of removing it. "Later" folds it to the bottom
+ * too, and a reload keeps it folded. Stepping back to the lobby hands
  * over to the lobby's own card.
  */
 export function LatePlayerCountPrompt({
@@ -49,7 +50,7 @@ export function LatePlayerCountPrompt({
     writePlayerCountPromptDecision(joinCode, decision);
     setShouldAsk(decision);
   }
-  if (!shouldAsk || isDismissed || isLobby) return null;
+  if (!shouldAsk || isLobby) return null;
 
   return (
     <div className="mb-4 empty:hidden">
@@ -57,6 +58,7 @@ export function LatePlayerCountPrompt({
         savedCount={savedCount}
         onSend={onSend}
         bottomSlot={bottomSlot}
+        isDismissed={isDismissed}
         onDismiss={() => {
           writePlayerCountPromptDismissed(joinCode);
           setIsDismissed(true);

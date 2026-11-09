@@ -161,9 +161,7 @@ describe('PlayPage — a team that joins after the lobby', () => {
     expect(
       screen.getByText(/how many players does your team have/i),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /dismiss/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /later/i })).toBeInTheDocument();
   });
 
   it('never sees the card when its team already has a count', () => {
@@ -173,7 +171,7 @@ describe('PlayPage — a team that joins after the lobby', () => {
       screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /dismiss/i }),
+      screen.queryByRole('button', { name: /later/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -188,7 +186,7 @@ describe('PlayPage — a team that joins after the lobby', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('is asked again after a reload until it answers or dismisses', () => {
+  it('is asked again after a reload until it answers or taps Later', () => {
     renderPhone({ status: 'rules', myPlayerCount: null });
     cleanup();
 
@@ -199,18 +197,45 @@ describe('PlayPage — a team that joins after the lobby', () => {
     ).toBeInTheDocument();
   });
 
-  it('hides the card for good on this phone once dismissed', async () => {
+  it('folds the card to the bottom on Later, and keeps it folded after a reload', async () => {
     renderPhone({ status: 'rules', myPlayerCount: null });
 
-    await userEvent.click(screen.getByRole('button', { name: /dismiss/i }));
+    await userEvent.click(screen.getByRole('button', { name: /later/i }));
     expect(
       screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /how many players\? · add/i })
+        .parentElement,
+    ).toHaveClass('order-5');
 
+    cleanup();
     renderPhone({ status: 'rules', myPlayerCount: null });
     expect(
       screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /how many players\? · add/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('reopens the folded card at the bottom, where Later folds it again', async () => {
+    renderPhone({ status: 'rules', myPlayerCount: null });
+    await userEvent.click(screen.getByRole('button', { name: /later/i }));
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /how many players\? · add/i }),
+    );
+    expect(
+      screen
+        .getByRole('heading', { name: /how many players/i })
+        .closest('.order-5'),
+    ).not.toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /later/i }));
+    expect(
+      screen.getByRole('button', { name: /how many players\? · add/i }),
+    ).toBeInTheDocument();
   });
 
   it('still works when localStorage is unavailable', async () => {
@@ -227,7 +252,7 @@ describe('PlayPage — a team that joins after the lobby', () => {
       });
     renderPhone({ status: 'rules', myPlayerCount: null });
 
-    await userEvent.click(screen.getByRole('button', { name: /dismiss/i }));
+    await userEvent.click(screen.getByRole('button', { name: /later/i }));
 
     expect(
       screen.queryByText(/how many players does your team have/i),
@@ -313,6 +338,21 @@ describe('PlayerCountCard — a count saved while the card is open', () => {
       screen.getByRole('button', { name: /send/i }),
     );
     expect(shown()).toHaveTextContent('6');
+  });
+
+  it('stays open for a retry when an edit is refused', async () => {
+    const { setSavedCount } = renderCard(
+      vi.fn().mockResolvedValue({ success: false, error: 'Nope' }),
+    );
+    setSavedCount(6);
+    await userEvent.click(screen.getByRole('button', { name: /6 players/i }));
+
+    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/not saved/i);
+    expect(
+      screen.getByRole('heading', { name: /how many players/i }),
+    ).toBeInTheDocument();
   });
 
   it('still shows "Saved ✓" when the server sync beats the acknowledgement', async () => {

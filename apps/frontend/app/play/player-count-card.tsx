@@ -25,25 +25,30 @@ interface PlayerCountCardProps {
   /** The count the server holds for this team, or null until one is reported. */
   savedCount: number | null;
   onSend: (playerCount: number) => Promise<AckResult>;
-  /** When given, an unanswered card offers a way to skip it. */
+  /** When given, an unanswered card offers "Later", which folds it to the bottom without a count. */
   onDismiss?: () => void;
+  /** Whether "Later" was already tapped, so an unanswered card starts folded. */
+  isDismissed?: boolean;
   /** Where the answered card lives: the bottom of the page. */
   bottomSlot: HTMLElement | null;
 }
 
-function describePlayers(count: number): string {
-  return `${count} ${count === 1 ? 'player' : 'players'}`;
+function describeFoldedLine(count: number | null): string {
+  if (count === null) return 'How many players? · add';
+  return `${count} ${count === 1 ? 'player' : 'players'} · edit`;
 }
 
 /**
  * "How many players does your team have?": asks while the team has no count, and once one
  * is saved, here or elsewhere, slides to the bottom of the page and folds into
- * "(n) players · edit", which reopens the card there.
+ * "(n) players · edit", which reopens the card there. "Later" folds it there too,
+ * as "How many players? · add".
  */
 export function PlayerCountCard({
   savedCount,
   onSend,
   onDismiss,
+  isDismissed,
   bottomSlot,
 }: PlayerCountCardProps) {
   // Why this phone keeps the card open whatever count arrives: its own send
@@ -56,7 +61,7 @@ export function PlayerCountCard({
   const [sentCount, setSentCount] = useState<number | null>(null);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const count = savedCount ?? sentCount;
-  const isFolded = openReason === null && count !== null;
+  const isFolded = openReason === null && (count !== null || isDismissed);
 
   useClearTimeoutOnUnmount(collapseTimerRef);
 
@@ -88,7 +93,7 @@ export function PlayerCountCard({
           onClick={() => setOpenReason('editing')}
           className="w-full rounded-lg border border-foreground/15 px-4 py-2 text-center text-sm font-extrabold text-foreground/70"
         >
-          {describePlayers(count)} · edit
+          {describeFoldedLine(count)}
         </motion.button>
       ) : (
         <OpenPlayerCountCard
@@ -96,6 +101,7 @@ export function PlayerCountCard({
           onSend={send}
           onSaved={handleSaved}
           onDismiss={onDismiss}
+          onFold={() => setOpenReason(null)}
         />
       )}
     </MotionConfig>
@@ -120,11 +126,14 @@ function OpenPlayerCountCard({
   onSend,
   onSaved,
   onDismiss,
+  onFold,
 }: {
   count: number | null;
   onSend: (playerCount: number) => Promise<AckResult>;
   onSaved: (playerCount: number) => void;
   onDismiss: PlayerCountCardProps['onDismiss'];
+  /** Closes a card this phone opened, so "Later" folds it back. */
+  onFold: () => void;
 }) {
   return (
     <motion.section
@@ -144,10 +153,13 @@ function OpenPlayerCountCard({
       {onDismiss && count === null && (
         <button
           type="button"
-          onClick={onDismiss}
+          onClick={() => {
+            onFold();
+            onDismiss();
+          }}
           className="text-xs font-extrabold text-foreground/55 underline"
         >
-          Dismiss
+          Later
         </button>
       )}
     </motion.section>
