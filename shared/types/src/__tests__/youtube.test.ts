@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractYoutubeVideoId,
   formatTimecode,
+  isYoutubeShortUrl,
   parseTimecode,
 } from '../youtube';
 
@@ -99,5 +100,17 @@ describe('formatTimecode', () => {
     [3723, '1:02:03'],
   ])('writes %i seconds as %s', (seconds, expected) => {
     expect(formatTimecode(seconds)).toBe(expected);
+  });
+});
+
+describe('isYoutubeShortUrl', () => {
+  it.each([
+    ['https://www.youtube.com/shorts/dQw4w9WgXcQ', true],
+    ['https://youtube.com/shorts/dQw4w9WgXcQ?feature=share', true],
+    ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', false],
+    ['https://youtu.be/dQw4w9WgXcQ', false],
+    ['https://example.com/shorts/dQw4w9WgXcQ', false],
+  ])('%s is a Short: %s', (url, expected) => {
+    expect(isYoutubeShortUrl(url)).toBe(expected);
   });
 });

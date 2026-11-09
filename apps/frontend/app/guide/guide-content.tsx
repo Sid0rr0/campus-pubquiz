@@ -189,7 +189,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       "Pick the mode (Pub or Quickfire) first; it's permanent. Quickfire imports refuse other types; blank points become 1000.",
       'Round note: up to 500 characters, for Remote and the Control title card. "Show on screen" adds the big screen; phones never see it.',
       'Question notes: tick "Show on screen at reveal" to show them under the answer.',
-      'Media: paste a picture, audio, YouTube or video link into Media URL.',
+      'Media URL: picture, audio, YouTube or video link; paste Shorts as /shorts/ links.',
       `Number: the margin row has a number field and % / absolute switch. CSV: {margin: "5%"}; {scoring: …} sets ${SCORING_NOTE}.`,
       'Video: tick "Hide video (sound only)" to cover it until the reveal. CSV: hideVideo: true in the {…} notes group.',
       'Clip and Reveal times take seconds, M:SS or H:MM:SS. Blank Reveal times replay the clip; 0 plays it whole. CSV: {start: "1:22", end: "2:20", revealStart: "2:30"}.',

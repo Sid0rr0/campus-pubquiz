@@ -7,6 +7,7 @@ import {
 import {
   classifyMediaUrl,
   extractYoutubeVideoId,
+  isYoutubeShortUrl,
   isHttpUrl,
   isVideoUrl,
   QUESTION_KINDS,
@@ -65,22 +66,32 @@ interface AnswerMediaProps {
 const FULLSCREEN_OVERLAY =
   'fixed inset-0 z-50 flex items-center justify-center bg-black';
 
+/** A video's frame size: 16:9, or upright 9:16 for a YouTube Short — held to a height so it can't push the question off the screen. */
+function videoFrameShape(isFullscreen: boolean, isUpright: boolean): string {
+  if (isUpright) {
+    return isFullscreen
+      ? 'aspect-[9/16] h-full'
+      : 'mx-auto aspect-[9/16] h-[60vh]';
+  }
+  return isFullscreen
+    ? 'aspect-video max-h-full w-full'
+    : 'aspect-video w-full';
+}
+
 // Same nesting in both states, so toggling fullscreen never remounts the player.
 function AnswerVideoFrame({
   isFullscreen,
+  isUpright = false,
   children,
 }: {
   isFullscreen: boolean;
+  isUpright?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className={isFullscreen ? FULLSCREEN_OVERLAY : 'w-full max-w-2xl'}>
       <div
-        className={
-          isFullscreen
-            ? 'relative aspect-video max-h-full w-full overflow-hidden bg-black'
-            : 'relative aspect-video w-full overflow-hidden rounded-xl bg-black'
-        }
+        className={`relative overflow-hidden bg-black ${videoFrameShape(isFullscreen, isUpright)}${isFullscreen ? '' : ' rounded-xl'}`}
       >
         {children}
       </div>
@@ -136,7 +147,7 @@ function QuestionText({
   );
 }
 
-/** Covered while the question is asked and in break review; uncovered at reveal, where a hidden video may restart on its reveal clip. */
+/** Covered (and its YouTube title masked) while the question is asked and in break review; uncovered at reveal, where a hidden video may restart on its reveal clip. */
 function videoCoverOf(
   question: QuestionDisplayProps['question'],
   isRevealing: boolean,
@@ -144,6 +155,7 @@ function videoCoverOf(
 ) {
   return {
     isVideoCovered: question.isVideoHidden === true && !isRevealing,
+    isTitleMasked: !isRevealing,
     restartsAtReveal:
       isRevealing && restartsVideoAtReveal(question.isVideoHidden, revealClip),
   };
@@ -318,8 +330,9 @@ export function AnswerMedia({
     );
   }
   if (youtubeId) {
+    const isUpright = isYoutubeShortUrl(safeUrl);
     return (
-      <AnswerVideoFrame isFullscreen={isFullscreen}>
+      <AnswerVideoFrame isFullscreen={isFullscreen} isUpright={isUpright}>
         <iframe
           ref={youtubeRef}
           onLoad={onYoutubeLoad}
@@ -333,7 +346,12 @@ export function AnswerMedia({
             endSeconds,
           )}
           title="Answer video"
-          className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
+          // Crops YouTube's top title band off a 16:9 video; a Short's title runs along the bottom and is no secret at reveal.
+          className={
+            isUpright
+              ? 'absolute inset-0 h-full w-full'
+              : 'absolute inset-x-0 top-[-12%] h-[112%] w-full'
+          }
           allow="autoplay; encrypted-media"
           allowFullScreen
         />
@@ -632,6 +650,7 @@ function QuestionVideo({
   mediaReplayToken,
   isFullscreen,
   isVideoCovered,
+  isTitleMasked,
   autoplayMedia,
   mediaTestIdPrefix,
   youtubeRef,
@@ -647,6 +666,7 @@ function QuestionVideo({
   mediaReplayToken: number;
   isFullscreen: boolean;
   isVideoCovered: boolean;
+  isTitleMasked: boolean;
   autoplayMedia: boolean;
   mediaTestIdPrefix: string;
   youtubeRef: MediaPause['youtubeRef'];
@@ -661,6 +681,7 @@ function QuestionVideo({
   // A video file replays by seeking in place (see useMediaPause), so its key
   // leaves out the replay token; it still remounts at reveal for the reveal clip.
   const videoFileKey = restartsAtReveal ? 'reveal' : 'question';
+  const isUpright = isYoutubeShortUrl(url);
   return (
     <div className={isFullscreen ? FULLSCREEN_OVERLAY : 'w-full max-w-2xl'}>
       {/* A visible video, or a hidden one with a clip to play at reveal,
@@ -672,11 +693,7 @@ function QuestionVideo({
         remount the iframe and restart the YouTube player instead of
         continuing playback. */}
       <div
-        className={
-          isFullscreen
-            ? 'relative aspect-video max-h-full w-full'
-            : 'relative aspect-video w-full overflow-hidden rounded-xl'
-        }
+        className={`relative ${videoFrameShape(isFullscreen, isUpright)}${isFullscreen ? '' : ' overflow-hidden rounded-xl'}`}
       >
         {youtubeId ? (
           <>
@@ -697,13 +714,26 @@ function QuestionVideo({
               allowFullScreen
             />
             {/* YouTube always renders its title/channel overlay near the
-              top of the player and no longer honors any param that
-              removes it (modestbranding is deprecated) — mask it with a
-              solid bar instead, sized to the band YouTube draws it in. */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-[13%] bg-black"
-            />
+              top of the player (a Short also repeats it along the bottom,
+              with like/share) and no longer honors any param that removes
+              it (modestbranding is deprecated) — mask it with solid bars
+              instead, sized to the bands YouTube draws it in. At reveal the
+              answer is out, so the bars come off. */}
+            {isTitleMasked && (
+              <div
+                aria-hidden
+                data-testid={`${mediaTestIdPrefix}-youtube-title-mask`}
+                className="pointer-events-none absolute inset-x-0 top-0 h-[9%] bg-black"
+              />
+            )}
+            {isTitleMasked && isUpright && (
+              <div
+                aria-hidden
+                data-testid={`${mediaTestIdPrefix}-youtube-title-mask`}
+                // YouTube draws this band at a fixed pixel height, so it is a smaller share of a fullscreen frame.
+                className={`pointer-events-none absolute inset-x-0 bottom-0 bg-black ${isFullscreen ? 'h-1/9' : 'h-1/6'}`}
+              />
+            )}
           </>
         ) : (
           <VideoFile

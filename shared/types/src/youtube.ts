@@ -6,6 +6,11 @@ export function extractYoutubeVideoId(url: string): string | undefined {
   return YOUTUBE_ID_PATTERN.exec(url)?.[1];
 }
 
+/** Whether the link is a youtube.com/shorts/ link — a Short, drawn in an upright 9:16 frame. Other links to the same video stay 16:9. */
+export function isYoutubeShortUrl(url: string): boolean {
+  return /youtube\.com\/shorts\/[\w-]{11}/i.test(url);
+}
+
 const SECONDS_PER_MINUTE = 60;
 const MAX_TIMECODE_PARTS = 3;
 

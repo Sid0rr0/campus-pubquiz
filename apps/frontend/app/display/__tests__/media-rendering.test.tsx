@@ -172,6 +172,101 @@ describe('DisplayPage — media rendering', () => {
     expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['https://www.youtube.com/shorts/dQw4w9WgXcQ', 'aspect-[9/16]'],
+    ['https://youtu.be/dQw4w9WgXcQ', 'aspect-video'],
+  ])('frames the question video %s as %s', (mediaUrl, frameClass) => {
+    mockUseGame.mockReturnValue({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              { type: 'free_text', prompt: 'Name it.', mediaUrl, points: 3 },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('question-youtube').parentElement).toHaveClass(
+      frameClass,
+    );
+  });
+
+  it.each([
+    ['https://www.youtube.com/shorts/dQw4w9WgXcQ', 'aspect-[9/16]'],
+    ['https://youtu.be/dQw4w9WgXcQ', 'aspect-video'],
+  ])(
+    'frames the answer video %s as %s at reveal',
+    (answerMediaUrl, frameClass) => {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'free_text',
+                  prompt: 'Name it.',
+                  answer: 'It',
+                  answerMediaUrl,
+                  points: 3,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'reveal', revealIndex: 0 },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      expect(
+        screen.getByTestId('reveal-answer-youtube').parentElement,
+      ).toHaveClass(frameClass);
+    },
+  );
+
+  it.each([
+    ['https://www.youtube.com/shorts/dQw4w9WgXcQ', 'question_open', 2],
+    ['https://www.youtube.com/shorts/dQw4w9WgXcQ', 'reveal', 0],
+    ['https://youtu.be/dQw4w9WgXcQ', 'question_open', 1],
+    ['https://youtu.be/dQw4w9WgXcQ', 'reveal', 0],
+  ] as const)(
+    "masks %s question video's title bands while %s: %i masks",
+    (mediaUrl, status, maskCount) => {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'free_text',
+                  prompt: 'Name it.',
+                  answer: 'It',
+                  mediaUrl,
+                  points: 3,
+                },
+              ],
+            },
+          ],
+          progress: { status, revealIndex: 0 },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      expect(screen.queryAllByTestId(/-youtube-title-mask$/)).toHaveLength(
+        maskCount,
+      );
+    },
+  );
+
   it('does not autoplay an audio question when the session disables autoplayMedia', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {

@@ -44,7 +44,7 @@ What a question asks teams to do (free text, number, multiple choice, sort, matc
 _Avoid_: question kind, question format
 
 **Media**:
-An image, sound or video that any question can carry, shown on the big screen while the question is asked or when its answer is revealed. A video is either a YouTube link or a link to a video file. Which of these it is follows from the link, not from the question type.
+An image, sound or video that any question can carry, shown on the big screen while the question is asked or when its answer is revealed. A video is either a YouTube link or a link to a video file. Which of these it is follows from the link, not from the question type. A YouTube Short linked as a Short is shown upright.
 _Avoid_: audio question, video question, YouTube question, picture question (no such types)
 
 **Clip**:

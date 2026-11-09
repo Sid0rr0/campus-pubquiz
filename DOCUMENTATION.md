@@ -1548,6 +1548,21 @@ and leaves the prompt and answers; there is no retry and no message. Venue
 internet carries the video, so link short, compressed clips. Uploading video
 is not supported (`POST /media` stays images-only).
 
+**YouTube Shorts.** A `youtube.com/shorts/…` link (`isYoutubeShortUrl` in
+`shared/types/src/youtube.ts`) is drawn in an upright 9:16 frame instead of the
+16:9 box, so the vertical video fills it without black bars: held to 60% of
+the viewport's height on the big screen, full height in fullscreen. Only the
+link says it is a Short: the same video pasted as `youtu.be/…` or
+`watch?v=…` plays in the 16:9 box, pillarboxed. A Short's title and channel
+show at the top of the embed and again along the bottom, so the question
+video masks a band along the bottom (shorter in fullscreen) as well as the
+top band; a Short answer video at reveal is shown uncropped.
+
+**YouTube title bars.** YouTube always draws the video's title over the embed,
+which can give the answer away, so while a question is asked (and in break
+review) a YouTube question video has a black bar over that band. At reveal
+the bars come off, Short or 16:9, since the answer is out.
+
 A clip's start/end (seconds
 into the video) are real question fields (`mediaStartSeconds`/
 `mediaEndSeconds` on the draft, the preview and the JSON `payload`
