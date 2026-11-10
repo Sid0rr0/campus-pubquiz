@@ -18,6 +18,7 @@ import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { PurchaseService } from '@/purchase/purchase.service';
 import {
+  type AnswerAdjustments,
   gradeByHand,
   gradeOnKeyFix,
   gradeOnSubmit,
@@ -166,12 +167,7 @@ export class AnswerService {
     const write = gradeOnSubmit(
       question,
       value,
-      {
-        clue,
-        hasWiderMargin: (
-          await this.widerMarginTeamIds(gameSessionId, questionId)
-        ).has(teamId),
-      },
+      await this.adjustmentsFor(gameSessionId, questionId, teamId, clue),
       existing,
     );
 
@@ -216,6 +212,20 @@ export class AnswerService {
   }
 
   /** The teams that bought a wider margin on the question: graded against the widened one. */
+  private async adjustmentsFor(
+    gameSessionId: number,
+    questionId: number,
+    teamId: number,
+    clue: number | null,
+  ): Promise<AnswerAdjustments> {
+    return {
+      clue,
+      hasWiderMargin: (
+        await this.widerMarginTeamIds(gameSessionId, questionId)
+      ).has(teamId),
+    };
+  }
+
   private async widerMarginTeamIds(
     gameSessionId: number,
     questionId: number,
@@ -348,10 +358,12 @@ export class AnswerService {
       question,
       {
         gradedAt: answer.gradedAt,
-        clue: answer.clue,
-        hasWiderMargin: (
-          await this.widerMarginTeamIds(gameSessionId, question.id)
-        ).has(answer.team.id),
+        ...(await this.adjustmentsFor(
+          gameSessionId,
+          question.id,
+          answer.team.id,
+          answer.clue,
+        )),
       },
       pointsAwarded,
     );

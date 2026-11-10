@@ -59,8 +59,8 @@ function gradedAs(
   question: ScoredQuestion,
   { clue, hasWiderMargin }: AnswerAdjustments,
 ): ScoredQuestion {
-  const atTheClue = atClue(question, clue);
-  return hasWiderMargin ? withWiderMargin(atTheClue) : atTheClue;
+  const atItsClue = atClue(question, clue);
+  return hasWiderMargin ? withWiderMargin(atItsClue) : atItsClue;
 }
 
 function setOf(score: ScoreResult): GradeWrite {
@@ -163,7 +163,7 @@ export function gradingStateOf(
  */
 export function gradeByHand(
   question: ScoredQuestion,
-  stored: { gradedAt: Date | null } & AnswerAdjustments,
+  stored: Pick<StoredAnswerRow, 'gradedAt' | keyof AnswerAdjustments>,
   points: number,
 ): GradeWrite | 'refused' {
   if (!canGradeByHand(question, stored)) return 'refused';
@@ -181,7 +181,10 @@ export function gradeByHand(
  */
 export function gradeOnWiderMarginBought(
   question: ScoredQuestion,
-  stored: StoredAnswerGrade & { pointsAwarded: number; clue: number | null },
+  stored: Pick<
+    StoredAnswerRow,
+    'value' | 'gradedAt' | 'pointsAwarded' | 'clue'
+  >,
 ): GradeWrite {
   const score = gradeAtSubmit(question, stored.value, {
     clue: stored.clue,
