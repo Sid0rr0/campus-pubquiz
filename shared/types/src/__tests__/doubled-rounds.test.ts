@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canBeDoubled,
   doubledRoundIds,
+  doubledRoundIdsOfSession,
   doubledRoundIdsOfTeam,
   playsJokers,
   type DoublingPurchase,
@@ -53,6 +54,43 @@ describe('doubledRoundIdsOfTeam', () => {
     expect(doubledRoundIdsOfTeam({}, [{ teamId: 7, ...extra(2) }], 7)).toEqual([
       2,
     ]);
+  });
+});
+
+describe('doubledRoundIdsOfSession', () => {
+  const joker = (roundId: number) => ({ roundId, source: 'chosen' as const });
+
+  it.each<
+    [
+      string,
+      Record<number, { roundId: number; source: 'chosen' }>,
+      (DoublingPurchase & { teamId: number })[],
+      number[],
+    ]
+  >([
+    ['an empty session', {}, [], []],
+    ['a joker only', { 7: joker(1) }, [], [1]],
+    ['an extra joker only', {}, [{ teamId: 7, ...extra(2) }], [2]],
+    [
+      'a joker and an extra joker on one round',
+      { 7: joker(1) },
+      [{ teamId: 7, ...extra(1) }],
+      [1],
+    ],
+    [
+      'two teams doubling different rounds',
+      { 7: joker(1), 8: joker(3) },
+      [{ teamId: 9, ...extra(2) }],
+      [1, 3, 2],
+    ],
+    [
+      'a purchase that is not an extra joker',
+      {},
+      [{ teamId: 7, powerUp: 'fifty_fifty', roundId: 4 }],
+      [],
+    ],
+  ])('%s', (_name, jokers, purchases, expected) => {
+    expect(doubledRoundIdsOfSession(jokers, purchases)).toEqual(expected);
   });
 });
 

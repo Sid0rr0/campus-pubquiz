@@ -44,6 +44,24 @@ export function doubledRoundIds(
   ];
 }
 
+/** Every round some team doubles, each once: `doubledRoundIdsOfTeam` over every team with a joker or a purchase. */
+export function doubledRoundIdsOfSession(
+  jokers: Readonly<Record<number, TeamJoker>>,
+  purchases: readonly (DoublingPurchase & { teamId: number })[],
+): number[] {
+  const teamIds = new Set([
+    ...Object.keys(jokers).map(Number),
+    ...purchases.map((purchase) => purchase.teamId),
+  ]);
+  return [
+    ...new Set(
+      [...teamIds].flatMap((teamId) =>
+        doubledRoundIdsOfTeam(jokers, purchases, teamId),
+      ),
+    ),
+  ];
+}
+
 /** `doubledRoundIds` for one team, from a session's jokers and its purchase list. */
 export function doubledRoundIdsOfTeam(
   jokers: Readonly<Record<number, TeamJoker>>,

@@ -8,7 +8,7 @@ The quiz master sees the same blocks: adding a Clue question to a round any team
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Doubled rounds module exports the session-wide function. `doubled-rounds.test.ts` covers:
   - an empty session

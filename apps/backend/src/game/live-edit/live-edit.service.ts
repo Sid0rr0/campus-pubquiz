@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
+  doubledRoundIdsOfSession,
   getSessionLiveEditFrontier,
   mergeLiveEditFrontiers,
   QUESTION_KINDS,
@@ -298,12 +299,9 @@ export class LiveEditService {
 
 /** Every round a team doubles in `session` (a joker, chosen during the pick or held, or a bought extra joker), with its questions and its Clue questions. */
 function doubledRoundQuestions(session: SessionState): DoubledRoundQuestions[] {
-  const doubledIds = new Set([
-    ...Object.values(session.jokers).map((joker) => joker.roundId),
-    ...session.funFactData.powerUps.flatMap(({ powerUp, roundId }) =>
-      powerUp === 'extra_joker' && roundId !== null ? [roundId] : [],
-    ),
-  ]);
+  const doubledIds = new Set(
+    doubledRoundIdsOfSession(session.jokers, session.funFactData.powerUps),
+  );
   return session.seededGame.rounds
     .filter((round) => doubledIds.has(round.id))
     .map(({ questions }) => ({
