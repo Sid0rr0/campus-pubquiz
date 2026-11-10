@@ -1,6 +1,7 @@
 import { CheckIcon } from '@radix-ui/react-icons';
 import type { BlockQuestionView } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import type { MyAnswer } from '@/app/lib/team-link';
 import type { PickerRound } from '@/app/play/question-picker-slots';
 
 interface QuestionPickerProps {
@@ -8,7 +9,7 @@ interface QuestionPickerProps {
   /** The numbers of the rounds doubled for the team: their heading says so, even as the only round in the block. */
   doubledRoundNumbers: readonly number[];
   selectedQuestionId: BlockQuestionView['id'];
-  myAnswers: Record<number, string>;
+  myAnswers: Record<number, MyAnswer>;
   onSelect: (questionId: BlockQuestionView['id']) => void;
 }
 

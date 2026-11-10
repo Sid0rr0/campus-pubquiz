@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { teamLinkResult } from './test-utils';
+import { myAnswer, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -155,7 +155,10 @@ describe('PlayPage — sort and match answers', () => {
             teamToken: 'team-token-1',
           },
         },
-        game: { myAnswers: { 1: 'Venus|Mercury|Earth' }, submitAnswer },
+        game: {
+          myAnswers: { 1: myAnswer('Venus|Mercury|Earth') },
+          submitAnswer,
+        },
       }),
     );
     renderWithQuery(<PlayPage />);

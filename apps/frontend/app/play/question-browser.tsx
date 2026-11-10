@@ -19,7 +19,7 @@ import type {
   QuestionView,
   Verdict,
 } from '@campus-pubquiz/types';
-import type { MyAnswerClue } from '@/app/lib/team-link';
+import type { MyAnswer, MyAnswerClue } from '@/app/lib/team-link';
 import { yourAnswerTextClass } from '@/app/play/verdict-card';
 import { ClueList } from '@/app/components/clue-list';
 import { NumberMarginText } from '@/app/components/number-margin-text';
@@ -62,9 +62,7 @@ interface QuestionBrowserProps {
   revealQuestion?: PlayersRevealQuestionView;
   /** Active round's quickfire speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
   isQuickfireMode: boolean;
-  myAnswers: Record<number, string>;
-  /** The clue the selected Clue question's answer was locked in on and what it is worth there, once sent. */
-  myAnswerClue?: MyAnswerClue;
+  myAnswers: Record<number, MyAnswer>;
   /** Points awarded for the selected question's answer, null until graded. */
   myAnswerPoints: number | null;
   /** How the selected question's answer was judged, null until graded; colours "Your answer" on the reveal. */
@@ -122,6 +120,11 @@ function RevealBody({ revealQuestion, myAnswer }: RevealBodyProps) {
   }
 }
 
+/** The value and recorded clue of a team answer, both undefined while unanswered. */
+function answerFields(answer: MyAnswer | undefined) {
+  return { value: answer?.value, clue: answer?.clue ?? undefined };
+}
+
 /** The block question picker + prompt + answer form, shown while a question is open and, unless the leaderboard overlay is on, through break/reveal so teams can browse back. */
 export function QuestionBrowser({
   mode,
@@ -133,7 +136,6 @@ export function QuestionBrowser({
   revealQuestion,
   isQuickfireMode,
   myAnswers,
-  myAnswerClue,
   myAnswerPoints,
   myAnswerVerdict,
   myAnswerJokerExtra = null,
@@ -144,7 +146,9 @@ export function QuestionBrowser({
   doubledRoundNumbers = [],
   purchases = [],
 }: QuestionBrowserProps) {
-  const myAnswer = myAnswers[selectedQuestion.id];
+  const { value: myAnswer, clue: myAnswerClue } = answerFields(
+    myAnswers[selectedQuestion.id],
+  );
   const verdictTextClass = yourAnswerTextClass({
     myAnswer: myAnswer || null,
     pointsAwarded: myAnswerPoints,
@@ -304,15 +308,11 @@ function OpenQuestion({
   purchases,
 }: Pick<
   QuestionBrowserProps,
-  | 'mode'
-  | 'isAnswerable'
-  | 'team'
-  | 'isQuickfireMode'
-  | 'onSubmitAnswer'
-  | 'myAnswerClue'
+  'mode' | 'isAnswerable' | 'team' | 'isQuickfireMode' | 'onSubmitAnswer'
 > & {
   question: QuestionBrowserProps['selectedQuestion'];
   myAnswer: string | undefined;
+  myAnswerClue: MyAnswerClue | undefined;
   purchases: NonNullable<QuestionBrowserProps['purchases']>;
 }) {
   const hasWiderMargin = purchases.some(

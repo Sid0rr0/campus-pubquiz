@@ -134,16 +134,15 @@ describe('useTeamLink: the team data and the pending answer', () => {
     act(() => socket.trigger(SOCKET_EVENTS.STATE_SYNC, view));
 
     expect(result.current.game?.view).toEqual(view);
-    expect(result.current.game?.myAnswers).toEqual({ 20: 'Paris' });
-    expect(result.current.game?.myAnswerGrades).toMatchObject({
-      20: { pointsAwarded: 2 },
+    expect(result.current.game?.myAnswers).toMatchObject({
+      20: { value: 'Paris', grade: { pointsAwarded: 2 } },
     });
   });
 
   it('feeds join accepted, answer received and team answers synced into the team data', () => {
     const { result, socket } = renderPlayingTeam();
     expect(result.current.join.team?.teamId).toBe(31);
-    expect(result.current.game?.myAnswers).toEqual({ 20: 'Paris' });
+    expect(Object.keys(result.current.game?.myAnswers ?? {})).toEqual(['20']);
 
     act(() =>
       socket.trigger(SOCKET_EVENTS.ANSWER_RECEIVED, {
@@ -156,7 +155,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
         verdict: null,
       }),
     );
-    expect(result.current.game?.myAnswers).toEqual({ 20: 'Paris', 21: 'Rome' });
+    expect(result.current.game?.myAnswers).toMatchObject({
+      20: { value: 'Paris' },
+      21: { value: 'Rome', grade: null },
+    });
 
     act(() =>
       socket.trigger(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers: [] }),

@@ -16,7 +16,7 @@ Teams see the same `/play` as before, with one deliberate exception: a revised a
 
 **Blocked by:** None within this spec. Across specs, wait for `clue-answer-module` ticket 02 (phone freeze state) to be done, because both edit the question browser's freeze check.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Before changing the receipt semantics, confirm in the backend's answer submit path that a revised, now-ungraded answer has its `gradedAt` cleared on the row. If it doesn't, stop and report.
 - [ ] The team link state and the hook's game object expose `myAnswers` as `Record<number, MyAnswer>`, where `MyAnswer` is `{ value: string; grade: MyAnswerGrade | null; clue: MyAnswerClue | null }`. `myAnswerGrades` and `myAnswerClues` no longer exist.

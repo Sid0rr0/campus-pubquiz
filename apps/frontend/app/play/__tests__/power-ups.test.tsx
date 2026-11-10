@@ -9,7 +9,8 @@ import {
   type SessionSettings,
 } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
-import { teamLinkResult } from './test-utils';
+import type { MyAnswer } from '@/app/lib/team-link';
+import { myAnswer, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -52,7 +53,7 @@ function phone({
   answers = {},
 }: {
   roomReadyQuestionIds?: number[];
-  answers?: Record<number, string>;
+  answers?: Record<number, MyAnswer>;
   settings?: Partial<SessionSettings>;
   coins?: number;
   purchases?: PurchaseView[];
@@ -285,7 +286,7 @@ describe('PlayPage — the power-up bar', () => {
       phone({
         question: NUMBER,
         purchases: [widerMargin],
-        answers: { 1: '206' },
+        answers: { 1: myAnswer('206') },
         coins: 0,
       });
 
@@ -312,7 +313,7 @@ describe('PlayPage — the power-up bar', () => {
       phone({
         question: SORT,
         purchases: [pin],
-        answers: { 1: 'B|A|C' },
+        answers: { 1: myAnswer('B|A|C') },
         coins: 0,
       });
 
@@ -323,7 +324,7 @@ describe('PlayPage — the power-up bar', () => {
       phone({
         question: SORT,
         purchases: [pin],
-        answers: { 1: 'A|B|C' },
+        answers: { 1: myAnswer('A|B|C') },
         coins: 0,
       });
 

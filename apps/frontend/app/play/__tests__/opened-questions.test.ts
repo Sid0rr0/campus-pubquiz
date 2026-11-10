@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
-
-const GRADED_AT = '2024-01-01T00:00:00.000Z';
+import { myAnswer } from './test-utils';
 
 function closestGuessQuestion(id: number) {
   return {
@@ -55,7 +54,7 @@ describe('buildOpenedQuestions', () => {
 
     const entries = buildOpenedQuestions(
       { 3: r2q1, 2: r1q2, 1: r1q1 },
-      { 1: 'Banana' },
+      { 1: myAnswer('Banana') },
     );
 
     expect(entries.map((entry) => entry.id)).toEqual([1, 2, 3]);
@@ -108,7 +107,10 @@ describe('buildOpenedQuestions', () => {
       revealKind: 'answer' as const,
     };
 
-    const entries = buildOpenedQuestions({ 1: revealed }, { 1: 'Apple' });
+    const entries = buildOpenedQuestions(
+      { 1: revealed },
+      { 1: myAnswer('Apple') },
+    );
 
     expect(entries[0]).toMatchObject({
       myAnswer: 'Apple',
@@ -131,12 +133,15 @@ describe('buildOpenedQuestions', () => {
       roundTitle: 'Round 1',
     };
 
-    const entries = buildOpenedQuestions({ 1: question }, { 1: 'Banana' });
+    const entries = buildOpenedQuestions(
+      { 1: question },
+      { 1: myAnswer('Banana') },
+    );
 
     expect(entries[0]).toMatchObject({ maxPoints: 5, pointsAwarded: null });
   });
 
-  it('surfaces pointsAwarded once the question is revealed and myAnswerGrades has a grade for it', () => {
+  it('surfaces pointsAwarded once the question is revealed and the answer has a grade', () => {
     const question = {
       id: 1,
       type: 'free_text' as const,
@@ -151,20 +156,17 @@ describe('buildOpenedQuestions', () => {
 
     const entries = buildOpenedQuestions(
       { 1: question },
-      { 1: 'Banana' },
       {
-        1: {
-          pointsAwarded: 3,
-          gradedAt: '2024-01-01T00:00:00.000Z',
-          verdict: 'partial',
-        },
+        1: myAnswer('Banana', {
+          grade: { pointsAwarded: 3, verdict: 'partial' },
+        }),
       },
     );
 
     expect(entries[0]).toMatchObject({ maxPoints: 5, pointsAwarded: 3 });
   });
 
-  it('keeps pointsAwarded null before the question is revealed, even if myAnswerGrades already has a grade for it', () => {
+  it('keeps pointsAwarded null before the question is revealed, even if the answer already has a grade', () => {
     const question = {
       id: 1,
       type: 'free_text' as const,
@@ -177,13 +179,10 @@ describe('buildOpenedQuestions', () => {
 
     const entries = buildOpenedQuestions(
       { 1: question },
-      { 1: 'Banana' },
       {
-        1: {
-          pointsAwarded: 3,
-          gradedAt: '2024-01-01T00:00:00.000Z',
-          verdict: 'partial',
-        },
+        1: myAnswer('Banana', {
+          grade: { pointsAwarded: 3, verdict: 'partial' },
+        }),
       },
     );
 
@@ -213,11 +212,7 @@ describe('buildOpenedQuestions', () => {
   });
 
   it('shows 0 closest_guess points for a team that never submitted a guess', () => {
-    const entries = buildOpenedQuestions(
-      { 1: closestGuessQuestion(1) },
-      {},
-      {},
-    );
+    const entries = buildOpenedQuestions({ 1: closestGuessQuestion(1) }, {});
 
     expect(entries[0]).toMatchObject({ myAnswer: null, pointsAwarded: 0 });
   });
@@ -227,8 +222,9 @@ describe('buildOpenedQuestions', () => {
     // no name would match) was graded full points on its own synced answer.
     const mine = buildOpenedQuestions(
       { 1: closestGuessQuestion(1) },
-      { 1: '95' },
-      { 1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' } },
+      {
+        1: myAnswer('95', { grade: { pointsAwarded: 5, verdict: 'correct' } }),
+      },
     );
 
     expect(mine[0]).toMatchObject({ pointsAwarded: 5, verdict: 'correct' });
@@ -237,8 +233,11 @@ describe('buildOpenedQuestions', () => {
   it('shows 0 closest_guess points when another team was closest', () => {
     const entries = buildOpenedQuestions(
       { 2: closestGuessQuestion(2) },
-      { 2: '70' },
-      { 2: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' } },
+      {
+        2: myAnswer('70', {
+          grade: { pointsAwarded: 0, verdict: 'incorrect' },
+        }),
+      },
     );
 
     expect(entries[0]).toMatchObject({
@@ -262,8 +261,11 @@ describe('buildOpenedQuestions', () => {
 
     const entries = buildOpenedQuestions(
       { 1: match },
-      { 1: 'a|b|x|x' },
-      { 1: { pointsAwarded: 2, gradedAt: GRADED_AT, verdict: 'partial' } },
+      {
+        1: myAnswer('a|b|x|x', {
+          grade: { pointsAwarded: 2, verdict: 'partial' },
+        }),
+      },
     );
 
     expect(entries[0]).toMatchObject({ pointsAwarded: 2, verdict: 'partial' });
@@ -282,8 +284,11 @@ describe('buildOpenedQuestions', () => {
 
     const entries = buildOpenedQuestions(
       { 1: question },
-      { 1: 'Banana' },
-      { 1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' } },
+      {
+        1: myAnswer('Banana', {
+          grade: { pointsAwarded: 5, verdict: 'correct' },
+        }),
+      },
     );
 
     expect(entries[0]).toMatchObject({ pointsAwarded: null, verdict: null });
@@ -306,7 +311,7 @@ describe('buildOpenedQuestions', () => {
 
     const entries = buildOpenedQuestions(
       { 1: matchQuestion },
-      { 1: 'shield|excalibur' },
+      { 1: myAnswer('shield|excalibur') },
     );
 
     expect(entries[0].options).toEqual(['arthur', 'captain america']);

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { teamLinkResult } from './test-utils';
+import { myAnswer, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -121,8 +121,9 @@ describe('PlayPage — a Clue question', () => {
         },
         join: { team: TEAM },
         game: {
-          myAnswers: { 1: 'Marie Curie' },
-          myAnswerClues: { 1: { clue: 2, value: 1 } },
+          myAnswers: {
+            1: myAnswer('Marie Curie', { clue: { clue: 2, value: 1 } }),
+          },
         },
       }),
     );
@@ -137,8 +138,9 @@ describe('PlayPage — a Clue question', () => {
         session: clueSession(1, 2),
         join: { team: TEAM },
         game: {
-          myAnswers: { 1: 'Curie' },
-          myAnswerClues: { 1: { clue: 1, value: 1.5 } },
+          myAnswers: {
+            1: myAnswer('Curie', { clue: { clue: 1, value: 1.5 } }),
+          },
         },
       }),
     );
@@ -156,7 +158,7 @@ describe('PlayPage — a Clue question', () => {
       teamLinkResult({
         session: clueSession(1, 2),
         join: { team: TEAM },
-        game: { submitAnswer, myAnswers: { 1: 'Curie' } },
+        game: { submitAnswer, myAnswers: { 1: myAnswer('Curie') } },
       }),
     );
     const { rerender } = renderWithQuery(<PlayPage />);
@@ -170,7 +172,7 @@ describe('PlayPage — a Clue question', () => {
       teamLinkResult({
         session: clueSession(1, 2),
         join: { team: TEAM },
-        game: { submitAnswer, myAnswers: { 1: '' } },
+        game: { submitAnswer, myAnswers: { 1: myAnswer('') } },
       }),
     );
     rerender(<PlayPage />);
@@ -184,7 +186,7 @@ describe('PlayPage — a Clue question', () => {
       teamLinkResult({
         session: clueSession(2, 3),
         join: { team: TEAM },
-        game: { myAnswers: { 1: 'Curie' } },
+        game: { myAnswers: { 1: myAnswer('Curie') } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -200,8 +202,9 @@ describe('PlayPage — a Clue question', () => {
         session: clueSession(1, 2),
         join: { team: TEAM },
         game: {
-          myAnswers: { 1: '' },
-          myAnswerClues: { 1: { clue: 1, value: 1.5 } },
+          myAnswers: {
+            1: myAnswer('', { clue: { clue: 1, value: 1.5 } }),
+          },
         },
       }),
     );

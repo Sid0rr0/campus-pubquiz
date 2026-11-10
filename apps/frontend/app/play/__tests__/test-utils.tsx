@@ -2,12 +2,37 @@ import { vi } from 'vitest';
 import { SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { needsJoinForm } from '@/app/lib/join-gate';
 import { mergeSeenQuestions } from '@/app/lib/seen-questions';
+import type {
+  MyAnswer,
+  MyAnswerClue,
+  MyAnswerGrade,
+} from '@/app/lib/team-link';
 import type { TeamLinkGame, TeamLinkJoin } from '@/app/lib/use-team-link';
 import { roomView, type SessionDescription } from '@/test-utils/room-view';
 
 /** The questions the Team link would have gathered from the one view a phone is sent for `session`. */
 export function seenQuestionsOf(session: SessionDescription) {
   return mergeSeenQuestions({}, roomView(SOCKET_ROOMS.PLAYERS, session));
+}
+
+/** A team's answer record: the value, ungraded and with no recorded clue unless `grade` / `clue` say otherwise; a grade needs only its points. */
+export function myAnswer(
+  value: string,
+  {
+    grade,
+    clue = null,
+  }: {
+    grade?: Partial<MyAnswerGrade> & Pick<MyAnswerGrade, 'pointsAwarded'>;
+    clue?: MyAnswerClue | null;
+  } = {},
+): MyAnswer {
+  return {
+    value,
+    grade: grade
+      ? { gradedAt: '2024-01-01T00:00:00.000Z', verdict: null, ...grade }
+      : null,
+    clue,
+  };
 }
 
 const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
@@ -50,8 +75,6 @@ export function teamLinkResult({
         submitAnswer: vi.fn(),
         submitShowdownGuess: vi.fn(),
         myAnswers: {},
-        myAnswerGrades: {},
-        myAnswerClues: {},
         myBonusAwards: [],
         myRoundRatings: {},
         myFeedback: { comment: '', topics: [] },

@@ -170,16 +170,12 @@ function JoinedPlayScreen({
   const [playerCountSlot, setPlayerCountSlot] = useState<HTMLElement | null>(
     null,
   );
-  const { view, myAnswers, myAnswerGrades, myJoker, myPurchases } = game;
+  const { view, myAnswers, myJoker, myPurchases } = game;
   const { progress, settings, quizStructure } = view;
   // The block browser (question picker + prompt) is the `block` phone
   // screen: open questions, and break/reveal so teams can review the block
   // they just answered. It needs a question to show.
-  const openedQuestions = buildOpenedQuestions(
-    game.seenQuestions,
-    myAnswers,
-    myAnswerGrades,
-  );
+  const openedQuestions = buildOpenedQuestions(game.seenQuestions, myAnswers);
   const bonus =
     settings.enabledBonusCategories.length > 0
       ? {
@@ -281,7 +277,6 @@ function JoinedPlayScreen({
       <RevealVerdictCard
         view={view}
         myAnswers={myAnswers}
-        myAnswerGrades={myAnswerGrades}
         isConnected={isConnected}
         doubledRoundNumbers={jokerMarks.doubledRoundNumbers}
       />
@@ -332,7 +327,7 @@ function BlockBrowser({
   jokerMarks,
   onSubmitAnswer,
 }: {
-  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myAnswerClues' | 'myPurchases'>;
+  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myPurchases'>;
   team: JoinedTeam;
   selectedQuestion: SelectedQuestion;
   revealQuestion: BrowserState['revealQuestion'];
@@ -362,7 +357,6 @@ function BlockBrowser({
         revealQuestion={revealQuestion}
         isQuickfireMode={view.isCurrentRoundQuickfire}
         myAnswers={myAnswers}
-        myAnswerClue={game.myAnswerClues[selectedQuestion.id]}
         myAnswerPoints={selectedResult.points}
         myAnswerVerdict={selectedResult.verdict}
         myAnswerJokerExtra={selectedResult.jokerExtra}

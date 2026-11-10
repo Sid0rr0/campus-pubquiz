@@ -64,56 +64,37 @@ const NO_SESSION_RATINGS: TeamSessionRatingsView = {
   feltDifficulty: null,
 };
 
-function buildMyAnswers(answers: TeamAnswerView[]): Record<number, string> {
-  return Object.fromEntries(
-    answers.map((answer) => [answer.questionId, answer.value]),
-  );
-}
-
+/** The clue a Clue question answer was locked in on and what it is worth there. */
 export interface MyAnswerClue {
   clue: number;
   value: number;
 }
 
-/** The clue each Clue question answer was locked in on and what it is worth there, by question id; other answers have none. */
-function buildMyAnswerClues(
-  answers: TeamAnswerView[],
-): Record<number, MyAnswerClue> {
-  return Object.fromEntries(
-    answers.flatMap(({ questionId, clue, clueValue }) =>
-      clue && clueValue != null
-        ? [[questionId, { clue, value: clueValue }]]
-        : [],
-    ),
-  );
+/** A team's own answer to one question, as the server last said it. */
+export interface MyAnswer {
+  value: string;
+  grade: MyAnswerGrade | null;
+  clue: MyAnswerClue | null;
 }
 
-function toGrade(answer: {
-  pointsAwarded: number;
-  gradedAt: string;
-  verdict: Verdict | null;
-}): MyAnswerGrade {
+/** Builds the record from a `TeamAnswerView` or an `AnswerReceivedPayload`. */
+function toMyAnswer(
+  answer: Pick<
+    TeamAnswerView,
+    'value' | 'pointsAwarded' | 'gradedAt' | 'verdict' | 'clue' | 'clueValue'
+  >,
+): MyAnswer {
+  const { value, pointsAwarded, gradedAt, verdict, clue, clueValue } = answer;
   return {
-    pointsAwarded: answer.pointsAwarded,
-    gradedAt: answer.gradedAt,
-    verdict: answer.verdict,
+    value,
+    grade: gradedAt === null ? null : { pointsAwarded, gradedAt, verdict },
+    clue: clue && clueValue != null ? { clue, value: clueValue } : null,
   };
 }
 
-function buildMyAnswerGrades(
-  answers: TeamAnswerView[],
-): Record<number, MyAnswerGrade> {
+function buildMyAnswers(answers: TeamAnswerView[]): Record<number, MyAnswer> {
   return Object.fromEntries(
-    answers.flatMap((answer) =>
-      answer.gradedAt === null
-        ? []
-        : [
-            [
-              answer.questionId,
-              toGrade({ ...answer, gradedAt: answer.gradedAt }),
-            ],
-          ],
-    ),
+    answers.map((answer) => [answer.questionId, toMyAnswer(answer)]),
   );
 }
 
@@ -180,11 +161,8 @@ export interface TeamLinkState {
   team: JoinAcceptedPayload | null;
   /** True while the server has this connection registered as the team's — false while disconnected or mid-rejoin, when answers can't be accepted. */
   isLinked: boolean;
-  /** The team's own saved answers by question id. */
-  myAnswers: Record<number, string>;
-  myAnswerGrades: Record<number, MyAnswerGrade>;
-  /** The clue each Clue question answer was locked in on, and what it is worth there, by question id. */
-  myAnswerClues: Record<number, MyAnswerClue>;
+  /** The team's own saved answers by question id: the server's last word on each. */
+  myAnswers: Record<number, MyAnswer>;
   /** Every bonus award this team has received so far this session, in award order. */
   myBonusAwards: TeamBonusAwardView[];
   /** What the join carried plus every rating the server acknowledged since. */
@@ -345,8 +323,6 @@ const EMPTY_TEAM_DATA = {
   team: null,
   isLinked: false,
   myAnswers: {},
-  myAnswerGrades: {},
-  myAnswerClues: {},
   myBonusAwards: [],
   myRoundRatings: {},
   myFeedback: EMPTY_FEEDBACK,
@@ -665,8 +641,6 @@ function teamDataFromJoin(payload: JoinAcceptedPayload) {
   const answers = payload.answers ?? [];
   return {
     myAnswers: buildMyAnswers(answers),
-    myAnswerGrades: buildMyAnswerGrades(answers),
-    myAnswerClues: buildMyAnswerClues(answers),
     myBonusAwards: payload.bonusAwards ?? [],
     myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
     myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
@@ -724,30 +698,12 @@ function receiveAnswer(
   state: TeamLinkState,
   payload: AnswerReceivedPayload,
 ): TeamLinkStep {
-  const myAnswerGrades =
-    payload.gradedAt === null
-      ? state.myAnswerGrades
-      : {
-          ...state.myAnswerGrades,
-          [payload.questionId]: toGrade({
-            ...payload,
-            gradedAt: payload.gradedAt,
-          }),
-        };
   return unchanged({
     ...state,
-    myAnswers: { ...state.myAnswers, [payload.questionId]: payload.value },
-    myAnswerGrades,
-    myAnswerClues:
-      payload.clue && payload.clueValue != null
-        ? {
-            ...state.myAnswerClues,
-            [payload.questionId]: {
-              clue: payload.clue,
-              value: payload.clueValue,
-            },
-          }
-        : state.myAnswerClues,
+    myAnswers: {
+      ...state.myAnswers,
+      [payload.questionId]: toMyAnswer(payload),
+    },
   });
 }
 
@@ -993,8 +949,6 @@ const INPUT_HANDLERS: {
     unchanged({
       ...state,
       myAnswers: buildMyAnswers(input.answers),
-      myAnswerGrades: buildMyAnswerGrades(input.answers),
-      myAnswerClues: buildMyAnswerClues(input.answers),
     }),
   bonusAwardsSynced: (state, input) =>
     unchanged({ ...state, myBonusAwards: input.bonusAwards }),

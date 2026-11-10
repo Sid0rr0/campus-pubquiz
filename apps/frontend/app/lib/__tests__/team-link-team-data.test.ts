@@ -19,6 +19,12 @@ const GRADED = {
   verdict: 'correct',
 } as const;
 
+const PARIS_GRADE = {
+  pointsAwarded: 2,
+  gradedAt: GRADED.gradedAt,
+  verdict: 'correct',
+};
+
 const WAITING = {
   questionId: 21,
   value: 'Banana',
@@ -108,9 +114,8 @@ describe('team link: the team data', () => {
     );
 
     expect(state.team?.teamId).toBe(31);
-    expect(state.myAnswers).toEqual({ 20: 'Paris' });
-    expect(state.myAnswerGrades).toEqual({
-      20: { pointsAwarded: 2, gradedAt: GRADED.gradedAt, verdict: 'correct' },
+    expect(state.myAnswers).toEqual({
+      20: { value: 'Paris', grade: PARIS_GRADE, clue: null },
     });
     expect(state.myBonusAwards).toEqual([]);
     expect(state.myRoundRatings).toEqual({ 11: 4 });
@@ -122,8 +127,10 @@ describe('team link: the team data', () => {
   });
 
   it('grades only the answers that were graded', () => {
-    expect(linkedPhone().myAnswers).toEqual({ 20: 'Paris', 21: 'Banana' });
-    expect(Object.keys(linkedPhone().myAnswerGrades)).toEqual(['20']);
+    expect(linkedPhone().myAnswers).toEqual({
+      20: { value: 'Paris', grade: PARIS_GRADE, clue: null },
+      21: { value: 'Banana', grade: null, clue: null },
+    });
   });
 
   it('updates just that answer on answer received, with its grade when graded automatically', () => {
@@ -143,20 +150,73 @@ describe('team link: the team data', () => {
       type: 'answerReceived',
       payload: received,
     }).state;
-    expect(graded.myAnswers).toEqual({ 20: 'Paris', 21: 'Banana', 22: 'Rome' });
-    expect(graded.myAnswerGrades[22]).toEqual({
-      pointsAwarded: 1,
-      gradedAt: received.gradedAt,
-      verdict: 'correct',
+    expect(graded.myAnswers[22]).toEqual({
+      value: 'Rome',
+      grade: {
+        pointsAwarded: 1,
+        gradedAt: received.gradedAt,
+        verdict: 'correct',
+      },
+      clue: null,
     });
-    expect(graded.myAnswerGrades[20]).toBeDefined();
+    expect(Object.keys(graded.myAnswers)).toEqual(['20', '21', '22']);
 
     const waiting = run(linkedPhone(), {
       type: 'answerReceived',
       payload: { ...received, gradedAt: null, verdict: null, pointsAwarded: 0 },
     }).state;
-    expect(waiting.myAnswers[22]).toBe('Rome');
-    expect(waiting.myAnswerGrades).not.toHaveProperty('22');
+    expect(waiting.myAnswers[22]).toEqual({
+      value: 'Rome',
+      grade: null,
+      clue: null,
+    });
+  });
+
+  it('drops the old grade when a revised answer comes back ungraded', () => {
+    const { state } = run(linkedPhone(), {
+      type: 'answerReceived',
+      payload: {
+        ...GRADED,
+        teamId: 31,
+        teamName: 'The Quizzards',
+        value: 'Lyon',
+        pointsAwarded: 0,
+        gradedAt: null,
+        verdict: null,
+      },
+    });
+
+    expect(state.myAnswers[20]).toEqual({
+      value: 'Lyon',
+      grade: null,
+      clue: null,
+    });
+  });
+
+  it('carries a Clue answer’s recorded clue and its worth, and drops it when the receipt has none', () => {
+    const received = {
+      ...WAITING,
+      teamId: 31,
+      teamName: 'The Quizzards',
+      value: 'Curie',
+      clue: 2,
+      clueValue: 1,
+    };
+    const clued = run(linkedPhone(), {
+      type: 'answerReceived',
+      payload: received,
+    }).state;
+    expect(clued.myAnswers[21]).toEqual({
+      value: 'Curie',
+      grade: null,
+      clue: { clue: 2, value: 1 },
+    });
+
+    const cleared = run(clued, {
+      type: 'answerReceived',
+      payload: { ...received, value: '', clue: null, clueValue: null },
+    }).state;
+    expect(cleared.myAnswers[21].clue).toBeNull();
   });
 
   it('replaces answers and grades when the team answers are synced', () => {
@@ -165,8 +225,9 @@ describe('team link: the team data', () => {
       answers: [{ ...GRADED, questionId: 30, value: 'Oslo' }],
     });
 
-    expect(state.myAnswers).toEqual({ 30: 'Oslo' });
-    expect(Object.keys(state.myAnswerGrades)).toEqual(['30']);
+    expect(state.myAnswers).toEqual({
+      30: { value: 'Oslo', grade: PARIS_GRADE, clue: null },
+    });
   });
 
   it('appends a live bonus award and toasts it; awards restored on join are not toasted', () => {
@@ -427,7 +488,6 @@ describe('team link: the team data', () => {
       team: null,
       isLinked: false,
       myAnswers: {},
-      myAnswerGrades: {},
       myBonusAwards: [],
       myRoundRatings: {},
       myFeedback: { comment: '', topics: [] },
@@ -609,7 +669,6 @@ describe('team link: leaving a session drops the team data', () => {
         lastStatus: null,
         pendingAnswer: null,
         myAnswers: {},
-        myAnswerGrades: {},
         myBonusAwards: [],
         myRoundRatings: {},
       });

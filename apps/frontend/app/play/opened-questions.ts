@@ -4,7 +4,7 @@ import type {
   QuestionType,
   Verdict,
 } from '@campus-pubquiz/types';
-import type { MyAnswerGrade } from '@/app/lib/team-link';
+import type { MyAnswer } from '@/app/lib/team-link';
 
 export interface OpenedQuestionEntry {
   id: number;
@@ -42,11 +42,10 @@ function isRevealed(
 /** Every question the team has seen open so far, oldest round/position first, paired with the team's own answer (if any), the correct answer (once revealed), and points awarded plus verdict (shown once the question arrives with its answer — 0 for an unanswered question — even if the answer was actually graded earlier). A question counts as revealed when it arrives with an answer: the players view only carries answers the big screen has already shown. Both come from the team's own synced graded answers, closest_guess included. */
 export function buildOpenedQuestions(
   seenQuestions: Record<number, SeenQuestion>,
-  myAnswers: Record<number, string>,
-  myAnswerGrades: Record<number, MyAnswerGrade> = {},
+  myAnswers: Record<number, MyAnswer> = {},
 ): OpenedQuestionEntry[] {
   return Object.values(seenQuestions)
-    .map((question) => toOpenedEntry(question, myAnswers, myAnswerGrades))
+    .map((question) => toOpenedEntry(question, myAnswers))
     .sort((a, b) =>
       a.roundNumber !== b.roundNumber
         ? a.roundNumber - b.roundNumber
@@ -54,17 +53,23 @@ export function buildOpenedQuestions(
     );
 }
 
+/** Points on a revealed question: the grade's, else 0 for no answer, else null (waiting on the quiz master). */
+function revealedPoints(
+  grade: MyAnswer['grade'] | undefined,
+  myAnswer: string | null,
+): number | null {
+  return grade?.pointsAwarded ?? (myAnswer === null ? 0 : null);
+}
+
 function toOpenedEntry(
   question: SeenQuestion,
-  myAnswers: Record<number, string>,
-  myAnswerGrades: Record<number, MyAnswerGrade>,
+  myAnswers: Record<number, MyAnswer>,
 ): OpenedQuestionEntry {
-  const myAnswer = myAnswers[question.id] ?? null;
+  const mine = myAnswers[question.id];
+  const myAnswer = mine?.value ?? null;
   const revealed = isRevealed(question);
-  const grade = revealed ? myAnswerGrades[question.id] : undefined;
-  const pointsAwarded = !revealed
-    ? null
-    : (grade?.pointsAwarded ?? (myAnswer === null ? 0 : null));
+  const grade = revealed ? mine?.grade : undefined;
+  const pointsAwarded = revealed ? revealedPoints(grade, myAnswer) : null;
   return {
     id: question.id,
     type: question.type,

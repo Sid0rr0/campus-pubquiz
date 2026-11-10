@@ -382,7 +382,6 @@ describe('team link: a join accepted with the optional parts left out', () => {
     });
 
     expect(state.myAnswers).toEqual({});
-    expect(state.myAnswerGrades).toEqual({});
     expect(state.myBonusAwards).toEqual([]);
     expect(Object.keys(state.myRoundRatings)).toEqual([]);
   });

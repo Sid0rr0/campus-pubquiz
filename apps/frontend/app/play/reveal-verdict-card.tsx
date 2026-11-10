@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { MotionConfig, motion } from 'motion/react';
 import type { PlayersStatePayload } from '@campus-pubquiz/types';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
-import type { MyAnswerGrade } from '@/app/lib/team-link';
+import type { MyAnswer } from '@/app/lib/team-link';
 import { vibrate } from '@/app/lib/vibrate';
 import { jokerExtraPoints } from '@/app/play/joker-round';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
@@ -22,8 +22,7 @@ interface RevealVerdictCardProps {
     PlayersStatePayload,
     'progress' | 'revealQuestions' | 'pastRevealedQuestions'
   >;
-  myAnswers: Record<number, string>;
-  myAnswerGrades: Record<number, MyAnswerGrade>;
+  myAnswers: Record<number, MyAnswer>;
   isConnected: boolean;
   /** The numbers of the rounds doubled for the team. */
   doubledRoundNumbers: readonly number[];
@@ -54,7 +53,6 @@ function revealedCount({
 function describeLandedQuestion({
   view,
   myAnswers,
-  myAnswerGrades,
   doubledRoundNumbers,
 }: RevealVerdictCardProps): RevealedVerdict | null {
   const { progress, revealQuestions } = view;
@@ -66,11 +64,7 @@ function describeLandedQuestion({
   ) {
     return null;
   }
-  const [entry] = buildOpenedQuestions(
-    { [landed.id]: landed },
-    myAnswers,
-    myAnswerGrades,
-  );
+  const [entry] = buildOpenedQuestions({ [landed.id]: landed }, myAnswers);
   return {
     ...describeVerdictCard(entry),
     jokerExtra: jokerExtraPoints(

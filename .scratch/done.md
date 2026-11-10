@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| one-team-answer-record | [One record per team answer on the phone](one-team-answer-record/spec.md) | 1 |
 | doubled-rounds-owns-never-doubled | [The Doubled rounds module owns "never doubled"](doubled-rounds-owns-never-doubled/spec.md) | 2 |
 | clue-answer-module | [One Clue answer module for the freeze rule and an answer's worth](clue-answer-module/spec.md) | 2 |
 | grading-policy-graded-as | [The Grading policy decides the graded-as question itself](grading-policy-graded-as/spec.md) | 2 |

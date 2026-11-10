@@ -6,7 +6,8 @@ import PlayPage from '@/app/play/page';
 import { AUTO_ADVANCE_STORAGE_KEY } from '@/app/lib/player-settings-storage';
 import { vibrate } from '@/app/lib/vibrate';
 import type { SessionDescription } from '@/test-utils/room-view';
-import { teamLinkResult } from './test-utils';
+import type { MyAnswer } from '@/app/lib/team-link';
+import { myAnswer, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -30,7 +31,6 @@ const TEAM = {
   teamToken: 'team-token-1',
 };
 
-const GRADED_AT = '2024-01-01T00:00:00.000Z';
 const CARD_MS = 3_000;
 
 const ROUNDS = [
@@ -44,11 +44,10 @@ const ROUNDS = [
 ];
 
 /** The team got #1 right, #2 partly right, #3 wrong, and answered all three. */
-const MY_ANSWERS = { 1: 'Banana', 2: 'Mars?', 3: 'Chile' };
-const MY_GRADES = {
-  1: { pointsAwarded: 2, gradedAt: GRADED_AT, verdict: 'correct' as const },
-  2: { pointsAwarded: 1.5, gradedAt: GRADED_AT, verdict: 'partial' as const },
-  3: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' as const },
+const MY_ANSWERS = {
+  1: myAnswer('Banana', { grade: { pointsAwarded: 2, verdict: 'correct' } }),
+  2: myAnswer('Mars?', { grade: { pointsAwarded: 1.5, verdict: 'partial' } }),
+  3: myAnswer('Chile', { grade: { pointsAwarded: 0, verdict: 'incorrect' } }),
 };
 
 function atReveal(revealIndex: number): SessionDescription {
@@ -73,7 +72,7 @@ describe('PlayPage — reveal verdict card', () => {
   function showPhoneAt(
     session: SessionDescription,
     options: {
-      myAnswers?: Record<number, string>;
+      myAnswers?: Record<number, MyAnswer>;
       connectionError?: string | null;
       myJoker?: TeamJoker | null;
     } = {},
@@ -84,7 +83,6 @@ describe('PlayPage — reveal verdict card', () => {
         join: { team: TEAM, connectionError: options.connectionError ?? null },
         game: {
           myAnswers: options.myAnswers ?? MY_ANSWERS,
-          myAnswerGrades: MY_GRADES,
           myJoker: options.myJoker ?? null,
         },
       }),
@@ -138,7 +136,9 @@ describe('PlayPage — reveal verdict card', () => {
   it('shows "No answer" when the team did not answer', () => {
     const { rerender } = renderPhoneAt(atReveal(0));
 
-    showPhoneAt(atReveal(1), { myAnswers: { 1: 'Banana' } });
+    showPhoneAt(atReveal(1), {
+      myAnswers: { 1: MY_ANSWERS[1] },
+    });
     rerender(<PlayPage />);
 
     expect(screen.getByRole('status')).toHaveTextContent('No answer');

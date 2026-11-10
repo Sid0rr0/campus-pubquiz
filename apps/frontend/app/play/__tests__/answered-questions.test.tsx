@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { seenQuestionsOf, teamLinkResult } from './test-utils';
+import { myAnswer, seenQuestionsOf, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -24,8 +24,6 @@ const TEAM = {
   teamName: 'Returning Team',
   teamToken: 'team-token-1',
 };
-
-const GRADED_AT = '2024-01-01T00:00:00.000Z';
 
 const FRUIT = { prompt: 'Name a fruit', points: 5, answer: 'Banana' };
 const PLANET = { prompt: 'Name a planet', points: 5, answer: 'Mars' };
@@ -71,7 +69,7 @@ describe('PlayPage — answered questions history', () => {
         ],
         progress: { status: 'round_intro', roundIndex: 1 },
       },
-      { myAnswers: { 1: 'Banana' } },
+      { myAnswers: { 1: myAnswer('Banana') } },
     );
 
     expect(
@@ -106,8 +104,11 @@ describe('PlayPage — answered questions history', () => {
         },
       },
       {
-        myAnswers: { 9: 'Neptune' },
-        myAnswerGrades: { 9: { pointsAwarded: 3, verdict: 'correct' } },
+        myAnswers: {
+          9: myAnswer('Neptune', {
+            grade: { pointsAwarded: 3, verdict: 'correct' },
+          }),
+        },
       },
     );
 
@@ -123,13 +124,10 @@ describe('PlayPage — answered questions history', () => {
         progress: { status: 'reveal', revealIndex: 0 },
       },
       {
-        myAnswers: { 1: 'Banana' },
-        myAnswerGrades: {
-          1: {
-            pointsAwarded: 3,
-            gradedAt: GRADED_AT,
-            verdict: 'partial' as const,
-          },
+        myAnswers: {
+          1: myAnswer('Banana', {
+            grade: { pointsAwarded: 3, verdict: 'partial' },
+          }),
         },
       },
     );
@@ -144,15 +142,16 @@ describe('PlayPage — answered questions history', () => {
         progress: { status: 'reveal', revealIndex: 2, questionIndex: 2 },
       },
       {
-        myAnswers: { 1: 'Banana', 2: 'excalibur|excalibur', 3: 'Venus' },
-        myAnswerGrades: {
-          1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' },
-          2: {
-            pointsAwarded: 2,
-            gradedAt: GRADED_AT,
-            verdict: 'partial' as const,
-          },
-          3: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' },
+        myAnswers: {
+          1: myAnswer('Banana', {
+            grade: { pointsAwarded: 5, verdict: 'correct' },
+          }),
+          2: myAnswer('excalibur|excalibur', {
+            grade: { pointsAwarded: 2, verdict: 'partial' },
+          }),
+          3: myAnswer('Venus', {
+            grade: { pointsAwarded: 0, verdict: 'incorrect' },
+          }),
         },
       },
     );
@@ -171,9 +170,11 @@ describe('PlayPage — answered questions history', () => {
   });
 
   describe('across the reveal walk', () => {
-    const grades = {
-      1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' as const },
-      2: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' as const },
+    const answers = {
+      1: myAnswer('Banana', {
+        grade: { pointsAwarded: 3, verdict: 'partial' },
+      }),
+      2: myAnswer('Mars', { grade: { pointsAwarded: 5, verdict: 'correct' } }),
     };
 
     // The phone is sent only the walk so far: the first `shownCount` reveal
@@ -191,8 +192,7 @@ describe('PlayPage — answered questions history', () => {
         session,
         join: { team: TEAM },
         game: {
-          myAnswers: { 1: 'Banana', 2: 'Mars' },
-          myAnswerGrades: grades,
+          myAnswers: answers,
           seenQuestions: seenQuestionsOf(session),
         },
       });
@@ -238,13 +238,10 @@ describe('PlayPage — answered questions history', () => {
         progress: { status: 'break' },
       },
       {
-        myAnswers: { 1: 'Banana' },
-        myAnswerGrades: {
-          1: {
-            pointsAwarded: 3,
-            gradedAt: GRADED_AT,
-            verdict: 'partial' as const,
-          },
+        myAnswers: {
+          1: myAnswer('Banana', {
+            grade: { pointsAwarded: 3, verdict: 'partial' },
+          }),
         },
       },
     );
@@ -263,7 +260,7 @@ describe('PlayPage — answered questions history', () => {
         ],
         progress: { status: 'question_open', roundIndex: 1 },
       },
-      { myAnswers: { 1: 'shield|excalibur' } },
+      { myAnswers: { 1: myAnswer('shield|excalibur') } },
     );
 
     expect(
@@ -280,7 +277,7 @@ describe('PlayPage — answered questions history', () => {
         rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],
         progress: { status: 'break' },
       },
-      { myAnswers: { 1: 'Banana' } },
+      { myAnswers: { 1: myAnswer('Banana') } },
     );
 
     await userEvent.click(
@@ -305,7 +302,7 @@ describe('PlayPage — answered questions history', () => {
         ],
         progress: { status: 'question_open', questionIndex: 1 },
       },
-      { myAnswers: { 1: 'Banana' } },
+      { myAnswers: { 1: myAnswer('Banana') } },
     );
 
     expect(
@@ -330,7 +327,7 @@ describe('PlayPage — answered questions history', () => {
         ],
         progress: { status: 'question_open', roundIndex: 1 },
       },
-      { myAnswers: { 1: 'Banana' } },
+      { myAnswers: { 1: myAnswer('Banana') } },
     );
 
     expect(
@@ -380,8 +377,11 @@ describe('PlayPage — answered questions history', () => {
           closestGuessRevealStep: step,
         },
         {
-          myAnswers: { 7: '40' },
-          myAnswerGrades: { 7: { pointsAwarded: 0, verdict: 'wrong' } },
+          myAnswers: {
+            7: myAnswer('40', {
+              grade: { pointsAwarded: 0, verdict: 'incorrect' },
+            }),
+          },
         },
       );
     }

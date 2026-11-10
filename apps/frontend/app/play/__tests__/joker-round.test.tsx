@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PurchaseView, TeamJoker } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import type { SessionDescription } from '@/test-utils/room-view';
-import { seenQuestionsOf, teamLinkResult } from './test-utils';
+import { myAnswer, seenQuestionsOf, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -263,13 +263,10 @@ describe('PlayPage — the joker’s extra points on the reveal', () => {
         join: { team: JOINED_TEAM },
         game: {
           myJoker,
-          myAnswers: { 2: 'Paris' },
-          myAnswerGrades: {
-            2: {
-              pointsAwarded: 1,
-              gradedAt: '2024-01-01T00:00:00.000Z',
-              verdict: 'correct',
-            },
+          myAnswers: {
+            2: myAnswer('Paris', {
+              grade: { pointsAwarded: 1, verdict: 'correct' },
+            }),
           },
           seenQuestions: seenQuestionsOf(session),
         },

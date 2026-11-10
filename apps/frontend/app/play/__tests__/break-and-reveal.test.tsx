@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { seenQuestionsOf, teamLinkResult } from './test-utils';
+import { myAnswer, seenQuestionsOf, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -24,8 +24,6 @@ const TEAM = {
   teamName: 'Returning Team',
   teamToken: 'team-token-1',
 };
-
-const GRADED_AT = '2024-01-01T00:00:00.000Z';
 
 /** A single fruit question whose reveal is on air. */
 const FRUIT_REVEAL = {
@@ -108,7 +106,7 @@ describe('PlayPage — break and reveal', () => {
         ],
         progress: { status: 'break', questionIndex: 1 },
       },
-      { myAnswers: { 1: 'Banana', 2: 'Mars' } },
+      { myAnswers: { 1: myAnswer('Banana'), 2: myAnswer('Mars') } },
     );
 
     // Defaults to the block's last question, with the picker showing both.
@@ -212,7 +210,7 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it("shows the correct answer and the team's own submitted answer during reveal", () => {
-    renderPhone(FRUIT_REVEAL, { myAnswers: { 1: 'Mango' } });
+    renderPhone(FRUIT_REVEAL, { myAnswers: { 1: myAnswer('Mango') } });
 
     expect(screen.getByText('Banana')).toBeInTheDocument();
     expect(screen.getByText(/your answer/i)).toBeInTheDocument();
@@ -221,9 +219,10 @@ describe('PlayPage — break and reveal', () => {
 
   it('shows points awarded next to YOUR ANSWER during reveal once graded', () => {
     renderPhone(FRUIT_REVEAL, {
-      myAnswers: { 1: 'Mango' },
-      myAnswerGrades: {
-        1: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' },
+      myAnswers: {
+        1: myAnswer('Mango', {
+          grade: { pointsAwarded: 0, verdict: 'incorrect' },
+        }),
       },
       seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
     });
@@ -233,9 +232,10 @@ describe('PlayPage — break and reveal', () => {
 
   it('colors YOUR ANSWER green during reveal when it earned full points', () => {
     renderPhone(FRUIT_REVEAL, {
-      myAnswers: { 1: 'Banana' },
-      myAnswerGrades: {
-        1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' },
+      myAnswers: {
+        1: myAnswer('Banana', {
+          grade: { pointsAwarded: 5, verdict: 'correct' },
+        }),
       },
       seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
     });
@@ -247,9 +247,10 @@ describe('PlayPage — break and reveal', () => {
 
   it('colors YOUR ANSWER green for a correct verdict even when speed scaling cut its points', () => {
     renderPhone(FRUIT_REVEAL, {
-      myAnswers: { 1: 'Banana' },
-      myAnswerGrades: {
-        1: { pointsAwarded: 2, gradedAt: GRADED_AT, verdict: 'correct' },
+      myAnswers: {
+        1: myAnswer('Banana', {
+          grade: { pointsAwarded: 2, verdict: 'correct' },
+        }),
       },
       seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
     });
@@ -262,9 +263,10 @@ describe('PlayPage — break and reveal', () => {
 
   it('colors YOUR ANSWER as partial for a partial verdict', () => {
     renderPhone(FRUIT_REVEAL, {
-      myAnswers: { 1: 'Bananas' },
-      myAnswerGrades: {
-        1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' },
+      myAnswers: {
+        1: myAnswer('Bananas', {
+          grade: { pointsAwarded: 3, verdict: 'partial' },
+        }),
       },
       seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
     });
@@ -276,9 +278,10 @@ describe('PlayPage — break and reveal', () => {
 
   it('colors YOUR ANSWER magenta for an incorrect verdict', () => {
     renderPhone(FRUIT_REVEAL, {
-      myAnswers: { 1: 'Mango' },
-      myAnswerGrades: {
-        1: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' },
+      myAnswers: {
+        1: myAnswer('Mango', {
+          grade: { pointsAwarded: 0, verdict: 'incorrect' },
+        }),
       },
       seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
     });
@@ -301,7 +304,7 @@ describe('PlayPage — break and reveal', () => {
 
   it('colors an ungraded YOUR ANSWER magenta and shows no points line', () => {
     renderPhone(FRUIT_REVEAL, {
-      myAnswers: { 1: 'Mango' },
+      myAnswers: { 1: myAnswer('Mango') },
       seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
     });
 
@@ -319,7 +322,7 @@ describe('PlayPage — break and reveal', () => {
         ],
         progress: { status: 'reveal', revealIndex: 0 },
       },
-      { myAnswers: { 1: 'Imola|Spa|Silverstone' } },
+      { myAnswers: { 1: myAnswer('Imola|Spa|Silverstone') } },
     );
 
     expect(screen.getByText('Imola → Spa → Silverstone')).toBeInTheDocument();
@@ -334,7 +337,7 @@ describe('PlayPage — break and reveal', () => {
         ],
         progress: { status: 'reveal', revealIndex: 0 },
       },
-      { myAnswers: { 1: 'Imola|Spa|Silverstone' } },
+      { myAnswers: { 1: myAnswer('Imola|Spa|Silverstone') } },
     );
 
     // Each row of the reveal list shows the team's own submitted order —
@@ -356,7 +359,9 @@ describe('PlayPage — break and reveal', () => {
     };
 
     it('marks each item of the revealed order with a tick or a cross', () => {
-      renderPhone(REVEALED, { myAnswers: { 1: 'Imola|Spa|Silverstone' } });
+      renderPhone(REVEALED, {
+        myAnswers: { 1: myAnswer('Imola|Spa|Silverstone') },
+      });
 
       expect(screen.getByText('Imola').closest('li')).toHaveTextContent('✓');
       expect(screen.getByText('Spa').closest('li')).toHaveTextContent('✗');
@@ -367,9 +372,10 @@ describe('PlayPage — break and reveal', () => {
 
     it('still marks the items when the moderator overrode the points', () => {
       renderPhone(REVEALED, {
-        myAnswers: { 1: 'Imola|Spa|Silverstone' },
-        myAnswerGrades: {
-          1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'correct' },
+        myAnswers: {
+          1: myAnswer('Imola|Spa|Silverstone', {
+            grade: { pointsAwarded: 3, verdict: 'correct' },
+          }),
         },
         seenQuestions: seenQuestionsOf(REVEALED),
       });
@@ -384,7 +390,7 @@ describe('PlayPage — break and reveal', () => {
       expect(screen.queryByText('✗')).not.toBeInTheDocument();
       unmount();
 
-      renderPhone(REVEALED, { myAnswers: { 1: '__idk__' } });
+      renderPhone(REVEALED, { myAnswers: { 1: myAnswer('__idk__') } });
       expect(screen.queryByText('✓')).not.toBeInTheDocument();
       expect(document.body).not.toHaveTextContent('✗');
     });
@@ -392,7 +398,7 @@ describe('PlayPage — break and reveal', () => {
     it('shows no marks before the reveal', () => {
       renderPhone(
         { ...REVEALED, progress: { status: 'break' as const } },
-        { myAnswers: { 1: 'Imola|Spa|Silverstone' } },
+        { myAnswers: { 1: myAnswer('Imola|Spa|Silverstone') } },
       );
 
       expect(document.body).not.toHaveTextContent('✓');
@@ -420,7 +426,7 @@ describe('PlayPage — break and reveal', () => {
         progress: { status: 'reveal', revealIndex: 0 },
       },
       // arthur -> shield (wrong, correct is excalibur), captain america -> excalibur (wrong, correct is shield)
-      { myAnswers: { 1: 'shield|excalibur' } },
+      { myAnswers: { 1: myAnswer('shield|excalibur') } },
     );
 
     expect(screen.getByText('arthur').closest('li')).toHaveClass(

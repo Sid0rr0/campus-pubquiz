@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { teamLinkResult } from './test-utils';
+import { myAnswer, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -46,7 +46,7 @@ describe('PlayPage — question navigator', () => {
             teamToken: 'team-token-1',
           },
         },
-        game: { myAnswers: { 1: 'Banana' } },
+        game: { myAnswers: { 1: myAnswer('Banana') } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -149,7 +149,7 @@ describe('PlayPage — question navigator', () => {
             teamToken: 'team-token-1',
           },
         },
-        game: { submitAnswer, myAnswers: { 1: 'Banana' } },
+        game: { submitAnswer, myAnswers: { 1: myAnswer('Banana') } },
       }),
     );
     renderWithQuery(<PlayPage />);
