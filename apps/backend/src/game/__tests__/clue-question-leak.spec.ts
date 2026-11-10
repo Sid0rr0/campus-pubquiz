@@ -1,7 +1,9 @@
 import {
+  SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
   type GameAction,
+  type PresenterContextPayload,
 } from '@campus-pubquiz/types';
 import {
   setupRealStoreGatewayTest,
@@ -11,7 +13,8 @@ import {
 const CLUES = ['Born in a tiny village', 'Wrote on relativity', 'E equals mc'];
 
 // Screen-projection test: a Clue question's clues ride in `options`, and none
-// may reach the display, the phones or the admin before it is shown.
+// may reach the display or the phones before it is shown; only the presenter
+// remote's preview (admin room) carries them all.
 describe('GameGateway — a Clue question shows its clues one at a time', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
@@ -78,6 +81,19 @@ describe('GameGateway — a Clue question shows its clues one at a time', () => 
       clues: CLUES.slice(0, 2),
       clueCount: 3,
     });
+  });
+
+  it('sends every clue to the presenter remote alone from clue 1, so the quiz master can read ahead', async () => {
+    await actAll(game, toTheQuestion);
+
+    const [context] = game
+      .payloadsTo<PresenterContextPayload>(
+        SOCKET_ROOMS.ADMIN,
+        SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
+      )
+      .slice(-1);
+    expect(context.currentScreen.question?.options).toEqual(CLUES);
+    expect(shownTo(sentToScreensAndPhones())).toEqual([CLUES[0]]);
   });
 
   it('hides the latest clue on Previous and comes back to the highest clue shown', async () => {

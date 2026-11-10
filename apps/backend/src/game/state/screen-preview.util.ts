@@ -13,7 +13,6 @@ import {
   type ScreenPreview,
   type SessionState,
   SOCKET_ROOMS,
-  withoutClues,
 } from '@campus-pubquiz/types';
 
 function describeBreakIntro(session: SessionState): ScreenPreview {
@@ -54,7 +53,8 @@ function questionText(
     seededGame.rounds[screen.roundIndex]?.questions[screen.questionIndex];
   return {
     heading: `R${screen.roundIndex + 1} Q${screen.questionIndex + 1}`,
-    ...(question ? { question: withoutClues(question) } : {}),
+    // Every clue, unshown ones included: this preview only reaches the admin room (the presenter remote).
+    ...(question ? { question } : {}),
   };
 }
 

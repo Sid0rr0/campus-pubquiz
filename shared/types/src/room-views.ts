@@ -384,7 +384,7 @@ export interface AdminQuestionContext {
 export interface ScreenPreview {
   heading: string;
   body?: string;
-  /** Full question content (including the correct answer) when the screen is an open question. */
+  /** Full question content (including the correct answer, and every clue of a Clue question, shown or not) when the screen is an open question. */
   question?: SeededQuestion;
 }
 
