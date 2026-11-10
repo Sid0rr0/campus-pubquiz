@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AnswersUpdatedPayload } from '@campus-pubquiz/types';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
+import { answerView } from '@/test-utils/answer-view';
 
 function liveAnswers(
   overrides: Partial<AnswersUpdatedPayload> = {},
@@ -26,7 +27,7 @@ describe('countCorrectAnswers', () => {
   it('counts only answers with a correct verdict, not partial or incorrect ones', () => {
     const payload = liveAnswers({
       answers: [
-        {
+        answerView({
           answerId: 1,
           teamId: 1,
           teamName: 'The Quizzards',
@@ -36,8 +37,8 @@ describe('countCorrectAnswers', () => {
           gradingState: 'graded',
           powerUps: [],
           verdict: 'correct',
-        },
-        {
+        }),
+        answerView({
           answerId: 2,
           teamId: 2,
           teamName: 'Beer Necessities',
@@ -47,8 +48,8 @@ describe('countCorrectAnswers', () => {
           gradingState: 'graded',
           powerUps: [],
           verdict: 'partial',
-        },
-        {
+        }),
+        answerView({
           answerId: 3,
           teamId: 3,
           teamName: 'Quiz Pistols',
@@ -58,7 +59,7 @@ describe('countCorrectAnswers', () => {
           gradingState: 'graded',
           powerUps: [],
           verdict: 'incorrect',
-        },
+        }),
       ],
     });
 
@@ -69,7 +70,7 @@ describe('countCorrectAnswers', () => {
     const payload = liveAnswers({
       question: { ...liveAnswers().question, points: 1000 },
       answers: [
-        {
+        answerView({
           answerId: 1,
           teamId: 1,
           teamName: 'The Quizzards',
@@ -79,7 +80,7 @@ describe('countCorrectAnswers', () => {
           gradingState: 'graded',
           powerUps: [],
           verdict: 'correct',
-        },
+        }),
       ],
     });
 
@@ -87,7 +88,7 @@ describe('countCorrectAnswers', () => {
   });
 
   it('counts an answer the admin overrode up to full points once its verdict updates', () => {
-    const answer = {
+    const answer = answerView({
       answerId: 1,
       teamId: 1,
       teamName: 'The Quizzards',
@@ -96,7 +97,7 @@ describe('countCorrectAnswers', () => {
       gradedAt: '2026-01-01T00:00:00.000Z',
       gradingState: 'graded' as const,
       powerUps: [],
-    };
+    });
     const before = liveAnswers({
       answers: [{ ...answer, verdict: 'incorrect' }],
     });
@@ -112,7 +113,7 @@ describe('countCorrectAnswers', () => {
   it('excludes ungraded answers, which default to zero points', () => {
     const payload = liveAnswers({
       answers: [
-        {
+        answerView({
           answerId: 1,
           teamId: 1,
           teamName: 'The Quizzards',
@@ -122,7 +123,7 @@ describe('countCorrectAnswers', () => {
           gradingState: 'ungraded',
           powerUps: [],
           verdict: null,
-        },
+        }),
       ],
     });
 

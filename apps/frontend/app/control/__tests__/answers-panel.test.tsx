@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { AnswersUpdatedPayload, TeamView } from '@campus-pubquiz/types';
 import { AnswersPanel } from '@/app/control/answers-panel';
+import { answerView } from '@/test-utils/answer-view';
 
 const TEAMS: TeamView[] = [
   { teamId: 1, teamName: 'The Quizzards', isConnected: true },
@@ -25,7 +26,7 @@ function liveAnswers(
       totalQuestionsInRound: 4,
     },
     answers: [
-      {
+      answerView({
         answerId: 41,
         teamId: 1,
         teamName: 'The Quizzards',
@@ -35,7 +36,7 @@ function liveAnswers(
         gradingState: 'ungraded',
         powerUps: [],
         verdict: null,
-      },
+      }),
     ],
     ...overrides,
   };
@@ -74,7 +75,7 @@ describe('AnswersPanel', () => {
       <AnswersPanel
         liveAnswers={liveAnswers({
           answers: [
-            {
+            answerView({
               answerId: 41,
               teamId: 1,
               teamName: 'The Quizzards',
@@ -84,8 +85,8 @@ describe('AnswersPanel', () => {
               gradingState: 'graded',
               powerUps: [],
               verdict: 'correct',
-            },
-            {
+            }),
+            answerView({
               answerId: 42,
               teamId: 2,
               teamName: 'Beer Necessities',
@@ -95,7 +96,7 @@ describe('AnswersPanel', () => {
               gradingState: 'graded',
               powerUps: [],
               verdict: 'incorrect',
-            },
+            }),
           ],
         })}
         teams={TEAMS}
@@ -136,7 +137,7 @@ describe('AnswersPanel', () => {
             totalQuestionsInRound: 1,
           },
           answers: [
-            {
+            answerView({
               answerId: 41,
               teamId: 1,
               teamName: 'The Quizzards',
@@ -146,7 +147,7 @@ describe('AnswersPanel', () => {
               gradingState: 'graded',
               powerUps: [],
               verdict: 'incorrect',
-            },
+            }),
           ],
         })}
         teams={TEAMS}
@@ -173,7 +174,7 @@ describe('AnswersPanel', () => {
             totalQuestionsInRound: 1,
           },
           answers: [
-            {
+            answerView({
               answerId: 41,
               teamId: 1,
               teamName: 'The Quizzards',
@@ -183,7 +184,7 @@ describe('AnswersPanel', () => {
               gradingState: 'graded',
               powerUps: [],
               verdict: 'incorrect',
-            },
+            }),
           ],
         })}
         teams={TEAMS}
@@ -201,7 +202,7 @@ describe('AnswersPanel', () => {
       <AnswersPanel
         liveAnswers={liveAnswers({
           answers: [
-            {
+            answerView({
               answerId: 41,
               teamId: 1,
               teamName: 'The Quizzards',
@@ -211,7 +212,7 @@ describe('AnswersPanel', () => {
               gradingState: 'ungraded',
               powerUps: [],
               verdict: null,
-            },
+            }),
           ],
         })}
         teams={TEAMS}
@@ -297,7 +298,7 @@ describe('AnswersPanel', () => {
       <AnswersPanel
         liveAnswers={liveAnswers({
           answers: [
-            {
+            answerView({
               answerId: 41,
               teamId: 1,
               teamName: 'The Quizzards',
@@ -307,7 +308,7 @@ describe('AnswersPanel', () => {
               gradingState: 'graded',
               powerUps: [],
               verdict: 'correct',
-            },
+            }),
           ],
         })}
         teams={TEAMS}
@@ -528,7 +529,7 @@ describe('AnswersPanel', () => {
         <AnswersPanel
           liveAnswers={liveAnswers({
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -538,7 +539,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'graded',
                 powerUps: [],
                 verdict: 'partial',
-              },
+              }),
             ],
           })}
           teams={[TEAMS[0]]}
@@ -578,7 +579,7 @@ describe('AnswersPanel', () => {
       <AnswersPanel
         liveAnswers={liveAnswers({
           answers: [
-            {
+            answerView({
               answerId: 41,
               teamId: 1,
               teamName: 'The Quizzards',
@@ -588,7 +589,7 @@ describe('AnswersPanel', () => {
               gradingState: 'graded',
               powerUps: [],
               verdict: 'correct',
-            },
+            }),
           ],
         })}
         teams={TEAMS}
@@ -623,7 +624,7 @@ describe('AnswersPanel', () => {
           liveAnswers={liveAnswers({
             question: CLOSEST_GUESS_QUESTION,
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -633,7 +634,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'graded',
                 powerUps: [],
                 verdict: 'incorrect',
-              },
+              }),
             ],
           })}
           teams={TEAMS}
@@ -660,7 +661,7 @@ describe('AnswersPanel', () => {
           liveAnswers={liveAnswers({
             question: CLOSEST_GUESS_QUESTION,
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -670,7 +671,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'awaiting_batch',
                 powerUps: [],
                 verdict: null,
-              },
+              }),
             ],
           })}
           teams={TEAMS}
@@ -695,7 +696,7 @@ describe('AnswersPanel', () => {
           liveAnswers={liveAnswers({
             question: CLOSEST_GUESS_QUESTION,
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -705,7 +706,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'ungraded',
                 powerUps: [],
                 verdict: null,
-              },
+              }),
             ],
           })}
           teams={TEAMS}
@@ -729,7 +730,7 @@ describe('AnswersPanel', () => {
       <AnswersPanel
         liveAnswers={liveAnswers({
           answers: [
-            {
+            answerView({
               answerId: 41,
               teamId: 1,
               teamName: 'The Quizzards',
@@ -739,7 +740,7 @@ describe('AnswersPanel', () => {
               gradingState: 'awaiting_batch',
               powerUps: [],
               verdict: null,
-            },
+            }),
           ],
         })}
         teams={TEAMS}
@@ -773,7 +774,7 @@ describe('AnswersPanel', () => {
             totalQuestionsInRound: 1,
           },
           answers: [
-            {
+            answerView({
               answerId: 41,
               teamId: 1,
               teamName: 'The Quizzards',
@@ -783,7 +784,7 @@ describe('AnswersPanel', () => {
               gradingState: 'graded',
               powerUps: [],
               verdict: 'partial',
-            },
+            }),
           ],
         })}
         teams={TEAMS}
@@ -818,7 +819,7 @@ describe('AnswersPanel', () => {
         <AnswersPanel
           liveAnswers={liveAnswers({
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -828,7 +829,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'graded',
                 powerUps: [],
                 verdict: 'correct',
-              },
+              }),
             ],
           })}
           teams={TEAMS}
@@ -847,7 +848,7 @@ describe('AnswersPanel', () => {
         <AnswersPanel
           liveAnswers={liveAnswers({
             answers: [
-              {
+              answerView({
                 answerId: 42,
                 teamId: 2,
                 teamName: 'Beer Necessities',
@@ -857,7 +858,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'ungraded',
                 powerUps: [],
                 verdict: null,
-              },
+              }),
             ],
           })}
           teams={TEAMS}
@@ -876,7 +877,7 @@ describe('AnswersPanel', () => {
         <AnswersPanel
           liveAnswers={liveAnswers({
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -886,8 +887,8 @@ describe('AnswersPanel', () => {
                 gradingState: 'ungraded',
                 powerUps: [],
                 verdict: null,
-              },
-              {
+              }),
+              answerView({
                 answerId: 42,
                 teamId: 2,
                 teamName: 'Beer Necessities',
@@ -897,7 +898,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'ungraded',
                 powerUps: [],
                 verdict: null,
-              },
+              }),
             ],
           })}
           teams={TEAMS}
@@ -913,7 +914,7 @@ describe('AnswersPanel', () => {
         <AnswersPanel
           liveAnswers={liveAnswers({
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -923,8 +924,8 @@ describe('AnswersPanel', () => {
                 gradingState: 'graded',
                 powerUps: [],
                 verdict: 'correct',
-              },
-              {
+              }),
+              answerView({
                 answerId: 42,
                 teamId: 2,
                 teamName: 'Beer Necessities',
@@ -934,7 +935,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'ungraded',
                 powerUps: [],
                 verdict: null,
-              },
+              }),
             ],
           })}
           teams={TEAMS}
@@ -953,7 +954,7 @@ describe('AnswersPanel', () => {
         <AnswersPanel
           liveAnswers={liveAnswers({
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -963,8 +964,8 @@ describe('AnswersPanel', () => {
                 gradingState: 'graded',
                 powerUps: [],
                 verdict: 'correct',
-              },
-              {
+              }),
+              answerView({
                 answerId: 42,
                 teamId: 2,
                 teamName: 'Beer Necessities',
@@ -974,7 +975,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'graded',
                 powerUps: [],
                 verdict: 'correct',
-              },
+              }),
             ],
           })}
           teams={TEAMS}
@@ -991,7 +992,7 @@ describe('AnswersPanel', () => {
         <AnswersPanel
           liveAnswers={liveAnswers({
             answers: [
-              {
+              answerView({
                 answerId: 41,
                 teamId: 1,
                 teamName: 'The Quizzards',
@@ -1001,8 +1002,8 @@ describe('AnswersPanel', () => {
                 gradingState: 'ungraded',
                 powerUps: [],
                 verdict: null,
-              },
-              {
+              }),
+              answerView({
                 answerId: 42,
                 teamId: 2,
                 teamName: 'Beer Necessities',
@@ -1012,7 +1013,7 @@ describe('AnswersPanel', () => {
                 gradingState: 'graded',
                 powerUps: [],
                 verdict: 'correct',
-              },
+              }),
             ],
           })}
           teams={TEAMS}
