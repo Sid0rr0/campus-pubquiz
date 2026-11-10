@@ -7,7 +7,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
 | display-screen-adapters | [Big-screen screens draw their Display screen directly](display-screen-adapters/spec.md) | 2 | — |
-| clue-answer-module | [One Clue answer module for the freeze rule and an answer's worth](clue-answer-module/spec.md) | 2 | grading-policy-graded-as |
 | doubled-rounds-owns-never-doubled | [The Doubled rounds module owns "never doubled"](doubled-rounds-owns-never-doubled/spec.md) | 2 | — |
 | one-team-answer-record | [One record per team answer on the phone](one-team-answer-record/spec.md) | 1 | clue-answer-module |
 

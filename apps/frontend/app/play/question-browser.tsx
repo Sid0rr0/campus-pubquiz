@@ -1,4 +1,5 @@
 import {
+  clueFreezeState,
   formatAnswer,
   isHttpUrl,
   isNonAnswer,
@@ -195,30 +196,6 @@ export function QuestionBrowser({
   );
 }
 
-/**
- * Where a Clue answer stands against the clues shown: frozen (its clue is below
- * the highest shown, so a new clue was shown since) or still freezable (a clue
- * is left to show). A cleared answer (blank or "I don't know") never freezes.
- */
-function clueFreezeOf(
-  { highestClue, clueCount }: QuestionBrowserProps['selectedQuestion'],
-  myAnswerClue: MyAnswerClue | undefined,
-  myAnswer: string | undefined,
-) {
-  const isClueQuestion = highestClue !== undefined && clueCount !== undefined;
-  return {
-    frozenClue:
-      isClueQuestion &&
-      myAnswerClue !== undefined &&
-      myAnswer !== undefined &&
-      !isNonAnswer(myAnswer) &&
-      myAnswerClue.clue < highestClue
-        ? myAnswerClue
-        : null,
-    isFreezable: isClueQuestion && highestClue < clueCount,
-  };
-}
-
 /** A Clue question's clues shown so far and what an answer is worth now. */
 function CluesShown({
   question,
@@ -254,7 +231,8 @@ function AnswerArea({
   removedOptions,
   isQuickfireMode,
   pin,
-  clueFreeze,
+  myAnswerClue,
+  myAnswer,
   onSubmit,
 }: {
   question: QuestionBrowserProps['selectedQuestion'];
@@ -263,11 +241,17 @@ function AnswerArea({
   removedOptions: ReturnType<typeof removedOptionsOf>;
   isQuickfireMode: boolean;
   pin: ReturnType<typeof pinFor>;
-  clueFreeze: ReturnType<typeof clueFreezeOf>;
+  myAnswerClue: MyAnswerClue | undefined;
+  myAnswer: string | undefined;
   onSubmit: (value: string) => void;
 }) {
-  if (clueFreeze.frozenClue !== null) {
-    return <FrozenAnswer {...clueFreeze.frozenClue} />;
+  const { isFrozen, isFreezable } = clueFreezeState(
+    question,
+    { value: myAnswer, clue: myAnswerClue?.clue },
+    question.highestClue,
+  );
+  if (isFrozen && myAnswerClue) {
+    return <FrozenAnswer {...myAnswerClue} />;
   }
   return (
     // Hidden, not unmounted, while the phone is unlinked (a reconnect after the phone slept): the half-typed answer or dragged order survives until it is linked again.
@@ -275,7 +259,7 @@ function AnswerArea({
       <AnswerForm
         // A Clue question's form restarts when its answer is cleared, so the box doesn't keep the cleared text.
         key={
-          clueFreeze.isFreezable
+          isFreezable
             ? `${question.id}:${isNonAnswer(initialValue)}`
             : question.id
         }
@@ -287,7 +271,7 @@ function AnswerArea({
         pin={pin}
         onSubmit={onSubmit}
       />
-      {clueFreeze.isFreezable && (
+      {isFreezable && (
         <>
           <p className="mt-2 text-center text-sm font-extrabold text-foreground/55">
             Once the next clue is shown, you can&apos;t change this answer.
@@ -369,7 +353,8 @@ function OpenQuestion({
           removedOptions={removedOptionsOf(question.id, purchases)}
           isQuickfireMode={isQuickfireMode}
           pin={pin}
-          clueFreeze={clueFreezeOf(question, myAnswerClue, myAnswer)}
+          myAnswerClue={myAnswerClue}
+          myAnswer={myAnswer}
           onSubmit={(value) => onSubmitAnswer(question.id, team.teamId, value)}
         />
       )}

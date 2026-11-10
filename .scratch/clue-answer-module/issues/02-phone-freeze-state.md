@@ -10,7 +10,7 @@ No `/guide` or docs text: behaviour is unchanged.
 
 **Blocked by:** 01 (Clue answer module owns record/freeze and worth on the server).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Pure tests for freeze state: not frozen before a new clue; frozen after one; never frozen for a blank or "I don't know"; can't freeze on the last clue; a type without clues is never frozen or freezable
 - [ ] A parity test over a small table of cases: freeze state reports frozen exactly when clue to record returns "frozen" for a changed, non-blank value

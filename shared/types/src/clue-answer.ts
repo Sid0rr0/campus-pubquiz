@@ -14,6 +14,31 @@ export function clueWorth(clueCount: number, clue: number): number {
 }
 
 /**
+ * Where a team's current answer stands against the clues shown: frozen (a new
+ * clue was shown since it was locked in, so the server refuses a change) or
+ * freezable (a clue is left to show). A type without clues is neither; a blank
+ * or "I don't know" answer is never frozen.
+ */
+export function clueFreezeState(
+  question: { type: QuestionType; clueCount?: number },
+  answer: { value?: string; clue?: number },
+  highestClue: number | undefined,
+): { isFrozen: boolean; isFreezable: boolean } {
+  if (!QUESTION_KINDS[question.type].hasClues) {
+    return { isFrozen: false, isFreezable: false };
+  }
+  const highest = highestClue ?? 1;
+  return {
+    isFrozen:
+      answer.value !== undefined &&
+      answer.clue !== undefined &&
+      !isNonAnswer(answer.value) &&
+      answer.clue < highest,
+    isFreezable: highest < (question.clueCount ?? 0),
+  };
+}
+
+/**
  * The clue a write is recorded on (null for any type without clues), or
  * 'frozen' when a new clue has been shown since the stored answer was locked
  * in. An unchanged value keeps its clue; a changed one takes the highest clue
