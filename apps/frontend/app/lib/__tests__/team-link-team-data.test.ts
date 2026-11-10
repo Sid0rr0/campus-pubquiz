@@ -14,6 +14,8 @@ const GRADED = {
   value: 'Paris',
   pointsAwarded: 2,
   gradedAt: '2026-10-01T10:00:00.000Z',
+  clue: null,
+  clueValue: null,
   verdict: 'correct',
 } as const;
 
@@ -22,6 +24,8 @@ const WAITING = {
   value: 'Banana',
   pointsAwarded: 0,
   gradedAt: null,
+  clue: null,
+  clueValue: null,
   verdict: null,
 } as const;
 
@@ -130,6 +134,8 @@ describe('team link: the team data', () => {
       value: 'Rome',
       pointsAwarded: 1,
       gradedAt: '2026-10-01T11:00:00.000Z',
+      clue: null,
+      clueValue: null,
       verdict: 'correct',
     } as const;
 

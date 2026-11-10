@@ -40,9 +40,9 @@ export interface AnswerReceivedPayload {
   /** Set together with gradedAt; null until graded. */
   verdict: Verdict | null;
   /** Clue question only: the clue (1-based) the answer was locked in on; null for every other type. */
-  clue?: number | null;
+  clue: number | null;
   /** Clue question only: what a right answer is worth at that clue; null for every other type. */
-  clueValue?: number | null;
+  clueValue: number | null;
 }
 
 export interface TeamAnswerView {
@@ -54,9 +54,9 @@ export interface TeamAnswerView {
   /** Set together with gradedAt: how the answer was judged, independent of speed scaling or partial rounding. Null until graded. */
   verdict: Verdict | null;
   /** Clue question only: the clue (1-based) the answer was locked in on; null for every other type. With the question's `highestClue`, it says whether the answer is frozen. */
-  clue?: number | null;
+  clue: number | null;
   /** Clue question only: what a right answer is worth at that clue; null for every other type. */
-  clueValue?: number | null;
+  clueValue: number | null;
 }
 
 /**
@@ -82,9 +82,9 @@ export interface AnswerView {
   /** The power-ups the team used on this question, so the quiz master can settle disputes. */
   powerUps: PowerUpId[];
   /** Clue question only: the clue (1-based) the answer was locked in on; null for every other type. */
-  clue?: number | null;
+  clue: number | null;
   /** Clue question only: what a right answer is worth at that clue; null for every other type. */
-  clueValue?: number | null;
+  clueValue: number | null;
 }
 
 export interface AnswersUpdatedPayload {

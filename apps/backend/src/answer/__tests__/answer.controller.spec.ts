@@ -36,6 +36,7 @@ const answers: AnswerView[] = [
     gradingState: 'ungraded',
     verdict: null,
     clue: null,
+    clueValue: null,
     powerUps: [],
   },
 ];
