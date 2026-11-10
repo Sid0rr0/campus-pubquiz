@@ -6,6 +6,7 @@ import {
   DEFAULT_SESSION_SETTINGS,
   drawPin,
   drawRemovedOptions,
+  extraJokerOfferedRound,
   extraJokerRoundId,
   fiftyFiftyLeaveCount,
   isPinOffPlace,
@@ -72,6 +73,45 @@ describe('extraJokerRoundId', () => {
   it('offers nothing once the quiz has ended', () => {
     expect(offered('ended', 0)).toBeNull();
     expect(offered('ended', 1)).toBeNull();
+  });
+});
+
+describe('extraJokerOfferedRound', () => {
+  const rounds = [
+    {
+      id: 7,
+      title: 'One',
+      questions: [{ id: 10, type: 'free_text' as const }],
+    },
+    { id: 9, title: 'Two', questions: [{ id: 20, type: 'clues' as const }] },
+  ];
+  const offered = (status: string, roundIndex: number) =>
+    extraJokerOfferedRound({
+      seededGame: { rounds },
+      openedQuestionIds: [],
+      progress: { status, roundIndex },
+    });
+
+  it('names the offered round with its number, title and doubling', () => {
+    expect(offered('rules', 0)).toEqual({
+      roundId: 7,
+      roundNumber: 1,
+      title: 'One',
+      canBeDoubled: true,
+    });
+  });
+
+  it('says a round with a Clue question cannot be doubled', () => {
+    expect(offered('round_intro', 0)).toEqual({
+      roundId: 9,
+      roundNumber: 2,
+      title: 'Two',
+      canBeDoubled: false,
+    });
+  });
+
+  it('is null when no round is offered', () => {
+    expect(offered('lobby', 0)).toBeNull();
   });
 });
 

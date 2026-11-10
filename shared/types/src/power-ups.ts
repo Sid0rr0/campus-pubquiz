@@ -252,25 +252,34 @@ export function extraJokerRoundId(session: {
   return next ? next.id : null;
 }
 
-/** The round `extraJokerRoundId` picks, with its number in the quiz and whether it can be doubled; null when none is offered. */
+/** The round `extraJokerRoundId` picks, with its number in the quiz, its (raw) title and whether it can be doubled; null when none is offered. */
 export function extraJokerOfferedRound(
   session: Parameters<typeof extraJokerRoundId>[0] & {
     seededGame: {
-      rounds: readonly { questions: readonly { type: QuestionType }[] }[];
+      rounds: readonly {
+        title: string;
+        questions: readonly { type: QuestionType }[];
+      }[];
     };
   },
-): { roundId: number; roundNumber: number; canBeDoubled: boolean } | null {
+): {
+  roundId: number;
+  roundNumber: number;
+  title: string;
+  canBeDoubled: boolean;
+} | null {
   const offeredId = extraJokerRoundId(session);
   const index = session.seededGame.rounds.findIndex(
-    (round) => round.id === offeredId,
+    (candidate) => candidate.id === offeredId,
   );
-  return index === -1
-    ? null
-    : {
-        roundId: session.seededGame.rounds[index].id,
-        roundNumber: index + 1,
-        canBeDoubled: canBeDoubled(session.seededGame.rounds[index]),
-      };
+  if (index === -1) return null;
+  const round = session.seededGame.rounds[index];
+  return {
+    roundId: round.id,
+    roundNumber: index + 1,
+    title: round.title,
+    canBeDoubled: canBeDoubled(round),
+  };
 }
 
 /** How many options a 50/50 leaves: half, rounded down, never fewer than two. */

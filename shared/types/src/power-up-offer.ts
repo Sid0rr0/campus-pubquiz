@@ -152,11 +152,14 @@ export interface OfferedRound {
   canBeDoubled: boolean;
 }
 
+/** What the rule needs to know of the round on offer. */
+export type OfferedRoundRule = Pick<OfferedRound, 'roundId' | 'canBeDoubled'>;
+
 /** Why an extra joker for `roundId` is refused (worded for the team), or null when it goes through. The order is the server's. */
 function extraJokerRefusalOf(
   input: ExtraJokerRuleInput,
   roundId: number,
-  offered: { roundId: number; canBeDoubled: boolean } | null,
+  offered: OfferedRoundRule | null,
 ): Refusal | null {
   const { cost, maxUses, used } = entryOf(
     'extra_joker',
@@ -165,7 +168,8 @@ function extraJokerRefusalOf(
   );
   if (maxUses === 0) return refused('That power-up is not offered');
   if (roundId !== offered?.roundId) return refused(WRONG_ROUND);
-  if (!offered.canBeDoubled) {
+  // === false: an older backend's offer carries no flag, and must not read as a Clue round.
+  if (offered.canBeDoubled === false) {
     return refused("Can't be used on this round");
   }
   const doubled = doubledRoundIds(
@@ -184,7 +188,7 @@ function extraJokerRefusalOf(
 export function extraJokerPurchaseRefusal(
   input: ExtraJokerRuleInput & {
     roundId: number;
-    offered: { roundId: number; canBeDoubled: boolean } | null;
+    offered: OfferedRoundRule | null;
   },
 ): string | null {
   return (

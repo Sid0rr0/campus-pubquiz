@@ -259,7 +259,7 @@ export function buildPlayersFields(
             title: visibleRoundTitle(
               settings,
               session.progress.status,
-              rounds[offered.roundNumber - 1].title,
+              offered.title,
             ),
           },
     clueRounds: rounds.flatMap((round, index) =>
