@@ -7,11 +7,8 @@ import type {
   TeamAnswerView,
   Verdict,
 } from '@campus-pubquiz/types';
-import {
-  clueValueFromPoints,
-  isNonAnswer,
-  QUESTION_KINDS,
-} from '@campus-pubquiz/types';
+import { clueToRecord, clueWorth, QUESTION_KINDS } from '@campus-pubquiz/types';
+import { readQuestionPayload } from '@/db/question-payload';
 import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
@@ -56,30 +53,6 @@ export class AnswerLockedError extends Error {
     super('Your answer is locked in: a new clue has been shown');
     this.name = 'AnswerLockedError';
   }
-}
-
-/**
- * The clue a submission is recorded on (null for any other type): an
- * unchanged value keeps its clue, a changed one takes the highest clue shown,
- * unless the stored answer's clue is already below it, which freezes it. A
- * stored blank or "I don't know" says nothing, so it never freezes: that is how
- * a team clears its answer to wait for the next clue.
- */
-function clueToRecord(
-  question: GradableQuestion,
-  existing: { value: string; clue: number | null } | null,
-  value: string,
-  highestClueShown: number | null,
-): number | null {
-  if (!QUESTION_KINDS[question.type].hasClues) return null;
-  const highest = highestClueShown ?? 1;
-  if (existing === null) return highest;
-  const stored = existing.clue ?? highest;
-  if (existing.value === value) return stored;
-  if (stored < highest && !isNonAnswer(existing.value)) {
-    throw new AnswerLockedError();
-  }
-  return highest;
 }
 
 /** A question as grading sees it: the scoring inputs plus the id its answers hang off. SeededQuestion satisfies it. */
@@ -164,6 +137,7 @@ export class AnswerService {
       { fields: ['value', 'gradedAt', 'clue'] },
     );
     const clue = clueToRecord(question, existing, value, highestClueShown);
+    if (clue === 'frozen') throw new AnswerLockedError();
     const write = gradeOnSubmit(
       question,
       value,
@@ -207,7 +181,7 @@ export class AnswerService {
       verdict: answer.verdict,
       clue: answer.clue,
       clueValue:
-        clue === null ? null : clueValueFromPoints(question.points, clue),
+        clue === null ? null : clueWorth(question.options?.length ?? 0, clue),
     };
   }
 
@@ -531,5 +505,6 @@ function clueValueOf(row: Answer): number | null {
   if (!QUESTION_KINDS[row.question.type].hasClues || row.clue === null) {
     return null;
   }
-  return clueValueFromPoints(row.question.points, row.clue);
+  const { options } = readQuestionPayload(row.question);
+  return clueWorth(options?.length ?? 0, row.clue);
 }

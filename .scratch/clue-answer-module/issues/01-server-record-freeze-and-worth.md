@@ -11,7 +11,7 @@ Ticket 02 adds the phone's freeze state to the same module. No `/guide` or docs 
 
 **Blocked by:** the `grading-policy-graded-as` spec (all its tickets), which rewrites the same submit path first.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Pure Vitest tests in `shared/types` cover: first answer on clue 1 and on a later clue; an unchanged resend after a new clue keeps the old clue; a changed value on the same clue is re-recorded; a changed value after a new clue is frozen; a stored blank or "I don't know" never freezes, before or after a new clue; a blank sent over a frozen answer is still frozen; a type without clues records null; a missing highest clue reads as clue 1; worth on every clue for 2 and 8 clues
 - [ ] The Answer service no longer contains the freeze rule; a frozen resubmission still throws `AnswerLockedError` with the same message

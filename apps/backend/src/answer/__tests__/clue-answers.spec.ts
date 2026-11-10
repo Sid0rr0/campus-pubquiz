@@ -93,109 +93,28 @@ describe('AnswerService (Postgres integration) - Clue question answers', () => {
     });
   });
 
-  it('accepts an unchanged resubmission after a newer clue and keeps its clue', async () => {
+  it('reports the worth from the clue count, not from the stored points', async () => {
     const question = await clueQuestion();
-    const team = await insertTeam('The Quizzards', 'token-1');
-    const submit = (clue: number) =>
-      state.answerService.submit(
-        state.session.id,
-        gradable(question),
-        team.id,
-        'Curie',
-        null,
-        clue,
-      );
-    await submit(1);
-
-    await submit(4);
-
-    expect(await answerOf(question)).toMatchObject({ clue: 1 });
-  });
-
-  it.each(['', '__idk__'])(
-    'lets a team that cleared its answer (%j) answer on a later clue at that clue value',
-    async (cleared) => {
-      const question = await clueQuestion();
-      const team = await insertTeam('The Quizzards', 'token-1');
-      const submit = (value: string, clue: number) =>
-        state.answerService.submit(
-          state.session.id,
-          gradable(question),
-          team.id,
-          value,
-          null,
-          clue,
-        );
-      await submit('Curie', 1);
-      await submit(cleared, 1);
-
-      await submit('Marie Curie', 3);
-
-      expect(await answerOf(question)).toMatchObject({
-        value: 'Marie Curie',
-        clue: 3,
-        pointsAwarded: 1.5,
-      });
-    },
-  );
-
-  it('still refuses to clear an answer a newer clue has frozen', async () => {
-    const question = await clueQuestion();
-    const team = await insertTeam('The Quizzards', 'token-1');
-    const submit = (value: string, clue: number) =>
-      state.answerService.submit(
-        state.session.id,
-        gradable(question),
-        team.id,
-        value,
-        null,
-        clue,
-      );
-    await submit('Curie', 1);
-
-    await expect(submit('', 2)).rejects.toThrow(AnswerLockedError);
-  });
-
-  it('accepts a change on the same clue, and on the last clue, at the current clue', async () => {
-    const question = await clueQuestion();
-    const team = await insertTeam('The Quizzards', 'token-1');
-    const submit = (value: string, clue: number) =>
-      state.answerService.submit(
-        state.session.id,
-        gradable(question),
-        team.id,
-        value,
-        null,
-        clue,
-      );
-    await submit('Curie', 5);
-
-    await submit('Marie Curie', 5);
-
-    expect(await answerOf(question)).toMatchObject({
-      value: 'Marie Curie',
-      clue: 5,
-      pointsAwarded: 0.5,
-    });
-  });
-
-  it('lets a team that has not answered answer on a later clue at that clue value', async () => {
-    const question = await clueQuestion();
+    question.points = 9;
+    await state.em.flush();
     const team = await insertTeam('The Quizzards', 'token-1');
 
-    await state.answerService.submit(
+    const submitted = await state.answerService.submit(
       state.session.id,
       gradable(question),
       team.id,
-      'Marie Curie',
+      'Curie',
       null,
-      4,
+      3,
     );
 
-    expect(await answerOf(question)).toMatchObject({
-      clue: 4,
-      pointsAwarded: 1,
-    });
+    expect(submitted.clueValue).toBe(1.5);
+    expect(await answerOf(question)).toMatchObject({ clue: 3, clueValue: 1.5 });
+    const [mine] = await state.answerService.listForTeam(
+      state.session.id,
+      team.id,
+    );
+    expect(mine).toMatchObject({ clue: 3, clueValue: 1.5 });
   });
 
   it('takes any hand-graded amount, judging it against the answer clue value', async () => {

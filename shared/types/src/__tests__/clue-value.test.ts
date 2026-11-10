@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  clueValue,
-  clueValueFromPoints,
-  cluePoints,
-  clueValues,
-} from '../clue-value';
+import { clueValue, cluePoints, clueValues } from '../clue-value';
 import { atClue, scoreSubmission } from '../scoring';
 
 describe('clue value', () => {
@@ -23,10 +18,6 @@ describe('clue value', () => {
   it('stores the first-clue value as the question points', () => {
     expect(cluePoints(5)).toBe(2.5);
     expect(cluePoints(2)).toBe(1);
-  });
-
-  it('reads a clue value from the question points alone', () => {
-    expect(clueValueFromPoints(2.5, 3)).toBe(1.5);
   });
 });
 

@@ -55,6 +55,7 @@ export * from './display-screen';
 export * from './control-availability';
 export * from './question-types';
 export * from './clue-value';
+export * from './clue-answer';
 export * from './question-row-schema';
 export * from './question-csv-codec';
 export * from './question-preview-schema';

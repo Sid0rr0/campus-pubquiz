@@ -11,7 +11,7 @@ import {
   type Verdict,
 } from './answer-kind';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
-import { clueValue } from './clue-value';
+import { clueWorth } from './clue-answer';
 import { parseFiniteNumber, widenedMargin } from './margin';
 import { halfPoints, nearestHalfPoint } from './score-math';
 
@@ -41,7 +41,7 @@ export function atClue<Q extends ScoredQuestion>(
   if (!QUESTION_KINDS[question.type].hasClues || clue === null) return question;
   return {
     ...question,
-    points: clueValue(question.options?.length ?? 0, clue),
+    points: clueWorth(question.options?.length ?? 0, clue),
   };
 }
 
