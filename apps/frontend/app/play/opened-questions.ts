@@ -42,7 +42,7 @@ function isRevealed(
 /** Every question the team has seen open so far, oldest round/position first, paired with the team's own answer (if any), the correct answer (once revealed), and points awarded plus verdict (shown once the question arrives with its answer — 0 for an unanswered question — even if the answer was actually graded earlier). A question counts as revealed when it arrives with an answer: the players view only carries answers the big screen has already shown. Both come from the team's own synced graded answers, closest_guess included. */
 export function buildOpenedQuestions(
   seenQuestions: Record<number, SeenQuestion>,
-  myAnswers: Record<number, MyAnswer> = {},
+  myAnswers: Record<number, MyAnswer>,
 ): OpenedQuestionEntry[] {
   return Object.values(seenQuestions)
     .map((question) => toOpenedEntry(question, myAnswers))

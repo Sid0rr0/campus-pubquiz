@@ -120,9 +120,9 @@ function RevealBody({ revealQuestion, myAnswer }: RevealBodyProps) {
   }
 }
 
-/** The value and recorded clue of a team answer, both undefined while unanswered. */
-function answerFields(answer: MyAnswer | undefined) {
-  return { value: answer?.value, clue: answer?.clue ?? undefined };
+/** The text and recorded clue of a team's answer to a question: undefined text while unanswered, a null clue when none is recorded. */
+function valueAndClueOf(answer: MyAnswer | undefined) {
+  return { value: answer?.value, clue: answer?.clue ?? null };
 }
 
 /** The block question picker + prompt + answer form, shown while a question is open and, unless the leaderboard overlay is on, through break/reveal so teams can browse back. */
@@ -146,7 +146,7 @@ export function QuestionBrowser({
   doubledRoundNumbers = [],
   purchases = [],
 }: QuestionBrowserProps) {
-  const { value: myAnswer, clue: myAnswerClue } = answerFields(
+  const { value: myAnswer, clue: myAnswerClue } = valueAndClueOf(
     myAnswers[selectedQuestion.id],
   );
   const verdictTextClass = yourAnswerTextClass({
@@ -245,7 +245,7 @@ function AnswerArea({
   removedOptions: ReturnType<typeof removedOptionsOf>;
   isQuickfireMode: boolean;
   pin: ReturnType<typeof pinFor>;
-  myAnswerClue: MyAnswerClue | undefined;
+  myAnswerClue: MyAnswerClue | null;
   myAnswer: string | undefined;
   onSubmit: (value: string) => void;
 }) {
@@ -312,7 +312,7 @@ function OpenQuestion({
 > & {
   question: QuestionBrowserProps['selectedQuestion'];
   myAnswer: string | undefined;
-  myAnswerClue: MyAnswerClue | undefined;
+  myAnswerClue: MyAnswerClue | null;
   purchases: NonNullable<QuestionBrowserProps['purchases']>;
 }) {
   const hasWiderMargin = purchases.some(
@@ -458,7 +458,7 @@ function RevealedAnswer({
 }: {
   revealQuestion: NonNullable<QuestionBrowserProps['revealQuestion']>;
   myAnswer: string | undefined;
-  myAnswerClue: MyAnswerClue | undefined;
+  myAnswerClue: MyAnswerClue | null;
   myAnswerPoints: QuestionBrowserProps['myAnswerPoints'];
   myAnswerJokerExtra: QuestionBrowserProps['myAnswerJokerExtra'];
   verdictTextClass: string;
@@ -489,7 +489,7 @@ function RevealedAnswer({
           )}
         </p>
       )}
-      {myAnswerClue !== undefined && (
+      {myAnswerClue !== null && (
         <p className="text-sm font-extrabold text-foreground/55">
           You answered on clue {myAnswerClue.clue}
         </p>
