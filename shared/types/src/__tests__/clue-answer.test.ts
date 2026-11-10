@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { isNonAnswer } from '../answers';
 import { clueFreezeState, clueToRecord, clueWorth } from '../clue-answer';
 
 const clues = { type: 'clues' as const };
@@ -94,8 +93,7 @@ describe('clueFreezeState', () => {
     (value, clue, high) => {
       const changed = `${value}!`;
       expect(clueFreezeState(four, answer(value, clue), high).isFrozen).toBe(
-        clueToRecord(clues, stored(value, clue), changed, high) === 'frozen' &&
-          !isNonAnswer(value),
+        clueToRecord(clues, stored(value, clue), changed, high) === 'frozen',
       );
     },
   );

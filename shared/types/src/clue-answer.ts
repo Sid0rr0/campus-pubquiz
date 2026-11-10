@@ -5,12 +5,17 @@ import type { QuestionType } from './question-types';
 
 /**
  * The Clue answer module: the rules for a team's answer to a Clue question,
- * pure so the server (and later the phone) read one source.
+ * pure so the server and the phone read one source.
  */
 
 /** What a right answer locked in on clue `clue` (1-based) of `clueCount` is worth. */
 export function clueWorth(clueCount: number, clue: number): number {
   return clueValue(clueCount, clue);
+}
+
+/** The one freeze rule: an answer locked in below the highest clue shown is frozen, unless it is a blank or "I don't know". */
+function isFrozenAt(value: string, clue: number, highest: number): boolean {
+  return clue < highest && !isNonAnswer(value);
 }
 
 /**
@@ -32,8 +37,7 @@ export function clueFreezeState(
     isFrozen:
       answer.value !== undefined &&
       answer.clue !== undefined &&
-      !isNonAnswer(answer.value) &&
-      answer.clue < highest,
+      isFrozenAt(answer.value, answer.clue, highest),
     isFreezable: highest < (question.clueCount ?? 0),
   };
 }
@@ -56,6 +60,6 @@ export function clueToRecord(
   if (existing === null) return highest;
   const stored = existing.clue ?? highest;
   if (existing.value === value) return stored;
-  if (stored < highest && !isNonAnswer(existing.value)) return 'frozen';
+  if (isFrozenAt(existing.value, stored, highest)) return 'frozen';
   return highest;
 }

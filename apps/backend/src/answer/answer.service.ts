@@ -254,12 +254,14 @@ export class AnswerService {
       gameSessionId,
       questionId,
     );
+    const clueCounts = new Map<number, number>();
     return rows.map((row) =>
       toAnswerView(
         row,
         used
           .filter(({ teamId }) => teamId === row.team.id)
           .map((u) => u.powerUp),
+        clueCounts,
       ),
     );
   }
@@ -294,6 +296,7 @@ export class AnswerService {
       { gameSession: gameSessionId, team: teamId },
       { populate: ['question'] },
     );
+    const clueCounts = new Map<number, number>();
     return rows.map((row) => ({
       questionId: row.question.id,
       value: row.value,
@@ -301,7 +304,7 @@ export class AnswerService {
       gradedAt: row.gradedAt?.toISOString() ?? null,
       verdict: row.verdict,
       clue: row.clue,
-      clueValue: clueValueOf(row),
+      clueValue: clueValueOf(row, clueCounts),
     }));
   }
 
@@ -484,7 +487,11 @@ export class AnswerService {
 }
 
 /** An answer row as the admin's answer list shows it; the one place a stored answer becomes an admin answer view, its grading state asked of the Grading policy. */
-function toAnswerView(row: Answer, powerUps: PowerUpId[]): AnswerView {
+function toAnswerView(
+  row: Answer,
+  powerUps: PowerUpId[],
+  clueCounts: Map<number, number>,
+): AnswerView {
   return {
     powerUps,
     answerId: row.id,
@@ -496,15 +503,22 @@ function toAnswerView(row: Answer, powerUps: PowerUpId[]): AnswerView {
     gradedAt: row.gradedAt?.toISOString() ?? null,
     verdict: row.verdict,
     clue: row.clue,
-    clueValue: clueValueOf(row),
+    clueValue: clueValueOf(row, clueCounts),
   };
 }
 
-/** What a right answer is worth at the clue the row was locked in on (the question's points are its first-clue value); null for any other type. */
-function clueValueOf(row: Answer): number | null {
+/** What a right answer is worth at the clue the row was locked in on, from its question's clue count (parsed once per question into `clueCounts`); null for any other type. */
+function clueValueOf(
+  row: Answer,
+  clueCounts: Map<number, number>,
+): number | null {
   if (!QUESTION_KINDS[row.question.type].hasClues || row.clue === null) {
     return null;
   }
-  const { options } = readQuestionPayload(row.question);
-  return clueWorth(options?.length ?? 0, row.clue);
+  let count = clueCounts.get(row.question.id);
+  if (count === undefined) {
+    count = readQuestionPayload(row.question).options?.length ?? 0;
+    clueCounts.set(row.question.id, count);
+  }
+  return clueWorth(count, row.clue);
 }
