@@ -8,11 +8,9 @@ import type {
   Verdict,
 } from '@campus-pubquiz/types';
 import {
-  atClue,
   clueValueFromPoints,
   isNonAnswer,
   QUESTION_KINDS,
-  verdictForManualGrade,
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -20,10 +18,10 @@ import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { PurchaseService } from '@/purchase/purchase.service';
 import {
-  canGradeByHand,
-  gradeAtSubmit,
+  gradeByHand,
   gradeOnKeyFix,
   gradeOnSubmit,
+  gradeOnWiderMarginBought,
   gradingStateOf,
   lockBatchWrites,
   speedScore,
@@ -344,21 +342,25 @@ export class AnswerService {
       gameSession: gameSessionId,
       question: question.id,
     });
-    // Whether this answer may be hand-graded yet is the Grading policy's
-    // call (a batch answer only once its batch has run).
-    if (!canGradeByHand(question, answer)) {
+    // Whether this answer may be hand-graded yet, and its verdict, are the
+    // Grading policy's call (a batch answer only once its batch has run).
+    const write = gradeByHand(
+      question,
+      {
+        gradedAt: answer.gradedAt,
+        clue: answer.clue,
+        hasWiderMargin: (
+          await this.widerMarginTeamIds(gameSessionId, question.id)
+        ).has(answer.team.id),
+      },
+      pointsAwarded,
+    );
+    if (write === 'refused') {
       throw new AnswerGradeRefusedError(
         `${question.type} answers can only be graded by hand once the block locks`,
       );
     }
-    answer.pointsAwarded = pointsAwarded;
-    // A Clue answer is judged against its own clue's value, not the question's first-clue points.
-    answer.verdict = verdictForManualGrade(
-      atClue(question, answer.clue),
-      pointsAwarded,
-    );
-    answer.gradedAt = new Date();
-    await this.answers.getEntityManager().flush();
+    await this.applyWrites([answer], [write]);
   }
 
   /**
@@ -408,20 +410,7 @@ export class AnswerService {
       team: teamId,
     });
     if (!row) return;
-    const score = gradeAtSubmit(question, row.value, {
-      clue: null,
-      hasWiderMargin: true,
-    });
-    if (
-      score === null ||
-      (row.gradedAt !== null && row.pointsAwarded >= score.points)
-    ) {
-      return;
-    }
-    await this.applyWrites(
-      [row],
-      [{ kind: 'set', points: score.points, verdict: score.verdict }],
-    );
+    await this.applyWrites([row], [gradeOnWiderMarginBought(question, row)]);
   }
 
   /** Applies the policy's grade writes (one per row), stamping one grading time per flush; keep is a no-op. */

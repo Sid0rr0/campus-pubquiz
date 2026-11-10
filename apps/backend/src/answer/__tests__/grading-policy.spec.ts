@@ -10,7 +10,9 @@ import {
   canGradeByHand,
   gradeAtSubmit as policyGradeAtSubmit,
   lockBatchWrites,
+  gradeByHand,
   gradeOnKeyFix,
+  gradeOnWiderMarginBought,
   gradeOnSubmit as policyGradeOnSubmit,
   gradesAtLock,
   gradingStateOf,
@@ -323,6 +325,96 @@ describe('Grading policy: can grade by hand', () => {
 
   it('allows a batch answer once graded', () => {
     expect(canGradeByHand(BATCH, { gradedAt: new Date() })).toBe(true);
+  });
+});
+
+describe('Grading policy: hand grade', () => {
+  const stored = (gradedAt: Date | null, adjustments = NONE) => ({
+    gradedAt,
+    ...adjustments,
+  });
+
+  it('judges Correct on a Clue answer at its clue value', () => {
+    const atClue3 = stored(null, { ...NONE, clue: 3 });
+    expect(gradeByHand(CLUES, atClue3, 0.5)).toEqual({
+      kind: 'set',
+      points: 0.5,
+      verdict: 'correct',
+    });
+    expect(gradeByHand(CLUES, atClue3, 0.25)).toEqual({
+      kind: 'set',
+      points: 0.25,
+      verdict: 'partial',
+    });
+    expect(gradeByHand(CLUES, atClue3, 0)).toEqual({
+      kind: 'set',
+      points: 0,
+      verdict: 'incorrect',
+    });
+  });
+
+  it('judges a plain answer against the question points', () => {
+    expect(gradeByHand(MATCH_OR_HUMAN, stored(null), 3)).toEqual({
+      kind: 'set',
+      points: 3,
+      verdict: 'correct',
+    });
+  });
+
+  it('grades a wider-margin answer through the graded-as question', () => {
+    expect(gradeByHand(NUMBER, stored(null, WIDER), 4)).toEqual({
+      kind: 'set',
+      points: 4,
+      verdict: 'correct',
+    });
+  });
+
+  it('refuses a batch answer before its batch has run, and grades it after', () => {
+    expect(gradeByHand(BATCH, stored(null), 5)).toBe('refused');
+    expect(gradeByHand(BATCH, stored(new Date()), 5)).toEqual({
+      kind: 'set',
+      points: 5,
+      verdict: 'correct',
+    });
+  });
+});
+
+describe('Grading policy: wider margin bought', () => {
+  const OLD = new Date('2026-01-01');
+  // 115 misses the plain margin (4 points at the widened one); 500 misses both.
+  const answer = (value: string, gradedAt: Date | null, pointsAwarded = 0) => ({
+    value,
+    gradedAt,
+    pointsAwarded,
+    ...NONE,
+  });
+
+  it('grades an answer the widened margin now hits, replacing no grade or a lower one', () => {
+    const set = { kind: 'set', points: 4, verdict: 'correct' };
+    expect(gradeOnWiderMarginBought(NUMBER, answer('115', null))).toEqual(set);
+    expect(gradeOnWiderMarginBought(NUMBER, answer('115', OLD, 1))).toEqual(
+      set,
+    );
+  });
+
+  it.each([4, 5])('keeps a grade of %s, at or above the widened score', (n) => {
+    expect(gradeOnWiderMarginBought(NUMBER, answer('115', OLD, n))).toEqual({
+      kind: 'keep',
+    });
+  });
+
+  it('writes nothing for a graded answer the widened margin still misses', () => {
+    expect(gradeOnWiderMarginBought(NUMBER, answer('500', OLD, 0))).toEqual({
+      kind: 'keep',
+    });
+  });
+
+  it('grades a still-ungraded answer even when it stays wrong', () => {
+    expect(gradeOnWiderMarginBought(NUMBER, answer('500', null))).toEqual({
+      kind: 'set',
+      points: 0,
+      verdict: 'incorrect',
+    });
   });
 });
 

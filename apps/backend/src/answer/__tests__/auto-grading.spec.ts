@@ -582,8 +582,6 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     });
 
     describe('a wider margin', () => {
-      const OLD = new Date('2026-01-01T00:00:00Z');
-
       async function answered(value: string) {
         const question = await numberQuestion();
         const team = await insertTeam('The Quizzards', 'token-1');
@@ -657,53 +655,6 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
         );
         expect(answer.pointsAwarded).toBe(4);
         expect(answer.verdict).toBe('correct');
-      });
-
-      it.each([
-        ['equal to', 4],
-        ['above', 5],
-      ])(
-        'leaves a grade %s the widened score untouched',
-        async (_name, points) => {
-          const { question, team, row } = await answered('280');
-          row.pointsAwarded = points;
-          row.verdict = 'correct';
-          row.gradedAt = OLD;
-          await state.em.flush();
-
-          await state.answerService.regradeForWiderMargin(
-            state.session.id,
-            gradable(question),
-            team.id,
-          );
-
-          const [answer] = await state.answerService.listForQuestion(
-            state.session.id,
-            question.id,
-          );
-          expect(answer.pointsAwarded).toBe(points);
-          expect(new Date(answer.gradedAt!)).toEqual(OLD);
-        },
-      );
-
-      it('grades an answer still ungraded even when it stays wrong', async () => {
-        const { question, team, row } = await answered('500');
-        row.gradedAt = null;
-        row.verdict = null;
-        await state.em.flush();
-
-        await state.answerService.regradeForWiderMargin(
-          state.session.id,
-          gradable(question),
-          team.id,
-        );
-
-        const [answer] = await state.answerService.listForQuestion(
-          state.session.id,
-          question.id,
-        );
-        expect(answer.gradedAt).not.toBeNull();
-        expect(answer.verdict).toBe('incorrect');
       });
     });
   });

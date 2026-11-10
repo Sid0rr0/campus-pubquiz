@@ -9,6 +9,7 @@ import {
   type GradingState,
   type ScoredQuestion,
   type ScoreResult,
+  verdictForManualGrade,
   withWiderMargin,
 } from '@campus-pubquiz/types';
 
@@ -153,6 +154,46 @@ export function gradingStateOf(
 ): GradingState {
   if (stored.gradedAt !== null) return 'graded';
   return canGradeByHand(question, stored) ? 'ungraded' : 'awaiting_batch';
+}
+
+/**
+ * What a hand grade of `points` does to a stored answer: the verdict judged
+ * against the question the answer is graded as, or 'refused' when the
+ * hand-grade rule says no.
+ */
+export function gradeByHand(
+  question: ScoredQuestion,
+  stored: { gradedAt: Date | null } & AnswerAdjustments,
+  points: number,
+): GradeWrite | 'refused' {
+  if (!canGradeByHand(question, stored)) return 'refused';
+  return {
+    kind: 'set',
+    points,
+    verdict: verdictForManualGrade(gradedAs(question, stored), points),
+  };
+}
+
+/**
+ * A team just bought a wider margin: grades its stored answer against the
+ * widened margin. The widening only ever adds points, so a grade at or above
+ * the new score (a moderator's higher mark) is kept.
+ */
+export function gradeOnWiderMarginBought(
+  question: ScoredQuestion,
+  stored: StoredAnswerGrade & { pointsAwarded: number; clue: number | null },
+): GradeWrite {
+  const score = gradeAtSubmit(question, stored.value, {
+    clue: stored.clue,
+    hasWiderMargin: true,
+  });
+  if (
+    score === null ||
+    (stored.gradedAt !== null && stored.pointsAwarded >= score.points)
+  ) {
+    return KEEP;
+  }
+  return setOf(score);
 }
 
 /** A stored answer as the key-fix event reads it. */

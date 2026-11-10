@@ -10,7 +10,7 @@ No `/guide` or docs text: behaviour is unchanged.
 
 **Blocked by:** 01 (The Grading policy works out the graded-as question for submit, key fix and speed score), which adds the adjustments and the builder and edits the same files.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Policy spec, hand grade: Correct on a Clue answer at a later clue is a correct verdict at that clue's value, less is partial, zero is incorrect; a batch answer before its batch runs is refused; a wider-margin answer is graded through the builder
 - [ ] Policy spec, wider margin bought: a higher moderator grade is kept; a lower grade or no grade is replaced; an answer the widened margin still misses gets no write
