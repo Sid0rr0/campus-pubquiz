@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // CRAP score report (complexity × missing coverage) via unclebob/crapper.
 //   node scripts/crap.mjs            every workspace: rerun coverage, rank all functions
-//   node scripts/crap.mjs --changed  only uncommitted source files; coverage rerun only where they live
-// Exits 2 when any scored function is above THRESHOLD. Backend coverage needs Docker (Testcontainers).
+//   node scripts/crap.mjs --changed  only uncommitted source files; coverage from only the tests that import them
+// Exits 2 when any scored function is above THRESHOLD, and always ends on a `crap: exit <code>` line
+// (wait on that line for a backgrounded run). Backend coverage needs Docker (Testcontainers).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -19,9 +20,12 @@ const VENV_OK = join(TOOL, '.venv', '.installed');
 const zeroThresholds = ['lines', 'functions', 'branches', 'statements'].map(
   (k) => `--coverage.thresholds.${k}=0`,
 );
-const vitest = (name) => [
+// `related` (Vitest) and --findRelatedTests (Jest) follow the import graph, so every test that can reach a file runs.
+const vitest = (name) => (related) => [
   'vitest',
-  'run',
+  ...(related
+    ? ['related', '--run', '--passWithNoTests', ...related]
+    : ['run']),
   '--coverage',
   '--coverage.reporter=lcov',
   `--coverage.reportsDirectory=${join(ROOT, 'coverage', name)}`,
@@ -39,8 +43,11 @@ const WORKSPACES = [
     name: 'backend',
     dir: 'apps/backend',
     src: 'apps/backend/src',
-    cmd: [
+    cmd: (related) => [
       'jest',
+      ...(related
+        ? ['--passWithNoTests', '--findRelatedTests', ...related]
+        : []),
       '--maxWorkers=2',
       '--coverage',
       '--coverageReporters=lcov',
@@ -67,11 +74,16 @@ function run(cmd, args, cwd = ROOT) {
   return r.status ?? 1;
 }
 
+function exit(code) {
+  console.log(`crap: exit ${code}`);
+  process.exit(code);
+}
+
 function must(cmd, args, cwd) {
   const code = run(cmd, args, cwd);
   if (code !== 0) {
     console.error(`crap: \`${cmd} ${args.join(' ')}\` exited ${code}`);
-    process.exit(1);
+    exit(1);
   }
 }
 
@@ -125,7 +137,7 @@ const changed = process.argv.includes('--changed');
 const files = changed ? changedSources() : null;
 if (changed && files.length === 0) {
   console.log('crap: no uncommitted source changes to score.');
-  process.exit(0);
+  exit(0);
 }
 const workspaces = changed
   ? WORKSPACES.filter((w) => files.some((f) => f.startsWith(`${w.src}/`)))
@@ -135,11 +147,14 @@ ensureCrapper();
 for (const w of workspaces) {
   console.log(`crap: coverage for ${w.name}`);
   // A failed run leaves no report (Vitest clears it first), so every function would score 0% covered.
-  if (run('pnpm', ['exec', ...w.cmd], join(ROOT, w.dir)) !== 0) {
+  const related = files
+    ?.filter((f) => f.startsWith(`${w.src}/`))
+    .map((f) => join(ROOT, f));
+  if (run('pnpm', ['exec', ...w.cmd(related)], join(ROOT, w.dir)) !== 0) {
     console.error(
       `crap: ${w.name} tests failed, so its scores would be wrong. Fix the tests and rerun.`,
     );
-    process.exit(1);
+    exit(1);
   }
 }
 
@@ -151,4 +166,4 @@ const code = run(join(TOOL, '.venv', 'bin', 'python'), [
   THRESHOLD,
   ...(changed ? files : WORKSPACES.map((w) => w.src)),
 ]);
-process.exit(code);
+exit(code);
