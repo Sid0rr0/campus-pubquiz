@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PresenterContextPayload } from '@campus-pubquiz/types';
@@ -406,6 +406,45 @@ describe('RemotePage — content', () => {
     renderWithQuery(<RemotePage />);
 
     expect(screen.getByText('Clue 2 of 3')).toBeInTheDocument();
+  });
+
+  it('lists every clue of the Clue question on display, marked from the highest clue shown, and plain up next', () => {
+    const clues = ['Vague', 'Sharper', 'Giveaway'];
+    const clueQuestion = {
+      type: 'clues' as const,
+      prompt: 'Who am I?',
+      options: clues,
+      points: 1.5,
+    };
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        rounds: [{ questions: [clueQuestion] }],
+        progress: { status: 'question_open' },
+        clueStep: 1,
+        highestClueShown: { 1: 2 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({
+        currentScreen: {
+          heading: 'R1 Q1',
+          question: { ...clueQuestion, id: 1, answer: 'Einstein' },
+        },
+        nextScreen: {
+          heading: 'R1 Q2',
+          question: { ...clueQuestion, id: 2, answer: 'Curie' },
+        },
+      }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    const [onDisplay, upNext] = screen.getAllByRole('list', { name: 'Clues' });
+    const states = (list: HTMLElement) =>
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.dataset.state);
+    expect(states(onDisplay)).toEqual(['shown', 'latest', 'hidden']);
+    expect(states(upNext)).toEqual([undefined, undefined, undefined]);
   });
 
   it('shows how many teams answered correctly once graded', () => {

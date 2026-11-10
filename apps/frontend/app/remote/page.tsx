@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   isRoundNoteScreen,
+  QUESTION_KINDS,
   type PresenterContextPayload,
   type SeededQuestion,
   type ScreenPreview,
@@ -13,17 +14,28 @@ import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 import { MediaPauseButton } from '@/app/control/media-pause-button';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
+import { AllCluesList } from '@/app/control/all-clues-list';
 import { ClueStatus } from '@/app/control/clue-status';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { useAdminMediaPauseShortcut } from '@/app/control/use-admin-keyboard-shortcuts';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
-function NextQuestionPreview({ question }: { question: SeededQuestion }) {
+function NextQuestionPreview({
+  question,
+  highestClue,
+}: {
+  question: SeededQuestion;
+  highestClue?: number;
+}) {
+  const hasClues = QUESTION_KINDS[question.type].hasClues;
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className="font-bold">{question.prompt}</p>
-      {question.options && question.options.length > 0 && (
+      {hasClues && question.options && (
+        <AllCluesList clues={question.options} highestClue={highestClue} />
+      )}
+      {!hasClues && question.options && question.options.length > 0 && (
         <ul className="list-disc pl-5">
           {question.options.map((option) => (
             <li key={option}>{option}</li>
@@ -60,9 +72,15 @@ function ScreenSummaryLine({ screen }: { screen: ScreenPreview }) {
   );
 }
 
-function ScreenPreviewCard({ screen }: { screen: ScreenPreview }) {
+function ScreenPreviewCard({
+  screen,
+  highestClue,
+}: {
+  screen: ScreenPreview;
+  highestClue?: number;
+}) {
   return screen.question ? (
-    <NextQuestionPreview question={screen.question} />
+    <NextQuestionPreview question={screen.question} highestClue={highestClue} />
   ) : (
     screen.body && <p className="text-sm text-foreground/70">{screen.body}</p>
   );
@@ -129,7 +147,10 @@ function RemotePageContent() {
         </p>
       )}
       <RemoteStatusBar snapshot={snapshot} liveAnswers={liveAnswers} />
-      <OnDisplaySection presenterContext={presenterContext} />
+      <OnDisplaySection
+        presenterContext={presenterContext}
+        currentQuestion={snapshot.currentQuestion}
+      />
 
       <section
         aria-labelledby="remote-notes"
@@ -234,9 +255,12 @@ function RemoteStatusBar({
 
 function OnDisplaySection({
   presenterContext,
+  currentQuestion,
 }: {
   presenterContext: PresenterContext;
+  currentQuestion: RemoteSnapshot['currentQuestion'];
 }) {
+  const onAirId = presenterContext?.currentScreen.question?.id;
   return (
     <section
       aria-labelledby="remote-on-display"
@@ -254,7 +278,14 @@ function OnDisplaySection({
         )}
       </div>
       {presenterContext ? (
-        <ScreenPreviewCard screen={presenterContext.currentScreen} />
+        <ScreenPreviewCard
+          screen={presenterContext.currentScreen}
+          highestClue={
+            currentQuestion && currentQuestion.id === onAirId
+              ? currentQuestion.highestClue
+              : undefined
+          }
+        />
       ) : (
         <p className="text-sm text-foreground/50">Loading…</p>
       )}

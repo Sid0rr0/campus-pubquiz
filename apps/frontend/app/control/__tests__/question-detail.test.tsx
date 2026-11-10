@@ -203,6 +203,35 @@ describe('QuestionDetail', () => {
     expect(screen.getByText('Read both lists aloud.')).toBeInTheDocument();
   });
 
+  it("lists a Clue question's clues, marked from the highest clue shown, and no Choices", () => {
+    render(
+      <QuestionDetail
+        questionId={5}
+        rounds={roundWith({
+          id: 5,
+          type: 'clues',
+          prompt: 'Who am I?',
+          options: ['Born in Ulm', 'Patent clerk'],
+          answer: 'Einstein',
+        })}
+        liveAnswers={null}
+        fallbackQuestions={[]}
+        highestClue={1}
+      />,
+    );
+
+    const clues = within(
+      screen.getByRole('list', { name: 'Clues' }),
+    ).getAllByRole('listitem');
+    expect(clues.map((clue) => clue.dataset.state)).toEqual([
+      'latest',
+      'hidden',
+    ]);
+    expect(
+      screen.queryByRole('list', { name: 'Choices' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows just the prompt from the live snapshot while nothing else has loaded', () => {
     renderDetail(99, [], null, 'Loading gap prompt');
 

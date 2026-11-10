@@ -485,6 +485,11 @@ function SessionWorkspace({
                 rounds={rounds}
                 liveAnswers={liveAnswers}
                 fallbackQuestions={fallbackQuestions}
+                highestClue={
+                  currentQuestion?.id === questionId
+                    ? currentQuestion.highestClue
+                    : undefined
+                }
               />
             )}
           </div>

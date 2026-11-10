@@ -283,12 +283,13 @@ describe('GuideContent', () => {
     const text = renderGuideText();
 
     expect(text).toContain('Advance shows the next clue');
-    expect(text).toContain('the room has seen it, so scoring keeps it');
+    expect(text).toContain('hides a clue, but scoring keeps it');
     expect(text).toContain(
       'half a point per clue not yet seen, counting the latest',
     );
     expect(text).toContain('answer freezes once a new clue is shown');
     expect(text).toContain('Grade right or wrong; Custom for other amounts');
+    expect(text).toContain('Control and Remote list every clue with its value');
   });
 
   it('says grading can start before the break and must finish in it', () => {

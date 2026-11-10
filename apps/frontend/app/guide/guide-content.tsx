@@ -109,8 +109,9 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Clue questions',
     paragraphs: [
-      'Advance shows the next clue, and on the last clue moves on. Previous hides a clue, but the room has seen it, so scoring keeps it.',
+      'Advance shows the next clue, and on the last clue moves on. Previous hides a clue, but scoring keeps it.',
       "A right answer is worth half a point per clue not yet seen, counting the latest. A team's answer freezes once a new clue is shown (not on the last). Grade right or wrong; Custom for other amounts.",
+      'Control and Remote list every clue with its value; unshown ones are greyed.',
     ],
   },
   {

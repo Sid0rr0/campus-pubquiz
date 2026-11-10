@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  QUESTION_KINDS,
   formatAnswer,
   resolveAnswerKind,
   type AnswerKind,
@@ -9,6 +10,7 @@ import {
   type QuestionView,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
+import { AllCluesList } from '@/app/control/all-clues-list';
 import { NotesLine } from '@/app/control/notes-line';
 
 interface QuestionDetailProps {
@@ -21,6 +23,8 @@ interface QuestionDetailProps {
    * ANSWERS_UPDATED roundtrip has arrived.
    */
   fallbackQuestions: QuestionView[];
+  /** The highest clue shown, when the question is the Clue question on air. */
+  highestClue?: number;
 }
 
 /** What the column draws; every field but the prompt is missing while data is still loading. */
@@ -166,8 +170,7 @@ function OptionList({
 export function QuestionDetail(props: QuestionDetailProps) {
   const detail = resolveDetail(props);
   if (!detail) return null;
-  const { type, correctAnswer, options, matchTargets } = detail;
-  const headings = type && OPTION_HEADINGS[resolveAnswerKind({ type })];
+  const { type, correctAnswer, options } = detail;
 
   return (
     <section
@@ -186,15 +189,45 @@ export function QuestionDetail(props: QuestionDetailProps) {
         </p>
       )}
       {detail.notes && <NotesLine notes={detail.notes} />}
-      {headings && options && (
-        <OptionLists
-          headings={headings}
+      {type && options && (
+        <OptionsSection
+          {...detail}
+          type={type}
           options={options}
-          matchTargets={matchTargets}
-          correctAnswer={correctAnswer}
+          highestClue={props.highestClue}
         />
       )}
     </section>
+  );
+}
+
+/** A Clue question's clues, or the option list(s) of a kind that has them; nothing for any other kind. */
+function OptionsSection({
+  type,
+  options,
+  matchTargets,
+  correctAnswer,
+  highestClue,
+}: {
+  type: QuestionType;
+  options: string[];
+  matchTargets?: string[];
+  correctAnswer?: string;
+  highestClue?: number;
+}) {
+  if (QUESTION_KINDS[type].hasClues) {
+    return <AllCluesList clues={options} highestClue={highestClue} />;
+  }
+  const headings = OPTION_HEADINGS[resolveAnswerKind({ type })];
+  return (
+    headings && (
+      <OptionLists
+        headings={headings}
+        options={options}
+        matchTargets={matchTargets}
+        correctAnswer={correctAnswer}
+      />
+    )
   );
 }
 

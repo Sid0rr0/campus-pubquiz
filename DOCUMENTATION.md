@@ -1510,9 +1510,13 @@ grading behavior. Media is not a type: any question can carry a
   clues, a clue containing `|` and an empty answer. **Editor:** picking the type
   shows a clue list (add, delete, move up/down) and the per-clue value line in
   place of the points field. **No clue leaves the server before it is shown**:
-  `toQuestionView`, the admin question context and the presenter's screen
-  preview drop `options` for a `hasClues` type (`withoutClues`), and only the
-  reveal views carry them (all of them, including clues never shown).
+  `toQuestionView` and the admin question context drop `options` for a
+  `hasClues` type (`withoutClues`), and only the reveal views carry them (all
+  of them, including clues never shown). The one staff exception is the
+  presenter's screen preview (`PRESENTER_CONTEXT_UPDATED`, admin room only),
+  which carries every clue so `/remote` can list them ahead; `/control` lists
+  them from the quiz summary. Both mark the clues shown from `highestClue`
+  and give each clue's value.
   **Showing the clues:** while a Clue question is asked (`question_open` or
   `locking`) the quiz master steps through its clues with Advance and Previous,
   a third kind (`clues`) of the Stepped reveal beside `closest_guess` and
