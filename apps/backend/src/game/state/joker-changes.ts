@@ -1,4 +1,5 @@
 import {
+  canBeDoubled,
   canChooseJoker,
   canSetJoker,
   drawJoker,
@@ -70,6 +71,8 @@ export class JokerChanges {
     if (!isJokerPickOpen(session)) {
       throw new SessionRefusal('The joker pick is not open');
     }
+    // Before the general check below, so a Clue round gets its own refusal, not "it has already started".
+    refuseClueRound(session, roundId);
     const pickableRoundIds = pickableRoundIdsOf(session);
     if (!canChooseJoker({ isPickOpen: true, pickableRoundIds }, roundId)) {
       throw new SessionRefusal(
@@ -100,6 +103,7 @@ export class JokerChanges {
     if (!session.teams.some((team) => team.teamId === teamId)) {
       throw new SessionRefusal(`Team ${teamId} is not in this session`);
     }
+    refuseClueRound(session, roundId);
     const canSet = canSetJoker(
       {
         isEnabled: session.seededGame.settings.jokersEnabled,
@@ -367,12 +371,19 @@ export function withJoker(
     : { ...session, jokers: { ...session.jokers, [teamId]: joker } };
 }
 
-/** The ids of the session's rounds with no opened question. */
+/** The ids of the rounds a joker may sit on: no opened question, and no Clue question. */
 function pickableRoundIdsOf(session: SessionState): number[] {
-  return pickableRounds(
-    session.seededGame.rounds,
-    session.openedQuestionIds,
-  ).map((round) => round.id);
+  return pickableRounds(session.seededGame.rounds, session.openedQuestionIds)
+    .filter(canBeDoubled)
+    .map((round) => round.id);
+}
+
+/** Refuses a round that has a Clue question: it is never doubled. */
+function refuseClueRound(session: SessionState, roundId: number): void {
+  const round = session.seededGame.rounds.find(({ id }) => id === roundId);
+  if (round && !canBeDoubled(round)) {
+    throw new SessionRefusal("That round can't be a joker round");
+  }
 }
 
 /**

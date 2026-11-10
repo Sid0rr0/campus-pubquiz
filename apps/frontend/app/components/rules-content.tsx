@@ -134,7 +134,10 @@ export function RulesContent({
     teamSizeRule,
     ...rules,
     ...bonusRules,
-    ...(jokersEnabled ? [JOKER_RULE] : []),
+    // With no round that can be a joker round the pick is skipped, so the line goes too.
+    ...(jokersEnabled && quizStructure?.hasJokerPick !== false
+      ? [JOKER_RULE]
+      : []),
     ...(powerUpsEnabled
       ? [
           `Power-ups are on: you start with ${startingCoins} ${pluralize(startingCoins, 'coin')}. If your team rated all rounds of the last pub quiz, you get ${CARRIED_COINS} bonus coins. Earn more with shots and selfies.`,

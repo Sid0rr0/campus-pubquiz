@@ -1,7 +1,7 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import { formatAnswer, type Verdict } from './answer-kind';
-import { doubledRoundIdsOfTeam } from './doubled-rounds';
+import { canBeDoubled, doubledRoundIdsOfTeam } from './doubled-rounds';
 import { jokerRoundPoints } from './joker';
 import type { PowerUpId } from './power-ups';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
@@ -341,6 +341,7 @@ function jokerFacts(
     roundNumber: index + 1,
     roundTitle: round.title,
     questionIds: round.questions.map((question) => question.id),
+    canBeJoker: canBeDoubled(round),
   }));
   const holders = jokerHolders(session, rounds);
   if (holders.length === 0) return [];
@@ -352,6 +353,7 @@ function jokerFacts(
 
 interface QuizJokerRound extends JokerRound {
   questionIds: number[];
+  canBeJoker: boolean;
 }
 
 interface JokerHolder {
@@ -411,7 +413,9 @@ function jokerCountFacts(
     rounds,
     (r) => -(teamsPerRound.get(r.roundId) ?? 0),
   );
-  const snubbed = rounds.find((r) => !teamsPerRound.has(r.roundId));
+  const snubbed = rounds.find(
+    (r) => r.canBeJoker && !teamsPerRound.has(r.roundId),
+  );
   const drawn = holders.filter(({ joker }) => joker.source === 'drawn').length;
   return [
     favourite && teamsPerRound.has(favourite.roundId)

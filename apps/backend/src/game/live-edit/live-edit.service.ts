@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   getSessionLiveEditFrontier,
   mergeLiveEditFrontiers,
+  QUESTION_KINDS,
   type LiveEditFrontier,
   type QuizDraftSaveRequest,
   type QuizDraftSaveResult,
@@ -24,12 +25,14 @@ import { BlockGradingService } from '@/game/state/block-grading.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
 import { SessionWrite, type HeldWriter } from '@/game/state/session-write';
 import {
+  findCluesOnDoubledRounds,
   findDroppedAnsweredQuestions,
   findForeignQuestionIds,
   findLiveEditViolations,
   findMovedAnsweredQuestions,
   findRegradeQuestionIds,
   QuizLiveEditBlockedError,
+  type DoubledRoundQuestions,
 } from '@/quiz/live-edit-guard';
 import {
   QuizDraftInvalidError,
@@ -195,11 +198,13 @@ export class LiveEditService {
           const frontier = mergeLiveEditFrontiers(
             liveSessions.map((session) => getSessionLiveEditFrontier(session)),
           );
-          const issues = findLiveEditViolations(
-            currentDraft.rounds,
-            rounds,
-            frontier,
-          );
+          const issues = [
+            ...findLiveEditViolations(currentDraft.rounds, rounds, frontier),
+            ...findCluesOnDoubledRounds(
+              rounds,
+              liveSessions.flatMap(doubledRoundQuestions),
+            ),
+          ];
           if (issues.length > 0) throw new QuizLiveEditBlockedError(issues);
           const regradeQuestionIds = findRegradeQuestionIds(
             currentDraft.rounds,
@@ -289,4 +294,22 @@ export class LiveEditService {
     }
     if (!swallowErrors && failures.length > 0) throw failures[0];
   }
+}
+
+/** Every round a team doubles in `session` (a joker, chosen during the pick or held, or a bought extra joker), with its questions and its Clue questions. */
+function doubledRoundQuestions(session: SessionState): DoubledRoundQuestions[] {
+  const doubledIds = new Set([
+    ...Object.values(session.jokers).map((joker) => joker.roundId),
+    ...session.funFactData.powerUps.flatMap(({ powerUp, roundId }) =>
+      powerUp === 'extra_joker' && roundId !== null ? [roundId] : [],
+    ),
+  ]);
+  return session.seededGame.rounds
+    .filter((round) => doubledIds.has(round.id))
+    .map(({ questions }) => ({
+      questionIds: questions.map((question) => question.id),
+      clueQuestionIds: questions
+        .filter((question) => QUESTION_KINDS[question.type].hasClues)
+        .map((question) => question.id),
+    }));
 }

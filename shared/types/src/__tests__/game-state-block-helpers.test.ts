@@ -141,6 +141,7 @@ describe('getBreakNumber', () => {
         breakRoundNumbers: [],
         minQuestionsPerTopic: 0,
         maxQuestionsPerTopic: 0,
+        hasJokerPick: false,
       }),
     ).toBe(0);
   });
@@ -257,6 +258,7 @@ describe('getQuizStructureSummary', () => {
       breakRoundNumbers: [2],
       minQuestionsPerTopic: 2,
       maxQuestionsPerTopic: 2,
+      hasJokerPick: false,
     });
   });
 
@@ -277,6 +279,7 @@ describe('getQuizStructureSummary', () => {
       breakRoundNumbers: [2, 4, 6],
       minQuestionsPerTopic: 1,
       maxQuestionsPerTopic: 1,
+      hasJokerPick: false,
     });
   });
 
@@ -294,6 +297,7 @@ describe('getQuizStructureSummary', () => {
       breakRoundNumbers: [1, 3],
       minQuestionsPerTopic: 1,
       maxQuestionsPerTopic: 1,
+      hasJokerPick: false,
     });
   });
 
@@ -310,6 +314,7 @@ describe('getQuizStructureSummary', () => {
       breakRoundNumbers: [1, 2],
       minQuestionsPerTopic: 1,
       maxQuestionsPerTopic: 1,
+      hasJokerPick: false,
     });
   });
 
@@ -328,6 +333,7 @@ describe('getQuizStructureSummary', () => {
       breakRoundNumbers: [1, 3],
       minQuestionsPerTopic: 1,
       maxQuestionsPerTopic: 1,
+      hasJokerPick: false,
     });
     // The second break the room sees is announced as break 2.
     expect(getBreakNumber(2, summary)).toBe(2);
@@ -346,6 +352,7 @@ describe('getQuizStructureSummary', () => {
       breakRoundNumbers: [2],
       minQuestionsPerTopic: 3,
       maxQuestionsPerTopic: 5,
+      hasJokerPick: false,
     });
   });
 
@@ -356,6 +363,7 @@ describe('getQuizStructureSummary', () => {
       breakRoundNumbers: [],
       minQuestionsPerTopic: 0,
       maxQuestionsPerTopic: 0,
+      hasJokerPick: false,
     });
   });
 });

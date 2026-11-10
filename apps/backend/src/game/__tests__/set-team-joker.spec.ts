@@ -89,6 +89,36 @@ describe('GameGateway — the quiz master changing a team’s joker', () => {
     );
   }
 
+  it('refuses a round with a Clue question and stores nothing', async () => {
+    const clueRound: QuizRoundSpec = {
+      title: 'Who am I',
+      breakAfter: true,
+      questions: [
+        {
+          type: 'clues',
+          prompt: 'Who am I?',
+          answer: 'Einstein',
+          payload: { options: ['Physicist', 'Relativity'] },
+        },
+      ],
+    };
+    const game = await jokerNight({ rounds: [...THREE_ROUNDS, clueRound] });
+    await openPick(game);
+    const [alpha] = game.teams;
+
+    const ack = await setJoker(game, alpha.teamId, game.rounds[3].id);
+    const view = await game.snapshot();
+
+    expect(ack).toEqual({
+      success: false,
+      error: "That round can't be a joker round",
+    });
+    expect(await storedJokers(game)).toEqual({});
+    expect(view.settableJokerRounds.map((round) => round.roundId)).toEqual(
+      game.rounds.slice(0, 3).map((round) => round.id),
+    );
+  });
+
   it('sets a team’s joker during the pick, marked as set by the quiz master, and tells only that team', async () => {
     const game = await jokerNight();
     await openPick(game);

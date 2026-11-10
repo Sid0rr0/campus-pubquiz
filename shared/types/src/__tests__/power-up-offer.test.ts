@@ -189,6 +189,7 @@ const jokerBase = {
   purchases: [] as { powerUp: PowerUpId; roundId: number | null }[],
   balance: 2,
   jokerRoundId: 3 as number | null | undefined,
+  clueRoundIds: [] as number[],
 };
 const offered = { roundId: 5, roundNumber: 2, title: 'Music' };
 const extra = (roundId: number) => ({
@@ -209,6 +210,7 @@ const jokerRefusal = (
 const WRONG = 'Only the next round can be doubled, before its intro';
 const DOUBLED = 'That round is already doubled';
 const LIMIT = 'You have reached the limit for that power-up';
+const CLUE = "Can't be used on this round";
 const notOffered = {
   settings: { ...settings, extra_joker: { cost: 2, maxUses: 0 } },
 };
@@ -222,6 +224,7 @@ describe('extraJokerPurchaseRefusal', () => {
     ['not offered', notOffered, 9, null, 'That power-up is not offered'],
     ['another round than offered', {}, 6, 5, WRONG],
     ['no round offered', {}, 5, null, WRONG],
+    ['a round with a Clue question', { clueRoundIds: [5] }, 5, 5, CLUE],
     ['the team joker round', { jokerRoundId: 5 }, 5, 5, DOUBLED],
     ['an earlier extra joker on it', { purchases: [extra(5)] }, 5, 5, DOUBLED],
     ['the limit', { purchases: [extra(1), extra(2)] }, 5, 5, LIMIT],
@@ -230,13 +233,14 @@ describe('extraJokerPurchaseRefusal', () => {
     expect(jokerRefusal(patch, roundId, offeredRoundId)).toBe(reason);
   });
 
-  it('checks in the server order: round, doubled, limit, coins', () => {
+  it('checks in the server order: round, clue, doubled, limit, coins', () => {
     const all = {
       jokerRoundId: 5,
       balance: 0,
       purchases: [extra(1), extra(2)],
     };
-    expect(jokerRefusal(all, 6)).toBe(WRONG);
+    expect(jokerRefusal({ ...all, clueRoundIds: [5] }, 6)).toBe(WRONG);
+    expect(jokerRefusal({ ...all, clueRoundIds: [5] })).toBe(CLUE);
     expect(jokerRefusal(all)).toBe(DOUBLED);
     expect(jokerRefusal({ ...all, jokerRoundId: 3 })).toBe(LIMIT);
     expect(jokerRefusal({ ...all, jokerRoundId: 3, purchases: [] })).toBe(
@@ -287,6 +291,7 @@ describe('extraJokerOfferEntry', () => {
   });
 
   it.each([
+    ['a round with a Clue question', { clueRoundIds: [5] }, CLUE],
     ['the joker round', { jokerRoundId: 5 }, DOUBLED],
     ['an earlier extra joker', { purchases: [extra(5)] }, DOUBLED],
     ['the limit', { purchases: [extra(1), extra(2)] }, LIMIT],

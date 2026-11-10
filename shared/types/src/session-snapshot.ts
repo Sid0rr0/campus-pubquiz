@@ -10,6 +10,7 @@ import {
   getUpcomingQuestionPositions,
 } from './block-questions';
 import { coinBalance } from './coin-ledger';
+import { canBeDoubled, playsJokers } from './doubled-rounds';
 import { isAnsweringStatus } from './game-state-groups';
 import {
   hasJokerPickOpened,
@@ -142,7 +143,7 @@ export function isJokerPickOpen(session: SessionState): boolean {
 /** Whether the session plays with jokers and has reached the joker pick, so the rounds can be named for a joker. */
 function isJokerLineupKnown(session: SessionState): boolean {
   return (
-    session.seededGame.settings.jokersEnabled &&
+    playsJokers(session.seededGame) &&
     hasJokerPickOpened(session.progress.status)
   );
 }
@@ -213,7 +214,9 @@ export function buildAdminFields(
   const { maxPlayersPerTeam } = session.seededGame.settings;
   return {
     settableJokerRounds: isJokerLineupKnown(session)
-      ? describeJokerPickRounds(session, true)
+      ? describeJokerPickRounds(session, true).filter(
+          (round) => round.canBeJoker,
+        )
       : [],
     teams: session.teams.map((team): AdminTeamView => {
       const playerCount = session.playerCounts[team.teamId] ?? null;
@@ -243,6 +246,7 @@ export function buildPlayersFields(
   | 'jokerPick'
   | 'jokerRounds'
   | 'extraJokerOffer'
+  | 'clueRounds'
 > {
   const { rounds, settings } = session.seededGame;
   const offeredId = extraJokerRoundId(session);
@@ -260,6 +264,11 @@ export function buildPlayersFields(
               rounds[offeredIndex].title,
             ),
           },
+    clueRounds: rounds.flatMap((round, index) =>
+      canBeDoubled(round)
+        ? []
+        : [{ roundId: round.id, roundNumber: index + 1 }],
+    ),
     jokerRounds: isJokerLineupKnown(session)
       ? describeJokerPickRounds(session, false)
       : [],

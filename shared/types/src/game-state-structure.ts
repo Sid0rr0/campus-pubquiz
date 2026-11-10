@@ -18,6 +18,8 @@ export interface QuizStructureSummary {
    * round has the same count (or the quiz has no rounds).
    */
   maxQuestionsPerTopic: number;
+  /** Whether the quiz stops on the joker pick: Jokers is on and some round can be a joker round. The rules screen's joker line follows it. */
+  hasJokerPick: boolean;
 }
 
 /**
@@ -98,5 +100,6 @@ export function getQuizStructureSummary(
       questionCounts.length > 0 ? Math.min(...questionCounts) : 0,
     maxQuestionsPerTopic:
       questionCounts.length > 0 ? Math.max(...questionCounts) : 0,
+    hasJokerPick: context.jokersEnabled ?? false,
   };
 }

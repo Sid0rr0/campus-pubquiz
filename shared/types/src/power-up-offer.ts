@@ -141,6 +141,8 @@ export interface ExtraJokerRuleInput {
   balance: number;
   /** The team's joker round, which an extra joker cannot double again. */
   jokerRoundId: number | undefined | null;
+  /** The rounds that have a Clue question: never doubled. */
+  clueRoundIds: readonly number[];
 }
 
 /** The next round, as the phone is told of it: its title is "" when the round overview did not show it. */
@@ -163,6 +165,9 @@ function extraJokerRefusalOf(
   );
   if (maxUses === 0) return refused('That power-up is not offered');
   if (roundId !== offeredRoundId) return refused(WRONG_ROUND);
+  if (input.clueRoundIds.includes(roundId)) {
+    return refused("Can't be used on this round");
+  }
   const doubled = doubledRoundIds(
     input.jokerRoundId ?? undefined,
     input.purchases,

@@ -153,6 +153,7 @@ describe('TeamsPanel joker rounds', () => {
       title: 'Film',
       category: '',
       author: '',
+      canBeJoker: true,
     },
     {
       roundId: 12,
@@ -160,6 +161,7 @@ describe('TeamsPanel joker rounds', () => {
       title: 'Sport',
       category: '',
       author: '',
+      canBeJoker: true,
     },
   ];
   const JOKER_TEAMS: AdminTeamView[] = [

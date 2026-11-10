@@ -101,6 +101,24 @@ describe('RulesContent', () => {
     expect(screen.queryByText(/^Joker:/)).not.toBeInTheDocument();
   });
 
+  it('leaves the joker line out when the quiz has no joker pick (every round has a Clue question)', () => {
+    render(
+      <RulesContent
+        settings={settingsWith({ jokersEnabled: true })}
+        quizStructure={{
+          blockCount: 1,
+          topicsPerBlock: 2,
+          breakRoundNumbers: [2],
+          minQuestionsPerTopic: 1,
+          maxQuestionsPerTopic: 1,
+          hasJokerPick: false,
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/^Joker:/)).not.toBeInTheDocument();
+  });
+
   it('states the team size and penalty from the settings', () => {
     render(
       <RulesContent
@@ -127,6 +145,7 @@ describe('RulesContent', () => {
           breakRoundNumbers: [2, 4, 6],
           minQuestionsPerTopic: 5,
           maxQuestionsPerTopic: 5,
+          hasJokerPick: true,
         }}
       />,
     );
@@ -145,6 +164,7 @@ describe('RulesContent', () => {
           breakRoundNumbers: [1, 2, 3],
           minQuestionsPerTopic: 5,
           maxQuestionsPerTopic: 5,
+          hasJokerPick: true,
         }}
       />,
     );
@@ -163,6 +183,7 @@ describe('RulesContent', () => {
           breakRoundNumbers: [2, 5, 7],
           minQuestionsPerTopic: 5,
           maxQuestionsPerTopic: 5,
+          hasJokerPick: true,
         }}
       />,
     );
@@ -181,6 +202,7 @@ describe('RulesContent', () => {
           breakRoundNumbers: [1, 3],
           minQuestionsPerTopic: 5,
           maxQuestionsPerTopic: 5,
+          hasJokerPick: true,
         }}
       />,
     );
@@ -197,6 +219,7 @@ describe('RulesContent', () => {
           breakRoundNumbers: [4],
           minQuestionsPerTopic: 5,
           maxQuestionsPerTopic: 5,
+          hasJokerPick: true,
         }}
       />,
     );
@@ -215,6 +238,7 @@ describe('RulesContent', () => {
           breakRoundNumbers: [4],
           minQuestionsPerTopic: 1,
           maxQuestionsPerTopic: 1,
+          hasJokerPick: true,
         }}
       />,
     );
@@ -233,6 +257,7 @@ describe('RulesContent', () => {
           breakRoundNumbers: [4],
           minQuestionsPerTopic: 3,
           maxQuestionsPerTopic: 7,
+          hasJokerPick: true,
         }}
       />,
     );
@@ -251,6 +276,7 @@ describe('RulesContent', () => {
           breakRoundNumbers: [],
           minQuestionsPerTopic: 0,
           maxQuestionsPerTopic: 0,
+          hasJokerPick: true,
         }}
       />,
     );

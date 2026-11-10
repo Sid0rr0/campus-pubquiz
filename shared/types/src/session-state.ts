@@ -1,3 +1,4 @@
+import { playsJokers } from './doubled-rounds';
 import type { FunFactData } from './fun-facts';
 import type { GameContext, GameProgress } from './game-state-types';
 import type { TeamJoker } from './joker';
@@ -270,7 +271,7 @@ export function getGameContext(session: SessionState): GameContext {
       quickfire: round.quickfire ?? false,
     })),
     showRoundOverview: session.seededGame.settings.showRoundOverview,
-    jokersEnabled: session.seededGame.settings.jokersEnabled,
+    jokersEnabled: playsJokers(session.seededGame),
     autoplayMedia: session.seededGame.settings.autoplayMedia,
   };
 }

@@ -27,6 +27,8 @@ export interface PowerUpsListProps {
   /** The round the extra joker could double next (null when none), and the team's joker round, which it cannot double again. */
   extraJokerOffer: PlayersStatePayload['extraJokerOffer'];
   jokerRoundId: number | null;
+  /** The rounds with a Clue question, which the extra joker can't double: named on its card all along. */
+  clueRounds: PlayersStatePayload['clueRounds'];
   onBuyExtraJoker: (roundId: number) => Promise<AckResult>;
   /** Called after the server accepted a purchase: the drawer closes on it. */
   onActivated?: () => void;
@@ -51,6 +53,7 @@ export function PowerUpsList({
   onBuy,
   extraJokerOffer,
   jokerRoundId,
+  clueRounds,
   onBuyExtraJoker,
   onActivated,
 }: PowerUpsListProps) {
@@ -62,6 +65,7 @@ export function PowerUpsList({
     roomReadyQuestionIds,
     extraJokerOffer,
     jokerRoundId,
+    clueRounds,
   });
   const available = rows.filter((row) => row.target !== null);
   const unavailable = rows.filter((row) => row.target === null);
@@ -127,6 +131,8 @@ interface PowerUpRow {
   target: string | null;
   /** Why the activation button is disabled, when only that stands in the way. */
   heldBack: string | null;
+  /** Lines shown under the description: what the power-up can't be used on. */
+  notes?: string[];
 }
 
 type RowInputs = Pick<
@@ -138,6 +144,7 @@ type RowInputs = Pick<
   | 'roomReadyQuestionIds'
   | 'extraJokerOffer'
   | 'jokerRoundId'
+  | 'clueRounds'
 >;
 
 /** Every power-up the session offers (maxUses above 0), with what it can be used on right now: the question power-ups from the Power-up offer, the extra joker from the same module. */
@@ -164,17 +171,39 @@ function extraJokerRow({
   coins,
   extraJokerOffer: offer,
   jokerRoundId,
+  clueRounds,
 }: RowInputs): PowerUpRow | null {
   const entry = extraJokerOfferEntry({
     settings,
     purchases,
     balance: coins,
     jokerRoundId,
+    clueRoundIds: clueRounds.map((round) => round.roundId),
     offer,
   });
   if (entry === null) return null;
   const { outcome, roundName, ...rest } = entry;
-  return rowOf(rest, outcome, `the next round: ${roundName}`);
+  const isClueRound = clueRounds.some(
+    (round) => round.roundId === offer?.roundId,
+  );
+  return {
+    ...rowOf(rest, outcome, `the next round: ${roundName}`),
+    notes: [
+      ...(clueRounds.length > 0
+        ? [`Can't be used on ${listRounds(clueRounds)}`]
+        : []),
+      ...(isClueRound && outcome.status === 'unavailable'
+        ? [outcome.reason]
+        : []),
+    ],
+  };
+}
+
+/** "Round 3", "Round 3 or Round 5", "Round 1, Round 3 or Round 5". */
+function listRounds(rounds: readonly { roundNumber: number }[]): string {
+  const names = rounds.map(({ roundNumber }) => `Round ${roundNumber}`);
+  const last = names.pop();
+  return names.length === 0 ? `${last}` : `${names.join(', ')} or ${last}`;
 }
 
 /** An offer entry as a row: the button's target unless unavailable, and the reason when only that holds it back. */
@@ -239,11 +268,13 @@ function PowerUpDetails({
   cost,
   used,
   maxUses,
+  notes = [],
 }: {
   powerUp: PowerUpId;
   cost: number;
   used: number;
   maxUses: number;
+  notes?: string[];
 }) {
   return (
     <div className="flex items-start justify-between gap-3">
@@ -252,6 +283,11 @@ function PowerUpDetails({
         <p className="text-sm text-foreground/70">
           {POWER_UP_DESCRIPTIONS[powerUp]}
         </p>
+        {notes.map((note) => (
+          <p key={note} className="mt-1 text-sm font-bold text-magenta">
+            {note}
+          </p>
+        ))}
       </div>
       <div className="shrink-0 text-right text-xs font-extrabold tabular-nums text-foreground/70">
         <p className="font-black text-magenta">{formatCoins(cost)}</p>

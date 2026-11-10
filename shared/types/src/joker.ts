@@ -1,4 +1,6 @@
+import { canBeDoubled } from './doubled-rounds';
 import type { GameStatus } from './game-state-types';
+import type { QuestionType } from './question-types';
 
 /** How long the joker pick stays open, in seconds. Fixed, not a setting. */
 export const JOKER_PICK_SECONDS = 60;
@@ -46,6 +48,8 @@ export interface JokerPickRound {
   category: string;
   /** '' when the round has none. */
   author: string;
+  /** False for a round that has a Clue question: it can't be a joker round. */
+  canBeJoker: boolean;
 }
 
 /**
@@ -63,6 +67,7 @@ interface JokerListedRound {
   title: string;
   category?: string;
   author?: string;
+  questions: readonly { type: QuestionType }[];
 }
 
 /** `listed` (some or all of `allRounds`, by identity) as the joker pick shows them, each with its place in the whole quiz. */
@@ -76,6 +81,7 @@ export function toJokerPickRounds(
     title: round.title,
     category: round.category ?? '',
     author: round.author ?? '',
+    canBeJoker: canBeDoubled(round),
   }));
 }
 

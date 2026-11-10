@@ -654,6 +654,76 @@ describe('GameGateway — the joker pick', () => {
     });
   });
 
+  describe('a round with a Clue question', () => {
+    const clueRound = (title: string): QuizRoundSpec => ({
+      title,
+      breakAfter: true,
+      questions: [
+        {
+          type: 'clues',
+          prompt: 'Who am I?',
+          answer: 'Einstein',
+          payload: { options: ['Physicist', 'Relativity'] },
+        },
+      ],
+    });
+    // Round 3 (the last) has a Clue question.
+    const WITH_CLUE_ROUND = [
+      THREE_ROUNDS[0],
+      THREE_ROUNDS[1],
+      clueRound('Who'),
+    ];
+
+    it('offers it on the pick as one that cannot be a joker, and refuses it', async () => {
+      const game = await jokerNight({ rounds: WITH_CLUE_ROUND });
+      await openPick(game);
+      const [alpha] = game.teams;
+
+      const ack = await pick(game, alpha, game.rounds[2].id);
+
+      const players = await game.resync('players');
+      expect(
+        players.jokerPick?.rounds.map((round) => round.canBeJoker),
+      ).toEqual([true, true, false]);
+      expect(ack).toEqual({
+        success: false,
+        error: "That round can't be a joker round",
+      });
+      expect(await storedJokers(game)).toEqual({});
+    });
+
+    it('never draws it', async () => {
+      // 0.99 always draws the last round that can be drawn.
+      const game = await jokerNight({
+        rounds: WITH_CLUE_ROUND,
+        jokerRandom: () => 0.99,
+      });
+      await openPick(game);
+
+      await game.act('ADVANCE');
+
+      expect(await adminJokers(game)).toEqual({
+        Alpha: { roundId: game.rounds[1].id, source: 'drawn' },
+        Bravo: { roundId: game.rounds[1].id, source: 'drawn' },
+      });
+    });
+
+    it('goes straight to the first round intro when every round has a Clue question', async () => {
+      const game = await jokerNight({
+        rounds: [clueRound('One'), clueRound('Two')],
+      });
+      await game.act('START_QUIZ');
+      await game.act('ADVANCE'); // -> round_overview
+
+      const advanced = await game.act('ADVANCE');
+      const back = await game.act('PREVIOUS');
+
+      expect(advanced.progress.status).toBe('round_intro');
+      expect(back.progress.status).toBe('round_overview');
+      expect(await adminJokers(game)).toEqual({ Alpha: null, Bravo: null });
+    });
+  });
+
   describe('reconnecting and rejoining', () => {
     it('hands a rejoining phone its own joker in JOIN_ACCEPTED', async () => {
       const game = await jokerNight();

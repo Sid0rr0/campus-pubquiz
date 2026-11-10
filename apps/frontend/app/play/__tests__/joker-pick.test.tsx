@@ -83,6 +83,26 @@ describe('PlayPage — the joker pick', () => {
     expect(cards[2]).toHaveTextContent('Film Quotes');
   });
 
+  it('shows a round with a Clue question as a card that can’t be tapped', () => {
+    renderPick({
+      session: pickSession({
+        rounds: [
+          ROUNDS[0],
+          ROUNDS[1],
+          {
+            title: 'Film Quotes',
+            questions: [{ type: 'clues', options: ['first', 'second'] }],
+          },
+        ],
+      }),
+    });
+
+    const card = screen.getByRole('button', { name: /film quotes/i });
+    expect(card).toBeDisabled();
+    expect(card).toHaveTextContent("Can't be your joker");
+    expect(screen.getByRole('button', { name: /pop music/i })).toBeEnabled();
+  });
+
   it('counts down to the deadline the server sent', () => {
     renderPick({
       session: pickSession({

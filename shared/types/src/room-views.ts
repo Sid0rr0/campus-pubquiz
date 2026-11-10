@@ -315,6 +315,8 @@ export interface PlayersStatePayload
     roundNumber: number;
     title: string;
   } | null;
+  /** The rounds that have a Clue question, which the extra joker can't double (the phone names them on its card). Every round of the quiz, whatever the status. */
+  clueRounds: { roundId: number; roundNumber: number }[];
   /**
    * Positions (and round titles) of the current block's remaining
    * questions — not open yet, shown as disabled slots in the block picker

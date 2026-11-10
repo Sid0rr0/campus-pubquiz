@@ -11,7 +11,7 @@ import {
   isBlockAnswerable,
   isJokerPickOpen,
 } from '../session-snapshot';
-import type { SessionState } from '../session-state';
+import { getGameContext, type SessionState } from '../session-state';
 import {
   freeText,
   progressAt,
@@ -392,6 +392,66 @@ describe('the players view fields', () => {
 
       expect(buildPlayersFields(session).extraJokerOffer?.title).toBe('');
     });
+  });
+});
+
+describe('rounds with a Clue question', () => {
+  const clue = (id: number) =>
+    freeText(id, { type: 'clues', options: ['first', 'second'] });
+  // Round 2 (id 20) has a Clue question among its questions.
+  const mixed = [
+    roundOf(10, [1]),
+    roundOf(20, [], { questions: [freeText(2), clue(3)] }),
+    roundOf(30, [4]),
+  ];
+  const allClues = [
+    roundOf(10, [], { questions: [clue(1)] }),
+    roundOf(20, [], { questions: [clue(2)] }),
+  ];
+  const jokers = { jokersEnabled: true, showRoundOverview: true };
+
+  it('shows a Clue round on the joker pick as one that cannot be a joker', () => {
+    const picking = {
+      ...sessionOver(mixed, progressAt('joker_pick'), jokers),
+      jokerPickEndsAt: NOW + 5,
+    };
+
+    expect(
+      buildPlayersFields(picking).jokerPick?.rounds.map(
+        ({ roundId, canBeJoker }) => [roundId, canBeJoker],
+      ),
+    ).toEqual([
+      [10, true],
+      [20, false],
+      [30, true],
+    ]);
+  });
+
+  it('tells the phone which rounds have a Clue question, by id and number', () => {
+    expect(
+      buildPlayersFields(sessionOver(mixed, progressAt('rules'))).clueRounds,
+    ).toEqual([{ roundId: 20, roundNumber: 2 }]);
+  });
+
+  it('leaves Clue rounds out of the rounds the quiz master can set', () => {
+    const session = sessionOver(mixed, progressAt('round_intro'), jokers);
+
+    expect(
+      buildAdminFields(session).settableJokerRounds.map((r) => r.roundId),
+    ).toEqual([10, 30]);
+  });
+
+  it('plays without a joker pick when every round has a Clue question', () => {
+    const session = sessionOver(allClues, progressAt('rules'), jokers);
+
+    expect(getGameContext(session).jokersEnabled).toBe(false);
+    expect(buildSnapshot(session).quizStructure.hasJokerPick).toBe(false);
+    // The stored setting stays as set: /control's lobby settings form reads it.
+    expect(buildSnapshot(session).settings.jokersEnabled).toBe(true);
+    expect(
+      getGameContext(sessionOver(mixed, progressAt('rules'), jokers))
+        .jokersEnabled,
+    ).toBe(true);
   });
 });
 

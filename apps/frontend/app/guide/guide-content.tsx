@@ -43,7 +43,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Before the night',
     paragraphs: [
-      'Build the quiz, then check it with Quiz preview (in the editor, quiz list or waiting session), not a throwaway session.',
+      'Build the quiz, then check it with Quiz preview (editor, quiz list or waiting session), not a throwaway session.',
       'Put /display on the big screen and /control on your laptop; teams use phones.',
       'A block is a run of rounds graded and revealed together, ending at a break.',
     ],
@@ -52,14 +52,14 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Starting a session',
     paragraphs: [
       'Session Settings sets the rules text and bonus categories in the lobby; then press Start Quiz.',
-      'Tick the leagues this session counts towards in Session Settings.',
+      "Tick the session's leagues in Session Settings.",
       'Advance shows the rules, the round overview, then the first round title card; Previous on the rules returns to the lobby.',
     ],
   },
   {
     title: 'Unlisted sessions',
     paragraphs: [
-      'The "Show in the game list" switch in Session Settings (lobby only) hides a session from the game list; yours marks it "Unlisted".',
+      'The "Show in the game list" switch (Session Settings, lobby only) hides a session; yours marks it "Unlisted".',
       'Open display on Control shows the big screen. Teams join by scanning its QR code, or "Have a game code?".',
     ],
   },
@@ -71,6 +71,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'Close pick (Advance) ends it early; unpicked teams get a random round.',
       'Change a joker in the joker list until that round has started; the phone says it was changed by the quiz master.',
       'A joker round gives the team\'s leaderboard row a "2×" stamp, even on 0 points.',
+      'A Clue round is never doubled: no joker, no extra joker; with only Clue rounds, no joker pick.',
     ],
   },
   {
@@ -93,15 +94,15 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'The Control layout',
     paragraphs: [
       'The phase timer sits beside "Quiz Master" in the sidebar, and in the mobile bar.',
-      'The detail column beside the question browser shows what is on the big screen: a question with its options, a round title card (category, author, Round note) or a break card ("Break N", "(final)" on the last).',
+      'The detail column beside the question browser mirrors the big screen: a question with its options, a round title card (category, author, Round note) or a break card ("Break N", "(final)" on the last).',
       'Click a question number, T or B to look ahead; the column follows the big screen again once it gets there.',
-      'The grading list sits full width below, for the question in the detail column; a title or break card has none.',
+      "The grading list sits full width below, for the detail column's question; a title or break card has none.",
     ],
   },
   {
     title: 'Running questions',
     paragraphs: [
-      'Each round opens with a round title card, then Advance opens questions one by one. Teams can change answers to any question opened this block.',
+      'Each round opens with its title card, then Advance opens questions one by one. Teams can change answers to any question opened this block.',
       "Advance on a block's last question starts the final countdown, then the break.",
     ],
   },
@@ -130,7 +131,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'The break and break review',
     paragraphs: [
-      'When a block ends, answers close and the big screen shows a break card with a timer. Break End Time extends it.',
+      'When a block ends, answers close and the big screen shows a break card and timer. Break End Time extends it.',
       "Previous steps back through the block's questions, answers hidden: the break review.",
     ],
   },
@@ -153,10 +154,10 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'The Teams panel shows who is connected and has answered; kick a team to remove it.',
       'A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
-      'Each team shows its player count, flagged as over the player cap above the "max players per team" setting; nothing is deducted automatically, so give a negative bonus as a penalty.',
+      'Each team shows its player count, flagged as over the player cap above "max players per team"; nothing is deducted, so give a negative bonus as a penalty.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
       "Bonus points: in the team's menu choose Award bonus, pick category and points, press Award. With power-ups on, a shot or selfie also gives 2 coins; the Coins field gives or takes more (zeroes untouched points); the list shows both.",
-      'A team forgot its code: open /teams, choose Show team code in its actions menu, and have the team rejoin with its name and code. If it joined as a new team, press "Merge with…" on that team\'s page after the night; a merge can\'t be undone.',
+      'A team forgot its code: open /teams, choose Show team code in its actions menu, and have it rejoin with its name and code. If it joined anew, press "Merge with…" on that team\'s page after the night; a merge can\'t be undone.',
     ],
   },
   {
@@ -168,7 +169,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      'Remote (Sessions page) is a phone page with Previous, Advance, leaderboard controls, a next-up preview and your notes.',
+      'Remote (Sessions page) is a phone page: Previous, Advance, leaderboard controls, next-up preview and your notes.',
       'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,

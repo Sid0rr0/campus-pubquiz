@@ -5,6 +5,7 @@ import type {
 } from '@campus-pubquiz/types';
 import {
   QuizLiveEditBlockedError,
+  findCluesOnDoubledRounds,
   findLiveEditViolations,
   findRegradeQuestionIds,
 } from '@/quiz/live-edit-guard';
@@ -1335,6 +1336,59 @@ describe('findRegradeQuestionIds', () => {
   it('ignores an unopened question even if its answer changed', () => {
     expect(
       findRegradeQuestionIds([round()], withFirstQuestion({ answer: 'B' }), []),
+    ).toEqual([]);
+  });
+});
+
+describe('findCluesOnDoubledRounds', () => {
+  const clue = (questionId: number | undefined) =>
+    question(questionId, { type: 'clues', options: ['first', 'second'] });
+  // A team holds a joker or an extra joker on the round holding questions 1 and 2.
+  const doubled = [{ questionIds: [1, 2], clueQuestionIds: [] }];
+  const MESSAGE =
+    "Cannot add a Clue question to this round — a team holds a joker or extra joker on it, and a round with a Clue question can't be doubled";
+
+  it('flags a Clue question added to a doubled round', () => {
+    const incoming = [
+      roundOf('Doubled', [question(1), question(2), clue(undefined)]),
+      roundOf('Other', [question(3)]),
+    ];
+
+    expect(findCluesOnDoubledRounds(incoming, doubled)).toEqual([
+      { roundIndex: 0, questionIndex: 2, field: 'type', message: MESSAGE },
+    ]);
+  });
+
+  it('flags a question of a doubled round changed to a Clue question, and one moved in', () => {
+    const incoming = [
+      roundOf('Other', [question(3)]),
+      roundOf('Doubled', [clue(1), question(2), clue(4)]),
+    ];
+
+    expect(
+      findCluesOnDoubledRounds(incoming, doubled).map((issue) => [
+        issue.roundIndex,
+        issue.questionIndex,
+      ]),
+    ).toEqual([
+      [1, 0],
+      [1, 2],
+    ]);
+  });
+
+  it('lets a Clue question into a round nobody doubles, and leaves a gone round alone', () => {
+    const incoming = [roundOf('Other', [question(3), clue(undefined)])];
+
+    expect(findCluesOnDoubledRounds(incoming, doubled)).toEqual([]);
+  });
+
+  it('keeps a Clue question the doubled round already had', () => {
+    const incoming = [roundOf('Doubled', [question(1), clue(2)])];
+
+    expect(
+      findCluesOnDoubledRounds(incoming, [
+        { questionIds: [1, 2], clueQuestionIds: [2] },
+      ]),
     ).toEqual([]);
   });
 });

@@ -4,6 +4,7 @@ import {
   type TeamPurchasesSyncedPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
 import {
   advanceUntil,
   setupRealStoreGatewayTest,
@@ -173,6 +174,28 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
     await game.saveQuizEdit((rounds) => rounds);
 
     expect(syncsTo(game, game.teams[0])).toEqual([]);
+  });
+
+  it('refuses an edit that adds a Clue question to its round, keeping the purchase', async () => {
+    const { game, alpha } = await withExtraOnRoundOne();
+    const clue = {
+      type: 'clues' as const,
+      prompt: 'Who am I?',
+      answer: 'Einstein',
+      points: 1,
+      options: ['Physicist', 'Relativity'],
+    };
+
+    await expect(
+      game.saveQuizEdit((rounds) => [
+        { ...rounds[0], questions: [...rounds[0].questions, clue] },
+        rounds[1],
+        rounds[2],
+      ]),
+    ).rejects.toThrow(QuizLiveEditBlockedError);
+    expect(await stored(game, alpha)).toMatchObject([
+      { roundId: game.rounds[0].id },
+    ]);
   });
 
   it('leaves it alone when the edit does not touch the rounds', async () => {

@@ -100,6 +100,23 @@ describe('DisplayScreenView — without a live context', () => {
     expectNoLiveParts();
   });
 
+  it('marks a round with a Clue question on the joker pick as one that can’t be a joker', () => {
+    drawWithoutLiveContext({
+      rounds: [
+        { title: 'Science', questions: [{ prompt: 'Largest planet?' }] },
+        {
+          title: 'Who am I',
+          questions: [{ type: 'clues', options: ['first', 'second'] }],
+        },
+      ],
+      progress: { status: 'joker_pick' },
+    });
+
+    const [science, clueRound] = screen.getAllByRole('listitem');
+    expect(clueRound).toHaveTextContent("Can't be a joker");
+    expect(science).not.toHaveTextContent("Can't be a joker");
+  });
+
   describe('the joker pick with the live teams', () => {
     const LIVE_TEAMS: DisplayLiveContext = {
       teams: [

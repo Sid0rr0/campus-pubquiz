@@ -66,7 +66,9 @@ export function JokerPickScreen({
         {rounds.map((round) => (
           <li
             key={round.roundId}
-            className="flex items-start gap-3 text-display-2xl font-bold"
+            className={`flex items-start gap-3 text-display-2xl font-bold ${
+              round.canBeJoker ? '' : 'text-foreground/50'
+            }`}
           >
             <span aria-hidden="true" className="text-cyan">
               {round.roundNumber}.
@@ -79,6 +81,11 @@ export function JokerPickScreen({
               {round.author && (
                 <span className="block text-display-base font-bold text-foreground/60">
                   by {round.author}
+                </span>
+              )}
+              {!round.canBeJoker && (
+                <span className="block text-display-base font-bold text-magenta">
+                  Can&apos;t be a joker
                 </span>
               )}
             </span>

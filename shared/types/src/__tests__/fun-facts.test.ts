@@ -23,6 +23,8 @@ interface RoundSpec {
   isQuickfire?: boolean;
   /** Ids (as numbered across the rounds) of questions that are closest_guess. */
   closestGuessIds?: number[];
+  /** Ids of questions that are Clue questions. */
+  clueIds?: number[];
 }
 
 /** Question ids run 1, 2, 3… across the rounds; every round ends a block (breakAfter). */
@@ -39,7 +41,9 @@ function roundsOf(specs: RoundSpec[]): SeededRound[] {
         id,
         type: spec.closestGuessIds?.includes(id)
           ? ('closest_guess' as const)
-          : ('free_text' as const),
+          : spec.clueIds?.includes(id)
+            ? ('clues' as const)
+            : ('free_text' as const),
         prompt: `Question ${id}?`,
         answer: `Answer ${id}`,
         points: 1000,
@@ -759,6 +763,23 @@ describe('describeFunFacts', () => {
       );
 
       expect(kinds(session)).toEqual(['joker_favourite_round']);
+    });
+
+    it('never names a round with a Clue question as snubbed, since it cannot be a joker', () => {
+      const session = withJokers(
+        sessionOf(
+          [
+            THREE_ROUNDS[0],
+            THREE_ROUNDS[1],
+            { title: 'Three', questionCount: 2, clueIds: [6] },
+          ],
+          breakProgress(0, 1),
+          {},
+        ),
+        jokers,
+      );
+
+      expect(kinds(session)).not.toContain('joker_snubbed_round');
     });
 
     it('says nothing without any joker', () => {

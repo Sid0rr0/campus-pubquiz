@@ -1,5 +1,6 @@
 import {
   OPENED_QUESTION_FIXED_FIELDS,
+  QUESTION_KINDS,
   answerKeyOf,
   withDerivedPoints,
   describeLiveEditRounds,
@@ -199,6 +200,64 @@ export function findDroppedAnsweredQuestions(
         : [],
     ),
   );
+}
+
+const CLUE_ON_DOUBLED_MESSAGE =
+  "Cannot add a Clue question to this round — a team holds a joker or extra joker on it, and a round with a Clue question can't be doubled";
+
+/** A round some team doubles in a live session: its questions, and those of them already Clue questions. */
+export interface DoubledRoundQuestions {
+  questionIds: readonly number[];
+  clueQuestionIds: readonly number[];
+}
+
+/**
+ * Issues for Clue questions a save would add to a round a team doubles (its
+ * joker round or a round it bought an extra joker for): a new one, a question
+ * changed to Clue, or one moved in. A round is known by its questions, as the
+ * jokers follow it: the incoming round holding most of the doubled round's
+ * questions. A round with none of them left is gone, and its doubling with it.
+ */
+export function findCluesOnDoubledRounds(
+  incoming: readonly ImportRoundPreview[],
+  doubledRounds: readonly DoubledRoundQuestions[],
+): QuizDraftIssue[] {
+  const checked = new Set<number>();
+  return doubledRounds.flatMap(({ questionIds, clueQuestionIds }) => {
+    const roundIndex = roundHolding(incoming, questionIds);
+    if (roundIndex === -1 || checked.has(roundIndex)) return [];
+    checked.add(roundIndex);
+    return incoming[roundIndex].questions.flatMap(
+      ({ type, questionId }, questionIndex) =>
+        QUESTION_KINDS[type].hasClues &&
+        (questionId === undefined || !clueQuestionIds.includes(questionId))
+          ? [
+              {
+                roundIndex,
+                questionIndex,
+                field: 'type',
+                message: CLUE_ON_DOUBLED_MESSAGE,
+              },
+            ]
+          : [],
+    );
+  });
+}
+
+/** The index of the round holding most of `questionIds`, or -1 when none of them is left. */
+function roundHolding(
+  rounds: readonly ImportRoundPreview[],
+  questionIds: readonly number[],
+): number {
+  const keptCounts = rounds.map(
+    (round) =>
+      round.questions.filter(
+        ({ questionId }) =>
+          questionId !== undefined && questionIds.includes(questionId),
+      ).length,
+  );
+  const most = Math.max(0, ...keptCounts);
+  return most === 0 ? -1 : keptCounts.indexOf(most);
 }
 
 const MOVED_ANSWERED_MESSAGE =

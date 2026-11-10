@@ -63,7 +63,7 @@ How a question is answered: typed text, a number, picking a choice, putting item
 _Avoid_: input kind (the registry field that is its default)
 
 **Clue question**:
-A question type where the quiz master shows clues to the whole room one at a time, and teams type their answer. A right answer is worth half a point for every clue the room had not yet seen when the team answered, counting the latest clue shown, so on a five-clue question 2.5 on the first clue down to 0.5 on the last; the clues set the question's points, and the quiz master's grade buttons are wrong or right (any other amount goes through Custom). Once another clue is shown, a team's answer can no longer be changed.
+A question type where the quiz master shows clues to the whole room one at a time, and teams type their answer. A right answer is worth half a point for every clue the room had not yet seen when the team answered, counting the latest clue shown, so on a five-clue question 2.5 on the first clue down to 0.5 on the last; the clues set the question's points, and the quiz master's grade buttons are wrong or right (any other amount goes through Custom). Once another clue is shown, a team's answer can no longer be changed. A round that has a Clue question is never doubled: no team can play its **Joker** on it or buy an **Extra joker** for it, and no question power-up works on a Clue question.
 _Avoid_: help points, hint question
 
 **Clue**:
@@ -187,7 +187,7 @@ What a bonus award was given for: shot, selfie, or custom. A custom award carrie
 ## Jokers
 
 **Joker**:
-A team's one chance per session to score double on a round it chooses, in a session played with jokers. A team "plays its joker" on a round.
+A team's one chance per session to score double on a round it chooses, in a session played with jokers. A round that has a **Clue question** can't be a joker round. A team "plays its joker" on a round.
 _Avoid_: double points (that's the effect), 2× round, power-up (that's bought with coins; see **Extra joker**)
 
 **Joker round**:
@@ -238,7 +238,7 @@ _Avoid_: poll, ask the audience
 A power-up on a Number question that doubles its margin for one team; on a question with no margin it gives the default margin instead.
 
 **Extra joker**:
-A power-up that doubles the next round for a team, on top of its joker if the session has jokers, bought before that round's intro. It can't be bought for a round already doubled, so no round counts more than double. Without the round overview the team buys it blind, knowing only the round's number.
+A power-up that doubles the next round for a team, on top of its joker if the session has jokers, bought before that round's intro. It can't be bought for a round already doubled, so no round counts more than double, or for a round that has a **Clue question**. Without the round overview the team buys it blind, knowing only the round's number.
 _Avoid_: second joker, double joker
 
 **Power-up count**:

@@ -28,6 +28,7 @@ function list(overrides: Partial<PowerUpsListProps> = {}) {
       onBuy={vi.fn()}
       extraJokerOffer={{ roundId: 7, roundNumber: 2, title: 'Music' }}
       jokerRoundId={null}
+      clueRounds={[]}
       onBuyExtraJoker={onBuyExtraJoker}
       {...overrides}
     />,
@@ -50,6 +51,27 @@ describe('the extra joker card', () => {
 
     expect(button()).toHaveTextContent('Activate for the next round: Music');
     expect(onBuy).toHaveBeenCalledWith(7);
+  });
+
+  it('warns all along which rounds it can’t be used on', () => {
+    list({
+      clueRounds: [
+        { roundId: 9, roundNumber: 3 },
+        { roundId: 11, roundNumber: 5 },
+      ],
+    });
+
+    expect(
+      screen.getByText("Can't be used on Round 3 or Round 5"),
+    ).toBeInTheDocument();
+    expect(button()).toBeEnabled();
+  });
+
+  it('can’t be activated for a next round that has a Clue question, and says so', () => {
+    list({ clueRounds: [{ roundId: 7, roundNumber: 2 }] });
+
+    expect(button()).toBeNull();
+    expect(screen.getByText("Can't be used on this round")).toBeInTheDocument();
   });
 
   it('names the round by number when the title is hidden', () => {

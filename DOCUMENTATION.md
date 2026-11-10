@@ -312,7 +312,7 @@ what it draws:
 | Kind                                               | Carries                                                                                                                                                                                                                                                                                   |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `lobby`, `rules`, `round_overview`, `join_overlay` | Nothing; they draw the shared top-level fields (teams, settings, quiz structure, round lists, league)                                                                                                                                                                                     |
-| `joker_pick`                                       | `endsAt` (the pick's deadline, null once closed), `rounds` (every round: `roundId`, `roundNumber`, `title`, `category`, `author`), `pickedTeamIds` (roster teams that chose a joker themselves; the screen ticks their names off and shows "N/M picked"); never which round a team picked |
+| `joker_pick`                                       | `endsAt` (the pick's deadline, null once closed), `rounds` (every round: `roundId`, `roundNumber`, `title`, `category`, `author`, `canBeJoker`), `pickedTeamIds` (roster teams that chose a joker themselves; the screen ticks their names off and shows "N/M picked"); never which round a team picked |
 | `round_title`                                      | `roundNumber`, `title`, `category`, `author`, `note` ('' when the round has none or hides its note)                                                                                                                                                                                       |
 | `break_round_title`                                | `roundNumber`, `title`, `note`                                                                                                                                                                                                                                                            |
 | `reveal_intro`                                     | `roundNumber`, `title`                                                                                                                                                                                                                                                                    |
@@ -489,7 +489,7 @@ got to, and a mute that is already on applies to media that mounts later.
 | Display and admin               | `roundTitles`, `answeredTeamIds` (drives all response indicators), `displayTextScale`, `isDisplaySoundMuted` (the big-screen mute; `/display` hands it to its sound registry and to the question's media)                                                                                                                                                                                                                                                                                                                                               |
 | Display (`DisplayStatePayload`) | `screen` (the Display screen), `screenPosition` (the Screen position: grows on every forward move through the quiz, falls on Previous, unmoved by overlays and steps within a screen; the admin and players views don't carry it), `roundCategories`, `roundAuthors`, `quickfireQuestionEndsAt`, `jokerPickEndsAt` (the open pick's deadline, apart from `screen` so the countdown track outlives an overlay), `teamsCorrect`, `leagueTop`. The question, round, leaderboard, fun-fact, break-time and showdown content lives in `screen`, not at the top. |
 | Admin (`AdminStatePayload`)     | `onAirScreen`, `breakEndsAt`, `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`); each `teams` entry also carries the team's `joker` (round id, number, title and source, or `null`); `settableJokerRounds` (the rounds with no opened question, once the pick has opened in a session with Jokers, else empty; the `/control` joker list offers them)                                                                                                                                                        |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`, `jokerPick` (while the status is `joker_pick`: the deadline, `null` once closed, and the pickable rounds; never a team's choice), `jokerRounds` (every round's id, number and title once the pick has opened in a session with Jokers, else empty; names the team's own joker on its phone, never any team's choice)                                                                                                                                                                  |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`, `jokerPick` (while the status is `joker_pick`: the deadline, `null` once closed, and the pickable rounds; never a team's choice), `jokerRounds` (every round's id, number and title once the pick has opened in a session with Jokers, else empty; names the team's own joker on its phone, never any team's choice), `clueRounds` (every round with a Clue question, by `roundId` and `roundNumber`; the Extra joker card names them)                                                                                                                                                                  |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -578,7 +578,7 @@ module, in this order, and skips a fact with no data:
 | `clue_last_gasp`         | `clue`, `question`                                     | Clue question: the first revealed one whose earliest `correct` answer came after clue 1; `clue` is that earliest clue. A Clue question nobody got is `nobody_got_it`'s                  |
 | `clean_sweep`            | `teamNames`                                            | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted                             |
 | `joker_favourite_round`  | `roundNumber`, `roundTitle`, `teamCount`               | Jokers on only: the round most teams have as their joker, and how many; a tie goes to the earlier round; names no team                                                            |
-| `joker_snubbed_round`    | `roundNumber`, `roundTitle`                            | Jokers on only: the first round no team has as its joker; skipped when every round is someone's joker; names no team                                                              |
+| `joker_snubbed_round`    | `roundNumber`, `roundTitle`                            | Jokers on only: the first round no team has as its joker, never a round with a Clue question; skipped when every round is someone's joker; names no team                         |
 | `joker_drawn_count`      | `teamCount`                                            | Jokers on only: how many teams got a drawn joker; skipped at 0; names no team                                                                                                     |
 | `best_joker`             | `teamName`, `roundNumber`, `roundTitle`, `extraPoints` | Jokers on only: among joker rounds already revealed, the team whose joker added the most points (its raw points in that round); skipped at 0; ties go to leaderboard name order   |
 | `joker_backfired`        | `teamName`, `roundNumber`, `roundTitle`                | Jokers on only: among joker rounds already revealed, the first team in leaderboard name order whose joker round, as it counts, scored less than each of its other revealed rounds |
@@ -828,6 +828,32 @@ the rounds with no opened question, and `PICK_JOKER` for any other round is
 refused, so a team cannot double a round whose questions it has seen; draws use
 the same rule. A kept joker on a started round stays, but can only be moved to a
 pickable round.
+
+**Clue rounds are never doubled.** A round that has a Clue question
+(`canBeDoubled`, `shared/types/src/doubled-rounds.ts`) can't be a joker round or
+take an extra joker. `PICK_JOKER` and `SET_TEAM_JOKER` refuse it ("That round
+can't be a joker round"), draws and redraws skip it, and `settableJokerRounds`
+leaves it out. The joker pick still lists it, with `canBeJoker: false` on its
+`JokerPickRound`: the phone shows it as a disabled card ("Can't be your joker")
+and the big screen marks it "Can't be a joker". `BUY_POWER_UP` for an extra
+joker refuses it ("Can't be used on this round"; checked after the next-round
+refusal). The players view's `clueRounds` (`{ roundId, roundNumber }` for every
+round with a Clue question, whatever the status) feeds the phone's Extra joker
+card, which says "Can't be used on Round 3 or Round 5" all session. When no
+round can be a joker round (`playsJokers` is false), the session plays as if
+Jokers were off: `getGameContext` reports `jokersEnabled: false`, so `ADVANCE`
+from `round_overview` goes straight to the first round's `round_intro`, and the snapshot's `quizStructure.hasJokerPick`
+is false, so the rules screen leaves out the joker line (`settings.jokersEnabled`
+stays as stored, for the lobby settings form). It is read from the
+quiz as it stands, not stored: a live edit that later makes a round of an
+all-Clue quiz eligible lets `PREVIOUS` from round 0's intro open the pick then
+(accepted, as the case needs both). A Live edit save that
+would put a Clue question in a round a team doubles (its joker round, a choice
+saved while the pick is open included, or a round it bought an extra joker for)
+is refused with a 409 (`findCluesOnDoubledRounds`): a new Clue question, a
+question changed to Clue, or one moved in. A round is followed by its questions,
+as the jokers are. Jokers and extra jokers already on a Clue round when this
+rule shipped, and ended sessions, are left as they were.
 
 While the status is `joker_pick`, the `/control` teams panel shows "N/M picked":
 the teams whose joker is `chosen` out of the whole roster (drawn and quiz-master-set

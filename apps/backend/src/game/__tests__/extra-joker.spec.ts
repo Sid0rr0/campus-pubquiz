@@ -189,6 +189,26 @@ describe('GameGateway — buying an extra joker', () => {
       },
     );
 
+    it('refuses a round with a Clue question', async () => {
+      const clueRound: QuizRoundSpec = {
+        title: 'Who am I',
+        breakAfter: true,
+        questions: [
+          {
+            type: 'clues',
+            prompt: 'Who am I?',
+            answer: 'Einstein',
+            payload: { options: ['Physicist', 'Relativity'] },
+          },
+        ],
+      };
+      const game = await night({}, { rounds: [clueRound, ...THREE_ROUNDS] });
+      const [alpha] = game.teams;
+
+      expect(await refusal(game, alpha, 0)).toBe("Can't be used on this round");
+      expect(await stored(game, alpha)).toEqual([]);
+    });
+
     it('refuses the joker round', async () => {
       const game = await night({
         showRoundOverview: true,

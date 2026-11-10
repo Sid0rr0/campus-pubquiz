@@ -43,7 +43,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
   {
     title: 'Joker',
     lines: [
-      "If the quiz has jokers, pick one round at the start of the quiz: your answer points in that round count double, bonuses don't. Pick nothing and you get a random round.",
+      "If the quiz has jokers, pick one round at the start of the quiz: your answer points in that round count double, bonuses don't. Pick nothing and you get a random round. A round with a Clue question can't be your joker, and the extra joker can't double it.",
     ],
   },
   {

@@ -3,6 +3,7 @@ import {
   findQuestionOpenForAnswering,
   drawRemovedOptions,
   drawPin,
+  canBeDoubled,
   extraJokerPurchaseRefusal,
   extraJokerRoundId,
   questionPurchaseRefusal,
@@ -269,6 +270,9 @@ export class PurchaseChanges {
       purchases: records,
       balance: coinBalance(session, teamId, records),
       jokerRoundId: session.jokers[teamId]?.roundId,
+      clueRoundIds: session.seededGame.rounds
+        .filter((round) => !canBeDoubled(round))
+        .map((round) => round.id),
       roundId,
       offeredRoundId: extraJokerRoundId(session),
     });

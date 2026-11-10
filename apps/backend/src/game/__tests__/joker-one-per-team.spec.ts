@@ -5,6 +5,7 @@ import {
   type TeamJokerSyncedPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
 import {
   setupRealStoreGatewayTest,
   type CreateGatewayOptions,
@@ -282,6 +283,37 @@ describe('GameGateway — every team keeps exactly one joker', () => {
 
       // The draw would pick Round 1 first, which Alpha already doubles.
       expect((await adminJokers(game)).Alpha).toEqual([2, 'Round 3', 'drawn']);
+    });
+
+    it('refuses an edit that adds a Clue question to a round a team chose during the open pick', async () => {
+      const game = await jokerNight();
+      await openPick(game);
+      const [alpha] = game.teams;
+      await game.gateway.handlePickJoker(asSocket(alpha.socket), {
+        roundId: game.rounds[1].id,
+      });
+      const clue = {
+        type: 'clues' as const,
+        prompt: 'Who am I?',
+        answer: 'Einstein',
+        points: 1,
+        options: ['Physicist', 'Relativity'],
+      };
+
+      await expect(
+        game.saveQuizEdit((rounds) => [
+          rounds[0],
+          { ...rounds[1], questions: [...rounds[1].questions, clue] },
+          rounds[2],
+        ]),
+      ).rejects.toThrow(QuizLiveEditBlockedError);
+      await expect(
+        game.saveQuizEdit((rounds) => [
+          rounds[0],
+          rounds[1],
+          { ...rounds[2], questions: [...rounds[2].questions, clue] },
+        ]),
+      ).resolves.toBeDefined();
     });
 
     it('keeps a joker on its round when the rounds are reordered', async () => {

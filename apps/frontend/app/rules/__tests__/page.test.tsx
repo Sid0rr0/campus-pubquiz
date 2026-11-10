@@ -58,6 +58,7 @@ describe('RulesPage', () => {
           breakRoundNumbers: [3, 6],
           minQuestionsPerTopic: 4,
           maxQuestionsPerTopic: 4,
+          hasJokerPick: true,
         },
       },
       connectionError: null,

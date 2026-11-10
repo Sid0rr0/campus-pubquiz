@@ -512,6 +512,7 @@ function powerUpsListOf({
     },
     extraJokerOffer: view.extraJokerOffer,
     jokerRoundId,
+    clueRounds: view.clueRounds,
     onBuyExtraJoker: async (roundId: number) => {
       const result = await buyExtraJoker(roundId);
       if (result.success) {

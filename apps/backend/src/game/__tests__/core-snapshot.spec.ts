@@ -60,6 +60,7 @@ describe('GameStateService — core snapshot', () => {
       breakRoundNumbers: [2],
       minQuestionsPerTopic: 2,
       maxQuestionsPerTopic: 2,
+      hasJokerPick: false,
     });
   });
 

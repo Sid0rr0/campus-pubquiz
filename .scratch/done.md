@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| clue-rounds-not-doubled | [Clue rounds are never doubled](clue-rounds-not-doubled/spec.md) | 0 |
 | quickfire-mode | [Quickfire is a quiz mode, not a round setting](quickfire-mode/spec.md) | 6 |
 | clue-question | [Clue question type, worth less with every clue shown](clue-question/spec.md) | 5 |
 | play-page-wiring | [The /play page as plain wiring](play-page-wiring/spec.md) | 2 |

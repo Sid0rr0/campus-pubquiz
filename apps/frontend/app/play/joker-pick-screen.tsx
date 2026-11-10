@@ -141,8 +141,9 @@ function JokerRoundButton({
     <button
       type="button"
       aria-pressed={isPicked}
+      disabled={!round.canBeJoker}
       onClick={onPick}
-      className={`flex w-full flex-col items-start gap-1 rounded-xl border-2 px-4 py-3 text-left ${
+      className={`flex w-full flex-col items-start gap-1 rounded-xl border-2 px-4 py-3 text-left disabled:border-dashed disabled:opacity-60 ${
         isPicked ? 'border-magenta bg-magenta/15' : 'border-foreground/20'
       }`}
     >
@@ -152,6 +153,11 @@ function JokerRoundButton({
       <span className="font-display text-xl">{round.title}</span>
       {round.category && (
         <span className="text-sm text-cyan">{round.category}</span>
+      )}
+      {!round.canBeJoker && (
+        <span className="text-sm font-extrabold text-magenta">
+          Can&apos;t be your joker
+        </span>
       )}
     </button>
   );

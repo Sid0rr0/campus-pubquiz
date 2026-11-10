@@ -100,6 +100,7 @@ describe('the joker pick views', () => {
           title: 'Round 1',
           category: 'Music',
           author: '',
+          canBeJoker: true,
         },
         {
           roundId: 20,
@@ -107,6 +108,7 @@ describe('the joker pick views', () => {
           title: 'Round 2',
           category: '',
           author: '',
+          canBeJoker: true,
         },
       ],
     });

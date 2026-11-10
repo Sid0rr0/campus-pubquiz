@@ -75,6 +75,7 @@ describe('block answering payloads', () => {
         breakRoundNumbers: [1],
         minQuestionsPerTopic: 2,
         maxQuestionsPerTopic: 2,
+        hasJokerPick: false,
       },
       roundTitle: 'Round 1',
       currentQuestion: {
@@ -131,6 +132,7 @@ describe('block answering payloads', () => {
         breakRoundNumbers: [1],
         minQuestionsPerTopic: 2,
         maxQuestionsPerTopic: 2,
+        hasJokerPick: false,
       },
       roundTitle: 'Round 1',
       currentQuestion: null,

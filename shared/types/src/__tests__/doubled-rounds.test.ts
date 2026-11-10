@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canBeDoubled,
   doubledRoundIds,
   doubledRoundIdsOfTeam,
+  playsJokers,
   type DoublingPurchase,
 } from '../doubled-rounds';
 
@@ -51,5 +53,33 @@ describe('doubledRoundIdsOfTeam', () => {
     expect(doubledRoundIdsOfTeam({}, [{ teamId: 7, ...extra(2) }], 7)).toEqual([
       2,
     ]);
+  });
+});
+
+const plain = { questions: [{ type: 'free_text' as const }] };
+const withClue = {
+  questions: [{ type: 'free_text' as const }, { type: 'clues' as const }],
+};
+
+describe('canBeDoubled', () => {
+  it('doubles a round without a Clue question, never one with', () => {
+    expect(canBeDoubled(plain)).toBe(true);
+    expect(canBeDoubled(withClue)).toBe(false);
+  });
+});
+
+describe('playsJokers', () => {
+  const game = (jokersEnabled: boolean, rounds: (typeof plain)[]) => ({
+    settings: { jokersEnabled },
+    rounds,
+  });
+
+  it('plays with jokers when Jokers is on and some round can be a joker round', () => {
+    expect(playsJokers(game(true, [withClue, plain]))).toBe(true);
+  });
+
+  it('plays without jokers when Jokers is off, or every round has a Clue question', () => {
+    expect(playsJokers(game(false, [plain]))).toBe(false);
+    expect(playsJokers(game(true, [withClue, withClue]))).toBe(false);
   });
 });
