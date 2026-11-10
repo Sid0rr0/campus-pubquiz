@@ -1,4 +1,4 @@
-import type { LeaderboardEntry } from '@campus-pubquiz/types';
+import type { ScreenViewProps } from '@/app/components/display-screen-view';
 import { Podium, podiumEntries } from '@/app/components/podium';
 import { RosterMarquee } from '@/app/display/roster-marquee';
 import { formatRankLabel } from '@/app/lib/rank-label';
@@ -14,16 +14,10 @@ const THANK_YOU = "Thank you for playing today's pub quiz!";
 const FEEDBACK_INVITE = 'Tell us how it went on your phone ★';
 const SEE_YOU = 'See you next week!';
 
-interface EndedScreenProps {
-  leaderboard: readonly LeaderboardEntry[];
-  isFeedbackPromptShown: boolean;
-}
-
 /** The final screen: podium on top, the rest of the field scrolling below it, then the thank-you. */
-export function EndedScreen({
-  leaderboard,
-  isFeedbackPromptShown,
-}: EndedScreenProps) {
+export function EndedScreen({ screen, live }: ScreenViewProps<'ended'>) {
+  const leaderboard = live?.leaderboard ?? [];
+  const { isFeedbackPromptShown } = screen;
   const onPodium = new Set(podiumEntries(leaderboard));
   const otherTeams = leaderboard.filter((entry) => !onPodium.has(entry));
   const thankYou = isFeedbackPromptShown

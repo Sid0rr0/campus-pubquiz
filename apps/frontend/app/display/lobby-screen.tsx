@@ -1,27 +1,12 @@
-import type { LeagueTop, TeamView } from '@campus-pubquiz/types';
+import type { ScreenViewProps } from '@/app/components/display-screen-view';
 import { JoinDetails } from '@/app/display/join-details';
 import { LeagueTopCard } from '@/app/display/league-top';
 import { TeamRoster } from '@/app/display/team-roster';
 
-interface LobbyScreenProps {
-  teams: TeamView[];
-  leagueTop: LeagueTop | null;
-  isConnected: boolean;
-  joinCode: string | null | undefined;
-  maxPlayersPerTeam: number;
-  extraPlayerPenaltyPoints: number;
-  onPickAnotherGame: () => void;
-}
-
-export function LobbyScreen({
-  teams,
-  leagueTop,
-  isConnected,
-  joinCode,
-  maxPlayersPerTeam,
-  extraPlayerPenaltyPoints,
-  onPickAnotherGame,
-}: LobbyScreenProps) {
+export function LobbyScreen({ settings, live }: ScreenViewProps<'lobby'>) {
+  if (!live) return null;
+  const { teams, leagueTop, isConnected, joinCode, onPickAnotherGame } = live;
+  const { maxPlayersPerTeam, extraPlayerPenaltyPoints } = settings;
   return (
     <div className="flex flex-1 flex-col px-16 text-center">
       <div className="flex flex-1 flex-col items-center gap-8">

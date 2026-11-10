@@ -65,7 +65,7 @@ type ScreenOf<Kind extends DisplayScreen['kind']> = Extract<
 >;
 
 /** What every screen's view is drawn from. */
-interface ScreenViewProps<Kind extends DisplayScreen['kind']> {
+export interface ScreenViewProps<Kind extends DisplayScreen['kind']> {
   screen: ScreenOf<Kind>;
   quiz: QuizPreviewContext;
   settings: QuizPreviewContext['settings'];
@@ -119,35 +119,6 @@ function LeaderboardView({
   );
 }
 
-function LobbyView({ settings, live }: ScreenViewProps<'lobby'>): ReactNode {
-  if (!live) return null;
-  return (
-    <LobbyScreen
-      teams={live.teams}
-      leagueTop={live.leagueTop}
-      isConnected={live.isConnected}
-      joinCode={live.joinCode}
-      maxPlayersPerTeam={settings.maxPlayersPerTeam}
-      extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
-      onPickAnotherGame={live.onPickAnotherGame}
-    />
-  );
-}
-
-function JoinOverlayView({
-  settings,
-  live,
-}: ScreenViewProps<'join_overlay'>): ReactNode {
-  if (!live) return null;
-  return (
-    <JoinOverlayScreen
-      joinCode={live.joinCode}
-      maxPlayersPerTeam={settings.maxPlayersPerTeam}
-      extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
-    />
-  );
-}
-
 function RulesView({
   settings,
   quizStructure,
@@ -156,18 +127,6 @@ function RulesView({
     <div className="flex flex-1 items-center justify-center px-16 py-10">
       <RulesContent quizStructure={quizStructure} settings={settings} />
     </div>
-  );
-}
-
-function RoundOverviewView({
-  quiz,
-}: ScreenViewProps<'round_overview'>): ReactNode {
-  return (
-    <RoundOverviewScreen
-      roundTitles={quiz.roundTitles}
-      roundCategories={quiz.roundCategories}
-      roundAuthors={quiz.roundAuthors}
-    />
   );
 }
 
@@ -192,15 +151,6 @@ function RoundTitleView({ screen }: ScreenViewProps<'round_title'>): ReactNode {
       roundTitle={screen.title}
       author={screen.author}
       note={screen.note}
-    />
-  );
-}
-
-function EndedView({ screen, live }: ScreenViewProps<'ended'>): ReactNode {
-  return (
-    <EndedScreen
-      leaderboard={live?.leaderboard ?? []}
-      isFeedbackPromptShown={screen.isFeedbackPromptShown}
     />
   );
 }
@@ -333,13 +283,13 @@ const SCREEN_VIEWS: {
   [Kind in DisplayScreen['kind']]: (props: ScreenViewProps<Kind>) => ReactNode;
 } = {
   leaderboard: LeaderboardView,
-  lobby: LobbyView,
-  join_overlay: JoinOverlayView,
+  lobby: LobbyScreen,
+  join_overlay: JoinOverlayScreen,
   rules: RulesView,
-  round_overview: RoundOverviewView,
+  round_overview: RoundOverviewScreen,
   joker_pick: JokerPickView,
   round_title: RoundTitleView,
-  ended: EndedView,
+  ended: EndedScreen,
   showdown: ShowdownView,
   blank: () => null,
   question: QuestionView,

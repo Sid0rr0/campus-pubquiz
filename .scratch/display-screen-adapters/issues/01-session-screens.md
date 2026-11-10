@@ -11,7 +11,7 @@ Ticket 02 collapses the open question, break intro and break review. No `/guide`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The four screens take the shared screen-view props; their adapters and props interfaces no longer exist
 - [ ] Display screen view tests, rendered from a Display screen fixture (reuse the suite's builders): a live-context case for each of lobby, join overlay, round overview and ended, and a no-live case showing lobby and join overlay draw nothing and ended draws an empty leaderboard

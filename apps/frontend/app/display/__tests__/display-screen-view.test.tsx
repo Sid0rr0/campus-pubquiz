@@ -518,3 +518,87 @@ describe('DisplayScreenView — without a live context', () => {
     expectNoLiveParts();
   });
 });
+
+describe('DisplayScreenView — session screens', () => {
+  function drawWith(
+    description: SessionDescription,
+    live?: Partial<DisplayLiveContext>,
+  ) {
+    const view = roomView(SOCKET_ROOMS.DISPLAY, {
+      teams: TEAMS,
+      ...description,
+    });
+    return render(
+      <DisplayScreenView
+        screen={view.screen}
+        quiz={{
+          settings: view.settings,
+          quizStructure: view.quizStructure,
+          roundTitles: view.roundTitles,
+          roundCategories: view.roundCategories,
+          roundAuthors: view.roundAuthors,
+        }}
+        live={live && { ...LIVE, ...live }}
+      />,
+    );
+  }
+
+  it('draws the lobby with the join code and the teams', () => {
+    drawWith(
+      { progress: { status: 'lobby' } },
+      { teams: roomView(SOCKET_ROOMS.DISPLAY, { teams: TEAMS }).teams },
+    );
+
+    expect(screen.getByText(/Waiting for the teams/)).toBeInTheDocument();
+    expect(screen.getByText('The Quizzards')).toBeInTheDocument();
+    expect(screen.getByText(/ABCDEF/)).toBeInTheDocument();
+  });
+
+  it('draws the join overlay with the join code', () => {
+    drawWith({ progress: { isJoinOverlayVisible: true } }, {});
+
+    expect(screen.getByText(/ABCDEF/)).toBeInTheDocument();
+  });
+
+  it('draws nothing for the lobby and the join overlay without a live context', () => {
+    const lobby = drawWith({ progress: { status: 'lobby' } });
+    expect(lobby.container).toBeEmptyDOMElement();
+    lobby.unmount();
+
+    const overlay = drawWith({ progress: { isJoinOverlayVisible: true } });
+    expect(overlay.container).toBeEmptyDOMElement();
+  });
+
+  it('draws the round overview with a live context', () => {
+    drawWith(
+      { rounds: TWO_ROUNDS, progress: { status: 'round_overview' } },
+      {},
+    );
+
+    expect(screen.getByText('Science')).toBeInTheDocument();
+  });
+
+  it('draws the ended screen with the final standings', () => {
+    const view = roomView(SOCKET_ROOMS.DISPLAY, {
+      leaderboard: [
+        { teamName: 'Winners', totalPoints: 9 },
+        { teamName: 'Runners', totalPoints: 5 },
+      ],
+      progress: { status: 'ended' },
+    });
+    drawWith(
+      { progress: { status: 'ended' } },
+      { leaderboard: view.leaderboard },
+    );
+
+    expect(screen.getByText('Quiz complete!')).toBeInTheDocument();
+    expect(screen.getByText('Winners')).toBeInTheDocument();
+  });
+
+  it('draws the ended screen with an empty leaderboard without a live context', () => {
+    drawWith({ progress: { status: 'ended' } });
+
+    expect(screen.getByText('Quiz complete!')).toBeInTheDocument();
+    expect(screen.queryByTestId('podium-step')).not.toBeInTheDocument();
+  });
+});
