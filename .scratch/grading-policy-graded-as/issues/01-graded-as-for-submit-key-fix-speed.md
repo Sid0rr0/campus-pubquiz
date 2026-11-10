@@ -14,7 +14,7 @@ Hand grade and the wider-margin regrade are ticket 02. No `/guide` or docs text:
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The policy's pure Jest spec covers, for submit, grade at submit, key fix (auto and match-or-human) and speed score: a Clue answer on a later clue graded at that clue's value, and a wider-margin answer outside the plain margin but inside the widened one graded correct. Build the scenario from fixtures if no registered type has both clues and auto grading; the point is that the builder runs on every event
 - [ ] A key-fix case shows that a moderator grade equal to the widened automatic grade counts as automatic (the documented tradeoff, evaluated against the graded-as question)

@@ -45,6 +45,23 @@ function modeOf(question: Pick<ScoredQuestion, 'type'>): GradingMode {
   return QUESTION_KINDS[question.type].gradingMode;
 }
 
+/** What an answer brings to grading beyond its value. */
+export interface AnswerAdjustments {
+  /** The clue a Clue question's answer was recorded on; null for any other type. */
+  clue: number | null;
+  /** Whether the answering team bought a wider margin on the question: graded against the widened one. */
+  hasWiderMargin: boolean;
+}
+
+/** The question as this one answer is graded against: its clue's value, then the widened margin when bought. */
+function gradedAs(
+  question: ScoredQuestion,
+  { clue, hasWiderMargin }: AnswerAdjustments,
+): ScoredQuestion {
+  const atTheClue = atClue(question, clue);
+  return hasWiderMargin ? withWiderMargin(atTheClue) : atTheClue;
+}
+
 function setOf(score: ScoreResult): GradeWrite {
   return { kind: 'set', points: score.points, verdict: score.verdict };
 }
@@ -79,8 +96,9 @@ const SUBMIT_GRADE: Record<
 export function gradeAtSubmit(
   question: ScoredQuestion,
   value: string,
+  adjustments: AnswerAdjustments,
 ): ScoreResult | null {
-  return SUBMIT_GRADE[modeOf(question)](question, value);
+  return SUBMIT_GRADE[modeOf(question)](gradedAs(question, adjustments), value);
 }
 
 const SUBMIT: Record<GradingMode, SubmitRule> = {
@@ -102,10 +120,11 @@ const SUBMIT: Record<GradingMode, SubmitRule> = {
 export function gradeOnSubmit(
   question: ScoredQuestion,
   value: string,
+  adjustments: AnswerAdjustments,
   stored: StoredAnswerGrade | null,
 ): GradeWrite {
   return SUBMIT[modeOf(question)](
-    gradeAtSubmit(question, value),
+    gradeAtSubmit(question, value, adjustments),
     value,
     stored,
   );
@@ -137,14 +156,10 @@ export function gradingStateOf(
 }
 
 /** A stored answer as the key-fix event reads it. */
-export interface StoredAnswerRow extends StoredAnswerGrade {
+export interface StoredAnswerRow extends StoredAnswerGrade, AnswerAdjustments {
   responseMs: number | null;
   verdict: ScoreResult['verdict'] | null;
   pointsAwarded: number;
-  /** Whether the answering team bought a wider margin on this question: graded against the widened one. */
-  hasWiderMargin?: boolean;
-  /** The clue a Clue question's answer was locked in on; its points are that clue's value. */
-  clue?: number | null;
 }
 
 export interface KeyFixInput {
@@ -174,7 +189,7 @@ function isGradedAutomatically(
   key: ScoredQuestion,
   stored: StoredAnswerRow,
 ): boolean {
-  const score = gradeAtSubmit(atClue(key, stored.clue ?? null), stored.value);
+  const score = gradeAtSubmit(key, stored.value, stored);
   return (
     score !== null &&
     stored.gradedAt !== null &&
@@ -194,7 +209,7 @@ export function rescoreAutoGraded(
   return rows.map((row) =>
     setOf(
       scoreSubmission(
-        row.hasWiderMargin ? withWiderMargin(question) : question,
+        gradedAs(question, row),
         row.value,
         timerMs === null ? undefined : { responseMs: row.responseMs, timerMs },
       ),
@@ -213,10 +228,7 @@ const KEY_FIX: Record<GradingMode, (input: KeyFixInput) => KeyFixResult> = {
   'match-or-human': ({ question, previous, rows }) => ({
     rescored: true,
     writes: rows.map((row) => {
-      const score = gradeAtSubmit(
-        atClue(question, row.clue ?? null),
-        row.value,
-      );
+      const score = gradeAtSubmit(question, row.value, row);
       if (score) return setOf(score);
       return isGradedAutomatically(previous, row) ? CLEAR : KEEP;
     }),

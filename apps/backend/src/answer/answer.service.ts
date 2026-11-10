@@ -13,7 +13,6 @@ import {
   isNonAnswer,
   QUESTION_KINDS,
   verdictForManualGrade,
-  withWiderMargin,
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -166,12 +165,15 @@ export class AnswerService {
       { fields: ['value', 'gradedAt', 'clue'] },
     );
     const clue = clueToRecord(question, existing, value, highestClueShown);
-    const graded = atClue(question, clue);
     const write = gradeOnSubmit(
-      (await this.widerMarginTeamIds(gameSessionId, questionId)).has(teamId)
-        ? withWiderMargin(graded)
-        : graded,
+      question,
       value,
+      {
+        clue,
+        hasWiderMargin: (
+          await this.widerMarginTeamIds(gameSessionId, questionId)
+        ).has(teamId),
+      },
       existing,
     );
 
@@ -210,7 +212,8 @@ export class AnswerService {
       gradedAt: answer.gradedAt?.toISOString() ?? null,
       verdict: answer.verdict,
       clue: answer.clue,
-      clueValue: clue === null ? null : graded.points,
+      clueValue:
+        clue === null ? null : clueValueFromPoints(question.points, clue),
     };
   }
 
@@ -405,7 +408,10 @@ export class AnswerService {
       team: teamId,
     });
     if (!row) return;
-    const score = gradeAtSubmit(withWiderMargin(question), row.value);
+    const score = gradeAtSubmit(question, row.value, {
+      clue: null,
+      hasWiderMargin: true,
+    });
     if (
       score === null ||
       (row.gradedAt !== null && row.pointsAwarded >= score.points)

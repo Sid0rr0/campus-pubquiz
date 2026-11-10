@@ -8,15 +8,41 @@ import {
 import {
   canBeUngraded,
   canGradeByHand,
-  gradeAtSubmit,
+  gradeAtSubmit as policyGradeAtSubmit,
   lockBatchWrites,
   gradeOnKeyFix,
-  gradeOnSubmit,
+  gradeOnSubmit as policyGradeOnSubmit,
   gradesAtLock,
   gradingStateOf,
   speedScore,
+  type AnswerAdjustments,
+  type StoredAnswerGrade,
   type StoredAnswerRow,
 } from '@/answer/grading-policy';
+
+const NONE: AnswerAdjustments = { clue: null, hasWiderMargin: false };
+const WIDER: AnswerAdjustments = { clue: null, hasWiderMargin: true };
+const gradeAtSubmit = (
+  question: ScoredQuestion,
+  value: string,
+  adjustments = NONE,
+) => policyGradeAtSubmit(question, value, adjustments);
+const gradeOnSubmit = (
+  question: ScoredQuestion,
+  value: string,
+  stored: StoredAnswerGrade | null,
+  adjustments = NONE,
+) => policyGradeOnSubmit(question, value, adjustments, stored);
+
+// 10% of 100 is 10, widened to 20%: 115 misses the plain margin, hits the widened.
+const NUMBER: ScoredQuestion = { type: 'number', answer: '100', points: 4 };
+// Three clues: clue 3 is worth 0.5, clue 1 worth 1.5.
+const CLUES: ScoredQuestion = {
+  type: 'clues',
+  answer: 'apple',
+  points: 1.5,
+  options: ['a', 'b', 'c'],
+};
 
 const AUTO: ScoredQuestion = {
   type: 'multiple_choice',
@@ -148,6 +174,33 @@ describe('Grading policy: grade at submit', () => {
 
     it('grades "I don\'t know" incorrect', () => {
       expect(gradeAtSubmit(number('200'), IDK_ANSWER_VALUE)).toEqual(incorrect);
+    });
+  });
+});
+
+describe('Grading policy: adjustments at submit', () => {
+  it('grades a Clue answer at the value of its recorded clue', () => {
+    expect(gradeAtSubmit(CLUES, 'apple', { ...NONE, clue: 3 })).toEqual({
+      points: 0.5,
+      verdict: 'correct',
+    });
+    expect(gradeOnSubmit(CLUES, 'apple', null, { ...NONE, clue: 3 })).toEqual({
+      kind: 'set',
+      points: 0.5,
+      verdict: 'correct',
+    });
+  });
+
+  it('grades outside the plain margin but inside the widened one correct', () => {
+    expect(gradeAtSubmit(NUMBER, '115')?.verdict).toBe('incorrect');
+    expect(gradeAtSubmit(NUMBER, '115', WIDER)).toEqual({
+      points: 4,
+      verdict: 'correct',
+    });
+    expect(gradeOnSubmit(NUMBER, '115', null, WIDER)).toEqual({
+      kind: 'set',
+      points: 4,
+      verdict: 'correct',
     });
   });
 });
@@ -311,6 +364,7 @@ describe('Grading policy: key fix', () => {
     gradedAt: null,
     verdict: null,
     pointsAwarded: 0,
+    ...NONE,
     ...over,
   });
   const graded = (
@@ -446,6 +500,52 @@ describe('Grading policy: key fix', () => {
     });
   });
 
+  describe('adjustments', () => {
+    const fix = (
+      question: ScoredQuestion,
+      rows: StoredAnswerRow[],
+      previous = question,
+    ) =>
+      gradeOnKeyFix({
+        question,
+        previous,
+        rows,
+        quickfireTimerSeconds: null,
+        hasBatchRun: false,
+      }).writes;
+
+    it('auto: applies the widened margin', () => {
+      expect(
+        fix(NUMBER, [row({ value: '115', hasWiderMargin: true })]),
+      ).toEqual([{ kind: 'set', points: 4, verdict: 'correct' }]);
+    });
+
+    it('match-or-human: grades a Clue answer at its clue and applies the clue', () => {
+      expect(fix(CLUES, [row({ value: 'apple', clue: 3 })])).toEqual([
+        { kind: 'set', points: 0.5, verdict: 'correct' },
+      ]);
+    });
+
+    it('treats a moderator grade equal to the clue-valued automatic grade as automatic', () => {
+      const wrongNow = { ...CLUES, answer: 'pear' };
+      expect(
+        fix(
+          wrongNow,
+          [
+            row({
+              value: 'apple',
+              clue: 3,
+              gradedAt: at,
+              verdict: 'correct',
+              pointsAwarded: 0.5,
+            }),
+          ],
+          CLUES,
+        ),
+      ).toEqual([{ kind: 'clear' }]);
+    });
+  });
+
   describe('batch', () => {
     const fix = (hasBatchRun: boolean) =>
       gradeOnKeyFix({
@@ -479,6 +579,7 @@ describe('Grading policy: grades at the lock', () => {
     responseMs: null,
     verdict: null,
     pointsAwarded: 0,
+    ...NONE,
   });
 
   it('is true only for a batch question', () => {
@@ -517,6 +618,13 @@ describe('Grading policy: speed score', () => {
     responseMs,
     verdict: null,
     pointsAwarded: 0,
+    ...NONE,
+  });
+
+  it('applies the widened margin to an auto row', () => {
+    expect(
+      speedScore(NUMBER, [{ ...rowOf('115', null), ...WIDER }], null),
+    ).toEqual([{ kind: 'set', points: 4, verdict: 'correct' }]);
   });
 
   it('scales an auto question by response time when a timer is given', () => {
