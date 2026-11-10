@@ -578,6 +578,38 @@ describe('DisplayScreenView — session screens', () => {
     expect(screen.getByText('Science')).toBeInTheDocument();
   });
 
+  it('draws the answered count of an open question with a live context', () => {
+    drawWith(
+      { rounds: TWO_ROUNDS, progress: { status: 'question_open' } },
+      {
+        teams: roomView(SOCKET_ROOMS.DISPLAY, { teams: TEAMS }).teams,
+        answeredTeamIds: [1],
+      },
+    );
+
+    expect(screen.getByText('1 OF 2 TEAMS ANSWERED')).toBeInTheDocument();
+  });
+
+  it('draws the break intro bonus list, but not on the final break', () => {
+    const bonusSettings = {
+      settings: { enabledBonusCategories: ['shot' as const] },
+    };
+    const middle = drawWith({
+      ...bonusSettings,
+      rounds: [{ breakAfter: true, questions: [{}] }, { questions: [{}] }],
+      progress: { status: 'break_intro', roundIndex: 0 },
+    });
+    expect(middle.container.querySelector('aside')).not.toBeNull();
+    middle.unmount();
+
+    const final = drawWith({
+      ...bonusSettings,
+      rounds: [{ breakAfter: false, questions: [{}] }, { questions: [{}] }],
+      progress: { status: 'break_intro', roundIndex: 1 },
+    });
+    expect(final.container.querySelector('aside')).toBeNull();
+  });
+
   it('draws the ended screen with the final standings', () => {
     const view = roomView(SOCKET_ROOMS.DISPLAY, {
       leaderboard: [

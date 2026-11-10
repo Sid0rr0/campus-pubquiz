@@ -1,19 +1,5 @@
-import type { ComponentProps } from 'react';
-import type { BlockQuestionView } from '@campus-pubquiz/types';
+import type { ScreenViewProps } from '@/app/components/display-screen-view';
 import { QuestionDisplay } from '@/app/display/question-display';
-
-type MediaProps = Pick<
-  ComponentProps<typeof QuestionDisplay>,
-  | 'autoplayMedia'
-  | 'isFullscreen'
-  | 'mediaReplayToken'
-  | 'isMediaPaused'
-  | 'isDisplaySoundMuted'
->;
-
-interface BreakReviewScreenProps extends MediaProps {
-  question: BlockQuestionView;
-}
 
 /**
  * Shown while the admin grades a just-locked block, stepping through its
@@ -22,14 +8,16 @@ interface BreakReviewScreenProps extends MediaProps {
  * closed to new answers) and minus the correct answer (not revealed yet).
  */
 export function BreakReviewScreen({
-  question,
-  ...media
-}: BreakReviewScreenProps) {
+  screen,
+  settings,
+  media,
+}: ScreenViewProps<'break_review'>) {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
       <QuestionDisplay
-        question={question}
+        question={screen.question}
         mediaTestIdPrefix="break"
+        autoplayMedia={settings.autoplayMedia}
         {...media}
       />
     </div>

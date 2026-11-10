@@ -170,28 +170,6 @@ function ShowdownView({
   );
 }
 
-function QuestionView({
-  screen,
-  settings,
-  live,
-  media,
-}: ScreenViewProps<'question'>): ReactNode {
-  return (
-    <QuestionOpenScreen
-      question={screen.question}
-      teamCounts={
-        live && {
-          answeredCount: live.answeredTeamIds.length,
-          totalTeams: live.teams.length,
-        }
-      }
-      autoplayMedia={settings.autoplayMedia}
-      {...media}
-      quickfireQuestionEndsAt={live?.quickfireQuestionEndsAt}
-    />
-  );
-}
-
 function LockingView({ screen }: ScreenViewProps<'locking'>): ReactNode {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
@@ -204,39 +182,6 @@ function LockingView({ screen }: ScreenViewProps<'locking'>): ReactNode {
         lockAt={screen.lockAt}
       />
     </div>
-  );
-}
-
-function BreakIntroView({
-  screen,
-  settings,
-  quizStructure,
-}: ScreenViewProps<'break_intro'>): ReactNode {
-  return (
-    <BreakIntroScreen
-      roundNumber={screen.roundNumber}
-      breakNumber={screen.breakNumber}
-      enabledBonusCategories={settings.enabledBonusCategories}
-      breakEndsAt={screen.breakEndsAt}
-      quizStructure={quizStructure}
-      showBonusList={!screen.isFinalBreak}
-      isFeedbackPromptShown={screen.isFeedbackPromptShown}
-      funFacts={screen.funFacts}
-    />
-  );
-}
-
-function BreakReviewView({
-  screen,
-  settings,
-  media,
-}: ScreenViewProps<'break_review'>): ReactNode {
-  return (
-    <BreakReviewScreen
-      question={screen.question}
-      autoplayMedia={settings.autoplayMedia}
-      {...media}
-    />
   );
 }
 
@@ -292,10 +237,10 @@ const SCREEN_VIEWS: {
   ended: EndedScreen,
   showdown: ShowdownView,
   blank: () => null,
-  question: QuestionView,
+  question: QuestionOpenScreen,
   locking: LockingView,
-  break_intro: BreakIntroView,
-  break_review: BreakReviewView,
+  break_intro: BreakIntroScreen,
+  break_review: BreakReviewScreen,
   break_round_title: BreakRoundTitleView,
   reveal_intro: RevealIntroView,
   reveal: RevealView,

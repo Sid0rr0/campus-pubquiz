@@ -1,9 +1,30 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BlockQuestionView, QuestionView } from '@campus-pubquiz/types';
-import { BreakReviewScreen } from '@/app/display/break-review-screen';
+import {
+  SOCKET_ROOMS,
+  type BlockQuestionView,
+  type DisplayScreen,
+  type QuestionView,
+} from '@campus-pubquiz/types';
+import { DisplayScreenView } from '@/app/components/display-screen-view';
 import { QuestionDisplay } from '@/app/display/question-display';
-import { QuestionOpenScreen } from '@/app/display/question-open-screen';
+import { roomView } from '@/test-utils/room-view';
+
+function drawScreen(screen: DisplayScreen) {
+  const view = roomView(SOCKET_ROOMS.DISPLAY, {});
+  return render(
+    <DisplayScreenView
+      screen={screen}
+      quiz={{
+        settings: view.settings,
+        quizStructure: view.quizStructure,
+        roundTitles: view.roundTitles,
+        roundCategories: view.roundCategories,
+        roundAuthors: view.roundAuthors,
+      }}
+    />,
+  );
+}
 
 // The vitest config turns iframe page loading off, so happy-dom logs a
 // NotSupportedError each time the YouTube embed mounts; drop only that.
@@ -42,19 +63,14 @@ describe('hidden video on the big screen', () => {
   });
 
   it('covers the mounted video while the question is asked', () => {
-    render(
-      <QuestionOpenScreen
-        question={HIDDEN}
-        teamCounts={{ answeredCount: 0, totalTeams: 0 }}
-      />,
-    );
+    drawScreen({ kind: 'question', question: HIDDEN });
 
     expect(screen.getByTestId('question-youtube')).toBeInTheDocument();
     expect(screen.getByTestId('question-video-cover')).toHaveTextContent('🎵');
   });
 
   it('covers the mounted video in break review', () => {
-    render(<BreakReviewScreen question={BLOCK_QUESTION} />);
+    drawScreen({ kind: 'break_review', question: BLOCK_QUESTION });
 
     expect(screen.getByTestId('break-youtube')).toBeInTheDocument();
     expect(screen.getByTestId('break-video-cover')).toBeInTheDocument();
@@ -128,12 +144,7 @@ describe('hidden video on the big screen', () => {
   });
 
   it('shows no cover for a video that is not hidden', () => {
-    render(
-      <QuestionOpenScreen
-        question={QUESTION}
-        teamCounts={{ answeredCount: 0, totalTeams: 0 }}
-      />,
-    );
+    drawScreen({ kind: 'question', question: QUESTION });
 
     expect(screen.getByTestId('question-youtube')).toBeInTheDocument();
     expect(

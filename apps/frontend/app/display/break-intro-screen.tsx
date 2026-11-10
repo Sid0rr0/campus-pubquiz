@@ -1,28 +1,6 @@
-import type {
-  BonusCategory,
-  FunFact,
-  QuizStructureSummary,
-} from '@campus-pubquiz/types';
+import type { ScreenViewProps } from '@/app/components/display-screen-view';
 import { BreakBonusList } from '@/app/display/break-bonus-list';
 import { FunFactRotator } from '@/app/display/fun-fact-rotator';
-
-interface BreakIntroScreenProps {
-  roundNumber: number;
-  /** 1-based ordinal of this break (1 for the quiz's first, 2 for its second, …) — shown as "BREAK N". */
-  breakNumber: number;
-  /** This session's enabled bonus categories — passed through to BreakBonusList to show what teams can still go earn while grading happens off-screen. */
-  enabledBonusCategories: BonusCategory[];
-  /** Epoch-ms time the admin expects the break to end, or null/undefined when unset — shown as "Back at HH:MM" underneath BREAK. */
-  breakEndsAt?: number | null;
-  /** Passed through to BreakBonusList's "can be earned until the end of break X" caption. */
-  quizStructure: QuizStructureSummary;
-  /** False on the quiz's last break — bonuses have already closed by then, so there's nothing left to show as available. */
-  showBonusList: boolean;
-  /** The server's say-so that teams are being asked for feedback — draws the "Rate the rounds" line, nothing when false. */
-  isFeedbackPromptShown: boolean;
-  /** The server's already-filtered fun facts, rotated one at a time under BREAK; empty shows nothing. */
-  funFacts: FunFact[];
-}
 
 /** "Back at 9:45 PM" — local time, no seconds. */
 function formatBreakEndTime(breakEndsAt: number): string {
@@ -34,18 +12,22 @@ function formatBreakEndTime(breakEndsAt: number): string {
 
 /** Shown for the whole grading break — same round_intro-style treatment, but for "BREAK" instead of a round's name. Grading itself happens off-screen in the admin panel. */
 export function BreakIntroScreen({
-  roundNumber,
-  breakNumber,
-  enabledBonusCategories,
-  breakEndsAt,
+  screen,
+  settings,
   quizStructure,
-  showBonusList,
-  isFeedbackPromptShown,
-  funFacts,
-}: BreakIntroScreenProps) {
+}: ScreenViewProps<'break_intro'>) {
+  const {
+    roundNumber,
+    breakNumber,
+    breakEndsAt,
+    isFeedbackPromptShown,
+    funFacts,
+  } = screen;
+  const { enabledBonusCategories } = settings;
+  // No bonus list on the quiz's last break: bonuses have already closed.
   // Same rule BreakBonusList applies: "custom" has no explanation, so it alone draws nothing.
   const hasBonusList =
-    showBonusList &&
+    !screen.isFinalBreak &&
     enabledBonusCategories.some((category) => category !== 'custom');
   const bonusList = hasBonusList ? (
     <BreakBonusList

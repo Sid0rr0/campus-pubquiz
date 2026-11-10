@@ -1,17 +1,12 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FunFact, QuizStructureSummary } from '@campus-pubquiz/types';
-import { BreakIntroScreen } from '@/app/display/break-intro-screen';
+import { SOCKET_ROOMS, type FunFact } from '@campus-pubquiz/types';
+import { DisplayScreenView } from '@/app/components/display-screen-view';
 import {
   FUN_FACT_ROTATE_MS,
   FUN_FACT_START_DELAY_MS,
 } from '@/app/display/fun-fact-rotator';
-
-const QUIZ_STRUCTURE: QuizStructureSummary = {
-  roundCount: 2,
-  breakCount: 2,
-  lastBreakNumber: 2,
-} as unknown as QuizStructureSummary;
+import { roomView } from '@/test-utils/room-view';
 
 const QUESTION = {
   questionId: 7,
@@ -27,16 +22,21 @@ const BONUS_FACT: FunFact = {
 };
 
 function renderBreak(funFacts: FunFact[]) {
+  const view = roomView(SOCKET_ROOMS.DISPLAY, {
+    rounds: [{ breakAfter: false, questions: [{}] }, { questions: [{}] }],
+    progress: { status: 'break_intro', roundIndex: 1 },
+  });
+  if (view.screen.kind !== 'break_intro') throw new Error('not a break intro');
   return render(
-    <BreakIntroScreen
-      roundNumber={2}
-      breakNumber={1}
-      enabledBonusCategories={[]}
-      breakEndsAt={null}
-      quizStructure={QUIZ_STRUCTURE}
-      showBonusList={false}
-      isFeedbackPromptShown={false}
-      funFacts={funFacts}
+    <DisplayScreenView
+      screen={{ ...view.screen, funFacts }}
+      quiz={{
+        settings: view.settings,
+        quizStructure: view.quizStructure,
+        roundTitles: view.roundTitles,
+        roundCategories: view.roundCategories,
+        roundAuthors: view.roundAuthors,
+      }}
     />,
   );
 }

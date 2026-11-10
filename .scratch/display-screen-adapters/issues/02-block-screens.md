@@ -9,7 +9,7 @@ No `/guide` or docs text.
 
 **Blocked by:** 01 (Session screens draw their Display screen directly), which exports the shared props and edits the same view file and test suite.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The three screens take the shared screen-view props; their adapters and props interfaces no longer exist
 - [ ] The break fun-facts test and the hidden-video tests for the open question and break review render through the Display screen view from a Display screen fixture, with their assertions unchanged
