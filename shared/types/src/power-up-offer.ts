@@ -141,22 +141,22 @@ export interface ExtraJokerRuleInput {
   balance: number;
   /** The team's joker round, which an extra joker cannot double again. */
   jokerRoundId: number | undefined | null;
-  /** The rounds that have a Clue question: never doubled. */
-  clueRoundIds: readonly number[];
 }
 
-/** The next round, as the phone is told of it: its title is "" when the round overview did not show it. */
+/** The round on offer (`extraJokerOfferedRound`), as the phone is told of it: its title is "" when the round overview did not show it. */
 export interface OfferedRound {
   roundId: number;
   roundNumber: number;
   title: string;
+  /** False for a round with a Clue question. */
+  canBeDoubled: boolean;
 }
 
 /** Why an extra joker for `roundId` is refused (worded for the team), or null when it goes through. The order is the server's. */
 function extraJokerRefusalOf(
   input: ExtraJokerRuleInput,
   roundId: number,
-  offeredRoundId: number | null,
+  offered: { roundId: number; canBeDoubled: boolean } | null,
 ): Refusal | null {
   const { cost, maxUses, used } = entryOf(
     'extra_joker',
@@ -164,8 +164,8 @@ function extraJokerRefusalOf(
     input.purchases,
   );
   if (maxUses === 0) return refused('That power-up is not offered');
-  if (roundId !== offeredRoundId) return refused(WRONG_ROUND);
-  if (input.clueRoundIds.includes(roundId)) {
+  if (roundId !== offered?.roundId) return refused(WRONG_ROUND);
+  if (!offered.canBeDoubled) {
     return refused("Can't be used on this round");
   }
   const doubled = doubledRoundIds(
@@ -180,16 +180,15 @@ function extraJokerRefusalOf(
   return input.balance < cost ? heldBack(NOT_ENOUGH_COINS) : null;
 }
 
-/** Why buying an extra joker for `roundId` is refused, or null when it goes through. `offeredRoundId` is what `extraJokerRoundId` says is on offer. */
+/** Why buying an extra joker for `roundId` is refused, or null when it goes through. `offered` is what `extraJokerOfferedRound` says is on offer. */
 export function extraJokerPurchaseRefusal(
   input: ExtraJokerRuleInput & {
     roundId: number;
-    offeredRoundId: number | null;
+    offered: { roundId: number; canBeDoubled: boolean } | null;
   },
 ): string | null {
   return (
-    extraJokerRefusalOf(input, input.roundId, input.offeredRoundId)?.reason ??
-    null
+    extraJokerRefusalOf(input, input.roundId, input.offered)?.reason ?? null
   );
 }
 
@@ -205,14 +204,13 @@ export function extraJokerOfferEntry(
   const entry = entryOf('extra_joker', input.settings, input.purchases);
   if (entry.maxUses === 0) return null;
   const { offer } = input;
-  const offeredId = offer?.roundId ?? null;
   return {
     ...entry,
     // With no round offered, nothing matches: the "next round only" reason.
     outcome: outcomeOf(
-      offeredId === null
+      offer === null
         ? refused(WRONG_ROUND)
-        : extraJokerRefusalOf(input, offeredId, offeredId),
+        : extraJokerRefusalOf(input, offer.roundId, offer),
     ),
     roundName:
       offer === null

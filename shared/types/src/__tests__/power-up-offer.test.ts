@@ -189,9 +189,14 @@ const jokerBase = {
   purchases: [] as { powerUp: PowerUpId; roundId: number | null }[],
   balance: 2,
   jokerRoundId: 3 as number | null | undefined,
-  clueRoundIds: [] as number[],
 };
-const offered = { roundId: 5, roundNumber: 2, title: 'Music' };
+const offered = {
+  roundId: 5,
+  roundNumber: 2,
+  title: 'Music',
+  canBeDoubled: true,
+};
+const clueOffered = { ...offered, canBeDoubled: false };
 const extra = (roundId: number) => ({
   powerUp: 'extra_joker' as const,
   roundId,
@@ -199,13 +204,13 @@ const extra = (roundId: number) => ({
 const jokerRefusal = (
   patch: Partial<typeof jokerBase> = {},
   roundId = 5,
-  offeredRoundId: number | null = 5,
+  offer: { roundId: number; canBeDoubled: boolean } | null = offered,
 ) =>
   extraJokerPurchaseRefusal({
     ...jokerBase,
     ...patch,
     roundId,
-    offeredRoundId,
+    offered: offer,
   });
 const WRONG = 'Only the next round can be doubled, before its intro';
 const DOUBLED = 'That round is already doubled';
@@ -222,15 +227,21 @@ describe('extraJokerPurchaseRefusal', () => {
 
   it.each([
     ['not offered', notOffered, 9, null, 'That power-up is not offered'],
-    ['another round than offered', {}, 6, 5, WRONG],
+    ['another round than offered', {}, 6, offered, WRONG],
     ['no round offered', {}, 5, null, WRONG],
-    ['a round with a Clue question', { clueRoundIds: [5] }, 5, 5, CLUE],
-    ['the team joker round', { jokerRoundId: 5 }, 5, 5, DOUBLED],
-    ['an earlier extra joker on it', { purchases: [extra(5)] }, 5, 5, DOUBLED],
-    ['the limit', { purchases: [extra(1), extra(2)] }, 5, 5, LIMIT],
-    ['coins', { balance: 1 }, 5, 5, 'Not enough coins'],
-  ])('refuses %s', (_name, patch, roundId, offeredRoundId, reason) => {
-    expect(jokerRefusal(patch, roundId, offeredRoundId)).toBe(reason);
+    ['a round with a Clue question', {}, 5, clueOffered, CLUE],
+    ['the team joker round', { jokerRoundId: 5 }, 5, offered, DOUBLED],
+    [
+      'an earlier extra joker on it',
+      { purchases: [extra(5)] },
+      5,
+      offered,
+      DOUBLED,
+    ],
+    ['the limit', { purchases: [extra(1), extra(2)] }, 5, offered, LIMIT],
+    ['coins', { balance: 1 }, 5, offered, 'Not enough coins'],
+  ])('refuses %s', (_name, patch, roundId, offer, reason) => {
+    expect(jokerRefusal(patch, roundId, offer)).toBe(reason);
   });
 
   it('checks in the server order: round, clue, doubled, limit, coins', () => {
@@ -239,8 +250,8 @@ describe('extraJokerPurchaseRefusal', () => {
       balance: 0,
       purchases: [extra(1), extra(2)],
     };
-    expect(jokerRefusal({ ...all, clueRoundIds: [5] }, 6)).toBe(WRONG);
-    expect(jokerRefusal({ ...all, clueRoundIds: [5] })).toBe(CLUE);
+    expect(jokerRefusal(all, 6, clueOffered)).toBe(WRONG);
+    expect(jokerRefusal(all, 5, clueOffered)).toBe(CLUE);
     expect(jokerRefusal(all)).toBe(DOUBLED);
     expect(jokerRefusal({ ...all, jokerRoundId: 3 })).toBe(LIMIT);
     expect(jokerRefusal({ ...all, jokerRoundId: 3, purchases: [] })).toBe(
@@ -291,12 +302,15 @@ describe('extraJokerOfferEntry', () => {
   });
 
   it.each([
-    ['a round with a Clue question', { clueRoundIds: [5] }, CLUE],
-    ['the joker round', { jokerRoundId: 5 }, DOUBLED],
-    ['an earlier extra joker', { purchases: [extra(5)] }, DOUBLED],
-    ['the limit', { purchases: [extra(1), extra(2)] }, LIMIT],
-  ])('is not available now with %s', (_name, patch, reason) => {
-    expect(entry(patch)?.outcome).toEqual({ status: 'unavailable', reason });
+    ['a round with a Clue question', {}, clueOffered, CLUE],
+    ['the joker round', { jokerRoundId: 5 }, offered, DOUBLED],
+    ['an earlier extra joker', { purchases: [extra(5)] }, offered, DOUBLED],
+    ['the limit', { purchases: [extra(1), extra(2)] }, offered, LIMIT],
+  ])('is not available now with %s', (_name, patch, offer, reason) => {
+    expect(entry(patch, offer)?.outcome).toEqual({
+      status: 'unavailable',
+      reason,
+    });
   });
 
   it('is not available now with no round offered, and counts its uses', () => {

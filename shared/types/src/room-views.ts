@@ -314,6 +314,8 @@ export interface PlayersStatePayload
     roundId: number;
     roundNumber: number;
     title: string;
+    /** False when the round has a Clue question. */
+    canBeDoubled: boolean;
   } | null;
   /** The rounds that have a Clue question, which the extra joker can't double (the phone names them on its card). Every round of the quiz, whatever the status. */
   clueRounds: { roundId: number; roundNumber: number }[];

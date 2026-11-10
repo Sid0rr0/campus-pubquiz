@@ -21,7 +21,7 @@ import {
 } from './joker';
 import { getQuizStructureSummary } from './game-state-structure';
 import {
-  extraJokerRoundId,
+  extraJokerOfferedRound,
   powerUpCountsFor,
   visibleRoundTitle,
   type PowerUpCount,
@@ -249,19 +249,17 @@ export function buildPlayersFields(
   | 'clueRounds'
 > {
   const { rounds, settings } = session.seededGame;
-  const offeredId = extraJokerRoundId(session);
-  const offeredIndex = rounds.findIndex((round) => round.id === offeredId);
+  const offered = extraJokerOfferedRound(session);
   return {
     extraJokerOffer:
-      offeredIndex === -1
+      offered === null
         ? null
         : {
-            roundId: rounds[offeredIndex].id,
-            roundNumber: offeredIndex + 1,
+            ...offered,
             title: visibleRoundTitle(
               settings,
               session.progress.status,
-              rounds[offeredIndex].title,
+              rounds[offered.roundNumber - 1].title,
             ),
           },
     clueRounds: rounds.flatMap((round, index) =>

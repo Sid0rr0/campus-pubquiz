@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ANSWER_FORMATS, type AnswerKind } from './answer-kind';
+import { canBeDoubled } from './doubled-rounds';
 import type { GameStatus } from './game-state-types';
 import { pickableRounds } from './joker';
 import { QUESTION_KINDS } from './question-kind';
@@ -249,6 +250,27 @@ export function extraJokerRoundId(session: {
     (round) => rounds.indexOf(round) > lastIntroIndex,
   );
   return next ? next.id : null;
+}
+
+/** The round `extraJokerRoundId` picks, with its number in the quiz and whether it can be doubled; null when none is offered. */
+export function extraJokerOfferedRound(
+  session: Parameters<typeof extraJokerRoundId>[0] & {
+    seededGame: {
+      rounds: readonly { questions: readonly { type: QuestionType }[] }[];
+    };
+  },
+): { roundId: number; roundNumber: number; canBeDoubled: boolean } | null {
+  const offeredId = extraJokerRoundId(session);
+  const index = session.seededGame.rounds.findIndex(
+    (round) => round.id === offeredId,
+  );
+  return index === -1
+    ? null
+    : {
+        roundId: session.seededGame.rounds[index].id,
+        roundNumber: index + 1,
+        canBeDoubled: canBeDoubled(session.seededGame.rounds[index]),
+      };
 }
 
 /** How many options a 50/50 leaves: half, rounded down, never fewer than two. */

@@ -370,6 +370,7 @@ describe('the players view fields', () => {
         roundId: 10,
         roundNumber: 1,
         title: '',
+        canBeDoubled: true,
       });
     });
 
@@ -382,6 +383,7 @@ describe('the players view fields', () => {
         roundId: 10,
         roundNumber: 1,
         title: 'Round 10',
+        canBeDoubled: true,
       });
     });
 
@@ -431,6 +433,13 @@ describe('rounds with a Clue question', () => {
     expect(
       buildPlayersFields(sessionOver(mixed, progressAt('rules'))).clueRounds,
     ).toEqual([{ roundId: 20, roundNumber: 2 }]);
+  });
+
+  it('says the offered round cannot be doubled when it has a Clue question', () => {
+    expect(
+      buildPlayersFields(sessionOver(allClues, progressAt('rules')))
+        .extraJokerOffer,
+    ).toMatchObject({ roundId: 10, canBeDoubled: false });
   });
 
   it('leaves Clue rounds out of the rounds the quiz master can set', () => {

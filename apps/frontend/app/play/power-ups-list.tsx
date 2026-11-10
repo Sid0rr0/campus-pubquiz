@@ -178,14 +178,11 @@ function extraJokerRow({
     purchases,
     balance: coins,
     jokerRoundId,
-    clueRoundIds: clueRounds.map((round) => round.roundId),
     offer,
   });
   if (entry === null) return null;
   const { outcome, roundName, ...rest } = entry;
-  const isClueRound = clueRounds.some(
-    (round) => round.roundId === offer?.roundId,
-  );
+  const isClueRound = offer?.canBeDoubled === false;
   return {
     ...rowOf(rest, outcome, `the next round: ${roundName}`),
     notes: [

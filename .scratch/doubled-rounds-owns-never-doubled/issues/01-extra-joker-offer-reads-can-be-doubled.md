@@ -8,7 +8,7 @@ Teams see no difference: the same refusals, in the same order, with the same wor
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The offer's extra-joker rule input no longer has `clueRoundIds` or `offeredRoundId`. The server's purchase path and the phone's power-ups list no longer build a list of Clue rounds for the rule.
 - [ ] One shared builder returns the offered round with `canBeDoubled`. The snapshot and the server's purchase path both call it.

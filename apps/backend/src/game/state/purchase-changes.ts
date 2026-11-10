@@ -3,9 +3,8 @@ import {
   findQuestionOpenForAnswering,
   drawRemovedOptions,
   drawPin,
-  canBeDoubled,
   extraJokerPurchaseRefusal,
-  extraJokerRoundId,
+  extraJokerOfferedRound,
   questionPurchaseRefusal,
   coinBalance,
   textHint,
@@ -270,11 +269,8 @@ export class PurchaseChanges {
       purchases: records,
       balance: coinBalance(session, teamId, records),
       jokerRoundId: session.jokers[teamId]?.roundId,
-      clueRoundIds: session.seededGame.rounds
-        .filter((round) => !canBeDoubled(round))
-        .map((round) => round.id),
       roundId,
-      offeredRoundId: extraJokerRoundId(session),
+      offered: extraJokerOfferedRound(session),
     });
     if (refusal !== null) throw new SessionRefusal(refusal);
 
