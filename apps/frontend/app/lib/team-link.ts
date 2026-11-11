@@ -652,7 +652,7 @@ function teamDataFromJoin(payload: JoinAcceptedPayload) {
     mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
     myPlayerCount: payload.playerCount ?? null,
     myJoker: payload.joker ?? null,
-    mySideId: payload.sideId ?? null,
+    mySideId: payload.sideId,
     myPurchases: payload.purchases,
     roomReadyQuestionIds: payload.roomReadyQuestionIds,
   } satisfies Partial<TeamLinkState>;

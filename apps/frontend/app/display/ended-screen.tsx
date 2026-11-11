@@ -3,6 +3,7 @@ import { Podium, podiumEntries } from '@/app/components/podium';
 import { SideBar } from '@/app/components/side-bar';
 import { RosterMarquee } from '@/app/display/roster-marquee';
 import { formatRankLabel } from '@/app/lib/rank-label';
+import { sideStandingsWinner } from '@campus-pubquiz/types';
 
 const TEAM_TEXT_CLASSES = [
   'text-cyan',
@@ -19,6 +20,7 @@ const SEE_YOU = 'See you next week!';
 export function EndedScreen({ screen, live }: ScreenViewProps<'ended'>) {
   const leaderboard = live?.leaderboard ?? [];
   const { isFeedbackPromptShown, sideStandings } = screen;
+  const winner = sideStandings && sideStandingsWinner(sideStandings);
   const onPodium = new Set(podiumEntries(leaderboard));
   const otherTeams = leaderboard.filter((entry) => !onPodium.has(entry));
   const thankYou = isFeedbackPromptShown
@@ -29,13 +31,15 @@ export function EndedScreen({ screen, live }: ScreenViewProps<'ended'>) {
     <div className="flex flex-1 flex-col items-center gap-8 px-16 pt-10 pb-10 text-center">
       <Podium entries={leaderboard} />
       <h1 className="font-display text-display-4xl">Quiz complete!</h1>
-      {sideStandings && (
+      {sideStandings && winner && (
         <div className="flex w-full max-w-5xl flex-col items-center gap-4">
-          <p className="font-display text-display-2xl">
-            {sideStandings.isTied
-              ? "It's a tie"
-              : `${sideStandings.sides.find((side) => side.isLeading)?.name} wins`}
-          </p>
+          {winner.kind !== 'none' && (
+            <p className="font-display text-display-2xl">
+              {winner.kind === 'tie'
+                ? "It's a tie"
+                : `${winner.side.name} wins`}
+            </p>
+          )}
           <SideBar standings={sideStandings} />
         </div>
       )}

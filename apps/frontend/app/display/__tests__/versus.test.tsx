@@ -110,6 +110,22 @@ describe('DisplayPage — Versus', () => {
       expect(screen.queryByText(/wins/)).not.toBeInTheDocument();
     });
 
+    it('names no winner when no team took part', () => {
+      show({
+        settings: VERSUS,
+        teamSides: TEAM_SIDES,
+        progress: { status: 'ended' },
+        tookPartTeamIds: [],
+        leaderboard: [
+          { teamId: 1, teamName: 'Alpha', totalPoints: 10 },
+          { teamId: 2, teamName: 'Beta', totalPoints: 30 },
+        ],
+      });
+
+      expect(screen.getByTestId('side-bar')).toBeInTheDocument();
+      expect(screen.queryByText(/wins|tie|undefined/)).not.toBeInTheDocument();
+    });
+
     it('shows nothing about sides with Versus off', () => {
       show({
         progress: { status: 'ended' },
@@ -125,7 +141,7 @@ describe('DisplayPage — Versus', () => {
     leaderboard(1);
 
     expect(screen.getByTestId('side-segment-eng')).toHaveStyle({
-      width: '25%',
+      transform: 'scaleX(0.25)',
     });
   });
 
@@ -133,7 +149,7 @@ describe('DisplayPage — Versus', () => {
     leaderboard(2);
 
     expect(screen.getByTestId('side-segment-eng')).toHaveStyle({
-      width: '75%',
+      transform: 'scaleX(0.75)',
     });
   });
 
@@ -141,7 +157,7 @@ describe('DisplayPage — Versus', () => {
     leaderboard(0, false);
 
     expect(screen.getByTestId('side-segment-eng')).toHaveStyle({
-      width: '75%',
+      transform: 'scaleX(0.75)',
     });
   });
 

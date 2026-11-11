@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
-import { versusSideColor } from '@campus-pubquiz/types';
+import {
+  getLeaderboardRevealStepCount,
+  versusSideColor,
+} from '@campus-pubquiz/types';
 import type {
   DisplayScreen,
   LeaderboardEntry,
@@ -108,9 +111,9 @@ function LeaderboardView({
   const { board, revealCount, sideStandings, priorSideStandings, sideIds } =
     screen;
   // The bar holds the prior split until the top rank is revealed; the reveal
-  // target is the number of ranks on the board, all the view carries.
+  // target is the step count of the (already capped) board the view carries.
   const isTopRankRevealed =
-    revealCount >= new Set(board.entries.map((entry) => entry.rank)).size;
+    revealCount >= getLeaderboardRevealStepCount(board.entries, false);
   const sideColors = Object.fromEntries(
     Object.entries(sideIds ?? {}).flatMap(([teamId, sideId]) => {
       const side = sideStandings?.sides.find(({ id }) => id === sideId);

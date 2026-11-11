@@ -64,9 +64,10 @@ describe('PlayPage — the side bar on the leaderboard', () => {
     expect(within(bar).getByText('30 pts avg · 67%')).toBeInTheDocument();
     expect(within(bar).getByText('No teams')).toBeInTheDocument();
     expect(within(bar).getByText('0%')).toBeInTheDocument();
-    expect(screen.getByTestId('side-segment-law')).toHaveStyle({
-      width: '66.66666666666666%',
-    });
+    // Segments are full-width layers scaled to their cumulative share (transform only animates).
+    expect(screen.getByTestId('side-segment-eng').style.transform).toMatch(
+      /^scaleX\(0\.3333/,
+    );
     const own = within(bar)
       .getByText(/Engineering/)
       .closest('li');

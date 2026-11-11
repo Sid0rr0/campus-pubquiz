@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeSideStandings } from '../side-standings';
+import { describeSideStandings, sideStandingsWinner } from '../side-standings';
 import { leaderboardEntry } from './session-fixtures';
 
 const SIDES = [
@@ -109,5 +109,27 @@ describe('describeSideStandings', () => {
     const none = standings({}, {});
     expect(none.sides.every((side) => !side.isLeading)).toBe(true);
     expect(none.isTied).toBe(false);
+  });
+});
+
+describe('sideStandingsWinner', () => {
+  it('names the single leading side', () => {
+    const winner = sideStandingsWinner(
+      standings({ 1: 5, 2: 9 }, { 1: 'a', 2: 'b' }),
+    );
+    expect(winner).toEqual({
+      kind: 'side',
+      side: expect.objectContaining({ id: 'b' }),
+    });
+  });
+
+  it('reports a tie', () => {
+    expect(
+      sideStandingsWinner(standings({ 1: 5, 2: 5 }, { 1: 'a', 2: 'b' })),
+    ).toEqual({ kind: 'tie' });
+  });
+
+  it('reports no winner when no team counts', () => {
+    expect(sideStandingsWinner(standings({}, {}))).toEqual({ kind: 'none' });
   });
 });

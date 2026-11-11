@@ -23,6 +23,18 @@ export interface SideStandings {
   isTied: boolean;
 }
 
+export type SideWinner =
+  | { kind: 'none' }
+  | { kind: 'tie' }
+  | { kind: 'side'; side: SideStanding };
+
+/** Who won: the one leading side, a tie, or nobody when no team counted. */
+export function sideStandingsWinner(standings: SideStandings): SideWinner {
+  if (standings.isTied) return { kind: 'tie' };
+  const side = standings.sides.find((candidate) => candidate.isLeading);
+  return side ? { kind: 'side', side } : { kind: 'none' };
+}
+
 /** The session's current side standings, or undefined with Versus off (nothing is sent then). Computed from session state on every emit, so a pick or move shows without a scores change. */
 export function describeSessionSideStandings(
   session: SessionState,
