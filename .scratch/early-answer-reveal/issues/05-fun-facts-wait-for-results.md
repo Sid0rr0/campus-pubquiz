@@ -6,6 +6,6 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Fun facts tests: with the setting on, no fact in a break draws on the block in play; with it off, unchanged
+- [x] Fun facts tests: with the setting on, no fact in a break draws on the block in play; with it off, unchanged

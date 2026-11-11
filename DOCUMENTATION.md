@@ -596,8 +596,11 @@ correct rate says nothing and it always has a winner: it is left out of
 `toughest_question`, `room_split` and `nobody_got_it`, and out of the
 `clean_sweep` block (a block of only closest guesses has no sweep).
 `fastest_correct_answer` stays quickfire-only. The
-facts about questions read only the blocks before the block in play (whose
-answers stay hidden until its reveal); the block in play contributes nothing.
+facts about questions read only the blocks whose results are out, i.e. the
+blocks before the block in play; the block in play, or in its break, contributes
+nothing. That holds with **Early answer reveal** on too: the block in its break
+has aired its answers but not its results, so a fact like `toughest_question`
+would leak them.
 At the first break nothing is revealed, so only `bonus_awards_so_far` and the
 three joker facts that name no team can appear (and the list is `[]` when no
 bonus was awarded and Jokers is off). The joker facts that name a team
