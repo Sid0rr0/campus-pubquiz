@@ -40,6 +40,8 @@ export function versusSideColor(index: number): string {
 export const VERSUS_SIDE_COUNT_MESSAGE = `Versus needs ${MIN_VERSUS_SIDES} to ${MAX_VERSUS_SIDES} sides`;
 export const VERSUS_SIDE_NAME_MESSAGE =
   'Side names must be filled in and differ, ignoring case';
+export const MAX_VERSUS_SIDE_ID_LENGTH = 64;
+export const VERSUS_SIDE_ID_MESSAGE = `Side ids must be unique and at most ${MAX_VERSUS_SIDE_ID_LENGTH} characters`;
 export const VERSUS_NOT_FOR_QUICKFIRE_MESSAGE =
   "A quickfire session can't have Versus";
 
@@ -52,6 +54,13 @@ export function versusSettingsRefusal(settings: {
   const sides = settings.versusSides ?? [];
   if (sides.length < MIN_VERSUS_SIDES || sides.length > MAX_VERSUS_SIDES) {
     return VERSUS_SIDE_COUNT_MESSAGE;
+  }
+  const ids = new Set(sides.map((side) => side.id));
+  if (
+    ids.size !== sides.length ||
+    sides.some((side) => side.id.length > MAX_VERSUS_SIDE_ID_LENGTH)
+  ) {
+    return VERSUS_SIDE_ID_MESSAGE;
   }
   const names = sides.map((side) => side.name.trim().toLowerCase());
   return names.some((name) => name === '') ||

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_VERSUS_SIDE_ID_LENGTH,
   VERSUS_SIDE_COLORS,
+  VERSUS_SIDE_ID_MESSAGE,
   VERSUS_SIDE_COUNT_MESSAGE,
   VERSUS_SIDE_NAME_MESSAGE,
   versusSettingsRefusal,
@@ -57,6 +59,29 @@ describe('versusSettingsRefusal', () => {
         versusSides: [side('a', 'Law'), side('b', ' LAW')],
       }),
     ).toBe(VERSUS_SIDE_NAME_MESSAGE);
+  });
+});
+
+describe('versusSettingsRefusal ids', () => {
+  it('refuses two sides sharing an id', () => {
+    expect(
+      versusSettingsRefusal({
+        versusEnabled: true,
+        versusSides: [side('a', 'Law'), side('a', 'Eng')],
+      }),
+    ).toBe(VERSUS_SIDE_ID_MESSAGE);
+  });
+
+  it('refuses an id longer than the cap', () => {
+    expect(
+      versusSettingsRefusal({
+        versusEnabled: true,
+        versusSides: [
+          side('x'.repeat(MAX_VERSUS_SIDE_ID_LENGTH + 1), 'Law'),
+          side('b', 'Eng'),
+        ],
+      }),
+    ).toBe(VERSUS_SIDE_ID_MESSAGE);
   });
 });
 

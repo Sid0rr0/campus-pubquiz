@@ -217,6 +217,23 @@ describe('GameGateway — the quiz master moves a team', () => {
     });
   });
 
+  it('moves a roster team after a restart, before its phone has rejoined', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Quizzards'],
+      settings: VERSUS,
+    });
+    const { teamId } = game.teams[0];
+    const restarted = await game.restart();
+    const admin = await restarted.connectAdmin();
+
+    const ack = await restarted.gateway.handleSetTeamSide(asSocket(admin), {
+      teamId,
+      sideId: 'eng',
+    });
+
+    expect(ack).toEqual({ success: true });
+  });
+
   it('refuses an unknown side and a team not on the roster', async () => {
     const game = await harness.createGateway({
       teamNames: ['Quizzards'],
@@ -299,6 +316,17 @@ describe('GameGateway — Start quiz and the Versus settings with sides picked',
     expect(view.progress.status).not.toBe('lobby');
   });
 
+  it('lets the quiz master end the quiz from the lobby while a team has no side', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Quizzards'],
+      settings: VERSUS,
+    });
+
+    const view = await game.act('END_QUIZ');
+
+    expect(view.progress.status).toBe('ended');
+  });
+
   it('starts without sides when Versus is off', async () => {
     const game = await harness.createGateway({ teamNames: ['Quizzards'] });
 
@@ -324,6 +352,24 @@ describe('GameGateway — Start quiz and the Versus settings with sides picked',
     ]);
     await update(game, VERSUS);
     expect(await rejoinSide(game, team)).toBeNull();
+  });
+
+  it('does not save the Versus-off settings when clearing the picks fails', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Quizzards'],
+      settings: VERSUS,
+    });
+    await pick(game, game.teams[0], { sideId: 'eng' });
+    jest
+      .spyOn(game.teamService, 'clearSides')
+      .mockRejectedValueOnce(new Error('db down'));
+    const save = jest.spyOn(game.seedService, 'updateSettings');
+
+    await expect(update(game, { versusEnabled: false })).rejects.toThrow(
+      'db down',
+    );
+
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('refuses removing a side a team is on, and allows removing an empty one', async () => {

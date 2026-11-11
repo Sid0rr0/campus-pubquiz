@@ -187,7 +187,7 @@ export class MoveCommitter {
     step: ProgressMoveStep,
   ): Promise<CommittedMove> {
     const { progress } = step;
-    assertEveryTeamHasSideToStart(session, progress.status);
+    assertEveryTeamHasSideToStart(session, pressed);
     const closedPick = await this.crossJokerPick(session, progress);
     // Leaving the lobby decides every rostered team's carried coin, once.
     const isLeavingLobby =
@@ -281,17 +281,17 @@ export class MoveCommitter {
 }
 
 /**
- * Refuses leaving the lobby while Versus is on and a roster team has no side.
+ * Refuses Start quiz (not End quiz) while Versus is on and a roster team has no side.
  * The leaderboard lists every roster team (re-read with each write), so it
  * covers teams that have not rejoined since a restart, unlike `session.teams`.
  */
 function assertEveryTeamHasSideToStart(
   session: SessionState,
-  nextStatus: GameProgress['status'],
+  pressed: GameAction,
 ): void {
   if (
+    pressed !== 'START_QUIZ' ||
     session.progress.status !== 'lobby' ||
-    nextStatus === 'lobby' ||
     !session.seededGame.settings.versusEnabled
   ) {
     return;

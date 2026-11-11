@@ -63,7 +63,8 @@ export class TeamSideChanges {
     { teamId, sideId }: SetTeamSidePayload,
   ): Promise<SessionChange<SessionOutcome>> {
     requireSide(session, sideId);
-    if (!session.teams.some((team) => team.teamId === teamId)) {
+    // The leaderboard lists the whole roster; `session.teams` is empty after a restart until phones rejoin.
+    if (!session.leaderboard.some((entry) => entry.teamId === teamId)) {
       throw new SessionRefusal(`Team ${teamId} is not in this session`);
     }
     return await this.store(session, teamId, sideId);
