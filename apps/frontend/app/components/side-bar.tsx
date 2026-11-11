@@ -18,8 +18,9 @@ export function SideBar({
 }) {
   if (!standings) return null;
   const { sides } = standings;
-  let cumulative = 0;
-  const segmentEnds = sides.map((side) => (cumulative += side.share));
+  const segmentEnds = sides.map((_, index) =>
+    sides.slice(0, index + 1).reduce((sum, side) => sum + side.share, 0),
+  );
   return (
     <div data-testid="side-bar" className="flex w-full flex-col gap-2">
       <div className="relative h-4 w-full overflow-hidden rounded-full">
