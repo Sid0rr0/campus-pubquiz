@@ -1,8 +1,16 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { UsersController } from '@/auth/users.controller';
-import { UserNotFoundError, type AuthService } from '@/auth/auth.service';
+import {
+  UserNotFoundError,
+  UserNotPendingError,
+  type AuthService,
+} from '@/auth/auth.service';
 import type { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import type { UsersListedPayload } from '@campus-pubquiz/types';
 
@@ -74,6 +82,15 @@ describe('UsersController', () => {
         controller.approve(999, { role: 'moderator' }),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('maps UserNotPendingError to a 409', async () => {
+      const { controller, authService } = makeController();
+      authService.approve.mockRejectedValue(new UserNotPendingError(5));
+
+      await expect(
+        controller.approve(5, { role: 'moderator' }),
+      ).rejects.toThrow(ConflictException);
+    });
   });
 
   describe('deactivate', () => {
@@ -129,6 +146,13 @@ describe('UsersController', () => {
       authService.deny.mockRejectedValue(new UserNotFoundError(999));
 
       await expect(controller.deny(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps UserNotPendingError to a 409', async () => {
+      const { controller, authService } = makeController();
+      authService.deny.mockRejectedValue(new UserNotPendingError(5));
+
+      await expect(controller.deny(5)).rejects.toThrow(ConflictException);
     });
   });
 });

@@ -41,6 +41,14 @@ export class UserNotFoundError extends Error {
   }
 }
 
+/** Approve and Deny only apply to a pending account; another admin may have decided it since the page loaded. */
+export class UserNotPendingError extends Error {
+  constructor(userId: number) {
+    super(`User ${userId} is no longer pending`);
+    this.name = 'UserNotPendingError';
+  }
+}
+
 export interface LoginResult {
   token: string;
   user: AuthUser;
@@ -103,6 +111,7 @@ export class AuthService {
   async approve(userId: number, role: UserRole): Promise<void> {
     const user = await this.users.findOne(userId);
     if (!user) throw new UserNotFoundError(userId);
+    if (user.status !== 'pending') throw new UserNotPendingError(userId);
     user.role = role;
     user.status = 'active';
     await this.users.getEntityManager().flush();
@@ -119,6 +128,7 @@ export class AuthService {
   async deny(userId: number): Promise<void> {
     const user = await this.users.findOne(userId);
     if (!user) throw new UserNotFoundError(userId);
+    if (user.status !== 'pending') throw new UserNotPendingError(userId);
     await this.users.getEntityManager().removeAndFlush(user);
   }
 

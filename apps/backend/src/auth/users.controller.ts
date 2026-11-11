@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   Get,
   NotFoundException,
@@ -13,7 +14,11 @@ import type {
   ApproveUserRequest,
   UsersListedPayload,
 } from '@campus-pubquiz/types';
-import { AuthService, UserNotFoundError } from '@/auth/auth.service';
+import {
+  AuthService,
+  UserNotFoundError,
+  UserNotPendingError,
+} from '@/auth/auth.service';
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
@@ -24,6 +29,17 @@ function requireRole(body: Partial<ApproveUserRequest>): ApproveUserRequest {
     throw new BadRequestException('role must be "admin" or "moderator"');
   }
   return { role: body.role };
+}
+
+/** The HTTP error for a refused account change; anything else is rethrown. */
+function httpErrorFor(error: unknown): unknown {
+  if (error instanceof UserNotFoundError) {
+    return new NotFoundException(error.message);
+  }
+  if (error instanceof UserNotPendingError) {
+    return new ConflictException(error.message);
+  }
+  return error;
 }
 
 @Controller('users')
@@ -49,10 +65,7 @@ export class UsersController {
     try {
       await this.authService.approve(id, role);
     } catch (error) {
-      if (error instanceof UserNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      throw error;
+      throw httpErrorFor(error);
     }
   }
 
@@ -62,10 +75,7 @@ export class UsersController {
       await this.authService.deactivate(id);
       this.broadcaster.disconnectUser(id);
     } catch (error) {
-      if (error instanceof UserNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      throw error;
+      throw httpErrorFor(error);
     }
   }
 
@@ -74,10 +84,7 @@ export class UsersController {
     try {
       await this.authService.deny(id);
     } catch (error) {
-      if (error instanceof UserNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      throw error;
+      throw httpErrorFor(error);
     }
   }
 }

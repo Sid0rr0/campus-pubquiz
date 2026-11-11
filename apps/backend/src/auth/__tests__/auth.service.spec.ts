@@ -6,6 +6,7 @@ import {
   AuthService,
   InvalidCredentialsError,
   UserNotFoundError,
+  UserNotPendingError,
 } from '@/auth/auth.service';
 import type { UserRepository } from '@/db/repositories/user.repository';
 import type { SessionService } from '@/auth/session.service';
@@ -317,6 +318,26 @@ describe('AuthService', () => {
         UserNotFoundError,
       );
     });
+
+    it.each(['active', 'deactivated'] as const)(
+      'refuses approve for a {status} user and changes nothing',
+      async (status) => {
+        const user: Partial<User> = { id: 5, role: 'moderator', status };
+        const repo = createFakeUserRepository([user]);
+        const service = new AuthService(
+          repo as unknown as UserRepository,
+          createFakeSessionService() as unknown as SessionService,
+        );
+
+        await expect(service.approve(5, 'admin')).rejects.toThrow(
+          UserNotPendingError,
+        );
+
+        expect(user.status).toBe(status);
+        expect(repo.flush).not.toHaveBeenCalled();
+        expect(repo.removeAndFlush).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('deactivate', () => {
@@ -379,6 +400,24 @@ describe('AuthService', () => {
 
       await expect(service.deny(999)).rejects.toThrow(UserNotFoundError);
     });
+
+    it.each(['active', 'deactivated'] as const)(
+      'refuses deny for a {status} user and changes nothing',
+      async (status) => {
+        const user: Partial<User> = { id: 5, role: 'moderator', status };
+        const repo = createFakeUserRepository([user]);
+        const service = new AuthService(
+          repo as unknown as UserRepository,
+          createFakeSessionService() as unknown as SessionService,
+        );
+
+        await expect(service.deny(5)).rejects.toThrow(UserNotPendingError);
+
+        expect(user.status).toBe(status);
+        expect(repo.flush).not.toHaveBeenCalled();
+        expect(repo.removeAndFlush).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('listUsers', () => {

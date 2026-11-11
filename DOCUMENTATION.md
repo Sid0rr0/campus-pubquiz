@@ -2190,7 +2190,8 @@ on an older schema version keep working without a data migration.
 - **Admin/moderator**: per-user accounts with two roles — `admin` (everything,
   including user management) and `moderator` (everything except user
   management). New accounts self-register as `pending`; an existing admin
-  approves them and assigns a role. Passwords are bcrypt-hashed; login issues
+  approves them and assigns a role (approve and deny only apply to a still-`pending`
+  account: another admin's earlier decision is refused with a 409). Passwords are bcrypt-hashed; login issues
   an opaque, DB-backed session token with sliding expiration (every validated
   request/handshake pushes it forward), delivered as an httpOnly session
   cookie (`campus_pubquiz_session`, set by `POST /auth/login`). REST calls
