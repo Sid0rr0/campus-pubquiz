@@ -330,7 +330,10 @@ const PREVIOUS_FROM: Partial<Record<GameStatus, Transition>> = {
   locking: (progress) => ({ ...progress, status: 'question_open' }),
   // Reveals the specific just-locked question at the same revealIndex —
   // never decrements, so it's never silently skipped past.
-  break_intro: (progress) => ({ ...progress, status: 'break' }),
+  break_intro: (progress, context) => ({
+    ...progress,
+    status: context.earlyAnswerReveal ? 'answers' : 'break',
+  }),
   break: previousFromBlockReview,
   break_round_intro: previousFromBreakRoundIntro,
   answers_intro: previousFromAnswersIntro,

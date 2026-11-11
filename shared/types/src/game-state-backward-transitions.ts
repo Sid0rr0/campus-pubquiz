@@ -7,6 +7,7 @@ import {
   isFirstQuestionOfItsRound,
   type QuestionPosition,
 } from './game-state-block-position';
+import { isBreakStatus } from './game-state-groups';
 import {
   illegal,
   type GameContext,
@@ -80,19 +81,29 @@ export function previousFromRoundIntro(
     };
   }
 
+  // With the Early answer reveal the previous block ended in its break card,
+  // which Previous returns to quietly (no leaderboard, every grade kept).
+  if (context.earlyAnswerReveal && !previousRound.quickfire) {
+    return {
+      ...enterPreviousBlockReveal(progress, context, 'break_intro'),
+      isLeaderboardVisible: false,
+    };
+  }
+
   return enterPreviousBlockReveal(progress, context);
 }
 
 /**
  * Jumps back into the last question of the block immediately before the one
- * starting at `progress.roundIndex`'s first question, in 'reveal' status —
- * that block's answers already aired live, so re-entering it re-shows them
- * rather than reopening anything for (re-)answering. Illegal when there is
- * no earlier block.
+ * starting at `progress.roundIndex`'s first question, in 'reveal' status
+ * (or `status`) — that block's answers already aired live, so re-entering it
+ * re-shows them rather than reopening anything for (re-)answering. Illegal
+ * when there is no earlier block.
  */
 function enterPreviousBlockReveal(
   progress: GameProgress,
   context: GameContext,
+  status: 'reveal' | 'break_intro' = 'reveal',
 ): GameProgress {
   const currentBlockStart = getBlockStartPosition(
     progress.roundIndex,
@@ -111,7 +122,7 @@ function enterPreviousBlockReveal(
   );
   return {
     ...progress,
-    status: 'reveal',
+    status,
     roundIndex: previousBlockEnd.roundIndex,
     questionIndex: previousBlockEnd.questionIndex,
     revealIndex,
@@ -318,5 +329,12 @@ export function previousFromEnded(progress: GameProgress): GameProgress {
   if (!progress.previousStatus) {
     illegal(progress.status, 'PREVIOUS');
   }
-  return { ...progress, status: progress.previousStatus, previousStatus: null };
+  return {
+    ...progress,
+    status: progress.previousStatus,
+    previousStatus: null,
+    // The break's Advance opened the board on the way out; Previous stays quiet.
+    isLeaderboardVisible:
+      progress.isLeaderboardVisible && !isBreakStatus(progress.previousStatus),
+  };
 }

@@ -10,7 +10,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Backward transition tests cover each rule above, with the setting on and off
 - [ ] Walking forward then all the way back then forward again lands on the same screens

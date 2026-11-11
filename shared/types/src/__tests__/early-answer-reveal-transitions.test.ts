@@ -101,11 +101,80 @@ describe('Early answer reveal — Move plan transitions', () => {
 
   it('opens the leaderboard again when the break is re-entered by Previous and left again', () => {
     const back = press(breakIntro, 'PREVIOUS', early);
-    expect(back.status).toBe('break');
-    expect(press(back, 'ADVANCE', early)).toMatchObject({
+    expect(back.status).toBe('answers');
+    expect(
+      press(press(back, 'ADVANCE', early), 'ADVANCE', early),
+    ).toMatchObject({
       status: 'round_intro',
       isLeaderboardVisible: true,
     });
+  });
+
+  it("steps back from the break card to the block's last answer, not the break review", () => {
+    expect(press(breakIntro, 'PREVIOUS', early)).toMatchObject({
+      status: 'answers',
+      revealIndex: 3,
+    });
+    expect(press(breakIntro, 'PREVIOUS', usual).status).toBe('break');
+  });
+
+  const nextRoundIntro: GameProgress = {
+    ...locking,
+    status: 'round_intro',
+    roundIndex: 2,
+    questionIndex: 0,
+    revealIndex: 0,
+    furthestOpenIndex: -1,
+    isLeaderboardVisible: true,
+  };
+
+  it("steps back from the next block's round intro to the break card, leaderboard hidden", () => {
+    expect(press(nextRoundIntro, 'PREVIOUS', early)).toMatchObject({
+      status: 'break_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      revealIndex: 3,
+      isLeaderboardVisible: false,
+    });
+    expect(press(nextRoundIntro, 'PREVIOUS', usual).status).toBe('reveal');
+  });
+
+  it('hides the leaderboard when Previous leaves the final screen for the break card', () => {
+    const ended: GameProgress = {
+      ...breakIntro,
+      status: 'ended',
+      previousStatus: 'break_intro',
+      isLeaderboardVisible: true,
+    };
+    expect(press(ended, 'PREVIOUS', early)).toMatchObject({
+      status: 'break_intro',
+      isLeaderboardVisible: false,
+    });
+  });
+
+  it('lands on the same screens walking forward, all the way back, and forward again', () => {
+    const screens = (p: GameProgress) => [
+      p.status,
+      p.roundIndex,
+      p.revealIndex,
+      p.isLeaderboardVisible,
+    ];
+    // A locked block never reopens, so the walk starts at the answers title card.
+    const forward: GameProgress[] = [];
+    let p = press(locking, 'ADVANCE', early);
+    while (p.status !== 'round_intro') {
+      forward.push(p);
+      p = press(p, 'ADVANCE', early);
+    }
+    forward.push(p);
+    const presses = forward.length - 1;
+    let back = p;
+    for (let i = 0; i < presses; i++) back = press(back, 'PREVIOUS', early);
+    expect(screens(back)).toEqual(screens(forward[0]));
+    for (let i = 0; i < presses; i++) {
+      back = press(back, 'ADVANCE', early);
+      expect(screens(back)).toEqual(screens(forward[i + 1]));
+    }
   });
 
   it('still leaves the break through the usual reveal with the setting off', () => {
