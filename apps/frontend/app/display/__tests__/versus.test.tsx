@@ -146,9 +146,13 @@ describe('DisplayPage — Versus', () => {
   it('shows the current split once every rank is revealed', () => {
     leaderboard(2);
 
-    expect(screen.getByTestId('side-segment-eng')).toHaveStyle({
-      transform: 'scaleX(0.75)',
-    });
+    // The first side grows in from the left edge, the last from the right.
+    const eng = screen.getByTestId('side-segment-eng');
+    const law = screen.getByTestId('side-segment-law');
+    expect(eng.style.getPropertyValue('--side-scale')).toBe('0.75');
+    expect(eng).toHaveClass('origin-left');
+    expect(law.style.getPropertyValue('--side-scale')).toBe('0.25');
+    expect(law).toHaveClass('origin-right');
   });
 
   it('gives each shown row its side colour dot', () => {
