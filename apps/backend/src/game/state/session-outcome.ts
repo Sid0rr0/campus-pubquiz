@@ -44,6 +44,11 @@ export interface JokerSync extends TeamSync {
   joker: TeamJoker | null;
 }
 
+/** A connected team whose phone needs its side (null: none), with the socket it is on. */
+export interface SideSync extends TeamSync {
+  sideId: string | null;
+}
+
 /** A connected team whose phone needs its new coins (no toast), with the socket it is on. */
 export interface CoinSync extends TeamSync {
   payload: TeamCoinsSyncedPayload;
@@ -110,6 +115,8 @@ export interface SessionOutcome {
   playerCountSyncs: readonly PlayerCountSync[];
   /** Connected teams whose own joker changed (a pick, a draw when the pick closed), each told the joker it now holds (never sent room-wide). */
   jokerSyncs: readonly JokerSync[];
+  /** Connected teams whose own side changed (a pick, Versus turned off), each told the side it is now on (never sent room-wide). */
+  sideSyncs: readonly SideSync[];
   /** Connected teams whose own power-up purchases changed (a purchase), each told its purchases and coins (never sent room-wide). */
   purchaseSyncs: readonly PurchaseSync[];
   /** Connected teams told whether their Ask the room is ready on a question, after any team's answer landed there (a flag per team, never a count). */
@@ -152,6 +159,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   teamSyncs: [],
   playerCountSyncs: [],
   jokerSyncs: [],
+  sideSyncs: [],
   purchaseSyncs: [],
   roomReadySyncs: [],
   bonusSyncs: [],

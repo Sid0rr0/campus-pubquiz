@@ -16,6 +16,7 @@ import {
   type JoinAcceptedPayload,
   type LeaveSessionPayload,
   type PickJokerPayload,
+  type PickSidePayload,
   type PowerUpId,
   type PurchaseView,
   type RateRoundPayload,
@@ -143,6 +144,10 @@ export interface TeamLinkGame {
   myJoker: TeamJoker | null;
   /** Resolves to the server's verdict on a joker pick; the picker shows it ("Saved ✓", or the reason), so nothing is toasted here. */
   pickJoker: (roundId: number) => Promise<AckResult>;
+  /** The id of the team's own Versus side as the server last said it, or null while it has none. */
+  mySideId: string | null;
+  /** Resolves to the server's verdict on a side pick; the new side arrives as a sync, so nothing is dispatched here. */
+  pickSide: (sideId: string) => Promise<AckResult>;
   /** The team's own power-up purchases as the server last said them. */
   myPurchases: PurchaseView[];
   /** The questions on which this team's Ask the room is ready, as the server last said. */
@@ -413,6 +418,9 @@ export function useTeamLink(
       socket.on(SOCKET_EVENTS.TEAM_JOKER_SYNCED, (payload) =>
         dispatch({ type: 'jokerSynced', joker: payload.joker }),
       );
+      socket.on(SOCKET_EVENTS.TEAM_SIDE_SYNCED, (payload) =>
+        dispatch({ type: 'sideSynced', sideId: payload.sideId }),
+      );
       socket.on(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, (payload) =>
         dispatch({ type: 'purchasesSynced', payload }),
       );
@@ -575,6 +583,7 @@ function teamGameFields(
     myPlayerCount: link.myPlayerCount,
     roundRatingsEpoch: link.roundRatingsEpoch,
     myJoker: link.myJoker,
+    mySideId: link.mySideId,
     myPurchases: link.myPurchases,
     roomReadyQuestionIds: link.roomReadyQuestionIds,
   } satisfies Partial<TeamLinkGame>;
@@ -729,6 +738,15 @@ function useTeamLinkActions(
     [emitWithAck, dispatch],
   );
 
+  const pickSide = useCallback(
+    (sideId: string) =>
+      emitWithAck(SOCKET_EVENTS.PICK_SIDE, {
+        sideId,
+      } satisfies PickSidePayload),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
+  );
+
   /** Buys a power-up; the purchase and the coins left arrive as a sync, so nothing is dispatched here. */
   const buyPowerUp = useCallback(
     (powerUp: PowerUpId, questionId: number) =>
@@ -772,6 +790,7 @@ function useTeamLinkActions(
     rateSession,
     setPlayerCount,
     pickJoker,
+    pickSide,
     buyPowerUp,
     buyExtraJoker,
     submitShowdownGuess,

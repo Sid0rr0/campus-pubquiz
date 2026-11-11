@@ -75,6 +75,7 @@ export function PanelTeams({ panel }: { panel: ControlPanel }) {
       jokerRounds={view.settableJokerRounds}
       onSetJoker={actions.setTeamJoker}
       isJokerPick={view.progress.status === 'joker_pick'}
+      sides={view.settings.versusEnabled ? view.settings.versusSides : []}
       className="mt-auto border-t border-background/20 pt-4"
     />
   );

@@ -820,6 +820,22 @@ the quiz has started. The start dialog and the `/control` lobby settings panel
 show the switch, one name field per side with its colour swatch, and add/remove
 buttons (add stops at 4, remove at 2).
 
+_A team's side._ The side a team picked is a nullable `side_id` on its
+`game_session_teams` row (a `VersusSide.id`), cached in
+`SessionState.teamSides` (read when the session is placed, updated on a pick, a
+kick or leave, and when Versus goes off). The `PICK_SIDE` event is covered under
+the client events below. Three settings rules depend on picks: turning Versus
+off clears every team's side in the same write (each connected phone gets
+`TEAM_SIDE_SYNCED` with `{ sideId: null }`); a settings change that removes a side
+a team is on is refused with "Can't remove a side while a team is on it"
+(`SessionSettingsInvalidError`); and turning Versus on in the lobby needs no event,
+since a phone with Versus on and no side shows the side picker. **Start quiz** is
+refused with "Every team needs a side before the quiz can start" while Versus is on
+and any roster team has no side (the leaderboard lists the roster, so a team that
+has not rejoined since a backend restart counts too); `/control` shows it like
+other refused presses. A kicked or departed team's roster row, and so its side,
+is deleted: if it rejoins it picks again.
+
 With Jokers on, `ADVANCE` from `round_overview` goes to `joker_pick` and `ADVANCE`
 from there to the first round's `round_intro`; `PREVIOUS` from `joker_pick` goes
 back to `round_overview`. The pick is open exactly while the status is
@@ -1058,7 +1074,8 @@ whose intro, break round intro or reveal intro is on air; each `null` on every
 other screen, decided from the on-air screen in `screen-preview.util.ts`),
 `TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
 team's own phone only), `TEAM_JOKER_SYNCED` (`{ joker }`, to the team's own
-phones only; see Jokers above), `BONUS_AWARDED` (one fresh award, appended on the
+phones only; see Jokers above), `TEAM_SIDE_SYNCED` (`{ sideId }`, to the team's own
+phones only; see `PICK_SIDE`), `BONUS_AWARDED` (one fresh award, appended on the
 phone with a toast), `TEAM_BONUS_AWARDS_SYNCED` (`{ bonusAwards }`, the team's
 full list in award order as `TeamBonusAwardView[]`, to the awarded team's own
 phone only when the quiz master edits or deletes an award; it replaces the
@@ -1075,7 +1092,7 @@ payload), plus the connection's `exception` message.
 Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `SET_TEAM_JOKER`, `AWARD_BONUS`,
 `SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE`, `SET_DISPLAY_SOUND_MUTED`
 (`{ isDisplaySoundMuted: boolean }`) and `CREATE_SHOWDOWN_ROUND` (admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
-`SEND_FEEDBACK`, `RATE_SESSION`, `SET_PLAYER_COUNT`, `PICK_JOKER`, `BUY_POWER_UP` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
+`SEND_FEEDBACK`, `RATE_SESSION`, `SET_PLAYER_COUNT`, `PICK_JOKER`, `PICK_SIDE`, `BUY_POWER_UP` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
 acknowledged with `AckResult`. Room
 membership is checked server-side on every handler; violations raise
 `WsException`. Quiz listing/creation and session lifecycle (list, start,
@@ -1151,6 +1168,22 @@ and the players view are untouched. Instead the server sends `TEAM_PLAYER_COUNT_
 that also carries the team's answers), so a team's count never reaches another team.
 The service that reads and writes it is `PlayerCountService`
 (`apps/backend/src/player-count/`).
+
+`PICK_SIDE` — `{ sideId }` (players only) — picks or switches the team's own
+**side** in a Versus session. Allowed in the lobby, and at any status while the
+team has no side (a late join, or Versus just turned on); refused with "Sides are
+locked once the quiz has started; ask the quiz master to move you" once the quiz
+has started and the team has a side, with "That side is not in this session" for an
+unknown id, "This session is not played with Versus" without Versus, and "Join a
+team before picking a side" for a socket with no team. It goes through the session
+write, declares that it doesn't change scores, and broadcasts a fresh view to all
+rooms (the roster shows the side). The server also sends `TEAM_SIDE_SYNCED`
+(`{ sideId: string | null }`) to the team's own connected phones, and
+`JOIN_ACCEPTED` carries `sideId` so a reconnect or rejoin restores it. Only the
+admin view's `teams` entries (`AdminTeamView.sideId`) carry a team's side; the
+display and players views don't yet. The phone shows a side picker (not a
+status; it covers that phone only) while Versus is on and the team has no side, a
+side badge next to the team name, and in the lobby the badge reopens the picker.
 
 `SET_TEAM_PLAYER_COUNT` — `{ teamId, playerCount }` — lets the quiz master or a
 moderator set or correct any team's player count from the Teams panel at any status.

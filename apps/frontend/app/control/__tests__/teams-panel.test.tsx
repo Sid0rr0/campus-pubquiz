@@ -13,6 +13,7 @@ const TEAMS: AdminTeamView[] = [
     isOverPlayerCap: false,
     joker: null,
     coins: 2,
+    sideId: null,
   },
   {
     teamId: 2,
@@ -22,12 +23,38 @@ const TEAMS: AdminTeamView[] = [
     isOverPlayerCap: false,
     joker: null,
     coins: 2,
+    sideId: null,
   },
 ];
 
 function teamItem(name: string): HTMLElement {
   return screen.getByText(name).closest('li') as HTMLElement;
 }
+
+describe('TeamsPanel sides', () => {
+  it('shows each team’s side by name, and nothing for a team without one', () => {
+    render(
+      <TeamsPanel
+        teams={[{ ...TEAMS[0], sideId: 'law' }, TEAMS[1]]}
+        showAnswerStatus={false}
+        answeredTeamIds={[]}
+        onKickTeam={vi.fn()}
+        onSetPlayerCount={vi.fn()}
+        jokerRounds={[]}
+        onSetJoker={vi.fn()}
+        sides={[
+          { id: 'eng', name: 'Engineering' },
+          { id: 'law', name: 'Law' },
+        ]}
+      />,
+    );
+
+    expect(within(teamItem('The Quizzards')).getByText('Law')).toBeVisible();
+    expect(
+      within(teamItem('Beer Necessities')).queryByText('Law'),
+    ).not.toBeInTheDocument();
+  });
+});
 
 describe('TeamsPanel player counts', () => {
   const renderPanel = (

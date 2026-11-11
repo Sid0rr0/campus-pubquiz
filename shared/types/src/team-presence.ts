@@ -46,6 +46,8 @@ export interface JoinAcceptedPayload {
   playerCount: number | null;
   /** The team's own joker this session (null until it has one), so a reconnect, a second phone or a rejoin after a kick restores it. Never another team's. */
   joker: TeamJoker | null;
+  /** The id of the team's own side this session (null until it picks one, and always null without Versus), so a reconnect or a rejoin after a kick restores it. */
+  sideId: string | null;
   /** The team's own coins, worked out by the server from its ledger, so a reconnect restores them. */
   coins: number;
   /** Whether one of those coins is the carried coin, earned by rating every round of the team's last night in the league, so the phone can say where it came from. */

@@ -12,6 +12,7 @@ export type ControlPanelView = Pick<
   | 'phaseElapsedMs'
   | 'joinCode'
   | 'teams'
+  | 'settings'
   | 'settableJokerRounds'
   | 'answeredTeamIds'
   | 'breakEndsAt'

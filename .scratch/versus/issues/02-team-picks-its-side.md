@@ -15,7 +15,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A team picks a side in the lobby and can switch; the side appears in the players view and the admin roster (gateway spec, following `set-player-count.spec`)
 - [ ] After Start quiz a switch is refused; a team joining late with no side can pick once

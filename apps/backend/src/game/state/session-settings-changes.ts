@@ -2,11 +2,13 @@ import {
   defaultExtraJokerCost,
   hasJokersWithoutOverview,
   JOKERS_NEED_OVERVIEW_MESSAGE,
+  SIDE_REMOVAL_REFUSED_MESSAGE,
   type SessionSettings,
   type SessionState,
   versusSettingsRefusal,
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
+import type { TeamService } from '@/team/team.service';
 import { SessionSettingsInvalidError } from '@/game/state/errors/session-settings-invalid.error';
 import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 import type { SessionChange } from '@/game/state/session-write';
@@ -35,7 +37,10 @@ import {
  *   with its outcome (a SessionChange).
  */
 export class SessionSettingsChanges {
-  constructor(private readonly seedService: SeedService) {}
+  constructor(
+    private readonly seedService: SeedService,
+    private readonly teamService: Pick<TeamService, 'clearSides'>,
+  ) {}
 
   /** Sets or clears the epoch-ms time the break is expected to end. */
   breakEndTime(
@@ -127,15 +132,42 @@ export class SessionSettingsChanges {
     }
     const versusRefusal = versusSettingsRefusal(settings);
     if (versusRefusal) throw new SessionSettingsInvalidError(versusRefusal);
-    await this.seedService.updateSettings(
-      session.seededGame.gameSessionId,
-      settings,
-    );
+    assertNoTeamLosesItsSide(session.teamSides, settings);
+    const { gameSessionId } = session.seededGame;
+    await this.seedService.updateSettings(gameSessionId, settings);
     return {
-      session: { ...session, seededGame: { ...session.seededGame, settings } },
+      session: {
+        ...session,
+        teamSides: await this.sidesAfter(session, settings),
+        seededGame: { ...session.seededGame, settings },
+      },
       outcome: undefined,
       // Stryker disable next-line BooleanLiteral: equivalent, the only caller (the league change module's settingsAndLeagues) reads just `.session` and returns its own touchedScores, so this flag is never consulted.
       touchedScores: false,
     };
+  }
+
+  /** The picked sides once `settings` are in force: without Versus no team is on a side, so they are cleared (stored too). */
+  private async sidesAfter(
+    session: SessionState,
+    settings: SessionSettings,
+  ): Promise<Record<number, string>> {
+    if (settings.versusEnabled || Object.keys(session.teamSides).length === 0) {
+      return session.teamSides;
+    }
+    await this.teamService.clearSides(session.seededGame.gameSessionId);
+    return {};
+  }
+}
+
+/** Refuses settings with Versus on that drop a side a roster team is on. */
+function assertNoTeamLosesItsSide(
+  teamSides: Record<number, string>,
+  settings: SessionSettings,
+): void {
+  if (!settings.versusEnabled) return;
+  const kept = new Set(settings.versusSides.map((side) => side.id));
+  if (Object.values(teamSides).some((sideId) => !kept.has(sideId))) {
+    throw new SessionSettingsInvalidError(SIDE_REMOVAL_REFUSED_MESSAGE);
   }
 }

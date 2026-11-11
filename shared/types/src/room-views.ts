@@ -93,6 +93,8 @@ export interface AdminTeamView extends TeamView {
   joker: AdminTeamJoker | null;
   /** The team's coins, worked out by the server. */
   coins: number;
+  /** The id of the Versus side the team is on, or null (always null without Versus). The quiz master sees every team's; no other room is sent one. */
+  sideId: string | null;
 }
 
 export interface StateSnapshotPayload {

@@ -16,6 +16,7 @@ import {
   kickTeamPayloadSchema,
   leaveSessionPayloadSchema,
   pickJokerPayloadSchema,
+  pickSidePayloadSchema,
   rateRoundPayloadSchema,
   rateSessionPayloadSchema,
   sendFeedbackPayloadSchema,
@@ -129,6 +130,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.PLAYERS,
     rejection: 'Only player clients may pick a joker',
     logFields: ['roundId'],
+  }),
+  pickSide: declareSocketEvent({
+    event: SOCKET_EVENTS.PICK_SIDE,
+    schema: pickSidePayloadSchema,
+    allowedRoom: SOCKET_ROOMS.PLAYERS,
+    rejection: 'Only player clients may pick a side',
+    logFields: ['sideId'],
   }),
   setTeamJoker: declareSocketEvent({
     event: SOCKET_EVENTS.SET_TEAM_JOKER,

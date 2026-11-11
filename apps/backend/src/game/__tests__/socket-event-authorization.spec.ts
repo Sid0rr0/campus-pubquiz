@@ -79,6 +79,11 @@ const SENDERS: Record<keyof typeof D, EventSender> = {
       gateway.handlePickJoker(asSocket(socket), payload),
     payload: () => ({ roundId: 1 }),
   },
+  pickSide: {
+    send: (gateway, socket, payload) =>
+      gateway.handlePickSide(asSocket(socket), payload),
+    payload: () => ({ sideId: 'side-a' }),
+  },
   buyPowerUp: {
     send: (gateway, socket, payload) =>
       gateway.handleBuyPowerUp(asSocket(socket), payload),

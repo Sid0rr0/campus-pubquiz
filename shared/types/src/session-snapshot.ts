@@ -229,6 +229,7 @@ export function buildAdminFields(
           playerCount !== null && playerCount > maxPlayersPerTeam,
         joker: describeAdminTeamJoker(session, team.teamId),
         coins: coinBalance(session, team.teamId),
+        sideId: session.teamSides[team.teamId] ?? null,
       };
     }),
     ungradedQuestionIds: session.ungradedQuestionIds,

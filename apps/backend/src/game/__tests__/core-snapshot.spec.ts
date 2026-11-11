@@ -79,6 +79,7 @@ describe('GameStateService — core snapshot', () => {
         isOverPlayerCap: false,
         joker: null,
         coins: 0,
+        sideId: null,
       },
     ]);
 
@@ -93,6 +94,7 @@ describe('GameStateService — core snapshot', () => {
         isOverPlayerCap: false,
         joker: null,
         coins: 0,
+        sideId: null,
       },
     ]);
   });

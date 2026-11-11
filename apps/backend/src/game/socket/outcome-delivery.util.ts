@@ -144,6 +144,10 @@ function emitTeamSyncs(
     server.to(socketId).emit(SOCKET_EVENTS.TEAM_JOKER_SYNCED, { joker });
   }
 
+  for (const { socketId, sideId } of outcome.sideSyncs) {
+    server.to(socketId).emit(SOCKET_EVENTS.TEAM_SIDE_SYNCED, { sideId });
+  }
+
   for (const { socketId, payload } of outcome.purchaseSyncs) {
     server.to(socketId).emit(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, payload);
   }

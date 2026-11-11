@@ -26,6 +26,7 @@ import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
 import { JokerMoment } from '@/app/play/joker-moment';
+import { SideBadge, SidePicker } from '@/app/play/side-picker';
 import {
   doubledRoundsOf,
   isJokerRoundPlayed,
@@ -170,6 +171,7 @@ function JoinedPlayScreen({
   const [playerCountSlot, setPlayerCountSlot] = useState<HTMLElement | null>(
     null,
   );
+  const [isPickingSide, setIsPickingSide] = useState(false);
   const { view, myAnswers, myJoker, myPurchases } = game;
   const { progress, settings, quizStructure } = view;
   // The block browser (question picker + prompt) is the `block` phone
@@ -204,6 +206,19 @@ function JoinedPlayScreen({
     selectedQuestion?.id,
   );
   const isConnected = connectionError === null;
+  const { mySideId } = game;
+
+  // A side-less team picks before anything else; in the lobby a team may reopen the picker to switch.
+  if (isSidePickerShown(settings, mySideId, isPickingSide)) {
+    return (
+      <SidePicker
+        sides={settings.versusSides}
+        mySideId={mySideId}
+        onPick={game.pickSide}
+        onClose={() => setIsPickingSide(false)}
+      />
+    );
+  }
 
   return (
     <main
@@ -222,6 +237,9 @@ function JoinedPlayScreen({
         doubledRounds={jokerMarks.doubledRounds}
         status={progress.status}
         pastRevealedQuestions={view.pastRevealedQuestions}
+        side={headerSideOf(settings, mySideId, progress.status, () =>
+          setIsPickingSide(true),
+        )}
         onOpenSettings={onOpenSettings}
         onLogOut={join.handleLogOut}
       />
@@ -292,6 +310,30 @@ function JoinedPlayScreen({
       />
     </main>
   );
+}
+
+/** Whether the side picker covers the phone: Versus is on and the team has no side yet, or it reopened the picker to switch. */
+function isSidePickerShown(
+  settings: PlayerView['settings'],
+  mySideId: string | null,
+  isReopened: boolean,
+): boolean {
+  return settings.versusEnabled && (mySideId === null || isReopened);
+}
+
+/** The side badge the header shows (null without Versus or a side); switching is offered in the lobby only. */
+function headerSideOf(
+  settings: PlayerView['settings'],
+  mySideId: string | null,
+  status: PlayerView['progress']['status'],
+  onSwitch: () => void,
+) {
+  if (!settings.versusEnabled || mySideId === null) return null;
+  return {
+    sides: settings.versusSides,
+    sideId: mySideId,
+    onSwitch: status === 'lobby' ? onSwitch : undefined,
+  };
 }
 
 function ConnectionNotices({
@@ -523,6 +565,7 @@ function TeamHeader({
   doubledRounds,
   status,
   pastRevealedQuestions,
+  side,
   onOpenSettings,
   onLogOut,
 }: {
@@ -531,6 +574,11 @@ function TeamHeader({
   doubledRounds: ReturnType<typeof doubledRoundsOf>;
   status: PlayerView['progress']['status'];
   pastRevealedQuestions: PlayerView['pastRevealedQuestions'];
+  side: {
+    sides: PlayerView['settings']['versusSides'];
+    sideId: string;
+    onSwitch: (() => void) | undefined;
+  } | null;
   onOpenSettings: () => void;
   onLogOut: () => void;
 }) {
@@ -539,6 +587,22 @@ function TeamHeader({
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="text-sm font-extrabold tracking-wide text-foreground/55 mb-2">
           Playing as {teamName}
+          {side && (
+            <>
+              {' '}
+              {side.onSwitch ? (
+                <button
+                  type="button"
+                  aria-label="Switch side"
+                  onClick={side.onSwitch}
+                >
+                  <SideBadge sides={side.sides} sideId={side.sideId} />
+                </button>
+              ) : (
+                <SideBadge sides={side.sides} sideId={side.sideId} />
+              )}
+            </>
+          )}
         </p>
         <div className="hidden items-center gap-2 md:flex">
           <Button

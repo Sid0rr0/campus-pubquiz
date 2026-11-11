@@ -5,7 +5,9 @@ import type {
   AdminTeamView,
   JokerPickRound,
   JokerSource,
+  VersusSide,
 } from '@campus-pubquiz/types';
+import { SideBadge } from '@/app/play/side-picker';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { PlayerCountEditor } from '@/app/control/player-count-editor';
@@ -28,6 +30,8 @@ interface TeamsPanelProps {
   onSetJoker: (teamId: number, roundId: number) => void;
   /** Whether the joker pick is on: the heading then counts the teams that have picked. */
   isJokerPick?: boolean;
+  /** The session's Versus sides (empty without Versus), to name each team's side. */
+  sides?: VersusSide[];
   className?: string;
 }
 
@@ -89,6 +93,7 @@ export function TeamsPanel({
   jokerRounds,
   onSetJoker,
   isJokerPick = false,
+  sides = [],
   className = '',
 }: TeamsPanelProps) {
   if (teams.length === 0) {
@@ -126,6 +131,7 @@ export function TeamsPanel({
             onSetPlayerCount={onSetPlayerCount}
             jokerRounds={jokerRounds}
             onSetJoker={onSetJoker}
+            sides={sides}
           />
         ))}
       </ul>
@@ -141,8 +147,10 @@ function TeamRow({
   onSetPlayerCount,
   jokerRounds,
   onSetJoker,
+  sides = [],
 }: Pick<
   TeamsPanelProps,
+  | 'sides'
   | 'showAnswerStatus'
   | 'answeredTeamIds'
   | 'onKickTeam'
@@ -170,6 +178,9 @@ function TeamRow({
           {team.isConnected ? 'Connected' : 'Disconnected'}
         </span>
         {team.teamName}
+        {team.sideId !== null && (
+          <SideBadge sides={sides} sideId={team.sideId} />
+        )}
         {hasAnswered && (
           <span aria-hidden="true" className="ml-1 text-cyan">
             ✓
