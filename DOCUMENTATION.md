@@ -1208,7 +1208,19 @@ emit, so a pick or move shows without a scores change: the players view in
 `phoneLeaderboard.sideStandings` and the admin view as `sideStandings`; nothing is
 sent with Versus off. The phone shows the bar on its leaderboard screen with its own
 side highlighted ("No teams" on an empty side), and `/control` shows it above the
-Teams table. The same function can be run over the prior standings' board.
+Teams table. The same function is run over the prior standings' board for the prior
+split. Once the session has ended (status `ended`) a roster team that never **took
+part** (no answer or bonus, `session.tookPartTeamIds`, read with the live results from
+`EndedSessionsRead.participants`) is left out of its side's average in every view; while
+the session runs every roster team counts.
+
+On the big screen (display view, nothing sent with Versus off) the `lobby` screen
+carries `sideCounts` (`{ id, name, colorIndex, teamCount }` per side, side order) and the
+`leaderboard` screen carries `sideStandings` (current), `priorSideStandings` (only when
+there are prior standings, so absent for a screen after a backend restart) and `sideIds`
+(shown team id -> side id, for the row's colour dot). `/display` draws the prior split
+while `revealCount` is below the number of ranks on the board and the current split once
+it reaches it, sliding the bar; with no prior split it draws the current one at once.
 
 `SET_TEAM_PLAYER_COUNT` — `{ teamId, playerCount }` — lets the quiz master or a
 moderator set or correct any team's player count from the Teams panel at any status.

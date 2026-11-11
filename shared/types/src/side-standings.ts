@@ -27,14 +27,34 @@ export interface SideStandings {
 export function describeSessionSideStandings(
   session: SessionState,
 ): SideStandings | undefined {
-  const { versusEnabled, versusSides } = session.seededGame.settings;
-  return versusEnabled
-    ? describeSideStandings({
-        entries: session.leaderboard,
-        teamSides: session.teamSides,
-        sides: versusSides,
-      })
+  return describeSessionBoardSides(session, session.leaderboard);
+}
+
+/** The side standings as they stood on the prior standings' board; undefined with Versus off or without prior standings. */
+export function describePriorSideStandings(
+  session: SessionState,
+): SideStandings | undefined {
+  return session.priorStandings
+    ? describeSessionBoardSides(session, session.priorStandings.board)
     : undefined;
+}
+
+function describeSessionBoardSides(
+  session: SessionState,
+  entries: readonly LeaderboardEntry[],
+): SideStandings | undefined {
+  const { versusEnabled, versusSides } = session.seededGame.settings;
+  if (!versusEnabled) return undefined;
+  return describeSideStandings({
+    entries,
+    teamSides: session.teamSides,
+    sides: versusSides,
+    // Once the session has ended a roster team that never took part doesn't count.
+    countedTeamIds:
+      session.progress.status === 'ended'
+        ? new Set(session.tookPartTeamIds)
+        : undefined,
+  });
 }
 
 /**

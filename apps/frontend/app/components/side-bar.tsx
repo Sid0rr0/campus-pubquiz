@@ -21,6 +21,7 @@ export function SideBar({
           <div
             key={side.id}
             data-testid={`side-segment-${side.id}`}
+            className="transition-[width] duration-1000 ease-in-out"
             style={{
               width: `${side.share * 100}%`,
               backgroundColor: versusSideColor(side.colorIndex),

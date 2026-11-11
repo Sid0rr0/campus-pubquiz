@@ -208,6 +208,16 @@ export class StandingsService {
     return participants.length > 0;
   }
 
+  /** The roster teams that took part (see {@link hasTakenPart}). */
+  async tookPartTeamIds(gameSessionId: number): Promise<number[]> {
+    const participants = await this.endedSessionsRead.participants({
+      gameSessionIds: [gameSessionId],
+    });
+    return participants
+      .filter((participant) => participant.isOnRoster)
+      .map((participant) => participant.teamId);
+  }
+
   async forSession(gameSessionId: number): Promise<SessionStandings> {
     const bySession = await this.forSessions([gameSessionId]);
     return bySession.get(gameSessionId)!;

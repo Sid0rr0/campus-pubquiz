@@ -163,6 +163,13 @@ export interface SessionState {
    */
   funFactData: FunFactData;
   /**
+   * Ids of the roster teams that took part (see GLOSSARY "Took part"): all of
+   * them while the session runs, only those with an answer or bonus once it has
+   * ended. Read with the standings. The Versus side figures use it to leave
+   * idle teams out after the end. Ephemeral.
+   */
+  tookPartTeamIds: number[];
+  /**
    * The league the big screen lobby shows (name and top rows), or null when the
    * session is in none. A cache: read when the session is placed and again
    * whenever its leagues change, never recomputed per broadcast. Ephemeral.
@@ -254,6 +261,7 @@ export function freshSessionState(
     leaderboardRevealCount: 0,
     priorStandings: null,
     funFactData: { answers: [], bonusAwards: [], powerUps: [] },
+    tookPartTeamIds: [],
     leagueTop: null,
     teams: [],
     playerCounts: {},

@@ -34,6 +34,8 @@ type LeaderboardProps = Omit<LeaderboardRowsInput, 'phase'> & {
   isFinal?: boolean;
   /** Called once the winner's fanfare and confetti have gone off, so the Quiz complete screen can skip its own. */
   onWinnerCelebrated?: () => void;
+  /** Versus: teamId -> the colour of the team's side, drawn as a dot on its row. */
+  sideColors?: Record<number, string>;
 };
 
 const RANK_TREND_LABELS: Record<RankTrend, string> = {
@@ -173,6 +175,7 @@ export function Leaderboard({
   isConnected,
   isFinal = false,
   onWinnerCelebrated,
+  sideColors,
 }: LeaderboardProps) {
   const hasOldState = board.countUpBoard !== undefined;
   const phase = useLeaderboardPhase(hasOldState);
@@ -223,6 +226,7 @@ export function Leaderboard({
             isNewest={row.rankIndex === newestRankIndex}
             hasOldState={hasOldState}
             isStampLanding={!alreadyStampedTeamIds.has(row.entry.teamId)}
+            sideColor={sideColors?.[row.entry.teamId]}
           />
         ))}
       </ol>
@@ -239,6 +243,8 @@ interface LeaderboardRowItemProps {
   hasOldState: boolean;
   /** Whether the row's joker stamp, if it has one, slams down rather than just being there. */
   isStampLanding: boolean;
+  /** The colour of the team's Versus side, when it has one. */
+  sideColor?: string;
 }
 
 /** One row. Its entrance runs once on mount and is cut straight to its end as soon as a newer rank is revealed, so an Advance never waits for it. */
@@ -248,6 +254,7 @@ function LeaderboardRowItem({
   isNewest,
   hasOldState,
   isStampLanding,
+  sideColor,
 }: LeaderboardRowItemProps) {
   const isReducedMotion = useReducedMotion() ?? false;
   const [entrance] = useState(() => rankEntrance(rankIndex, isReducedMotion));
@@ -285,6 +292,7 @@ function LeaderboardRowItem({
       >
         {label}
       </span>
+      <SideDot color={sideColor} />
       <span className="flex-1 font-bold text-display-3xl">
         {entry.teamName}
       </span>
@@ -302,6 +310,18 @@ function LeaderboardRowItem({
         <span className={totalPointsClassName}>{entry.totalPoints}</span>
       )}
     </motion.li>
+  );
+}
+
+/** The colour dot of a team's Versus side; nothing for a team without one. */
+function SideDot({ color }: { color?: string }) {
+  if (!color) return null;
+  return (
+    <span
+      data-testid="side-dot"
+      className="size-5 shrink-0 rounded-full"
+      style={{ backgroundColor: color }}
+    />
   );
 }
 

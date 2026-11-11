@@ -8,7 +8,7 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The display view carries current and prior side standings and row side ids with Versus on, and nothing with it off (gateway spec, following `leaderboard-board.spec`)
 - [ ] With no prior standings the prior split is absent
