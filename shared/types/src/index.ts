@@ -30,6 +30,7 @@ export * from './auth';
 export * from './team';
 export * from './quiz-draft';
 export * from './quiz-mode';
+export * from './versus';
 export {
   OPENED_QUESTION_FIXED_FIELDS,
   describeLiveEditRounds,

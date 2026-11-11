@@ -298,6 +298,8 @@ describe('SessionSettings defaults', () => {
       playLockCountdownSound: true,
       showRoundOverview: false,
       jokersEnabled: false,
+      versusEnabled: false,
+      versusSides: [],
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       maxPlayersPerTeam: 6,
       extraPlayerPenaltyPoints: 2,

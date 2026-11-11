@@ -4,6 +4,7 @@ import {
   JOKERS_NEED_OVERVIEW_MESSAGE,
   type SessionSettings,
   type SessionState,
+  versusSettingsRefusal,
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
 import { SessionSettingsInvalidError } from '@/game/state/errors/session-settings-invalid.error';
@@ -124,6 +125,8 @@ export class SessionSettingsChanges {
     if (hasJokersWithoutOverview(settings)) {
       throw new SessionSettingsInvalidError(JOKERS_NEED_OVERVIEW_MESSAGE);
     }
+    const versusRefusal = versusSettingsRefusal(settings);
+    if (versusRefusal) throw new SessionSettingsInvalidError(versusRefusal);
     await this.seedService.updateSettings(
       session.seededGame.gameSessionId,
       settings,
