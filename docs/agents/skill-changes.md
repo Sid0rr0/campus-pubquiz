@@ -100,3 +100,5 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ in the power-up-offer run, implementers waited on a backgrounded `crap:changed` with `while pgrep -f "scripts/crap.mjs"`, which matches its own shell and never exits; 7 such loops ran for over an hour and auto mode refused to kill them. `crap.mjs` now always ends on `crap: exit <code>`.
 - **implement-spec step 4 (2026-11-10 retro)**: the orchestrator pastes its "Codebase map" block into each implementer prompt, replacing the 2026-11-07 "look up an unseen path with `rg --files`" line.
   _Why:_ that line didn't change behaviour: about 20 guessed paths still failed across 12 implementers between Nov 7 and Nov 10.
+- **implement, implement-spec step 7 (2026-11-11)**: the `ponytail:ponytail-review` loop now runs until it reports no Must fix **and** no Should fix; Nice to have stays optional.
+  _Why:_ the user wants Should fix findings (untested risky code, duplication, mixed-job functions) fixed too, not left behind.
