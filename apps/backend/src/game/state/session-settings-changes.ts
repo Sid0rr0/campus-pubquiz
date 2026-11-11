@@ -134,7 +134,7 @@ export class SessionSettingsChanges {
     if (versusRefusal) throw new SessionSettingsInvalidError(versusRefusal);
     assertNoTeamLosesItsSide(session.teamSides, settings);
     const { gameSessionId } = session.seededGame;
-    // Clear first: if the save then fails the picks stay gone, rather than a failed clear leaving old picks to resurface under Versus-off settings.
+    // Clear first, so a failed clear can't leave old picks to resurface under Versus-off settings. If the save then fails, the DB picks stay gone while memory keeps them until restart (teams re-pick): rare, accepted.
     const teamSides = await this.sidesAfter(session, settings);
     await this.seedService.updateSettings(gameSessionId, settings);
     return {
