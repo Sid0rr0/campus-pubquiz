@@ -187,7 +187,15 @@ export function isRevealEntry(
     previousStatus !== 'reveal_intro' && newStatus === 'reveal_intro';
   const entersCollapsedQuickfireReveal =
     previousStatus === 'locking' && newStatus === 'reveal';
-  return entersRevealIntro || entersCollapsedQuickfireReveal;
+  // With Early answer reveal the break exit is where the verdicts first reach the phones.
+  const leavesBreakIntoResults =
+    (previousStatus === 'break_intro' || previousStatus === 'break') &&
+    (newStatus === 'round_intro' || newStatus === 'ended');
+  return (
+    entersRevealIntro ||
+    entersCollapsedQuickfireReveal ||
+    leavesBreakIntoResults
+  );
 }
 
 /**
