@@ -4,7 +4,7 @@
 
 **Blocked by:** 01, 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The guide covers the setting, side picks, the Start quiz refusal, moving a team and the bar's meaning
 - [ ] The guide stays within its word cap (its existing test passes)
