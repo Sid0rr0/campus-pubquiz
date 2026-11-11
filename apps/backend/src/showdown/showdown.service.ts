@@ -116,6 +116,35 @@ export class ShowdownService {
     };
   }
 
+  /** The session's round still waiting to be resolved, with each seat's guess, or null: how a restored session gets its showdown back. */
+  async loadUnresolved(
+    gameSessionId: number,
+  ): Promise<ActiveShowdownRoundState | null> {
+    const round = await this.showdownRounds.findOne({
+      gameSession: gameSessionId,
+      resolvedAt: null,
+    });
+    if (!round) return null;
+    const rows = await this.showdownRoundTeams.find(
+      { showdownRound: round.id },
+      { populate: ['team'], orderBy: { seatIndex: 'asc' } },
+    );
+    return {
+      id: round.id,
+      question: round.question,
+      answer: round.answer,
+      winnerTeamId: null,
+      isTie: false,
+      resolved: false,
+      participants: rows.map((row) => ({
+        teamId: row.team.id,
+        teamName: row.team.name,
+        seatIndex: row.seatIndex,
+        guess: row.guess ?? null,
+      })),
+    };
+  }
+
   /** Last-write-wins, same semantics as SUBMIT_ANSWER — resubmitting before reveal overwrites the previous guess. */
   async submitGuess(
     roundId: number,

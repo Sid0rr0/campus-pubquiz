@@ -161,7 +161,18 @@ export class MoveCommitter {
     const coinAwards = await this.readCoinAwards(
       placed.seededGame.gameSessionId,
     );
-    return { ...withResults, leagueTop, jokers, carriedCoins, coinAwards };
+    // A showdown round still open is stored, its cache is not: it comes back with its guesses.
+    const activeShowdownRound = await this.showdownService.loadUnresolved(
+      placed.seededGame.gameSessionId,
+    );
+    return {
+      ...withResults,
+      leagueTop,
+      jokers,
+      carriedCoins,
+      coinAwards,
+      activeShowdownRound,
+    };
   }
 
   private async commitProgressMove(
