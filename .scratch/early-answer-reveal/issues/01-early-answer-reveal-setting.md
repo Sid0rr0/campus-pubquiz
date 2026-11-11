@@ -8,7 +8,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The switch shows in the start dialog and the lobby settings panel for a pub quiz, and not for a quickfire quiz
 - [ ] Default off; a stored settings JSON without the field reads as off
