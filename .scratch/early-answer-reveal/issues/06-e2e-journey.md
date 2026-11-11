@@ -4,7 +4,7 @@
 
 **Blocked by:** 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] After the lock, the big screen shows the answers title card, then each question with its correct answer; the phone shows its own answer beside the correct one with no verdict
 - [ ] Leaving the break is refused while a free_text answer is ungraded, then opens the leaderboard on the next round intro once graded; the phone shows its verdicts
