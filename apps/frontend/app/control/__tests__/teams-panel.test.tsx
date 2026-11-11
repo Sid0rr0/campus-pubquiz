@@ -49,10 +49,67 @@ describe('TeamsPanel sides', () => {
       />,
     );
 
-    expect(within(teamItem('The Quizzards')).getByText('Law')).toBeVisible();
     expect(
-      within(teamItem('Beer Necessities')).queryByText('Law'),
+      within(teamItem('The Quizzards')).getByText('Law', { selector: 'span' }),
+    ).toBeVisible();
+    expect(
+      within(teamItem('Beer Necessities')).queryByText('Law', {
+        selector: 'span',
+      }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('TeamsPanel move to a side', () => {
+  const SIDES = [
+    { id: 'eng', name: 'Engineering' },
+    { id: 'law', name: 'Law' },
+  ];
+
+  it('sends the chosen side for that team, with the current side selected', async () => {
+    const onSetSide = vi.fn();
+    render(
+      <TeamsPanel
+        teams={[{ ...TEAMS[0], sideId: 'law' }, TEAMS[1]]}
+        showAnswerStatus={false}
+        answeredTeamIds={[]}
+        onKickTeam={vi.fn()}
+        onSetPlayerCount={vi.fn()}
+        jokerRounds={[]}
+        onSetJoker={vi.fn()}
+        sides={SIDES}
+        onSetSide={onSetSide}
+      />,
+    );
+    const select = within(teamItem('Beer Necessities')).getByRole('combobox', {
+      name: /side for beer necessities/i,
+    });
+    expect(
+      within(teamItem('The Quizzards')).getByRole('combobox', {
+        name: /side for the quizzards/i,
+      }),
+    ).toHaveValue('law');
+
+    await userEvent.selectOptions(select, 'Engineering');
+
+    expect(onSetSide).toHaveBeenCalledWith(2, 'eng');
+  });
+
+  it('offers no move control without Versus', () => {
+    render(
+      <TeamsPanel
+        teams={TEAMS}
+        showAnswerStatus={false}
+        answeredTeamIds={[]}
+        onKickTeam={vi.fn()}
+        onSetPlayerCount={vi.fn()}
+        jokerRounds={[]}
+        onSetJoker={vi.fn()}
+        onSetSide={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });
 

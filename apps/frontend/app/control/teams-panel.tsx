@@ -32,6 +32,8 @@ interface TeamsPanelProps {
   isJokerPick?: boolean;
   /** The session's Versus sides (empty without Versus), to name each team's side. */
   sides?: VersusSide[];
+  /** Moves a team to a side; the move control shows only while there are sides. */
+  onSetSide?: (teamId: number, sideId: string) => void;
   className?: string;
 }
 
@@ -84,6 +86,40 @@ function JokerRoundSelect({
   );
 }
 
+/** The quiz master's list for moving one team to a Versus side. */
+function SideSelect({
+  team,
+  sides,
+  onSetSide,
+}: {
+  team: AdminTeamView;
+  sides: VersusSide[];
+  onSetSide: (teamId: number, sideId: string) => void;
+}) {
+  if (sides.length === 0) return null;
+  return (
+    <label className="ml-5 flex items-center gap-1.5 text-xs font-bold text-background/70">
+      <span className="sr-only">Side for {team.teamName}</span>
+      <select
+        value={team.sideId ?? ''}
+        onChange={(event) => onSetSide(team.teamId, event.target.value)}
+        className="max-w-full rounded border border-background/30 bg-foreground px-1 py-0.5 text-xs text-background"
+      >
+        {team.sideId === null && (
+          <option value="" disabled>
+            No side yet
+          </option>
+        )}
+        {sides.map((side) => (
+          <option key={side.id} value={side.id}>
+            {side.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function TeamsPanel({
   teams,
   showAnswerStatus,
@@ -94,6 +130,7 @@ export function TeamsPanel({
   onSetJoker,
   isJokerPick = false,
   sides = [],
+  onSetSide = () => {},
   className = '',
 }: TeamsPanelProps) {
   if (teams.length === 0) {
@@ -132,6 +169,7 @@ export function TeamsPanel({
             jokerRounds={jokerRounds}
             onSetJoker={onSetJoker}
             sides={sides}
+            onSetSide={onSetSide}
           />
         ))}
       </ul>
@@ -147,17 +185,21 @@ function TeamRow({
   onSetPlayerCount,
   jokerRounds,
   onSetJoker,
-  sides = [],
+  onSetSide,
+  sides,
 }: Pick<
   TeamsPanelProps,
-  | 'sides'
   | 'showAnswerStatus'
   | 'answeredTeamIds'
   | 'onKickTeam'
   | 'onSetPlayerCount'
   | 'jokerRounds'
   | 'onSetJoker'
-> & { team: TeamsPanelProps['teams'][number] }) {
+> & {
+  team: TeamsPanelProps['teams'][number];
+  sides: VersusSide[];
+  onSetSide: (teamId: number, sideId: string) => void;
+}) {
   const hasAnswered = showAnswerStatus && answeredTeamIds.includes(team.teamId);
   return (
     <li
@@ -210,6 +252,7 @@ function TeamRow({
           </span>
         </p>
       )}
+      <SideSelect team={team} sides={sides} onSetSide={onSetSide} />
       {jokerRounds.length > 0 && (
         <JokerRoundSelect
           team={team}

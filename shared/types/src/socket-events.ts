@@ -40,6 +40,7 @@ export const SOCKET_EVENTS = {
   SET_TEAM_JOKER: 'game:set_team_joker',
   BUY_POWER_UP: 'game:buy_power_up',
   PICK_SIDE: 'game:pick_side',
+  SET_TEAM_SIDE: 'game:set_team_side',
 } as const;
 
 export const SOCKET_ROOMS = {

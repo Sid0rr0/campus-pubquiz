@@ -84,6 +84,11 @@ const SENDERS: Record<keyof typeof D, EventSender> = {
       gateway.handlePickSide(asSocket(socket), payload),
     payload: () => ({ sideId: 'side-a' }),
   },
+  setTeamSide: {
+    send: (gateway, socket, payload) =>
+      gateway.handleSetTeamSide(asSocket(socket), payload),
+    payload: ({ teamId }) => ({ teamId, sideId: 'side-a' }),
+  },
   buyPowerUp: {
     send: (gateway, socket, payload) =>
       gateway.handleBuyPowerUp(asSocket(socket), payload),

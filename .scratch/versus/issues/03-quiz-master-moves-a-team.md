@@ -8,7 +8,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The quiz master moves a team in the lobby and mid-quiz; the players view and admin roster show the new side (gateway spec, following `set-team-player-count.spec`)
 - [ ] An unknown side or a team not on the roster is refused; a players-room socket can't send the event (authorization spec)

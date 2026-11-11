@@ -9,6 +9,11 @@ export interface PickSidePayload {
   sideId: string;
 }
 
+/** The quiz master moving a roster team to a side, at any status. */
+export interface SetTeamSidePayload extends PickSidePayload {
+  teamId: number;
+}
+
 /** Sent to a team's own phones after its side changed (null: it has none), so every phone of the team shows the same one. */
 export interface TeamSideSyncedPayload {
   sideId: string | null;

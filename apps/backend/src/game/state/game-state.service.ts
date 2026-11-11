@@ -32,6 +32,7 @@ import {
   type PickSidePayload,
   type SetPlayerCountPayload,
   type SetTeamPlayerCountPayload,
+  type SetTeamSidePayload,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
@@ -419,6 +420,16 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
       this.sideChanges.sidePicked(session, payload, socketId),
+    );
+  }
+
+  /** The quiz master moves a roster team to another Versus side, at any status; see the team side change module. */
+  teamSideSet(
+    joinCode: string,
+    payload: SetTeamSidePayload,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.sideChanges.teamSideSet(session, payload),
     );
   }
 

@@ -31,6 +31,7 @@ export type ControlPanelActions = Pick<
   | 'sendAction'
   | 'kickTeam'
   | 'setTeamPlayerCount'
+  | 'setTeamSide'
   | 'setTeamJoker'
   | 'setBreakEndTime'
   | 'setDisplayTextScale'

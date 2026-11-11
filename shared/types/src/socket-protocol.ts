@@ -40,7 +40,11 @@ import type {
   SetTeamPlayerCountPayload,
   TeamPlayerCountSyncedPayload,
 } from './player-count';
-import type { PickSidePayload, TeamSideSyncedPayload } from './versus';
+import type {
+  PickSidePayload,
+  SetTeamSidePayload,
+  TeamSideSyncedPayload,
+} from './versus';
 import type { PresenterContextPayload, StateViewByRoom } from './room-views';
 import type {
   CreateShowdownRoundPayload,
@@ -107,6 +111,7 @@ export interface ClientToServerProtocol {
   };
   [SOCKET_EVENTS.BUY_POWER_UP]: { payload: BuyPowerUpPayload; ack: void };
   [SOCKET_EVENTS.PICK_SIDE]: { payload: PickSidePayload; ack: void };
+  [SOCKET_EVENTS.SET_TEAM_SIDE]: { payload: SetTeamSidePayload; ack: void };
 }
 
 export type ClientToServerEvent = keyof ClientToServerProtocol;

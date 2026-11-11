@@ -1185,6 +1185,16 @@ display and players views don't yet. The phone shows a side picker (not a
 status; it covers that phone only) while Versus is on and the team has no side, a
 side badge next to the team name, and in the lobby the badge reopens the picker.
 
+`SET_TEAM_SIDE` — `{ teamId, sideId }` (admin room only, so admins and
+moderators; refused with "Only admin clients may move a team to a side" from any
+other) — moves a roster team to another side at any status, including mid-quiz,
+to fix a team that tapped the wrong side. Refused with "That side is not in this
+session" for an unknown id, "This session is not played with Versus" without
+Versus, and "Team N is not in this session" for a team not on the roster. It
+goes through the session write and changes no scores; the team's phones get
+`TEAM_SIDE_SYNCED` and every room a fresh view, as for `PICK_SIDE`. `/control`
+shows a side select on each roster row while Versus is on.
+
 `SET_TEAM_PLAYER_COUNT` — `{ teamId, playerCount }` — lets the quiz master or a
 moderator set or correct any team's player count from the Teams panel at any status.
 It is admin-room gated like `KICK_TEAM` (so it is allowed for admins and moderators

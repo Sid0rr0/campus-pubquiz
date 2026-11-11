@@ -74,6 +74,12 @@ describe('useAdminGame', () => {
         call: (game) => game.setTeamPlayerCount(7, 5),
       },
       {
+        name: 'setTeamSide',
+        event: SOCKET_EVENTS.SET_TEAM_SIDE,
+        payload: { teamId: 7, sideId: 'law' },
+        call: (game) => game.setTeamSide(7, 'law'),
+      },
+      {
         name: 'setTeamJoker',
         event: SOCKET_EVENTS.SET_TEAM_JOKER,
         payload: { teamId: 7, roundId: 12 },

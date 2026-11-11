@@ -22,6 +22,7 @@ import {
   sendFeedbackPayloadSchema,
   setPlayerCountPayloadSchema,
   setTeamPlayerCountPayloadSchema,
+  setTeamSidePayloadSchema,
   setTeamJokerPayloadSchema,
   setBreakEndTimePayloadSchema,
   setDisplaySoundMutedPayloadSchema,
@@ -137,6 +138,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.PLAYERS,
     rejection: 'Only player clients may pick a side',
     logFields: ['sideId'],
+  }),
+  setTeamSide: declareSocketEvent({
+    event: SOCKET_EVENTS.SET_TEAM_SIDE,
+    schema: setTeamSidePayloadSchema,
+    allowedRoom: SOCKET_ROOMS.ADMIN,
+    rejection: 'Only admin clients may move a team to a side',
+    logFields: ['teamId', 'sideId'],
   }),
   setTeamJoker: declareSocketEvent({
     event: SOCKET_EVENTS.SET_TEAM_JOKER,

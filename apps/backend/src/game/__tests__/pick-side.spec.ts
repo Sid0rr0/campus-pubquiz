@@ -188,6 +188,51 @@ describe('GameGateway — a team picks its side', () => {
   });
 });
 
+describe('GameGateway — the quiz master moves a team', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('moves a team in the lobby and mid-quiz, syncing the phone and the roster', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Quizzards', 'Rivals'],
+      settings: VERSUS,
+    });
+    const [team, rival] = game.teams;
+    const admin = await game.connectAdmin();
+    const move = (teamId: number, sideId: string) =>
+      game.gateway.handleSetTeamSide(asSocket(admin), { teamId, sideId });
+
+    expect(await move(team.teamId, 'eng')).toEqual({ success: true });
+    await pick(game, rival, { sideId: 'law' });
+    await game.openFirstQuestion(admin);
+    expect(await move(team.teamId, 'law')).toEqual({ success: true });
+
+    expect(sideSyncsTo(game, team)).toEqual([
+      { sideId: 'eng' },
+      { sideId: 'law' },
+    ]);
+    expect(await rosterSides(game)).toEqual({
+      Quizzards: 'law',
+      Rivals: 'law',
+    });
+  });
+
+  it('refuses an unknown side and a team not on the roster', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Quizzards'],
+      settings: VERSUS,
+    });
+    const admin = await game.connectAdmin();
+    const send = (payload: unknown) =>
+      game.gateway.handleSetTeamSide(asSocket(admin), payload);
+
+    expect(
+      (await send({ teamId: game.teams[0].teamId, sideId: 'x' })).success,
+    ).toBe(false);
+    expect((await send({ teamId: 9999, sideId: 'eng' })).success).toBe(false);
+    expect(await rosterSides(game)).toEqual({ Quizzards: null });
+  });
+});
+
 describe('GameGateway — Start quiz and the Versus settings with sides picked', () => {
   const harness = setupRealStoreGatewayTest();
 
