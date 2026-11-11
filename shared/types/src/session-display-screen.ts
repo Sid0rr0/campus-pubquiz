@@ -18,7 +18,7 @@ export function trimOnAirQuestion(
   closestGuessRevealStep: number,
 ): PlayersRevealQuestionView[] {
   return revealQuestions.map((question, index) =>
-    status === 'reveal' && index === revealIndex
+    (status === 'reveal' || status === 'answers') && index === revealIndex
       ? shownAtStep(question, closestGuessRevealStep)
       : question,
   );

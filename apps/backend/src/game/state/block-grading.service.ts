@@ -3,6 +3,7 @@ import {
   type GameProgress,
   isBreakStatus,
   isGradedStatus,
+  isRevealingStatus,
   type ScoredQuestion,
   type SessionState,
   summarizeClosestGuess,
@@ -132,7 +133,11 @@ export class BlockGradingService {
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
-    if (!isGradedStatus(newProgress.status)) {
+    // The early answer reveal airs the answers (closest_guess steps included) before the break.
+    if (
+      !isGradedStatus(newProgress.status) &&
+      !isRevealingStatus(newProgress.status)
+    ) {
       return { session, staleAnswerListIds: [] };
     }
 
@@ -413,7 +418,15 @@ export class BlockGradingService {
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<SessionState> {
-    if (!isBreakStatus(newProgress.status)) return session;
+    // The early answer reveal comes before the break, but grading can start there.
+    const { status } = newProgress;
+    if (
+      !isBreakStatus(status) &&
+      status !== 'answers_intro' &&
+      status !== 'answers'
+    ) {
+      return session;
+    }
     const refresh = await this.readGradingRefresh(
       session,
       newProgress,

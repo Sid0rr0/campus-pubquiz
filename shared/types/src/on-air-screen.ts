@@ -44,6 +44,12 @@ export type OnAirScreen =
       questionId: number | null;
     }
   | {
+      kind: 'answers_intro';
+      roundIndex: number | null;
+      questionId: number | null;
+    }
+  | { kind: 'answers'; roundIndex: number | null; questionId: number | null }
+  | {
       kind: 'reveal_intro';
       roundIndex: number | null;
       questionId: number | null;
@@ -88,6 +94,18 @@ type RoundPosition = Pick<
   'roundNumber' | 'questionNumberInRound' | 'roundTitle'
 >;
 
+function revealHeader(
+  status: 'answers' | 'reveal',
+  question: RoundPosition | undefined,
+): HeaderContent {
+  if (question === undefined) return {};
+  return {
+    label: `ROUND ${question.roundNumber}`,
+    title: question.roundTitle,
+    badge: `${status === 'answers' ? 'ANSWERS' : 'REVEALING ANSWERS'} · QUESTION ${question.questionNumberInRound}`,
+  };
+}
+
 function getHeader(
   input: OnAirInput,
   breakQuestion: RoundPosition | undefined,
@@ -110,12 +128,8 @@ function getHeader(
         badge: `QUESTION ${breakQuestion.questionNumberInRound} (BREAK)`,
       };
     case 'reveal':
-      if (revealQuestion === undefined) return {};
-      return {
-        label: `ROUND ${revealQuestion.roundNumber}`,
-        title: revealQuestion.roundTitle,
-        badge: `REVEALING ANSWERS · QUESTION ${revealQuestion.questionNumberInRound}`,
-      };
+    case 'answers':
+      return revealHeader(progress.status, revealQuestion);
     default:
       return {};
   }
@@ -157,7 +171,7 @@ function breakScreen(
 }
 
 function revealScreen(
-  kind: 'reveal_intro' | 'reveal',
+  kind: RevealingStatus,
   revealQuestion: BlockRevealQuestionView | undefined,
 ): OnAirScreen {
   return {
@@ -213,9 +227,9 @@ function revealScreenKey(
   revealQuestion: RoundPosition | undefined,
 ): string {
   const position = `${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}`;
-  return status === 'reveal'
-    ? `reveal-${position}-${input.closestGuessRevealStep ?? 0}`
-    : `reveal_intro-${position}`;
+  return status === 'reveal' || status === 'answers'
+    ? `${status}-${position}-${input.closestGuessRevealStep ?? 0}`
+    : `${status}-${position}`;
 }
 
 function getScreenKey(
@@ -306,6 +320,9 @@ const IN_QUIZ_REGION: Partial<
   round_intro: { region: REGION.roundIntro, isCard: null },
   question_open: { region: REGION.question, isCard: null },
   locking: { region: REGION.locking, isCard: null },
+  // The early answer reveal sits between the lock and the break card, so it shares the break review's region (below break_intro, above locking).
+  answers_intro: { region: REGION.breakReview, isCard: true },
+  answers: { region: REGION.breakReview, isCard: false },
   break: { region: REGION.breakReview, isCard: false },
   break_round_intro: { region: REGION.breakReview, isCard: true },
   break_intro: { region: REGION.breakIntro, isCard: null },
@@ -380,6 +397,7 @@ function onDisplayQuestionIdOf(screen: OnAirScreen): number | null {
   switch (screen.kind) {
     case 'question':
     case 'locking':
+    case 'answers':
     case 'reveal':
     case 'break_review':
       return screen.questionId;
@@ -391,6 +409,7 @@ function onDisplayQuestionIdOf(screen: OnAirScreen): number | null {
 function titleCardRoundIndexOf(screen: OnAirScreen): number | null {
   switch (screen.kind) {
     case 'round_title':
+    case 'answers_intro':
     case 'reveal_intro':
     case 'break_round_title':
       return screen.roundIndex;
@@ -401,14 +420,21 @@ function titleCardRoundIndexOf(screen: OnAirScreen): number | null {
 
 /**
  * What the block browser does: `answering` while the block is answerable,
- * `locked` in break and break review, `revealing` from the reveal intro
- * through reveal.
+ * `locked` in break and break review, `answers` during the early answer
+ * reveal (the team's own answer beside the correct one, no verdicts),
+ * `revealing` from the reveal intro through reveal.
  */
-export type BlockMode = 'answering' | 'locked' | 'revealing';
+export type BlockMode = 'answering' | 'locked' | 'answers' | 'revealing';
 
 function blockModeOf(input: PlayersScreenInput): BlockMode {
   if (input.isAnswerable) return 'answering';
   if (isBreakStatus(input.progress.status)) return 'locked';
+  if (
+    input.progress.status === 'answers' ||
+    input.progress.status === 'answers_intro'
+  ) {
+    return 'answers';
+  }
   if (isRevealingStatus(input.progress.status)) return 'revealing';
   return 'answering';
 }
@@ -534,6 +560,25 @@ function phoneScreenUnderBoard(
 ): PhoneScreen {
   if (isPassThroughScreen(screen)) return { kind: screen.kind };
   switch (screen.kind) {
+    case 'answers':
+    case 'reveal':
+      return { kind: 'block', mode, onScreenQuestionId: screen.questionId };
+    case 'answers_intro':
+    case 'reveal_intro':
+    case 'break_round_title':
+      return walkTitleCardPhoneScreen(input, screen, mode);
+    default:
+      return otherPhoneScreen(input, screen, mode);
+  }
+}
+
+/** The pick, a round's title card and the showdown; the block browser for every other screen. */
+function otherPhoneScreen(
+  input: PlayersScreenInput,
+  screen: OnAirScreen,
+  mode: BlockMode,
+): PhoneScreen {
+  switch (screen.kind) {
     case 'joker_pick':
       return { kind: 'joker_pick', isOpen: input.isJokerPickOpen };
     case 'round_title':
@@ -542,11 +587,6 @@ function phoneScreenUnderBoard(
         title: input.roundTitle ?? '',
         roundNumber: screen.roundIndex + 1,
       };
-    case 'reveal':
-      return { kind: 'block', mode, onScreenQuestionId: screen.questionId };
-    case 'reveal_intro':
-    case 'break_round_title':
-      return walkTitleCardPhoneScreen(input, screen, mode);
     case 'showdown':
       return showdownPhoneScreen(input, screen.showdownId);
     default:
@@ -556,13 +596,16 @@ function phoneScreenUnderBoard(
 
 function walkTitleCardPhoneScreen(
   input: PlayersScreenInput,
-  screen: Extract<OnAirScreen, { kind: 'reveal_intro' | 'break_round_title' }>,
+  screen: Extract<
+    OnAirScreen,
+    { kind: 'answers_intro' | 'reveal_intro' | 'break_round_title' }
+  >,
   mode: BlockMode,
 ): PhoneScreen {
   const card = roundTitleCardOf(
-    screen.kind === 'reveal_intro'
-      ? input.revealQuestions
-      : input.blockQuestions,
+    screen.kind === 'break_round_title'
+      ? input.blockQuestions
+      : input.revealQuestions,
     screen.questionId,
   );
   return card === null

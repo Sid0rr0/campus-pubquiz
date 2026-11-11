@@ -1,9 +1,12 @@
 import {
+  advanceFromAnswers,
   advanceFromBlockReview,
   advanceFromQuestionOpen,
   advanceFromReveal,
 } from './game-state-forward-transitions';
 import {
+  previousFromAnswers,
+  previousFromAnswersIntro,
   previousFromBlockReview,
   previousFromBreakRoundIntro,
   previousFromEnded,
@@ -267,6 +270,9 @@ function advanceFromLocking(
   if (round.quickfire) {
     return { ...progress, status: 'reveal', revealIndex };
   }
+  if (context.earlyAnswerReveal) {
+    return { ...progress, status: 'answers_intro', revealIndex: 0 };
+  }
   return {
     ...progress,
     status: 'break_intro',
@@ -298,6 +304,8 @@ const ADVANCE_FROM: Partial<Record<GameStatus, Transition>> = {
   // Resumes into the specific question that was paused on, same as
   // reveal_intro resuming into 'reveal' at the same revealIndex.
   break_round_intro: (progress) => ({ ...progress, status: 'break' }),
+  answers_intro: (progress) => ({ ...progress, status: 'answers' }),
+  answers: advanceFromAnswers,
   reveal_intro: (progress) => ({ ...progress, status: 'reveal' }),
   reveal: advanceFromReveal,
 };
@@ -325,6 +333,8 @@ const PREVIOUS_FROM: Partial<Record<GameStatus, Transition>> = {
   break_intro: (progress) => ({ ...progress, status: 'break' }),
   break: previousFromBlockReview,
   break_round_intro: previousFromBreakRoundIntro,
+  answers_intro: previousFromAnswersIntro,
+  answers: previousFromAnswers,
   reveal_intro: previousFromRevealIntro,
   reveal: previousFromReveal,
   ended: previousFromEnded,

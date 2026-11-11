@@ -157,8 +157,8 @@ export function withClueShown(session: SessionState): SessionState {
 function isSameRevealOnAir(current: GameProgress, next: GameProgress): boolean {
   if (current.status === 'ended' && next.status === 'ended') return true;
   return (
-    current.status === 'reveal' &&
-    next.status === 'reveal' &&
+    (current.status === 'reveal' || current.status === 'answers') &&
+    next.status === current.status &&
     current.roundIndex === next.roundIndex &&
     current.questionIndex === next.questionIndex &&
     current.revealIndex === next.revealIndex

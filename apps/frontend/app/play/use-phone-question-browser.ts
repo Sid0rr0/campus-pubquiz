@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { StateViewByRoom } from '@campus-pubquiz/types';
+import type { GameStatus, StateViewByRoom } from '@campus-pubquiz/types';
 import {
   browsedQuestionAfterAutoAdvanceChange,
   selectPhoneQuestion,
@@ -151,18 +151,27 @@ function browserInputsOf(view: PlayersView | null) {
     currentQuestionId: currentQuestion?.id ?? null,
     // Only changes while actively revealing (currentQuestionId stays null
     // throughout break/reveal), so this alone can key the reveal-walk sync.
-    revealSyncKey: progress.status === 'reveal' ? progress.revealIndex : null,
+    revealSyncKey: isRevealQuestionStatus(progress.status)
+      ? progress.revealIndex
+      : null,
     blockQuestions: view.blockQuestions,
     onScreenQuestionId: isBlockScreen ? phoneScreen.onScreenQuestionId : null,
     isBlockScreen,
   };
 }
 
+/** A question's answer is on air: the reveal, or the early answer reveal before the break. */
+function isRevealQuestionStatus(status: GameStatus): boolean {
+  return status === 'reveal' || status === 'answers';
+}
+
 function revealQuestionOf(
   view: PlayersView | null,
   selectedQuestion: { id: number } | null,
 ) {
-  return view?.progress.status === 'reveal' && selectedQuestion
+  return view &&
+    isRevealQuestionStatus(view.progress.status) &&
+    selectedQuestion
     ? view.revealQuestions.find(
         (question) => question.id === selectedQuestion.id,
       )

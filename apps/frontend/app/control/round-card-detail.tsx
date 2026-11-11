@@ -4,6 +4,7 @@ import type { GameStatus, QuizSummaryRound } from '@campus-pubquiz/types';
 const TITLE_CARD_KINDS: Partial<Record<GameStatus, string>> = {
   round_intro: 'Round intro',
   round_overview: 'Round intro',
+  answers_intro: 'Answers intro',
   reveal_intro: 'Reveal intro',
   break_round_intro: 'Break review: round intro',
 };

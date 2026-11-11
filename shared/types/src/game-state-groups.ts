@@ -32,6 +32,8 @@ export const GRADED_STATUSES: StatusGroup = new Set<GameStatus>([
 
 /** Answers are being revealed. */
 export const REVEALING_STATUSES: StatusGroup = new Set<GameStatus>([
+  'answers_intro',
+  'answers',
   'reveal_intro',
   'reveal',
 ]);
@@ -40,6 +42,7 @@ export const REVEALING_STATUSES: StatusGroup = new Set<GameStatus>([
 export const BLOCK_STARTED_STATUSES: StatusGroup = new Set<GameStatus>([
   ...ANSWERING_STATUSES,
   ...GRADED_STATUSES,
+  ...REVEALING_STATUSES,
 ]);
 
 export function isAnsweringStatus(status: GameStatus): boolean {
@@ -51,7 +54,11 @@ export function isQuestionOnAirStatus(status: GameStatus): boolean {
 }
 
 export type BreakStatus = 'break_intro' | 'break' | 'break_round_intro';
-export type RevealingStatus = 'reveal_intro' | 'reveal';
+export type RevealingStatus =
+  | 'answers_intro'
+  | 'answers'
+  | 'reveal_intro'
+  | 'reveal';
 
 export function isBreakStatus(status: GameStatus): status is BreakStatus {
   return BREAK_STATUSES.has(status);

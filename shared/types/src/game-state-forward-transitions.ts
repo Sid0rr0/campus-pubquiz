@@ -106,6 +106,43 @@ export function advanceFromBlockReview(
   return { ...progress, status: 'reveal_intro', revealIndex: 0 };
 }
 
+/**
+ * Steps through the early answer reveal one question at a time, pausing on
+ * each round's title card (answers_intro) at a round boundary, like the
+ * reveal. After the block's last question it goes on to the break card.
+ */
+export function advanceFromAnswers(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const blockQuestionCount = getBlockQuestionCount(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  if (progress.revealIndex + 1 >= blockQuestionCount) {
+    return { ...progress, status: 'break_intro' };
+  }
+  const revealIndex = progress.revealIndex + 1;
+  const { questionIndex } = getRoundAndQuestionForBlockPosition(
+    blockStart,
+    revealIndex,
+    context,
+  );
+  return {
+    ...progress,
+    status: isFirstQuestionOfItsRound(questionIndex)
+      ? 'answers_intro'
+      : 'answers',
+    revealIndex,
+  };
+}
+
 export function advanceFromReveal(
   progress: GameProgress,
   context: GameContext,

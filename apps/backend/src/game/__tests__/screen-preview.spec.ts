@@ -93,6 +93,21 @@ describe('describeScreen — the words for the screen on air', () => {
     ).toEqual(intro);
   });
 
+  it('names the early answer reveal title card and answer for /remote', () => {
+    expect(
+      describeScreen(session({ status: 'answers_intro', revealIndex: 0 })),
+    ).toEqual({ heading: 'Answers · Round 1 title', body: 'Alpha' });
+    expect(
+      describeScreen(session({ status: 'answers', revealIndex: 0 })),
+    ).toEqual({
+      heading: 'Answers R1 Q1',
+      body: 'Question 10 — Answer: Answer 10',
+    });
+    expect(
+      describeScreen(session({ status: 'answers', revealIndex: 5 })),
+    ).toEqual({ heading: 'Answers' });
+  });
+
   it('says only that answers are being revealed when the reveal step names no question', () => {
     expect(
       describeScreen(session({ status: 'reveal_intro', revealIndex: 5 })),

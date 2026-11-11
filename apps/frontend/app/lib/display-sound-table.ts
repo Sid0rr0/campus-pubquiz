@@ -10,6 +10,8 @@ const AFTER_LOCK_KINDS: readonly ScreenKind[] = [
   'break_intro',
   'break_review',
   'break_round_title',
+  'answers_intro',
+  'answers',
   'reveal_intro',
   'reveal',
 ];
@@ -34,6 +36,6 @@ export function soundFor(
   ) {
     return 'timeUp';
   }
-  if (next.kind === 'reveal') return 'reveal';
+  if (next.kind === 'reveal' || next.kind === 'answers') return 'reveal';
   return null;
 }

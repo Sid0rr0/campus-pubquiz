@@ -112,7 +112,8 @@ function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
 
 /** The power-ups used on the question on air in 'reveal'; empty outside a reveal. */
 function describePowerUpCounts(session: SessionState): PowerUpCount[] {
-  if (session.progress.status !== 'reveal') return [];
+  const { status } = session.progress;
+  if (status !== 'reveal' && status !== 'answers') return [];
   const question =
     getBlockSeededQuestions(session)[session.progress.revealIndex];
   return question

@@ -211,6 +211,68 @@ export function previousFromReveal(
   return { ...progress, revealIndex: progress.revealIndex - 1 };
 }
 
+/** Steps back from an early-answer-reveal question to its round's title card, or to the previous question. */
+export function previousFromAnswers(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const { questionIndex } = getRoundAndQuestionForBlockPosition(
+    blockStart,
+    progress.revealIndex,
+    context,
+  );
+  return isFirstQuestionOfItsRound(questionIndex)
+    ? { ...progress, status: 'answers_intro' }
+    : { ...progress, revealIndex: progress.revealIndex - 1 };
+}
+
+/**
+ * Steps back from an early-answer-reveal title card to the previous round's
+ * last answer, or from the block's first card to what precedes the block: the
+ * previous block's break card (a locked block never reopens), or, for the
+ * quiz's first block, wherever Previous from its first round intro goes.
+ */
+export function previousFromAnswersIntro(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  if (progress.revealIndex > 0) {
+    return {
+      ...progress,
+      status: 'answers',
+      revealIndex: progress.revealIndex - 1,
+    };
+  }
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const previousBlockEnd = getPreviousQuestionPosition(blockStart, context);
+  if (previousBlockEnd === null) {
+    return previousFromRoundIntro(
+      { ...progress, roundIndex: blockStart.roundIndex },
+      context,
+    );
+  }
+  return {
+    ...progress,
+    status: 'break_intro',
+    roundIndex: previousBlockEnd.roundIndex,
+    questionIndex: previousBlockEnd.questionIndex,
+    revealIndex: getBlockPositionForQuestion(
+      previousBlockEnd.roundIndex,
+      previousBlockEnd.questionIndex,
+      context,
+    ),
+  };
+}
+
 /**
  * Steps back from a reveal round's intro card to the previous round's last
  * reveal question, or — at the block's very first round — back into that

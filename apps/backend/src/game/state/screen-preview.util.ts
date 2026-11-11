@@ -84,30 +84,36 @@ function breakRoundTitleText(
     : describeBreakIntro(session);
 }
 
+/** The word each answer-airing screen kind is previewed under. */
+const REVEAL_WORD = { answers: 'Answers', reveal: 'Revealing' } as const;
+
 function revealIntroText(
   session: SessionState,
-  screen: OnAirOf<'reveal_intro'>,
+  screen: OnAirOf<'reveal_intro' | 'answers_intro'>,
 ): ScreenPreview {
+  const word =
+    REVEAL_WORD[screen.kind === 'answers_intro' ? 'answers' : 'reveal'];
   const question = findBlockQuestion(session, screen.questionId);
   return question
     ? {
-        heading: `Revealing · Round ${question.roundNumber} title`,
+        heading: `${word} · Round ${question.roundNumber} title`,
         body: question.roundTitle,
       }
-    : { heading: 'Revealing answers' };
+    : { heading: word === 'Answers' ? 'Answers' : 'Revealing answers' };
 }
 
 function revealText(
   session: SessionState,
-  screen: OnAirOf<'reveal'>,
+  screen: OnAirOf<'reveal' | 'answers'>,
 ): ScreenPreview {
+  const word = REVEAL_WORD[screen.kind];
   const question = findBlockQuestion(session, screen.questionId);
   return question
     ? {
-        heading: `Revealing R${question.roundNumber} Q${question.questionNumberInRound}`,
+        heading: `${word} R${question.roundNumber} Q${question.questionNumberInRound}`,
         body: `${question.prompt} — Answer: ${question.answer}`,
       }
-    : { heading: 'Revealing answers' };
+    : { heading: screen.kind === 'answers' ? 'Answers' : 'Revealing answers' };
 }
 
 const SCREEN_TEXTS: ScreenTexts = {
@@ -133,6 +139,8 @@ const SCREEN_TEXTS: ScreenTexts = {
   break_intro: describeBreakIntro,
   break_review: breakReviewText,
   break_round_title: breakRoundTitleText,
+  answers_intro: revealIntroText,
+  answers: revealText,
   reveal_intro: revealIntroText,
   reveal: revealText,
   leaderboard: (session) =>

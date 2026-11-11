@@ -9,6 +9,8 @@ export type GameStatus =
   | 'break_intro'
   | 'break'
   | 'break_round_intro'
+  | 'answers_intro'
+  | 'answers'
   | 'reveal_intro'
   | 'reveal'
   | 'ended';
@@ -67,6 +69,12 @@ export interface GameContext {
    * undefined behaves as true (autoplay).
    */
   autoplayMedia?: boolean;
+  /**
+   * The session's Early answer reveal setting: locking a block goes through
+   * 'answers_intro'/'answers' before the break. Optional; undefined behaves
+   * as false (the usual break-then-reveal flow).
+   */
+  earlyAnswerReveal?: boolean;
 }
 
 export interface GameProgress {

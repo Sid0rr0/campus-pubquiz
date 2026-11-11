@@ -18,6 +18,7 @@ function getDisplayCardMarker(progressStatus: GameStatus): 'T' | 'B' | null {
     case 'round_overview':
     case 'round_intro':
     case 'break_round_intro':
+    case 'answers_intro':
     case 'reveal_intro':
       return 'T';
     case 'break_intro':

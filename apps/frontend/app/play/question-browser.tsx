@@ -87,7 +87,8 @@ interface QuestionBrowserProps {
 
 interface RevealBodyProps {
   revealQuestion: PlayersRevealQuestionView;
-  myAnswer: string;
+  /** The team's answer, which marks its items right or wrong; undefined draws the answer without marks. */
+  myAnswer: string | undefined;
 }
 
 /** The revealed question as its reveal kind lays it out; both closest-guess kinds draw the closest-guess sequence, but only `closest_guess` carries the correct answer. */
@@ -174,11 +175,13 @@ export function QuestionBrowser({
           />
         </div>
       )}
-      {mode === 'revealing' && revealQuestion ? (
+      {(mode === 'revealing' || mode === 'answers') && revealQuestion ? (
         <RevealedAnswer
           revealQuestion={revealQuestion}
           myAnswer={myAnswer}
           myAnswerClue={myAnswerClue}
+          // The early answer reveal shows the answers before grading is done: no verdict colours, marks or points.
+          isVerdictShown={mode === 'revealing'}
           myAnswerPoints={myAnswerPoints}
           myAnswerJokerExtra={myAnswerJokerExtra}
           verdictTextClass={verdictTextClass}
@@ -452,6 +455,7 @@ function RevealedAnswer({
   revealQuestion,
   myAnswer,
   myAnswerClue,
+  isVerdictShown,
   myAnswerPoints,
   myAnswerJokerExtra,
   verdictTextClass,
@@ -459,14 +463,20 @@ function RevealedAnswer({
   revealQuestion: NonNullable<QuestionBrowserProps['revealQuestion']>;
   myAnswer: string | undefined;
   myAnswerClue: MyAnswerClue | null;
+  isVerdictShown: boolean;
   myAnswerPoints: QuestionBrowserProps['myAnswerPoints'];
   myAnswerJokerExtra: QuestionBrowserProps['myAnswerJokerExtra'];
   verdictTextClass: string;
 }) {
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      <RevealBody revealQuestion={revealQuestion} myAnswer={myAnswer ?? ''} />
-      <p className={`font-display text-2xl ${verdictTextClass}`}>
+      <RevealBody
+        revealQuestion={revealQuestion}
+        myAnswer={isVerdictShown ? (myAnswer ?? '') : undefined}
+      />
+      <p
+        className={`font-display text-2xl ${isVerdictShown ? verdictTextClass : ''}`}
+      >
         <span className="font-body text-base font-extrabold text-foreground/55">
           Your answer{': '}
         </span>
@@ -477,7 +487,7 @@ function RevealedAnswer({
             })
           : 'No answer submitted'}
       </p>
-      {myAnswerPoints !== null && (
+      {isVerdictShown && myAnswerPoints !== null && (
         <p
           className={`font-body text-3xl font-extrabold tabular-nums ${verdictTextClass}`}
         >

@@ -53,6 +53,8 @@ const MEMBERSHIP: Record<GameStatus, Membership> = {
     graded: true,
     blockStarted: true,
   }),
+  answers_intro: m({ revealing: true, blockStarted: true }),
+  answers: m({ revealing: true, blockStarted: true }),
   reveal_intro: m({
     graded: true,
     revealing: true,
@@ -95,7 +97,7 @@ describe('game status groups', () => {
     for (const [, set] of GROUPS) {
       for (const status of set) expect(everyStatus.has(status)).toBe(true);
     }
-    expect(statuses).toHaveLength(13);
+    expect(statuses).toHaveLength(15);
   });
 
   it.each(GROUPS)(

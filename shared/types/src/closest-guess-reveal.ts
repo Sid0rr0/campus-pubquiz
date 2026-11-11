@@ -148,7 +148,9 @@ export function closestGuessRevealDescriptor(
   session: SessionState,
   progress: GameProgress,
 ): SteppedRevealDescriptor | null {
-  if (progress.status !== 'reveal') return null;
+  if (progress.status !== 'reveal' && progress.status !== 'answers') {
+    return null;
+  }
   // A reveal index past the block names no question: nothing to walk.
   const blockSize = getBlockInPlayIds(
     session.seededGame.rounds,

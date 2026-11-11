@@ -56,7 +56,7 @@ function trimToRevealWalk(
   closestGuessRevealStep: number,
 ): PlayersRevealQuestionView[] {
   const shownCount =
-    progress.status === 'reveal'
+    progress.status === 'reveal' || progress.status === 'answers'
       ? progress.revealIndex + 1
       : progress.revealIndex;
   return trimOnAirQuestion(
