@@ -64,6 +64,11 @@ export function isBreakStatus(status: GameStatus): status is BreakStatus {
   return BREAK_STATUSES.has(status);
 }
 
+/** Whether a move from `from` to `to` leaves the break for good: into the reveal, or on past the block with the Early answer reveal. The one moment grading must be complete. */
+export function isBreakExit(from: GameStatus, to: GameStatus): boolean {
+  return (from === 'break_intro' || from === 'break') && !isBreakStatus(to);
+}
+
 export function isGradedStatus(status: GameStatus): boolean {
   return GRADED_STATUSES.has(status);
 }

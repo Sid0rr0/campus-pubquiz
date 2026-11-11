@@ -68,13 +68,48 @@ describe('Early answer reveal — Move plan transitions', () => {
     });
   });
 
-  it('still leaves the break through the usual reveal', () => {
-    const breakIntro = press(
-      { ...locking, status: 'answers', revealIndex: 3 },
-      'ADVANCE',
-      early,
-    );
+  const breakIntro: GameProgress = {
+    ...locking,
+    status: 'break_intro',
+    revealIndex: 3,
+  };
+
+  it("leaves the break for the next block's round intro with the leaderboard up", () => {
     expect(press(breakIntro, 'ADVANCE', early)).toMatchObject({
+      status: 'round_intro',
+      roundIndex: 2,
+      questionIndex: 0,
+      revealIndex: 0,
+      furthestOpenIndex: -1,
+      isLeaderboardVisible: true,
+    });
+  });
+
+  it('leaves the last block\'s break for "ended" with the leaderboard up', () => {
+    const lastBreak: GameProgress = {
+      ...breakIntro,
+      roundIndex: 2,
+      questionIndex: 0,
+      revealIndex: 0,
+    };
+    expect(press(lastBreak, 'ADVANCE', early)).toMatchObject({
+      status: 'ended',
+      previousStatus: 'break_intro',
+      isLeaderboardVisible: true,
+    });
+  });
+
+  it('opens the leaderboard again when the break is re-entered by Previous and left again', () => {
+    const back = press(breakIntro, 'PREVIOUS', early);
+    expect(back.status).toBe('break');
+    expect(press(back, 'ADVANCE', early)).toMatchObject({
+      status: 'round_intro',
+      isLeaderboardVisible: true,
+    });
+  });
+
+  it('still leaves the break through the usual reveal with the setting off', () => {
+    expect(press(breakIntro, 'ADVANCE', usual)).toMatchObject({
       status: 'reveal_intro',
       revealIndex: 0,
     });

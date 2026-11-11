@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   type GameProgress,
+  isBreakExit,
   isBreakStatus,
   isGradedStatus,
   isRevealingStatus,
@@ -108,10 +109,7 @@ export class BlockGradingService {
     session: SessionState,
     toProgress: GameProgress,
   ): Promise<void> {
-    const { status } = session.progress;
-    // Stryker disable next-line ConditionalExpression: equivalent, the other moves into reveal_intro start from a reveal, where the gate already passed and no answer can be ungraded.
-    const isLeavingBreak = status === 'break_intro' || status === 'break';
-    if (!isLeavingBreak || toProgress.status !== 'reveal_intro') return;
+    if (!isBreakExit(session.progress.status, toProgress.status)) return;
 
     const ungradedQuestionIds = await this.getUngradedBlockQuestionIds(session);
     if (ungradedQuestionIds.length > 0) {

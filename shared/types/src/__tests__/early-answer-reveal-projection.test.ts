@@ -100,6 +100,77 @@ describe('Early answer reveal — the display on answers', () => {
   });
 });
 
+describe('Early answer reveal — the phone under the post-break leaderboard', () => {
+  const twoBlocks = [
+    round(1, [10, 11], { title: 'Alpha' }),
+    round(2, [20], { title: 'Beta' }),
+  ];
+
+  function afterBreak(
+    progress: Partial<GameProgress>,
+    isEarly = true,
+  ): SessionState {
+    const session = sessionWith(twoBlocks, {
+      status: 'round_intro',
+      roundIndex: 1,
+      questionIndex: 0,
+      furthestOpenIndex: -1,
+      isLeaderboardVisible: true,
+      ...progress,
+    });
+    return {
+      ...session,
+      seededGame: {
+        ...session.seededGame,
+        settings: {
+          ...session.seededGame.settings,
+          earlyAnswerReveal: isEarly,
+        },
+      },
+    };
+  }
+
+  it('shows the graded block in revealing mode instead of the leaderboard', () => {
+    const view = projectScreen(afterBreak({}), SOCKET_ROOMS.PLAYERS);
+    expect(view.phoneScreen).toEqual({
+      kind: 'block',
+      mode: 'revealing',
+      onScreenQuestionId: 10,
+    });
+    expect(view.blockQuestions.map(({ id }) => id)).toEqual([10, 11]);
+    expect(view.revealQuestions.map(({ id }) => id)).toEqual([10, 11]);
+  });
+
+  it('shows the last block after the quiz ended from its break', () => {
+    const view = projectScreen(
+      afterBreak({
+        status: 'ended',
+        previousStatus: 'break_intro',
+        roundIndex: 1,
+        questionIndex: 0,
+      }),
+      SOCKET_ROOMS.PLAYERS,
+    );
+    expect(view.phoneScreen).toMatchObject({
+      kind: 'block',
+      mode: 'revealing',
+    });
+    expect(view.revealQuestions.map(({ id }) => id)).toEqual([20]);
+  });
+
+  it('is the usual phone screen once the board is hidden, or with the setting off', () => {
+    expect(
+      projectScreen(
+        afterBreak({ isLeaderboardVisible: false }),
+        SOCKET_ROOMS.PLAYERS,
+      ).phoneScreen.kind,
+    ).toBe('round_title');
+    expect(
+      projectScreen(afterBreak({}, false), SOCKET_ROOMS.PLAYERS).phoneScreen,
+    ).toEqual({ kind: 'leaderboard' });
+  });
+});
+
 describe('Early answer reveal — the phone on answers', () => {
   it('shows the block browser in answers mode following the question on air', () => {
     const view = projectScreen(at('answers', 1), SOCKET_ROOMS.PLAYERS);

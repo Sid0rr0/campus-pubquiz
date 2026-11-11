@@ -169,9 +169,13 @@ function revealQuestionOf(
   view: PlayersView | null,
   selectedQuestion: { id: number } | null,
 ) {
-  return view &&
-    isRevealQuestionStatus(view.progress.status) &&
-    selectedQuestion
+  // The phone's mode says it too: under the post-break leaderboard the status is a round intro, yet the graded block is revealed.
+  const { phoneScreen } = view ?? {};
+  const isRevealed =
+    view &&
+    (isRevealQuestionStatus(view.progress.status) ||
+      (phoneScreen?.kind === 'block' && phoneScreen.mode === 'revealing'));
+  return view && isRevealed && selectedQuestion
     ? view.revealQuestions.find(
         (question) => question.id === selectedQuestion.id,
       )

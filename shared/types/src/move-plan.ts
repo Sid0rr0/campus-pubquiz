@@ -1,6 +1,6 @@
 import { describeMediaControls } from './control-availability';
 import { getPlayingMediaUrl } from './display-screen';
-import { getNextGameState } from './game-state';
+import { getNextGameState, isBreakExit } from './game-state';
 import {
   IllegalGameTransitionError,
   type GameAction,
@@ -221,13 +221,9 @@ function planUnderlyingMove(
 
 /** Turns the break's ADVANCE into the reveal into a grading-pending step while the session's cached ungraded set is not empty. */
 function planGradingGate(session: SessionState, step: MoveStep): MoveStep {
-  const { status } = session.progress;
-  const isLeavingBreak = status === 'break_intro' || status === 'break';
-  const isEnteringReveal =
-    step.kind === 'transition' && step.progress.status === 'reveal_intro';
   if (
-    !isLeavingBreak ||
-    !isEnteringReveal ||
+    step.kind !== 'transition' ||
+    !isBreakExit(session.progress.status, step.progress.status) ||
     session.ungradedQuestionIds.length === 0
   ) {
     return step;
