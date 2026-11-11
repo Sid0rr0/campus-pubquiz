@@ -12,7 +12,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Move plan tests: with the setting on, `locking` → `answers_intro` → `answers` … → `break_intro` across rounds; with it off, unchanged
 - [ ] Status group tests place `answers_intro`/`answers` in revealing only
