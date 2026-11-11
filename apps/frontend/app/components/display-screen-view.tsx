@@ -108,11 +108,10 @@ function LeaderboardView({
   live,
   isConnected,
 }: ScreenViewProps<'leaderboard'>): ReactNode {
-  const { board, revealCount, sideStandings, priorSideStandings, sideIds } =
-    screen;
-  // The bar holds the prior split until the top rank is revealed; the reveal
-  // target is the step count of the (already capped) board the view carries.
-  const isTopRankRevealed =
+  const { board, revealCount, sideStandings, sideIds } = screen;
+  // The bar appears once every rank is revealed; the reveal target is the step
+  // count of the (already capped) board the view carries.
+  const isAllRevealed =
     revealCount >= getLeaderboardRevealStepCount(board.entries, false);
   const sideColors = Object.fromEntries(
     Object.entries(sideIds ?? {}).flatMap(([teamId, sideId]) => {
@@ -125,13 +124,7 @@ function LeaderboardView({
       <h1 className="text-center font-display text-display-4xl">
         <span className="text-magenta">Leaderboard</span>
       </h1>
-      <SideBar
-        standings={
-          isTopRankRevealed
-            ? sideStandings
-            : (priorSideStandings ?? sideStandings)
-        }
-      />
+      {isAllRevealed && <SideBar standings={sideStandings} />}
       <Leaderboard
         board={board}
         revealCount={revealCount}

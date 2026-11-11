@@ -24,7 +24,7 @@ const SIDES = [
   { id: 'art', name: 'Arts' },
 ];
 
-function renderLeaderboard(mySideId: string) {
+function renderLeaderboard(mySideId: string, leaderboardRevealCount = 3) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'Beta');
   mockUseTeamLink.mockReturnValue(
     teamLinkResult({
@@ -38,6 +38,7 @@ function renderLeaderboard(mySideId: string) {
         ],
         settings: { versusEnabled: true, versusSides: SIDES },
         teamSides: { 1: 'law', 2: 'eng', 3: 'eng' },
+        leaderboardRevealCount,
       },
       join: {
         team: { teamId: 2, teamName: 'Beta', teamToken: 'token-2' },
@@ -76,5 +77,11 @@ describe('PlayPage — the side bar on the leaderboard', () => {
       'data-own',
       'false',
     );
+  });
+
+  it('shows no bar until every rank is revealed', () => {
+    renderLeaderboard('eng', 2);
+
+    expect(screen.queryByTestId('side-bar')).not.toBeInTheDocument();
   });
 });

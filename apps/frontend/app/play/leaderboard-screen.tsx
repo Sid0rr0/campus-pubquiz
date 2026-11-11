@@ -1,6 +1,10 @@
 'use client';
 
-import type { LeaderboardBoard, SideStandings } from '@campus-pubquiz/types';
+import {
+  getLeaderboardRevealStepCount,
+  type LeaderboardBoard,
+  type SideStandings,
+} from '@campus-pubquiz/types';
 import { SideBar } from '@/app/components/side-bar';
 import { JokerStamp } from '@/app/components/joker-stamp';
 import { findMyStanding } from '@/app/play/my-standing';
@@ -54,11 +58,12 @@ export function LeaderboardScreen({
         </p>
         <h1 className="font-display text-2xl text-magenta">Leaderboard</h1>
       </div>
-      {sideStandings && (
-        <div className="w-full max-w-sm text-left">
-          <SideBar standings={sideStandings} ownSideId={mySideId} />
-        </div>
-      )}
+      {sideStandings &&
+        revealCount >= getLeaderboardRevealStepCount(board.entries, false) && (
+          <div className="w-full max-w-sm text-left">
+            <SideBar standings={sideStandings} ownSideId={mySideId} />
+          </div>
+        )}
       {standing && (
         <div
           data-testid="own-leaderboard-row"

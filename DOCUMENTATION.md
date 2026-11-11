@@ -1220,9 +1220,9 @@ On the big screen (display view, nothing sent with Versus off) the `lobby` scree
 carries `sideCounts` (`{ id, name, colorIndex, teamCount }` per side, side order) and the
 `leaderboard` screen carries `sideStandings` (current), `priorSideStandings` (only when
 there are prior standings, so absent for a screen after a backend restart) and `sideIds`
-(shown team id -> side id, for the row's colour dot). `/display` draws the prior split
-while `revealCount` is below the number of ranks on the board and the current split once
-it reaches it, sliding the bar; with no prior split it draws the current one at once.
+(shown team id -> side id, for the row's colour dot). `/display` and the phone
+leaderboard draw no bar while `revealCount` is below the number of ranks on the board, and
+the current split once every rank is revealed (`priorSideStandings` is unused for now).
 The `ended` screen carries `sideStandings` too: it shows "`<side>` wins" (the one leading
 side) or "It's a tie" (`isTied`) above the bar, under "Quiz complete!"; with no counted
 team (`sideStandingsWinner` says `none`) there is no winner line. Nothing is

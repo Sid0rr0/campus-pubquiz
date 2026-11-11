@@ -137,24 +137,14 @@ describe('DisplayPage — Versus', () => {
     });
   });
 
-  it('holds the prior split until the top rank is revealed', () => {
+  it('shows no bar until every rank is revealed', () => {
     leaderboard(1);
 
-    expect(screen.getByTestId('side-segment-eng')).toHaveStyle({
-      transform: 'scaleX(0.25)',
-    });
+    expect(screen.queryByTestId('side-bar')).not.toBeInTheDocument();
   });
 
-  it('slides to the current split once the top rank is revealed', () => {
+  it('shows the current split once every rank is revealed', () => {
     leaderboard(2);
-
-    expect(screen.getByTestId('side-segment-eng')).toHaveStyle({
-      transform: 'scaleX(0.75)',
-    });
-  });
-
-  it('draws the current split at once with no prior standings', () => {
-    leaderboard(0, false);
 
     expect(screen.getByTestId('side-segment-eng')).toHaveStyle({
       transform: 'scaleX(0.75)',
