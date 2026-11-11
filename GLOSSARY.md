@@ -16,7 +16,7 @@ The questions of the current block a session has reached. While answering, those
 _Avoid_: current block, active block
 
 **Quiz mode**:
-How a quiz is played, chosen when the quiz is created and never changed: a **pub quiz** (answers stay open until a block locks, then a break, then the reveal) or a **quickfire quiz**. Every round of a quiz plays in its mode; a quiz never mixes the two. A quickfire quiz's sessions have no jokers, power-ups, coins or leagues.
+How a quiz is played, chosen when the quiz is created and never changed: a **pub quiz** (answers stay open until a block locks, then a break, then the reveal) or a **quickfire quiz**. Every round of a quiz plays in its mode; a quiz never mixes the two. A quickfire quiz's sessions have no jokers, power-ups, coins, leagues or Versus.
 
 **Quickfire quiz**:
 A quiz where every question is its own block, so each one is locked, scored and revealed before the next, and a faster correct answer scores more.
@@ -346,6 +346,16 @@ _Avoid_: league leaderboard, standings (that's one session)
 
 **League top**:
 The name and top five rows of the league table of a session's league (the most recently created one if it is in several), shown on the big screen lobby. Sent to the display only, and `null` when the session is in no league. Redrawn when the league table may have changed: another session ended or its scores changed after it ended, the league was edited, or two teams were merged.
+
+## Versus
+
+**Versus**:
+A session setting under which every team fights for one of the session's **Sides**, and the leaderboard shows which side is ahead. Only for pub quiz sessions. A side belongs to its session alone: it never reaches the team page, the league or the stats.
+_Avoid_: versus mode (a **Quiz mode** is something else), side war
+
+**Side**:
+One of the two to four named camps the quiz master sets for a session played with Versus, such as "Engineering" and "Law". Every team in such a session is on exactly one side: it picks when it joins and can switch until the quiz starts, after which only the quiz master can move it. A side's strength is the average leaderboard total of its teams that took part and haven't left, and the bar shows each side's share of those averages (a negative average counts as none). The side that is ahead when the session ends wins the night's Versus, and nothing records it.
+_Avoid_: faction, camp, house, team (a team is on a side)
 
 ## Game status
 
