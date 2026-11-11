@@ -10,7 +10,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Move plan tests: leaving the break goes to the next block's `round_intro` with the leaderboard visible, and to `ended` after the last block; the ungraded refusal still applies
 - [ ] Re-entering the break by Previous and leaving it again opens the leaderboard again
