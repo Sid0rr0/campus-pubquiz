@@ -321,7 +321,7 @@ what it draws:
 | `locking`                                          | `lockAt`                                                                                                                                                                                                                                                                                  |
 | `break_intro`                                      | `roundNumber`, `breakNumber`, `isFinalBreak` (hides the bonus list), `isFeedbackPromptShown`, `funFacts`, `breakEndsAt`                                                                                                                                                                   |
 | `leaderboard`                                      | `board`, `revealCount`, `isFinal` (the quiz has ended, or this is the last break, which crowns the winners)                                                                                                                                                                               |
-| `ended`                                            | `isFeedbackPromptShown`                                                                                                                                                                                                                                                                   |
+| `ended`                                            | `isFeedbackPromptShown`, `sideStandings` (Versus only)                                                                                                                                                                                                                                                                |
 | `showdown`                                         | `showdown`, `step`                                                                                                                                                                                                                                                                        |
 | `blank`                                            | Nothing; sent (and logged) when the server can't find a kind's content                                                                                                                                                                                                                    |
 
@@ -1221,6 +1221,10 @@ there are prior standings, so absent for a screen after a backend restart) and `
 (shown team id -> side id, for the row's colour dot). `/display` draws the prior split
 while `revealCount` is below the number of ranks on the board and the current split once
 it reaches it, sliding the bar; with no prior split it draws the current one at once.
+The `ended` screen carries `sideStandings` too: it shows "`<side>` wins" (the one leading
+side) or "It's a tie" (`isTied`) above the bar, under "Quiz complete!". Nothing is
+stored; the standings are recomputed on every emit, so a grade changed after the end
+that flips the lead changes the winner shown.
 
 `SET_TEAM_PLAYER_COUNT` — `{ teamId, playerCount }` — lets the quiz master or a
 moderator set or correct any team's player count from the Teams panel at any status.

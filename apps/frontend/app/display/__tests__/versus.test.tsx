@@ -83,6 +83,44 @@ describe('DisplayPage — Versus', () => {
     expect(within(counts).getByText(/Law: 1 team$/)).toBeInTheDocument();
   });
 
+  describe('ended screen', () => {
+    const ended = (totals: [number, number]) =>
+      show({
+        settings: VERSUS,
+        teamSides: TEAM_SIDES,
+        progress: { status: 'ended' },
+        tookPartTeamIds: [1, 2],
+        leaderboard: [
+          { teamId: 1, teamName: 'Alpha', totalPoints: totals[0] },
+          { teamId: 2, teamName: 'Beta', totalPoints: totals[1] },
+        ],
+      });
+
+    it('names the winning side next to the bar', () => {
+      ended([10, 30]);
+
+      expect(screen.getByText('Law wins')).toBeInTheDocument();
+      expect(screen.getByTestId('side-bar')).toBeInTheDocument();
+    });
+
+    it('says it is a tie when the lead is shared', () => {
+      ended([20, 20]);
+
+      expect(screen.getByText("It's a tie")).toBeInTheDocument();
+      expect(screen.queryByText(/wins/)).not.toBeInTheDocument();
+    });
+
+    it('shows nothing about sides with Versus off', () => {
+      show({
+        progress: { status: 'ended' },
+        leaderboard: [{ teamId: 1, teamName: 'Alpha', totalPoints: 5 }],
+      });
+
+      expect(screen.queryByTestId('side-bar')).not.toBeInTheDocument();
+      expect(screen.queryByText(/wins|tie/)).not.toBeInTheDocument();
+    });
+  });
+
   it('holds the prior split until the top rank is revealed', () => {
     leaderboard(1);
 

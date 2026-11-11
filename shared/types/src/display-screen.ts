@@ -88,7 +88,12 @@ export type DisplayScreen =
       priorSideStandings?: SideStandings;
       sideIds?: Record<number, string>;
     }
-  | { kind: 'ended'; isFeedbackPromptShown: boolean }
+  | {
+      kind: 'ended';
+      isFeedbackPromptShown: boolean;
+      /** With Versus on: the final side split (recomputed on every emit, so a later grade change can flip the winner). */
+      sideStandings?: SideStandings;
+    }
   | { kind: 'showdown'; showdown: ActiveShowdownView; step: number }
   | { kind: 'blank' };
 
@@ -270,10 +275,14 @@ const SCREEN_BUILDERS: ScreenBuilders = {
   reveal_intro: revealIntroScreen,
   reveal: revealScreen,
   leaderboard: leaderboardScreen,
-  ended: (_input, onAir) => ({
-    kind: 'ended',
-    isFeedbackPromptShown: onAir.isFeedbackPromptShown,
-  }),
+  ended: ({ session }, onAir) => {
+    const sideStandings = describeSessionSideStandings(session);
+    return {
+      kind: 'ended',
+      isFeedbackPromptShown: onAir.isFeedbackPromptShown,
+      ...(sideStandings && { sideStandings }),
+    };
+  },
   showdown: showdownScreen,
 };
 

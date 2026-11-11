@@ -1,5 +1,6 @@
 import type { ScreenViewProps } from '@/app/components/display-screen-view';
 import { Podium, podiumEntries } from '@/app/components/podium';
+import { SideBar } from '@/app/components/side-bar';
 import { RosterMarquee } from '@/app/display/roster-marquee';
 import { formatRankLabel } from '@/app/lib/rank-label';
 
@@ -17,7 +18,7 @@ const SEE_YOU = 'See you next week!';
 /** The final screen: podium on top, the rest of the field scrolling below it, then the thank-you. */
 export function EndedScreen({ screen, live }: ScreenViewProps<'ended'>) {
   const leaderboard = live?.leaderboard ?? [];
-  const { isFeedbackPromptShown } = screen;
+  const { isFeedbackPromptShown, sideStandings } = screen;
   const onPodium = new Set(podiumEntries(leaderboard));
   const otherTeams = leaderboard.filter((entry) => !onPodium.has(entry));
   const thankYou = isFeedbackPromptShown
@@ -28,6 +29,16 @@ export function EndedScreen({ screen, live }: ScreenViewProps<'ended'>) {
     <div className="flex flex-1 flex-col items-center gap-8 px-16 pt-10 pb-10 text-center">
       <Podium entries={leaderboard} />
       <h1 className="font-display text-display-4xl">Quiz complete!</h1>
+      {sideStandings && (
+        <div className="flex w-full max-w-5xl flex-col items-center gap-4">
+          <p className="font-display text-display-2xl">
+            {sideStandings.isTied
+              ? "It's a tie"
+              : `${sideStandings.sides.find((side) => side.isLeading)?.name} wins`}
+          </p>
+          <SideBar standings={sideStandings} />
+        </div>
+      )}
       {otherTeams.length > 0 && (
         <div aria-label="Other teams" className="w-full">
           <RosterMarquee

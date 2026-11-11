@@ -112,6 +112,8 @@ export interface SessionDescription {
   settings?: Partial<SessionSettings>;
   /** The Versus side each team is on, by team id (with `settings.versusEnabled` and `versusSides`). */
   teamSides?: Record<number, string>;
+  /** Team ids that took part (an ended session's side standings count only these). */
+  tookPartTeamIds?: number[];
   /** Coins brought from the last league night, by team id (what the quiz master's Coins column shows with power-ups off). */
   carriedCoins?: Record<number, number>;
   /** The league the lobby shows beside the roster; omit for a session in no league. */
@@ -293,6 +295,7 @@ export function buildSessionState(
     jokers: description.jokers ?? {},
     carriedCoins: description.carriedCoins ?? {},
     teamSides: description.teamSides ?? {},
+    tookPartTeamIds: description.tookPartTeamIds ?? [],
     ...(description.displayTextScale === undefined
       ? {}
       : { displayTextScale: description.displayTextScale }),

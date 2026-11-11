@@ -99,6 +99,31 @@ describe('GameGateway — the Versus side standings on the display view', () => 
     expect(screen).not.toHaveProperty('sideIds');
   });
 
+  it('carries the side standings on the ended screen', async () => {
+    const game = await createGame(['A', 'B']);
+    await pickSides(game, ['eng', 'law']);
+    await playToBoard(game, ['Paris', 'London']);
+    await game.act('END_QUIZ');
+
+    const screen = displayScreen(game);
+    if (screen.kind !== 'ended') throw new Error(screen.kind);
+    expect(screen.sideStandings?.sides.map((side) => side.isLeading)).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it('sends no side standings on the ended screen with Versus off', async () => {
+    const game = await createGame(['A', 'B'], {});
+    await playToBoard(game, ['Paris', 'London']);
+    await game.act('END_QUIZ');
+
+    expect(displayScreen(game)).toEqual(
+      expect.objectContaining({ kind: 'ended' }),
+    );
+    expect(displayScreen(game)).not.toHaveProperty('sideStandings');
+  });
+
   it('leaves a roster team that never took part out of its side once the session has ended', async () => {
     const game = await createGame(['A', 'B', 'Idle']);
     await pickSides(game, ['eng', 'law', 'law']);
