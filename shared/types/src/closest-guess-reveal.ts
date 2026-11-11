@@ -4,6 +4,7 @@ import {
   getBlockStartPosition,
   getRoundAndQuestionForBlockPosition,
 } from './game-state-block-position';
+import { isRevealQuestionStatus } from './game-state-groups';
 import type { GameProgress } from './game-state-types';
 import type {
   BlockRevealQuestionView,
@@ -148,9 +149,7 @@ export function closestGuessRevealDescriptor(
   session: SessionState,
   progress: GameProgress,
 ): SteppedRevealDescriptor | null {
-  if (progress.status !== 'reveal' && progress.status !== 'answers') {
-    return null;
-  }
+  if (!isRevealQuestionStatus(progress.status)) return null;
   // A reveal index past the block names no question: nothing to walk.
   const blockSize = getBlockInPlayIds(
     session.seededGame.rounds,

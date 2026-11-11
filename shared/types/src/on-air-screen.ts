@@ -1,6 +1,8 @@
 import {
   isBreakStatus,
+  isEarlyAnswersStatus,
   isRevealingStatus,
+  isRevealQuestionStatus,
   type RevealingStatus,
 } from './game-state-groups';
 import type { GameProgress, GameStatus } from './game-state-types';
@@ -227,7 +229,7 @@ function revealScreenKey(
   revealQuestion: RoundPosition | undefined,
 ): string {
   const position = `${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}`;
-  return status === 'reveal' || status === 'answers'
+  return isRevealQuestionStatus(status)
     ? `${status}-${position}-${input.closestGuessRevealStep ?? 0}`
     : `${status}-${position}`;
 }
@@ -429,12 +431,7 @@ export type BlockMode = 'answering' | 'locked' | 'answers' | 'revealing';
 function blockModeOf(input: PlayersScreenInput): BlockMode {
   if (input.isAnswerable) return 'answering';
   if (isBreakStatus(input.progress.status)) return 'locked';
-  if (
-    input.progress.status === 'answers' ||
-    input.progress.status === 'answers_intro'
-  ) {
-    return 'answers';
-  }
+  if (isEarlyAnswersStatus(input.progress.status)) return 'answers';
   if (isRevealingStatus(input.progress.status)) return 'revealing';
   return 'answering';
 }

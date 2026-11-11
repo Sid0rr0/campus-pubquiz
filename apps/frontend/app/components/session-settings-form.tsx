@@ -220,8 +220,8 @@ export function SessionSettingsForm({
             Show correct answers before break
           </label>
           <p className="-mt-3 text-xs text-foreground/60">
-            The big screen shows each question&apos;s correct answer before the
-            break review.
+            The big screen shows each question&apos;s correct answer when the
+            block ends, before the break. Verdicts come after the break.
           </p>
         </>
       )}

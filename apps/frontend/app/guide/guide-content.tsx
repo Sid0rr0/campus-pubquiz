@@ -52,7 +52,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Starting a session',
     paragraphs: [
       'Session Settings sets the rules text, bonus categories and leagues in the lobby; then press Start Quiz.',
-      'Advance shows the rules, the round overview, then the first round title card.',
+      'Advance shows the rules, the round overview, then the first round title card; Previous on the rules returns to the lobby.',
     ],
   },
   {
@@ -86,7 +86,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Power-ups',
     paragraphs: [
       'The "Power-ups" tab (lobby Session Settings) lets teams spend coins: set starting coins and each power-up\'s cost and uses. Teams shows a Coins column.',
-      'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles a round).',
+      'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles the next round).',
       "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off.",
       'Grading names the power-ups each answer used. Never refunded: after an answer-key fix, give the coin back with a coin award. Deleting a shot or selfie award removes its coin.',
     ],
@@ -147,14 +147,14 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Show correct answers before break',
     paragraphs: [
-      "This lobby switch (pub quiz) shows a block's answers when it ends, before the break, without verdicts. Advance steps through them.",
-      'Advance from the break opens the leaderboard, and teams see verdicts. No reveal or break review follows: Previous walks the answers back.',
+      "Shows a block's answers, without verdicts, when it ends; grading can start meanwhile.",
+      'Advance from the break opens the leaderboard with verdicts. Previous walks the answers back.',
     ],
   },
   {
     title: 'The reveal',
     paragraphs: [
-      'Once graded, Advance reveals the block: each round title card, then each question with its answer.',
+      'Once graded, Advance reveals the block: each round title card, then each question with its answer. After the last block it ends the quiz.',
     ],
   },
   {

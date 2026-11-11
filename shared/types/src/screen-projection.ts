@@ -13,7 +13,7 @@ import { getFeedbackField } from './feedback-rounds';
 import { describeControlAvailability } from './control-availability';
 import type { DisplayScreen } from './display-screen';
 import type { GameProgress } from './game-state-types';
-import { isRevealingStatus } from './game-state-groups';
+import { isRevealingStatus, isRevealQuestionStatus } from './game-state-groups';
 import { isQuestionHiddenBehindQuickfireLeaderboard } from './quickfire-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import { describeSessionSideStandings } from './side-standings';
@@ -61,10 +61,9 @@ function trimToRevealWalk(
   progress: GameProgress,
   closestGuessRevealStep: number,
 ): PlayersRevealQuestionView[] {
-  const shownCount =
-    progress.status === 'reveal' || progress.status === 'answers'
-      ? progress.revealIndex + 1
-      : progress.revealIndex;
+  const shownCount = isRevealQuestionStatus(progress.status)
+    ? progress.revealIndex + 1
+    : progress.revealIndex;
   return trimOnAirQuestion(
     revealQuestions.slice(0, shownCount),
     progress,

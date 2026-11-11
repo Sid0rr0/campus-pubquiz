@@ -211,6 +211,30 @@ describe('Early answer reveal — Move plan transitions', () => {
     expect(press(first, 'PREVIOUS', early)).toMatchObject({
       status: 'rules',
       roundIndex: 0,
+      furthestOpenIndex: -1,
+      isLeaderboardVisible: false,
+    });
+  });
+
+  it('lands in the quickfire reveal, not the break card, from the block after a quickfire block', () => {
+    const quickfireThenBlock: GameContext = {
+      earlyAnswerReveal: true,
+      rounds: [
+        { questionCount: 2, breakAfter: true, quickfire: true },
+        { questionCount: 1, breakAfter: true },
+      ],
+    };
+    const second: GameProgress = {
+      ...locking,
+      status: 'answers_intro',
+      roundIndex: 1,
+      questionIndex: 0,
+      revealIndex: 0,
+    };
+    expect(press(second, 'PREVIOUS', quickfireThenBlock)).toMatchObject({
+      status: 'reveal',
+      roundIndex: 0,
+      questionIndex: 1,
     });
   });
 

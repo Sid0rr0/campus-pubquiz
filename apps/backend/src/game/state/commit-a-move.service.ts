@@ -196,7 +196,7 @@ export class MoveCommitter {
     const started = isLeavingLobby ? await this.decideCarriedCoins(base) : base;
 
     const { session: refreshed, staleAnswerListIds } =
-      await this.grading.gradeForMove(started, progress);
+      await this.grading.gradeForMove(started, progress, pressed);
     // settleMove carries a raw ADVANCE under the leaderboard out as the action
     // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
     // reveal count, the quickfire timer and everything else downstream treat it

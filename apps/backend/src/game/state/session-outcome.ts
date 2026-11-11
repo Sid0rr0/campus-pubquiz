@@ -1,6 +1,8 @@
 import {
   coinBalance,
   type GameStatus,
+  isBreakExit,
+  isRevealingStatus,
   type ServerToClientProtocol,
   type SessionState,
   SOCKET_EVENTS,
@@ -189,8 +191,7 @@ export function isRevealEntry(
     previousStatus === 'locking' && newStatus === 'reveal';
   // With Early answer reveal the break exit is where the verdicts first reach the phones.
   const leavesBreakIntoResults =
-    (previousStatus === 'break_intro' || previousStatus === 'break') &&
-    (newStatus === 'round_intro' || newStatus === 'ended');
+    isBreakExit(previousStatus, newStatus) && !isRevealingStatus(newStatus);
   return (
     entersRevealIntro ||
     entersCollapsedQuickfireReveal ||

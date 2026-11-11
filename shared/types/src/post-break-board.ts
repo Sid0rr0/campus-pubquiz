@@ -15,9 +15,10 @@ import { getGameContext, type SessionState } from './session-state';
  * block-reading helpers take it whole), or null when the board is not that
  * one.
  *
- * shortcut: a board the moderator toggles on at a fresh block's round intro
- * reads the same, because the progress alone cannot tell them apart; add a
- * progress flag if that ever matters.
+ * shortcut: a board the moderator toggles on at a fresh block's round intro,
+ * or at 'ended' after End Quiz pressed in a break, reads the same, because the
+ * progress alone cannot tell them apart; add a persisted progress flag if that
+ * ever matters.
  */
 export function getPostBreakBoardBlock(
   session: SessionState,
@@ -44,7 +45,8 @@ export function getPostBreakBoardBlock(
     context,
   );
   const last = getPreviousQuestionPosition(blockStart, context);
-  return last === null
+  // A quickfire block has no break: its end opened the board, with nothing early-revealed.
+  return last === null || context.rounds[last.roundIndex].quickfire
     ? null
     : { ...progress, ...last, status: 'reveal', revealIndex: 0 };
 }

@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import {
+  type GameAction,
   type GameProgress,
   isBreakExit,
   isBreakStatus,
+  isEarlyAnswersStatus,
   isGradedStatus,
   isRevealingStatus,
   type ScoredQuestion,
@@ -10,6 +12,7 @@ import {
   summarizeClosestGuess,
   getBlockInPlay,
   getBlockInPlayIds,
+  getPostBreakBoardBlock,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
@@ -67,8 +70,12 @@ export class BlockGradingService {
   async gradeForMove(
     session: SessionState,
     toProgress: GameProgress,
+    pressed: GameAction,
   ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
-    await this.assertNothingUngradedLeavingBreak(session, toProgress);
+    // Only the Advance press leaves the break for good; Previous and End Quiz never need grading done.
+    if (pressed === 'ADVANCE') {
+      await this.assertNothingUngradedLeavingBreak(session, toProgress);
+    }
     const speedScored = await this.ensureQuickfireSpeedScored(
       session,
       toProgress,
@@ -97,7 +104,12 @@ export class BlockGradingService {
       session,
       progress,
     );
-    return this.refreshUngradedQuestionIds(summarized, progress);
+    // The post-break board shows the block before this fresh round intro, whose summaries the batch above cannot see.
+    const boardBlock = getPostBreakBoardBlock({ ...summarized, progress });
+    const { session: withBoardBlock } = boardBlock
+      ? await this.ensureBlockGraded(summarized, boardBlock)
+      : { session: summarized };
+    return this.refreshUngradedQuestionIds(withBoardBlock, progress);
   }
 
   /**
@@ -418,11 +430,7 @@ export class BlockGradingService {
   ): Promise<SessionState> {
     // The early answer reveal comes before the break, but grading can start there.
     const { status } = newProgress;
-    if (
-      !isBreakStatus(status) &&
-      status !== 'answers_intro' &&
-      status !== 'answers'
-    ) {
+    if (!isBreakStatus(status) && !isEarlyAnswersStatus(status)) {
       return session;
     }
     const refresh = await this.readGradingRefresh(

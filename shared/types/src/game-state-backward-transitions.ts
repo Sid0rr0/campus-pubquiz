@@ -264,24 +264,18 @@ export function previousFromAnswersIntro(
     progress.questionIndex,
     context,
   );
-  const previousBlockEnd = getPreviousQuestionPosition(blockStart, context);
-  if (previousBlockEnd === null) {
-    return previousFromRoundIntro(
-      { ...progress, roundIndex: blockStart.roundIndex },
-      context,
-    );
-  }
-  return {
-    ...progress,
-    status: 'break_intro',
-    roundIndex: previousBlockEnd.roundIndex,
-    questionIndex: previousBlockEnd.questionIndex,
-    revealIndex: getBlockPositionForQuestion(
-      previousBlockEnd.roundIndex,
-      previousBlockEnd.questionIndex,
-      context,
-    ),
-  };
+  // The block's first card sits where its round intro would: step back from there.
+  return previousFromRoundIntro(
+    {
+      ...progress,
+      status: 'round_intro',
+      roundIndex: blockStart.roundIndex,
+      questionIndex: 0,
+      furthestOpenIndex: -1,
+      isLeaderboardVisible: false,
+    },
+    context,
+  );
 }
 
 /**

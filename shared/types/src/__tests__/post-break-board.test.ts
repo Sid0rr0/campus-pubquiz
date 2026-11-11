@@ -38,6 +38,28 @@ describe('getPostBreakBoardBlock', () => {
     ).toMatchObject({ status: 'reveal', roundIndex: 1 });
   });
 
+  it('is null when the block before ended on a quickfire round, which has no break', () => {
+    const session = sessionWith(
+      [round(1, [10, 11], { quickfire: true }), round(2, [20])],
+      {
+        status: 'round_intro',
+        roundIndex: 1,
+        questionIndex: 0,
+        furthestOpenIndex: -1,
+        isLeaderboardVisible: true,
+      },
+    );
+    expect(
+      getPostBreakBoardBlock({
+        ...session,
+        seededGame: {
+          ...session.seededGame,
+          settings: { ...session.seededGame.settings, earlyAnswerReveal: true },
+        },
+      }),
+    ).toBeNull();
+  });
+
   it.each([
     ['with the setting off', withBoard({}, false)],
     ['with the board hidden', withBoard({ isLeaderboardVisible: false })],

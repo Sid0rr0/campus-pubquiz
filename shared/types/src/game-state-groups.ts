@@ -64,9 +64,23 @@ export function isBreakStatus(status: GameStatus): status is BreakStatus {
   return BREAK_STATUSES.has(status);
 }
 
-/** Whether a move from `from` to `to` leaves the break for good: into the reveal, or on past the block with the Early answer reveal. The one moment grading must be complete. */
+/** Whether a move from `from` to `to` leaves the break for good: into the reveal, or on past the block with the Early answer reveal. Only the Advance press needs grading complete for it. */
 export function isBreakExit(from: GameStatus, to: GameStatus): boolean {
   return (from === 'break_intro' || from === 'break') && !isBreakStatus(to);
+}
+
+/** A question's answer is on air: a reveal or an Early answer reveal question (not a title card). */
+export function isRevealQuestionStatus(
+  status: GameStatus,
+): status is 'answers' | 'reveal' {
+  return status === 'answers' || status === 'reveal';
+}
+
+/** The Early answer reveal is airing, before the break: its title card or one of its answers. */
+export function isEarlyAnswersStatus(
+  status: GameStatus,
+): status is 'answers_intro' | 'answers' {
+  return status === 'answers_intro' || status === 'answers';
 }
 
 export function isGradedStatus(status: GameStatus): boolean {

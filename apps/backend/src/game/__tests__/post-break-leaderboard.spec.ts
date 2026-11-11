@@ -52,6 +52,35 @@ describe('GameGateway — leaving the break with the Early answer reveal on', ()
     expect((await game.snapshot()).progress.status).toBe('break_intro');
   });
 
+  it('lets Previous step back from the break card while an answer is ungraded', async () => {
+    const answers = await game.act('PREVIOUS');
+
+    expect(answers.progress.status).toBe('answers');
+  });
+
+  it('lets End Quiz end the quiz from the break card while an answer is ungraded', async () => {
+    const ended = await game.act('END_QUIZ');
+
+    expect(ended.progress.status).toBe('ended');
+  });
+
+  it('tells /remote that the next press shows the results, then the next round intro', async () => {
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    await game.gateway.handleGradeAnswer(asSocket(await game.connectAdmin()), {
+      answerId: answer.answerId,
+      pointsAwarded: 1,
+    });
+
+    const { nextScreen } = game.gameState.getPresenterContext(game.joinCode);
+
+    expect(nextScreen).toMatchObject({
+      heading: 'Leaderboard',
+      body: 'Results, then Round 2 intro',
+    });
+  });
+
   it('saves the next round intro with the leaderboard visible once graded, so a restart restores it', async () => {
     const [answer] = await game.inRequestContext(() =>
       game.answerService.listForQuestion(game.gameSessionId, questionId),

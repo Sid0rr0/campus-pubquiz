@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { GameStatus, StateViewByRoom } from '@campus-pubquiz/types';
+import {
+  isRevealQuestionStatus,
+  type StateViewByRoom,
+} from '@campus-pubquiz/types';
 import {
   browsedQuestionAfterAutoAdvanceChange,
   selectPhoneQuestion,
@@ -158,11 +161,6 @@ function browserInputsOf(view: PlayersView | null) {
     onScreenQuestionId: isBlockScreen ? phoneScreen.onScreenQuestionId : null,
     isBlockScreen,
   };
-}
-
-/** A question's answer is on air: the reveal, or the early answer reveal before the break. */
-function isRevealQuestionStatus(status: GameStatus): boolean {
-  return status === 'reveal' || status === 'answers';
 }
 
 function revealQuestionOf(

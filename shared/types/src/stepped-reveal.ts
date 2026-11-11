@@ -4,6 +4,7 @@ import {
   clueStartStep,
 } from './clue-reveal';
 import { closestGuessRevealDescriptor } from './closest-guess-reveal';
+import { isRevealQuestionStatus } from './game-state-groups';
 import type { GameAction, GameProgress } from './game-state-types';
 import type { Movement } from './move-plan';
 import type { SessionState } from './session-state';
@@ -157,7 +158,7 @@ export function withClueShown(session: SessionState): SessionState {
 function isSameRevealOnAir(current: GameProgress, next: GameProgress): boolean {
   if (current.status === 'ended' && next.status === 'ended') return true;
   return (
-    (current.status === 'reveal' || current.status === 'answers') &&
+    isRevealQuestionStatus(current.status) &&
     next.status === current.status &&
     current.roundIndex === next.roundIndex &&
     current.questionIndex === next.questionIndex &&
