@@ -11,6 +11,7 @@ import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindQuickfireLeaderboard } from './quickfire-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
+import { describeSessionSideStandings } from './side-standings';
 import { FULLY_REVEALED_STEP } from './closest-guess-reveal';
 import {
   assembleDisplayScreen,
@@ -187,8 +188,10 @@ function projectAdmin({
   buildDisplayScreen,
 }: Projection): StateViewByRoom[typeof SOCKET_ROOMS.ADMIN] {
   const { screen } = onAir;
+  const sideStandings = describeSessionSideStandings(session);
   return {
     ...snapshot,
+    ...(sideStandings === undefined ? {} : { sideStandings }),
     ...buildScreenOperatorFields(session),
     ...buildAdminFields(session),
     onAirScreen: screen,
@@ -215,12 +218,14 @@ function projectPlayers({
   // needs the upcoming question's round title); only what leaves the
   // server is trimmed.
   const isAnswerable = isBlockAnswerable(session);
+  const sideStandings = describeSessionSideStandings(session);
   const view = {
     ...snapshot,
     ...buildPlayersFields(session),
     phoneLeaderboard: {
       board: describeLeaderboardBoard(session),
       revealCount: session.leaderboardRevealCount,
+      ...(sideStandings === undefined ? {} : { sideStandings }),
     },
     ...describePlayersScreen({
       ...snapshot,

@@ -47,6 +47,7 @@ describe('what each quiz mode allows', () => {
 describe('the settings refusal', () => {
   it.each([
     [{ jokersEnabled: true }, "A quickfire session can't have jokers"],
+    [{ versusEnabled: true }, "A quickfire session can't have Versus"],
     [{ powerUpsEnabled: true }, "A quickfire session can't have power-ups"],
     [
       { startingCoins: 0 },
@@ -146,15 +147,17 @@ describe('the settings a mode plays with', () => {
   const on = {
     ...DEFAULT_SESSION_SETTINGS,
     jokersEnabled: true,
+    versusEnabled: true,
     powerUpsEnabled: true,
     startingCoins: 7,
     collectFeedback: false,
   };
 
-  it('quickfire switches jokers, power-ups and coins off, leaving the rest', () => {
+  it('quickfire switches jokers, Versus, power-ups and coins off, leaving the rest', () => {
     expect(settingsForMode('quickfire', on)).toEqual({
       ...on,
       jokersEnabled: false,
+      versusEnabled: false,
       powerUpsEnabled: false,
       startingCoins: 0,
     });

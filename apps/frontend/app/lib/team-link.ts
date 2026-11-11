@@ -174,6 +174,8 @@ export interface TeamLinkState {
   myPlayerCount: number | null;
   /** The team's own joker as the server last said it (the join, a sync, or an acknowledged pick), or null while it has none. */
   myJoker: TeamJoker | null;
+  /** The id of the team's own Versus side as the server last said it (the join, or a sync after a pick), or null while it has none. */
+  mySideId: string | null;
   /** The team's own power-up purchases as the server last said them (the join, or a sync after a purchase); a 50/50's removed options stay hidden through them. */
   myPurchases: PurchaseView[];
   /** The questions on which the server says this team's Ask the room is ready (the join, then a sync as other teams answer). A flag only, never a count. */
@@ -224,6 +226,8 @@ export type TeamLinkInput =
   | { type: 'jokerSynced'; joker: TeamJoker | null }
   // The server acknowledged a joker pick this phone sent.
   | { type: 'jokerSaved'; joker: TeamJoker }
+  // The server told the team's phones its side changed (a pick, or Versus turned off).
+  | { type: 'sideSynced'; sideId: string | null }
   // The server told the team's phones its purchases and coins after a purchase.
   | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
   // The server said whether Ask the room is ready on a question, after another team's answer.
@@ -329,6 +333,7 @@ const EMPTY_TEAM_DATA = {
   mySessionRatings: NO_SESSION_RATINGS,
   myPlayerCount: null,
   myJoker: null,
+  mySideId: null,
   myPurchases: [],
   roomReadyQuestionIds: [],
   pendingAnswer: null,
@@ -647,6 +652,7 @@ function teamDataFromJoin(payload: JoinAcceptedPayload) {
     mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
     myPlayerCount: payload.playerCount ?? null,
     myJoker: payload.joker ?? null,
+    mySideId: payload.sideId,
     myPurchases: payload.purchases,
     roomReadyQuestionIds: payload.roomReadyQuestionIds,
   } satisfies Partial<TeamLinkState>;
@@ -973,6 +979,7 @@ const INPUT_HANDLERS: {
   playerCountSaved: (state, input) =>
     unchanged({ ...state, myPlayerCount: input.playerCount }),
   jokerSaved: (state, input) => unchanged({ ...state, myJoker: input.joker }),
+  sideSynced: (state, input) => unchanged({ ...state, mySideId: input.sideId }),
   purchasesSynced: syncPurchases,
   roomReadySynced: syncRoomReady,
   nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),

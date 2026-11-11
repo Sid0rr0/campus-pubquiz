@@ -208,6 +208,7 @@ export class TeamRosterChanges {
           gameSessionId,
           team.id,
         ),
+        sideId: session.teamSides[team.id] ?? null,
         joker,
         coins: coinBalance(session, team.id, purchases),
         hasCarriedCoin: carriedCoin > 0,
@@ -288,9 +289,12 @@ export class TeamRosterChanges {
             },
           ]
         : [];
+    // The roster row went with the team's side.
+    const teamSides = { ...session.teamSides };
+    delete teamSides[teamId];
     return {
       session: withTeams(
-        withoutTeamConnection(session, teamId),
+        { ...withoutTeamConnection(session, teamId), teamSides },
         await this.teamService.listForSession(gameSessionId),
       ),
       outcome: {

@@ -1,4 +1,8 @@
 import type { ReactNode } from 'react';
+import {
+  getLeaderboardRevealStepCount,
+  versusSideColor,
+} from '@campus-pubquiz/types';
 import type {
   DisplayScreen,
   LeaderboardEntry,
@@ -13,6 +17,7 @@ import {
   closestGuessAnswerProps,
 } from '@/app/components/closest-guess-reveal-screen';
 import { Leaderboard } from '@/app/components/leaderboard';
+import { SideBar } from '@/app/components/side-bar';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
 import { BreakReviewScreen } from '@/app/display/break-review-screen';
@@ -103,17 +108,30 @@ function LeaderboardView({
   live,
   isConnected,
 }: ScreenViewProps<'leaderboard'>): ReactNode {
+  const { board, revealCount, sideStandings, sideIds } = screen;
+  // The bar appears once every rank is revealed; the reveal target is the step
+  // count of the (already capped) board the view carries.
+  const isAllRevealed =
+    revealCount >= getLeaderboardRevealStepCount(board.entries, false);
+  const sideColors = Object.fromEntries(
+    Object.entries(sideIds ?? {}).flatMap(([teamId, sideId]) => {
+      const side = sideStandings?.sides.find(({ id }) => id === sideId);
+      return side ? [[teamId, versusSideColor(side.colorIndex)]] : [];
+    }),
+  );
   return (
     <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
       <h1 className="text-center font-display text-display-4xl">
         <span className="text-magenta">Leaderboard</span>
       </h1>
+      {isAllRevealed && <SideBar standings={sideStandings} />}
       <Leaderboard
-        board={screen.board}
-        revealCount={screen.revealCount}
+        board={board}
+        revealCount={revealCount}
         isConnected={isConnected}
         isFinal={screen.isFinal}
         onWinnerCelebrated={live?.onWinnerCelebrated}
+        sideColors={sideColors}
       />
     </div>
   );

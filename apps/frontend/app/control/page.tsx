@@ -19,6 +19,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { useToastOnError } from '@/app/lib/use-toast-on-error';
 import { ClueStatus } from '@/app/control/clue-status';
 import { TeamsTable } from '@/app/control/teams-table';
+import { SideBar } from '@/app/components/side-bar';
 import { DesktopSidebar } from '@/app/control/desktop-sidebar';
 import { AnswersPanel } from '@/app/control/answers-panel';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
@@ -112,6 +113,7 @@ function AdminPageContent() {
     gradeAnswer,
     kickTeam,
     setTeamPlayerCount,
+    setTeamSide,
     setTeamJoker,
     awardBonus,
     setBreakEndTime,
@@ -171,6 +173,7 @@ function AdminPageContent() {
       sendAction,
       kickTeam,
       setTeamPlayerCount,
+      setTeamSide,
       setTeamJoker,
       setBreakEndTime,
       setDisplayTextScale,
@@ -503,6 +506,7 @@ function SessionWorkspace({
         )}
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl">Teams</h2>
+          <SideBar standings={view.sideStandings} />
           <TeamsTable
             joinCode={view.joinCode}
             leaderboard={leaderboard}

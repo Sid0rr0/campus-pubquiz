@@ -22,6 +22,7 @@ import {
   type SetDisplayTextScalePayload,
   type SetTeamJokerPayload,
   type SetTeamPlayerCountPayload,
+  type SetTeamSidePayload,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import {
@@ -53,6 +54,8 @@ export interface UseAdminGameResult {
     teamId: number,
     playerCount: number,
   ) => Promise<AckResult>;
+  /** Moves a team to a Versus side at any status; a rejection is a toast and the returned result. */
+  setTeamSide: (teamId: number, sideId: string) => Promise<AckResult>;
   /** Gives a team a round as its joker, until that round has started; a rejection is a toast and the returned result. */
   setTeamJoker: (teamId: number, roundId: number) => Promise<AckResult>;
   awardBonus: (
@@ -185,6 +188,15 @@ export function useAdminGame(
     [emitAction],
   );
 
+  const setTeamSide = useCallback(
+    (teamId: number, sideId: string) => {
+      const payload: SetTeamSidePayload = { teamId, sideId };
+      return emitAction(SOCKET_EVENTS.SET_TEAM_SIDE, payload);
+    },
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitAction` never changes, so `setTeamSide` is the same function either way
+    [emitAction],
+  );
+
   const setTeamJoker = useCallback(
     (teamId: number, roundId: number) => {
       const payload: SetTeamJokerPayload = { teamId, roundId };
@@ -271,6 +283,7 @@ export function useAdminGame(
     gradeAnswer,
     kickTeam,
     setTeamPlayerCount,
+    setTeamSide,
     setTeamJoker,
     awardBonus,
     setBreakEndTime,

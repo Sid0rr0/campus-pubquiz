@@ -7,6 +7,11 @@ import {
 } from './joker';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import type { OnAirScreen } from './on-air-screen';
+import {
+  describePriorSideStandings,
+  describeSessionSideStandings,
+  type SideStandings,
+} from './side-standings';
 import type {
   BlockQuestionView,
   PlayersRevealQuestionView,
@@ -24,7 +29,8 @@ import type { ActiveShowdownView } from './showdown';
  * page switches on `kind` and looks nothing up.
  */
 export type DisplayScreen =
-  | { kind: 'lobby' }
+  /** `sideCounts`: with Versus on, the teams on each side in side order. */
+  | { kind: 'lobby'; sideCounts?: SideCount[] }
   | { kind: 'rules' }
   | { kind: 'round_overview' }
   /** Every round of the quiz, the pick's deadline and the ids of the teams that have picked; never which round any team picked. */
@@ -77,8 +83,17 @@ export type DisplayScreen =
       board: LeaderboardBoard;
       revealCount: number;
       isFinal: boolean;
+      /** With Versus on: the current side split, the split on the prior standings (absent without them) and each shown team's side id. */
+      sideStandings?: SideStandings;
+      priorSideStandings?: SideStandings;
+      sideIds?: Record<number, string>;
     }
-  | { kind: 'ended'; isFeedbackPromptShown: boolean }
+  | {
+      kind: 'ended';
+      isFeedbackPromptShown: boolean;
+      /** With Versus on: the final side split (recomputed on every emit, so a later grade change can flip the winner). */
+      sideStandings?: SideStandings;
+    }
   | { kind: 'showdown'; showdown: ActiveShowdownView; step: number }
   | { kind: 'blank' };
 
@@ -179,15 +194,54 @@ function leaderboardScreen({
   snapshot,
 }: DisplayScreenInput): DisplayScreen {
   const { progress, quizStructure } = snapshot;
+  const board = describeLeaderboardBoard(session);
+  const sideStandings = describeSessionSideStandings(session);
+  const priorSideStandings = describePriorSideStandings(session);
   return {
     kind: 'leaderboard',
-    board: describeLeaderboardBoard(session),
+    board,
     revealCount: session.leaderboardRevealCount,
     // The board shown once the quiz is over, or during its last break, crowns the winners.
     isFinal:
       progress.status === 'ended' ||
       isShowingLastBreak(progress, quizStructure),
+    ...(sideStandings && {
+      sideStandings,
+      sideIds: Object.fromEntries(
+        board.entries.flatMap(({ teamId }) =>
+          session.teamSides[teamId]
+            ? [[teamId, session.teamSides[teamId]]]
+            : [],
+        ),
+      ),
+    }),
+    ...(priorSideStandings && { priorSideStandings }),
   };
+}
+
+/** One side's team count for the lobby. */
+export interface SideCount {
+  id: string;
+  name: string;
+  colorIndex: number;
+  teamCount: number;
+}
+
+function lobbyScreen({ session }: DisplayScreenInput): DisplayScreen {
+  const sideStandings = describeSessionSideStandings(session);
+  return sideStandings
+    ? {
+        kind: 'lobby',
+        sideCounts: sideStandings.sides.map(
+          ({ id, name, colorIndex, teamCount }) => ({
+            id,
+            name,
+            colorIndex,
+            teamCount,
+          }),
+        ),
+      }
+    : { kind: 'lobby' };
 }
 
 function showdownScreen({ snapshot }: DisplayScreenInput): DisplayScreen {
@@ -201,7 +255,7 @@ function showdownScreen({ snapshot }: DisplayScreenInput): DisplayScreen {
 }
 
 const SCREEN_BUILDERS: ScreenBuilders = {
-  lobby: () => ({ kind: 'lobby' }),
+  lobby: lobbyScreen,
   rules: () => ({ kind: 'rules' }),
   round_overview: () => ({ kind: 'round_overview' }),
   join_overlay: () => ({ kind: 'join_overlay' }),
@@ -221,10 +275,14 @@ const SCREEN_BUILDERS: ScreenBuilders = {
   reveal_intro: revealIntroScreen,
   reveal: revealScreen,
   leaderboard: leaderboardScreen,
-  ended: (_input, onAir) => ({
-    kind: 'ended',
-    isFeedbackPromptShown: onAir.isFeedbackPromptShown,
-  }),
+  ended: ({ session }, onAir) => {
+    const sideStandings = describeSessionSideStandings(session);
+    return {
+      kind: 'ended',
+      isFeedbackPromptShown: onAir.isFeedbackPromptShown,
+      ...(sideStandings && { sideStandings }),
+    };
+  },
   showdown: showdownScreen,
 };
 

@@ -4,10 +4,10 @@
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Teams pick sides on their phones in the lobby and the big-screen lobby shows the counts
-- [ ] Start quiz is refused while a team has no side
-- [ ] The phone and big-screen leaderboards show the bar with the expected split
-- [ ] The ended screen names the winning side
-- [ ] `pnpm e2e --repeat-each=5` on the new journey passes
+- [x] Teams pick sides on their phones in the lobby and the big-screen lobby shows the counts
+- [x] Start quiz is refused while a team has no side
+- [x] The phone and big-screen leaderboards show the bar with the expected split
+- [x] The ended screen names the winning side
+- [x] `pnpm e2e --repeat-each=5` on the new journey passes

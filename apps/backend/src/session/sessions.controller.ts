@@ -14,6 +14,7 @@ import {
   hasJokersWithoutOverview,
   JOKERS_NEED_OVERVIEW_MESSAGE,
   quizModeSettingsRefusal,
+  versusSettingsRefusal,
   type ActiveSessionSummary,
   type CreateSessionPayload,
   type SessionSettings,
@@ -119,6 +120,9 @@ export class SessionsController {
     if (hasJokersWithoutOverview(settings)) {
       throw new BadRequestException(JOKERS_NEED_OVERVIEW_MESSAGE);
     }
+    // The partial schema only checks sides it is given, so Versus on with none is refused here.
+    const versusRefusal = versusSettingsRefusal(settings);
+    if (versusRefusal) throw new BadRequestException(versusRefusal);
     const name = parseName(body.name);
     const leagueIds = parseLeagueIds(body.leagueIds) ?? [];
     if (await this.gameState.isQuickfireQuiz(quizId)) {

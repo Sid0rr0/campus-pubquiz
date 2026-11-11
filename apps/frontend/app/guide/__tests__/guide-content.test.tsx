@@ -25,7 +25,7 @@ const STATUS_NAMES: GameStatus[] = [
 ];
 
 const MIN_GUIDE_WORDS = 1000;
-const MAX_GUIDE_WORDS = 1640;
+const MAX_GUIDE_WORDS = 1730;
 const MAX_PARAGRAPH_CHARS = 300;
 
 function renderGuideText(): string {
@@ -70,6 +70,16 @@ describe('GuideContent', () => {
     expect(text).toContain('random round');
     expect(text).toContain('N/M picked');
     expect(text).toContain('"Countdown sound"');
+  });
+
+  it('explains Versus: the setting, side picks, the Start Quiz refusal, moving a team and the bar', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('"Versus" switch');
+    expect(text).toContain('2 to 4 sides');
+    expect(text).toContain('Start Quiz is refused while a team has no side');
+    expect(text).toContain('To move a team');
+    expect(text).toContain('average points per team');
   });
 
   it('explains the Power-ups tab, starting coins and the Coins column', () => {

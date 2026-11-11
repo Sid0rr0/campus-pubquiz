@@ -228,6 +228,15 @@ describe('SessionsController', () => {
       },
     );
 
+    it('400s on Versus enabled without sides, creating nothing', async () => {
+      const { controller, gameState } = makeController();
+
+      await expect(
+        controller.create({ quizId: 2, settings: { versusEnabled: true } }),
+      ).rejects.toThrow(BadRequestException);
+      expect(gameState.createSession).not.toHaveBeenCalled();
+    });
+
     it('creates a quickfire session with the question timer and no refused setting', async () => {
       const { controller, gameState } = makeController();
       gameState.isQuickfireQuiz.mockResolvedValue(true);

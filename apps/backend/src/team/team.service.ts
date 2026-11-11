@@ -206,6 +206,37 @@ export class TeamService {
     }));
   }
 
+  /** teamId -> side id for the roster teams that picked a side in this session. */
+  async listSides(gameSessionId: number): Promise<Record<number, string>> {
+    const rows = await this.gameSessionTeams.find(
+      { gameSession: gameSessionId, sideId: { $ne: null } },
+      { populate: ['team'] },
+    );
+    return Object.fromEntries(
+      rows.flatMap((row) => (row.sideId ? [[row.team.id, row.sideId]] : [])),
+    );
+  }
+
+  /** Stores the side a roster team picked. */
+  async setSide(
+    gameSessionId: number,
+    teamId: number,
+    sideId: string,
+  ): Promise<void> {
+    await this.gameSessionTeams.nativeUpdate(
+      { gameSession: gameSessionId, team: teamId },
+      { sideId },
+    );
+  }
+
+  /** Clears every roster team's side (Versus turned off). */
+  async clearSides(gameSessionId: number): Promise<void> {
+    await this.gameSessionTeams.nativeUpdate(
+      { gameSession: gameSessionId },
+      { sideId: null },
+    );
+  }
+
   /** Every team that has ever registered, paginated and sorted server-side — the team directory, not scoped to one session. */
   async listAll({
     page,

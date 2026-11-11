@@ -1,9 +1,14 @@
+import { versusSideColor } from '@campus-pubquiz/types';
 import type { ScreenViewProps } from '@/app/components/display-screen-view';
 import { JoinDetails } from '@/app/display/join-details';
 import { LeagueTopCard } from '@/app/display/league-top';
 import { TeamRoster } from '@/app/display/team-roster';
 
-export function LobbyScreen({ settings, live }: ScreenViewProps<'lobby'>) {
+export function LobbyScreen({
+  screen,
+  settings,
+  live,
+}: ScreenViewProps<'lobby'>) {
   if (!live) return null;
   const { teams, leagueTop, isConnected, joinCode, onPickAnotherGame } = live;
   const { maxPlayersPerTeam, extraPlayerPenaltyPoints } = settings;
@@ -23,6 +28,23 @@ export function LobbyScreen({ settings, live }: ScreenViewProps<'lobby'>) {
           )}
           {leagueTop && <LeagueTopCard leagueTop={leagueTop} />}
         </div>
+        {screen.sideCounts && (
+          <ul
+            data-testid="side-counts"
+            className="flex justify-center gap-8 text-display-xl"
+          >
+            {screen.sideCounts.map((side) => (
+              <li key={side.id} className="flex items-center gap-3">
+                <span
+                  className="size-6 rounded-full"
+                  style={{ backgroundColor: versusSideColor(side.colorIndex) }}
+                />
+                {side.name}: {side.teamCount}{' '}
+                {side.teamCount === 1 ? 'team' : 'teams'}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <TeamRoster teams={teams} isConnected={isConnected} />
       <button

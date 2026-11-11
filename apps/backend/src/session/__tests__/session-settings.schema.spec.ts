@@ -98,6 +98,52 @@ describe('sessionSettingsPartialSchema', () => {
     ).toBe(true);
   });
 
+  describe('Versus', () => {
+    const side = (id: string, name: string) => ({ id, name });
+    const parse = (versusSides: { id: string; name: string }[]) =>
+      sessionSettingsPartialSchema.safeParse({
+        versusEnabled: true,
+        versusSides,
+      });
+
+    it('accepts 2 to 4 sides and trims their names', () => {
+      expect(parse([side('a', ' Law '), side('b', 'Eng')]).data).toMatchObject({
+        versusSides: [side('a', 'Law'), side('b', 'Eng')],
+      });
+      expect(
+        parse([side('a', 'A'), side('b', 'B'), side('c', 'C'), side('d', 'D')])
+          .success,
+      ).toBe(true);
+    });
+
+    it.each([
+      ['fewer than 2 sides', [side('a', 'Law')]],
+      [
+        'more than 4 sides',
+        [
+          side('a', 'A'),
+          side('b', 'B'),
+          side('c', 'C'),
+          side('d', 'D'),
+          side('e', 'E'),
+        ],
+      ],
+      ['a blank name', [side('a', 'Law'), side('b', '   ')]],
+      ['names differing only by case', [side('a', 'Law'), side('b', ' LAW')]],
+    ])('refuses %s while Versus is on', (_name, sides) => {
+      expect(parse(sides).success).toBe(false);
+    });
+
+    it('lets sides be anything while Versus is off', () => {
+      expect(
+        sessionSettingsPartialSchema.safeParse({
+          versusEnabled: false,
+          versusSides: [side('a', 'Law')],
+        }).success,
+      ).toBe(true);
+    });
+  });
+
   it('rejects an empty enabledBonusCategories array, saying one category must stay enabled', () => {
     const result = sessionSettingsPartialSchema.safeParse({
       enabledBonusCategories: [],

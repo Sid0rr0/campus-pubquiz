@@ -7,6 +7,9 @@ import {
   type PowerUpId,
   hasJokersWithoutOverview,
   JOKERS_NEED_OVERVIEW_MESSAGE,
+  MAX_VERSUS_SIDES,
+  VERSUS_SIDE_COUNT_MESSAGE,
+  versusSettingsRefusal,
   type BonusCategory,
   type SessionSettings,
 } from '@campus-pubquiz/types';
@@ -46,6 +49,15 @@ export const sessionSettingsPartialSchema = z
     playLockCountdownSound: z.boolean(),
     showRoundOverview: z.boolean(),
     jokersEnabled: z.boolean(),
+    versusEnabled: z.boolean(),
+    versusSides: z
+      .array(
+        z.object({
+          id: z.string().trim().min(1),
+          name: z.string().trim().max(RULE_MAX_LENGTH),
+        }),
+      )
+      .max(MAX_VERSUS_SIDES, VERSUS_SIDE_COUNT_MESSAGE),
     rules: z
       .array(z.string().trim().min(1).max(RULE_MAX_LENGTH))
       .max(MAX_RULES),
@@ -65,6 +77,11 @@ export const sessionSettingsPartialSchema = z
   // other, as stored, where the settings are merged (see SessionSettingsChanges).
   .refine((settings) => !hasJokersWithoutOverview(settings), {
     message: JOKERS_NEED_OVERVIEW_MESSAGE,
+  })
+  // A patch naming only one of the pair is checked against the other where merged.
+  .superRefine((settings, ctx) => {
+    const message = settings.versusSides && versusSettingsRefusal(settings);
+    if (message) ctx.addIssue({ code: 'custom', message });
   });
 
 export type SessionSettingsPartial = z.infer<

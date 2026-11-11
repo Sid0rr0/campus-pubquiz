@@ -1,10 +1,14 @@
 import { Cross2Icon, PlusIcon } from '@radix-ui/react-icons';
 import {
   BONUS_CATEGORIES,
+  MAX_VERSUS_SIDES,
+  MIN_VERSUS_SIDES,
   quizModeAllows,
+  versusSideColor,
   type BonusCategory,
   type QuizMode,
   type SessionSettings,
+  type VersusSide,
 } from '@campus-pubquiz/types';
 import {
   BONUS_CATEGORY_LABELS,
@@ -199,6 +203,10 @@ export function SessionSettingsForm({
         </>
       )}
 
+      {quizModeAllows(mode, 'versus') && (
+        <VersusSettings value={value} onChange={onChange} />
+      )}
+
       <label className="flex items-center gap-2 text-sm font-extrabold">
         <input
           type="checkbox"
@@ -325,6 +333,109 @@ function withJokers(value: SessionSettings, jokersEnabled: boolean) {
     ...(jokersEnabled ? withShowRoundOverview(value, true) : value),
     jokersEnabled,
   };
+}
+
+function newSide(): VersusSide {
+  return { id: crypto.randomUUID(), name: '' };
+}
+
+/** The Versus switch and its side list: a side's swatch is its position in the palette. */
+function VersusSettings({
+  value,
+  onChange,
+}: {
+  value: SessionSettings;
+  onChange: (next: SessionSettings) => void;
+}) {
+  const sides = value.versusSides;
+  function setSides(versusSides: VersusSide[]): void {
+    onChange({ ...value, versusSides });
+  }
+  function setVersus(versusEnabled: boolean): void {
+    onChange({
+      ...value,
+      versusEnabled,
+      versusSides:
+        versusEnabled && sides.length < MIN_VERSUS_SIDES
+          ? [
+              ...sides,
+              ...Array.from(
+                { length: MIN_VERSUS_SIDES - sides.length },
+                newSide,
+              ),
+            ]
+          : sides,
+    });
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="flex items-center gap-2 text-sm font-extrabold">
+        <input
+          type="checkbox"
+          checked={value.versusEnabled}
+          onChange={(event) => setVersus(event.target.checked)}
+        />
+        Versus
+      </label>
+      <p className="-mt-1 text-xs text-foreground/60">
+        Teams pick a side and the leaderboard pits the sides against each other.
+      </p>
+      {value.versusEnabled && (
+        <>
+          <ul className="flex flex-col gap-2">
+            {sides.map((side, index) => (
+              <li key={side.id} className="flex items-center gap-2">
+                <span
+                  data-testid="side-swatch"
+                  aria-hidden="true"
+                  style={{ backgroundColor: versusSideColor(index) }}
+                  className="size-4 shrink-0 rounded-full"
+                />
+                <input
+                  type="text"
+                  value={side.name}
+                  onChange={(event) =>
+                    setSides(
+                      sides.map((s) =>
+                        s.id === side.id
+                          ? { ...s, name: event.target.value }
+                          : s,
+                      ),
+                    )
+                  }
+                  aria-label={`Side ${index + 1} name`}
+                  className="min-h-9 flex-1 rounded-lg border border-foreground/20 px-2 text-sm"
+                />
+                <Button
+                  type="button"
+                  size="icon-md"
+                  disabled={sides.length <= MIN_VERSUS_SIDES}
+                  onClick={() =>
+                    setSides(sides.filter((s) => s.id !== side.id))
+                  }
+                  aria-label={`Remove side ${index + 1}`}
+                  className="rounded-lg border border-foreground/20"
+                >
+                  <Cross2Icon aria-hidden="true" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <Button
+            type="button"
+            onClick={() => setSides([...sides, newSide()])}
+            disabled={sides.length >= MAX_VERSUS_SIDES}
+            variant="outline-dashed"
+            size="xs"
+            className="w-fit"
+          >
+            <PlusIcon aria-hidden="true" />
+            Add side
+          </Button>
+        </>
+      )}
+    </div>
+  );
 }
 
 function BonusCategoryToggles({

@@ -121,6 +121,64 @@ describe('SessionSettingsForm', () => {
     expect(screen.queryByLabelText(/^jokers$/i)).not.toBeInTheDocument();
   });
 
+  describe('Versus', () => {
+    it('is off with no side list, and not offered for a quickfire quiz', () => {
+      const { unmount } = renderControlled(DEFAULT_SESSION_SETTINGS, vi.fn());
+      expect(screen.getByLabelText(/^versus$/i)).not.toBeChecked();
+      expect(screen.queryByLabelText(/side 1 name/i)).not.toBeInTheDocument();
+      unmount();
+
+      renderControlled(DEFAULT_SESSION_SETTINGS, vi.fn(), 'quickfire');
+      expect(screen.queryByLabelText(/^versus$/i)).not.toBeInTheDocument();
+    });
+
+    it('turns on with two sides, edits names, adds up to four, and submits the list', async () => {
+      const onChange = vi.fn();
+      renderControlled(DEFAULT_SESSION_SETTINGS, onChange);
+
+      await userEvent.click(screen.getByLabelText(/^versus$/i));
+      expect(screen.getAllByTestId('side-swatch')).toHaveLength(2);
+      await userEvent.type(screen.getByLabelText(/side 1 name/i), 'Law');
+      await userEvent.click(screen.getByRole('button', { name: /add side/i }));
+      await userEvent.click(screen.getByRole('button', { name: /add side/i }));
+
+      expect(screen.getAllByTestId('side-swatch')).toHaveLength(4);
+      expect(screen.getByRole('button', { name: /add side/i })).toBeDisabled();
+      const last = onChange.mock.lastCall![0] as SessionSettings;
+      expect(last.versusEnabled).toBe(true);
+      expect(last.versusSides.map((side) => side.name)).toEqual([
+        'Law',
+        '',
+        '',
+        '',
+      ]);
+    });
+
+    it('removes a side down to two', async () => {
+      renderControlled(
+        {
+          ...DEFAULT_SESSION_SETTINGS,
+          versusEnabled: true,
+          versusSides: [
+            { id: 'a', name: 'A' },
+            { id: 'b', name: 'B' },
+            { id: 'c', name: 'C' },
+          ],
+        },
+        vi.fn(),
+      );
+
+      await userEvent.click(
+        screen.getByRole('button', { name: /remove side 3/i }),
+      );
+
+      expect(screen.getAllByTestId('side-swatch')).toHaveLength(2);
+      expect(
+        screen.getByRole('button', { name: /remove side 1/i }),
+      ).toBeDisabled();
+    });
+  });
+
   it('toggles a bonus category off', async () => {
     const onChange = vi.fn();
     render(

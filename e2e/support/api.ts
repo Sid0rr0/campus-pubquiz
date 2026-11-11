@@ -22,6 +22,8 @@ export interface SessionSettingsInput {
   /** Needs `showRoundOverview` on too (the backend refuses the pair otherwise). */
   jokersEnabled?: boolean;
   powerUpsEnabled?: boolean;
+  versusEnabled?: boolean;
+  versusSides?: { id: string; name: string }[];
   startingCoins?: number;
   /** The whole power-up table (the backend takes it complete or not at all). */
   powerUps?: Record<string, { cost: number; maxUses: number }>;

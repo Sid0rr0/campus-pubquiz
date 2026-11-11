@@ -36,6 +36,8 @@ interface GameStatusScreensProps {
   activeShowdown: ActiveShowdownView | null;
   showdownRevealStep: number;
   myTeamId: number | null;
+  /** The team's own Versus side, highlighted in the side bar. */
+  mySideId?: string | null;
   /** The team's coins; absent when the session has no power-ups. */
   coins?: number;
   /** Whether one of the coins is the carried coin, for the line saying where it came from. */
@@ -217,6 +219,7 @@ const STATUS_SCREENS: {
     isConnected,
     coins,
     hasCarriedCoin,
+    mySideId,
   }) => (
     <LeaderboardScreen
       board={phoneLeaderboard.board}
@@ -225,6 +228,8 @@ const STATUS_SCREENS: {
       isConnected={isConnected}
       coins={coins}
       hasCarriedCoin={hasCarriedCoin}
+      sideStandings={phoneLeaderboard.sideStandings}
+      mySideId={mySideId}
     />
   ),
   lobby: LobbyScreen,

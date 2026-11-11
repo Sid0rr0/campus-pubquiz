@@ -1,4 +1,5 @@
 import type { SessionSettings } from './session-settings';
+import { VERSUS_NOT_FOR_QUICKFIRE_MESSAGE } from './versus';
 
 /** A quiz's mode, chosen at creation and never changed: see GLOSSARY.md "quiz mode". */
 export const QUIZ_MODES = ['pub', 'quickfire'] as const;
@@ -7,6 +8,7 @@ export type QuizMode = (typeof QUIZ_MODES)[number];
 
 export type ModeFeature =
   | 'jokers'
+  | 'versus'
   | 'powerUps'
   | 'coins'
   | 'leagues'
@@ -16,6 +18,7 @@ export type ModeFeature =
 const MODE_ALLOWS: Record<QuizMode, Record<ModeFeature, boolean>> = {
   pub: {
     jokers: true,
+    versus: true,
     powerUps: true,
     coins: true,
     leagues: true,
@@ -23,6 +26,7 @@ const MODE_ALLOWS: Record<QuizMode, Record<ModeFeature, boolean>> = {
   },
   quickfire: {
     jokers: false,
+    versus: false,
     powerUps: false,
     coins: false,
     leagues: false,
@@ -70,15 +74,32 @@ export function quizModeSettingsRefusal(
   partial: Partial<SessionSettings>,
   leagueIds: readonly number[] | undefined,
 ): string | undefined {
-  if (partial.jokersEnabled === true && !quizModeAllows(mode, 'jokers')) {
-    return "A quickfire session can't have jokers";
-  }
-  if (partial.powerUpsEnabled === true && !quizModeAllows(mode, 'powerUps')) {
-    return "A quickfire session can't have power-ups";
-  }
-  if (partial.startingCoins !== undefined && !quizModeAllows(mode, 'coins')) {
-    return "A quickfire session has no coins, so it can't have starting coins";
-  }
+  const refusals: [boolean, ModeFeature, string][] = [
+    [
+      partial.jokersEnabled === true,
+      'jokers',
+      "A quickfire session can't have jokers",
+    ],
+    [
+      partial.versusEnabled === true,
+      'versus',
+      VERSUS_NOT_FOR_QUICKFIRE_MESSAGE,
+    ],
+    [
+      partial.powerUpsEnabled === true,
+      'powerUps',
+      "A quickfire session can't have power-ups",
+    ],
+    [
+      partial.startingCoins !== undefined,
+      'coins',
+      "A quickfire session has no coins, so it can't have starting coins",
+    ],
+  ];
+  const refused = refusals.find(
+    ([named, feature]) => named && !quizModeAllows(mode, feature),
+  );
+  if (refused) return refused[2];
   if (leagueIds && leagueIds.length > 0) return leagueModeRefusal(mode);
   return undefined;
 }
@@ -104,6 +125,7 @@ export function settingsForMode(
   return {
     ...settings,
     jokersEnabled: settings.jokersEnabled && quizModeAllows(mode, 'jokers'),
+    versusEnabled: settings.versusEnabled && quizModeAllows(mode, 'versus'),
     powerUpsEnabled:
       settings.powerUpsEnabled && quizModeAllows(mode, 'powerUps'),
     startingCoins: quizModeAllows(mode, 'coins') ? settings.startingCoins : 0,

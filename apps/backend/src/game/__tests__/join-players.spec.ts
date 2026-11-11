@@ -153,6 +153,7 @@ describe('GameGateway — join players', () => {
               isOverPlayerCap: false,
               joker: null,
               coins: 0,
+              sideId: null,
             }
           : {};
       expect(snapshots[snapshots.length - 1].teams).toEqual([

@@ -9,7 +9,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A new session has Versus off and no sides; a stored session without the fields reads the same
 - [ ] Versus on with fewer than 2 or more than 4 sides, a blank name, or names that differ only by case is refused (session settings schema spec)

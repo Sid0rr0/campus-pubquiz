@@ -7,7 +7,7 @@
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The ended screen's display view carries the side standings with Versus on, nothing with it off (gateway spec)
 - [ ] A grade changed after the end that flips the leading side changes the winner shown

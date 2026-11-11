@@ -26,6 +26,7 @@ import {
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { ClosedJokerPick, JokerChanges } from '@/game/state/joker-changes';
+import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { LiveResultsRead } from '@/game/state/live-results-read';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
@@ -66,6 +67,9 @@ export class MoveCommitter {
     private readonly readCoinAwards: (
       gameSessionId: number,
     ) => Promise<Record<number, number>>,
+    private readonly readTeamSides: (
+      gameSessionId: number,
+    ) => Promise<Record<number, string>>,
   ) {}
 
   /**
@@ -165,10 +169,12 @@ export class MoveCommitter {
     const activeShowdownRound = await this.showdownService.loadUnresolved(
       placed.seededGame.gameSessionId,
     );
+    const teamSides = await this.readTeamSides(placed.seededGame.gameSessionId);
     return {
       ...withResults,
       leagueTop,
       jokers,
+      teamSides,
       carriedCoins,
       coinAwards,
       activeShowdownRound,
@@ -181,6 +187,7 @@ export class MoveCommitter {
     step: ProgressMoveStep,
   ): Promise<CommittedMove> {
     const { progress } = step;
+    assertEveryTeamHasSideToStart(session, pressed);
     const closedPick = await this.crossJokerPick(session, progress);
     // Leaving the lobby decides every rostered team's carried coin, once.
     const isLeavingLobby =
@@ -270,6 +277,29 @@ export class MoveCommitter {
       resolved: true,
     };
     return { ...session, activeShowdownRound: resolvedRound };
+  }
+}
+
+/**
+ * Refuses Start quiz (not End quiz) while Versus is on and a roster team has no side.
+ * The leaderboard lists every roster team (re-read with each write), so it
+ * covers teams that have not rejoined since a restart, unlike `session.teams`.
+ */
+function assertEveryTeamHasSideToStart(
+  session: SessionState,
+  pressed: GameAction,
+): void {
+  if (
+    pressed !== 'START_QUIZ' ||
+    session.progress.status !== 'lobby' ||
+    !session.seededGame.settings.versusEnabled
+  ) {
+    return;
+  }
+  if (session.leaderboard.some((entry) => !session.teamSides[entry.teamId])) {
+    throw new SessionRefusal(
+      'Every team needs a side before the quiz can start',
+    );
   }
 }
 

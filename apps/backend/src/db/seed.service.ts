@@ -26,6 +26,8 @@ import { HARDCODED_QUIZ } from '@/game/fixtures/hardcoded-quiz.fixture';
 import type { CreatedGameSession } from '@/db/seed.types';
 
 const STALE_ENDED_SESSION_MS = 24 * 60 * 60 * 1000;
+/** What a row stored before "Versus" reads as: off with no sides. */
+const VERSUS_OFF = { versusEnabled: false, versusSides: [] };
 
 @Injectable()
 export class SeedService {
@@ -119,6 +121,8 @@ export class SeedService {
       // Sessions stored before the "Collect feedback" / "Fun facts" settings have no such field: they count as on.
       // The quiz's mode then switches off what it disallows, whatever the stored row says.
       settings: settingsForMode(quiz.mode, {
+        // Before "Versus", a stored row has neither field: it reads as off with no sides.
+        ...(VERSUS_OFF as Partial<SessionSettings>),
         ...gameSessionRow.settings,
         collectFeedback: gameSessionRow.settings.collectFeedback ?? true,
         funFactsEnabled: gameSessionRow.settings.funFactsEnabled ?? true,

@@ -91,6 +91,8 @@ export interface SessionState {
   jokerPickEndsAt: number | null;
   /** teamId -> the team's joker, for teams that have one. A cache of the stored jokers, read when the session is placed and as teams join, and updated as teams pick and as the pick closes, so the views stay synchronous. */
   jokers: Record<number, TeamJoker>;
+  /** teamId -> the id of the Versus side the team is on, for teams that picked one. A cache of the stored sides, read when the session is placed and updated as teams pick, leave or are kicked and as Versus is turned off, so the views stay synchronous. */
+  teamSides: Record<number, string>;
   /** teamId -> the team's carried coins (0 or `CARRIED_COINS`), for teams it was decided for (at the start, or at a late join). A cache of the stored carried coins, read when the session is placed and as teams join. */
   carriedCoins: Record<number, number>;
   /** teamId -> the sum of the team's coin awards (absent: none). A cache of the stored coin awards, read when the session is placed and updated as awards are given and removed, so the views stay synchronous. */
@@ -160,6 +162,13 @@ export interface SessionState {
    * Ephemeral.
    */
   funFactData: FunFactData;
+  /**
+   * Ids of the roster teams that took part (see GLOSSARY "Took part"): all of
+   * them while the session runs, only those with an answer or bonus once it has
+   * ended. Read with the standings. The Versus side figures use it to leave
+   * idle teams out after the end. Ephemeral.
+   */
+  tookPartTeamIds: number[];
   /**
    * The league the big screen lobby shows (name and top rows), or null when the
    * session is in none. A cache: read when the session is placed and again
@@ -236,6 +245,7 @@ export function freshSessionState(
     quickfireQuestionEndsAt: null,
     jokerPickEndsAt: null,
     jokers: {},
+    teamSides: {},
     carriedCoins: {},
     coinAwards: {},
     breakEndsAt: null,
@@ -251,6 +261,7 @@ export function freshSessionState(
     leaderboardRevealCount: 0,
     priorStandings: null,
     funFactData: { answers: [], bonusAwards: [], powerUps: [] },
+    tookPartTeamIds: [],
     leagueTop: null,
     teams: [],
     playerCounts: {},

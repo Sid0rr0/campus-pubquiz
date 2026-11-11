@@ -4,6 +4,7 @@ import {
   defaultPowerUpSettings,
   type PowerUpSettings,
 } from './power-ups';
+import type { VersusSide } from './versus';
 
 /** Discrete steps the admin can pick between for /display's text size — 1 is the original, unscaled size. */
 export const DISPLAY_TEXT_SCALE_STEPS = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
@@ -24,6 +25,10 @@ export interface SessionSettings {
   showRoundOverview: boolean;
   /** Whether each team picks one joker round (its points count double) in a 'joker_pick' step after the round overview. Builds on the overview, so it is only ever on with `showRoundOverview` on. */
   jokersEnabled: boolean;
+  /** Whether teams pick a side and the leaderboard pits the sides against each other (pub quizzes only). */
+  versusEnabled: boolean;
+  /** The Versus sides, in colour order: 2–4 while Versus is on. */
+  versusSides: VersusSide[];
   /** One entry per rendered /rules bullet line — display text only, no enforcement. */
   rules: string[];
   /** Caps how many times a single team may be awarded a given bonus category this session (e.g. shot: 2, selfie: 1); a category absent from the map has no cap. */
@@ -83,6 +88,8 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   playLockCountdownSound: true,
   showRoundOverview: false,
   jokersEnabled: false,
+  versusEnabled: false,
+  versusSides: Object.freeze([]) as unknown as VersusSide[],
   maxBonusAwardsPerCategory: Object.freeze({
     shot: 2,
     selfie: 1,

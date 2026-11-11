@@ -24,6 +24,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   coins: 2,
   hasCarriedCoin: false,
   purchases: [BOUGHT],
+  sideId: null,
   roomReadyQuestionIds: [5],
 };
 

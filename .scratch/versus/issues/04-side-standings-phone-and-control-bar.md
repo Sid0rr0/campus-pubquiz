@@ -16,7 +16,7 @@
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Module: averages with uneven team counts; a negative average floored for the share but shown as is; all zeros split evenly; an empty side shows 0% and no average; teams that left or didn't take part excluded; lead and tie (shared types test, following `leaderboard-board.test.ts`)
 - [ ] Players and admin views carry the side standings with Versus on and nothing with it off; a move changes them without a scores change (gateway spec)

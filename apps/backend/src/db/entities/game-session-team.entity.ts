@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, OptionalProps } from '@mikro-orm/core';
+import { Entity, ManyToOne, OptionalProps, Property } from '@mikro-orm/core';
 import { TimestampedEntity } from '@/db/entities/timestamped.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -16,4 +16,8 @@ export class GameSessionTeam extends TimestampedEntity {
 
   @ManyToOne(() => Team, { primary: true, deleteRule: 'cascade' })
   team!: Team;
+
+  /** The id of the Versus side the team picked for this session (a `VersusSide.id` in the session settings), or null. */
+  @Property({ type: 'text', nullable: true })
+  sideId?: string | null;
 }

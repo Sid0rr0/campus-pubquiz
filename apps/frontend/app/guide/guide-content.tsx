@@ -75,6 +75,15 @@ const GUIDE_SECTIONS: GuideSection[] = [
     ],
   },
   {
+    title: 'Versus',
+    paragraphs: [
+      'The "Versus" switch in Session Settings (pub quiz, lobby only) pits camps against each other: name 2 to 4 sides. A side with teams can\'t be removed; turning Versus off clears every pick.',
+      'Teams pick a side on their phone and can switch until the quiz starts. Start Quiz is refused while a team has no side.',
+      'To move a team, use its side select in Teams, any time.',
+      "The leaderboard bar splits by each side's average points per team, so more teams don't win.",
+    ],
+  },
+  {
     title: 'Power-ups',
     paragraphs: [
       'The "Power-ups" tab (lobby Session Settings) lets teams spend coins: set starting coins and each power-up\'s cost and uses. Teams shows a Coins column.',

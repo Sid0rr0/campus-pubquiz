@@ -114,6 +114,14 @@ export const pickJokerPayloadSchema = z.object({
   roundId: positiveInt,
 });
 
+export const pickSidePayloadSchema = z.object({
+  sideId: z.string().min(1),
+});
+
+export const setTeamSidePayloadSchema = pickSidePayloadSchema.extend({
+  teamId: positiveInt,
+});
+
 export const setTeamJokerPayloadSchema = z.object({
   teamId: positiveInt,
   roundId: positiveInt,

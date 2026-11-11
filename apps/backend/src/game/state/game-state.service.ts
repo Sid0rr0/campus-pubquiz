@@ -29,8 +29,10 @@ import {
   type SendFeedbackPayload,
   type SessionSettings,
   type SessionState,
+  type PickSidePayload,
   type SetPlayerCountPayload,
   type SetTeamPlayerCountPayload,
+  type SetTeamSidePayload,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
@@ -60,6 +62,7 @@ import { PurchaseService } from '@/purchase/purchase.service';
 import { TimerExpiryChanges } from '@/game/state/timer-expiry-changes';
 import { TeamRosterChanges } from '@/game/state/team-roster-changes';
 import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
+import { TeamSideChanges } from '@/game/state/team-side-changes';
 import { TeamPlayerCountChanges } from '@/game/state/team-player-count-changes';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { ShowdownsChanges } from '@/game/state/showdowns-changes';
@@ -108,6 +111,7 @@ export class GameStateService implements OnModuleInit {
   private readonly logger = new Logger('GameStateService');
   private readonly moveCommitter: MoveCommitter;
   private readonly settingsChanges: SessionSettingsChanges;
+  private readonly sideChanges: TeamSideChanges;
   private readonly answersChanges: AnswersChanges;
   private readonly bonusChanges: BonusAwardsChanges;
   private readonly rosterChanges: TeamRosterChanges;
@@ -150,7 +154,11 @@ export class GameStateService implements OnModuleInit {
       this.purchaseService,
       random ?? Math.random,
     );
-    this.settingsChanges = new SessionSettingsChanges(this.seedService);
+    this.settingsChanges = new SessionSettingsChanges(
+      this.seedService,
+      this.teamService,
+    );
+    this.sideChanges = new TeamSideChanges(this.teamService);
     this.answersChanges = new AnswersChanges(this.answerService, this.grading);
     this.bonusChanges = new BonusAwardsChanges(this.bonusService);
     this.rosterChanges = new TeamRosterChanges(
@@ -183,6 +191,7 @@ export class GameStateService implements OnModuleInit {
       this.jokerChanges,
       this.carriedCoinService,
       (gameSessionId) => this.bonusService.coinAwardTotals(gameSessionId),
+      (gameSessionId) => this.teamService.listSides(gameSessionId),
     );
     this.timerExpiryChanges = new TimerExpiryChanges(this.moveCommitter);
   }
@@ -400,6 +409,27 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
       this.jokerChanges.pick(session, payload, socketId),
+    );
+  }
+
+  /** A team picks or switches its Versus side from `socketId`; see the team side change module. */
+  sidePicked(
+    joinCode: string,
+    payload: PickSidePayload,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.sideChanges.sidePicked(session, payload, socketId),
+    );
+  }
+
+  /** The quiz master moves a roster team to another Versus side, at any status; see the team side change module. */
+  teamSideSet(
+    joinCode: string,
+    payload: SetTeamSidePayload,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.sideChanges.teamSideSet(session, payload),
     );
   }
 
