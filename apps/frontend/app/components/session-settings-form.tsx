@@ -207,6 +207,25 @@ export function SessionSettingsForm({
         <VersusSettings value={value} onChange={onChange} />
       )}
 
+      {quizModeAllows(mode, 'earlyAnswerReveal') && (
+        <>
+          <label className="flex items-center gap-2 text-sm font-extrabold">
+            <input
+              type="checkbox"
+              checked={value.earlyAnswerReveal}
+              onChange={(event) =>
+                onChange({ ...value, earlyAnswerReveal: event.target.checked })
+              }
+            />
+            Show correct answers before break
+          </label>
+          <p className="-mt-3 text-xs text-foreground/60">
+            The big screen shows each question&apos;s correct answer before the
+            break review.
+          </p>
+        </>
+      )}
+
       <label className="flex items-center gap-2 text-sm font-extrabold">
         <input
           type="checkbox"

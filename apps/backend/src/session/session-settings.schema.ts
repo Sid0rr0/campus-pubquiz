@@ -58,6 +58,7 @@ export const sessionSettingsPartialSchema = z
         }),
       )
       .max(MAX_VERSUS_SIDES, VERSUS_SIDE_COUNT_MESSAGE),
+    earlyAnswerReveal: z.boolean(),
     rules: z
       .array(z.string().trim().min(1).max(RULE_MAX_LENGTH))
       .max(MAX_RULES),

@@ -9,6 +9,48 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
+describe('Early answer reveal session setting', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  function update(game: RealStoreGateway, earlyAnswerReveal: boolean) {
+    return game.inRequestContext(() =>
+      game.gameState.updateSessionSettings(game.joinCode, {
+        earlyAnswerReveal,
+      }),
+    );
+  }
+
+  function revealOf(game: RealStoreGateway) {
+    return game.gameState.getSnapshot(game.joinCode).settings.earlyAnswerReveal;
+  }
+
+  it('is off by default and can be turned on in the lobby', async () => {
+    const game = await harness.createGateway();
+    expect(revealOf(game)).toBe(false);
+
+    await update(game, true);
+
+    expect(revealOf(game)).toBe(true);
+  });
+
+  it('is refused for a quickfire quiz', async () => {
+    const game = await harness.createGateway({ quickfire: true });
+
+    await expect(update(game, true)).rejects.toThrow(
+      SessionSettingsInvalidError,
+    );
+  });
+
+  it('is refused once the quiz has started', async () => {
+    const game = await harness.createGateway();
+    await game.act('START_QUIZ');
+
+    await expect(update(game, true)).rejects.toThrow(
+      SessionSettingsUpdateBlockedError,
+    );
+  });
+});
+
 describe('Versus session setting', () => {
   const harness = setupRealStoreGatewayTest();
   const sides = [

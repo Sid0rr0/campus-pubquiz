@@ -98,6 +98,17 @@ describe('sessionSettingsPartialSchema', () => {
     ).toBe(true);
   });
 
+  it('accepts earlyAnswerReveal as a boolean only, defaulting to off', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ earlyAnswerReveal: true }).data,
+    ).toEqual({ earlyAnswerReveal: true });
+    expect(
+      sessionSettingsPartialSchema.safeParse({ earlyAnswerReveal: 'yes' })
+        .success,
+    ).toBe(false);
+    expect(resolveSessionSettings({}).earlyAnswerReveal).toBe(false);
+  });
+
   describe('Versus', () => {
     const side = (id: string, name: string) => ({ id, name });
     const parse = (versusSides: { id: string; name: string }[]) =>

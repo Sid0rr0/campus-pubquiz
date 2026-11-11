@@ -822,6 +822,16 @@ the quiz has started. The start dialog and the `/control` lobby settings panel
 show the switch, one name field per side with its colour swatch, and add/remove
 buttons (add stops at 4, remove at 2).
 
+**Early answer reveal.** The **`earlyAnswerReveal`** switch (default off; a stored
+settings JSON without it reads as off, so no migration) is the setting behind the
+glossary's "Early answer reveal"; it has no effect on play yet. It is pub-quiz
+only: a quickfire quiz's session refuses `earlyAnswerReveal: true` (400 on
+`POST /sessions` and on the lobby settings change, "A quickfire session can't
+show answers before the break"; `quizModeAllows(mode, 'earlyAnswerReveal')`), and
+like every setting it is refused once the quiz has started. The start dialog and
+the `/control` lobby settings panel show it as "Show correct answers before
+break", for pub quizzes only.
+
 _A team's side._ The side a team picked is a nullable `side_id` on its
 `game_session_teams` row (a `VersusSide.id`), cached in
 `SessionState.teamSides` (read when the session is placed, updated on a pick, a

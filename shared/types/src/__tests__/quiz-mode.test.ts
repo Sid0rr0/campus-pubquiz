@@ -50,6 +50,10 @@ describe('the settings refusal', () => {
     [{ versusEnabled: true }, "A quickfire session can't have Versus"],
     [{ powerUpsEnabled: true }, "A quickfire session can't have power-ups"],
     [
+      { earlyAnswerReveal: true },
+      "A quickfire session can't show answers before the break",
+    ],
+    [
       { startingCoins: 0 },
       "A quickfire session has no coins, so it can't have starting coins",
     ],
@@ -148,16 +152,18 @@ describe('the settings a mode plays with', () => {
     ...DEFAULT_SESSION_SETTINGS,
     jokersEnabled: true,
     versusEnabled: true,
+    earlyAnswerReveal: true,
     powerUpsEnabled: true,
     startingCoins: 7,
     collectFeedback: false,
   };
 
-  it('quickfire switches jokers, Versus, power-ups and coins off, leaving the rest', () => {
+  it('quickfire switches jokers, Versus, early reveal, power-ups and coins off, leaving the rest', () => {
     expect(settingsForMode('quickfire', on)).toEqual({
       ...on,
       jokersEnabled: false,
       versusEnabled: false,
+      earlyAnswerReveal: false,
       powerUpsEnabled: false,
       startingCoins: 0,
     });
