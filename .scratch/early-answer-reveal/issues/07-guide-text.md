@@ -4,7 +4,7 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The guide describes the setting and its flow in the moderator's terms
 - [ ] The guide stays within its word cap and its tests pass

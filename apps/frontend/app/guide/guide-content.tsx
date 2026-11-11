@@ -44,23 +44,22 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Before the night',
     paragraphs: [
       'Build the quiz, then check it with Quiz preview (editor, quiz list or waiting session), not a throwaway session.',
-      'Put /display on the big screen and /control on your laptop; teams use phones.',
+      'Put /display on the big screen and /control on your laptop.',
       'A block is a run of rounds graded and revealed together, ending at a break.',
     ],
   },
   {
     title: 'Starting a session',
     paragraphs: [
-      'Session Settings sets the rules text and bonus categories in the lobby; then press Start Quiz.',
-      "Tick the session's leagues in Session Settings.",
-      'Advance shows the rules, the round overview, then the first round title card; Previous on the rules returns to the lobby.',
+      'Session Settings sets the rules text, bonus categories and leagues in the lobby; then press Start Quiz.',
+      'Advance shows the rules, the round overview, then the first round title card.',
     ],
   },
   {
     title: 'Unlisted sessions',
     paragraphs: [
       'The "Show in the game list" switch (Session Settings, lobby only) hides a session; yours marks it "Unlisted".',
-      'Open display on Control shows the big screen. Teams join by scanning its QR code, or "Have a game code?".',
+      'Open display on Control shows it. Teams join by scanning its QR code, or "Have a game code?".',
     ],
   },
   {
@@ -87,8 +86,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Power-ups',
     paragraphs: [
       'The "Power-ups" tab (lobby Session Settings) lets teams spend coins: set starting coins and each power-up\'s cost and uses. Teams shows a Coins column.',
-      'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles the next round).',
-      "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off (Teams shows them).",
+      'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles a round).',
+      "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off.",
       'Grading names the power-ups each answer used. Never refunded: after an answer-key fix, give the coin back with a coin award. Deleting a shot or selfie award removes its coin.',
     ],
   },
@@ -102,9 +101,9 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'The Control layout',
     paragraphs: [
-      'The phase timer sits beside "Quiz Master" in the sidebar, and in the mobile bar.',
+      'The phase timer sits beside "Quiz Master" in the sidebar.',
       'The detail column beside the question browser mirrors the big screen: a question with its options, a round title card (category, author, Round note) or a break card ("Break N", "(final)" on the last).',
-      'Click a question number, T or B to look ahead; the column follows the big screen again once it gets there.',
+      'Click a question number, T or B to look ahead; the column follows the big screen again on arrival.',
       "The grading list sits full width below, for the detail column's question; a title or break card has none.",
     ],
   },
@@ -126,7 +125,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Media and sound',
     paragraphs: [
-      'Pause and "Play again" show for video or audio, in break too. With autoplay off, press Play.',
+      'Pause and "Play again" show for video or audio. With autoplay off, press Play.',
       'Display sound mutes the big screen.',
     ],
   },
@@ -146,9 +145,16 @@ const GUIDE_SECTIONS: GuideSection[] = [
     ],
   },
   {
+    title: 'Show correct answers before break',
+    paragraphs: [
+      "This lobby switch (pub quiz) shows a block's answers when it ends, before the break, without verdicts. Advance steps through them.",
+      'Advance from the break opens the leaderboard, and teams see verdicts. No reveal or break review follows: Previous walks the answers back.',
+    ],
+  },
+  {
     title: 'The reveal',
     paragraphs: [
-      'Once graded, Advance reveals the block: each round title card, then each question with its answer. After the last block it ends the quiz.',
+      'Once graded, Advance reveals the block: each round title card, then each question with its answer.',
     ],
   },
   {
@@ -164,7 +170,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'The Teams panel shows who is connected and has answered; kick a team to remove it.',
       'A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
-      'Each team shows its player count, flagged as over the player cap above "max players per team"; nothing is deducted, so give a negative bonus as a penalty.',
+      'Each team shows its player count, flagged as over the player cap above "max players per team"; nothing is deducted, so give a negative bonus.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
       "Bonus points: in the team's menu choose Award bonus, pick category and points, press Award. With power-ups on, a shot or selfie also gives 2 coins; the Coins field gives or takes more (zeroes untouched points); the list shows both.",
       'A team forgot its code: open /teams, choose Show team code in its actions menu, and have it rejoin with its name and code. If it joined anew, press "Merge with…" on that team\'s page after the night; a merge can\'t be undone.',

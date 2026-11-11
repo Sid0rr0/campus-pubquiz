@@ -133,6 +133,15 @@ describe('GuideContent', () => {
     expect(text).toContain('changed by the quiz master');
   });
 
+  it('explains Show correct answers before break: the flow and Previous', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Show correct answers before break');
+    expect(text).toContain('without verdicts');
+    expect(text).toContain('opens the leaderboard');
+    expect(text).toContain('Previous walks the answers back');
+  });
+
   it('explains the 2× stamp on the leaderboard', () => {
     const text = renderGuideText();
 
