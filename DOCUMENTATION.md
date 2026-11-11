@@ -1181,7 +1181,7 @@ rooms (the roster shows the side). The server also sends `TEAM_SIDE_SYNCED`
 (`{ sideId: string | null }`) to the team's own connected phones, and
 `JOIN_ACCEPTED` carries `sideId` so a reconnect or rejoin restores it. Only the
 admin view's `teams` entries (`AdminTeamView.sideId`) carry a team's side; the
-display and players views don't yet. The phone shows a side picker (not a
+display and players views don't (they carry the side standings, below). The phone shows a side picker (not a
 status; it covers that phone only) while Versus is on and the team has no side, a
 side badge next to the team name, and in the lobby the badge reopens the picker.
 
@@ -1194,6 +1194,21 @@ Versus, and "Team N is not in this session" for a team not on the roster. It
 goes through the session write and changes no scores; the team's phones get
 `TEAM_SIDE_SYNCED` and every room a fresh view, as for `PICK_SIDE`. `/control`
 shows a side select on each roster row while Versus is on.
+
+**Side standings** (`describeSideStandings` in `shared/types/src/side-standings.ts`,
+pure). From the full leaderboard entries, each team's side and the session's sides it
+returns `{ sides, isTied }`: per side in side order `id`, `name`, `colorIndex`,
+`teamCount`, `average` (the counted teams' mean total as it is, negative included;
+`null` with no counted team), `share` and `isLeading`. A team counts when it is on the
+leaderboard (roster teams only, so a kicked or departed team is out) and has a side.
+`share` is the average floored at 0 over the sum of floored averages, an equal split
+when that sum is 0, and 0 for an empty side once others have scored. `isTied` is true
+when more than one side leads. The views carry it computed from session state on every
+emit, so a pick or move shows without a scores change: the players view in
+`phoneLeaderboard.sideStandings` and the admin view as `sideStandings`; nothing is
+sent with Versus off. The phone shows the bar on its leaderboard screen with its own
+side highlighted ("No teams" on an empty side), and `/control` shows it above the
+Teams table. The same function can be run over the prior standings' board.
 
 `SET_TEAM_PLAYER_COUNT` — `{ teamId, playerCount }` — lets the quiz master or a
 moderator set or correct any team's player count from the Teams panel at any status.

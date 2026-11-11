@@ -1,6 +1,7 @@
 import {
   SIDE_REMOVAL_REFUSED_MESSAGE,
   SOCKET_EVENTS,
+  SOCKET_ROOMS,
   type AckResult,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
@@ -230,6 +231,53 @@ describe('GameGateway — the quiz master moves a team', () => {
     ).toBe(false);
     expect((await send({ teamId: 9999, sideId: 'eng' })).success).toBe(false);
     expect(await rosterSides(game)).toEqual({ Quizzards: null });
+  });
+});
+
+describe('GameGateway — the side standings in the views', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('carries the standings with Versus on, follows a move, and sends nothing with it off', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Quizzards', 'Rivals'],
+      settings: VERSUS,
+    });
+    const [team, rival] = game.teams;
+    await pick(game, team, { sideId: 'eng' });
+    await pick(game, rival, { sideId: 'law' });
+    const admin = await game.connectAdmin();
+
+    const shares = async () => {
+      const players = await game.resync(SOCKET_ROOMS.PLAYERS);
+      const adminView = await game.snapshot();
+      expect(players.phoneLeaderboard.sideStandings).toEqual(
+        adminView.sideStandings,
+      );
+      return adminView.sideStandings?.sides.map((side) => [
+        side.id,
+        side.teamCount,
+        side.share,
+      ]);
+    };
+    expect(await shares()).toEqual([
+      ['eng', 1, 0.5],
+      ['law', 1, 0.5],
+    ]);
+
+    await game.gateway.handleSetTeamSide(asSocket(admin), {
+      teamId: rival.teamId,
+      sideId: 'eng',
+    });
+    expect(await shares()).toEqual([
+      ['eng', 2, 0.5],
+      ['law', 0, 0.5],
+    ]);
+
+    await update(game, { versusEnabled: false });
+    expect(await game.snapshot()).not.toHaveProperty('sideStandings');
+    expect(
+      (await game.resync(SOCKET_ROOMS.PLAYERS)).phoneLeaderboard,
+    ).not.toHaveProperty('sideStandings');
   });
 });
 

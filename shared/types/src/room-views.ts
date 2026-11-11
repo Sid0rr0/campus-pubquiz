@@ -26,6 +26,7 @@ import type {
 import type { QuestionType } from './question-types';
 import type { QuizMode } from './quiz-mode';
 import type { SessionSettings } from './session-settings';
+import type { SideStandings } from './side-standings';
 import type { ActiveShowdownView } from './showdown';
 
 export interface RoundPoints {
@@ -239,6 +240,8 @@ export interface AdminStatePayload
     ScreenOperatorFields {
   /** The roster, each team with its player count and over-cap flag. */
   teams: AdminTeamView[];
+  /** The Versus side standings for /control's bar; absent without Versus. */
+  sideStandings?: SideStandings;
   /** The rounds the quiz master may give a team as its joker: those with no opened question, once the joker pick has opened in a session with jokers; empty otherwise. */
   settableJokerRounds: JokerPickRound[];
   onAirScreen: OnAirScreen;
@@ -343,7 +346,12 @@ export interface PlayersStatePayload
    * revealed so far, so a phone shows its own team's placing (and trend) only
    * once the big screen has revealed that rank.
    */
-  phoneLeaderboard: { board: LeaderboardBoard; revealCount: number };
+  phoneLeaderboard: {
+    board: LeaderboardBoard;
+    revealCount: number;
+    /** The Versus side standings for the bar; absent without Versus. */
+    sideStandings?: SideStandings;
+  };
 }
 
 /** The view type each socket room is sent. */

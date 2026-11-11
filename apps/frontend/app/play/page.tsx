@@ -432,6 +432,7 @@ type StatusGame = Pick<
   | 'myPlayerCount'
   | 'setPlayerCount'
   | 'myJoker'
+  | 'mySideId'
   | 'pickJoker'
   | 'submitShowdownGuess'
   | 'roundRatingsEpoch'
@@ -719,6 +720,7 @@ function StatusSection({
         activeShowdown={activeShowdown}
         showdownRevealStep={showdownRevealStep}
         myTeamId={myTeamId}
+        mySideId={game.mySideId}
         // A team's coins in a session with power-ups, or a carried coin in one without.
         coins={
           coinsShown(settings.powerUpsEnabled, team?.coins ?? 0)

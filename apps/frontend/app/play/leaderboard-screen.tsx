@@ -1,6 +1,7 @@
 'use client';
 
-import type { LeaderboardBoard } from '@campus-pubquiz/types';
+import type { LeaderboardBoard, SideStandings } from '@campus-pubquiz/types';
+import { SideBar } from '@/app/components/side-bar';
 import { JokerStamp } from '@/app/components/joker-stamp';
 import { findMyStanding } from '@/app/play/my-standing';
 import { placingText } from '@/app/lib/placing-text';
@@ -17,6 +18,10 @@ interface LeaderboardScreenProps {
   coins?: number;
   /** Whether one of the coins is the carried coin, earned by rating every round of the team's last league night. */
   hasCarriedCoin?: boolean;
+  /** The Versus side bar's standings; absent without Versus. */
+  sideStandings?: SideStandings;
+  /** The team's own side, highlighted in the bar. */
+  mySideId?: string | null;
 }
 
 /**
@@ -31,6 +36,8 @@ export function LeaderboardScreen({
   isConnected,
   coins,
   hasCarriedCoin,
+  sideStandings,
+  mySideId,
 }: LeaderboardScreenProps) {
   const standing = findMyStanding(board, revealCount, myTeamId);
   useOnLiveForwardMove(standing ? 1 : 0, isConnected, () => {
@@ -47,6 +54,11 @@ export function LeaderboardScreen({
         </p>
         <h1 className="font-display text-2xl text-magenta">Leaderboard</h1>
       </div>
+      {sideStandings && (
+        <div className="w-full max-w-sm text-left">
+          <SideBar standings={sideStandings} ownSideId={mySideId} />
+        </div>
+      )}
       {standing && (
         <div
           data-testid="own-leaderboard-row"
