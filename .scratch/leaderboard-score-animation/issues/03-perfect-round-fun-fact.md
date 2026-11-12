@@ -8,7 +8,7 @@
 
 **Blocked by:** 02 (Perfect rounds 🔥 on the leaderboard)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The fact counts teams across every revealed round, and a team with several perfect rounds is counted once
 - [ ] `teamName` is present only when the count is 1

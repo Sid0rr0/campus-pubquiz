@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| leaderboard-score-animation | [Leaderboard score animation and perfect rounds](leaderboard-score-animation/spec.md) | 3 | — |
 
 ## Won't do
 

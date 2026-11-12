@@ -10,7 +10,7 @@
 
 **Blocked by:** 01 (Points gained: "+x" and the pub quiz count-up)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `perfectRounds` counts multiple perfect rounds in the block, and partial or unanswered answers break a round
 - [ ] Closest-guess questions are left out, and a round of only closest-guess questions is never perfect
