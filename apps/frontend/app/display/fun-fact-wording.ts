@@ -84,6 +84,16 @@ const FUN_FACT_LINES: {
     headline: fact.teamNames.join(', '),
     detail: 'Clean sweep: every question right in the last block',
   }),
+  perfect_rounds: (fact) =>
+    fact.teamName === undefined
+      ? {
+          headline: `${fact.teamCount} teams`,
+          detail: 'have had a perfect round so far',
+        }
+      : {
+          headline: `Only ${fact.teamName}`,
+          detail: 'has had a perfect round so far',
+        },
   joker_favourite_round: (fact) => ({
     headline: `Round ${fact.roundNumber} — ${fact.roundTitle}`,
     detail: `${plural(fact.teamCount, 'team', 'teams')} bet their joker on it`,

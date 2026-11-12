@@ -104,6 +104,25 @@ describe('describeFunFactLine', () => {
     });
   });
 
+  it('words the perfect rounds fact for many teams and for a single named team', () => {
+    expect(
+      describeFunFactLine({ kind: 'perfect_rounds', teamCount: 3 }),
+    ).toEqual({
+      headline: '3 teams',
+      detail: 'have had a perfect round so far',
+    });
+    expect(
+      describeFunFactLine({
+        kind: 'perfect_rounds',
+        teamCount: 1,
+        teamName: 'Ants',
+      }),
+    ).toEqual({
+      headline: 'Only Ants',
+      detail: 'has had a perfect round so far',
+    });
+  });
+
   it('words the favourite joker round with a singular or plural team count', () => {
     const favourite = (teamCount: number) =>
       describeFunFactLine({
