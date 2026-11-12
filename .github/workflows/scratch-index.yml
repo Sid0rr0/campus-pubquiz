@@ -1,0 +1,22 @@
+name: Scratch index
+
+# Split from ci.yml so it still runs on .scratch changes, which ci.yml skips as docs.
+on:
+  push:
+    branches: [main]
+    paths: ['.scratch/**', 'scripts/check-scratch-index.mjs']
+  pull_request:
+    paths: ['.scratch/**', 'scripts/check-scratch-index.mjs']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.4
+
+      - name: Every .scratch spec is in overview.md or done.md
+        run: node scripts/check-scratch-index.mjs

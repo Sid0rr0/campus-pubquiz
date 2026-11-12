@@ -1,9 +1,12 @@
 name: CI
 
+# Docs-only changes skip CI; a push that also touches code still runs it all.
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md']
   pull_request:
+    paths-ignore: ['**/*.md']
 
 jobs:
   build-and-test:
@@ -26,9 +29,6 @@ jobs:
 
       - name: Lint
         run: pnpm lint
-
-      - name: Every .scratch spec is in overview.md or done.md
-        run: node scripts/check-scratch-index.mjs
 
       - name: Typecheck
         run: pnpm typecheck
