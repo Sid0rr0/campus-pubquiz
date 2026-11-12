@@ -202,6 +202,37 @@ function PointsGained({
   );
 }
 
+/** One flickering 🔥 per Perfect round, right of the total; static under reduced motion. */
+function PerfectRounds({ count = 0 }: { count?: number }) {
+  const isReducedMotion = useReducedMotion() ?? false;
+  if (count === 0) return null;
+  return (
+    <span
+      aria-label={`${count} perfect ${count === 1 ? 'round' : 'rounds'}`}
+      className="flex text-display-2xl"
+    >
+      {Array.from({ length: count }, (_, index) => (
+        <motion.span
+          key={index}
+          aria-hidden
+          animate={
+            isReducedMotion
+              ? undefined
+              : { opacity: [1, 0.75, 1], scale: [1, 1.12, 1] }
+          }
+          transition={{
+            duration: 1.1,
+            repeat: Infinity,
+            delay: index * 0.25,
+          }}
+        >
+          🔥
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
 export function Leaderboard({
   board,
   revealCount,
@@ -264,6 +295,7 @@ export function Leaderboard({
                 ? undefined
                 : board.pointsGained?.[row.entry.teamId]
             }
+            perfectRounds={board.perfectRounds?.[row.entry.teamId]}
             isStampLanding={!alreadyStampedTeamIds.has(row.entry.teamId)}
             sideColor={sideColors?.[row.entry.teamId]}
           />
@@ -282,6 +314,8 @@ interface LeaderboardRowItemProps {
   hasOldState: boolean;
   /** What the team gained in the block, when the board shows one: a pub quiz row counts up from `total − gained`, and the "+x" floats beside it. */
   pointsGained?: number;
+  /** How many Perfect rounds the team had in the block; one 🔥 each. */
+  perfectRounds?: number;
   /** Whether the row's joker stamp, if it has one, slams down rather than just being there. */
   isStampLanding: boolean;
   /** The colour of the team's Versus side, when it has one. */
@@ -371,6 +405,7 @@ function LeaderboardRowItem({
   isNewest,
   hasOldState,
   pointsGained,
+  perfectRounds,
   isStampLanding,
   sideColor,
 }: LeaderboardRowItemProps) {
@@ -416,6 +451,7 @@ function LeaderboardRowItem({
       ) : (
         <span className={totalPointsClassName}>{shownTotal}</span>
       )}
+      <PerfectRounds count={perfectRounds} />
       {pointsGained !== undefined && (
         <PointsGained
           gained={pointsGained}

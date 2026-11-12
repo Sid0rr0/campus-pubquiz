@@ -410,6 +410,44 @@ describe('Leaderboard', () => {
     });
   });
 
+  describe('perfect rounds', () => {
+    const FIRE_ENTRIES = [ranked(1, 'Blaze', 30, 1), ranked(2, 'Plain', 10, 2)];
+
+    it('draws one labelled 🔥 per perfect round right of the total, and none without an entry', () => {
+      render(
+        <Leaderboard
+          board={described(FIRE_ENTRIES, { perfectRounds: { 1: 2 } })}
+          revealCount={2}
+        />,
+      );
+
+      const blaze = screen.getByText('Blaze').closest('li') as HTMLElement;
+      expect(
+        within(blaze).getByLabelText('2 perfect rounds'),
+      ).toHaveTextContent('🔥🔥');
+      expect(blaze).toHaveTextContent('Blaze30🔥🔥');
+      expect(screen.getAllByLabelText(/perfect round/)).toHaveLength(1);
+    });
+
+    it('labels a single perfect round in the singular, also under reduced motion', () => {
+      mockReducedMotion.value = true;
+      try {
+        render(
+          <Leaderboard
+            board={described(FIRE_ENTRIES, { perfectRounds: { 2: 1 } })}
+            revealCount={2}
+          />,
+        );
+
+        expect(screen.getByLabelText('1 perfect round')).toHaveTextContent(
+          '🔥',
+        );
+      } finally {
+        mockReducedMotion.value = false;
+      }
+    });
+  });
+
   describe('half-point totals', () => {
     it('counts up to a half-point total instead of rounding it to a whole point', async () => {
       // Real timers: the count-up runs on animation frames, which fake timers do not drive (an earlier test leaves them on).

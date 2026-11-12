@@ -554,7 +554,8 @@ from the session, so a reloaded or second big screen draws the same thing):
   starting its results (its `reveal_intro`, or, with Early answer reveal,
   leaving its break) until the next block's first question opens, so also the
   next block's round intro and any leaderboard toggle in between, plus the final
-  board. In a quickfire round: the between-questions count-up board. A
+  board. In a quickfire round: the between-questions count-up board and the
+  board after a round's last question (the next round's fresh round intro). A
   leaderboard brought up while a block is answered, locked or in break, or one
   with no prior standings (after a backend restart), carries none. It lists only
   shown (capped) teams and leaves out teams missing from the prior standings and
@@ -564,6 +565,17 @@ from the session, so a reloaded or second big screen draws the same thing):
   green "+x" / red "−x" outside the row's right border, labelled "gained 3
   points", that fades about 2 s after the row settles. Reduced motion swaps the
   total instantly and keeps the "+x" static apart from the fade.
+- `perfectRounds` — team id → how many rounds of the prior standings' block
+  (see `GLOSSARY.md`, **Perfect round**) the team has a perfect round in: a
+  `correct` verdict on every question of the round whose type has a meaningful
+  correct rate (closest guess is left out; a round with no such question is never
+  perfect; partial, incorrect and missing answers break it; a correct Clue answer
+  on any clue and a slow quickfire answer count). Read from the session's fun fact
+  answers by the shared `countPerfectRounds`. Present on the same boards as
+  `pointsGained` (the results window) but never on the final board; lists only
+  shown (capped) teams and leaves out teams with 0. `/display` draws one flickering
+  🔥 per perfect round right of the total, labelled "2 perfect rounds"; static
+  under reduced motion.
 
 `leaderboardRevealCount` stays a separate display field: how many ranks,
 counting up from last place, are revealed.

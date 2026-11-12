@@ -78,6 +78,8 @@ export interface LeaderboardBoard {
   jokerTeamIds?: number[];
   /** Points each shown team gained in the block just scored (current total minus its prior-standings total, nearest half point; losses are negative). Leaves out teams missing from the prior standings and teams on exactly 0. Present only while the board shows a block's results. */
   pointsGained?: Record<number, number>;
+  /** How many rounds of the block just scored each shown team had a Perfect round in; teams with 0 are left out. Present only while the board shows a block's results, never on the final board. */
+  perfectRounds?: Record<number, number>;
 }
 
 export interface TeamView {

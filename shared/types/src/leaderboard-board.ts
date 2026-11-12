@@ -1,5 +1,6 @@
 import { getBlockInPlay, getBlockRoundIndexes } from './block-in-play';
 import { doubledRoundIdsOfTeam } from './doubled-rounds';
+import { countPerfectRounds } from './perfect-rounds';
 import { isGradedStatus, isQuestionOnAirStatus } from './game-state-groups';
 import {
   isCurrentRoundQuickfire,
@@ -201,11 +202,39 @@ function isShowingBlockResults(
   // No prior standings (after a backend restart) means nothing to gain from.
   if (!progress.isLeaderboardVisible || !priorStandings) return false;
   if (progress.status === 'ended') return true;
-  if (isQuickfire) return isBetweenQuickfireQuestions;
+  // The board after a quickfire round's last question is the next round's fresh round intro.
+  const isFreshRoundIntro =
+    progress.status === 'round_intro' && progress.furthestOpenIndex < 0;
+  if (isQuickfire) return isBetweenQuickfireQuestions || isFreshRoundIntro;
   return (
     progress.status === 'reveal_intro' ||
     progress.status === 'reveal' ||
-    (progress.status === 'round_intro' && progress.furthestOpenIndex < 0)
+    isFreshRoundIntro
+  );
+}
+
+/**
+ * How many rounds of the prior standings' block each shown team had a Perfect
+ * round in; teams with 0 are left out.
+ */
+function describePerfectRounds(
+  session: SessionState,
+  entries: LeaderboardEntry[],
+): Record<number, number> {
+  const { priorStandings, seededGame, funFactData } = session;
+  if (!priorStandings) return {};
+  const { rounds } = seededGame;
+  const counts = countPerfectRounds(
+    getBlockRoundIndexes(rounds, priorStandings.blockFirstQuestionId).map(
+      (roundIndex) => rounds[roundIndex],
+    ),
+    funFactData.answers,
+  );
+  return Object.fromEntries(
+    entries.flatMap(({ teamId }) => {
+      const count = counts.get(teamId);
+      return count === undefined ? [] : [[teamId, count]];
+    }),
   );
 }
 
@@ -251,18 +280,24 @@ export function describeLeaderboardBoard(
     ? describeCountUpBoard(session, entries)
     : undefined;
   const jokerTeamIds = describeJokerTeamIds(session, entries);
-  const pointsGained = isShowingBlockResults(
+  const isShowingResults = isShowingBlockResults(
     session,
     isBetweenQuickfireQuestions,
     isQuickfire,
-  )
+  );
+  const pointsGained = isShowingResults
     ? describePointsGained(session, entries)
     : undefined;
+  const perfectRounds =
+    isShowingResults && session.progress.status !== 'ended'
+      ? describePerfectRounds(session, entries)
+      : undefined;
   return {
     entries,
     ...(countUpBoard === undefined ? {} : { countUpBoard }),
     trends: describeTrends(session, entries),
     ...(jokerTeamIds.length === 0 ? {} : { jokerTeamIds }),
     ...(pointsGained === undefined ? {} : { pointsGained }),
+    ...(perfectRounds === undefined ? {} : { perfectRounds }),
   };
 }
