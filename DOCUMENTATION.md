@@ -1729,7 +1729,7 @@ direct files and are not recognised. On `/display` it is a `<video>` with no
 controls, `playsInline` and `autoPlay` from `autoplayMedia`, in the same 16:9
 box as YouTube (and the same fullscreen overlay, without remounting). The
 reveal rule is worded over video: a video `answer_media_url` (YouTube or file,
-either source) replaces the question media at reveal; otherwise the question video plays again. The side-by-side image reveal is unchanged. If the file
+either source) replaces the question media at reveal; otherwise the question video plays again. The side-by-side image reveal is unchanged, except for a Short answer (below). If the file
 fails to load (`error` event) the display hides the video area for that media
 and leaves the prompt and answers; there is no retry and no message. Venue
 internet carries the video, so link short, compressed clips. Uploading video
@@ -1737,8 +1737,14 @@ is not supported (`POST /media` stays images-only).
 
 **YouTube Shorts.** A `youtube.com/shorts/…` link (`isYoutubeShortUrl` in
 `shared/types/src/youtube.ts`) is drawn in an upright 9:16 frame instead of the
-16:9 box, so the vertical video fills it without black bars: held to 60% of
-the viewport's height on the big screen, full height in fullscreen. Only the
+16:9 box, so the vertical video fills it without black bars: as tall as the
+space beside the text on the big screen (60% of the viewport's height on the
+closest-guess reveal), full height in fullscreen. A Short on
+the big screen always sits to the right of the prompt and its options or
+answer, like a portrait question image, so it never overlaps the text: a
+Short question video while asked (and at reveal with no answer media), and a
+Short answer video at reveal, which replaces a question image instead of
+standing side by side with it. Only the
 link says it is a Short: the same video pasted as `youtu.be/…` or
 `watch?v=…` plays in the 16:9 box, pillarboxed. A Short's title and channel
 show at the top of the embed and again along the bottom, so the question

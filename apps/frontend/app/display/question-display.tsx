@@ -61,17 +61,28 @@ interface AnswerMediaProps {
   mediaReplayToken?: number;
   /** The snapshot's isDisplaySoundMuted — silences the answer media (video file, YouTube, audio) without pausing it. */
   isDisplaySoundMuted?: boolean;
+  /** Shown in QuestionDisplay's media column, whose full height an upright Short fills. */
+  isInMediaColumn?: boolean;
 }
 
 const FULLSCREEN_OVERLAY =
   'fixed inset-0 z-50 flex items-center justify-center bg-black';
 
-/** A video's frame size: 16:9, or upright 9:16 for a YouTube Short — held to a height so it can't push the question off the screen. */
+/** The box around a video: the fullscreen overlay, the media column's full height for an upright Short in it, else a capped width (and a capped height, so a Short can't push the text off the screen). */
+function videoBoxClass(
+  isFullscreen: boolean,
+  isUpright: boolean,
+  isInMediaColumn: boolean,
+): string {
+  if (isFullscreen) return FULLSCREEN_OVERLAY;
+  if (!isUpright) return 'w-full max-w-2xl';
+  return isInMediaColumn ? 'h-full' : 'h-[60vh] w-full max-w-2xl';
+}
+
+/** A video's frame size: 16:9, or upright 9:16 for a YouTube Short, as tall as its box. */
 function videoFrameShape(isFullscreen: boolean, isUpright: boolean): string {
   if (isUpright) {
-    return isFullscreen
-      ? 'aspect-[9/16] h-full'
-      : 'mx-auto aspect-[9/16] h-[60vh]';
+    return 'mx-auto aspect-[9/16] h-full';
   }
   return isFullscreen
     ? 'aspect-video max-h-full w-full'
@@ -82,14 +93,16 @@ function videoFrameShape(isFullscreen: boolean, isUpright: boolean): string {
 function AnswerVideoFrame({
   isFullscreen,
   isUpright = false,
+  isInMediaColumn,
   children,
 }: {
   isFullscreen: boolean;
   isUpright?: boolean;
+  isInMediaColumn: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className={isFullscreen ? FULLSCREEN_OVERLAY : 'w-full max-w-2xl'}>
+    <div className={videoBoxClass(isFullscreen, isUpright, isInMediaColumn)}>
       <div
         className={`relative overflow-hidden bg-black ${videoFrameShape(isFullscreen, isUpright)}${isFullscreen ? '' : ' rounded-xl'}`}
       >
@@ -195,6 +208,48 @@ function questionClipOf(
     : { start: question.mediaStartSeconds, end: question.mediaEndSeconds };
 }
 
+/** Upright media (a Short, a portrait image) can't fit under the text, so it goes in a column beside it; an answer video keeps that column in fullscreen, as leaving it would remount the player. */
+function mediaColumnOf({
+  questionImageOrientation,
+  questionMediaKind,
+  questionMediaUrl,
+  isFullscreen,
+  isRevealingWithAnswerMedia,
+  answerMediaUrl,
+}: {
+  questionImageOrientation: 'portrait' | 'landscape' | null;
+  questionMediaKind: ReturnType<typeof classifyMediaUrl>;
+  questionMediaUrl: string | undefined;
+  isFullscreen: boolean;
+  isRevealingWithAnswerMedia: boolean;
+  answerMediaUrl: string | undefined;
+}) {
+  const shownUrl = isRevealingWithAnswerMedia
+    ? answerMediaUrl
+    : questionMediaUrl;
+  const isShortInColumn = isYoutubeShortUrl(shownUrl ?? '');
+  return {
+    isShortInColumn,
+    columnMedia: columnMediaOf(isRevealingWithAnswerMedia, isShortInColumn),
+    showTwoColumnLayout:
+      isShortInColumn ||
+      (questionImageOrientation === 'portrait' &&
+        keepsInlineImageLayout(questionMediaKind, {
+          isFullscreen,
+          isRevealingWithAnswerMedia,
+          answerMediaUrl,
+        })),
+  };
+}
+
+function columnMediaOf(
+  isRevealingWithAnswerMedia: boolean,
+  isShortInColumn: boolean,
+): 'answer' | 'questionVideo' | 'questionImage' {
+  if (isRevealingWithAnswerMedia) return 'answer';
+  return isShortInColumn ? 'questionVideo' : 'questionImage';
+}
+
 /** A question image shown inline; fullscreen has its own layout, except that an answer video keeps the inline one: leaving it would remount the player. */
 function keepsInlineImageLayout(
   questionMediaKind: ReturnType<typeof classifyMediaUrl>,
@@ -297,6 +352,7 @@ export function AnswerMedia({
   isMediaPaused = false,
   mediaReplayToken = 0,
   isDisplaySoundMuted = false,
+  isInMediaColumn = false,
 }: AnswerMediaProps) {
   const safeUrl = httpUrlOrNone(url);
   const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
@@ -314,7 +370,10 @@ export function AnswerMedia({
   if (kind === 'video-file') {
     if (videoFailure.isFailed) return null;
     return (
-      <AnswerVideoFrame isFullscreen={isFullscreen}>
+      <AnswerVideoFrame
+        isFullscreen={isFullscreen}
+        isInMediaColumn={isInMediaColumn}
+      >
         <VideoFile
           videoRef={videoRef}
           testId={`${mediaTestIdPrefix}-answer-video`}
@@ -332,7 +391,11 @@ export function AnswerMedia({
   if (youtubeId) {
     const isUpright = isYoutubeShortUrl(safeUrl);
     return (
-      <AnswerVideoFrame isFullscreen={isFullscreen} isUpright={isUpright}>
+      <AnswerVideoFrame
+        isFullscreen={isFullscreen}
+        isUpright={isUpright}
+        isInMediaColumn={isInMediaColumn}
+      >
         <iframe
           ref={youtubeRef}
           onLoad={onYoutubeLoad}
@@ -528,16 +591,14 @@ export function QuestionDisplay({
   const questionMediaKind = classifyMediaUrl(questionMediaUrl);
   const isQuestionVideo = isVideoUrl(questionMediaUrl);
   const questionVideoFailure = useVideoLoadFailure(questionMediaUrl);
-  // A portrait image also wins over the side-by-side reveal: the answer image
-  // then takes the image column in place of the question image.
-  // An answer video keeps this layout in fullscreen: leaving it would remount the player.
-  const showTwoColumnLayout =
-    questionImageOrientation === 'portrait' &&
-    keepsInlineImageLayout(questionMediaKind, {
-      isFullscreen,
-      isRevealingWithAnswerMedia,
-      answerMediaUrl,
-    });
+  const { isShortInColumn, showTwoColumnLayout, columnMedia } = mediaColumnOf({
+    questionImageOrientation,
+    questionMediaKind,
+    questionMediaUrl,
+    isFullscreen,
+    isRevealingWithAnswerMedia,
+    answerMediaUrl,
+  });
 
   const layout = showTwoColumnLayout ? TWO_COLUMN_LAYOUT : STACKED_LAYOUT;
   const answerMedia = (
@@ -552,6 +613,7 @@ export function QuestionDisplay({
       isMediaPaused={isMediaPaused}
       mediaReplayToken={mediaReplayToken}
       isDisplaySoundMuted={isDisplaySoundMuted}
+      isInMediaColumn={showTwoColumnLayout}
     />
   );
   const questionImage = (
@@ -562,6 +624,34 @@ export function QuestionDisplay({
       alt="Question image"
       onLoad={handleQuestionImageLoad}
       className="max-h-full max-w-full rounded-xl object-contain"
+    />
+  );
+
+  const questionMedia = questionMediaUrl && (
+    <QuestionMedia
+      url={questionMediaUrl}
+      kind={questionMediaKind}
+      isVideo={isQuestionVideo}
+      hasVideoFailed={questionVideoFailure.isFailed}
+      showsInlineImage={!showTwoColumnLayout}
+      video={{
+        youtubeId: questionYoutubeId,
+        clip: questionClip,
+        ...videoCoverOf(question, isRevealing, revealClip),
+        mediaReplayToken,
+        isFullscreen,
+        autoplayMedia,
+        mediaTestIdPrefix,
+        youtubeRef,
+        onYoutubeLoad,
+        videoRef,
+        onVideoReady,
+        onError: questionVideoFailure.onError,
+      }}
+      image={questionImage}
+      answerMedia={showSideBySideReveal ? answerMedia : null}
+      isAnswerSound={classifyMediaUrl(answerMediaUrl) === 'audio'}
+      audioRef={audioRef}
     />
   );
 
@@ -587,38 +677,18 @@ export function QuestionDisplay({
         </div>
         {showTwoColumnLayout && (
           <MediaColumn>
-            {isRevealingWithAnswerMedia ? answerMedia : questionImage}
+            {
+              {
+                answer: answerMedia,
+                questionVideo: questionMedia,
+                questionImage,
+              }[columnMedia]
+            }
           </MediaColumn>
         )}
       </div>
-      {questionMediaUrl && (
-        <QuestionMedia
-          url={questionMediaUrl}
-          kind={questionMediaKind}
-          isVideo={isQuestionVideo}
-          hasVideoFailed={questionVideoFailure.isFailed}
-          showsInlineImage={!showTwoColumnLayout}
-          video={{
-            youtubeId: questionYoutubeId,
-            clip: questionClip,
-            ...videoCoverOf(question, isRevealing, revealClip),
-            mediaReplayToken,
-            isFullscreen,
-            autoplayMedia,
-            mediaTestIdPrefix,
-            youtubeRef,
-            onYoutubeLoad,
-            videoRef,
-            onVideoReady,
-            onError: questionVideoFailure.onError,
-          }}
-          image={questionImage}
-          answerMedia={showSideBySideReveal ? answerMedia : null}
-          isAnswerSound={classifyMediaUrl(answerMediaUrl) === 'audio'}
-          audioRef={audioRef}
-        />
-      )}
-      {isRevealing && !showSideBySideReveal && (
+      {!isShortInColumn && questionMedia}
+      {isRevealing && !showSideBySideReveal && !showTwoColumnLayout && (
         <AnswerMediaBelow url={answerMediaUrl} answerMedia={answerMedia} />
       )}
     </>
@@ -683,7 +753,7 @@ function QuestionVideo({
   const videoFileKey = restartsAtReveal ? 'reveal' : 'question';
   const isUpright = isYoutubeShortUrl(url);
   return (
-    <div className={isFullscreen ? FULLSCREEN_OVERLAY : 'w-full max-w-2xl'}>
+    <div className={videoBoxClass(isFullscreen, isUpright, true)}>
       {/* A visible video, or a hidden one with a clip to play at reveal,
         is keyed on the reveal so it plays again even when the reveal
         clip's src equals the question's; a hidden video with no clip is
@@ -727,11 +797,9 @@ function QuestionVideo({
               />
             )}
             {isTitleMasked && isUpright && (
-              <div
-                aria-hidden
-                data-testid={`${mediaTestIdPrefix}-youtube-title-mask`}
-                // YouTube draws this band at a fixed pixel height, so it is a smaller share of a fullscreen frame.
-                className={`pointer-events-none absolute inset-x-0 bottom-0 bg-black ${isFullscreen ? 'h-1/9' : 'h-1/6'}`}
+              <ShortBottomMask
+                testId={`${mediaTestIdPrefix}-youtube-title-mask`}
+                isFullscreen={isFullscreen}
               />
             )}
           </>
@@ -766,6 +834,23 @@ function QuestionVideo({
   );
 }
 
+/** A Short repeats its title along the bottom; YouTube draws that band at a fixed pixel height, so it is a smaller share of a fullscreen frame. */
+function ShortBottomMask({
+  testId,
+  isFullscreen,
+}: {
+  testId: string;
+  isFullscreen: boolean;
+}) {
+  return (
+    <div
+      aria-hidden
+      data-testid={testId}
+      className={`pointer-events-none absolute inset-x-0 bottom-0 bg-black ${isFullscreen ? 'h-1/9' : 'h-1/6'}`}
+    />
+  );
+}
+
 const TWO_COLUMN_LAYOUT = {
   name: 'two-column',
   row: 'flex w-full min-h-0 flex-1 items-stretch gap-8',
@@ -792,11 +877,13 @@ function questionMediaOf(
   const answerMediaUrl = isMediaHidden ? undefined : question.answerMediaUrl;
   const isRevealingWithAnswerMedia =
     isRevealing && answerMediaUrl !== undefined;
-  const rawQuestionMediaUrl =
-    mediaUrl && isHttpUrl(mediaUrl) ? mediaUrl : undefined;
+  const rawQuestionMediaUrl = httpUrlOrNone(mediaUrl);
+  // An upright Short can't fit under the text beside an image: it replaces the image instead.
   const showSideBySideReveal =
-    isRevealingWithAnswerMedia &&
-    classifyMediaUrl(rawQuestionMediaUrl) === 'image';
+    isRevealing &&
+    answerMediaUrl !== undefined &&
+    classifyMediaUrl(rawQuestionMediaUrl) === 'image' &&
+    !isYoutubeShortUrl(answerMediaUrl);
   return {
     answerMediaUrl,
     isRevealingWithAnswerMedia,

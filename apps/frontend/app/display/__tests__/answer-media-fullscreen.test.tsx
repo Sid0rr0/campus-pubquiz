@@ -104,6 +104,40 @@ describe('fullscreen at reveal', () => {
     expect(screen.getByTestId('reveal-answer-youtube')).toBe(iframe);
     expect(isRaised('reveal-answer-youtube')).toBe(true);
   });
+
+  it('keeps a Short answer video playing when fullscreen is toggled beside a landscape question image', () => {
+    const fields = {
+      mediaUrl: QUESTION_IMAGE,
+      answerMediaUrl: 'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+    };
+    const { rerender } = render(renderReveal(fields, false));
+    const iframe = screen.getByTestId('reveal-answer-youtube');
+
+    rerender(renderReveal(fields, true));
+
+    expect(screen.getByTestId('reveal-answer-youtube')).toBe(iframe);
+    expect(isRaised('reveal-answer-youtube')).toBe(true);
+  });
+
+  it('keeps a Short question video playing when fullscreen is toggled', () => {
+    const asked = (isFullscreen: boolean) => (
+      <QuestionDisplay
+        question={{
+          ...QUESTION,
+          mediaUrl: 'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+        }}
+        mediaTestIdPrefix="question"
+        isFullscreen={isFullscreen}
+      />
+    );
+    const { rerender } = render(asked(false));
+    const iframe = screen.getByTestId('question-youtube');
+
+    rerender(asked(true));
+
+    expect(screen.getByTestId('question-youtube')).toBe(iframe);
+    expect(isRaised('question-youtube')).toBe(true);
+  });
 });
 
 describe('closest-guess answer media', () => {
@@ -154,5 +188,20 @@ describe('closest-guess answer media', () => {
     rerender(renderScreen({ mediaReplayToken: 1, isMediaPaused: true }));
 
     expect(pause).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds a Short answer to a capped height, having no media column to fill', () => {
+    render(
+      <ClosestGuessRevealScreen
+        prompt="How tall?"
+        correctAnswer="42"
+        answerMediaUrl="https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        closestGuess={closestGuess}
+        mediaTestIdPrefix="reveal"
+      />,
+    );
+
+    const frame = screen.getByTestId('reveal-answer-youtube').parentElement;
+    expect(frame?.parentElement).toHaveClass('h-[60vh]');
   });
 });

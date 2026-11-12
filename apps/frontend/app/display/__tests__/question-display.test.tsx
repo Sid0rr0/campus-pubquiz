@@ -454,6 +454,91 @@ describe('DisplayPage — question display', () => {
       expect(screen.getByTestId('reveal-answer-image')).toBeInTheDocument();
       expect(screen.queryByTestId('reveal-image')).not.toBeInTheDocument();
     });
+
+    it('shows a Short answer video beside the choices in place of a landscape question image at reveal', () => {
+      renderQuestion(
+        {
+          ...capitalOfFrance,
+          mediaUrl: 'https://example.com/x.png',
+          answer: 'Paris',
+          answerMediaUrl: 'https://www.youtube.com/shorts/abc123DEF45',
+        },
+        { status: 'reveal', revealIndex: 0 },
+      );
+
+      expect(screen.getByTestId('reveal-prompt-media-row')).toHaveAttribute(
+        'data-layout',
+        'two-column',
+      );
+      expect(screen.getByTestId('reveal-answer-youtube')).toBeInTheDocument();
+      expect(screen.queryByTestId('reveal-image')).not.toBeInTheDocument();
+    });
+
+    it('shows a Short answer video beside the choices of a question with no media at reveal', () => {
+      renderQuestion(
+        {
+          ...capitalOfFrance,
+          answer: 'Paris',
+          answerMediaUrl: 'https://www.youtube.com/shorts/abc123DEF45',
+        },
+        { status: 'reveal', revealIndex: 0 },
+      );
+
+      const row = screen.getByTestId('reveal-prompt-media-row');
+      expect(row).toHaveAttribute('data-layout', 'two-column');
+      expect(screen.getAllByTestId('reveal-answer-youtube')).toHaveLength(1);
+      expect(row).toContainElement(screen.getByTestId('reveal-answer-youtube'));
+    });
+
+    it('shows a Short question video beside the choices while asked', () => {
+      renderQuestion(
+        {
+          ...capitalOfFrance,
+          mediaUrl: 'https://www.youtube.com/shorts/abc123DEF45',
+        },
+        { status: 'question_open' },
+      );
+
+      const row = screen.getByTestId('question-prompt-media-row');
+      expect(row).toHaveAttribute('data-layout', 'two-column');
+      expect(row).toContainElement(screen.getByTestId('question-youtube'));
+    });
+
+    it('keeps a Short question video beside the answer of a typed-answer question at reveal', () => {
+      renderQuestion(
+        {
+          type: 'free_text',
+          prompt: 'Which truck is this?',
+          answer: 'Monster Jam',
+          mediaUrl: 'https://www.youtube.com/shorts/abc123DEF45',
+        },
+        { status: 'reveal', revealIndex: 0 },
+      );
+
+      const row = screen.getByTestId('reveal-prompt-media-row');
+      expect(row).toHaveAttribute('data-layout', 'two-column');
+      expect(row).toContainElement(screen.getByTestId('reveal-youtube'));
+    });
+
+    it('keeps a 16:9 answer video beside a question image at reveal', () => {
+      renderQuestion(
+        {
+          ...capitalOfFrance,
+          mediaUrl: 'https://example.com/x.png',
+          answer: 'Paris',
+          answerMediaUrl: 'https://www.youtube.com/watch?v=abc123DEF45',
+        },
+        { status: 'reveal', revealIndex: 0 },
+      );
+      loadImage('reveal-image', 900, 600);
+
+      expect(screen.getByTestId('reveal-prompt-media-row')).toHaveAttribute(
+        'data-layout',
+        'stacked',
+      );
+      expect(screen.getByTestId('reveal-image')).toBeInTheDocument();
+      expect(screen.getByTestId('reveal-answer-youtube')).toBeInTheDocument();
+    });
   });
 
   it('shows how many teams have answered the open question', () => {
