@@ -9,6 +9,13 @@ const { mockPlaySound, mockFireConfetti } = vi.hoisted(() => ({
   mockFireConfetti: vi.fn(),
 }));
 
+const mockReducedMotion = vi.hoisted(() => ({ value: false }));
+
+vi.mock('motion/react', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('motion/react')>()),
+  useReducedMotion: () => mockReducedMotion.value,
+}));
+
 vi.mock('@/app/lib/confetti', () => ({ fireConfetti: mockFireConfetti }));
 
 vi.mock('@/app/lib/display-sounds', () => ({
@@ -291,6 +298,115 @@ describe('Leaderboard', () => {
       expect(within(settledRows[0]).getByLabelText('moved up')).toHaveClass(
         'text-green',
       );
+    });
+  });
+
+  describe('points gained', () => {
+    const GAIN_ENTRIES = [
+      ranked(1, 'Climber', 30, 1),
+      ranked(2, 'Slider', 18, 2),
+      ranked(3, 'Steady', 10, 3),
+    ];
+    const pointsGained = { 1: 3, 2: -2 };
+    const FADE_MS = 900 + 2000;
+
+    it('counts a revealed pub quiz row up from its prior total to its total', async () => {
+      vi.useRealTimers();
+      render(
+        <Leaderboard
+          board={described(GAIN_ENTRIES, { pointsGained })}
+          revealCount={3}
+        />,
+      );
+
+      const climber = screen.getByText('Climber').closest('li') as HTMLElement;
+      expect(climber).toHaveTextContent('Climber27');
+      await waitFor(() => expect(climber).toHaveTextContent('Climber30+3'), {
+        timeout: 4000,
+      });
+    });
+
+    it('cuts the count-up to its end when a newer rank is revealed', () => {
+      vi.useRealTimers();
+      const board = described(GAIN_ENTRIES, { pointsGained: { 3: 4 } });
+      const { rerender } = render(
+        <Leaderboard board={board} revealCount={1} />,
+      );
+      const steady = screen.getByText('Steady').closest('li') as HTMLElement;
+      expect(steady).toHaveTextContent('Steady6');
+
+      rerender(<Leaderboard board={board} revealCount={2} />);
+
+      expect(steady).toHaveTextContent('Steady10');
+    });
+
+    it('shows a labelled green "+x" and red "−x" outside the row, and fades them', () => {
+      vi.useFakeTimers();
+      render(
+        <Leaderboard
+          board={described(GAIN_ENTRIES, { pointsGained })}
+          revealCount={3}
+        />,
+      );
+
+      const gain = screen.getByLabelText('gained 3 points');
+      expect(gain).toHaveTextContent('+3');
+      expect(gain).toHaveClass('text-green');
+      expect(gain).not.toHaveClass('opacity-0');
+      const loss = screen.getByLabelText('lost 2 points');
+      expect(loss).toHaveTextContent('−2');
+      expect(loss).toHaveClass('text-red-500');
+      expect(screen.getAllByLabelText(/gained|lost/)).toHaveLength(2);
+
+      act(() => {
+        vi.advanceTimersByTime(FADE_MS);
+      });
+      expect(gain).toHaveClass('opacity-0');
+    });
+
+    it('shows no "+x" without an entry, or on the plain preview', () => {
+      render(<Leaderboard board={described(ENTRIES)} revealCount={3} />);
+
+      expect(screen.queryByLabelText(/gained|lost/)).not.toBeInTheDocument();
+    });
+
+    it('brings the quickfire "+x" in with the counting phase', () => {
+      vi.useFakeTimers();
+      render(
+        <Leaderboard
+          board={described([ranked(1, 'Challenger', 13, 1)], {
+            countUpBoard: [ranked(1, 'Challenger', 10, 1)],
+            pointsGained: { 1: 3 },
+          })}
+        />,
+      );
+      expect(
+        screen.queryByLabelText('gained 3 points'),
+      ).not.toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(900);
+      });
+      expect(screen.getByLabelText('gained 3 points')).toBeInTheDocument();
+    });
+
+    it('draws final values statically under reduced motion', () => {
+      mockReducedMotion.value = true;
+      try {
+        render(
+          <Leaderboard
+            board={described(GAIN_ENTRIES, { pointsGained })}
+            revealCount={3}
+          />,
+        );
+
+        expect(screen.getByText('Climber').closest('li')).toHaveTextContent(
+          'Climber30+3',
+        );
+        expect(screen.getByLabelText('gained 3 points')).toBeInTheDocument();
+      } finally {
+        mockReducedMotion.value = false;
+      }
     });
   });
 

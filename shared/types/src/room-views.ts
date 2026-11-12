@@ -76,6 +76,8 @@ export interface LeaderboardBoard {
   trends: Record<number, RankTrend>;
   /** Ids of the shown teams whose joker round has a question in the block just scored: their row gets the 2× stamp, even on 0 points. Present only when there is one (never while the leaderboard is not on air, so a pick is not leaked). */
   jokerTeamIds?: number[];
+  /** Points each shown team gained in the block just scored (current total minus its prior-standings total, nearest half point; losses are negative). Leaves out teams missing from the prior standings and teams on exactly 0. Present only while the board shows a block's results. */
+  pointsGained?: Record<number, number>;
 }
 
 export interface TeamView {

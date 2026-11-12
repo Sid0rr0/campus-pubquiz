@@ -547,6 +547,23 @@ from the session, so a reloaded or second big screen draws the same thing):
   live (the stamp lands, with a spring, beside the team's name; a reload or
   reconnect draws it already in place), and the phone's own-row card carries the
   same stamp.
+- `pointsGained` — team id → the team's current total minus its total in the
+  prior standings, to the nearest half point (joker doubling and bonuses are in
+  the totals, so in the gain; a loss is negative). Present only while the board
+  shows a block's results (the results window): from the prior standings' block
+  starting its results (its `reveal_intro`, or, with Early answer reveal,
+  leaving its break) until the next block's first question opens, so also the
+  next block's round intro and any leaderboard toggle in between, plus the final
+  board. In a quickfire round: the between-questions count-up board. A
+  leaderboard brought up while a block is answered, locked or in break, or one
+  with no prior standings (after a backend restart), carries none. It lists only
+  shown (capped) teams and leaves out teams missing from the prior standings and
+  teams on exactly 0. `/display` counts a pub quiz row up from `total − gained`
+  to its total as the rank is revealed (cut to its end when a newer rank is
+  revealed; the final board's list rows too, the podium unchanged) and floats a
+  green "+x" / red "−x" outside the row's right border, labelled "gained 3
+  points", that fades about 2 s after the row settles. Reduced motion swaps the
+  total instantly and keeps the "+x" static apart from the fade.
 
 `leaderboardRevealCount` stays a separate display field: how many ranks,
 counting up from last place, are revealed.

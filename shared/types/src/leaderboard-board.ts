@@ -7,6 +7,7 @@ import {
 } from './quickfire-visibility';
 import { capLeaderboard } from './leaderboard-tiebreak';
 import { rankTeams } from './ranking-rule';
+import { nearestHalfPoint } from './score-math';
 import type {
   LeaderboardBoard,
   LeaderboardEntry,
@@ -185,6 +186,54 @@ function describeJokerTeamIds(
 }
 
 /**
+ * Whether the board shows a block's results: from the prior standings' block
+ * starting its results (its reveal_intro; with Early answer reveal, leaving its
+ * break, which lands on the next block's fresh round intro) until the next
+ * block's first question opens, plus the final board. In a quickfire round
+ * only the between-questions board counts. A leaderboard brought up while a
+ * block is answered, locked or in break is not.
+ */
+function isShowingBlockResults(
+  { progress, priorStandings }: SessionState,
+  isBetweenQuickfireQuestions: boolean,
+  isQuickfire: boolean,
+): boolean {
+  // No prior standings (after a backend restart) means nothing to gain from.
+  if (!progress.isLeaderboardVisible || !priorStandings) return false;
+  if (progress.status === 'ended') return true;
+  if (isQuickfire) return isBetweenQuickfireQuestions;
+  return (
+    progress.status === 'reveal_intro' ||
+    progress.status === 'reveal' ||
+    (progress.status === 'round_intro' && progress.furthestOpenIndex < 0)
+  );
+}
+
+/**
+ * What each shown team gained against the prior standings, to the nearest half
+ * point. A team missing from them, or on exactly 0, is left out.
+ */
+function describePointsGained(
+  { priorStandings }: SessionState,
+  entries: LeaderboardEntry[],
+): Record<number, number> {
+  const priorTotals = new Map(
+    (priorStandings?.board ?? []).map((entry) => [
+      entry.teamId,
+      entry.totalPoints,
+    ]),
+  );
+  return Object.fromEntries(
+    entries.flatMap(({ teamId, totalPoints }) => {
+      const prior = priorTotals.get(teamId);
+      const gained =
+        prior === undefined ? 0 : nearestHalfPoint(totalPoints - prior);
+      return gained === 0 ? [] : [[teamId, gained]];
+    }),
+  );
+}
+
+/**
  * The leaderboard the big screen draws, decided once on the server: the
  * entries (capped for a quickfire round), the board to count up from (only for
  * the between-questions quickfire board, where the next question is already open
@@ -193,10 +242,8 @@ function describeJokerTeamIds(
 export function describeLeaderboardBoard(
   session: SessionState,
 ): LeaderboardBoard {
-  const entries = capLeaderboard(
-    session.leaderboard,
-    isCurrentRoundQuickfire(session),
-  );
+  const isQuickfire = isCurrentRoundQuickfire(session);
+  const entries = capLeaderboard(session.leaderboard, isQuickfire);
   const isBetweenQuickfireQuestions =
     session.progress.status === 'question_open' &&
     isQuestionHiddenBehindQuickfireLeaderboard(session);
@@ -204,10 +251,18 @@ export function describeLeaderboardBoard(
     ? describeCountUpBoard(session, entries)
     : undefined;
   const jokerTeamIds = describeJokerTeamIds(session, entries);
+  const pointsGained = isShowingBlockResults(
+    session,
+    isBetweenQuickfireQuestions,
+    isQuickfire,
+  )
+    ? describePointsGained(session, entries)
+    : undefined;
   return {
     entries,
     ...(countUpBoard === undefined ? {} : { countUpBoard }),
     trends: describeTrends(session, entries),
     ...(jokerTeamIds.length === 0 ? {} : { jokerTeamIds }),
+    ...(pointsGained === undefined ? {} : { pointsGained }),
   };
 }

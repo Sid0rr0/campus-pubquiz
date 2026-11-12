@@ -150,6 +150,110 @@ describe('describeLeaderboardBoard', () => {
     });
   });
 
+  describe('points gained', () => {
+    const current = board(
+      [1, 'A', 50],
+      [2, 'B', 40],
+      [3, 'C', 30],
+      [4, 'D', 20],
+      [5, 'E', 10],
+    );
+    // C is unchanged, D lost points, E is new, B gained half a point past rounding.
+    const prior = board(
+      [1, 'A', 30],
+      [2, 'B', 38.5],
+      [3, 'C', 30],
+      [4, 'D', 25],
+    );
+    const priorStandings = { board: prior, blockFirstQuestionId: 4 };
+
+    function gainedAt(
+      progress: Partial<GameProgress>,
+      overrides: Partial<SessionState> = {},
+    ) {
+      return describeLeaderboardBoard(
+        withBoard({ isLeaderboardVisible: true, ...progress }, current, {
+          priorStandings,
+          ...overrides,
+        }),
+      ).pointsGained;
+    }
+
+    const REVEAL = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 0,
+    } as const;
+
+    it('lists what each team gained at the reveal, keeping losses and leaving out newcomers and zero gains', () => {
+      expect(gainedAt(REVEAL)).toEqual({ 1: 20, 2: 1.5, 4: -5 });
+    });
+
+    it('is there from the results intro, the next round intro and the final board', () => {
+      const expected = { 1: 20, 2: 1.5, 4: -5 };
+
+      expect(gainedAt({ ...REVEAL, status: 'reveal_intro' })).toEqual(expected);
+      expect(
+        gainedAt({
+          status: 'round_intro',
+          roundIndex: 2,
+          questionIndex: 0,
+          furthestOpenIndex: -1,
+        }),
+      ).toEqual(expected);
+      expect(gainedAt({ status: 'ended', roundIndex: 2 })).toEqual(expected);
+    });
+
+    it.each(['question_open', 'locking', 'break_intro', 'break'] as const)(
+      'is absent while the block is still %s',
+      (status) => {
+        expect(
+          gainedAt({ ...REVEAL, status, furthestOpenIndex: 0 }),
+        ).toBeUndefined();
+      },
+    );
+
+    it('is absent at a round intro inside a block already opened', () => {
+      expect(
+        gainedAt({
+          status: 'round_intro',
+          roundIndex: 1,
+          questionIndex: 0,
+          furthestOpenIndex: 1,
+        }),
+      ).toBeUndefined();
+    });
+
+    it('is absent without prior standings', () => {
+      expect(gainedAt(REVEAL, { priorStandings: null })).toBeUndefined();
+    });
+
+    it('is there on the quickfire between-questions board, for the shown teams only', () => {
+      const session = withBoard(
+        { ...QUICKFIRE_QUESTION, isLeaderboardVisible: true },
+        [...current, ...board([6, 'F', 1])],
+        {
+          priorStandings: {
+            board: [...prior, ...board([6, 'F', 0])],
+            blockFirstQuestionId: 5,
+          },
+        },
+      );
+
+      expect(describeLeaderboardBoard(session).pointsGained).toEqual({
+        1: 20,
+        2: 1.5,
+        4: -5,
+      });
+    });
+
+    it('is absent on a quickfire board brought up after the question was revealed', () => {
+      expect(
+        gainedAt({ ...QUICKFIRE_QUESTION, status: 'reveal' }),
+      ).toBeUndefined();
+    });
+  });
+
   describe('the count-up board', () => {
     // A..G; the top five once the quickfire cap applies are A, B, C, G, D.
     const current = board(
