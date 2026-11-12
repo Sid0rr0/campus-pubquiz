@@ -6,7 +6,7 @@
 import { expect } from '@playwright/test';
 import { recordMove } from './coverage';
 import type { ControlScreen } from './screens/control-screen';
-import type { DisplayScreen } from './screens/display-screen';
+import { TRAILING_BADGES, type DisplayScreen } from './screens/display-screen';
 
 async function pressPrevious(
   control: ControlScreen,
@@ -50,7 +50,7 @@ export async function toggleJoinOverlay(
   recordMove('join_overlay');
 }
 
-/** The team's leaderboard row on the big screen ends in `points`; a trend mark may sit between the name and the points once the board has a history. */
+/** The team's leaderboard row on the big screen ends in `points`; a trend mark may sit between the name and the points once the board has a history, and 🔥 and a "+x" may trail it. */
 export async function expectStandingsRow(
   display: DisplayScreen,
   teamName: string,
@@ -60,7 +60,9 @@ export async function expectStandingsRow(
     .getByTestId('leaderboard-rows')
     .getByRole('listitem')
     .filter({ hasText: teamName });
-  await expect(row).toHaveText(new RegExp(`${teamName}\\D*${points}$`));
+  await expect(row).toHaveText(
+    new RegExp(`${teamName}\\D*${points}${TRAILING_BADGES}$`),
+  );
 }
 
 /** The final board puts every top-three team on a podium step instead of in the list. */
