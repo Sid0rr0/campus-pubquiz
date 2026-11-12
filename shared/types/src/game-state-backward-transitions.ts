@@ -7,6 +7,7 @@ import {
   isFirstQuestionOfItsRound,
   type QuestionPosition,
 } from './game-state-block-position';
+import { isBreakStatus } from './game-state-groups';
 import {
   illegal,
   type GameContext,
@@ -80,19 +81,29 @@ export function previousFromRoundIntro(
     };
   }
 
+  // With the Early answer reveal the previous block ended in its break card,
+  // which Previous returns to quietly (no leaderboard, every grade kept).
+  if (context.earlyAnswerReveal && !previousRound.quickfire) {
+    return {
+      ...enterPreviousBlockReveal(progress, context, 'break_intro'),
+      isLeaderboardVisible: false,
+    };
+  }
+
   return enterPreviousBlockReveal(progress, context);
 }
 
 /**
  * Jumps back into the last question of the block immediately before the one
- * starting at `progress.roundIndex`'s first question, in 'reveal' status —
- * that block's answers already aired live, so re-entering it re-shows them
- * rather than reopening anything for (re-)answering. Illegal when there is
- * no earlier block.
+ * starting at `progress.roundIndex`'s first question, in 'reveal' status
+ * (or `status`) — that block's answers already aired live, so re-entering it
+ * re-shows them rather than reopening anything for (re-)answering. Illegal
+ * when there is no earlier block.
  */
 function enterPreviousBlockReveal(
   progress: GameProgress,
   context: GameContext,
+  status: 'reveal' | 'break_intro' = 'reveal',
 ): GameProgress {
   const currentBlockStart = getBlockStartPosition(
     progress.roundIndex,
@@ -111,7 +122,7 @@ function enterPreviousBlockReveal(
   );
   return {
     ...progress,
-    status: 'reveal',
+    status,
     roundIndex: previousBlockEnd.roundIndex,
     questionIndex: previousBlockEnd.questionIndex,
     revealIndex,
@@ -211,6 +222,62 @@ export function previousFromReveal(
   return { ...progress, revealIndex: progress.revealIndex - 1 };
 }
 
+/** Steps back from an early-answer-reveal question to its round's title card, or to the previous question. */
+export function previousFromAnswers(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const { questionIndex } = getRoundAndQuestionForBlockPosition(
+    blockStart,
+    progress.revealIndex,
+    context,
+  );
+  return isFirstQuestionOfItsRound(questionIndex)
+    ? { ...progress, status: 'answers_intro' }
+    : { ...progress, revealIndex: progress.revealIndex - 1 };
+}
+
+/**
+ * Steps back from an early-answer-reveal title card to the previous round's
+ * last answer, or from the block's first card to what precedes the block: the
+ * previous block's break card (a locked block never reopens), or, for the
+ * quiz's first block, wherever Previous from its first round intro goes.
+ */
+export function previousFromAnswersIntro(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  if (progress.revealIndex > 0) {
+    return {
+      ...progress,
+      status: 'answers',
+      revealIndex: progress.revealIndex - 1,
+    };
+  }
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  // The block's first card sits where its round intro would: step back from there.
+  return previousFromRoundIntro(
+    {
+      ...progress,
+      status: 'round_intro',
+      roundIndex: blockStart.roundIndex,
+      questionIndex: 0,
+      furthestOpenIndex: -1,
+      isLeaderboardVisible: false,
+    },
+    context,
+  );
+}
+
 /**
  * Steps back from a reveal round's intro card to the previous round's last
  * reveal question, or — at the block's very first round — back into that
@@ -256,5 +323,12 @@ export function previousFromEnded(progress: GameProgress): GameProgress {
   if (!progress.previousStatus) {
     illegal(progress.status, 'PREVIOUS');
   }
-  return { ...progress, status: progress.previousStatus, previousStatus: null };
+  return {
+    ...progress,
+    status: progress.previousStatus,
+    previousStatus: null,
+    // The break's Advance opened the board on the way out; Previous stays quiet.
+    isLeaderboardVisible:
+      progress.isLeaderboardVisible && !isBreakStatus(progress.previousStatus),
+  };
 }

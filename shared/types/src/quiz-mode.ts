@@ -9,6 +9,7 @@ export type QuizMode = (typeof QUIZ_MODES)[number];
 export type ModeFeature =
   | 'jokers'
   | 'versus'
+  | 'earlyAnswerReveal'
   | 'powerUps'
   | 'coins'
   | 'leagues'
@@ -19,6 +20,7 @@ const MODE_ALLOWS: Record<QuizMode, Record<ModeFeature, boolean>> = {
   pub: {
     jokers: true,
     versus: true,
+    earlyAnswerReveal: true,
     powerUps: true,
     coins: true,
     leagues: true,
@@ -27,6 +29,7 @@ const MODE_ALLOWS: Record<QuizMode, Record<ModeFeature, boolean>> = {
   quickfire: {
     jokers: false,
     versus: false,
+    earlyAnswerReveal: false,
     powerUps: false,
     coins: false,
     leagues: false,
@@ -86,6 +89,11 @@ export function quizModeSettingsRefusal(
       VERSUS_NOT_FOR_QUICKFIRE_MESSAGE,
     ],
     [
+      partial.earlyAnswerReveal === true,
+      'earlyAnswerReveal',
+      "A quickfire session can't show answers before the break",
+    ],
+    [
       partial.powerUpsEnabled === true,
       'powerUps',
       "A quickfire session can't have power-ups",
@@ -126,6 +134,8 @@ export function settingsForMode(
     ...settings,
     jokersEnabled: settings.jokersEnabled && quizModeAllows(mode, 'jokers'),
     versusEnabled: settings.versusEnabled && quizModeAllows(mode, 'versus'),
+    earlyAnswerReveal:
+      settings.earlyAnswerReveal && quizModeAllows(mode, 'earlyAnswerReveal'),
     powerUpsEnabled:
       settings.powerUpsEnabled && quizModeAllows(mode, 'powerUps'),
     startingCoins: quizModeAllows(mode, 'coins') ? settings.startingCoins : 0,

@@ -198,6 +198,17 @@ describe('PlayPage — the joker round title cards', () => {
     expect(screen.getByTestId('joker-badge')).toBeInTheDocument();
   });
 
+  it('shows it on the early answers title card of the joker round', () => {
+    renderPlay(
+      JOKER_ON_ROUND_2,
+      night({
+        progress: { status: 'answers_intro', roundIndex: 1, revealIndex: 1 },
+      }),
+    );
+
+    expect(screen.getByTestId('joker-badge')).toBeInTheDocument();
+  });
+
   it('shows no badge on another round’s title card', () => {
     renderPlay(
       JOKER_ON_ROUND_2,

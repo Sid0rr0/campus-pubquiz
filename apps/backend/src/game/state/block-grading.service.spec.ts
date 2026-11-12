@@ -66,6 +66,50 @@ describe('BlockGradingService.gradesChanged', () => {
   });
 });
 
+describe('BlockGradingService.gradeForPlacement', () => {
+  it('rebuilds the summaries of the block before a post-break board, which a fresh round intro cannot see', async () => {
+    const answerService = {
+      ...stubAnswerService(),
+      gradeAtLock: jest
+        .fn()
+        .mockResolvedValue([{ teamName: 'Far', value: '650' }]),
+    };
+    const grading = new BlockGradingService(
+      answerService as unknown as AnswerService,
+    );
+    const closest = question(1, 'closest_guess', '650');
+    const seededGame = {
+      gameSessionId: 1,
+      settings: {
+        quickfireQuestionTimerSeconds: 10,
+        earlyAnswerReveal: true,
+      },
+      rounds: [
+        { title: 'One', breakAfter: true, questions: [closest] },
+        {
+          title: 'Two',
+          breakAfter: true,
+          questions: [question(2, 'free_text', 'Queen')],
+        },
+      ],
+    } as unknown as SeededGame;
+    const progress = {
+      ...LOBBY_PROGRESS,
+      status: 'round_intro' as const,
+      roundIndex: 1,
+      furthestOpenIndex: -1,
+      isLeaderboardVisible: true,
+    };
+
+    const placed = await grading.gradeForPlacement(
+      freshSessionState(seededGame, progress),
+      progress,
+    );
+
+    expect(placed.closestGuessSummaries[1]).toBeDefined();
+  });
+});
+
 describe('BlockGradingService.regradeForKeyFix', () => {
   it('hands back the reloaded session untouched, with nothing re-scored and no answering teams, when no question needs a regrade', async () => {
     const answerService = stubAnswerService();

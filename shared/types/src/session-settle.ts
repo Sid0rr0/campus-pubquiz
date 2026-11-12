@@ -183,7 +183,8 @@ function computeBreakEndsAt(
   now: number,
 ): number | null {
   const isStale =
-    session.progress.status === 'locking' &&
+    (session.progress.status === 'locking' ||
+      session.progress.status === 'answers') &&
     progress.status === 'break_intro' &&
     session.breakEndsAt !== null &&
     session.breakEndsAt <= now;

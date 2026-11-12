@@ -4,6 +4,7 @@ import {
   getGameContext,
   getQuizStructureSummary,
   getHostOnlyText,
+  isBreakExit,
   nextPressAction,
   type OnAirScreen,
   type PresenterContextPayload,
@@ -84,30 +85,40 @@ function breakRoundTitleText(
     : describeBreakIntro(session);
 }
 
+/** How each answer-airing screen kind is previewed: the word in its heading, and the heading when no question is found. */
+const REVEAL_WORDS = {
+  answers_intro: { word: 'Answers', bare: 'Answers' },
+  answers: { word: 'Answers', bare: 'Answers' },
+  reveal_intro: { word: 'Revealing', bare: 'Revealing answers' },
+  reveal: { word: 'Revealing', bare: 'Revealing answers' },
+} as const;
+
 function revealIntroText(
   session: SessionState,
-  screen: OnAirOf<'reveal_intro'>,
+  screen: OnAirOf<'reveal_intro' | 'answers_intro'>,
 ): ScreenPreview {
+  const { word, bare } = REVEAL_WORDS[screen.kind];
   const question = findBlockQuestion(session, screen.questionId);
   return question
     ? {
-        heading: `Revealing · Round ${question.roundNumber} title`,
+        heading: `${word} · Round ${question.roundNumber} title`,
         body: question.roundTitle,
       }
-    : { heading: 'Revealing answers' };
+    : { heading: bare };
 }
 
 function revealText(
   session: SessionState,
-  screen: OnAirOf<'reveal'>,
+  screen: OnAirOf<'reveal' | 'answers'>,
 ): ScreenPreview {
+  const { word, bare } = REVEAL_WORDS[screen.kind];
   const question = findBlockQuestion(session, screen.questionId);
   return question
     ? {
-        heading: `Revealing R${question.roundNumber} Q${question.questionNumberInRound}`,
+        heading: `${word} R${question.roundNumber} Q${question.questionNumberInRound}`,
         body: `${question.prompt} — Answer: ${question.answer}`,
       }
-    : { heading: 'Revealing answers' };
+    : { heading: bare };
 }
 
 const SCREEN_TEXTS: ScreenTexts = {
@@ -133,6 +144,8 @@ const SCREEN_TEXTS: ScreenTexts = {
   break_intro: describeBreakIntro,
   break_review: breakReviewText,
   break_round_title: breakRoundTitleText,
+  answers_intro: revealIntroText,
+  answers: revealText,
   reveal_intro: revealIntroText,
   reveal: revealText,
   leaderboard: (session) =>
@@ -162,6 +175,27 @@ export function describeScreen(session: SessionState): ScreenPreview {
   return describeOnAirScreenText(session, onAirScreen);
 }
 
+/** The words for a press moving to `after`; leaving the break for the Early answer reveal's results says what follows the board. */
+function describeTransition(
+  session: SessionState,
+  after: SessionState,
+): ScreenPreview {
+  const { status, roundIndex } = after.progress;
+  if (
+    !isBreakExit(session.progress.status, status) ||
+    status === 'reveal_intro'
+  ) {
+    return describeScreen(after);
+  }
+  return {
+    heading: 'Leaderboard',
+    body:
+      status === 'ended'
+        ? 'Results, then final standings'
+        : `Results, then Round ${roundIndex + 1} intro`,
+  };
+}
+
 /** Words for what a dry-run commit of the next press leaves on air; waiting and blocked steps move no screen and are described from the step. */
 function describePreviewedMove(
   session: SessionState,
@@ -181,8 +215,9 @@ function describePreviewedMove(
       return describeRevealStep(session, step.reveal, after);
     case 'join_overlay_hide':
       return { ...describeScreen(after), body: 'Hides the join overlay' };
-    case 'leaderboard_hide':
     case 'transition':
+      return describeTransition(session, after);
+    case 'leaderboard_hide':
       return describeScreen(after);
     case 'blocked':
       return null;

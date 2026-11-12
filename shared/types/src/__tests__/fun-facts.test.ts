@@ -1076,6 +1076,29 @@ describe('describeFunFacts', () => {
       expect(kinds(session)).not.toContain('nobody_got_it');
     });
 
+    it('is left out with Early answer reveal on too: its answers have aired but its results have not', () => {
+      const data: Partial<FunFactData> = {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(2, 0, 'correct'),
+          // Questions 3-4 are the block in its break, graded but not yet out.
+          answer(3, 0, 'incorrect', { responseMs: 100 }),
+          answer(4, 0, 'incorrect'),
+        ],
+      };
+      const off = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, data);
+      const on = {
+        ...off,
+        seededGame: {
+          ...off.seededGame,
+          settings: { ...off.seededGame.settings, earlyAnswerReveal: true },
+        },
+      };
+
+      expect(describeFunFacts(on)).toEqual(describeFunFacts(off));
+      expect(kinds(on)).not.toContain('nobody_got_it');
+    });
+
     it('never feeds any fact from answers to questions or jokers of rounds not yet past', () => {
       // Rounds 1-2 are past; round 3 (questions 5-6) is the block in play, round 4
       // (7-8, a quickfire round whose questions are blocks of their own) is ahead.

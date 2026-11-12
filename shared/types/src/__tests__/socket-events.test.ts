@@ -303,6 +303,7 @@ describe('SessionSettings defaults', () => {
       jokersEnabled: false,
       versusEnabled: false,
       versusSides: [],
+      earlyAnswerReveal: false,
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       maxPlayersPerTeam: 6,
       extraPlayerPenaltyPoints: 2,

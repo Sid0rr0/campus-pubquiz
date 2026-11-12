@@ -99,11 +99,52 @@ export function advanceFromBlockReview(
     return { ...progress, revealIndex: nextRevealIndex };
   }
 
+  // The early answer reveal already aired the answers, so the break leads
+  // straight on to the next block, results on the leaderboard.
+  if (context.earlyAnswerReveal) return leaveBlock(progress, context);
+
   // Already on the block's last question — nothing left to step forward
   // into, so this is the real "leave break" transition into reveal. Always
   // opens on the block's first round's intro card before any answer is
   // shown, same as round_intro precedes question_open.
   return { ...progress, status: 'reveal_intro', revealIndex: 0 };
+}
+
+/**
+ * Steps through the early answer reveal one question at a time, pausing on
+ * each round's title card (answers_intro) at a round boundary, like the
+ * reveal. After the block's last question it goes on to the break card.
+ */
+export function advanceFromAnswers(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const blockQuestionCount = getBlockQuestionCount(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  if (progress.revealIndex + 1 >= blockQuestionCount) {
+    return { ...progress, status: 'break_intro' };
+  }
+  const revealIndex = progress.revealIndex + 1;
+  const { questionIndex } = getRoundAndQuestionForBlockPosition(
+    blockStart,
+    revealIndex,
+    context,
+  );
+  return {
+    ...progress,
+    status: isFirstQuestionOfItsRound(questionIndex)
+      ? 'answers_intro'
+      : 'answers',
+    revealIndex,
+  };
 }
 
 export function advanceFromReveal(
@@ -164,17 +205,29 @@ export function advanceFromReveal(
     return { ...progress, revealIndex: nextRevealIndex };
   }
 
+  return leaveBlock(progress, context);
+}
+
+/**
+ * Moves on from a finished block (after its last reveal, or — with the early
+ * answer reveal — out of its break) to the next block's round intro with the
+ * leaderboard up, or to 'ended' after the last one.
+ */
+function leaveBlock(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
   if (isLastRound) {
     // Advancing past the last reveal question ends the quiz the same way
     // the admin's explicit "End Quiz" button does — the final leaderboard
     // shouldn't need a second click to appear. revealIndex is left
     // untouched (still the block's last question) so PREVIOUS can restore
-    // this exact 'reveal' position without recomputation.
+    // this exact position without recomputation.
     return {
       ...progress,
       status: 'ended',
-      previousStatus: 'reveal',
+      previousStatus: progress.status,
       isLeaderboardVisible: true,
     };
   }

@@ -1,5 +1,6 @@
 import { shownAtStep } from './closest-guess-reveal';
 import { describeDisplayScreen, type DisplayScreen } from './display-screen';
+import { isRevealQuestionStatus } from './game-state-groups';
 import type { GameProgress } from './game-state-types';
 import { describeOnAirScreen, type OnAirScreen } from './on-air-screen';
 import type {
@@ -18,7 +19,7 @@ export function trimOnAirQuestion(
   closestGuessRevealStep: number,
 ): PlayersRevealQuestionView[] {
   return revealQuestions.map((question, index) =>
-    status === 'reveal' && index === revealIndex
+    isRevealQuestionStatus(status) && index === revealIndex
       ? shownAtStep(question, closestGuessRevealStep)
       : question,
   );

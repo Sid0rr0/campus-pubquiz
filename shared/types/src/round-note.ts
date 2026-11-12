@@ -19,13 +19,21 @@ export function isRoundIntroScreen(
 }
 
 /** Whether the screen is a round's intro, break round intro or reveal intro: where the presenter remote shows the round note. */
-export function isRoundNoteScreen(
-  screen: OnAirScreen,
-): screen is Extract<
+export function isRoundNoteScreen(screen: OnAirScreen): screen is Extract<
   OnAirScreen,
-  { kind: 'round_title' | 'break_round_title' | 'reveal_intro' }
+  {
+    kind:
+      | 'round_title'
+      | 'break_round_title'
+      | 'answers_intro'
+      | 'reveal_intro';
+  }
 > {
-  return isRoundIntroScreen(screen) || screen.kind === 'reveal_intro';
+  return (
+    isRoundIntroScreen(screen) ||
+    screen.kind === 'answers_intro' ||
+    screen.kind === 'reveal_intro'
+  );
 }
 
 /** The round whose intro or break round intro is on air; undefined on every other screen (the reveal intro included). */
@@ -44,6 +52,7 @@ function questionIdOnScreen(screen: OnAirScreen): number | null {
     case 'question':
     case 'locking':
     case 'break_review':
+    case 'answers':
     case 'reveal':
       return screen.questionId;
     default:

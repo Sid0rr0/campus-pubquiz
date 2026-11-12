@@ -32,6 +32,8 @@ export const GRADED_STATUSES: StatusGroup = new Set<GameStatus>([
 
 /** Answers are being revealed. */
 export const REVEALING_STATUSES: StatusGroup = new Set<GameStatus>([
+  'answers_intro',
+  'answers',
   'reveal_intro',
   'reveal',
 ]);
@@ -40,6 +42,7 @@ export const REVEALING_STATUSES: StatusGroup = new Set<GameStatus>([
 export const BLOCK_STARTED_STATUSES: StatusGroup = new Set<GameStatus>([
   ...ANSWERING_STATUSES,
   ...GRADED_STATUSES,
+  ...REVEALING_STATUSES,
 ]);
 
 export function isAnsweringStatus(status: GameStatus): boolean {
@@ -51,10 +54,33 @@ export function isQuestionOnAirStatus(status: GameStatus): boolean {
 }
 
 export type BreakStatus = 'break_intro' | 'break' | 'break_round_intro';
-export type RevealingStatus = 'reveal_intro' | 'reveal';
+export type RevealingStatus =
+  | 'answers_intro'
+  | 'answers'
+  | 'reveal_intro'
+  | 'reveal';
 
 export function isBreakStatus(status: GameStatus): status is BreakStatus {
   return BREAK_STATUSES.has(status);
+}
+
+/** Whether a move from `from` to `to` leaves the break for good: into the reveal, or on past the block with the Early answer reveal. Only the Advance press needs grading complete for it. */
+export function isBreakExit(from: GameStatus, to: GameStatus): boolean {
+  return (from === 'break_intro' || from === 'break') && !isBreakStatus(to);
+}
+
+/** A question's answer is on air: a reveal or an Early answer reveal question (not a title card). */
+export function isRevealQuestionStatus(
+  status: GameStatus,
+): status is 'answers' | 'reveal' {
+  return status === 'answers' || status === 'reveal';
+}
+
+/** The Early answer reveal is airing, before the break: its title card or one of its answers. */
+export function isEarlyAnswersStatus(
+  status: GameStatus,
+): status is 'answers_intro' | 'answers' {
+  return status === 'answers_intro' || status === 'answers';
 }
 
 export function isGradedStatus(status: GameStatus): boolean {

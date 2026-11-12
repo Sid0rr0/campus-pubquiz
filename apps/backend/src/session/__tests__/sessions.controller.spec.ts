@@ -213,6 +213,7 @@ describe('SessionsController', () => {
     it.each([
       ['jokers', { jokersEnabled: true, showRoundOverview: true }, undefined],
       ['power-ups', { powerUpsEnabled: true }, undefined],
+      ['early answer reveal', { earlyAnswerReveal: true }, undefined],
       ['starting coins', { startingCoins: 3 }, undefined],
       ['a league', {}, [4]],
     ])(

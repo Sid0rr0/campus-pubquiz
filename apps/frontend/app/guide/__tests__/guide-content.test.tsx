@@ -133,6 +133,23 @@ describe('GuideContent', () => {
     expect(text).toContain('changed by the quiz master');
   });
 
+  it('explains Show correct answers before break: the flow and Previous', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Show correct answers before break');
+    expect(text).toContain('without verdicts');
+    expect(text).toContain('opens the leaderboard');
+    expect(text).toContain('Previous walks the answers back');
+    expect(text).toContain('grading can start meanwhile');
+  });
+
+  it('still says how the quiz starts and ends', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Previous on the rules returns to the lobby');
+    expect(text).toContain('After the last block it ends the quiz');
+  });
+
   it('explains the 2× stamp on the leaderboard', () => {
     const text = renderGuideText();
 

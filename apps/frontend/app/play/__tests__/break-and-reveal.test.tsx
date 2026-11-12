@@ -217,6 +217,24 @@ describe('PlayPage — break and reveal', () => {
     expect(screen.getByText('Mango')).toBeInTheDocument();
   });
 
+  it("shows the correct answer beside the team's own answer in the early answer reveal, with no verdict colour or points", () => {
+    const early = { ...FRUIT_REVEAL, progress: { status: 'answers' as const } };
+    renderPhone(early, {
+      myAnswers: {
+        1: myAnswer('Banana', {
+          grade: { pointsAwarded: 5, verdict: 'correct' },
+        }),
+      },
+      seenQuestions: seenQuestionsOf(early),
+    });
+
+    expect(
+      screen.getByText('Banana', { selector: 'p.font-display' }),
+    ).not.toHaveClass('text-green');
+    expect(screen.getByText(/your answer/i)).toBeInTheDocument();
+    expect(screen.queryByText('5 / 5 points')).not.toBeInTheDocument();
+  });
+
   it('shows points awarded next to YOUR ANSWER during reveal once graded', () => {
     renderPhone(FRUIT_REVEAL, {
       myAnswers: {

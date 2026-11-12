@@ -114,6 +114,29 @@ describe('usePhoneQuestionBrowser', () => {
     expect(window.localStorage.getItem(AUTO_ADVANCE_STORAGE_KEY)).toBe('1');
   });
 
+  it('hands over the revealed question under the post-break leaderboard', () => {
+    const { result } = renderHook(() =>
+      usePhoneQuestionBrowser(
+        playersView({
+          rounds: [...ROUNDS, { questions: [{ prompt: 'Name a river' }] }],
+          settings: { earlyAnswerReveal: true },
+          progress: {
+            status: 'round_intro',
+            roundIndex: 1,
+            questionIndex: 0,
+            furthestOpenIndex: -1,
+            isLeaderboardVisible: true,
+          },
+        }),
+      ),
+    );
+
+    expect(result.current.selectedQuestion?.prompt).toBe('Name a fruit');
+    expect(result.current.revealQuestion?.id).toBe(
+      result.current.selectedQuestion?.id,
+    );
+  });
+
   it('shows no question while the phone is not on the block browser', () => {
     const { result } = renderHook(() =>
       usePhoneQuestionBrowser(

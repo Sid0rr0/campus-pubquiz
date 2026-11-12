@@ -284,5 +284,6 @@ export function getGameContext(session: SessionState): GameContext {
     showRoundOverview: session.seededGame.settings.showRoundOverview,
     jokersEnabled: playsJokers(session.seededGame),
     autoplayMedia: session.seededGame.settings.autoplayMedia,
+    earlyAnswerReveal: session.seededGame.settings.earlyAnswerReveal,
   };
 }

@@ -96,6 +96,8 @@ export const HEADING_BY_SCREEN: Record<OnAirScreen['kind'], RegExp> = {
   break_intro: /^Break \d+$/,
   break_review: /^Break · Reviewing /,
   break_round_title: /^Break · Round \d+ title$/,
+  answers_intro: /^Answers · Round \d+ title$/,
+  answers: /^Answers R\d+ Q\d+$/,
   reveal_intro: /^Revealing · Round \d+ title$/,
   reveal: /^Revealing R\d+ Q\d+$/,
   leaderboard: /^Leaderboard$/,

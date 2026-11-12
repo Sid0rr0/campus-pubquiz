@@ -1,13 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import {
+  type GameAction,
   type GameProgress,
+  isBreakExit,
   isBreakStatus,
+  isEarlyAnswersStatus,
   isGradedStatus,
+  isRevealingStatus,
   type ScoredQuestion,
   type SessionState,
   summarizeClosestGuess,
   getBlockInPlay,
   getBlockInPlayIds,
+  getPostBreakBoardBlock,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
@@ -65,8 +70,12 @@ export class BlockGradingService {
   async gradeForMove(
     session: SessionState,
     toProgress: GameProgress,
+    pressed: GameAction,
   ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
-    await this.assertNothingUngradedLeavingBreak(session, toProgress);
+    // Only the Advance press leaves the break for good; Previous and End Quiz never need grading done.
+    if (pressed === 'ADVANCE') {
+      await this.assertNothingUngradedLeavingBreak(session, toProgress);
+    }
     const speedScored = await this.ensureQuickfireSpeedScored(
       session,
       toProgress,
@@ -95,7 +104,12 @@ export class BlockGradingService {
       session,
       progress,
     );
-    return this.refreshUngradedQuestionIds(summarized, progress);
+    // The post-break board shows the block before this fresh round intro, whose summaries the batch above cannot see.
+    const boardBlock = getPostBreakBoardBlock({ ...summarized, progress });
+    const { session: withBoardBlock } = boardBlock
+      ? await this.ensureBlockGraded(summarized, boardBlock)
+      : { session: summarized };
+    return this.refreshUngradedQuestionIds(withBoardBlock, progress);
   }
 
   /**
@@ -107,10 +121,7 @@ export class BlockGradingService {
     session: SessionState,
     toProgress: GameProgress,
   ): Promise<void> {
-    const { status } = session.progress;
-    // Stryker disable next-line ConditionalExpression: equivalent, the other moves into reveal_intro start from a reveal, where the gate already passed and no answer can be ungraded.
-    const isLeavingBreak = status === 'break_intro' || status === 'break';
-    if (!isLeavingBreak || toProgress.status !== 'reveal_intro') return;
+    if (!isBreakExit(session.progress.status, toProgress.status)) return;
 
     const ungradedQuestionIds = await this.getUngradedBlockQuestionIds(session);
     if (ungradedQuestionIds.length > 0) {
@@ -132,7 +143,11 @@ export class BlockGradingService {
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
-    if (!isGradedStatus(newProgress.status)) {
+    // The early answer reveal airs the answers (closest_guess steps included) before the break.
+    if (
+      !isGradedStatus(newProgress.status) &&
+      !isRevealingStatus(newProgress.status)
+    ) {
       return { session, staleAnswerListIds: [] };
     }
 
@@ -413,7 +428,11 @@ export class BlockGradingService {
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<SessionState> {
-    if (!isBreakStatus(newProgress.status)) return session;
+    // The early answer reveal comes before the break, but grading can start there.
+    const { status } = newProgress;
+    if (!isBreakStatus(status) && !isEarlyAnswersStatus(status)) {
+      return session;
+    }
     const refresh = await this.readGradingRefresh(
       session,
       newProgress,

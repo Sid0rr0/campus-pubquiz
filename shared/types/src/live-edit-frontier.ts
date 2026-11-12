@@ -1,4 +1,4 @@
-import { isGradedStatus } from './game-state-groups';
+import { isGradedStatus, isRevealingStatus } from './game-state-groups';
 import type { SessionState } from './session-state';
 
 /**
@@ -46,6 +46,7 @@ export function getSessionLiveEditFrontier(
     hasCurrentBlockStartedLocking:
       status === 'locking' ||
       isGradedStatus(status) ||
+      isRevealingStatus(status) ||
       roundIndex < currentRoundIndex,
   };
 }

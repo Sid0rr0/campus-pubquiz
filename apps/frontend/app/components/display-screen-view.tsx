@@ -226,12 +226,23 @@ function RevealIntroView({
   );
 }
 
+function AnswersIntroView({
+  screen,
+}: ScreenViewProps<'answers_intro'>): ReactNode {
+  return (
+    <RoundTitleCard
+      label={`ANSWERS · ROUND ${screen.roundNumber}`}
+      roundTitle={screen.title}
+    />
+  );
+}
+
 function RevealView({
   screen,
   settings,
   live,
   media,
-}: ScreenViewProps<'reveal'>): ReactNode {
+}: ScreenViewProps<'answers'> | ScreenViewProps<'reveal'>): ReactNode {
   return (
     <RevealScreen
       screen={screen}
@@ -260,6 +271,8 @@ const SCREEN_VIEWS: {
   break_intro: BreakIntroScreen,
   break_review: BreakReviewScreen,
   break_round_title: BreakRoundTitleView,
+  answers_intro: AnswersIntroView,
+  answers: RevealView,
   reveal_intro: RevealIntroView,
   reveal: RevealView,
 };
@@ -284,7 +297,10 @@ function RevealScreen({
   media,
   live,
 }: {
-  screen: Extract<DisplayScreenViewProps['screen'], { kind: 'reveal' }>;
+  screen: Extract<
+    DisplayScreenViewProps['screen'],
+    { kind: 'answers' | 'reveal' }
+  >;
   autoplayMedia: boolean;
   media: LiveMediaProps;
   live: DisplayScreenViewProps['live'];

@@ -11,7 +11,7 @@ import {
 } from './block-questions';
 import { coinBalance } from './coin-ledger';
 import { canBeDoubled, playsJokers } from './doubled-rounds';
-import { isAnsweringStatus } from './game-state-groups';
+import { isAnsweringStatus, isRevealQuestionStatus } from './game-state-groups';
 import {
   hasJokerPickOpened,
   pickableRounds,
@@ -112,7 +112,8 @@ function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
 
 /** The power-ups used on the question on air in 'reveal'; empty outside a reveal. */
 function describePowerUpCounts(session: SessionState): PowerUpCount[] {
-  if (session.progress.status !== 'reveal') return [];
+  const { status } = session.progress;
+  if (!isRevealQuestionStatus(status)) return [];
   const question =
     getBlockSeededQuestions(session)[session.progress.revealIndex];
   return question

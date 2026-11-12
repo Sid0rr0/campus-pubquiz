@@ -388,6 +388,48 @@ describe('planMove', () => {
 
       expect(planMove(session, 'PREVIOUS').kind).toBe('transition');
     });
+
+    describe('with the Early answer reveal on', () => {
+      const earlyBreak = (overrides: Partial<SessionState> = {}) => {
+        const session = sessionWith(
+          [round(1, [10, 11]), round(2, [20])],
+          { status: 'break_intro', questionIndex: 1, revealIndex: 1 },
+          overrides,
+        );
+        return {
+          ...session,
+          seededGame: {
+            ...session.seededGame,
+            settings: {
+              ...session.seededGame.settings,
+              earlyAnswerReveal: true,
+            },
+          },
+        };
+      };
+
+      it('is refused from the break while answers wait for grading', () => {
+        const step = planMove(
+          earlyBreak({ ungradedQuestionIds: [10] }),
+          'ADVANCE',
+        );
+
+        expect(step).toMatchObject({
+          kind: 'grading_pending',
+          ungradedQuestionIds: [10],
+        });
+      });
+
+      it("goes on to the next round's intro with the leaderboard up", () => {
+        const step = planMove(earlyBreak(), 'ADVANCE');
+
+        expect(step.kind === 'transition' && step.progress).toMatchObject({
+          status: 'round_intro',
+          roundIndex: 1,
+          isLeaderboardVisible: true,
+        });
+      });
+    });
   });
 });
 

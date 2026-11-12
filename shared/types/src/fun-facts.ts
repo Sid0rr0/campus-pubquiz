@@ -500,9 +500,9 @@ function revealedJokerFacts(
 /**
  * The fun facts for the break the session is in, in the order they rotate.
  * Pure, and the one place that decides what a fun fact may say: the facts
- * about questions read only blocks before the block in play (whose answers
- * stay hidden until its reveal); "bonus awards so far" is a count that gives
- * nothing away. Closest guess questions are left out of the rate-based facts
+ * about questions read only blocks before the block in play, including its
+ * break. With Early answer reveal that block's answers may have aired, but its
+ * results have not. "Bonus awards so far" is a count that gives nothing away. Closest guess questions are left out of the rate-based facts
  * and the clean sweep. A fact with no data is skipped, so the first break
  * yields only the bonus awards (or nothing).
  */

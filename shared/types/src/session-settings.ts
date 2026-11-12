@@ -29,6 +29,8 @@ export interface SessionSettings {
   versusEnabled: boolean;
   /** The Versus sides, in colour order: 2–4 while Versus is on. */
   versusSides: VersusSide[];
+  /** Early answer reveal (pub quizzes only): whether /display shows each question's correct answer before the break — see GLOSSARY.md. */
+  earlyAnswerReveal: boolean;
   /** One entry per rendered /rules bullet line — display text only, no enforcement. */
   rules: string[];
   /** Caps how many times a single team may be awarded a given bonus category this session (e.g. shot: 2, selfie: 1); a category absent from the map has no cap. */
@@ -90,6 +92,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   jokersEnabled: false,
   versusEnabled: false,
   versusSides: Object.freeze([]) as unknown as VersusSide[],
+  earlyAnswerReveal: false,
   maxBonusAwardsPerCategory: Object.freeze({
     shot: 2,
     selfie: 1,

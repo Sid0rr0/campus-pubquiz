@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { QuizMode, SessionSettings } from '@campus-pubquiz/types';
@@ -362,6 +362,25 @@ describe('SessionSettingsForm', () => {
     );
 
     expect(screen.getByLabelText(/show round overview/i)).toBeEnabled();
+  });
+
+  it('toggles the early answer reveal on for a pub quiz, and does not offer it for quickfire', async () => {
+    const onChange = vi.fn();
+    renderControlled(DEFAULT_SESSION_SETTINGS, onChange);
+    const toggle = screen.getByLabelText(/show correct answers before break/i);
+    expect(toggle).not.toBeChecked();
+
+    await userEvent.click(toggle);
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      earlyAnswerReveal: true,
+    });
+    cleanup();
+    renderControlled(DEFAULT_SESSION_SETTINGS, vi.fn(), 'quickfire');
+    expect(
+      screen.queryByLabelText(/show correct answers before break/i),
+    ).not.toBeInTheDocument();
   });
 
   it('toggles collectFeedback off, and it starts on', async () => {

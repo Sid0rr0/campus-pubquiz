@@ -113,6 +113,12 @@ lobby → rules → round_overview (optional)
   → next block's round_intro … → ended
 ```
 
+With the **Early answer reveal** session setting on, locking goes
+`answers_intro → answers … → break_intro` instead (the answers air before the
+break, without verdicts), and leaving the break skips the reveal: it goes
+straight to the next block's `round_intro` (or `ended` after the last block)
+with the leaderboard up, and phones show the block's verdicts under it.
+
 Meanings of these terms (block, break, break review, round title card,
 status groups) live in [`GLOSSARY.md`](GLOSSARY.md); this table is the
 behaviour of each status.
@@ -126,8 +132,10 @@ behaviour of each status.
 | `round_intro`       | Round title card: "ROUND N — category", title, author, and the round note when shown on screen                                                                                                                                                                                                                                | "Look at the screen" + round title, with a "2× POINTS" joker card played when it is the team's joker round and the intro comes on live; the block browser instead if questions are already open                                                                      | `ADVANCE` from `round_overview` (or `joker_pick`), from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
 | `question_open`     | The current question (prompt + media)                                                                                                                                                                                                                                                                                         | Block browser: every question opened so far in the block, answerable (last write wins)                                                                                                                                                                               | `ADVANCE` from `round_intro` or the previous question                                                                                                | Next question; the next round's `round_intro` if the block continues; `locking` on the block's last question           |
 | `locking`           | Countdown on the block's last question                                                                                                                                                                                                                                                                                        | Still answerable, with a thin bar draining to the same lock deadline as the countdown; when the block locks the phone buzzes and stamps "Locked" (live moves only, not on reconnect or Previous)                                                                     | `ADVANCE` from the block's last question                                                                                                             | `break_intro` — the block locks; a quickfire round goes straight to `reveal`                                              |
-| `break_intro`       | "BREAK N" card, break timer, bonus categories, and "Rate the rounds on your phone ★" when feedback is collected                                                                                                                                                                                                               | Block browser, read-only                                                                                                                                                                                                                                             | The block locking                                                                                                                                    | `reveal_intro` — refused while any answer in the block is ungraded                                                     |
-| `break`             | One locked question under break review (prompt + media, no answer)                                                                                                                                                                                                                                                            | Block browser, read-only                                                                                                                                                                                                                                             | `PREVIOUS` from `break_intro` (lands on the block's last question) or from a later question                                                          | The next question in the block; from the block's last question, `reveal_intro` (same ungraded check)                   |
+| `answers_intro`     | Round title card: "ANSWERS · ROUND N", title (Early answer reveal only)                                                                                                                                                                                                                                                       | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | The block locking, or `ADVANCE` across the start of a round during the early answer reveal                                                           | `answers` on that round's first question                                                                               |
+| `answers`           | One question with its correct answer (and `answer_media_url`), Question notes when set to show, power-up use counts, the full closest-guess stepped reveal — but no correct-rate figures (Early answer reveal only)                                                                                                            | Block browser in `answers` mode: the team's own answer beside the correct answer, with no verdict colours, item marks or points ("Follow the screen" tracks the question on air)                                                                                    | `ADVANCE` from `answers_intro` or the previous answer                                                                                                | Next answer; `answers_intro` at a round boundary; `break_intro` after the block's last question                        |
+| `break_intro`       | "BREAK N" card, break timer, bonus categories, and "Rate the rounds on your phone ★" when feedback is collected                                                                                                                                                                                                               | Block browser, read-only                                                                                                                                                                                                                                             | The block locking, or (Early answer reveal) `ADVANCE` from the block's last answer                                                                   | `reveal_intro` — refused while any answer in the block is ungraded. With the Early answer reveal: the next block's `round_intro` (or `ended`) with the leaderboard up, same refusal |
+| `break`             | One locked question under break review (prompt + media, no answer)                                                                                                                                                                                                                                                            | Block browser, read-only                                                                                                                                                                                                                                             | `PREVIOUS` from `break_intro` (lands on the block's last question; not with the Early answer reveal) or from a later question                                                          | The next question in the block; from the block's last question, `reveal_intro` or (Early answer reveal) the leaving step above (same ungraded check)                   |
 | `break_round_intro` | Round title card: "ROUND N", title — no answers implied                                                                                                                                                                                                                                                                       | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | `PREVIOUS` across the start of a round during break review                                                                                           | Back into `break` on the same question                                                                                 |
 | `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                                                                                                                                                                                                                                                                        | "Look at the screen" + round title (+ joker badge on the team's joker round)                                                                                                                                                                                         | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                                        | `reveal` on that round's first question                                                                                |
 | `reveal`            | One question with its correct answer (and `answer_media_url`), and its Question notes when set to show                                                                                                                                                                                                                                                                 | Block browser with the team's answer ("Your answer", coloured by its Verdict: green correct, cyan partial, magenta incorrect or no answer), the correct answer and points; a sort answer is listed item by item, each marked ✓ or ✗ for sitting in its correct slot (not for no answer or "I don't know", and still shown when the moderator overrode the points)                                                                                            | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a quickfire round                                                           | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
@@ -145,6 +153,17 @@ a `break_round_intro` card at the start of each round (the quiz's first
 round included), and from the block's first round card it crosses into the
 previous block's `reveal`.
 
+With the Early answer reveal on, `PREVIOUS` walks the early answer reveal
+instead of break review: from `break_intro` it shows the block's last
+`answers` question (with its answer), then steps back through `answers` and
+`answers_intro` mirroring the forward walk. A block's first `answers_intro`
+goes back to the previous block's `break_intro` (the quiz's first block goes
+to wherever Previous from its first `round_intro` goes), because a locked block
+never reopens. A `round_intro` reached from a break goes back to that block's
+`break_intro` with the leaderboard hidden and every grade kept; Previous out of
+`ended` onto the last break card hides the leaderboard too. The leaderboard
+only ever opens on the forward move out of a break.
+
 `break_round_intro` is deliberately a separate status from
 `round_intro`/`reveal_intro`, even though all three draw a round title card:
 those two treat their round as live (open for answering) or already
@@ -154,8 +173,9 @@ for answers or leak an unrevealed one.
 Grading is not tied to a status. The admin can grade an answer as soon as it
 arrives (a team revising an answer into something that doesn't match the key
 clears its grade); the break is
-where remaining grading must be finished, since leaving it is refused while
-any answer in the block is ungraded. While one is, /remote's "next" line says
+where remaining grading must be finished, since Advance out of it is refused
+while any answer in the block is ungraded (Previous and End Quiz are never
+refused). While one is, /remote's "next" line says
 Advance is "Waiting for grading" (the Advance slot still shows Advance); it
 switches to the reveal's round title card once the last answer is graded, and
 follows a live answer-key fix that makes an answer ungraded or clears the last
@@ -315,9 +335,9 @@ what it draws:
 | `joker_pick`                                       | `endsAt` (the pick's deadline, null once closed), `rounds` (every round: `roundId`, `roundNumber`, `title`, `category`, `author`, `canBeJoker`), `pickedTeamIds` (roster teams that chose a joker themselves; the screen ticks their names off and shows "N/M picked"); never which round a team picked |
 | `round_title`                                      | `roundNumber`, `title`, `category`, `author`, `note` ('' when the round has none or hides its note)                                                                                                                                                                                       |
 | `break_round_title`                                | `roundNumber`, `title`, `note`                                                                                                                                                                                                                                                            |
-| `reveal_intro`                                     | `roundNumber`, `title`                                                                                                                                                                                                                                                                    |
+| `answers_intro`, `reveal_intro`                    | `roundNumber`, `title`                                                                                                                                                                                                                                                                    |
 | `question`, `break_review` | The question being drawn |
-| `reveal` | The question being drawn, `notes` (the Question notes; `''` unless shown at the reveal and the answer is on air) |
+| `answers`, `reveal` | The question being drawn, `notes` (the Question notes; `''` unless shown at the reveal and the answer is on air). The display view's `teamsCorrect` (correct-rate figures) is null on `answers`; `powerUpCounts` is filled on both |
 | `locking`                                          | `lockAt`                                                                                                                                                                                                                                                                                  |
 | `break_intro`                                      | `roundNumber`, `breakNumber`, `isFinalBreak` (hides the bonus list), `isFeedbackPromptShown`, `funFacts`, `breakEndsAt`                                                                                                                                                                   |
 | `leaderboard`                                      | `board`, `revealCount`, `isFinal` (the quiz has ended, or this is the last break, which crowns the winners)                                                                                                                                                                               |
@@ -330,7 +350,9 @@ Each room gets **its own view**, built by the screen projection
 the display view carries the **Display screen** (`screen`: the screen on air with the content it draws, or `blank` when that content can't be found, which the server logs); the admin view names the **On-air screen** (`onAirScreen`) and adds what `/control`
 marks as on air plus server-decided Advance/Previous availability and **control availability** (`controlAvailability`: what the quiz master can do right now, built from the same Display screen `/display` is sent, which the admin room itself never receives), and gives each
 roster team its player count and over-cap flag; the
-players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state; its `block` kind carries a mode of `answering`, `locked` or `revealing`), and drops anything teams haven't been shown
+players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state; its `block` kind carries a mode of `answering`, `locked`, `answers` or `revealing`; under the post-break leaderboard of the Early answer reveal
+the phone screen is the just-graded block in `revealing` mode, with that whole block in
+`blockQuestions` and `revealQuestions`, instead of the leaderboard), and drops anything teams haven't been shown
 yet (a quickfire question hidden behind the leaderboard is removed server-side,
 never filtered by the client). In particular it carries only the reveal walk so
 far: `revealQuestions` holds the questions before `revealIndex`, plus the one at
@@ -596,8 +618,11 @@ correct rate says nothing and it always has a winner: it is left out of
 `toughest_question`, `room_split` and `nobody_got_it`, and out of the
 `clean_sweep` block (a block of only closest guesses has no sweep).
 `fastest_correct_answer` stays quickfire-only. The
-facts about questions read only the blocks before the block in play (whose
-answers stay hidden until its reveal); the block in play contributes nothing.
+facts about questions read only the blocks whose results are out, i.e. the
+blocks before the block in play; the block in play, or in its break, contributes
+nothing. That holds with **Early answer reveal** on too: the block in its break
+has aired its answers but not its results, so a fact like `toughest_question`
+would leak them.
 At the first break nothing is revealed, so only `bonus_awards_so_far` and the
 three joker facts that name no team can appear (and the list is `[]` when no
 bonus was awarded and Jokers is off). The joker facts that name a team
@@ -821,6 +846,16 @@ offer the switch there), and like every setting a Versus change is refused once
 the quiz has started. The start dialog and the `/control` lobby settings panel
 show the switch, one name field per side with its colour swatch, and add/remove
 buttons (add stops at 4, remove at 2).
+
+**Early answer reveal.** The **`earlyAnswerReveal`** switch (default off; a stored
+settings JSON without it reads as off, so no migration) is the setting behind the
+glossary's "Early answer reveal"; it makes the answers air between the lock and the break and the break lead on to the leaderboard. It is pub-quiz
+only: a quickfire quiz's session refuses `earlyAnswerReveal: true` (400 on
+`POST /sessions` and on the lobby settings change, "A quickfire session can't
+show answers before the break"; `quizModeAllows(mode, 'earlyAnswerReveal')`), and
+like every setting it is refused once the quiz has started. The start dialog and
+the `/control` lobby settings panel show it as "Show correct answers before
+break", for pub quizzes only.
 
 _A team's side._ The side a team picked is a nullable `side_id` on its
 `game_session_teams` row (a `VersusSide.id`), cached in

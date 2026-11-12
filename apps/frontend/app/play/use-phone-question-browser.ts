@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { StateViewByRoom } from '@campus-pubquiz/types';
+import {
+  isRevealQuestionStatus,
+  type StateViewByRoom,
+} from '@campus-pubquiz/types';
 import {
   browsedQuestionAfterAutoAdvanceChange,
   selectPhoneQuestion,
@@ -151,7 +154,9 @@ function browserInputsOf(view: PlayersView | null) {
     currentQuestionId: currentQuestion?.id ?? null,
     // Only changes while actively revealing (currentQuestionId stays null
     // throughout break/reveal), so this alone can key the reveal-walk sync.
-    revealSyncKey: progress.status === 'reveal' ? progress.revealIndex : null,
+    revealSyncKey: isRevealQuestionStatus(progress.status)
+      ? progress.revealIndex
+      : null,
     blockQuestions: view.blockQuestions,
     onScreenQuestionId: isBlockScreen ? phoneScreen.onScreenQuestionId : null,
     isBlockScreen,
@@ -162,7 +167,13 @@ function revealQuestionOf(
   view: PlayersView | null,
   selectedQuestion: { id: number } | null,
 ) {
-  return view?.progress.status === 'reveal' && selectedQuestion
+  // The phone's mode says it too: under the post-break leaderboard the status is a round intro, yet the graded block is revealed.
+  const { phoneScreen } = view ?? {};
+  const isRevealed =
+    view &&
+    (isRevealQuestionStatus(view.progress.status) ||
+      (phoneScreen?.kind === 'block' && phoneScreen.mode === 'revealing'));
+  return view && isRevealed && selectedQuestion
     ? view.revealQuestions.find(
         (question) => question.id === selectedQuestion.id,
       )

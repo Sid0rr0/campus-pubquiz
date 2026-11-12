@@ -126,7 +126,11 @@ A line of trivia about the session so far, shown on the big screen during a brea
 _Avoid_: stat, highlight (that's a stats-page tile)
 
 **Break review**:
-Stepping back through a block's locked questions during its break, with answers still hidden, e.g. to show a question to the room again.
+Stepping back through a block's locked questions during its break, with answers still hidden, e.g. to show a question to the room again. A session with **Early answer reveal** has none: stepping back from its break walks the early answer reveal instead.
+
+**Early answer reveal**:
+A pub quiz session setting under which a block's correct answers are shown as soon as it locks, before its break, while grading is still open. Teams see their own answers beside the correct ones but no verdicts or points. The block's results (verdicts and the leaderboard) follow the break, and there is no separate reveal after it. Off by default.
+_Avoid_: early reveal (a reveal shows results too), answers first
 
 **Round title card**:
 A screen showing a round's name before its content: the round intro before its questions, the break round intro when break review steps across it, and the reveal intro before its answers are revealed.
@@ -368,8 +372,9 @@ One block, in order:
 lobby → rules → round_overview
   → joker_pick (only with Jokers on)
   → round_intro → question_open … → locking        ← answering
+  → answers_intro → answers (only with Early answer reveal)  ← revealing, not graded
   → break_intro (+ break, break_round_intro in break review)  ← in the break
-  → reveal_intro → reveal                           ← revealing
+  → reveal_intro → reveal (not with Early answer reveal)  ← revealing
   → (next block) … → ended
 ```
 
@@ -377,7 +382,7 @@ lobby → rules → round_overview
 - **question on air** — is a question showing on the big screen? (question_open, locking)
 - **break** — is the block in its break? (break_intro, break, break_round_intro)
 - **graded** — is grading finished, so scores can be trusted and shown? (the break statuses, reveal_intro, reveal, ended)
-- **revealing** — are correct answers being shown? (reveal_intro, reveal)
+- **revealing** — are correct answers being shown? (answers_intro, answers, reveal_intro, reveal)
 - **block started** — do the current block's questions exist for teams yet? (answering plus graded)
 
 `joker_pick`, like `lobby`, `rules` and `round_overview`, is in no group: it comes before any block exists.

@@ -87,3 +87,4 @@ export * from './dry-run-press';
 export * from './session-snapshot';
 export * from './screen-projection';
 export * from './quiz-preview';
+export * from './post-break-board';

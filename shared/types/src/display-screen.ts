@@ -71,7 +71,15 @@ export type DisplayScreen =
       title: string;
       note: string;
     }
+  | { kind: 'answers_intro'; roundNumber: number; title: string }
   | { kind: 'reveal_intro'; roundNumber: number; title: string }
+  | {
+      /** The early answer reveal's question: what `reveal` carries, drawn without the figures derived from grading. */
+      kind: 'answers';
+      question: PlayersRevealQuestionView;
+      /** '' unless the question shows its notes on screen and its answer is on air. */
+      notes: string;
+    }
   | {
       kind: 'reveal';
       question: PlayersRevealQuestionView;
@@ -117,6 +125,7 @@ export function getPlayingMediaUrl(screen: DisplayScreen): string | undefined {
     case 'question':
     case 'break_review':
       return screen.question.mediaUrl;
+    case 'answers':
     case 'reveal':
       return screen.question.revealKind === 'closest_guess_pending'
         ? undefined
@@ -272,6 +281,8 @@ const SCREEN_BUILDERS: ScreenBuilders = {
   break_intro: breakIntroScreen,
   break_review: breakReviewScreen,
   break_round_title: breakRoundTitleScreen,
+  answers_intro: revealIntroScreen,
+  answers: revealScreen,
   reveal_intro: revealIntroScreen,
   reveal: revealScreen,
   leaderboard: leaderboardScreen,
@@ -328,12 +339,12 @@ function breakRoundTitleScreen(
 
 function revealIntroScreen(
   { revealQuestions }: DisplayScreenInput,
-  onAir: OnAirOf<'reveal_intro'>,
+  onAir: OnAirOf<'reveal_intro' | 'answers_intro'>,
 ): DisplayScreen {
   const question = questionById(revealQuestions, onAir.questionId);
   if (!question) return BLANK;
   return {
-    kind: 'reveal_intro',
+    kind: onAir.kind,
     roundNumber: question.roundNumber,
     title: question.roundTitle,
   };
@@ -341,12 +352,12 @@ function revealIntroScreen(
 
 function revealScreen(
   { session, revealQuestions }: DisplayScreenInput,
-  onAir: OnAirOf<'reveal'>,
+  onAir: OnAirOf<'reveal' | 'answers'>,
 ): DisplayScreen {
   const question = questionById(revealQuestions, onAir.questionId);
   return question
     ? {
-        kind: 'reveal',
+        kind: onAir.kind,
         question,
         notes: getDisplayRevealNotes(session.seededGame.rounds, question),
       }

@@ -3,12 +3,17 @@ import {
   isLastQuestionBeforeBreak,
   isShowdownEligible,
 } from './admin-view-flags';
-import { getBlockSeededQuestions } from './block-questions';
+import {
+  getBlockQuestions,
+  getBlockSeededQuestions,
+  getRevealQuestions,
+} from './block-questions';
+import { getPostBreakBoardBlock } from './post-break-board';
 import { getFeedbackField } from './feedback-rounds';
 import { describeControlAvailability } from './control-availability';
 import type { DisplayScreen } from './display-screen';
 import type { GameProgress } from './game-state-types';
-import { isRevealingStatus } from './game-state-groups';
+import { isRevealingStatus, isRevealQuestionStatus } from './game-state-groups';
 import { isQuestionHiddenBehindQuickfireLeaderboard } from './quickfire-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
 import { describeSessionSideStandings } from './side-standings';
@@ -24,6 +29,7 @@ import {
   describeAdminIndicators,
   describeOnAirScreen,
   describePlayersScreen,
+  type PhoneScreen,
   screenPositionOf,
 } from './on-air-screen';
 import type {
@@ -55,10 +61,9 @@ function trimToRevealWalk(
   progress: GameProgress,
   closestGuessRevealStep: number,
 ): PlayersRevealQuestionView[] {
-  const shownCount =
-    progress.status === 'reveal'
-      ? progress.revealIndex + 1
-      : progress.revealIndex;
+  const shownCount = isRevealQuestionStatus(progress.status)
+    ? progress.revealIndex + 1
+    : progress.revealIndex;
   return trimOnAirQuestion(
     revealQuestions.slice(0, shownCount),
     progress,
@@ -245,7 +250,30 @@ function projectPlayers({
             closestGuessRevealStep,
           ),
   };
+  const gradedBlock = getPostBreakBoardBlock(session);
+  if (gradedBlock) {
+    return withGradedBlock(view, { ...session, progress: gradedBlock });
+  }
   return isQuestionHiddenBehindQuickfireLeaderboard(session)
     ? { ...view, currentQuestion: null, blockQuestions: [] }
     : view;
+}
+
+/** Under the post-break leaderboard the phone shows the block just graded, whole and with its verdicts, instead of the board. */
+function withGradedBlock<View extends object>(
+  view: View,
+  gradedSession: SessionState,
+) {
+  const revealQuestions = getRevealQuestions(gradedSession);
+  return {
+    ...view,
+    phoneScreen: {
+      kind: 'block',
+      mode: 'revealing',
+      onScreenQuestionId: revealQuestions[0]?.id ?? null,
+    } satisfies PhoneScreen,
+    blockQuestions: getBlockQuestions(gradedSession),
+    revealQuestions,
+    upcomingQuestions: [],
+  };
 }
