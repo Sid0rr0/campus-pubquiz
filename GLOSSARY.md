@@ -102,6 +102,10 @@ _Avoid_: grade status
 How one graded answer was judged: `correct`, `partial` or `incorrect`. It is separate from the points the answer earned, which speed scoring and rounding can scale, so a correct answer can earn less than full points. Teams see their own verdicts on their phones during the reveal.
 _Avoid_: result, mark, outcome
 
+**Perfect round**:
+A round in which a team has a `correct` verdict on every question. A `partial` or an unanswered question breaks it; how fast the answer came or on which clue does not matter. Closest-guess questions are left out, so a round of only closest-guess questions is never perfect. The leaderboard marks it with a 🔥 per perfect round. Not the same as the **clean sweep** fun fact, which is about a whole block.
+_Avoid_: clean round, full marks
+
 **Half points**:
 Exactly half a question's points, so half of a 1-point question is 0.5 and half of 3 is 1.5. Points the app works out itself (a part-right match, a quickfire speed score) are kept to the nearest half point.
 _Avoid_: partial points (a partial answer can earn any share, not just half)
