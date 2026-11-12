@@ -1,3 +1,4 @@
+import type { Verdict } from './answer-kind';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import type { QuestionType } from './question-types';
 
@@ -15,7 +16,7 @@ export function countPerfectRounds(
   answers: readonly {
     questionId: number;
     teamId: number;
-    verdict: string | null;
+    verdict: Verdict | null;
   }[],
 ): Map<number, number> {
   const correct = answers.filter(({ verdict }) => verdict === 'correct');
