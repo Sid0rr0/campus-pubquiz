@@ -9,7 +9,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `pointsGained` is present at the pub quiz reveal, at the next block's round intro, after the break with Early answer reveal, on the final board, and on the quickfire between-questions board
 - [ ] No `pointsGained` on a leaderboard brought up while a block is being answered, locked or in break

@@ -5,6 +5,9 @@ function escapeRegExp(text: string): string {
 }
 
 /** The big screen: `/display` for one session. Reads what the room would see. */
+/** What may follow a leaderboard row's total: a 🔥 per perfect round and the floating "+x" / "−x". */
+export const TRAILING_BADGES = '(?:🔥)*(?:[+−]\\d+(?:\\.5)?)?';
+
 export class DisplayScreen {
   readonly kind = 'display';
 
@@ -111,7 +114,7 @@ export class DisplayScreen {
       .getByRole('listitem')
       .filter({ hasText: teamName });
     await expect(row).toHaveText(
-      new RegExp(`${escapeRegExp(teamName)}\\s*${points}$`),
+      new RegExp(`${escapeRegExp(teamName)}\\s*${points}${TRAILING_BADGES}$`),
     );
   }
 }

@@ -167,6 +167,11 @@ describe('BreakIntroScreen — fun facts', () => {
       ['Alpha', 'Beta', 'Clean sweep'],
     ],
     [
+      'perfect_rounds',
+      { kind: 'perfect_rounds', teamCount: 1, teamName: 'Alpha' },
+      ['Only Alpha', 'has had a perfect round so far'],
+    ],
+    [
       'joker_favourite_round',
       {
         kind: 'joker_favourite_round',

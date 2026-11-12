@@ -10,7 +10,7 @@
 
 **Blocked by:** 01 (Points gained: "+x" and the pub quiz count-up)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `perfectRounds` counts multiple perfect rounds in the block, and partial or unanswered answers break a round
 - [ ] Closest-guess questions are left out, and a round of only closest-guess questions is never perfect
@@ -19,3 +19,7 @@
 - [ ] The quickfire round's-end board shows the 🔥 (or the finding is recorded and the user has settled it)
 - [ ] The component draws one 🔥 per perfect round right of the total, with its label, and static under reduced motion
 - [ ] `DOCUMENTATION.md` updated
+
+## Comments
+
+- Check first: the board exists. After a quickfire round's last question reveal, `advanceFromReveal` falls through to `leaveBlock`, which lands on the next round's `round_intro` (`furthestOpenIndex` -1) with the leaderboard up. The results window now includes it for quickfire rounds too, for both `pointsGained` and `perfectRounds`.

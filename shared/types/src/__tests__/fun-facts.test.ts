@@ -583,6 +583,54 @@ describe('describeFunFacts', () => {
     });
   });
 
+  describe('perfect rounds', () => {
+    const perfect = (teamIndex: number, ...ids: number[]) =>
+      ids.map((id) => answer(id, teamIndex, 'correct'));
+    const factOf = (session: SessionState) =>
+      describeFunFacts(session).find((f) => f.kind === 'perfect_rounds');
+
+    it('counts each team once across the revealed rounds, however many perfect rounds it has', () => {
+      const session = sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+        answers: [
+          ...perfect(0, 1, 2, 3, 4),
+          ...perfect(1, 3, 4),
+          answer(1, 2, 'correct'),
+          answer(2, 2, 'partial', { pointsAwarded: 500 }),
+        ],
+      });
+
+      expect(factOf(session)).toEqual({ kind: 'perfect_rounds', teamCount: 2 });
+    });
+
+    it('names the team when exactly one has a perfect round', () => {
+      const session = sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+        answers: perfect(2, 1, 2),
+      });
+
+      expect(factOf(session)).toEqual({
+        kind: 'perfect_rounds',
+        teamCount: 1,
+        teamName: 'Charlie',
+      });
+    });
+
+    it('is skipped when no team has one', () => {
+      const session = sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+        answers: [...perfect(0, 1), answer(2, 0, 'partial')],
+      });
+
+      expect(kinds(session)).not.toContain('perfect_rounds');
+    });
+
+    it('does not count the round in play or later rounds', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [...perfect(0, 3, 4), ...perfect(1, 5, 6)],
+      });
+
+      expect(kinds(session)).not.toContain('perfect_rounds');
+    });
+  });
+
   describe('closest guess questions', () => {
     // Question 1 is a closest guess (one winner by design); question 2 is ordinary.
     const rounds: RoundSpec[] = [
@@ -1046,6 +1094,7 @@ describe('describeFunFacts', () => {
         'room_split',
         'nobody_got_it',
         'clean_sweep',
+        'perfect_rounds',
         'joker_favourite_round',
         'joker_snubbed_round',
         'joker_drawn_count',
@@ -1269,6 +1318,7 @@ describe('describeFunFacts', () => {
       'room_split',
       'nobody_got_it',
       'clean_sweep',
+      'perfect_rounds',
       'bonus_awards_so_far',
     ]);
   });

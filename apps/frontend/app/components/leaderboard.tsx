@@ -169,6 +169,68 @@ function AnimatedTotal({
   return <span className={className}>{displayValue}</span>;
 }
 
+/** How long the "+x" stays after the row has settled, before it fades. */
+const GAIN_LINGER_MS = 2000;
+
+/** The floating "+x" / "−x" just outside a row's right border; fades GAIN_LINGER_MS after `settleDelayMs`. */
+function PointsGained({
+  gained,
+  settleDelayMs,
+}: {
+  gained: number;
+  settleDelayMs: number;
+}) {
+  const [isFaded, setIsFaded] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setIsFaded(true),
+      settleDelayMs + GAIN_LINGER_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [settleDelayMs]);
+  const isGain = gained > 0;
+  return (
+    <span
+      aria-label={`${isGain ? 'gained' : 'lost'} ${Math.abs(gained)} ${Math.abs(gained) === 1 ? 'point' : 'points'}`}
+      className={`absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap font-display text-display-2xl transition-opacity duration-700 ${isGain ? 'text-green' : 'text-red-500'} ${isFaded ? 'opacity-0' : 'opacity-100'}`}
+    >
+      {isGain ? '+' : '−'}
+      {Math.abs(gained)}
+    </span>
+  );
+}
+
+/** One flickering 🔥 per Perfect round, right of the total; static under reduced motion. */
+function PerfectRounds({ count = 0 }: { count?: number }) {
+  const isReducedMotion = useReducedMotion() ?? false;
+  if (count === 0) return null;
+  return (
+    <span
+      aria-label={`${count} perfect ${count === 1 ? 'round' : 'rounds'}`}
+      className="flex text-display-2xl"
+    >
+      {Array.from({ length: count }, (_, index) => (
+        <motion.span
+          key={index}
+          aria-hidden
+          animate={
+            isReducedMotion
+              ? undefined
+              : { opacity: [1, 0.75, 1], scale: [1, 1.12, 1] }
+          }
+          transition={{
+            duration: 1.1,
+            repeat: Infinity,
+            delay: index * 0.25,
+          }}
+        >
+          🔥
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
 export function Leaderboard({
   board,
   revealCount,
@@ -225,6 +287,13 @@ export function Leaderboard({
             isAnimatedIn={revealCount !== undefined}
             isNewest={row.rankIndex === newestRankIndex}
             hasOldState={hasOldState}
+            pointsGained={
+              // Quickfire: the "+x" waits for the counting phase.
+              hasOldState && phase === 'old'
+                ? undefined
+                : board.pointsGained?.[row.entry.teamId]
+            }
+            perfectRounds={board.perfectRounds?.[row.entry.teamId]}
             isStampLanding={!alreadyStampedTeamIds.has(row.entry.teamId)}
             sideColor={sideColors?.[row.entry.teamId]}
           />
@@ -241,22 +310,67 @@ interface LeaderboardRowItemProps {
   /** Whether this row holds the most recently revealed rank. */
   isNewest: boolean;
   hasOldState: boolean;
+  /** What the team gained in the block, when the board shows one: a pub quiz row counts up from `total − gained`, and the "+x" floats beside it. */
+  pointsGained?: number;
+  /** How many Perfect rounds the team had in the block; one 🔥 each. */
+  perfectRounds?: number;
   /** Whether the row's joker stamp, if it has one, slams down rather than just being there. */
   isStampLanding: boolean;
   /** The colour of the team's Versus side, when it has one. */
   sideColor?: string;
 }
 
-/** One row. Its entrance runs once on mount and is cut straight to its end as soon as a newer rank is revealed, so an Advance never waits for it. */
-function LeaderboardRowItem({
-  row: { entry, rankIndex, label, trend, isJokerStamped },
-  isAnimatedIn,
-  isNewest,
-  hasOldState,
-  isStampLanding,
-  sideColor,
-}: LeaderboardRowItemProps) {
-  const isReducedMotion = useReducedMotion() ?? false;
+/**
+ * A pub quiz row's total counting up from `total − gained` on mount (nothing to
+ * count without `gained`). Fixed on mount, so a live grade while the board is up
+ * does not replay it; cut to its end as soon as a newer rank is revealed.
+ */
+function useRowCountUp(
+  total: number,
+  gained: number | undefined,
+  isNewest: boolean,
+) {
+  const [from] = useState(() =>
+    gained === undefined ? undefined : total - gained,
+  );
+  const [counted, setCounted] = useState(from);
+  const controlsRef = useRef<AnimationPlaybackControls | undefined>(undefined);
+
+  useEffect(() => {
+    if (from === undefined) return undefined;
+    const controls = animate(from, total, {
+      duration: SCORE_COUNT_UP_MS / 1000,
+      ease: 'easeOut',
+      onUpdate: (latest) => setCounted(nearestHalfPoint(latest)),
+      onComplete: () => setCounted(undefined),
+    });
+    controlsRef.current = controls;
+    return () => controls.stop();
+    // Once per mount: see above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from]);
+
+  // Latched while rendering (not in an effect), so the cut shows at once.
+  const [isCut, setIsCut] = useState(false);
+  if (!isNewest && !isCut) setIsCut(true);
+
+  useEffect(() => {
+    if (isCut) controlsRef.current?.stop();
+  }, [isCut]);
+
+  return {
+    shownTotal: isCut ? total : (counted ?? total),
+    isCountingUp: from !== undefined,
+  };
+}
+
+/** A row's entrance: runs once on mount and is cut straight to its end as soon as a newer rank is revealed, so an Advance never waits for it. */
+function useRowEntrance(
+  rankIndex: number,
+  isAnimatedIn: boolean,
+  isNewest: boolean,
+  isReducedMotion: boolean,
+) {
   const [entrance] = useState(() => rankEntrance(rankIndex, isReducedMotion));
   const opacity = useMotionValue(isAnimatedIn ? 0 : 1);
   const y = useMotionValue(isAnimatedIn ? entrance.offsetY : 0);
@@ -279,6 +393,32 @@ function LeaderboardRowItem({
     }
   }, [isNewest]);
 
+  return { opacity, y };
+}
+
+/** One row of the board. */
+function LeaderboardRowItem({
+  row: { entry, rankIndex, label, trend, isJokerStamped },
+  isAnimatedIn,
+  isNewest,
+  hasOldState,
+  pointsGained,
+  perfectRounds,
+  isStampLanding,
+  sideColor,
+}: LeaderboardRowItemProps) {
+  const isReducedMotion = useReducedMotion() ?? false;
+  const { opacity, y } = useRowEntrance(
+    rankIndex,
+    isAnimatedIn,
+    isNewest,
+    isReducedMotion,
+  );
+  const { shownTotal, isCountingUp } = useRowCountUp(
+    entry.totalPoints,
+    !hasOldState && !isReducedMotion ? pointsGained : undefined,
+    isNewest,
+  );
   const totalPointsClassName = 'font-display text-display-3xl';
   return (
     <motion.li
@@ -307,7 +447,15 @@ function LeaderboardRowItem({
           className={totalPointsClassName}
         />
       ) : (
-        <span className={totalPointsClassName}>{entry.totalPoints}</span>
+        <span className={totalPointsClassName}>{shownTotal}</span>
+      )}
+      <PerfectRounds count={perfectRounds} />
+      {pointsGained !== undefined && (
+        <PointsGained
+          gained={pointsGained}
+          // Quickfire mounts it as counting starts; the board settles one count-up later.
+          settleDelayMs={isCountingUp || hasOldState ? SCORE_COUNT_UP_MS : 0}
+        />
       )}
     </motion.li>
   );

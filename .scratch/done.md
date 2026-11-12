@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| leaderboard-score-animation | [Leaderboard score animation and perfect rounds](leaderboard-score-animation/spec.md) | 3 |
 | early-answer-reveal | [Early answer reveal](early-answer-reveal/spec.md) | 7 |
 | versus | [Versus: teams pick a side and fight for it](versus/spec.md) | 8 |
 | display-screen-adapters | [Big-screen screens draw their Display screen directly](display-screen-adapters/spec.md) | 2 |

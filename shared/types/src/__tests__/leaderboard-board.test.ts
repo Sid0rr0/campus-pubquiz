@@ -6,7 +6,14 @@ import {
 } from '../leaderboard-board';
 import type { LeaderboardEntry } from '../room-views';
 import type { SessionState } from '../session-state';
-import { leaderboardEntry, round, sessionWith } from './session-fixtures';
+import { advanceFromBlockReview } from '../game-state-forward-transitions';
+import { lobby } from './game-state-fixtures';
+import {
+  closestGuessQuestion,
+  leaderboardEntry,
+  round,
+  sessionWith,
+} from './session-fixtures';
 
 // Block 1 spans rounds 1 and 2 (round 1 has no break), block 2 is round 3, and
 // round 4 is a quickfire round where every question is its own block.
@@ -147,6 +154,281 @@ describe('describeLeaderboardBoard', () => {
         2: 'same',
         3: 'same',
       });
+    });
+  });
+
+  describe('points gained', () => {
+    const current = board(
+      [1, 'A', 50],
+      [2, 'B', 40],
+      [3, 'C', 30],
+      [4, 'D', 20],
+      [5, 'E', 10],
+    );
+    // C is unchanged, D lost points, E is new, B gained half a point past rounding.
+    const prior = board(
+      [1, 'A', 30],
+      [2, 'B', 38.5],
+      [3, 'C', 30],
+      [4, 'D', 25],
+    );
+    const priorStandings = { board: prior, blockFirstQuestionId: 4 };
+
+    function gainedAt(
+      progress: Partial<GameProgress>,
+      overrides: Partial<SessionState> = {},
+    ) {
+      return describeLeaderboardBoard(
+        withBoard({ isLeaderboardVisible: true, ...progress }, current, {
+          priorStandings,
+          ...overrides,
+        }),
+      ).pointsGained;
+    }
+
+    const REVEAL = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 0,
+    } as const;
+
+    it('lists what each team gained at the reveal, keeping losses and leaving out newcomers and zero gains', () => {
+      expect(gainedAt(REVEAL)).toEqual({ 1: 20, 2: 1.5, 4: -5 });
+    });
+
+    it('is there from the results intro, the next round intro and the final board', () => {
+      const expected = { 1: 20, 2: 1.5, 4: -5 };
+
+      expect(gainedAt({ ...REVEAL, status: 'reveal_intro' })).toEqual(expected);
+      expect(
+        gainedAt({
+          status: 'round_intro',
+          roundIndex: 2,
+          questionIndex: 0,
+          furthestOpenIndex: -1,
+        }),
+      ).toEqual(expected);
+      expect(gainedAt({ status: 'ended', roundIndex: 2 })).toEqual(expected);
+    });
+
+    it.each(['question_open', 'locking', 'break_intro', 'break'] as const)(
+      'is absent while the block is still %s',
+      (status) => {
+        expect(
+          gainedAt({ ...REVEAL, status, furthestOpenIndex: 0 }),
+        ).toBeUndefined();
+      },
+    );
+
+    it('is absent at a round intro inside a block already opened', () => {
+      expect(
+        gainedAt({
+          status: 'round_intro',
+          roundIndex: 1,
+          questionIndex: 0,
+          furthestOpenIndex: 1,
+        }),
+      ).toBeUndefined();
+    });
+
+    it('is absent without prior standings', () => {
+      expect(gainedAt(REVEAL, { priorStandings: null })).toBeUndefined();
+    });
+
+    it('is there on the quickfire between-questions board, for the shown teams only', () => {
+      const session = withBoard(
+        { ...QUICKFIRE_QUESTION, isLeaderboardVisible: true },
+        [...current, ...board([6, 'F', 1])],
+        {
+          priorStandings: {
+            board: [...prior, ...board([6, 'F', 0])],
+            blockFirstQuestionId: 5,
+          },
+        },
+      );
+
+      expect(describeLeaderboardBoard(session).pointsGained).toEqual({
+        1: 20,
+        2: 1.5,
+        4: -5,
+      });
+    });
+
+    it('is absent on a quickfire board brought up after the question was revealed', () => {
+      expect(
+        gainedAt({ ...QUICKFIRE_QUESTION, status: 'reveal' }),
+      ).toBeUndefined();
+    });
+
+    it('is there on the board after a quickfire round, the next round intro', () => {
+      const rounds = [
+        round(1, [1, 2], { quickfire: true }),
+        round(2, [3, 4], { quickfire: true }),
+      ];
+      const session = sessionWith(
+        rounds,
+        {
+          status: 'round_intro',
+          roundIndex: 1,
+          questionIndex: 0,
+          furthestOpenIndex: -1,
+          isLeaderboardVisible: true,
+        },
+        {
+          leaderboard: board([1, 'A', 5], [2, 'B', 1]),
+          priorStandings: {
+            board: board([1, 'A', 3], [2, 'B', 1]),
+            blockFirstQuestionId: 2,
+          },
+        },
+      );
+
+      expect(describeLeaderboardBoard(session).pointsGained).toEqual({ 1: 2 });
+    });
+  });
+
+  describe('perfect rounds', () => {
+    // Block 1 is rounds 1 and 2 (questions 1 to 3); block 2 is round 3.
+    const current = board([1, 'A', 5], [2, 'B', 4], [3, 'C', 3]);
+    const REVEAL = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 0,
+      isLeaderboardVisible: true,
+    } as const;
+
+    function answer(
+      questionId: number,
+      teamId: number,
+      verdict: 'correct' | 'partial' | 'incorrect' | null = 'correct',
+    ) {
+      return {
+        questionId,
+        teamId,
+        teamName: `T${teamId}`,
+        verdict,
+        pointsAwarded: 1,
+        responseMs: null,
+      };
+    }
+
+    function perfectAt(
+      answers: ReturnType<typeof answer>[],
+      progress: Partial<GameProgress> = REVEAL,
+      overrides: Partial<SessionState> = {},
+      rounds = ROUNDS,
+    ) {
+      return describeLeaderboardBoard(
+        sessionWith(rounds, progress, {
+          leaderboard: current,
+          priorStandings: { board: [], blockFirstQuestionId: 1 },
+          funFactData: { answers, bonusAwards: [], powerUps: [] },
+          ...overrides,
+        }),
+      ).perfectRounds;
+    }
+
+    it('counts each perfect round of the block, and a partial, wrong or missing answer breaks one', () => {
+      // Round 1 holds questions 1 and 2, round 2 question 3.
+      expect(
+        perfectAt([
+          ...[1, 2, 3].map((q) => answer(q, 1)),
+          answer(1, 2),
+          answer(2, 2),
+          answer(3, 2, 'partial'),
+          answer(1, 3),
+          answer(3, 3),
+        ]),
+      ).toEqual({ 1: 2, 2: 1, 3: 1 });
+    });
+
+    it('is there at the results intro, the next round intro and with Early answer reveal after the break', () => {
+      const answers = [1, 2, 3].map((q) => answer(q, 1));
+      const roundIntro = {
+        status: 'round_intro',
+        roundIndex: 2,
+        questionIndex: 0,
+        furthestOpenIndex: -1,
+        isLeaderboardVisible: true,
+      } as const;
+
+      expect(perfectAt(answers, { ...REVEAL, status: 'reveal_intro' })).toEqual(
+        { 1: 2 },
+      );
+      expect(perfectAt(answers, roundIntro)).toEqual({ 1: 2 });
+
+      const leftBreak = advanceFromBlockReview(
+        {
+          ...lobby,
+          status: 'break',
+          roundIndex: 1,
+          questionIndex: 0,
+          revealIndex: 2,
+          furthestOpenIndex: 2,
+        },
+        {
+          rounds: ROUNDS.map((r) => ({
+            questionCount: r.questions.length,
+            breakAfter: r.breakAfter,
+            quickfire: r.quickfire ?? false,
+          })),
+          earlyAnswerReveal: true,
+        },
+      );
+      expect(leftBreak.status).toBe('round_intro');
+      expect(
+        perfectAt(answers, { ...leftBreak, isLeaderboardVisible: true }),
+      ).toEqual({ 1: 2 });
+    });
+
+    it('is absent while the block is answered or in break, on the final board and without prior standings', () => {
+      const answers = [1, 2, 3].map((q) => answer(q, 1));
+
+      expect(
+        perfectAt(answers, { ...REVEAL, status: 'break' }),
+      ).toBeUndefined();
+      expect(
+        perfectAt(answers, { ...REVEAL, status: 'ended', roundIndex: 2 }),
+      ).toBeUndefined();
+      expect(
+        perfectAt(answers, REVEAL, { priorStandings: null }),
+      ).toBeUndefined();
+    });
+
+    it('leaves out closest-guess questions, and a round of only those is never perfect', () => {
+      const rounds = [round(1, [1, 2]), round(2, [3]), round(3, [4])];
+      rounds[0].questions[1] = closestGuessQuestion(2);
+      rounds[1].questions[0] = closestGuessQuestion(3);
+
+      expect(perfectAt([answer(1, 1)], REVEAL, {}, rounds)).toEqual({ 1: 1 });
+    });
+
+    it('counts a correct Clue answer on any clue and a slow quickfire answer', () => {
+      const slow = { ...answer(1, 1), responseMs: 29_000, clue: 3 };
+
+      expect(perfectAt([slow, answer(2, 1), answer(3, 1)])).toEqual({ 1: 2 });
+    });
+
+    it('is there on the board after a quickfire round, the next round intro', () => {
+      const rounds = [
+        round(1, [1, 2], { quickfire: true }),
+        round(2, [3, 4], { quickfire: true }),
+      ];
+
+      expect(
+        perfectAt(
+          [answer(1, 1), answer(2, 1), answer(1, 2)],
+          {
+            status: 'round_intro',
+            roundIndex: 1,
+            questionIndex: 0,
+            furthestOpenIndex: -1,
+            isLeaderboardVisible: true,
+          },
+          { priorStandings: { board: [], blockFirstQuestionId: 2 } },
+          rounds,
+        ),
+      ).toEqual({ 1: 1 });
     });
   });
 

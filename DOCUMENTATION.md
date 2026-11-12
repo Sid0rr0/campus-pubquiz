@@ -547,6 +547,35 @@ from the session, so a reloaded or second big screen draws the same thing):
   live (the stamp lands, with a spring, beside the team's name; a reload or
   reconnect draws it already in place), and the phone's own-row card carries the
   same stamp.
+- `pointsGained` — team id → the team's current total minus its total in the
+  prior standings, to the nearest half point (joker doubling and bonuses are in
+  the totals, so in the gain; a loss is negative). Present only while the board
+  shows a block's results (the results window): from the prior standings' block
+  starting its results (its `reveal_intro`, or, with Early answer reveal,
+  leaving its break) until the next block's first question opens, so also the
+  next block's round intro and any leaderboard toggle in between, plus the final
+  board. In a quickfire round: the between-questions count-up board and the
+  board after a round's last question (the next round's fresh round intro). A
+  leaderboard brought up while a block is answered, locked or in break, or one
+  with no prior standings (after a backend restart), carries none. It lists only
+  shown (capped) teams and leaves out teams missing from the prior standings and
+  teams on exactly 0. `/display` counts a pub quiz row up from `total − gained`
+  to its total as the rank is revealed (cut to its end when a newer rank is
+  revealed; the final board's list rows too, the podium unchanged) and floats a
+  green "+x" / red "−x" outside the row's right border, labelled "gained 3
+  points", that fades about 2 s after the row settles. Reduced motion swaps the
+  total instantly and keeps the "+x" static apart from the fade.
+- `perfectRounds` — team id → how many rounds of the prior standings' block
+  (see `GLOSSARY.md`, **Perfect round**) the team has a perfect round in: a
+  `correct` verdict on every question of the round whose type has a meaningful
+  correct rate (closest guess is left out; a round with no such question is never
+  perfect; partial, incorrect and missing answers break it; a correct Clue answer
+  on any clue and a slow quickfire answer count). Read from the session's fun fact
+  answers by the shared `countPerfectRounds`. Present on the same boards as
+  `pointsGained` (the results window) but never on the final board; lists only
+  shown (capped) teams and leaves out teams with 0. `/display` draws one flickering
+  🔥 per perfect round right of the total, labelled "2 perfect rounds"; static
+  under reduced motion.
 
 `leaderboardRevealCount` stays a separate display field: how many ranks,
 counting up from last place, are revealed.
@@ -599,6 +628,7 @@ module, in this order, and skips a fact with no data:
 | `clue_cracked_early`     | `teamNames`, `clue`, `question`                        | Clue question: the first revealed one whose earliest `correct` answer came on a clue before the last; names the teams that answered on that clue, in leaderboard name order           |
 | `clue_last_gasp`         | `clue`, `question`                                     | Clue question: the first revealed one whose earliest `correct` answer came after clue 1; `clue` is that earliest clue. A Clue question nobody got is `nobody_got_it`'s                  |
 | `clean_sweep`            | `teamNames`                                            | Teams that got every question of the last revealed block `correct`, in leaderboard name order; `closest_guess` questions of the block are not counted                             |
+| `perfect_rounds`         | `teamCount`, `teamName?`                               | Teams with at least one Perfect round among the fully revealed rounds (a team counted once); `teamName` only when `teamCount` is 1; skipped at 0                                 |
 | `joker_favourite_round`  | `roundNumber`, `roundTitle`, `teamCount`               | Jokers on only: the round most teams have as their joker, and how many; a tie goes to the earlier round; names no team                                                            |
 | `joker_snubbed_round`    | `roundNumber`, `roundTitle`                            | Jokers on only: the first round no team has as its joker, never a round with a Clue question; skipped when every round is someone's joker; names no team                         |
 | `joker_drawn_count`      | `teamCount`                                            | Jokers on only: how many teams got a drawn joker; skipped at 0; names no team                                                                                                     |

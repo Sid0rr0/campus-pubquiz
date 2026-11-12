@@ -1,5 +1,6 @@
 import { getBlockInPlay, getBlockRoundIndexes } from './block-in-play';
 import { doubledRoundIdsOfTeam } from './doubled-rounds';
+import { countPerfectRounds } from './perfect-rounds';
 import { isGradedStatus, isQuestionOnAirStatus } from './game-state-groups';
 import {
   isCurrentRoundQuickfire,
@@ -7,6 +8,7 @@ import {
 } from './quickfire-visibility';
 import { capLeaderboard } from './leaderboard-tiebreak';
 import { rankTeams } from './ranking-rule';
+import { nearestHalfPoint } from './score-math';
 import type {
   LeaderboardBoard,
   LeaderboardEntry,
@@ -185,6 +187,82 @@ function describeJokerTeamIds(
 }
 
 /**
+ * Whether the board shows a block's results: from the prior standings' block
+ * starting its results (its reveal_intro; with Early answer reveal, leaving its
+ * break, which lands on the next block's fresh round intro) until the next
+ * block's first question opens, plus the final board. In a quickfire round
+ * only the between-questions board counts. A leaderboard brought up while a
+ * block is answered, locked or in break is not.
+ */
+function isShowingBlockResults(
+  { progress, priorStandings }: SessionState,
+  isBetweenQuickfireQuestions: boolean,
+  isQuickfire: boolean,
+): boolean {
+  // No prior standings (after a backend restart) means nothing to gain from.
+  if (!progress.isLeaderboardVisible || !priorStandings) return false;
+  if (progress.status === 'ended') return true;
+  // The board after a quickfire round's last question is the next round's fresh round intro.
+  const isFreshRoundIntro =
+    progress.status === 'round_intro' && progress.furthestOpenIndex < 0;
+  if (isQuickfire) return isBetweenQuickfireQuestions || isFreshRoundIntro;
+  return (
+    progress.status === 'reveal_intro' ||
+    progress.status === 'reveal' ||
+    isFreshRoundIntro
+  );
+}
+
+/**
+ * How many rounds of the prior standings' block each shown team had a Perfect
+ * round in; teams with 0 are left out.
+ */
+function describePerfectRounds(
+  session: SessionState,
+  entries: LeaderboardEntry[],
+): Record<number, number> {
+  const { priorStandings, seededGame, funFactData } = session;
+  if (!priorStandings) return {};
+  const { rounds } = seededGame;
+  const counts = countPerfectRounds(
+    getBlockRoundIndexes(rounds, priorStandings.blockFirstQuestionId).map(
+      (roundIndex) => rounds[roundIndex],
+    ),
+    funFactData.answers,
+  );
+  return Object.fromEntries(
+    entries.flatMap(({ teamId }) => {
+      const count = counts.get(teamId);
+      return count === undefined ? [] : [[teamId, count]];
+    }),
+  );
+}
+
+/**
+ * What each shown team gained against the prior standings, to the nearest half
+ * point. A team missing from them, or on exactly 0, is left out.
+ */
+function describePointsGained(
+  { priorStandings }: SessionState,
+  entries: LeaderboardEntry[],
+): Record<number, number> {
+  const priorTotals = new Map(
+    (priorStandings?.board ?? []).map((entry) => [
+      entry.teamId,
+      entry.totalPoints,
+    ]),
+  );
+  return Object.fromEntries(
+    entries.flatMap(({ teamId, totalPoints }) => {
+      const prior = priorTotals.get(teamId);
+      const gained =
+        prior === undefined ? 0 : nearestHalfPoint(totalPoints - prior);
+      return gained === 0 ? [] : [[teamId, gained]];
+    }),
+  );
+}
+
+/**
  * The leaderboard the big screen draws, decided once on the server: the
  * entries (capped for a quickfire round), the board to count up from (only for
  * the between-questions quickfire board, where the next question is already open
@@ -193,10 +271,8 @@ function describeJokerTeamIds(
 export function describeLeaderboardBoard(
   session: SessionState,
 ): LeaderboardBoard {
-  const entries = capLeaderboard(
-    session.leaderboard,
-    isCurrentRoundQuickfire(session),
-  );
+  const isQuickfire = isCurrentRoundQuickfire(session);
+  const entries = capLeaderboard(session.leaderboard, isQuickfire);
   const isBetweenQuickfireQuestions =
     session.progress.status === 'question_open' &&
     isQuestionHiddenBehindQuickfireLeaderboard(session);
@@ -204,10 +280,24 @@ export function describeLeaderboardBoard(
     ? describeCountUpBoard(session, entries)
     : undefined;
   const jokerTeamIds = describeJokerTeamIds(session, entries);
+  const isShowingResults = isShowingBlockResults(
+    session,
+    isBetweenQuickfireQuestions,
+    isQuickfire,
+  );
+  const pointsGained = isShowingResults
+    ? describePointsGained(session, entries)
+    : undefined;
+  const perfectRounds =
+    isShowingResults && session.progress.status !== 'ended'
+      ? describePerfectRounds(session, entries)
+      : undefined;
   return {
     entries,
     ...(countUpBoard === undefined ? {} : { countUpBoard }),
     trends: describeTrends(session, entries),
     ...(jokerTeamIds.length === 0 ? {} : { jokerTeamIds }),
+    ...(pointsGained === undefined ? {} : { pointsGained }),
+    ...(perfectRounds === undefined ? {} : { perfectRounds }),
   };
 }

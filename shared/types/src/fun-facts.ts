@@ -3,6 +3,7 @@ import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import { formatAnswer, type Verdict } from './answer-kind';
 import { canBeDoubled, doubledRoundIdsOfTeam } from './doubled-rounds';
 import { jokerRoundPoints } from './joker';
+import { countPerfectRounds } from './perfect-rounds';
 import type { PowerUpId } from './power-ups';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import { QUESTION_KINDS } from './question-kind';
@@ -114,6 +115,13 @@ export type FunFact =
       question: FunFactQuestion;
     }
   | { kind: 'clean_sweep'; teamNames: string[] }
+  | {
+      kind: 'perfect_rounds';
+      /** Teams with at least one Perfect round in the revealed rounds. */
+      teamCount: number;
+      /** Present only when `teamCount` is 1. */
+      teamName?: string;
+    }
   | {
       kind: 'joker_favourite_round';
       roundNumber: number;
@@ -304,6 +312,22 @@ function cleanSweep(
     .map(([teamId]) => teamNames.get(teamId)!)
     .sort(compareTeamNames);
   return names.length === 0 ? null : { kind: 'clean_sweep', teamNames: names };
+}
+
+function perfectRounds(
+  session: SessionState,
+  pastIds: ReadonlySet<number>,
+  answers: readonly FunFactAnswer[],
+): FunFact | null {
+  const rounds = session.seededGame.rounds.filter((round) =>
+    round.questions.every(({ id }) => pastIds.has(id)),
+  );
+  const teamIds = [...countPerfectRounds(rounds, answers).keys()];
+  if (teamIds.length === 0) return null;
+  const teamName = answers.find((a) => a.teamId === teamIds[0])?.teamName;
+  return teamIds.length === 1
+    ? { kind: 'perfect_rounds', teamCount: 1, teamName }
+    : { kind: 'perfect_rounds', teamCount: teamIds.length };
 }
 
 function bonusAwardsSoFar(
@@ -572,6 +596,7 @@ export function describeFunFacts(session: SessionState): FunFact[] {
       (question, clue) => ({ kind: 'clue_last_gasp', clue, question }),
     ),
     cleanSweep(session, revealed, answers),
+    perfectRounds(session, pastIds, answers),
     ...jokerFacts(session, answers, pastIds),
     bonusAwardsSoFar(session.funFactData),
   ];

@@ -9,7 +9,7 @@ import type { SeededSession } from './api';
 import { seedCsvSession } from './csv-session';
 import { PATHS } from './env';
 import type { ControlScreen } from './screens/control-screen';
-import type { DisplayScreen } from './screens/display-screen';
+import { TRAILING_BADGES, type DisplayScreen } from './screens/display-screen';
 import type { PhoneScreen } from './screens/phone-screen';
 
 const JOKER_CSV = path.join(PATHS.e2eRoot, 'fixtures', 'joker-night.csv');
@@ -132,7 +132,9 @@ export async function expectStampedStandingsRow(
     .getByRole('listitem')
     .filter({ hasText: teamName });
   const stamp = isStamped ? '2×' : '';
-  await expect(row).toHaveText(new RegExp(`${teamName}${stamp}${points}$`));
+  await expect(row).toHaveText(
+    new RegExp(`${teamName}${stamp}${points}${TRAILING_BADGES}$`),
+  );
 }
 
 /** The "2×" stamp on the team's row of the big screen's leaderboard (or its absence). */
