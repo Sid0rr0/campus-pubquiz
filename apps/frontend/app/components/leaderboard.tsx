@@ -191,9 +191,7 @@ function PointsGained({
   const isGain = gained > 0;
   return (
     <span
-      aria-label={
-        isGain ? `gained ${gained} points` : `lost ${Math.abs(gained)} points`
-      }
+      aria-label={`${isGain ? 'gained' : 'lost'} ${Math.abs(gained)} ${Math.abs(gained) === 1 ? 'point' : 'points'}`}
       className={`absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap font-display text-display-2xl transition-opacity duration-700 ${isGain ? 'text-green' : 'text-red-500'} ${isFaded ? 'opacity-0' : 'opacity-100'}`}
     >
       {isGain ? '+' : '−'}
@@ -455,7 +453,8 @@ function LeaderboardRowItem({
       {pointsGained !== undefined && (
         <PointsGained
           gained={pointsGained}
-          settleDelayMs={isCountingUp ? SCORE_COUNT_UP_MS : 0}
+          // Quickfire mounts it as counting starts; the board settles one count-up later.
+          settleDelayMs={isCountingUp || hasOldState ? SCORE_COUNT_UP_MS : 0}
         />
       )}
     </motion.li>

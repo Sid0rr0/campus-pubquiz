@@ -390,6 +390,48 @@ describe('Leaderboard', () => {
       expect(screen.getByLabelText('gained 3 points')).toBeInTheDocument();
     });
 
+    it('fades the quickfire "+x" 2 s after the board settles, not after the counting phase starts', () => {
+      vi.useFakeTimers();
+      render(
+        <Leaderboard
+          board={described([ranked(1, 'Challenger', 13, 1)], {
+            countUpBoard: [ranked(1, 'Challenger', 10, 1)],
+            pointsGained: { 1: 3 },
+          })}
+        />,
+      );
+      // The "+x" mounts at 900 ms (counting); the board settles at 1800 ms; then 2 s of linger.
+      act(() => {
+        vi.advanceTimersByTime(900);
+      });
+      act(() => {
+        vi.advanceTimersByTime(900 + 2000 - 1);
+      });
+      expect(screen.getByLabelText('gained 3 points')).not.toHaveClass(
+        'opacity-0',
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByLabelText('gained 3 points')).toHaveClass('opacity-0');
+    });
+
+    it('labels exactly one point in the singular and keeps half points readable', () => {
+      render(
+        <Leaderboard
+          board={described(GAIN_ENTRIES, {
+            pointsGained: { 1: 1, 2: -1, 3: 0.5 },
+          })}
+          revealCount={3}
+        />,
+      );
+
+      expect(screen.getByLabelText('gained 1 point')).toBeInTheDocument();
+      expect(screen.getByLabelText('lost 1 point')).toBeInTheDocument();
+      expect(screen.getByLabelText('gained 0.5 points')).toBeInTheDocument();
+    });
+
     it('draws final values statically under reduced motion', () => {
       mockReducedMotion.value = true;
       try {
