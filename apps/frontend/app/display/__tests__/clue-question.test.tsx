@@ -52,6 +52,10 @@ describe('DisplayPage — a Clue question', () => {
     expect(screen.getByText('Vague')).toBeInTheDocument();
     expect(screen.getByText('Sharper')).toBeInTheDocument();
     expect(screen.queryByText('Giveaway')).not.toBeInTheDocument();
+    // Scales with the big screen's text-size control like the other list rows
+    expect(screen.getByRole('list', { name: 'Clues' })).toHaveClass(
+      'text-display-xl',
+    );
   });
 
   it('shows the answer and every clue at the reveal', () => {

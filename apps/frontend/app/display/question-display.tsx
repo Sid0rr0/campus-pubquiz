@@ -135,7 +135,9 @@ function QuestionText({
   const clues =
     question.clues ??
     (QUESTION_KINDS[question.type].hasClues ? question.options : undefined);
-  const clueList = clues && <ClueList clues={clues} />;
+  const clueList = clues && (
+    <ClueList clues={clues} className="text-display-xl" />
+  );
   if (question.answer === undefined) {
     const QuestionBody = QUESTION_BODIES[answerKind];
     return (
