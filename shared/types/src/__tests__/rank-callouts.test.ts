@@ -81,6 +81,102 @@ describe('the live board in the room views', () => {
   });
 });
 
+describe('the final board', () => {
+  const final = (overrides: Partial<SessionState> = {}) =>
+    live(NOW, PRIOR, 0, {
+      progress: {
+        ...live(NOW, PRIOR, 0).progress,
+        status: 'ended',
+      },
+      ...overrides,
+    });
+  const linesOf = (session: SessionState, revealCount: number) =>
+    describeLiveRankBoard({ ...session, leaderboardRevealCount: revealCount })
+      ?.current?.teams[0].callouts;
+
+  it('counts perfect rounds over the whole quiz', () => {
+    const session = final({
+      funFactData: {
+        answers: [1, 2, 3, 4].map((q) => answer(q, 2)),
+        bonusAwards: [],
+        powerUps: [],
+      },
+    });
+
+    expect(linesOf(session, 3)).toContain('3 perfect rounds tonight');
+  });
+
+  it('keeps movement and the lead but drops block-only lines', () => {
+    const session = final({
+      jokers: { 2: { roundId: 3, source: 'drawn' } } as SessionState['jokers'],
+    });
+
+    expect(linesOf(session, 3)).toEqual(['up from 2nd', 'leads by 3']);
+  });
+});
+
+describe('the board between quickfire questions', () => {
+  it('shows the top 5 with their gains all at once', () => {
+    const quickfire = [round(1, [1, 2, 3, 4, 5, 6, 7], { quickfire: true })];
+    const prior = [1, 2, 3, 4, 5, 6].map((id) => entry(id, `T${id}`, 0));
+    const now = [1, 2, 3, 4, 5, 6].map((id) => entry(id, `T${id}`, 10 - id));
+    const session = sessionWith(
+      quickfire,
+      {
+        status: 'question_open',
+        roundIndex: 0,
+        questionIndex: 1,
+        isLeaderboardVisible: true,
+      },
+      {
+        leaderboard: now,
+        priorStandings: { board: prior, blockFirstQuestionId: 1 },
+      },
+    );
+
+    const board = describeLiveRankBoard(session);
+
+    expect(board?.current).toBeNull();
+    expect(board?.next).toBeNull();
+    expect(board?.all?.map((g) => g.teams[0].teamName)).toEqual([
+      'T1',
+      'T2',
+      'T3',
+      'T4',
+      'T5',
+    ]);
+    expect(board?.all?.[0].teams[0].callouts).toEqual(['+9']);
+  });
+});
+
+describe('a quickfire round-end board', () => {
+  it('keeps the one-by-one reveal, capped to the top 5', () => {
+    const quickfire = [round(1, [1, 2], { quickfire: true })];
+    const now = [1, 2, 3, 4, 5, 6].map((id) => entry(id, `T${id}`, 10 - id));
+    const session = sessionWith(
+      quickfire,
+      {
+        status: 'round_intro',
+        roundIndex: 0,
+        questionIndex: 0,
+        furthestOpenIndex: -1,
+        isLeaderboardVisible: true,
+      },
+      {
+        leaderboard: now,
+        leaderboardRevealCount: 1,
+        priorStandings: { board: [], blockFirstQuestionId: 1 },
+      },
+    );
+
+    const board = describeLiveRankBoard(session);
+
+    expect(board?.all).toBeUndefined();
+    expect(names(board?.current)).toEqual(['T5']);
+    expect(names(board?.next)).toEqual(['T4']);
+  });
+});
+
 describe('describeLiveRankBoard', () => {
   describe('groups', () => {
     it('shows only the next group before the first Advance', () => {

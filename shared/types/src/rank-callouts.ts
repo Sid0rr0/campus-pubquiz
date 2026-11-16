@@ -3,7 +3,11 @@ import { doubledRoundIdsOfTeam } from './doubled-rounds';
 import { isShowingBlockResults } from './leaderboard-board';
 import { ordinal } from './ordinal';
 import { countPerfectRounds } from './perfect-rounds';
-import { isCurrentRoundQuickfire } from './quickfire-visibility';
+import { capLeaderboard } from './leaderboard-tiebreak';
+import {
+  isCurrentRoundQuickfire,
+  isQuestionHiddenBehindQuickfireLeaderboard,
+} from './quickfire-visibility';
 import { rankTeams } from './ranking-rule';
 import type { LeaderboardEntry } from './room-views';
 import { nearestHalfPoint } from './score-math';
@@ -39,6 +43,8 @@ export interface RankCalloutGroup {
 export interface LiveRankBoard {
   current: RankCalloutGroup | null;
   next: RankCalloutGroup | null;
+  /** Between quickfire questions: the whole board at once, best first (current and next are null). */
+  all?: RankCalloutGroup[];
 }
 
 const MINUS = '−';
@@ -50,11 +56,19 @@ function pointsText(points: number): string {
 function gainOf(
   entry: LeaderboardEntry,
   previous: ReadonlyMap<number, LeaderboardEntry>,
-): number | null {
+): number {
   const before = previous.get(entry.teamId);
   return before === undefined
-    ? null
+    ? 0
     : nearestHalfPoint(entry.totalPoints - before.totalPoints);
+}
+
+/** Every team on the board before the block is on the same total. */
+function isAllTied(previous: LeaderboardEntry[]): boolean {
+  return (
+    previous.length > 1 &&
+    new Set(previous.map((e) => e.totalPoints)).size === 1
+  );
 }
 
 /** "Perfect round: Music 🔥", one line naming every perfect round of the block. */
@@ -70,6 +84,27 @@ function perfectRoundLine(
   return [
     `Perfect ${titles.length === 1 ? 'round' : 'rounds'}: ${titles.join(', ')}`,
   ];
+}
+
+/** The final board's "3 perfect rounds tonight". */
+function perfectTonightLine(count: number): string[] {
+  return count === 0
+    ? []
+    : [`${count} perfect ${count === 1 ? 'round' : 'rounds'} tonight`];
+}
+
+/** "Joker 2× on Sport": the block's rounds the team doubled. */
+function jokerLine(
+  jokers: SessionState['jokers'],
+  powerUps: SessionState['funFactData']['powerUps'],
+  teamId: number,
+  blockRounds: readonly SeededRound[],
+): string[] {
+  const doubled = doubledRoundIdsOfTeam(jokers, powerUps, teamId);
+  const titles = blockRounds
+    .filter((round) => doubled.includes(round.id))
+    .map((round) => round.title);
+  return titles.length === 0 ? [] : [`Joker 2× on ${titles.join(', ')}`];
 }
 
 function movementLine(
@@ -130,58 +165,51 @@ function tiedLine(
  * @param ranked the board after the block (rankTeams order)
  * @param previous the board before the block: gains, movement and bonus are measured against it
  * @param blockFirstQuestionId the block, by its first question
+ * @param isFinal the final board: whole-quiz perfect rounds, no block-only lines
  */
 export function describeBlockCallouts(
   session: SessionState,
   blockFirstQuestionId: number,
   ranked: LeaderboardEntry[],
   previous: LeaderboardEntry[],
+  isFinal = false,
 ): Map<number, string[]> {
   const { rounds } = session.seededGame;
   const blockRounds = getBlockRoundIndexes(rounds, blockFirstQuestionId).map(
     (index) => rounds[index],
   );
-  const blockRoundIds = new Set(blockRounds.map((round) => round.id));
   const previousById = new Map(previous.map((e) => [e.teamId, e]));
   const previousRanks = new Map(
     rankTeams(previous).map((e) => [e.teamId, e.rank]),
   );
-  const isPreviousAllTied =
-    previous.length > 1 &&
-    new Set(previous.map((e) => e.totalPoints)).size === 1;
-  const gains = new Map(ranked.map((e) => [e.teamId, gainOf(e, previousById)]));
-  const biggest = Math.max(0, ...[...gains.values()].map((g) => g ?? 0));
+  const isPreviousAllTied = isAllTied(previous);
+  const biggest = Math.max(0, ...ranked.map((e) => gainOf(e, previousById)));
   const { answers, powerUps } = session.funFactData;
+  const wholeQuizPerfect = isFinal
+    ? countPerfectRounds(rounds, answers)
+    : new Map<number, number>();
 
   return new Map(
     ranked.map((entry) => {
-      const gain = gains.get(entry.teamId) ?? 0;
-      const jokerTitles = blockRounds
-        .filter(
-          (round) =>
-            blockRoundIds.has(round.id) &&
-            doubledRoundIdsOfTeam(
-              session.jokers,
-              powerUps,
-              entry.teamId,
-            ).includes(round.id),
-        )
-        .map((round) => round.title);
+      const gain = gainOf(entry, previousById);
+      const blockOnly = (lines: string[]) => (isFinal ? [] : lines);
       return [
         entry.teamId,
         [
-          ...perfectRoundLine(entry.teamId, blockRounds, answers),
-          ...(gain > 0 ? [`+${gain} this block`] : []),
+          ...(isFinal
+            ? perfectTonightLine(wholeQuizPerfect.get(entry.teamId) ?? 0)
+            : perfectRoundLine(entry.teamId, blockRounds, answers)),
+          ...blockOnly(gain > 0 ? [`+${gain} this block`] : []),
           ...movementLine(entry, previousRanks, isPreviousAllTied),
-          ...(jokerTitles.length > 0
-            ? [`Joker 2× on ${jokerTitles.join(', ')}`]
-            : []),
+          ...blockOnly(
+            jokerLine(session.jokers, powerUps, entry.teamId, blockRounds),
+          ),
           ...bonusLines(entry, previousById.get(entry.teamId)),
           ...gapLine(entry, ranked),
           ...tiedLine(entry, ranked),
-          ...(biggest > 0 && gain === biggest
-            ? ['biggest gain this block']
-            : []),
+          ...blockOnly(
+            biggest > 0 && gain === biggest ? ['biggest gain this block'] : [],
+          ),
         ],
       ];
     }),
@@ -208,32 +236,60 @@ function toGroup(
   };
 }
 
+/** The between-questions quickfire board: each team's gain since the previous question, nothing else. */
+function describeGainCallouts(
+  ranked: LeaderboardEntry[],
+  previous: LeaderboardEntry[],
+): Map<number, string[]> {
+  const previousById = new Map(previous.map((e) => [e.teamId, e]));
+  return new Map(
+    ranked.map((entry) => {
+      const gain = gainOf(entry, previousById);
+      return [entry.teamId, gain > 0 ? [`+${gain}`] : []];
+    }),
+  );
+}
+
 /**
  * The board on air with its callouts, or null when the leaderboard is not
- * showing a block's results (quickfire and the final board are not covered
- * yet). It follows the session's reveal count over the same rank groups as the
- * big screen: before the first Advance only the next (lowest) group, after the
- * winner only the current one.
+ * showing a block's results. It follows the session's reveal count over the
+ * same rank groups as the big screen: before the first Advance only the next
+ * (lowest) group, after the winner only the current one. The board between
+ * quickfire questions appears all at once, so it is the top teams in `all`
+ * with no current/next split.
  */
 export function describeLiveRankBoard(
   session: SessionState,
 ): LiveRankBoard | null {
   const { priorStandings, progress } = session;
+  const isQuickfire = isCurrentRoundQuickfire(session);
+  const isBetweenQuickfire =
+    progress.status === 'question_open' &&
+    isQuestionHiddenBehindQuickfireLeaderboard(session);
   if (
     !priorStandings ||
-    progress.status === 'ended' ||
-    isCurrentRoundQuickfire(session) ||
-    !isShowingBlockResults(session, false, false)
+    !isShowingBlockResults(session, isBetweenQuickfire, isQuickfire)
   ) {
     return null;
   }
-  const ranked = rankTeams(session.leaderboard);
-  const callouts = describeBlockCallouts(
-    session,
-    priorStandings.blockFirstQuestionId,
-    ranked,
-    priorStandings.board,
-  );
+  const ranked = capLeaderboard(session.leaderboard, isQuickfire);
+  const callouts = isBetweenQuickfire
+    ? describeGainCallouts(ranked, priorStandings.board)
+    : describeBlockCallouts(
+        session,
+        priorStandings.blockFirstQuestionId,
+        ranked,
+        priorStandings.board,
+        progress.status === 'ended',
+      );
+  if (isBetweenQuickfire) {
+    const ranks = [...new Set(ranked.map((entry) => entry.rank))];
+    return {
+      current: null,
+      next: null,
+      all: ranks.map((rank) => toGroup(rank, ranked, callouts)),
+    };
+  }
   const ranks = [...new Set(ranked.map((entry) => entry.rank))].reverse();
   const shown = Math.min(
     Math.max(session.leaderboardRevealCount, 0),

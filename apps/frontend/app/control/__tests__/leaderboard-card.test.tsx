@@ -128,6 +128,27 @@ describe('AdminPage — live leaderboard card', () => {
     expect(next).toHaveClass('opacity-50');
   });
 
+  it('shows the all-at-once quickfire board with every group at full strength', async () => {
+    mockBoard({
+      current: null,
+      next: null,
+      all: [
+        { rank: 1, teams: [team(1, 'Quizzly Bears', 1, ['+9'])] },
+        { rank: 2, teams: [team(2, 'The Quizzards', 2, ['+3'])] },
+      ],
+    });
+    renderWithQuery(<AdminPage />);
+
+    const groups = await screen.findAllByRole('region', { name: 'Board' });
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toHaveTextContent('Quizzly Bears');
+    expect(groups[0]).toHaveTextContent('+9');
+    expect(groups[1]).not.toHaveClass('opacity-50');
+    expect(
+      screen.queryByRole('region', { name: 'Revealed' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows no card without a live board', async () => {
     mockBoard(undefined);
     renderWithQuery(<AdminPage />);

@@ -44,6 +44,9 @@ function Group({
 export function LeaderboardCard({ board }: { board: LiveRankBoard }) {
   return (
     <section aria-label="Leaderboard card" className="flex flex-col gap-4">
+      {board.all?.map((group) => (
+        <Group key={group.rank} group={group} label="Board" isCurrent />
+      ))}
       {board.current && (
         <Group group={board.current} label="Revealed" isCurrent />
       )}
