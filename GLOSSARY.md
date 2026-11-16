@@ -129,6 +129,10 @@ The pause after a block locks, in which the quiz master finishes any grading sti
 A line of trivia about the session so far, shown on the big screen during a break. It is drawn only from blocks already revealed, or from figures that give no answer away, so it never hints at the block in play. It appears about 30 seconds into the break, and the quiz master can switch all fun facts off for a session.
 _Avoid_: stat, highlight (that's a stats-page tile)
 
+**Rank callout**:
+What the quiz master can say about a team as the leaderboard reveals its rank, worked out from the night's results rather than written by anyone: its perfect rounds by name, points gained in the block, rank movement, joker, bonus or penalty, the gap to the next place, a tie, and the block's biggest gain. The admin console and the presenter remote show the callout for the rank just revealed beside the dimmed next rank to come; teams and the big screen never see it.
+_Avoid_: leaderboard notes (notes are written by the quiz author), talking points
+
 **Break review**:
 Stepping back through a block's locked questions during its break, with answers still hidden, e.g. to show a question to the room again. A session with **Early answer reveal** has none: stepping back from its break walks the early answer reveal instead.
 
