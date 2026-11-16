@@ -36,14 +36,17 @@
   - navigation "Quick fire questions":
     - button "Show title card of Quick fire": T
     - button "Grade question 1 of Quick fire"
-    - button "Grade question 2 of Quick fire (live on display)" [pressed]
+    - button "Grade question 2 of Quick fire (live on display)"
     - button "Show break after Quick fire": B
+    - button "Show leaderboard after Quick fire": 🏆
   - paragraph: Quick fire
-  - region "Question detail":
-    - paragraph: Round 1 (Quick fire) — Q2 of 2
-    - heading "Which ocean is the largest?" [level=2]
-    - paragraph: "Correct answer: Pacific"
-  - paragraph: 0/2 answered 0 correct
+  - region "Leaderboard card":
+    - region "Board":
+      - paragraph: Board · 1st
+      - paragraph: /Team A [0-9a-f]{6} · [\d.]+/
+    - region "Board":
+      - paragraph: Board · 2nd
+      - paragraph: /Team B [0-9a-f]{6} · 0/
   - heading "Teams" [level=2]
   - table:
     - rowgroup:
