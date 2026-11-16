@@ -24,6 +24,7 @@ import type {
   UpcomingQuestionPosition,
 } from './question-views';
 import type { QuestionType } from './question-types';
+import type { LiveRankBoard } from './rank-callouts';
 import type { QuizMode } from './quiz-mode';
 import type { SessionSettings } from './session-settings';
 import type { SideStandings } from './side-standings';
@@ -246,6 +247,8 @@ export interface AdminStatePayload
   teams: AdminTeamView[];
   /** The Versus side standings for /control's bar; absent without Versus. */
   sideStandings?: SideStandings;
+  /** The Rank callouts of the leaderboard on air (current and next group); only the admin view carries them, and only while the board shows a block's results. */
+  liveRankBoard?: LiveRankBoard;
   /** The rounds the quiz master may give a team as its joker: those with no opened question, once the joker pick has opened in a session with jokers; empty otherwise. */
   settableJokerRounds: JokerPickRound[];
   onAirScreen: OnAirScreen;

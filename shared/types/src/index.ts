@@ -83,6 +83,8 @@ export * from './showdown-guesses-pending-error';
 export * from './move-plan';
 export * from './phase-timer';
 export * from './leaderboard-reveal';
+export * from './ordinal';
+export * from './rank-callouts';
 export * from './session-settle';
 export * from './dry-run-press';
 export * from './session-snapshot';

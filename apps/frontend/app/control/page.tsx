@@ -24,6 +24,7 @@ import { DesktopSidebar } from '@/app/control/desktop-sidebar';
 import { AnswersPanel } from '@/app/control/answers-panel';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
 import { QuestionDetail } from '@/app/control/question-detail';
+import { LeaderboardCard } from '@/app/control/leaderboard-card';
 import {
   RoundCardDetail,
   titleCardKindLabel,
@@ -417,6 +418,74 @@ export default function AdminPage() {
   );
 }
 
+/** The detail column: the live leaderboard card, a title or break card, or a question. */
+function DetailPane({
+  view,
+  rounds,
+  item,
+  questionId,
+  isManualPick,
+  liveAnswers,
+}: {
+  view: NonNullable<AdminSnapshot>;
+  rounds: typeof EMPTY_ROUNDS;
+  item: DetailItem | null;
+  questionId: number | null;
+  isManualPick: boolean;
+  liveAnswers: AdminSession['liveAnswers'];
+}) {
+  if (item?.kind === 'leaderboard' && view.liveRankBoard) {
+    return <LeaderboardCard board={view.liveRankBoard} />;
+  }
+  if (item && (item.kind === 'title' || item.kind === 'break')) {
+    return (
+      <RoundCardDetail
+        item={item}
+        rounds={rounds}
+        kindLabel={
+          !isManualPick ? titleCardKindLabel(view.progress.status) : undefined
+        }
+      />
+    );
+  }
+  return (
+    <QuestionPane
+      view={view}
+      rounds={rounds}
+      questionId={questionId}
+      liveAnswers={liveAnswers}
+    />
+  );
+}
+
+function QuestionPane({
+  view: { currentQuestion, blockQuestions },
+  rounds,
+  questionId,
+  liveAnswers,
+}: {
+  view: NonNullable<AdminSnapshot>;
+  rounds: typeof EMPTY_ROUNDS;
+  questionId: number | null;
+  liveAnswers: AdminSession['liveAnswers'];
+}) {
+  return (
+    <QuestionDetail
+      questionId={questionId}
+      rounds={rounds}
+      liveAnswers={liveAnswers}
+      fallbackQuestions={
+        currentQuestion ? [currentQuestion, ...blockQuestions] : blockQuestions
+      }
+      highestClue={
+        currentQuestion?.id === questionId
+          ? currentQuestion.highestClue
+          : undefined
+      }
+    />
+  );
+}
+
 /** The control page below the sidebar once the quiz has left the lobby. */
 function SessionWorkspace({
   view,
@@ -445,16 +514,12 @@ function SessionWorkspace({
     progress,
     currentQuestion,
     activeBlockStartIndex,
-    blockQuestions,
     leaderboard,
     roundTitles,
     teams,
     ungradedQuestionIds,
     settings,
   } = view;
-  const fallbackQuestions = currentQuestion
-    ? [currentQuestion, ...blockQuestions]
-    : blockQuestions;
   return (
     <>
       <>
@@ -472,29 +537,14 @@ function SessionWorkspace({
             />
           </div>
           <div className="md:min-w-0 md:flex-1">
-            {item && item.kind !== 'question' ? (
-              <RoundCardDetail
-                item={item}
-                rounds={rounds}
-                kindLabel={
-                  !isManualPick
-                    ? titleCardKindLabel(progress.status)
-                    : undefined
-                }
-              />
-            ) : (
-              <QuestionDetail
-                questionId={questionId}
-                rounds={rounds}
-                liveAnswers={liveAnswers}
-                fallbackQuestions={fallbackQuestions}
-                highestClue={
-                  currentQuestion?.id === questionId
-                    ? currentQuestion.highestClue
-                    : undefined
-                }
-              />
-            )}
+            <DetailPane
+              view={view}
+              rounds={rounds}
+              item={item}
+              questionId={questionId}
+              isManualPick={isManualPick}
+              liveAnswers={liveAnswers}
+            />
           </div>
         </div>
         {liveAnswers && liveAnswers.questionId === questionId && (
