@@ -361,6 +361,21 @@ reached stays in `blockQuestions` without its answer, so the phone shows a
 correct answer exactly when one arrives and stepping back with Previous takes it
 away again.
 
+**Rank callouts** (`shared/types/src/rank-callouts.ts`, pure; see the glossary) reach only the
+quiz master. The admin view carries `liveRankBoard` while the leaderboard on air shows a block's
+results: the `current` group (the ranks the latest Advance revealed, ties together) and the `next`
+group, each team with its `callouts` lines; between quickfire questions it carries `all` (the top
+5 at once) instead. It follows the same reveal count and tie grouping as the big screen. The admin
+view also carries `blockBoards`, one board per block (per round in a quickfire quiz) for every
+block reached so far, the block in play included as a preview flagged while its grading is
+unfinished; blocks not reached yet are listed without teams. A past block's board is the standings
+after that block (rounds up to it plus bonus awards stamped with it or an earlier block; unstamped
+awards count in the latest board only), with movement measured against the block before. A team
+that left (`SessionState.departedTeams`) stays on the boards it took part in, flagged `hasLeft`.
+`/control` draws `liveRankBoard` as the on-air leaderboard card (a manual pick still sticks) and
+a 🏆 item after each break marker for `blockBoards`. The presenter context carries the same
+`liveRankBoard`, which the remote's Notes section draws in place of question or round notes.
+
 Every reveal question carries a **reveal kind** (`revealKind`), decided once by the
 projection from the question type registry, and the screens switch on it instead
 of re-deriving it from the type. The admin views receive `answer`

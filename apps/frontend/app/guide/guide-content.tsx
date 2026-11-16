@@ -44,14 +44,14 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Before the night',
     paragraphs: [
       'Build the quiz, then check it with Quiz preview (editor, quiz list or waiting session), not a throwaway session.',
-      'Put /display on the big screen and /control on your laptop.',
+      'Open /display on the big screen, /control on your laptop.',
       'A block is a run of rounds graded and revealed together, ending at a break.',
     ],
   },
   {
     title: 'Starting a session',
     paragraphs: [
-      'Session Settings sets the rules text, bonus categories and leagues in the lobby; then press Start Quiz.',
+      'Set rules, bonus categories and leagues in Session Settings (lobby), then press Start Quiz.',
       'Advance shows the rules, the round overview, then the first round title card; Previous on the rules returns to the lobby.',
     ],
   },
@@ -76,7 +76,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Versus',
     paragraphs: [
-      'The "Versus" switch in Session Settings (pub quiz, lobby only) pits camps against each other: name 2 to 4 sides. A side with teams can\'t be removed; turning Versus off clears every pick.',
+      'The "Versus" switch in Session Settings (pub quiz, lobby only) pits camps against each other: name 2 to 4 sides; turning it off clears every pick.',
       'Teams pick a side on their phone and can switch until the quiz starts. Start Quiz is refused while a team has no side.',
       'To move a team, use its side select in Teams, any time.',
       "The leaderboard bar splits by each side's average points per team, so more teams don't win.",
@@ -87,7 +87,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'The "Power-ups" tab (lobby Session Settings) lets teams spend coins: set starting coins and each power-up\'s cost and uses. Teams shows a Coins column.',
       'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles the next round).',
-      "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off.",
+      "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in.",
       'Grading names the power-ups each answer used. Never refunded: after an answer-key fix, give the coin back with a coin award. Deleting a shot or selfie award removes its coin.',
     ],
   },
@@ -110,7 +110,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Running questions',
     paragraphs: [
-      'Each round opens with its title card, then Advance opens questions one by one. Teams can change answers to any question opened this block.',
+      'Each round opens with its title card, then Advance opens questions one by one.',
       "Advance on a block's last question starts the final countdown, then the break.",
     ],
   },
@@ -161,14 +161,15 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Leaderboard, late joiners and ties',
     paragraphs: [
       'Show or hide the leaderboard any time; Advance then reveals one rank at a time, from last place up.',
-      'Join overlay on Control shows the QR and join code for late teams.',
       'When teams tie for first, the Showdown panel offers a tiebreak.',
+      "The leaderboard card (and the remote's Notes) shows the rank just revealed, large, and the next, dimmed, with callouts. Teams never see them.",
+      'A 🏆 after each break previews that block\'s board ("Grading not finished" until graded); later blocks are greyed.',
     ],
   },
   {
     title: 'Teams',
     paragraphs: [
-      'The Teams panel shows who is connected and has answered; kick a team to remove it.',
+      'The Teams panel shows who is connected and answered; kick a team to remove it.',
       'A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
       'Each team shows its player count, flagged as over the player cap above "max players per team"; nothing is deducted, so give a negative bonus.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
@@ -179,7 +180,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Feedback from teams',
     paragraphs: [
-      'The "Collect feedback" switch in Session Settings (on by default, lobby only) makes phones show a "Rate these rounds" card each break and a form after "Quiz complete!". Results are anonymous, on the session stats page.',
+      'The "Collect feedback" switch in Session Settings (on by default, lobby only) makes phones show a "Rate these rounds" card each break and a form after "Quiz complete!". Results are anonymous, on session stats.',
     ],
   },
   {

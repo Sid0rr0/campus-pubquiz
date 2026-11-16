@@ -130,7 +130,7 @@ A line of trivia about the session so far, shown on the big screen during a brea
 _Avoid_: stat, highlight (that's a stats-page tile)
 
 **Rank callout**:
-What the quiz master can say about a team as the leaderboard reveals its rank, worked out from the night's results rather than written by anyone: its perfect rounds by name, points gained in the block, rank movement, joker, bonus or penalty, the gap to the next place, a tie, and the block's biggest gain. The admin console and the presenter remote show the callout for the rank just revealed beside the dimmed next rank to come; teams and the big screen never see it.
+What the quiz master can say about a team as the leaderboard reveals its rank, worked out from the night's results rather than written by anyone: its perfect rounds by name, points gained in the block, rank movement, joker, bonus or penalty, the gap to the next place, a tie, and the block's biggest gain. The admin console and the presenter remote show the callout for the rank just revealed beside the dimmed next rank to come, and the question browser's 🏆 marker after each block's break previews any reached block's whole board (tagged "grading not finished" while answers are ungraded; a team that left shows as "left"); teams and the big screen never see it.
 _Avoid_: leaderboard notes (notes are written by the quiz author), talking points
 
 **Break review**:
