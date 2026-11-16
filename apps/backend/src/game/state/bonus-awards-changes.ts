@@ -9,6 +9,7 @@ import {
   coinBalance,
   coinDebtCover,
   coinTakeRefusal,
+  getBlockInPlay,
 } from '@campus-pubquiz/types';
 import {
   BonusAwardNotFoundError,
@@ -59,6 +60,8 @@ export class BonusAwardsChanges {
         settings.enabledBonusCategories,
         settings.maxBonusAwardsPerCategory,
         { powerUpsEnabled: settings.powerUpsEnabled, manual: coins },
+        getBlockInPlay(session.seededGame.rounds, session.progress)[0]
+          ?.questionId,
       ),
     );
     const notices: TeamNotice[] = [];

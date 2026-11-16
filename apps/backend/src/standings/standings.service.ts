@@ -174,7 +174,10 @@ export class StandingsService {
         ) as Promise<FunFactAnswer[]>,
       knex('bonus_awards')
         .where('game_session_id', gameSessionId)
-        .select('category', 'points') as Promise<FunFactBonusAward[]>,
+        .select('team_id as teamId', 'category', 'points')
+        .select('block_first_question_id as blockFirstQuestionId') as Promise<
+        FunFactBonusAward[]
+      >,
       knex('purchases')
         .where('game_session_id', gameSessionId)
         .orderBy('id')
@@ -190,8 +193,10 @@ export class StandingsService {
         responseMs: row.responseMs === null ? null : Number(row.responseMs),
       })),
       bonusAwards: bonusRows.map((row) => ({
+        teamId: row.teamId,
         category: row.category,
         points: Number(row.points),
+        blockFirstQuestionId: row.blockFirstQuestionId,
       })),
     };
   }

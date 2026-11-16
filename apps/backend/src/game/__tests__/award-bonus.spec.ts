@@ -5,6 +5,7 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
+  advanceUntil,
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -54,6 +55,46 @@ describe('GameGateway — award bonus', () => {
     }
     expect(await storedBonuses()).toEqual([
       expect.objectContaining({ category: 'shot', points: 1 }),
+    ]);
+  });
+
+  it('stores the block in play on the award and carries it with its team in the live results', async () => {
+    await game.act('START_QUIZ');
+    await advanceUntil(game, 'question_open');
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
+      category: 'shot',
+      points: 1,
+    });
+
+    const stored = await game.inRequestContext(() =>
+      game.standingsService.funFactData(game.gameSessionId),
+    );
+    expect(stored.bonusAwards).toEqual([
+      {
+        teamId: team.teamId,
+        category: 'shot',
+        points: 1,
+        blockFirstQuestionId: game.rounds[0].questionIds[0],
+      },
+    ]);
+    expect(
+      game.sessionWrite.read(game.joinCode).funFactData.bonusAwards,
+    ).toEqual(stored.bonusAwards);
+  });
+
+  it('leaves the block empty when no block is in play', async () => {
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
+      category: 'shot',
+      points: 1,
+    });
+
+    const stored = await game.inRequestContext(() =>
+      game.standingsService.funFactData(game.gameSessionId),
+    );
+    expect(stored.bonusAwards).toEqual([
+      expect.objectContaining({ blockFirstQuestionId: null }),
     ]);
   });
 
