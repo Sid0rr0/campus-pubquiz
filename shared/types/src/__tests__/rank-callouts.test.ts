@@ -113,6 +113,18 @@ describe('the final board', () => {
 
     expect(linesOf(session, 3)).toEqual(['up from 2nd', 'leads by 3']);
   });
+
+  it('drops the block-only bonus line too', () => {
+    const session = final({
+      leaderboard: [
+        entry(1, 'A', 12),
+        entry(2, 'B', 15, { positiveBonusPoints: 4, bonusPoints: 4 }),
+        entry(3, 'C', 5),
+      ],
+    });
+
+    expect(linesOf(session, 3)).toEqual(['up from 2nd', 'leads by 3']);
+  });
 });
 
 describe('the board between quickfire questions', () => {

@@ -1,7 +1,5 @@
 import { ordinal } from '@campus-pubquiz/types';
 
-export { ordinal };
-
 const defaultWording = (place: string): string => `You're ${place}`;
 
 /**

@@ -5,14 +5,17 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/app/components/button';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
-import { ordinal } from '@/app/lib/placing-text';
 import { queryKeys } from '@/app/lib/query-keys';
 import {
   forgetSavedTeam,
   readStoredIdentity,
   saveTeamCode,
 } from '@/app/lib/team-storage';
-import type { TeamNightQuestion, Verdict } from '@campus-pubquiz/types';
+import {
+  ordinal,
+  type TeamNightQuestion,
+  type Verdict,
+} from '@campus-pubquiz/types';
 import {
   fetchTeamNight,
   fetchTeamPage,

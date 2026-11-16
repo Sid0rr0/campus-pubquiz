@@ -680,9 +680,11 @@ joker on its round in all five joker facts (a team may hold several). The
 session holds the answers, bonus awards and power-up purchases (`funFactData`)
 and re-reads them with the standings
 at the end of every session write and when a session is placed, so the facts
-follow hand grades and key fixes. A bonus award records the block in play when
-it was awarded (the block's first question id, empty for awards made before
-this was recorded or with no block in play), and the bonus awards in
+follow hand grades and key fixes. A bonus award records its block when it is
+awarded (the block's first question id): the block in play, else (a fresh round
+intro, still showing the previous board) the block just played, else (lobby,
+rules) the quiz's first block. Only awards made before this was recorded are
+empty. The bonus awards in
 `funFactData` carry their team and that block.
 
 The **`funFactsEnabled`** session setting (a boolean, default `true`, validated

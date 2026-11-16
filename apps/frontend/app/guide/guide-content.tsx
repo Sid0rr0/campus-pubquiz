@@ -45,7 +45,6 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'Build the quiz, then check it with Quiz preview (editor, quiz list or waiting session), not a throwaway session.',
       'Open /display on the big screen, /control on your laptop.',
-      'A block is a run of rounds graded and revealed together, ending at a break.',
     ],
   },
   {
@@ -76,7 +75,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Versus',
     paragraphs: [
-      'The "Versus" switch in Session Settings (pub quiz, lobby only) pits camps against each other: name 2 to 4 sides; turning it off clears every pick.',
+      'The "Versus" switch in Session Settings (pub quiz, lobby only) pits camps against each other: name 2 to 4 sides. A side with teams can\'t be removed; turning Versus off clears every pick.',
       'Teams pick a side on their phone and can switch until the quiz starts. Start Quiz is refused while a team has no side.',
       'To move a team, use its side select in Teams, any time.',
       "The leaderboard bar splits by each side's average points per team, so more teams don't win.",
@@ -87,7 +86,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'The "Power-ups" tab (lobby Session Settings) lets teams spend coins: set starting coins and each power-up\'s cost and uses. Teams shows a Coins column.',
       'Seven power-ups: 50/50 and Ask the room (multiple choice), First letter and Letter count (typed answers), Pin one (sort, match), Wider margin (Number), Extra joker (doubles the next round).',
-      "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in.",
+      "Ask the room needs 3 other teams' option answers first. A team that rated every round of its last league night carries 2 coins in, even with power-ups off.",
       'Grading names the power-ups each answer used. Never refunded: after an answer-key fix, give the coin back with a coin award. Deleting a shot or selfie award removes its coin.',
     ],
   },
@@ -110,7 +109,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Running questions',
     paragraphs: [
-      'Each round opens with its title card, then Advance opens questions one by one.',
+      'Each round opens with its title card, then Advance opens questions one by one. Teams can change answers to any question opened this block.',
       "Advance on a block's last question starts the final countdown, then the break.",
     ],
   },
@@ -126,7 +125,6 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Media and sound',
     paragraphs: [
       'Pause and "Play again" show for video or audio. With autoplay off, press Play.',
-      'Display sound mutes the big screen.',
     ],
   },
   {
@@ -161,6 +159,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Leaderboard, late joiners and ties',
     paragraphs: [
       'Show or hide the leaderboard any time; Advance then reveals one rank at a time, from last place up.',
+      'Join overlay on Control shows the QR and join code for late teams.',
       'When teams tie for first, the Showdown panel offers a tiebreak.',
       "The leaderboard card (and the remote's Notes) shows the rank just revealed, large, and the next, dimmed, with callouts. Teams never see them.",
       'A 🏆 after each break previews that block\'s board ("Grading not finished" until graded); later blocks are greyed.',
@@ -180,13 +179,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Feedback from teams',
     paragraphs: [
-      'The "Collect feedback" switch in Session Settings (on by default, lobby only) makes phones show a "Rate these rounds" card each break and a form after "Quiz complete!". Results are anonymous, on session stats.',
+      'The "Collect feedback" switch in Session Settings (on by default, lobby only) makes phones show a "Rate these rounds" card each break and a form after "Quiz complete!". Anonymous results: session stats.',
     ],
   },
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      'Remote (Sessions page) is a phone page: Previous, Advance, leaderboard controls, next-up preview and your notes.',
+      'Remote (Sessions page), for your phone: Previous, Advance, leaderboard controls, next-up preview and your notes.',
       'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,
@@ -201,7 +200,6 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Creating a quiz',
     paragraphs: [
       '"New Quiz" on the Sessions page opens the editor. Fill rounds by hand or import a CSV.',
-      'To add to a saved quiz, tick "Add to quiz instead of replacing".',
     ],
     bullets: [
       "Pick the mode (Pub or Quickfire) first; it's permanent. Quickfire imports refuse other types; blank points become 1000.",

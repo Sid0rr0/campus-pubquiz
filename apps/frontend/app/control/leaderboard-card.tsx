@@ -1,9 +1,9 @@
-import type {
-  BlockBoard,
-  LiveRankBoard,
-  RankCalloutGroup,
+import {
+  ordinal,
+  type BlockBoard,
+  type LiveRankBoard,
+  type RankCalloutGroup,
 } from '@campus-pubquiz/types';
-import { ordinal } from '@/app/lib/placing-text';
 
 function Group({
   group,

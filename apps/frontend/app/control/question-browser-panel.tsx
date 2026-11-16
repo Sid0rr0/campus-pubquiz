@@ -22,7 +22,7 @@ interface QuestionBrowserPanelProps {
   /** IDs of current-block questions still missing a grade — drives the "not yet graded" dot. */
   ungradedQuestionIds: number[];
   /** The 🏆 boards, one per block; the marker sits after its last round's break marker. */
-  blockBoards?: BlockBoard[];
+  blockBoards: BlockBoard[];
 }
 
 function questionButtonClasses(
@@ -72,7 +72,7 @@ export function QuestionBrowserPanel({
   indicators,
   onSelect,
   ungradedQuestionIds,
-  blockBoards = [],
+  blockBoards,
 }: QuestionBrowserPanelProps) {
   if (rounds.length === 0) {
     return null;
@@ -105,7 +105,7 @@ export function QuestionBrowserPanel({
 
 type RowProps = Pick<
   QuestionBrowserPanelProps,
-  'selected' | 'indicators' | 'onSelect' | 'ungradedQuestionIds' | 'blockBoards'
+  'selected' | 'indicators' | 'onSelect' | 'ungradedQuestionIds'
 >;
 
 function RoundRow({
@@ -117,7 +117,7 @@ function RoundRow({
   onSelect,
   ungradedQuestionIds,
   blockBoards,
-}: Omit<RowProps, 'blockBoards'> & {
+}: RowProps & {
   blockBoards: BlockBoard[];
   round: QuestionBrowserPanelProps['rounds'][number];
   roundIndex: number;

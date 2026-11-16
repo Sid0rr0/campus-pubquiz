@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getBlockForNewAward,
   getBlockInPlay,
   getBlockInPlayIds,
   getBlockRoundIndexes,
@@ -73,6 +74,26 @@ describe('the block in play', () => {
     });
 
     expect(getBlockInPlayIds(rounds, progress)).toEqual([6]);
+  });
+});
+
+describe('the block a new bonus award belongs to', () => {
+  it('is the block in play', () => {
+    const progress = progressAt('question_open', { furthestOpenIndex: 0 });
+    expect(getBlockForNewAward(rounds, progress, 99)).toBe(1);
+  });
+
+  it('is the block just played in a fresh round intro, whose board is still up', () => {
+    const progress = progressAt('round_intro', {
+      roundIndex: 2,
+      questionIndex: 0,
+      furthestOpenIndex: -1,
+    });
+    expect(getBlockForNewAward(rounds, progress, 3)).toBe(3);
+  });
+
+  it('is the first block in the lobby', () => {
+    expect(getBlockForNewAward(rounds, progressAt('lobby'))).toBe(1);
   });
 });
 

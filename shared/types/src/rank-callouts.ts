@@ -1,5 +1,6 @@
-import { getBlockRoundIndexes } from './block-in-play';
+import { getBlockInPlay, getBlockRoundIndexes } from './block-in-play';
 import { doubledRoundIdsOfTeam } from './doubled-rounds';
+import { isGradedStatus } from './game-state-groups';
 import { isShowingBlockResults } from './leaderboard-board';
 import { ordinal } from './ordinal';
 import { countPerfectRounds } from './perfect-rounds';
@@ -11,7 +12,11 @@ import {
 import { rankTeams } from './ranking-rule';
 import type { LeaderboardEntry } from './room-views';
 import { nearestHalfPoint } from './score-math';
-import type { SeededRound, SessionState } from './session-state';
+import type {
+  PriorStandings,
+  SeededRound,
+  SessionState,
+} from './session-state';
 
 /**
  * Rank callouts: what the quiz master can say about a team as the leaderboard
@@ -73,15 +78,17 @@ function isAllTied(previous: LeaderboardEntry[]): boolean {
   );
 }
 
-/** "Perfect round: Music 🔥", one line naming every perfect round of the block. */
+/** "Perfect round: Music 🔥", one line naming every perfect round of the block. `perfectByRound` is each round's title with the teams perfect in it, worked out once per board. */
 function perfectRoundLine(
   teamId: number,
-  blockRounds: readonly SeededRound[],
-  answers: Parameters<typeof countPerfectRounds>[1],
+  perfectByRound: readonly {
+    title: string;
+    teamIds: ReadonlyMap<number, number>;
+  }[],
 ): string[] {
-  const titles = blockRounds
-    .filter((round) => countPerfectRounds([round], answers).has(teamId))
-    .map((round) => `${round.title} \u{1F525}`);
+  const titles = perfectByRound
+    .filter(({ teamIds }) => teamIds.has(teamId))
+    .map(({ title }) => `${title} \u{1F525}`);
   if (titles.length === 0) return [];
   return [
     `Perfect ${titles.length === 1 ? 'round' : 'rounds'}: ${titles.join(', ')}`,
@@ -195,6 +202,12 @@ export function describeBlockCallouts(
   const wholeQuizPerfect = isFinal
     ? countPerfectRounds(rounds, answers)
     : new Map<number, number>();
+  const perfectByRound = isFinal
+    ? []
+    : blockRounds.map((round) => ({
+        title: round.title,
+        teamIds: countPerfectRounds([round], answers),
+      }));
 
   return new Map(
     ranked.map((entry) => {
@@ -205,7 +218,7 @@ export function describeBlockCallouts(
         [
           ...(isFinal
             ? perfectTonightLine(wholeQuizPerfect.get(entry.teamId) ?? 0)
-            : perfectRoundLine(entry.teamId, blockRounds, answers)),
+            : perfectRoundLine(entry.teamId, perfectByRound)),
           ...blockOnly(gain > 0 ? [`+${gain} this block`] : []),
           ...movementLine(
             entry,
@@ -216,7 +229,7 @@ export function describeBlockCallouts(
           ...blockOnly(
             jokerLine(session.jokers, powerUps, entry.teamId, blockRounds),
           ),
-          ...bonusLines(entry, previousById.get(entry.teamId)),
+          ...blockOnly(bonusLines(entry, previousById.get(entry.teamId))),
           ...gapLine(entry, ranked),
           ...tiedLine(entry, ranked),
           ...blockOnly(
@@ -274,7 +287,7 @@ interface BlockUnit {
   questionIds: Set<number>;
 }
 
-/** A block ends at a round with a break, at a quickfire round (one board per round) and at the last round. shortcut: a plain round straight before a quickfire round merges into the quickfire round's board, since such quizzes put a break there. */
+/** A block ends at a round with a break, at a quickfire round (one board per round) and at the last round. A quiz never mixes pub and quickfire rounds (ADR 0005), so a plain round never sits directly before a quickfire round and these boundaries match the Block module's. */
 function blockUnits(rounds: readonly SeededRound[]): BlockUnit[] {
   const units: BlockUnit[] = [];
   let start = 0;
@@ -360,6 +373,34 @@ function entriesAfterBlock(
 }
 
 /**
+ * The board before block `unitIndex`, which its gains, movement and bonus are
+ * measured against: the block before's board, or for the first block the same
+ * teams all on 0 (the live board uses it too, so it never disagrees with the 🏆 board).
+ */
+function previousBoardOf(
+  session: SessionState,
+  units: BlockUnit[],
+  unitIndex: number,
+  latestReached: number,
+): LeaderboardEntry[] {
+  return unitIndex > 0
+    ? entriesAfterBlock(session, units, unitIndex - 1, latestReached)
+    : zeroedBoard(entriesAfterBlock(session, units, 0, latestReached));
+}
+
+/** The same teams with no points, all tied: the board before the first block. */
+function zeroedBoard(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+  return entries.map((e) => ({
+    ...e,
+    totalPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
+    rank: 1,
+    rankTo: entries.length,
+  }));
+}
+
+/**
  * The 🏆 boards of the question browser: one per block (per round in a
  * quickfire quiz), each rebuilt from the per-round points and the bonus
  * awards. Blocks not reached yet carry no teams. Gains and movement compare
@@ -375,7 +416,10 @@ export function describeBlockBoards(session: SessionState): BlockBoard[] {
   const live = describeLiveRankBoard(session);
   const liveBlockId = session.priorStandings?.blockFirstQuestionId;
   const leftIds = new Set(session.departedTeams.map((t) => t.teamId));
-  let before: LeaderboardEntry[] = [];
+  // ungradedQuestionIds is only trusted once the block's grading statuses are reached.
+  const isBlockInPlayUngraded =
+    getBlockInPlay(session.seededGame.rounds, session.progress).length > 0 &&
+    !isGradedStatus(session.progress.status);
   return units.map((unit, index) => {
     const isFinal = index === units.length - 1;
     const base = {
@@ -384,7 +428,8 @@ export function describeBlockBoards(session: SessionState): BlockBoard[] {
       isReached: reached[index],
       isFinal,
       isGradingUnfinished:
-        index === latestReached && session.ungradedQuestionIds.length > 0,
+        index === latestReached &&
+        (isBlockInPlayUngraded || session.ungradedQuestionIds.length > 0),
       isOnAir:
         live !== null &&
         live.all === undefined &&
@@ -393,25 +438,13 @@ export function describeBlockBoards(session: SessionState): BlockBoard[] {
     };
     if (!reached[index]) return { ...base, groups: [] };
     const ranked = entriesAfterBlock(session, units, index, latestReached);
-    const previous =
-      index === 0
-        ? ranked.map((e) => ({
-            ...e,
-            totalPoints: 0,
-            positiveBonusPoints: 0,
-            negativeBonusPoints: 0,
-            rank: 1,
-            rankTo: ranked.length,
-          }))
-        : before;
     const callouts = describeBlockCallouts(
       session,
       unit.firstQuestionId,
       ranked,
-      previous,
+      previousBoardOf(session, units, index, latestReached),
       isFinal,
     );
-    before = ranked;
     const ranks = [...new Set(ranked.map((e) => e.rank))].reverse();
     return {
       ...base,
@@ -431,6 +464,48 @@ function describeGainCallouts(
       const gain = gainOf(entry, previousById);
       return [entry.teamId, gain > 0 ? [`+${gain}`] : []];
     }),
+  );
+}
+
+/**
+ * The callouts of the block just scored, measured the way its 🏆 board is:
+ * after a quickfire round against the board before the whole round (the prior
+ * standings only know its last question), and in the first block against
+ * everyone on 0 (so a lobby bonus counts in its gain).
+ */
+function describeLiveBlockCallouts(
+  session: SessionState,
+  prior: PriorStandings,
+  ranked: LeaderboardEntry[],
+): Map<number, string[]> {
+  const isFinal = session.progress.status === 'ended';
+  const units = blockUnits(session.seededGame.rounds);
+  const unitIndex = units.findIndex((u) =>
+    u.questionIds.has(prior.blockFirstQuestionId),
+  );
+  if (unitIndex < 0) {
+    return describeBlockCallouts(
+      session,
+      prior.blockFirstQuestionId,
+      ranked,
+      prior.board,
+      isFinal,
+    );
+  }
+  const unit = units[unitIndex];
+  let previous = unitIndex === 0 ? zeroedBoard(prior.board) : prior.board;
+  if (unit.firstQuestionId !== prior.blockFirstQuestionId) {
+    const latestReached = units.findLastIndex((u) =>
+      session.openedQuestionIds.includes(u.firstQuestionId),
+    );
+    previous = previousBoardOf(session, units, unitIndex, latestReached);
+  }
+  return describeBlockCallouts(
+    session,
+    unit.firstQuestionId,
+    ranked,
+    previous,
+    isFinal,
   );
 }
 
@@ -459,13 +534,7 @@ export function describeLiveRankBoard(
   const ranked = capLeaderboard(session.leaderboard, isQuickfire);
   const callouts = isBetweenQuickfire
     ? describeGainCallouts(ranked, priorStandings.board)
-    : describeBlockCallouts(
-        session,
-        priorStandings.blockFirstQuestionId,
-        ranked,
-        priorStandings.board,
-        progress.status === 'ended',
-      );
+    : describeLiveBlockCallouts(session, priorStandings, ranked);
   if (isBetweenQuickfire) {
     const ranks = [...new Set(ranked.map((entry) => entry.rank))];
     return {

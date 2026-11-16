@@ -83,7 +83,7 @@ describe('GameGateway — award bonus', () => {
     ).toEqual(stored.bonusAwards);
   });
 
-  it('leaves the block empty when no block is in play', async () => {
+  it('stamps an award made in the lobby with the quiz’s first block', async () => {
     await game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: team.teamId,
       category: 'shot',
@@ -94,7 +94,9 @@ describe('GameGateway — award bonus', () => {
       game.standingsService.funFactData(game.gameSessionId),
     );
     expect(stored.bonusAwards).toEqual([
-      expect.objectContaining({ blockFirstQuestionId: null }),
+      expect.objectContaining({
+        blockFirstQuestionId: game.rounds[0].questionIds[0],
+      }),
     ]);
   });
 

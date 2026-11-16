@@ -43,6 +43,7 @@ function renderPanel(onSelect = vi.fn()) {
       }}
       onSelect={onSelect}
       ungradedQuestionIds={[]}
+      blockBoards={[]}
     />,
   );
 }

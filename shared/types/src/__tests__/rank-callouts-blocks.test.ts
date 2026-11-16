@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FunFactBonusAward } from '../fun-facts';
-import { describeBlockBoards } from '../rank-callouts';
+import { describeBlockBoards, describeLiveRankBoard } from '../rank-callouts';
+import { rankTeams } from '../ranking-rule';
 import { projectScreen } from '../screen-projection';
 import { SOCKET_ROOMS } from '../socket-events';
 import type { LeaderboardEntry } from '../room-views';
@@ -224,6 +225,36 @@ describe('describeBlockBoards', () => {
     ).toEqual([false, false, false]);
   });
 
+  it('flags grading unfinished while the block is still being answered, before any ungraded answer is known', () => {
+    const answering = session({
+      progress: {
+        ...session().progress,
+        status: 'question_open',
+        furthestOpenIndex: 0,
+      },
+    });
+
+    expect(
+      describeBlockBoards(answering).map((b) => b.isGradingUnfinished),
+    ).toEqual([false, true, false]);
+  });
+
+  it('does not flag the finished block in a fresh round intro', () => {
+    const intro = session({
+      progress: {
+        ...session().progress,
+        status: 'round_intro',
+        roundIndex: 3,
+        questionIndex: 0,
+        furthestOpenIndex: -1,
+      },
+    });
+
+    expect(
+      describeBlockBoards(intro).map((b) => b.isGradingUnfinished),
+    ).toEqual([false, false, false]);
+  });
+
   it('keeps teams that left on the boards they took part in, tagged left', () => {
     const { rank: _rank, rankTo: _rankTo, ...gone } = team(4, 'D', [0, 0, 9]);
     const [first, second] = describeBlockBoards(
@@ -261,6 +292,99 @@ describe('describeBlockBoards', () => {
       false,
       false,
     ]);
+  });
+
+  describe('the live board on the same block', () => {
+    const calloutsOf = (board: ReturnType<typeof describeLiveRankBoard>) =>
+      Object.fromEntries(
+        [board?.current, board?.next]
+          .flatMap((g) => g?.teams ?? [])
+          .map((t) => [t.teamName, t.callouts]),
+      );
+
+    it('agrees with the 🏆 board after a quickfire round, measured against the board before the whole round', () => {
+      const quickfire = [
+        round(1, [1, 2], { quickfire: true, title: 'R1' }),
+        round(2, [3, 4], { quickfire: true, title: 'R2' }),
+      ];
+      const entry = (id: number, name: string, points: number) => ({
+        ...leaderboardEntry(id, name, points),
+        roundPoints: [{ roundTitle: 'R1', points }],
+      });
+      const live = sessionWith(
+        quickfire,
+        {
+          status: 'round_intro',
+          roundIndex: 1,
+          questionIndex: 0,
+          furthestOpenIndex: -1,
+          isLeaderboardVisible: true,
+        },
+        {
+          openedQuestionIds: [1, 2],
+          leaderboard: [entry(1, 'A', 9), entry(2, 'B', 5)],
+          leaderboardRevealCount: 2,
+          // Taken when question 2 opened: only question 1 had scored.
+          priorStandings: {
+            board: [entry(1, 'A', 4), entry(2, 'B', 5)],
+            blockFirstQuestionId: 2,
+          },
+        },
+      );
+
+      const [board] = describeBlockBoards(live);
+
+      expect(calloutsOf(describeLiveRankBoard(live)).A).toEqual(
+        byName(board, 'A').callouts,
+      );
+      expect(byName(board, 'A').callouts).toContain('+9 this block');
+    });
+
+    it('agrees with the 🏆 board in the first block, where a lobby bonus counts in the gain and nothing moved', () => {
+      const entry = (id: number, name: string, points: number[]) => ({
+        ...team(id, name, points),
+        positiveBonusPoints: id === 1 ? 3 : 0,
+        bonusPoints: id === 1 ? 3 : 0,
+        totalPoints: points.reduce((a, b) => a + b, 0) + (id === 1 ? 3 : 0),
+      });
+      const now = rankTeams([
+        entry(1, 'A', [3, 2]),
+        entry(2, 'B', [1, 1]),
+        entry(3, 'C', [0, 4]),
+      ]);
+      const live = session({
+        openedQuestionIds: [1],
+        progress: {
+          ...session().progress,
+          status: 'reveal',
+          roundIndex: 1,
+          isLeaderboardVisible: true,
+        },
+        leaderboard: now,
+        leaderboardRevealCount: 3,
+        funFactData: {
+          answers: [],
+          powerUps: [],
+          bonusAwards: [award(1, 3, 1)],
+        },
+        // Taken when block 1 opened: the lobby bonus was already on it.
+        priorStandings: {
+          board: now.map((e) => ({
+            ...e,
+            totalPoints: e.teamId === 1 ? 3 : 0,
+            roundPoints: [],
+          })),
+          blockFirstQuestionId: 1,
+        },
+      });
+
+      const [board] = describeBlockBoards(live);
+
+      expect(calloutsOf(describeLiveRankBoard(live)).A).toEqual(
+        byName(board, 'A').callouts,
+      );
+      expect(byName(board, 'A').callouts).toContain('+8 this block');
+    });
   });
 
   it('goes to the admin room only', () => {
