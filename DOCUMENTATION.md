@@ -683,8 +683,8 @@ at the end of every session write and when a session is placed, so the facts
 follow hand grades and key fixes. A bonus award records its block when it is
 awarded (the block's first question id): the block in play, else (a fresh round
 intro, still showing the previous board) the block played just before it (read
-from the progress, so also after a backend restart), else (lobby,
-rules) the quiz's first block. Only awards made before this was recorded are
+from the progress, so also after a backend restart), else (before the
+first block) the quiz's first block. Only awards made before this was recorded are
 empty. The bonus awards in
 `funFactData` carry their team and that block.
 

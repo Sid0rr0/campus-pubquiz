@@ -254,6 +254,10 @@ describe('GameGateway — bonus in a fresh round intro, the previous block’s b
     if (restart) {
       game = await game.restart();
       admin = await game.connectAdmin();
+      expect(game.sessionWrite.read(game.joinCode).progress).toMatchObject({
+        status: 'round_intro',
+        roundIndex: 2,
+      });
     }
     await game.gateway.handleAwardBonus(asSocket(admin), {
       teamId,
