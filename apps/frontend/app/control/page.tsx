@@ -24,7 +24,10 @@ import { DesktopSidebar } from '@/app/control/desktop-sidebar';
 import { AnswersPanel } from '@/app/control/answers-panel';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
 import { QuestionDetail } from '@/app/control/question-detail';
-import { LeaderboardCard } from '@/app/control/leaderboard-card';
+import {
+  BlockBoardCard,
+  LeaderboardCard,
+} from '@/app/control/leaderboard-card';
 import {
   RoundCardDetail,
   titleCardKindLabel,
@@ -418,6 +421,19 @@ export default function AdminPage() {
   );
 }
 
+/** The live leaderboard card or a block's 🏆 board for the item, else null. */
+function rankBoardCard(
+  view: NonNullable<AdminSnapshot>,
+  item: DetailItem | null,
+) {
+  if (item?.kind === 'leaderboard' && view.liveRankBoard) {
+    return <LeaderboardCard board={view.liveRankBoard} />;
+  }
+  if (item?.kind !== 'blockBoard') return null;
+  const board = view.blockBoards.find((b) => b.roundIndex === item.roundIndex);
+  return board?.isReached ? <BlockBoardCard board={board} /> : null;
+}
+
 /** The detail column: the live leaderboard card, a title or break card, or a question. */
 function DetailPane({
   view,
@@ -434,9 +450,8 @@ function DetailPane({
   isManualPick: boolean;
   liveAnswers: AdminSession['liveAnswers'];
 }) {
-  if (item?.kind === 'leaderboard' && view.liveRankBoard) {
-    return <LeaderboardCard board={view.liveRankBoard} />;
-  }
+  const boardCard = rankBoardCard(view, item);
+  if (boardCard) return boardCard;
   if (item && (item.kind === 'title' || item.kind === 'break')) {
     return (
       <RoundCardDetail
@@ -534,6 +549,7 @@ function SessionWorkspace({
               indicators={indicators}
               onSelect={onSelect}
               ungradedQuestionIds={ungradedQuestionIds}
+              blockBoards={view.blockBoards}
             />
           </div>
           <div className="md:min-w-0 md:flex-1">

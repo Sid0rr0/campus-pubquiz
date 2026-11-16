@@ -1,4 +1,8 @@
-import type { LiveRankBoard, RankCalloutGroup } from '@campus-pubquiz/types';
+import type {
+  BlockBoard,
+  LiveRankBoard,
+  RankCalloutGroup,
+} from '@campus-pubquiz/types';
 import { ordinal } from '@/app/lib/placing-text';
 
 function Group({
@@ -28,6 +32,11 @@ function Group({
             }
           >
             {team.teamName} · {team.totalPoints}
+            {team.hasLeft && (
+              <span className="ml-2 text-xs font-bold text-foreground/55">
+                left
+              </span>
+            )}
           </p>
           <ul className={isCurrent ? 'text-base' : 'text-sm'}>
             {team.callouts.map((line) => (
@@ -35,6 +44,22 @@ function Group({
             ))}
           </ul>
         </div>
+      ))}
+    </section>
+  );
+}
+
+/** A block's whole board, bottom-up, as the 🏆 marker previews it. */
+export function BlockBoardCard({ board }: { board: BlockBoard }) {
+  return (
+    <section aria-label="Block board card" className="flex flex-col gap-4">
+      {board.isGradingUnfinished && (
+        <p className="text-xs font-extrabold text-magenta uppercase">
+          Grading not finished
+        </p>
+      )}
+      {board.groups.map((group) => (
+        <Group key={group.rank} group={group} label="Board" isCurrent />
       ))}
     </section>
   );

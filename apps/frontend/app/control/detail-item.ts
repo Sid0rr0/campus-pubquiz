@@ -5,7 +5,9 @@ export type DetailItem =
   | { kind: 'question'; questionId: number }
   | { kind: 'title'; roundIndex: number }
   | { kind: 'break'; roundIndex: number }
-  | { kind: 'leaderboard' };
+  | { kind: 'leaderboard' }
+  /** A block's 🏆 board, by the block's last round. */
+  | { kind: 'blockBoard'; roundIndex: number };
 
 export function isSameItem(a: DetailItem | null, b: DetailItem | null) {
   if (!a || !b || a.kind !== b.kind) return false;

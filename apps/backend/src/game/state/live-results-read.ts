@@ -27,27 +27,40 @@ export class LiveResultsRead {
 
   async read(session: SessionState): Promise<SessionState> {
     const { gameSessionId } = session.seededGame;
-    const [leaderboard, funFactData, tookPartTeamIds] = await Promise.all([
-      this.readOrKeep(
-        session,
-        'Standings',
-        () => this.standingsService.leaderboard(gameSessionId),
-        session.leaderboard,
-      ),
-      this.readOrKeep(
-        session,
-        'Fun fact data',
-        () => this.standingsService.funFactData(gameSessionId),
-        session.funFactData,
-      ),
-      this.readOrKeep(
-        session,
-        'Participants',
-        () => this.standingsService.tookPartTeamIds(gameSessionId),
-        session.tookPartTeamIds,
-      ),
-    ]);
-    return { ...session, leaderboard, funFactData, tookPartTeamIds };
+    const [leaderboard, funFactData, tookPartTeamIds, departedTeams] =
+      await Promise.all([
+        this.readOrKeep(
+          session,
+          'Standings',
+          () => this.standingsService.leaderboard(gameSessionId),
+          session.leaderboard,
+        ),
+        this.readOrKeep(
+          session,
+          'Fun fact data',
+          () => this.standingsService.funFactData(gameSessionId),
+          session.funFactData,
+        ),
+        this.readOrKeep(
+          session,
+          'Participants',
+          () => this.standingsService.tookPartTeamIds(gameSessionId),
+          session.tookPartTeamIds,
+        ),
+        this.readOrKeep(
+          session,
+          'Departed teams',
+          () => this.standingsService.departedTeams(gameSessionId),
+          session.departedTeams,
+        ),
+      ]);
+    return {
+      ...session,
+      leaderboard,
+      funFactData,
+      tookPartTeamIds,
+      departedTeams,
+    };
   }
 
   private async readOrKeep<R>(

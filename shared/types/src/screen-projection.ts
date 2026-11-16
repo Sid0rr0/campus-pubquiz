@@ -16,7 +16,7 @@ import type { GameProgress } from './game-state-types';
 import { isRevealingStatus, isRevealQuestionStatus } from './game-state-groups';
 import { isQuestionHiddenBehindQuickfireLeaderboard } from './quickfire-visibility';
 import { describeLeaderboardBoard } from './leaderboard-board';
-import { describeLiveRankBoard } from './rank-callouts';
+import { describeBlockBoards, describeLiveRankBoard } from './rank-callouts';
 import { describeSessionSideStandings } from './side-standings';
 import { FULLY_REVEALED_STEP } from './closest-guess-reveal';
 import {
@@ -200,6 +200,7 @@ function projectAdmin({
     ...snapshot,
     ...(sideStandings === undefined ? {} : { sideStandings }),
     ...(liveRankBoard === null ? {} : { liveRankBoard }),
+    blockBoards: describeBlockBoards(session),
     ...buildScreenOperatorFields(session),
     ...buildAdminFields(session),
     onAirScreen: screen,

@@ -31,6 +31,8 @@ export interface RankCalloutTeam {
   rankTo: number;
   totalPoints: number;
   callouts: string[];
+  /** The team has left or was kicked; set on block boards only. */
+  hasLeft?: boolean;
 }
 
 /** The teams sharing one rank (a tie reveals as one step on the big screen). */
@@ -111,9 +113,12 @@ function movementLine(
   entry: LeaderboardEntry,
   previousRanks: ReadonlyMap<number, number>,
   isPreviousAllTied: boolean,
+  isFirstBlock: boolean,
 ): string[] {
   const before = previousRanks.get(entry.teamId);
-  if (before === undefined || isPreviousAllTied) return [];
+  if (before === undefined || isFirstBlock) return [];
+  // Everyone was tied before: like the big screen's trends, every team moved up.
+  if (isPreviousAllTied) return ['moved up'];
   if (entry.rank < before) return [`up from ${ordinal(before)}`];
   if (entry.rank > before) return [`down from ${ordinal(before)}`];
   return [`holds ${ordinal(entry.rank)}`];
@@ -183,6 +188,8 @@ export function describeBlockCallouts(
     rankTeams(previous).map((e) => [e.teamId, e.rank]),
   );
   const isPreviousAllTied = isAllTied(previous);
+  const isFirstBlock =
+    rounds.flatMap((r) => r.questions)[0]?.id === blockFirstQuestionId;
   const biggest = Math.max(0, ...ranked.map((e) => gainOf(e, previousById)));
   const { answers, powerUps } = session.funFactData;
   const wholeQuizPerfect = isFinal
@@ -200,7 +207,12 @@ export function describeBlockCallouts(
             ? perfectTonightLine(wholeQuizPerfect.get(entry.teamId) ?? 0)
             : perfectRoundLine(entry.teamId, blockRounds, answers)),
           ...blockOnly(gain > 0 ? [`+${gain} this block`] : []),
-          ...movementLine(entry, previousRanks, isPreviousAllTied),
+          ...movementLine(
+            entry,
+            previousRanks,
+            isPreviousAllTied,
+            isFirstBlock,
+          ),
           ...blockOnly(
             jokerLine(session.jokers, powerUps, entry.teamId, blockRounds),
           ),
@@ -220,6 +232,7 @@ function toGroup(
   rank: number,
   ranked: LeaderboardEntry[],
   callouts: Map<number, string[]>,
+  leftTeamIds?: ReadonlySet<number>,
 ): RankCalloutGroup {
   return {
     rank,
@@ -232,8 +245,179 @@ function toGroup(
         rankTo,
         totalPoints,
         callouts: callouts.get(teamId) ?? [],
+        ...(leftTeamIds?.has(teamId) ? { hasLeft: true } : {}),
       })),
   };
+}
+
+/** One block's board in the question browser's 🏆 marker. */
+export interface BlockBoard {
+  /** The block's last round: the marker sits after that round's break marker. */
+  roundIndex: number;
+  blockFirstQuestionId: number;
+  /** The block has been reached (its first question opened); a later block has no board. */
+  isReached: boolean;
+  /** The last block: the final board, whole-quiz lines. */
+  isFinal: boolean;
+  /** The block in play while its answers are still ungraded: totals are not final. */
+  isGradingUnfinished: boolean;
+  /** This board is the one on the big screen now. */
+  isOnAir: boolean;
+  /** Bottom-up like the reveal; empty until reached. */
+  groups: RankCalloutGroup[];
+}
+
+interface BlockUnit {
+  firstRoundIndex: number;
+  lastRoundIndex: number;
+  firstQuestionId: number;
+  questionIds: Set<number>;
+}
+
+/** A block ends at a round with a break, at a quickfire round (one board per round) and at the last round. shortcut: a plain round straight before a quickfire round merges into the quickfire round's board, since such quizzes put a break there. */
+function blockUnits(rounds: readonly SeededRound[]): BlockUnit[] {
+  const units: BlockUnit[] = [];
+  let start = 0;
+  rounds.forEach((round, index) => {
+    if (!round.quickfire && !round.breakAfter && index < rounds.length - 1)
+      return;
+    const questionIds = rounds
+      .slice(start, index + 1)
+      .flatMap((r) => r.questions.map(({ id }) => id));
+    if (questionIds.length > 0) {
+      units.push({
+        firstRoundIndex: start,
+        lastRoundIndex: index,
+        firstQuestionId: questionIds[0],
+        questionIds: new Set(questionIds),
+      });
+    }
+    start = index + 1;
+  });
+  return units;
+}
+
+/**
+ * Every team's entry as the board after block `unitIndex` stood: round points
+ * up to the block's last round plus bonus awards recorded for that block or
+ * earlier (awards with no known block count in the latest reached board only).
+ * Teams that left join once they have points or an award.
+ */
+function entriesAfterBlock(
+  session: SessionState,
+  units: BlockUnit[],
+  unitIndex: number,
+  latestReached: number,
+): LeaderboardEntry[] {
+  const departedIds = new Set(session.departedTeams.map((t) => t.teamId));
+  const teams = [
+    ...session.leaderboard,
+    ...session.departedTeams.map((t) => ({ ...t, rank: 0, rankTo: 0 })),
+  ];
+  const unitOfAward = (blockFirstQuestionId: number | null) => {
+    const found = units.findIndex((u) =>
+      u.questionIds.has(blockFirstQuestionId ?? -1),
+    );
+    return found < 0 ? latestReached : found;
+  };
+  return rankTeams(
+    teams.flatMap((team) => {
+      const roundPoints = team.roundPoints.slice(
+        0,
+        units[unitIndex].lastRoundIndex + 1,
+      );
+      const awards = session.funFactData.bonusAwards.filter(
+        (a) =>
+          a.teamId === team.teamId &&
+          unitOfAward(a.blockFirstQuestionId) <= unitIndex,
+      );
+      const positiveBonusPoints = awards
+        .filter((a) => a.points > 0)
+        .reduce((sum, a) => sum + a.points, 0);
+      const negativeBonusPoints = awards
+        .filter((a) => a.points < 0)
+        .reduce((sum, a) => sum + a.points, 0);
+      const quizPoints = roundPoints.reduce((sum, r) => sum + r.points, 0);
+      const tookPart =
+        !departedIds.has(team.teamId) ||
+        awards.length > 0 ||
+        roundPoints.some((r) => r.points !== 0);
+      return tookPart
+        ? [
+            {
+              ...team,
+              roundPoints,
+              positiveBonusPoints,
+              negativeBonusPoints,
+              bonusPoints: positiveBonusPoints + negativeBonusPoints,
+              totalPoints:
+                quizPoints + positiveBonusPoints + negativeBonusPoints,
+            },
+          ]
+        : [];
+    }),
+  );
+}
+
+/**
+ * The 🏆 boards of the question browser: one per block (per round in a
+ * quickfire quiz), each rebuilt from the per-round points and the bonus
+ * awards. Blocks not reached yet carry no teams. Gains and movement compare
+ * with the block before; the first block compares with everyone on 0.
+ */
+export function describeBlockBoards(session: SessionState): BlockBoard[] {
+  const { rounds } = session.seededGame;
+  const units = blockUnits(rounds);
+  const reached = units.map((u) =>
+    session.openedQuestionIds.includes(u.firstQuestionId),
+  );
+  const latestReached = reached.lastIndexOf(true);
+  const live = describeLiveRankBoard(session);
+  const liveBlockId = session.priorStandings?.blockFirstQuestionId;
+  const leftIds = new Set(session.departedTeams.map((t) => t.teamId));
+  let before: LeaderboardEntry[] = [];
+  return units.map((unit, index) => {
+    const isFinal = index === units.length - 1;
+    const base = {
+      roundIndex: unit.lastRoundIndex,
+      blockFirstQuestionId: unit.firstQuestionId,
+      isReached: reached[index],
+      isFinal,
+      isGradingUnfinished:
+        index === latestReached && session.ungradedQuestionIds.length > 0,
+      isOnAir:
+        live !== null &&
+        live.all === undefined &&
+        liveBlockId !== undefined &&
+        unit.questionIds.has(liveBlockId),
+    };
+    if (!reached[index]) return { ...base, groups: [] };
+    const ranked = entriesAfterBlock(session, units, index, latestReached);
+    const previous =
+      index === 0
+        ? ranked.map((e) => ({
+            ...e,
+            totalPoints: 0,
+            positiveBonusPoints: 0,
+            negativeBonusPoints: 0,
+            rank: 1,
+            rankTo: ranked.length,
+          }))
+        : before;
+    const callouts = describeBlockCallouts(
+      session,
+      unit.firstQuestionId,
+      ranked,
+      previous,
+      isFinal,
+    );
+    before = ranked;
+    const ranks = [...new Set(ranked.map((e) => e.rank))].reverse();
+    return {
+      ...base,
+      groups: ranks.map((rank) => toGroup(rank, ranked, callouts, leftIds)),
+    };
+  });
 }
 
 /** The between-questions quickfire board: each team's gain since the previous question, nothing else. */

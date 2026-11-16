@@ -148,6 +148,11 @@ export class StandingsService {
     return (await this.forSession(gameSessionId)).leaderboard;
   }
 
+  /** Teams that took part but were kicked or left (see {@link SessionStandings.departed}). */
+  async departedTeams(gameSessionId: number): Promise<DepartedTeam[]> {
+    return (await this.forSession(gameSessionId)).departed;
+  }
+
   /**
    * The session's answers (roster teams only, so a team that has left the
    * roster stays out of the fun facts and the reveal's teams-correct count)

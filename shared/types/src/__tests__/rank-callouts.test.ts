@@ -313,9 +313,10 @@ describe('describeLiveRankBoard', () => {
       ]);
     });
 
-    it('gives no movement line when every team was tied beforehand', () => {
+    it('says every team moved up when all were tied beforehand, as the big screen trends do', () => {
       const prior = [entry(1, 'A', 0), entry(2, 'B', 0), entry(3, 'C', 0)];
 
+      expect(lines(live(NOW, prior, 0), 3)).toContain('moved up');
       expect(lines(live(NOW, prior, 0), 3)).not.toContainEqual(
         expect.stringMatching(/up from|down from|holds/),
       );
