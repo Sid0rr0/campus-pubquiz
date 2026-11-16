@@ -80,16 +80,17 @@ describe('the block in play', () => {
 describe('the block a new bonus award belongs to', () => {
   it('is the block in play', () => {
     const progress = progressAt('question_open', { furthestOpenIndex: 0 });
-    expect(getBlockForNewAward(rounds, progress, 99)).toBe(1);
+    expect(getBlockForNewAward(rounds, progress)).toBe(1);
   });
 
-  it('is the block just played in a fresh round intro, whose board is still up', () => {
+  it('is the block just played in a fresh round intro, whose board is still up, with no prior standings needed (after a restart)', () => {
     const progress = progressAt('round_intro', {
       roundIndex: 2,
-      questionIndex: 0,
+      questionIndex: 1,
       furthestOpenIndex: -1,
     });
-    expect(getBlockForNewAward(rounds, progress, 3)).toBe(3);
+    // Not the quiz's first block (1): the quickfire question just played.
+    expect(getBlockForNewAward(rounds, progress)).toBe(5);
   });
 
   it('is the first block in the lobby', () => {

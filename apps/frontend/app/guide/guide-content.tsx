@@ -45,6 +45,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'Build the quiz, then check it with Quiz preview (editor, quiz list or waiting session), not a throwaway session.',
       'Open /display on the big screen, /control on your laptop.',
+      'A block is a run of rounds graded and revealed together, ending at a break.',
     ],
   },
   {
@@ -125,6 +126,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Media and sound',
     paragraphs: [
       'Pause and "Play again" show for video or audio. With autoplay off, press Play.',
+      'Display sound mutes the big screen.',
     ],
   },
   {
@@ -161,8 +163,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'Show or hide the leaderboard any time; Advance then reveals one rank at a time, from last place up.',
       'Join overlay on Control shows the QR and join code for late teams.',
       'When teams tie for first, the Showdown panel offers a tiebreak.',
-      "The leaderboard card (and the remote's Notes) shows the rank just revealed, large, and the next, dimmed, with callouts. Teams never see them.",
-      'A 🏆 after each break previews that block\'s board ("Grading not finished" until graded); later blocks are greyed.',
+      'The leaderboard card (and the remote\'s Notes) shows the rank just revealed and the next, with callouts teams never see. A 🏆 after each break previews that block\'s board ("Grading not finished" until graded).',
     ],
   },
   {
@@ -200,6 +201,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Creating a quiz',
     paragraphs: [
       '"New Quiz" on the Sessions page opens the editor. Fill rounds by hand or import a CSV.',
+      'To add to a saved quiz, tick "Add to quiz instead of replacing".',
     ],
     bullets: [
       "Pick the mode (Pub or Quickfire) first; it's permanent. Quickfire imports refuse other types; blank points become 1000.",

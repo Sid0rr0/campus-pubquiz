@@ -60,11 +60,7 @@ export class BonusAwardsChanges {
         settings.enabledBonusCategories,
         settings.maxBonusAwardsPerCategory,
         { powerUpsEnabled: settings.powerUpsEnabled, manual: coins },
-        getBlockForNewAward(
-          session.seededGame.rounds,
-          session.progress,
-          session.priorStandings?.blockFirstQuestionId,
-        ),
+        getBlockForNewAward(session.seededGame.rounds, session.progress),
       ),
     );
     const notices: TeamNotice[] = [];

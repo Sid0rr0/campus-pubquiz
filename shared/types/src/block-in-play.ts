@@ -124,18 +124,18 @@ export function getBlockInPlayIds(
 /**
  * The block (by its first question's id) a bonus award made now belongs to:
  * the block in play; between blocks (a fresh round intro, whose board still
- * shows the block just played) the block of the prior standings; before the
- * first block (lobby, rules) the quiz's first block. Undefined only for a quiz
- * with no questions.
+ * shows the block just played) the block played just before; before the
+ * first block (lobby, rules) the quiz's first block. Read from progress alone,
+ * so it holds after a backend restart too. Undefined only for a quiz with no
+ * questions.
  */
 export function getBlockForNewAward(
   rounds: readonly BlockRound[],
   progress: GameProgress,
-  priorBlockFirstQuestionId?: number,
 ): number | undefined {
   return (
     getBlockInPlay(rounds, progress)[0]?.questionId ??
-    priorBlockFirstQuestionId ??
+    getLastPastBlockIds(rounds, progress)[0] ??
     rounds[0]?.questions[0]?.id
   );
 }
