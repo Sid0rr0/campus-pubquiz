@@ -184,12 +184,20 @@ describe('GameStateService — getPresenterContext', () => {
         nextBody: 'Final standings',
       });
 
+      expect(
+        game.gameState.getPresenterContext(game.joinCode).liveRankBoard,
+      ).toBeNull();
+
       await advance(1); // -> ended, final leaderboard
       expect(screens()).toMatchObject({
         current: 'Leaderboard',
         next: 'Leaderboard',
         nextBody: 'Next place (1 of 1)',
       });
+      expect(
+        game.gameState.getPresenterContext(game.joinCode).liveRankBoard?.next
+          ?.rank,
+      ).toBe(1);
 
       await game.act('ADVANCE');
       // Every rank is shown and nothing waits under the final board, so

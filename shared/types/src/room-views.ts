@@ -414,4 +414,6 @@ export interface PresenterContextPayload {
   currentScreen: ScreenPreview;
   /** What /display will show after the remote's Advance button is pressed, or null when Advance has nowhere left to go. */
   nextScreen: ScreenPreview | null;
+  /** The leaderboard's rank callouts while it is up (admin-only), else null. */
+  liveRankBoard: LiveRankBoard | null;
 }

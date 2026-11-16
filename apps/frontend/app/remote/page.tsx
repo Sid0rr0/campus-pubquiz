@@ -16,6 +16,7 @@ import { MediaPauseButton } from '@/app/control/media-pause-button';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
 import { AllCluesList } from '@/app/control/all-clues-list';
 import { ClueStatus } from '@/app/control/clue-status';
+import { LeaderboardCard } from '@/app/control/leaderboard-card';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { useAdminMediaPauseShortcut } from '@/app/control/use-admin-keyboard-shortcuts';
@@ -94,6 +95,9 @@ function NotesBody({
   presenterContext: PresenterContextPayload | null;
   isRoundNoteOnAir: boolean;
 }) {
+  if (presenterContext?.liveRankBoard) {
+    return <LeaderboardCard board={presenterContext.liveRankBoard} />;
+  }
   const roundNote = presenterContext?.currentRoundNote;
   if (roundNote) {
     return <p className="text-sm whitespace-pre-line">{roundNote}</p>;
