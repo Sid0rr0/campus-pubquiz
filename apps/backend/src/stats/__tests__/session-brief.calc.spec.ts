@@ -146,6 +146,8 @@ function buildInput(
     ],
     answers,
     bonusAwards: [],
+    offeredPowerUps: [],
+    purchases: [],
     openedQuestionIds: [10, 11, 12],
     ...overrides,
   };

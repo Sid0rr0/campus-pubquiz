@@ -137,6 +137,7 @@ const DETAIL: SessionDetailStats = {
     },
     winningMargin: 6,
   },
+  powerUps: null,
   scoresheet: [
     {
       teamId: 1,

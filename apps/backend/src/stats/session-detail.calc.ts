@@ -1,5 +1,10 @@
 import {
   BONUS_CATEGORIES,
+  POWER_UP_IDS,
+  powerUpHits,
+  type FunFactPowerUp,
+  type PowerUpId,
+  type SessionDetailPowerUps,
   type BonusCategory,
   type FeltDifficulty,
   type Pacing,
@@ -101,6 +106,10 @@ export interface SessionDetailInput {
    */
   openedQuestionIds: readonly number[] | null;
   bonusAwards: SessionDetailBonusInputRow[];
+  /** Power-ups the session offered; empty when it had power-ups off. */
+  offeredPowerUps: readonly PowerUpId[];
+  /** Every stored purchase, whatever team made it. */
+  purchases: readonly FunFactPowerUp[];
 }
 
 /**
@@ -368,6 +377,80 @@ function computeHighlights({
   };
 }
 
+/** Every element whose score is the highest, in input order; empty for no rows. */
+function allBest<T>(rows: readonly T[], score: (row: T) => number): T[] {
+  const best = Math.max(...rows.map(score));
+  return rows.filter((row) => score(row) === best);
+}
+
+function computePowerUps({
+  offeredPowerUps,
+  purchases: allPurchases,
+  participantIds,
+  questions,
+  answers,
+}: {
+  offeredPowerUps: readonly PowerUpId[];
+  purchases: readonly FunFactPowerUp[];
+  participantIds: ReadonlySet<number>;
+  questions: readonly DetailQuestion[];
+  answers: readonly DetailAnswer[];
+}): SessionDetailPowerUps | null {
+  const purchases = allPurchases.filter((p) => participantIds.has(p.teamId));
+  if (offeredPowerUps.length === 0 && purchases.length === 0) return null;
+  const hitsByPowerUp = new Map(
+    powerUpHits(
+      purchases,
+      answers,
+      new Map(questions.map((q) => [q.questionId, q.points])),
+    ).map((h) => [h.powerUp, h.hits]),
+  );
+  const roundIdByQuestionId = new Map(
+    questions.map((q) => [q.questionId, q.roundId]),
+  );
+  const rows = POWER_UP_IDS.flatMap((powerUp) => {
+    const uses = purchases.filter((p) => p.powerUp === powerUp);
+    if (uses.length === 0 && !offeredPowerUps.includes(powerUp)) return [];
+    const isRoundPowerUp = powerUp === 'extra_joker';
+    return [
+      {
+        powerUp,
+        uses: uses.length,
+        teamCount: new Set(uses.map((p) => p.teamId)).size,
+        coinsSpent: uses.reduce((sum, p) => sum + p.cost, 0),
+        hits: isRoundPowerUp ? null : (hitsByPowerUp.get(powerUp) ?? 0),
+        // The doubling adds the team's raw points in that round once more.
+        pointsGained: isRoundPowerUp
+          ? answers
+              .filter((a) =>
+                uses.some(
+                  (p) =>
+                    p.teamId === a.teamId &&
+                    p.roundId === roundIdByQuestionId.get(a.questionId),
+                ),
+              )
+              .reduce((sum, a) => sum + a.pointsAwarded, 0)
+          : null,
+      },
+    ];
+  });
+  const used = rows.filter((row) => row.uses > 0);
+  // A power-up that never hit isn't effective, so all-miss names none.
+  const rated = used.filter(
+    (row): row is typeof row & { hits: number } =>
+      row.hits !== null && row.hits > 0,
+  );
+  return {
+    rows,
+    totalUses: purchases.length,
+    coinsSpent: purchases.reduce((sum, p) => sum + p.cost, 0),
+    mostUsed: allBest(used, (row) => row.uses).map((row) => row.powerUp),
+    mostEffective: allBest(rated, (row) => row.hits / row.uses).map(
+      (row) => row.powerUp,
+    ),
+  };
+}
+
 /**
  * Pure aggregation over one ended session's rows into `SessionDetailStats` —
  * StatsService.getSessionDetail fetches the rows, this does all the math, so
@@ -387,6 +470,8 @@ export function computeSessionDetail(
     questions,
     answers,
     bonusAwards,
+    offeredPowerUps,
+    purchases,
   } = input;
   const result = sessionResult({
     standings: sessionStandings,
@@ -494,5 +579,12 @@ export function computeSessionDetail(
       verdict: a.verdict,
       answer: a.answer,
     })),
+    powerUps: computePowerUps({
+      offeredPowerUps,
+      purchases,
+      participantIds: new Set(result.teams.map((team) => team.teamId)),
+      questions,
+      answers,
+    }),
   };
 }

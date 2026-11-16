@@ -82,6 +82,8 @@ function buildInput({
     // Every question opened unless a case says otherwise.
     openedQuestionIds: (overrides.questions ?? []).map((q) => q.questionId),
     bonusAwards,
+    offeredPowerUps: [],
+    purchases: [],
     ...overrides,
   };
 }
@@ -1436,6 +1438,208 @@ describe('computeSessionDetail', () => {
 
       expect(some.maxPoints).toBe(8);
       expect(some.difficulty).toEqual(all.difficulty);
+    });
+  });
+
+  describe('power-ups', () => {
+    const teams = [
+      { teamId: 1, teamName: 'Ann' },
+      { teamId: 2, teamName: 'Bob' },
+      { teamId: 3, teamName: 'Cy', hasLeft: true },
+    ];
+    const rounds = [{ roundId: 1, title: 'R1', category: null, orderIndex: 0 }];
+    const questions = [10, 11, 12].map((questionId, orderIndex) => ({
+      questionId,
+      roundId: 1,
+      orderIndex,
+      prompt: `Q${questionId}`,
+      type: 'free_text' as const,
+      answer: 'a',
+      points: 2,
+    }));
+    const answer = (
+      questionId: number,
+      teamId: number,
+      verdict: 'correct' | 'partial' | 'incorrect',
+      pointsAwarded: number,
+    ) => ({
+      questionId,
+      teamId,
+      teamName: `Team ${teamId}`,
+      pointsAwarded,
+      gradedAt: '2026-01-01T00:00:00.000Z',
+      verdict,
+      responseMs: null,
+      answer: 'x',
+    });
+    const buy = (
+      teamId: number,
+      powerUp: 'first_letter' | 'letter_count' | 'extra_joker',
+      cost: number,
+      target: { questionId?: number; roundId?: number },
+    ) => ({
+      teamId,
+      powerUp,
+      cost,
+      questionId: target.questionId ?? null,
+      roundId: target.roundId ?? null,
+    });
+
+    it('is null when power-ups were off and nothing was bought', () => {
+      expect(
+        computeSessionDetail(buildInput({ teams, rounds, questions })).powerUps,
+      ).toBeNull();
+    });
+
+    it('lists every offered power-up even when nobody bought anything', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams,
+          rounds,
+          questions,
+          offeredPowerUps: ['first_letter', 'extra_joker'],
+        }),
+      );
+
+      expect(result.powerUps).toEqual({
+        rows: [
+          {
+            powerUp: 'first_letter',
+            uses: 0,
+            teamCount: 0,
+            coinsSpent: 0,
+            hits: 0,
+            pointsGained: null,
+          },
+          {
+            powerUp: 'extra_joker',
+            uses: 0,
+            teamCount: 0,
+            coinsSpent: 0,
+            hits: null,
+            pointsGained: 0,
+          },
+        ],
+        totalUses: 0,
+        coinsSpent: 0,
+        mostUsed: [],
+        mostEffective: [],
+      });
+    });
+
+    it('counts uses, teams, coins and hit credit per power-up, departed teams included', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams,
+          rounds,
+          questions,
+          offeredPowerUps: ['first_letter', 'letter_count', 'extra_joker'],
+          answers: [
+            answer(10, 1, 'correct', 2),
+            answer(11, 1, 'partial', 1),
+            answer(10, 3, 'incorrect', 0),
+            answer(12, 2, 'correct', 2),
+          ],
+          purchases: [
+            buy(1, 'first_letter', 2, { questionId: 10 }),
+            buy(1, 'first_letter', 2, { questionId: 11 }),
+            buy(3, 'first_letter', 2, { questionId: 10 }),
+            // Bob never answered question 11: a miss.
+            buy(2, 'letter_count', 1, { questionId: 11 }),
+            buy(1, 'extra_joker', 5, { roundId: 1 }),
+          ],
+        }),
+      );
+
+      expect(result.powerUps!.rows).toEqual([
+        {
+          powerUp: 'first_letter',
+          uses: 3,
+          teamCount: 2,
+          coinsSpent: 6,
+          hits: 1.5,
+          pointsGained: null,
+        },
+        {
+          powerUp: 'letter_count',
+          uses: 1,
+          teamCount: 1,
+          coinsSpent: 1,
+          hits: 0,
+          pointsGained: null,
+        },
+        {
+          powerUp: 'extra_joker',
+          uses: 1,
+          teamCount: 1,
+          coinsSpent: 5,
+          hits: null,
+          pointsGained: 3,
+        },
+      ]);
+      expect(result.powerUps!.totalUses).toBe(5);
+      expect(result.powerUps!.coinsSpent).toBe(12);
+      expect(result.powerUps!.mostUsed).toEqual(['first_letter']);
+      expect(result.powerUps!.mostEffective).toEqual(['first_letter']);
+    });
+
+    it('names every tied power-up as most used and most effective, never the extra joker as effective', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams,
+          rounds,
+          questions,
+          answers: [answer(10, 1, 'correct', 2), answer(11, 2, 'correct', 2)],
+          purchases: [
+            buy(1, 'first_letter', 2, { questionId: 10 }),
+            buy(2, 'letter_count', 1, { questionId: 11 }),
+            buy(1, 'extra_joker', 5, { roundId: 1 }),
+          ],
+        }),
+      );
+
+      expect(result.powerUps!.rows.map((r) => r.powerUp)).toEqual([
+        'first_letter',
+        'letter_count',
+        'extra_joker',
+      ]);
+      expect(result.powerUps!.mostUsed).toEqual([
+        'first_letter',
+        'letter_count',
+        'extra_joker',
+      ]);
+      expect(result.powerUps!.mostEffective).toEqual([
+        'first_letter',
+        'letter_count',
+      ]);
+    });
+
+    it('names no most effective power-up when every use missed', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams,
+          rounds,
+          questions,
+          answers: [answer(10, 1, 'incorrect', 0)],
+          purchases: [buy(1, 'first_letter', 2, { questionId: 10 })],
+        }),
+      );
+
+      expect(result.powerUps!.mostEffective).toEqual([]);
+    });
+
+    it('leaves out purchases of a team that did not take part', () => {
+      const result = computeSessionDetail(
+        buildInput({
+          teams,
+          rounds,
+          questions,
+          offeredPowerUps: ['first_letter'],
+          purchases: [buy(9, 'first_letter', 2, { questionId: 10 })],
+        }),
+      );
+
+      expect(result.powerUps!.totalUses).toBe(0);
     });
   });
 });

@@ -11,6 +11,7 @@ export * from './bonus';
 export * from './coin-ledger';
 export * from './power-ups';
 export * from './power-up-offer';
+export * from './power-up-hits';
 export * from './feedback';
 export * from './session-scales';
 export * from './player-count';

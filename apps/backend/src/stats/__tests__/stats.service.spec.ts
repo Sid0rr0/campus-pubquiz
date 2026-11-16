@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from '@mikro-orm/postgresql';
 import {
   DEFAULT_SESSION_SETTINGS,
+  defaultPowerUpSettings,
   type FeltDifficulty,
   type GameStatus,
   type Pacing,
@@ -12,6 +13,7 @@ import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { League } from '@/db/entities/league.entity';
 import { LeagueSession } from '@/db/entities/league-session.entity';
+import { Purchase } from '@/db/entities/purchase.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
@@ -682,6 +684,44 @@ describe('StatsService (Postgres integration)', () => {
       expect(items[0].winnerPoints).toBe(5);
       expect(detail.maxPoints).toBe(4);
       expect(detail.rounds.map((r) => r.pointsPercent)).toEqual([100, 50]);
+    });
+
+    it('reads the offered power-ups from the settings and every stored purchase', async () => {
+      const { quiz, questions } = await createQuiz('Quiz P', [[2]]);
+      const session = await createSession(quiz, 'POWER01', 'ended');
+      const powerUps = defaultPowerUpSettings(false);
+      powerUps.pin_one.maxUses = 0;
+      session.settings = {
+        ...DEFAULT_SESSION_SETTINGS,
+        powerUpsEnabled: true,
+        powerUps,
+      };
+      const [q1] = questions[0];
+      const buyer = await joinTeam(session, 'Buyer');
+      await grade(session, q1, buyer, 2);
+      em.create(Purchase, {
+        gameSession: session,
+        team: buyer,
+        powerUp: 'first_letter',
+        question: q1,
+        cost: 2,
+        effect: {},
+      });
+      await em.flush();
+
+      const { powerUps: stats } = await statsService.getSessionDetail(
+        session.id,
+      );
+
+      expect(stats!.rows.map((row) => row.powerUp)).toEqual([
+        'fifty_fifty',
+        'first_letter',
+        'letter_count',
+        'wider_margin',
+        'ask_the_room',
+        'extra_joker',
+      ]);
+      expect(stats!.rows[1]).toMatchObject({ uses: 1, coinsSpent: 2, hits: 1 });
     });
 
     it('still counts a team that was kicked/left after answering, so correctRate cannot exceed 100%', async () => {

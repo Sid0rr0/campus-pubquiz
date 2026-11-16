@@ -635,6 +635,8 @@ module, in this order, and skips a fact with no data:
 | `best_joker`             | `teamName`, `roundNumber`, `roundTitle`, `extraPoints` | Jokers on only: among joker rounds already revealed, the team whose joker added the most points (its raw points in that round); skipped at 0; ties go to leaderboard name order   |
 | `joker_backfired`        | `teamName`, `roundNumber`, `roundTitle`                | Jokers on only: among joker rounds already revealed, the first team in leaderboard name order whose joker round, as it counts, scored less than each of its other revealed rounds |
 | `bonus_awards_so_far`    | `counts: { category, count }[]`                        | Positive bonus awards per category, in category order (`shot`, `selfie`, `custom`)                                                                                                |
+| `power_ups_so_far`       | `counts: { powerUp, count }[]`                         | Question power-ups bought for revealed questions by roster teams, per power-up in power-up order; the extra joker never counts (the joker facts cover it); names no team                         |
+| `power_up_paid_off`      | `powerUp`, `hits`, `uses`                              | The question power-up with the best **Power-up hit rate** on revealed questions, among those used at least twice with a hit; a tie goes to more uses, then power-up order          |
 
 `question` is `{ questionId, roundNumber, questionNumberInRound, prompt, answer }`;
 `answer` is the current answer key's correct answer worded by `formatAnswer` (a
@@ -2447,6 +2449,23 @@ points earned, green for `correct` and yellow for `partial`; "—" means no answ
 and a muted "?" an ungraded one. Hovering a cell shows the team's answer. The
 question columns and Total sort on click (a missing answer sorts below every
 scored one); otherwise the server's order stands.
+
+**Power-ups** get their own section, between the feedback and the questions.
+The session detail carries `powerUps: { rows, totalUses, coinsSpent, mostUsed,
+mostEffective }`, `null` when the session had power-ups off and no team bought
+anything (carried coins can be spent with power-ups off). It counts the purchases
+of every team that took part, departed teams included. `rows` has one row per
+power-up offered (power-ups on and `maxUses` above 0) or used, in power-up order:
+`uses`, `teamCount` (teams that used it), `coinsSpent`, and either `hits` (a
+question power-up: the summed credit of its uses, by the **Power-up hit rate**
+rule in `shared/types/src/power-up-hits.ts`) or `pointsGained` (the extra joker:
+the buying teams' raw points in the rounds it doubled). `mostUsed` and
+`mostEffective` (highest hit rate, question power-ups only, no minimum number
+of uses) list every tied power-up and are empty when nothing was used (or, for
+`mostEffective`, nothing hit). The page
+shows the **Power-ups used**, **Coins spent**, **Most used** and **Most
+effective** tiles over the table, whose **Effect** column reads "80% · 4 of 5"
+or "+7 points"; "No power-ups used" replaces both when nobody bought anything.
 
 **Player counts** show how many people came. They are read from the
 per-session player counts (the table the teams' reports are stored in), joined

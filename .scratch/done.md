@@ -137,3 +137,4 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 | live-session-module             | [Deepen the Live session module](live-session-module/spec.md)                                                                                                              | 10      |
 | scoring-module                  | [One Scoring module per question type](scoring-module/spec.md)                                                                                                             | 7       |
 | screen-projection               | [A Screen projection per room](screen-projection/spec.md)                                                                                                                  | 6       |
+| power-up-stats                  | [Power-up session stats and fun facts](power-up-stats/spec.md)                                                                                                             | 0       |

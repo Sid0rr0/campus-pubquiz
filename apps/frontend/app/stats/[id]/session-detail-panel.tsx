@@ -11,6 +11,7 @@ import { StandingsTable } from '@/app/stats/[id]/standings-table';
 import { RoundsTable } from '@/app/stats/[id]/rounds-table';
 import { FeedbackSection } from '@/app/stats/[id]/feedback-section';
 import { QuestionsTable } from '@/app/stats/[id]/questions-table';
+import { PowerUpsSection } from '@/app/stats/[id]/power-ups-section';
 import { ScoresheetTable } from '@/app/stats/[id]/scoresheet-table';
 
 interface SessionDetailPanelProps {
@@ -86,6 +87,8 @@ export function SessionDetailPanel({ gameSessionId }: SessionDetailPanelProps) {
       </section>
 
       <FeedbackSection feedback={data.feedback} />
+
+      <PowerUpsSection powerUps={data.powerUps} />
 
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-lg">Questions</h2>

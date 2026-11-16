@@ -252,6 +252,10 @@ _Avoid_: second joker, double joker
 **Power-up count**:
 How many times each power-up was used on a question, shown on the big screen when that question is revealed. It never names a team.
 
+**Power-up hit rate**:
+How often a question power-up paid off: the share of its uses where the team then got that question right, with partial answers credited the same way as in the **Correct rate**. A blank or missing answer counts as a miss, and two power-ups on one question each count as a use. The most effective power-up is the one with the highest hit rate. The extra joker has no hit rate: its effect is the points it added, which are the team's points in that round.
+_Avoid_: success rate, effectiveness score
+
 ## Team link
 
 **Player count**:

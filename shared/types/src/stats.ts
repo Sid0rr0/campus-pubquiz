@@ -1,5 +1,6 @@
 import type { Verdict } from './answer-kind';
 import type { BonusCategory } from './bonus';
+import type { PowerUpId } from './power-ups';
 import type { SessionScaleCounts } from './session-scales';
 
 /** One row per **ended** game session, for the admin/moderator stats history view. */
@@ -228,6 +229,32 @@ export interface SessionDetailStats {
   highlights: SessionDetailHighlights;
   /** Every stored answer, departed teams' included; a team with no answer to a question has no cell. */
   scoresheet: SessionDetailScoresheetCell[];
+  /** Null when the session had power-ups off and no team bought anything. */
+  powerUps: SessionDetailPowerUps | null;
+}
+
+/** How the session's power-ups were used, over every team that took part. */
+export interface SessionDetailPowerUps {
+  /** Every power-up offered or used, in power-up order. */
+  rows: SessionDetailPowerUpRow[];
+  totalUses: number;
+  coinsSpent: number;
+  /** The power-ups with the most uses (several on a tie); empty when nothing was used. */
+  mostUsed: PowerUpId[];
+  /** The question power-ups with the highest hit rate (several on a tie); empty when none was used. */
+  mostEffective: PowerUpId[];
+}
+
+export interface SessionDetailPowerUpRow {
+  powerUp: PowerUpId;
+  uses: number;
+  /** Teams that used it at least once. */
+  teamCount: number;
+  coinsSpent: number;
+  /** Question power-ups: summed credit of the uses (hits ÷ uses is the hit rate). Null for the extra joker. */
+  hits: number | null;
+  /** Extra joker only: the points it added, the buying teams' points in their extra joker rounds. Null otherwise. */
+  pointsGained: number | null;
 }
 
 /** One team's answer to one question on the Scoresheet. */

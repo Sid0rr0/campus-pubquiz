@@ -5,6 +5,7 @@ import { z } from 'zod';
 import {
   classifyMediaUrl,
   MIN_RATINGS_FOR_RANKING,
+  POWER_UP_IDS,
   TREND_ROUNDS_LIMIT,
   type BonusCategory,
   type FeedbackTrends,
@@ -331,6 +332,9 @@ export class StatsService {
       .where('game_session_id', gameSessionId)
       .select('team_id as teamId', 'category', 'points')) as SessionBonusRow[];
 
+    const { powerUps: purchases } =
+      await this.standings.funFactData(gameSessionId);
+
     return {
       session: {
         gameSessionId: header.gameSessionId,
@@ -369,6 +373,13 @@ export class StatsService {
         category: b.category,
         points: Number(b.points),
       })),
+      // Sessions stored before power-ups read as off.
+      offeredPowerUps: settings.powerUpsEnabled
+        ? POWER_UP_IDS.filter(
+            (id) => (settings.powerUps?.[id]?.maxUses ?? 0) > 0,
+          )
+        : [],
+      purchases,
     };
   }
 

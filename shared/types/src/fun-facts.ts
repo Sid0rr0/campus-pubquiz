@@ -4,7 +4,8 @@ import { formatAnswer, type Verdict } from './answer-kind';
 import { canBeDoubled, doubledRoundIdsOfTeam } from './doubled-rounds';
 import { jokerRoundPoints } from './joker';
 import { countPerfectRounds } from './perfect-rounds';
-import type { PowerUpId } from './power-ups';
+import { powerUpHits } from './power-up-hits';
+import { POWER_UP_IDS, type PowerUpId } from './power-ups';
 import { hasMeaningfulCorrectRate } from './question-correct-rate';
 import { QUESTION_KINDS } from './question-kind';
 import { questionOutcome } from './question-outcome';
@@ -145,7 +146,19 @@ export type FunFact =
       roundNumber: number;
       roundTitle: string;
     }
-  | { kind: 'bonus_awards_so_far'; counts: FunFactBonusCount[] };
+  | { kind: 'bonus_awards_so_far'; counts: FunFactBonusCount[] }
+  | {
+      kind: 'power_ups_so_far';
+      /** Uses per question power-up on revealed questions, in power-up order; never a zero count. */
+      counts: { powerUp: PowerUpId; count: number }[];
+    }
+  | {
+      kind: 'power_up_paid_off';
+      powerUp: PowerUpId;
+      /** Uses credited like the correct rate (a partial answer counts by its points' share). */
+      hits: number;
+      uses: number;
+    };
 
 const HALF = 0.5;
 
@@ -342,6 +355,36 @@ function bonusAwardsSoFar(
   return counts.length === 0 ? null : { kind: 'bonus_awards_so_far', counts };
 }
 
+/** The fewest uses a power-up needs before the big screen calls it the one that paid off. */
+const PAID_OFF_MIN_USES = 2;
+
+function powerUpFacts(
+  session: SessionState,
+  revealed: readonly RevealedQuestion[],
+): (FunFact | null)[] {
+  const pointsById = new Map(revealed.map((q) => [q.questionId, q.points]));
+  // The extra joker has no question, so it never counts: the joker facts cover it.
+  // Roster teams only, like the answers: a kicked team's answer is gone, so its use would read as a miss.
+  const purchases = session.funFactData.powerUps.filter(
+    (p) =>
+      p.questionId !== null &&
+      pointsById.has(p.questionId) &&
+      session.leaderboard.some((entry) => entry.teamId === p.teamId),
+  );
+  const counts = POWER_UP_IDS.map((powerUp) => ({
+    powerUp,
+    count: purchases.filter((p) => p.powerUp === powerUp).length,
+  })).filter(({ count }) => count > 0);
+  const best = powerUpHits(purchases, session.funFactData.answers, pointsById)
+    .filter(({ uses, hits }) => uses >= PAID_OFF_MIN_USES && hits > 0)
+    // Stable sort: a tie on rate goes to more uses, then power-up order.
+    .sort((a, b) => b.hits / b.uses - a.hits / a.uses || b.uses - a.uses)[0];
+  return [
+    counts.length > 0 ? { kind: 'power_ups_so_far', counts } : null,
+    best ? { kind: 'power_up_paid_off', ...best } : null,
+  ];
+}
+
 interface JokerRound {
   roundId: number;
   roundNumber: number;
@@ -526,7 +569,8 @@ function revealedJokerFacts(
  * Pure, and the one place that decides what a fun fact may say: the facts
  * about questions read only blocks before the block in play, including its
  * break. With Early answer reveal that block's answers may have aired, but its
- * results have not. "Bonus awards so far" is a count that gives nothing away. Closest guess questions are left out of the rate-based facts
+ * results have not. "Bonus awards so far" is a count that gives nothing away. The
+ * power-up facts read only purchases on revealed questions. Closest guess questions are left out of the rate-based facts
  * and the clean sweep. A fact with no data is skipped, so the first break
  * yields only the bonus awards (or nothing).
  */
@@ -599,6 +643,7 @@ export function describeFunFacts(session: SessionState): FunFact[] {
     perfectRounds(session, pastIds, answers),
     ...jokerFacts(session, answers, pastIds),
     bonusAwardsSoFar(session.funFactData),
+    ...powerUpFacts(session, revealed),
   ];
   return facts.filter((fact): fact is FunFact => fact !== null);
 }

@@ -1,7 +1,8 @@
-import type {
-  BonusCategory,
-  FunFact,
-  FunFactQuestion,
+import {
+  POWER_UP_LABELS,
+  type BonusCategory,
+  type FunFact,
+  type FunFactQuestion,
 } from '@campus-pubquiz/types';
 
 /** A fun fact worded for a TV across a room: a large headline and one short line under it. */
@@ -121,6 +122,16 @@ const FUN_FACT_LINES: {
       )
       .join(', '),
     detail: 'bonus awards so far',
+  }),
+  power_ups_so_far: (fact) => ({
+    headline: fact.counts
+      .map(({ powerUp, count }) => `${POWER_UP_LABELS[powerUp]} ×${count}`)
+      .join(', '),
+    detail: 'power-ups used so far',
+  }),
+  power_up_paid_off: (fact) => ({
+    headline: POWER_UP_LABELS[fact.powerUp],
+    detail: `Paid off ${percent(fact.hits / fact.uses)} of the time (${fact.uses} uses)`,
   }),
 };
 

@@ -214,4 +214,30 @@ describe('describeFunFactLine', () => {
       }).headline,
     ).toBe('3 shots, 2 custom bonuses');
   });
+
+  it('words the power-ups so far and the one that paid off', () => {
+    expect(
+      describeFunFactLine({
+        kind: 'power_ups_so_far',
+        counts: [
+          { powerUp: 'fifty_fifty', count: 4 },
+          { powerUp: 'first_letter', count: 1 },
+        ],
+      }),
+    ).toEqual({
+      headline: '50/50 ×4, First letter ×1',
+      detail: 'power-ups used so far',
+    });
+    expect(
+      describeFunFactLine({
+        kind: 'power_up_paid_off',
+        powerUp: 'letter_count',
+        hits: 2.5,
+        uses: 3,
+      }),
+    ).toEqual({
+      headline: 'Letter count',
+      detail: 'Paid off 83% of the time (3 uses)',
+    });
+  });
 });

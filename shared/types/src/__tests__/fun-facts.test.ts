@@ -740,6 +740,85 @@ describe('describeFunFacts', () => {
     });
   });
 
+  describe('power-up facts', () => {
+    function buy(
+      teamIndex: number,
+      powerUp: 'first_letter' | 'letter_count' | 'extra_joker',
+      questionId: number | null,
+    ) {
+      return {
+        teamId: teamIndex + 1,
+        powerUp,
+        questionId,
+        roundId: questionId === null ? 1 : null,
+        cost: 2,
+      };
+    }
+
+    it('counts question power-ups on revealed questions only, in power-up order', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        powerUps: [
+          buy(0, 'letter_count', 1),
+          buy(1, 'first_letter', 1),
+          buy(2, 'first_letter', 2),
+          // The block in play, the extra joker and a team off the roster never count.
+          buy(3, 'first_letter', 3),
+          buy(0, 'extra_joker', null),
+          { ...buy(0, 'first_letter', 1), teamId: 99 },
+        ],
+      });
+
+      expect(describeFunFacts(session)).toContainEqual({
+        kind: 'power_ups_so_far',
+        counts: [
+          { powerUp: 'first_letter', count: 2 },
+          { powerUp: 'letter_count', count: 1 },
+        ],
+      });
+    });
+
+    it('names the best hit rate among power-ups used at least twice, ties to more uses', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(1, 1, 'correct'),
+          answer(2, 0, 'correct'),
+          answer(2, 2, 'correct'),
+          answer(1, 3, 'correct'),
+        ],
+        powerUps: [
+          // letter_count: 2 of 2, but first_letter 3 of 3 wins the tie on uses.
+          buy(0, 'letter_count', 1),
+          buy(0, 'letter_count', 2),
+          buy(1, 'first_letter', 1),
+          buy(2, 'first_letter', 2),
+          buy(3, 'first_letter', 1),
+        ],
+      });
+
+      expect(describeFunFacts(session)).toContainEqual({
+        kind: 'power_up_paid_off',
+        powerUp: 'first_letter',
+        hits: 3,
+        uses: 3,
+      });
+    });
+
+    it('skips the paid-off fact with fewer than two uses or no hit', () => {
+      const once = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [answer(1, 0, 'correct')],
+        powerUps: [buy(0, 'first_letter', 1)],
+      });
+      const missed = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [answer(1, 0, 'incorrect')],
+        powerUps: [buy(0, 'first_letter', 1), buy(1, 'first_letter', 1)],
+      });
+
+      expect(kinds(once)).not.toContain('power_up_paid_off');
+      expect(kinds(missed)).not.toContain('power_up_paid_off');
+    });
+  });
+
   describe('joker facts', () => {
     function withJokers(
       session: SessionState,
