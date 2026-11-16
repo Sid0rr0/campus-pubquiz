@@ -6,7 +6,7 @@ Spec: [../spec.md](../spec.md) (user story 29)
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The presenter context carries the live board (from the Rank callouts module) while the leaderboard is up.
 - [ ] The Notes section draws it, including the final board and the all-at-once quickfire form.

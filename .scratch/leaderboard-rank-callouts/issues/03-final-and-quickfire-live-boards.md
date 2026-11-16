@@ -6,7 +6,7 @@ Spec: [../spec.md](../spec.md) (user stories 18–19)
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Final board: perfect rounds counted over the whole quiz ("3 perfect rounds tonight"); no block-only lines (gained, block perfect rounds, biggest gain, joker); movement, gap/lead/tie and bonus kept.
 - [ ] Between-questions quickfire board: the top 5 with their gains, no current/next split.

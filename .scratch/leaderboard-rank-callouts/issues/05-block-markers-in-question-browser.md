@@ -6,7 +6,7 @@ Spec: [../spec.md](../spec.md) (user stories 20–28, 30)
 
 **Blocked by:** 01, 04
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Rank callouts module gets a block-board entry point. A team's total is its per-round points over the rounds up to the end of that block, plus the bonus awards recorded for that block or earlier. Awards with no block count in the latest board only. Ranked by the shared ranking rule.
 - [ ] A block's movement, gain and biggest gain are measured against the previous block's board. The first block has no movement lines. The existing "everyone moved up" rule applies when everyone was tied before.
