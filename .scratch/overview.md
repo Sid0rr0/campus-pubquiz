@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| leaderboard-rank-callouts | [Rank callouts on the admin console and presenter remote](leaderboard-rank-callouts/spec.md) | 6 | — |
 
 ## Won't do
 
