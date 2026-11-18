@@ -43,10 +43,10 @@
   - region "Leaderboard card":
     - region "Board":
       - paragraph: Board · 1st
-      - paragraph: /Team A [0-9a-f]{6} · [\d.]+/
+      - paragraph: /Team A [0-9a-f]{6} · [\d.]+ points/
     - region "Board":
       - paragraph: Board · 2nd
-      - paragraph: /Team B [0-9a-f]{6} · 0/
+      - paragraph: /Team B [0-9a-f]{6} · 0 points/
   - heading "Teams" [level=2]
   - table:
     - rowgroup:

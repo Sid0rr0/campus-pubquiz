@@ -5,6 +5,14 @@ import {
   type RankCalloutGroup,
 } from '@campus-pubquiz/types';
 
+/** Every place a tied group fills, read bottom-up like the reveal: "3rd - 2nd"; one team is just "3rd". */
+function places({ rank, teams }: RankCalloutGroup): string {
+  const worst = rank + teams.length - 1;
+  return worst === rank
+    ? ordinal(rank)
+    : `${ordinal(worst)} - ${ordinal(rank)}`;
+}
+
 function Group({
   group,
   label,
@@ -14,6 +22,20 @@ function Group({
   label: string;
   isCurrent: boolean;
 }) {
+  // Tied teams' common facts are said once, below the names, not under each team.
+  const shared =
+    group.teams.length > 1
+      ? group.teams[0].callouts.filter((line) =>
+          group.teams.every((team) => team.callouts.includes(line)),
+        )
+      : [];
+  const lines = (callouts: string[]) => (
+    <ul className={isCurrent ? 'text-base' : 'text-sm'}>
+      {callouts.map((line) => (
+        <li key={line}>{line}</li>
+      ))}
+    </ul>
+  );
   return (
     <section
       aria-label={label}
@@ -22,7 +44,7 @@ function Group({
       }
     >
       <p className="text-xs font-extrabold tracking-wide text-foreground/55 uppercase">
-        {label} · {ordinal(group.rank)}
+        {label} · {places(group)}
       </p>
       {group.teams.map((team) => (
         <div key={team.teamId} className="break-words">
@@ -31,20 +53,18 @@ function Group({
               isCurrent ? 'font-display text-2xl' : 'font-display text-base'
             }
           >
-            {team.teamName} · {team.totalPoints}
+            {team.teamName} · {team.totalPoints}{' '}
+            {team.totalPoints === 1 ? 'point' : 'points'}
             {team.hasLeft && (
               <span className="ml-2 text-xs font-bold text-foreground/55">
                 left
               </span>
             )}
           </p>
-          <ul className={isCurrent ? 'text-base' : 'text-sm'}>
-            {team.callouts.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+          {lines(team.callouts.filter((line) => !shared.includes(line)))}
         </div>
       ))}
+      {shared.length > 0 && lines(shared)}
     </section>
   );
 }

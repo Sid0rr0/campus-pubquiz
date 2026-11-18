@@ -156,19 +156,9 @@ function gapLine(
       `${pointsText(nearest.totalPoints - entry.totalPoints)} behind ${ordinal(nearest.rank)}`,
     ];
   }
-  if (entry.rank !== entry.rankTo) return ['shares the lead'];
+  if (entry.rank !== entry.rankTo) return [];
   const second = ranked.find((other) => other.rank > entry.rank);
   return second ? [`leads by ${entry.totalPoints - second.totalPoints}`] : [];
-}
-
-function tiedLine(
-  entry: LeaderboardEntry,
-  ranked: LeaderboardEntry[],
-): string[] {
-  const others = ranked
-    .filter((o) => o.rank === entry.rank && o.teamId !== entry.teamId)
-    .map((o) => o.teamName);
-  return others.length === 0 ? [] : [`tied with ${others.join(', ')}`];
 }
 
 /**
@@ -231,7 +221,6 @@ export function describeBlockCallouts(
           ),
           ...blockOnly(bonusLines(entry, previousById.get(entry.teamId))),
           ...gapLine(entry, ranked),
-          ...tiedLine(entry, ranked),
           ...blockOnly(
             biggest > 0 && gain === biggest ? ['biggest gain this block'] : [],
           ),

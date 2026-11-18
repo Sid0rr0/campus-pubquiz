@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQuery } from '@/test-utils/query';
@@ -126,6 +126,48 @@ describe('AdminPage — live leaderboard card', () => {
     expect(next).toHaveTextContent('The Quizzards');
     expect(next).toHaveTextContent('holds 2nd');
     expect(next).toHaveClass('opacity-50');
+  });
+
+  it('names every place a tied group fills, worst first, and spells out points', async () => {
+    mockBoard({
+      current: {
+        rank: 2,
+        teams: [
+          { ...team(1, 'Quizzly Bears', 2, []), totalPoints: 1 },
+          team(2, 'The Quizzards', 2, []),
+        ],
+      },
+      next: { rank: 1, teams: [team(3, 'Sim Team 3', 1, [])] },
+    });
+    renderWithQuery(<AdminPage />);
+
+    const current = await screen.findByRole('region', { name: 'Revealed' });
+    expect(current).toHaveTextContent('Revealed · 3rd - 2nd');
+    expect(current).toHaveTextContent('Quizzly Bears · 1 point');
+    expect(current).toHaveTextContent('The Quizzards · 20 points');
+    expect(screen.getByRole('region', { name: 'Next' })).toHaveTextContent(
+      'Next · 1st',
+    );
+  });
+
+  it('says the facts tied teams share once, below the names, and keeps each team’s own', async () => {
+    mockBoard({
+      current: {
+        rank: 2,
+        teams: [
+          team(1, 'Quizzly Bears', 2, ['+4 this block', 'holds 2nd']),
+          team(2, 'The Quizzards', 2, ['+6 this block', 'holds 2nd']),
+        ],
+      },
+      next: null,
+    });
+    renderWithQuery(<AdminPage />);
+
+    const current = await screen.findByRole('region', { name: 'Revealed' });
+    const items = within(current)
+      .getAllByRole('listitem')
+      .map((item) => item.textContent);
+    expect(items).toEqual(['+4 this block', '+6 this block', 'holds 2nd']);
   });
 
   it('shows the all-at-once quickfire board with every group at full strength', async () => {

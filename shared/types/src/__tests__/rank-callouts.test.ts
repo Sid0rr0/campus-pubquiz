@@ -310,7 +310,7 @@ describe('describeLiveRankBoard', () => {
       );
     });
 
-    it('says tied teams share the lead and names who they tie with', () => {
+    it('gives tied leaders no lead or tie line, since the header names their places', () => {
       const tied = [entry(1, 'A', 15), entry(2, 'B', 15), entry(3, 'C', 5)];
       const session = live(tied, PRIOR, 0);
 
@@ -319,10 +319,10 @@ describe('describeLiveRankBoard', () => {
         leaderboardRevealCount: 2,
       })?.current;
 
-      expect(group?.teams.map((team) => team.callouts)).toEqual([
-        expect.arrayContaining(['shares the lead', 'tied with B']),
-        expect.arrayContaining(['shares the lead', 'tied with A']),
-      ]);
+      for (const team of group?.teams ?? []) {
+        expect(team.callouts.join()).not.toMatch(/lead|tied/);
+      }
+      expect(group?.teams).toHaveLength(2);
     });
 
     it('says every team moved up when all were tied beforehand, as the big screen trends do', () => {
