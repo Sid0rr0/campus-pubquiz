@@ -1,5 +1,4 @@
-import type { TeamStatsSummary } from '@campus-pubquiz/types';
-import { ordinal } from '@/app/lib/placing-text';
+import { ordinal, type TeamStatsSummary } from '@campus-pubquiz/types';
 import { StatTile } from '@/app/stats/[id]/highlight-tiles';
 
 function formatOneDecimal(value: number | null): string {

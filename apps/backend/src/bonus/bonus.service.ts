@@ -76,6 +76,7 @@ export class BonusService {
     enabledCategories: readonly BonusCategory[] = BONUS_CATEGORIES,
     maxAwardsPerCategory: Partial<Record<BonusCategory, number>> = {},
     coins: AwardCoins = { powerUpsEnabled: false },
+    blockFirstQuestionId?: number,
   ): Promise<AwardedBonus> {
     const manualCoins = coins.manual ?? 0;
     // Points of 0 give coins alone: no bonus award is stored.
@@ -102,6 +103,7 @@ export class BonusService {
           points,
           trimmedReason,
           powerUpsEnabled: coins.powerUpsEnabled,
+          blockFirstQuestionId,
         })
       : 0;
     if (manualCoins !== 0) {
@@ -165,11 +167,13 @@ export class BonusService {
       points,
       trimmedReason,
       powerUpsEnabled,
+      blockFirstQuestionId,
     }: {
       category: BonusCategory;
       points: number;
       trimmedReason: string | undefined;
       powerUpsEnabled: boolean;
+      blockFirstQuestionId: number | undefined;
     },
   ): number {
     const em = this.bonusAwards.getEntityManager();
@@ -179,6 +183,7 @@ export class BonusService {
       category,
       reason: category === 'custom' ? trimmedReason : undefined,
       points,
+      blockFirstQuestionId,
     });
     em.persist(bonusAward);
     // A shot or selfie earns coins of its own, which go with the award.

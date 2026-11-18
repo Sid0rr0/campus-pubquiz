@@ -1,6 +1,6 @@
 # Spec: Rank callouts on the admin console and presenter remote
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: —
 

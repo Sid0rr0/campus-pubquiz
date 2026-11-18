@@ -6,7 +6,7 @@ Spec: [../spec.md](../spec.md)
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Bonus awards store the block in play when awarded, identified the way prior standings are (the block's first question id). The new field is empty for older awards. Migration generated with `db:migrate:create`.
 - [ ] The bonus awards in the live results (fun fact data) carry their team and block.

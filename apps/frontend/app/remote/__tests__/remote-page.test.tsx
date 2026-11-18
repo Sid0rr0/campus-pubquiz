@@ -52,6 +52,7 @@ function presenterContext(
     currentRoundNote: null,
     currentScreen: { heading: 'R1 Q1' },
     nextScreen: null,
+    liveRankBoard: null,
     ...overrides,
   };
 }
@@ -243,6 +244,71 @@ describe('RemotePage — content', () => {
       ).toBeInTheDocument();
     },
   );
+
+  const team = (teamId: number, teamName: string, rank: number) => ({
+    teamId,
+    teamName,
+    rank,
+    rankTo: rank,
+    totalPoints: 10 - rank,
+    callouts: [`${teamName} line`],
+  });
+
+  it('draws the live rank board in place of the notes while the leaderboard is up', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: { progress: { status: 'question_open' } },
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({
+        currentQuestionNotes: 'Secret question note',
+        liveRankBoard: {
+          current: { rank: 3, teams: [team(1, 'Third', 3)] },
+          next: { rank: 2, teams: [team(2, 'Second', 2)] },
+        },
+      }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('Third line')).toBeInTheDocument();
+    expect(screen.getByText('Second line')).toBeInTheDocument();
+    expect(screen.queryByText('Secret question note')).not.toBeInTheDocument();
+  });
+
+  it('draws the whole quickfire board at once', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: { progress: { status: 'question_open' } },
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({
+        liveRankBoard: {
+          current: null,
+          next: null,
+          all: [
+            { rank: 1, teams: [team(1, 'First', 1)] },
+            { rank: 2, teams: [team(2, 'Second', 2)] },
+          ],
+        },
+      }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('First line')).toBeInTheDocument();
+    expect(screen.getByText('Second line')).toBeInTheDocument();
+  });
+
+  it('shows the question note again once the board is hidden', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: { progress: { status: 'question_open' } },
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({
+        currentQuestionNotes: 'Secret question note',
+      }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('Secret question note')).toBeInTheDocument();
+  });
 
   it('says there is no note for a round intro without one', () => {
     mockUseAdminGame.mockReturnValue({

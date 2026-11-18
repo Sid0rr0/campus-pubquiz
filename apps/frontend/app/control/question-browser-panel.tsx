@@ -1,6 +1,10 @@
 'use client';
 
-import type { AdminIndicators, QuizSummaryRound } from '@campus-pubquiz/types';
+import type {
+  AdminIndicators,
+  BlockBoard,
+  QuizSummaryRound,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { isSameItem, type DetailItem } from '@/app/control/detail-item';
 
@@ -17,6 +21,8 @@ interface QuestionBrowserPanelProps {
   onSelect: (item: DetailItem) => void;
   /** IDs of current-block questions still missing a grade — drives the "not yet graded" dot. */
   ungradedQuestionIds: number[];
+  /** The 🏆 boards, one per block; the marker sits after its last round's break marker. */
+  blockBoards: BlockBoard[];
 }
 
 function questionButtonClasses(
@@ -66,6 +72,7 @@ export function QuestionBrowserPanel({
   indicators,
   onSelect,
   ungradedQuestionIds,
+  blockBoards,
 }: QuestionBrowserPanelProps) {
   if (rounds.length === 0) {
     return null;
@@ -88,6 +95,7 @@ export function QuestionBrowserPanel({
             indicators={indicators}
             onSelect={onSelect}
             ungradedQuestionIds={ungradedQuestionIds}
+            blockBoards={blockBoards}
           />
         ))}
       </div>
@@ -108,7 +116,9 @@ function RoundRow({
   indicators,
   onSelect,
   ungradedQuestionIds,
+  blockBoards,
 }: RowProps & {
+  blockBoards: BlockBoard[];
   round: QuestionBrowserPanelProps['rounds'][number];
   roundIndex: number;
   isActiveRound: boolean;
@@ -117,6 +127,8 @@ function RoundRow({
   const isBreakOnDisplay = roundIndex === indicators.breakRoundIndex;
   const titleItem: DetailItem = { kind: 'title', roundIndex };
   const breakItem: DetailItem = { kind: 'break', roundIndex };
+  const board = blockBoards.find((b) => b.roundIndex === roundIndex);
+  const boardItem: DetailItem = { kind: 'blockBoard', roundIndex };
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -166,6 +178,22 @@ function RoundRow({
               )}
             >
               B
+            </Button>
+          )}
+          {board && (
+            <Button
+              type="button"
+              disabled={!board.isReached}
+              aria-label={`Show leaderboard after ${round.title}${board.isOnAir ? ' (live on display)' : ''}`}
+              aria-pressed={isSameItem(selected, boardItem)}
+              onClick={() => onSelect(boardItem)}
+              className={`${displayMarkerClasses(
+                board.isOnAir,
+                !isActiveRound,
+                isSameItem(selected, boardItem),
+              )} ${board.isReached ? '' : 'cursor-not-allowed opacity-30'}`}
+            >
+              🏆
             </Button>
           )}
         </nav>

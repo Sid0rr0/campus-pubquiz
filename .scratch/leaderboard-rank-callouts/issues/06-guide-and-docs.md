@@ -6,7 +6,7 @@ Spec: [../spec.md](../spec.md) (user story 32)
 
 **Blocked by:** 02, 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The `/guide` page explains the live leaderboard card (current and next, callouts), the remote's Notes during the board, and the 🏆 markers (preview, greyed later blocks, "grading not finished"). Stays within the guide's word cap.
 - [ ] `DOCUMENTATION.md` covers the admin view's live board and block boards, and the presenter context's live board.

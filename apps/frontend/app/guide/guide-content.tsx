@@ -44,14 +44,14 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Before the night',
     paragraphs: [
       'Build the quiz, then check it with Quiz preview (editor, quiz list or waiting session), not a throwaway session.',
-      'Put /display on the big screen and /control on your laptop.',
+      'Open /display on the big screen, /control on your laptop.',
       'A block is a run of rounds graded and revealed together, ending at a break.',
     ],
   },
   {
     title: 'Starting a session',
     paragraphs: [
-      'Session Settings sets the rules text, bonus categories and leagues in the lobby; then press Start Quiz.',
+      'Set rules, bonus categories and leagues in Session Settings (lobby), then press Start Quiz.',
       'Advance shows the rules, the round overview, then the first round title card; Previous on the rules returns to the lobby.',
     ],
   },
@@ -163,12 +163,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'Show or hide the leaderboard any time; Advance then reveals one rank at a time, from last place up.',
       'Join overlay on Control shows the QR and join code for late teams.',
       'When teams tie for first, the Showdown panel offers a tiebreak.',
+      'The leaderboard card (and the remote\'s Notes) shows the rank just revealed and the next, with callouts teams never see. A 🏆 after each break previews that block\'s board ("Grading not finished" until graded).',
     ],
   },
   {
     title: 'Teams',
     paragraphs: [
-      'The Teams panel shows who is connected and has answered; kick a team to remove it.',
+      'The Teams panel shows who is connected and answered; kick a team to remove it.',
       'A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
       'Each team shows its player count, flagged as over the player cap above "max players per team"; nothing is deducted, so give a negative bonus.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
@@ -179,13 +180,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Feedback from teams',
     paragraphs: [
-      'The "Collect feedback" switch in Session Settings (on by default, lobby only) makes phones show a "Rate these rounds" card each break and a form after "Quiz complete!". Results are anonymous, on the session stats page.',
+      'The "Collect feedback" switch in Session Settings (on by default, lobby only) makes phones show a "Rate these rounds" card each break and a form after "Quiz complete!". Anonymous results: session stats.',
     ],
   },
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      'Remote (Sessions page) is a phone page: Previous, Advance, leaderboard controls, next-up preview and your notes.',
+      'Remote (Sessions page), for your phone: Previous, Advance, leaderboard controls, next-up preview and your notes.',
       'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,

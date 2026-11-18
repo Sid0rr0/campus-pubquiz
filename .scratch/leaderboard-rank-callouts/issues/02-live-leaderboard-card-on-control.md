@@ -6,7 +6,7 @@ Spec: [../spec.md](../spec.md) (user stories 1–17, 31)
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A new pure Rank callouts module in shared types with a live-board entry point. Given the session, it returns the current group (or none), the next group (or none), and each team's callouts. It uses the same reveal count and tie grouping as the big screen.
 - [ ] The callouts: named perfect rounds of the block just scored; points gained in it; rank movement (up from / down from / holds); joker 2× on a round of the block; bonus and penalty; gap to the group above, "leads by N", or "shares the lead"; tied teams named; biggest gain of the block (ties included, none when nobody gained).

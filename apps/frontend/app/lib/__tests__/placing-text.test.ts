@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ordinal, placingText } from '@/app/lib/placing-text';
+import { ordinal } from '@campus-pubquiz/types';
+import { placingText } from '@/app/lib/placing-text';
 
 describe('ordinal', () => {
   it.each([

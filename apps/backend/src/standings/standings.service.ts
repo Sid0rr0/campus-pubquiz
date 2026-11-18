@@ -148,6 +148,11 @@ export class StandingsService {
     return (await this.forSession(gameSessionId)).leaderboard;
   }
 
+  /** Teams that took part but were kicked or left (see {@link SessionStandings.departed}). */
+  async departedTeams(gameSessionId: number): Promise<DepartedTeam[]> {
+    return (await this.forSession(gameSessionId)).departed;
+  }
+
   /**
    * The session's answers (roster teams only, so a team that has left the
    * roster stays out of the fun facts and the reveal's teams-correct count)
@@ -174,7 +179,10 @@ export class StandingsService {
         ) as Promise<FunFactAnswer[]>,
       knex('bonus_awards')
         .where('game_session_id', gameSessionId)
-        .select('category', 'points') as Promise<FunFactBonusAward[]>,
+        .select('team_id as teamId', 'category', 'points')
+        .select('block_first_question_id as blockFirstQuestionId') as Promise<
+        FunFactBonusAward[]
+      >,
       knex('purchases')
         .where('game_session_id', gameSessionId)
         .orderBy('id')
@@ -190,8 +198,10 @@ export class StandingsService {
         responseMs: row.responseMs === null ? null : Number(row.responseMs),
       })),
       bonusAwards: bonusRows.map((row) => ({
+        teamId: row.teamId,
         category: row.category,
         points: Number(row.points),
+        blockFirstQuestionId: row.blockFirstQuestionId,
       })),
     };
   }

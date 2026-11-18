@@ -194,7 +194,7 @@ function describeJokerTeamIds(
  * only the between-questions board counts. A leaderboard brought up while a
  * block is answered, locked or in break is not.
  */
-function isShowingBlockResults(
+export function isShowingBlockResults(
   { progress, priorStandings }: SessionState,
   isBetweenQuickfireQuestions: boolean,
   isQuickfire: boolean,

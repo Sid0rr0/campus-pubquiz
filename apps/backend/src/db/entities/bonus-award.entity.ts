@@ -38,4 +38,10 @@ export class BonusAward extends BaseEntity {
 
   @Property({ type: 'float' })
   points!: number;
+
+  // First question id of the block in play when awarded, so a past block's
+  // board counts it in the right block. Null for awards made before this was
+  // recorded (a later award with no block in play takes the block just played, or the first).
+  @Property({ type: 'integer', nullable: true })
+  blockFirstQuestionId?: number;
 }

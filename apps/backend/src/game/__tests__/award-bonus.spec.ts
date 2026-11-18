@@ -5,6 +5,8 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
+  advanceToBlockBoard,
+  advanceUntil,
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -54,6 +56,48 @@ describe('GameGateway — award bonus', () => {
     }
     expect(await storedBonuses()).toEqual([
       expect.objectContaining({ category: 'shot', points: 1 }),
+    ]);
+  });
+
+  it('stores the block in play on the award and carries it with its team in the live results', async () => {
+    await game.act('START_QUIZ');
+    await advanceUntil(game, 'question_open');
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
+      category: 'shot',
+      points: 1,
+    });
+
+    const stored = await game.inRequestContext(() =>
+      game.standingsService.funFactData(game.gameSessionId),
+    );
+    expect(stored.bonusAwards).toEqual([
+      {
+        teamId: team.teamId,
+        category: 'shot',
+        points: 1,
+        blockFirstQuestionId: game.rounds[0].questionIds[0],
+      },
+    ]);
+    expect(
+      game.sessionWrite.read(game.joinCode).funFactData.bonusAwards,
+    ).toEqual(stored.bonusAwards);
+  });
+
+  it('stamps an award made in the lobby with the quiz’s first block', async () => {
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
+      category: 'shot',
+      points: 1,
+    });
+
+    const stored = await game.inRequestContext(() =>
+      game.standingsService.funFactData(game.gameSessionId),
+    );
+    expect(stored.bonusAwards).toEqual([
+      expect.objectContaining({
+        blockFirstQuestionId: game.rounds[0].questionIds[0],
+      }),
     ]);
   });
 
@@ -172,5 +216,71 @@ describe('GameGateway — award bonus', () => {
         'This team has already been awarded the "shot" bonus the maximum 1 time(s)',
       ) as string,
     });
+  });
+});
+
+describe('GameGateway — bonus in a fresh round intro, the previous block’s board up', () => {
+  const harness = setupRealStoreGatewayTest();
+  const mcQuestion = {
+    type: 'multiple_choice' as const,
+    prompt: 'Capital of France?',
+    answer: 'Paris',
+    points: 2,
+    payload: { options: ['Paris', 'London'] },
+  };
+
+  // Three blocks: the third block's intro must stamp block 2, not block 1.
+  async function awardAtThirdBlockIntro(restart: boolean) {
+    let game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      rounds: ['One', 'Two', 'Three'].map((title) => ({
+        title,
+        breakAfter: true,
+        questions: [mcQuestion],
+      })),
+    });
+    let admin = await game.connectAdmin();
+    await game.act('START_QUIZ');
+    await advanceToBlockBoard(game);
+    await game.act('ADVANCE');
+    await advanceUntil(game, 'question_open'); // the board of block 1 is still up until here
+    await advanceToBlockBoard(game);
+    await game.act('ADVANCE');
+    expect(game.sessionWrite.read(game.joinCode).progress).toMatchObject({
+      status: 'round_intro',
+      roundIndex: 2,
+    });
+    const { teamId } = game.teams[0];
+    if (restart) {
+      game = await game.restart();
+      admin = await game.connectAdmin();
+      expect(game.sessionWrite.read(game.joinCode).progress).toMatchObject({
+        status: 'round_intro',
+        roundIndex: 2,
+      });
+    }
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId,
+      category: 'shot',
+      points: 1,
+    });
+    const stored = await game.inRequestContext(() =>
+      game.standingsService.funFactData(game.gameSessionId),
+    );
+    return { stored, playedBlockId: game.rounds[1].questionIds[0] };
+  }
+
+  it('stamps the award with the block just played', async () => {
+    const { stored, playedBlockId } = await awardAtThirdBlockIntro(false);
+    expect(stored.bonusAwards).toEqual([
+      expect.objectContaining({ blockFirstQuestionId: playedBlockId }),
+    ]);
+  });
+
+  it('still does after a backend restart, when there are no prior standings', async () => {
+    const { stored, playedBlockId } = await awardAtThirdBlockIntro(true);
+    expect(stored.bonusAwards).toEqual([
+      expect.objectContaining({ blockFirstQuestionId: playedBlockId }),
+    ]);
   });
 });

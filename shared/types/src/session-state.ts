@@ -170,6 +170,12 @@ export interface SessionState {
    */
   tookPartTeamIds: number[];
   /**
+   * Teams that took part but were kicked or left (points only, never ranked
+   * in `leaderboard`). Read with the standings; the Rank callouts' block
+   * boards show them tagged "left". Ephemeral.
+   */
+  departedTeams: Omit<LeaderboardEntry, 'rank' | 'rankTo'>[];
+  /**
    * The league the big screen lobby shows (name and top rows), or null when the
    * session is in none. A cache: read when the session is placed and again
    * whenever its leagues change, never recomputed per broadcast. Ephemeral.
@@ -262,6 +268,7 @@ export function freshSessionState(
     priorStandings: null,
     funFactData: { answers: [], bonusAwards: [], powerUps: [] },
     tookPartTeamIds: [],
+    departedTeams: [],
     leagueTop: null,
     teams: [],
     playerCounts: {},

@@ -29,8 +29,11 @@ export interface FunFactAnswer {
 
 /** One bonus award, as far as fun facts need it. */
 export interface FunFactBonusAward {
+  teamId: number;
   category: BonusCategory;
   points: number;
+  /** First question id of the block in play when awarded; null for awards made before it was recorded. */
+  blockFirstQuestionId: number | null;
 }
 
 /** One power-up purchase, as far as the live views need it: the reveal's power-up count and each team's coins. */

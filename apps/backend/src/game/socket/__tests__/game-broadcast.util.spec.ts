@@ -28,6 +28,7 @@ describe('broadcastGameState', () => {
   const presenterContext: PresenterContextPayload = {
     currentQuestionNotes: 'note',
     currentRoundNote: null,
+    liveRankBoard: null,
     currentScreen: { heading: 'Lobby' },
     nextScreen: null,
   };

@@ -1,4 +1,5 @@
 import {
+  describeLiveRankBoard,
   getBlockSeededQuestions,
   getBreakNumber,
   getGameContext,
@@ -275,5 +276,6 @@ export function buildPresenterContext(
     currentRoundNote: roundNote || null,
     currentScreen: describeOnAirScreenText(session, onAirScreen),
     nextScreen: describeNextScreen(session),
+    liveRankBoard: describeLiveRankBoard(session),
   };
 }

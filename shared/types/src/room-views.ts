@@ -24,6 +24,7 @@ import type {
   UpcomingQuestionPosition,
 } from './question-views';
 import type { QuestionType } from './question-types';
+import type { BlockBoard, LiveRankBoard } from './rank-callouts';
 import type { QuizMode } from './quiz-mode';
 import type { SessionSettings } from './session-settings';
 import type { SideStandings } from './side-standings';
@@ -246,6 +247,10 @@ export interface AdminStatePayload
   teams: AdminTeamView[];
   /** The Versus side standings for /control's bar; absent without Versus. */
   sideStandings?: SideStandings;
+  /** The Rank callouts of the leaderboard on air (current and next group); only the admin view carries them, and only while the board shows a block's results. */
+  liveRankBoard?: LiveRankBoard;
+  /** The 🏆 block boards of the question browser, one per block (per round in a quickfire quiz), with the Rank callouts of every team; blocks not reached yet carry no teams. Admin view only. */
+  blockBoards: BlockBoard[];
   /** The rounds the quiz master may give a team as its joker: those with no opened question, once the joker pick has opened in a session with jokers; empty otherwise. */
   settableJokerRounds: JokerPickRound[];
   onAirScreen: OnAirScreen;
@@ -411,4 +416,6 @@ export interface PresenterContextPayload {
   currentScreen: ScreenPreview;
   /** What /display will show after the remote's Advance button is pressed, or null when Advance has nowhere left to go. */
   nextScreen: ScreenPreview | null;
+  /** The leaderboard's rank callouts while it is up (admin-only), else null. */
+  liveRankBoard: LiveRankBoard | null;
 }
