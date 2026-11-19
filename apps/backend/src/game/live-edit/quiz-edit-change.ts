@@ -6,6 +6,7 @@ import type { BlockGradingService } from '@/game/state/block-grading.service';
 import {
   BROADCAST_STATE_OUTCOME,
   type SessionOutcome,
+  unionTeamIds,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
 
@@ -59,16 +60,14 @@ export function quizEditChange(
       await grading.regradeForKeyFix(reloaded, started, regradeQuestionIds);
 
     // A joker that moved or was redrawn, and every team holding a joker: a round's number or title may have shifted under its doubled rounds.
-    const changedTeamIds = [
-      ...new Set([
-        ...session.teams
-          .filter((team) => answeringTeamIds.has(team.teamId))
-          .map((team) => team.teamId),
-        ...purchaseTeamIds,
-        ...jokerTeamIds,
-        ...Object.keys(session.jokers).map(Number),
-      ]),
-    ];
+    const changedTeamIds = unionTeamIds(
+      session.teams
+        .filter((team) => answeringTeamIds.has(team.teamId))
+        .map((team) => team.teamId),
+      purchaseTeamIds,
+      jokerTeamIds,
+      Object.keys(session.jokers).map(Number),
+    );
     return {
       session,
       outcome: {

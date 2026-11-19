@@ -20,7 +20,9 @@ import type {
 } from '@/game/state/game-progress.repository';
 import {
   BROADCAST_STATE_OUTCOME,
+  connectedTeamIds,
   isRevealEntry,
+  unionTeamIds,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { ClosedJokerPick, JokerChanges } from '@/game/state/joker-changes';
@@ -212,18 +214,14 @@ export class MoveCommitter {
         // The batch just graded these: /control's answer list for them still
         // shows the ungraded rows it was sent while they were open.
         answerListQuestionIds: staleAnswerListIds,
-        changedTeamIds: [
-          ...new Set([
-            ...(isRevealEntry(session.progress.status, progress.status)
-              ? committed.teams.map((team) => team.teamId)
-              : []),
-            // A phone joined in the lobby knows its coins from before they were decided.
-            ...(isLeavingLobby
-              ? Object.keys(committed.connectedTeamSockets).map(Number)
-              : []),
-            ...(closedPick?.changedTeamIds ?? []),
-          ]),
-        ],
+        changedTeamIds: unionTeamIds(
+          isRevealEntry(session.progress.status, progress.status)
+            ? committed.teams.map((team) => team.teamId)
+            : [],
+          // A phone joined in the lobby knows its coins from before they were decided.
+          isLeavingLobby ? connectedTeamIds(committed) : [],
+          closedPick?.changedTeamIds ?? [],
+        ),
       },
       touchedScores: true,
     };

@@ -8,6 +8,7 @@ import {
 import { SessionSettingsInvalidError } from '@/game/state/errors/session-settings-invalid.error';
 import {
   BROADCAST_STATE_OUTCOME,
+  connectedTeamIds,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { SessionSettingsChanges } from '@/game/state/session-settings-changes';
@@ -117,9 +118,7 @@ export class LeagueChanges {
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
         // The settings decide the coins of every connected team's phone; Turning Versus off also cleared the picks.
-        changedTeamIds: Object.keys(change.session.connectedTeamSockets).map(
-          Number,
-        ),
+        changedTeamIds: connectedTeamIds(change.session),
       },
     };
   }

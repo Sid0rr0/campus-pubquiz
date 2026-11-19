@@ -84,15 +84,13 @@ describe('GameGateway — quiz edited (live answer-key fix)', () => {
       points: 5,
     });
 
-    for (const [team, points] of [
-      [londonTeam, 5],
-      [parisTeam, 0],
-    ] as const) {
+    // The question is still open: each team gets a view, with the grade withheld.
+    for (const team of [londonTeam, parisTeam]) {
       const [sync] = emitsTo(team.socket.id, SOCKET_EVENTS.TEAM_VIEW);
       expect(
         (sync.payload as { answers: { pointsAwarded: number | null }[] })
           .answers,
-      ).toEqual([expect.objectContaining({ pointsAwarded: points })]);
+      ).toEqual([expect.objectContaining({ pointsAwarded: 0 })]);
     }
     expect(lastLeaderboard()).toEqual([
       expect.objectContaining({ teamId: londonTeam.teamId, totalPoints: 5 }),
@@ -199,16 +197,14 @@ describe('GameGateway — quiz edited, which teams and questions a key fix reach
     expect(emitsTo(game, gone.socket.id, SOCKET_EVENTS.TEAM_VIEW)).toHaveLength(
       0,
     );
-    for (const [team, points] of [
-      [paris, 0],
-      [london, 5],
-    ] as const) {
+    for (const team of [paris, london]) {
       const syncs = emitsTo(game, team.socket.id, SOCKET_EVENTS.TEAM_VIEW);
       expect(syncs).toHaveLength(1);
+      // Still open: the re-scored grade is withheld from the phone.
       expect(
         (syncs[0].payload as { answers: { pointsAwarded: number | null }[] })
           .answers,
-      ).toEqual([expect.objectContaining({ pointsAwarded: points })]);
+      ).toEqual([expect.objectContaining({ pointsAwarded: 0 })]);
     }
     const leaderboard = lastAdminView(game).leaderboard;
     expect(
@@ -262,9 +258,10 @@ describe('GameGateway — quiz edited, which teams and questions a key fix reach
     expect(answerLists.map((list) => list.questionId).sort()).toEqual(
       [multipleChoice, audio].sort(),
     );
+    // The block is still open: the phones get a view with the grades withheld.
     for (const [team, expected] of [
       [tune, { [multipleChoice]: 0, [audio]: 0 }],
-      [abba, { [multipleChoice]: 4, [audio]: 6 }],
+      [abba, { [multipleChoice]: 0, [audio]: 0 }],
     ] as const) {
       const syncs = emitsTo(game, team.socket.id, SOCKET_EVENTS.TEAM_VIEW);
       expect(syncs).toHaveLength(1);

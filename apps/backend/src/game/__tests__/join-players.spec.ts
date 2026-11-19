@@ -89,7 +89,7 @@ describe('GameGateway — join players', () => {
             expect.objectContaining({
               questionId: game.questionIds.multipleChoice,
               value: 'Paris',
-              pointsAwarded: 2,
+              pointsAwarded: 0, // the question is still open: no grade yet
             }),
           ],
           bonusAwards: [

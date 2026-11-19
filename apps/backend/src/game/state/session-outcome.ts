@@ -143,6 +143,16 @@ export function isRevealEntry(
   );
 }
 
+/** The team ids in any of `lists`, each once. */
+export function unionTeamIds(...lists: Iterable<number>[]): number[] {
+  return [...new Set(lists.flatMap((list) => [...list]))];
+}
+
+/** The ids of the teams with a phone connected right now. */
+export function connectedTeamIds(session: SessionState): number[] {
+  return Object.keys(session.connectedTeamSockets).map(Number);
+}
+
 /**
  * The syncs for those of `teamIds` that are connected right now, each with the
  * socket it is on, so delivery never has to look a team's socket up.

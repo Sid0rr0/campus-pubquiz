@@ -24,8 +24,8 @@ import {
  * The team view projection: everything one team's own phones may know about the
  * team, read from the database and the session. The one builder behind both the
  * join reply and the live team view event, so a rejoining phone and a connected
- * one can't disagree. Answers are the same list the join reply always carried
- * (already redacted by the answer service).
+ * one can't disagree. Answers carry no grades
+ * until the block in play's results show (see `redactGrades`).
  */
 export class TeamViewProjection {
   constructor(
@@ -69,7 +69,7 @@ export class TeamViewProjection {
   ): Promise<OwnTeamView> {
     const { gameSessionId } = session.seededGame;
     const [
-      answers,
+      rawAnswers,
       bonusAwards,
       roundRatings,
       feedback,
@@ -85,6 +85,7 @@ export class TeamViewProjection {
       this.playerCounts.getForTeam(gameSessionId, teamId),
       this.purchases.listForTeam(gameSessionId, teamId),
     ]);
+    const answers = redactGrades(session, rawAnswers);
     const purchaseViews = toPurchaseViews(
       purchases,
       session.seededGame,
@@ -131,6 +132,31 @@ export class TeamViewProjection {
     }
     return ready;
   }
+}
+
+/**
+ * Grades of the block in play stay off the wire until its results show: from
+ * reveal intro on (quickfire's collapsed reveal included) and at the end. Earlier
+ * blocks' grades are always shown. Hidden grades take the neutral "ungraded" values.
+ */
+function redactGrades(
+  session: SessionState,
+  answers: OwnTeamView['answers'],
+): OwnTeamView['answers'] {
+  const { status } = session.progress;
+  if (status === 'reveal_intro' || status === 'reveal' || status === 'ended') {
+    return answers;
+  }
+  const inPlay = new Set(
+    getBlockInPlay(session.seededGame.rounds, session.progress).map(
+      ({ questionId }) => questionId,
+    ),
+  );
+  return answers.map((answer) =>
+    inPlay.has(answer.questionId)
+      ? { ...answer, pointsAwarded: 0, verdict: null, gradedAt: null }
+      : answer,
+  );
 }
 
 /** The extra points each doubled answer earns, by question id: only answers that scored something in a doubled round. */

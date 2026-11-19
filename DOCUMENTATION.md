@@ -1175,7 +1175,10 @@ only, after the room broadcasts; `JOIN_ACCEPTED` carries the same view as
 `teamView`, built by the same projection; it carries everything a team's phones
 may know about the team: answers, bonus awards, player count, joker, side,
 doubled rounds, coins, purchases and Ask the room readiness, see Jokers above,
-`PICK_SIDE` and Coin awards; a disconnected team catches up on rejoin),
+`PICK_SIDE` and Coin awards; a disconnected team catches up on rejoin; the
+grades of the block in play stay blank, with no points, verdict or graded time,
+until `reveal_intro` or `reveal` (or the quiz has ended), so no answer or grade
+change can reveal a verdict early),
 `BONUS_AWARDED` (one fresh award: a toast only, the award itself arrives in the
 team view sent beside it), `COIN_AWARDED` (a toast only; see Coin awards above),
 `SESSION_CLOSED`, `TEAM_KICKED` (no

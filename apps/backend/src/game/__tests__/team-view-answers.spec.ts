@@ -127,6 +127,56 @@ describe('GameGateway — the team view carries answers and Ask the room readine
       pointsAwarded: 1,
     });
 
+    // The question is still open: the grade stays off the wire.
+    expect(teamViewsTo(game, team).at(-1)?.answers).toEqual([
+      {
+        questionId,
+        value: 'Jupitor',
+        pointsAwarded: 0,
+        verdict: null,
+        gradedAt: null,
+        clue: null,
+        clueValue: null,
+      },
+    ]);
+    await expectLiveEqualsResync(game, team);
+  });
+
+  it('shows a hand grade once the block reaches its results, equal to a rejoin', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      rounds: [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'Largest planet?', answer: 'Jupiter' },
+          ],
+        },
+      ],
+    });
+    const admin = await game.connectAdmin();
+    const [team] = game.teams;
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(admin);
+    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId,
+      teamId: team.teamId,
+      value: 'Jupitor',
+    });
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: answer.answerId,
+      pointsAwarded: 1,
+    });
+
+    for (let i = 0; i < 20; i += 1) {
+      if ((await game.snapshot()).progress.status === 'reveal_intro') break;
+      await game.act('ADVANCE');
+    }
+
     expect(teamViewsTo(game, team).at(-1)?.answers).toEqual([
       expect.objectContaining({ questionId, pointsAwarded: 1 }),
     ]);
@@ -149,7 +199,7 @@ describe('GameGateway — the team view carries answers and Ask the room readine
     });
 
     expect(teamViewsTo(game, team).at(-1)?.answers).toEqual([
-      expect.objectContaining({ pointsAwarded: 5 }),
+      expect.objectContaining({ value: 'London', pointsAwarded: 0 }),
     ]);
     await expectLiveEqualsResync(game, team);
   });

@@ -15,7 +15,9 @@ import type { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
+  connectedTeamIds,
   type SessionOutcome,
+  unionTeamIds,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
 import {
@@ -74,7 +76,9 @@ export class AnswersChanges {
       throw error;
     }
 
-    const refreshed = await this.refreshAnswers(session, questionId, teamId);
+    const refreshed = await this.refreshAnswers(session, questionId, {
+      submitterTeamId: teamId,
+    });
     return {
       session: refreshed.session,
       touchedScores: refreshed.touchedScores,
@@ -142,7 +146,7 @@ export class AnswersChanges {
       }
       throw error;
     }
-    return await this.refreshAnswers(session, questionId, null);
+    return await this.refreshAnswers(session, questionId, 'hand grade');
   }
 
   /**
@@ -153,7 +157,7 @@ export class AnswersChanges {
   private async refreshAnswers(
     started: SessionState,
     questionId: number,
-    submitterTeamId: number | null,
+    by: { submitterTeamId: number } | 'hand grade',
   ): Promise<SessionChange<SessionOutcome>> {
     const [answers, graded] = await Promise.all([
       this.answerService.listForQuestion(
@@ -168,16 +172,17 @@ export class AnswersChanges {
       started.seededGame.settings.powerUps.ask_the_room.maxUses > 0;
     const answeredTeamIds = answers.map((answer) => answer.teamId);
     // A submitter's own other phones need the new answer even with Ask the room off.
-    const changedTeamIds = [
-      ...new Set([
-        ...(findQuestionOpenForAnswering(graded, questionId) && offersRoom
-          ? Object.keys(graded.connectedTeamSockets).map(Number)
-          : submitterTeamId === null
-            ? answeredTeamIds // a hand grade changes the answering teams' grades
-            : []),
-        ...(submitterTeamId === null ? [] : [submitterTeamId]),
-      ]),
-    ];
+    const roomTeamIds =
+      findQuestionOpenForAnswering(graded, questionId) && offersRoom
+        ? connectedTeamIds(graded)
+        : [];
+    // A hand grade changes the answering teams' grades.
+    const gradedTeamIds = by === 'hand grade' ? answeredTeamIds : [];
+    const changedTeamIds = unionTeamIds(
+      roomTeamIds,
+      gradedTeamIds,
+      by === 'hand grade' ? [] : [by.submitterTeamId],
+    );
     return {
       session: withAnsweredTeamIds(graded, questionId, answeredTeamIds),
       outcome: {

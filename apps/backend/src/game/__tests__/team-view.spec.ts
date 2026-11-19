@@ -193,6 +193,37 @@ describe('GameGateway — the team view', () => {
     await expectLiveEqualsResync(game, alpha);
   });
 
+  it('names a blind-bought extra joker round with an empty title', async () => {
+    const game = await harness.createGateway({
+      rounds: [1, 2].map((number) => ({
+        title: `Round ${number}`,
+        breakAfter: true,
+        questions: [
+          {
+            type: 'multiple_choice' as const,
+            prompt: `Question of round ${number}?`,
+            answer: 'right',
+            points: 1,
+            payload: { options: ['right', 'wrong'] },
+          },
+        ],
+      })),
+      teamNames: ['Alpha'],
+      settings: { powerUpsEnabled: true, startingCoins: 10 },
+    });
+    await game.act('START_QUIZ');
+    const [alpha] = game.teams;
+
+    await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
+      powerUp: 'extra_joker',
+      roundId: game.rounds[0].id,
+    });
+
+    expect(teamViewsTo(game, alpha).at(-1)?.doubledRounds).toEqual([
+      expect.objectContaining({ roundId: game.rounds[0].id, title: '' }),
+    ]);
+  });
+
   it('carries the team view in the join reply next to its identity', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const [team] = game.teams;
