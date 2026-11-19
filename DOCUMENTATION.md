@@ -280,6 +280,14 @@ to the admin as socket exceptions. A config whose last round has
 `breakAfter: false` is rejected outright (its answers could never be
 revealed).
 
+What a move between two statuses sets off (the joker pick closing or
+reopening, leaving the lobby, start needing every side, leaving the break
+needing the block graded, a quickfire question being speed-scored, the block
+being graded, grades becoming visible, leaving the break into results, league
+tables possibly changing) is decided in one place as named transition facts,
+`apps/backend/src/game/state/transition-rules.ts`. The move pipeline and the
+screen preview read those facts.
+
 ## Real-Time Protocol (Socket.IO)
 
 Clients connect with `?role=display|admin|players`; rooms are scoped per game

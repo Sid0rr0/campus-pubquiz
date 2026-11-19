@@ -5,7 +5,6 @@ import {
   getGameContext,
   getQuizStructureSummary,
   getHostOnlyText,
-  isBreakExit,
   nextPressAction,
   type OnAirScreen,
   type PresenterContextPayload,
@@ -16,6 +15,7 @@ import {
   type SessionState,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
+import { transitionFacts } from '@/game/state/transition-rules';
 
 function describeBreakIntro(session: SessionState): ScreenPreview {
   const { progress } = session;
@@ -183,8 +183,7 @@ function describeTransition(
 ): ScreenPreview {
   const { status, roundIndex } = after.progress;
   if (
-    !isBreakExit(session.progress.status, status) ||
-    status === 'reveal_intro'
+    !transitionFacts(session, after.progress, 'ADVANCE').leavesBreakIntoResults
   ) {
     return describeScreen(after);
   }
