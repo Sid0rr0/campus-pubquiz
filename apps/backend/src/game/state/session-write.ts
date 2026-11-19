@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { withPriorStandings, type SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
@@ -16,14 +17,12 @@ import {
 
 /**
  * What a change returns: the new session and the outcome the write resolves
- * to, plus whether the change touched scores (wrote answers, grades, bonus
- * awards or the roster). Required, no default: the write reads standings and
- * flags league tables only when it is set.
+ * to. The write reads the live results after every change, so a change never
+ * says whether it touched scores.
  */
 export interface SessionChange<T> {
   session: SessionState;
   outcome: T;
-  touchedScores: boolean;
 }
 
 /**
@@ -72,20 +71,23 @@ function reportDeadlineChange<T>(
 
 /**
  * The Session write's league report: `outcome` flagged `leagueTablesChanged`
- * when the write entered or left `ended`, or refreshed standings on a session
- * that was `ended` before and after (a grade, bonus or showdown result after
- * the end). Results that aren't a SessionOutcome pass through: a join's team
- * has no delivery to carry the flag.
+ * when the write entered or left `ended`, or the session was `ended` before
+ * and after and the write changed the leaderboard or departed teams (a grade,
+ * bonus or showdown result after the end). Results that aren't a
+ * SessionOutcome pass through: a join's team has no delivery to carry the flag.
  */
 function reportLeagueTablesChange<T>(
   started: SessionState,
   stored: SessionState,
-  refreshedStandings: boolean,
   outcome: T,
 ): T {
   const wasEnded = started.progress.status === 'ended';
   const isEnded = stored.progress.status === 'ended';
-  const changed = wasEnded !== isEnded || (wasEnded && refreshedStandings);
+  const changed =
+    wasEnded !== isEnded ||
+    (wasEnded &&
+      (!isDeepStrictEqual(started.leaderboard, stored.leaderboard) ||
+        !isDeepStrictEqual(started.departedTeams, stored.departedTeams)));
   if (!changed || !isSessionOutcome(outcome)) return outcome;
   return { ...outcome, leagueTablesChanged: true };
 }
@@ -161,7 +163,7 @@ export class SessionWrite {
   /**
    * A session write: runs `change` against the session as the previous write
    * for this join code left it, refreshes the live results once as the
-   * last step (only when the change says it touched scores), stores the
+   * last step, stores the
    * result and returns the change's outcome. A change that throws stores
    * nothing and doesn't hold up the next write; a failed live result read,
    * after the change has done its work, is logged and the session is stored
@@ -253,28 +255,21 @@ export class SessionWrite {
   private async commit<T>(
     joinCode: string,
     started: SessionState,
-    {
-      session: changedSession,
-      outcome,
-      touchedScores: refreshStandings,
-    }: SessionChange<T>,
+    { session: changedSession, outcome }: SessionChange<T>,
   ): Promise<T> {
     // The change has already done its database work (a press has saved its
     // progress), so it counts as done even if a live result read fails: the
     // live results read keeps that live result's earlier value.
     const sessionToStore = withPriorStandings(started, changedSession);
-    if (refreshStandings) await this.gate.reached('standings', joinCode);
+    await this.gate.reached('standings', joinCode);
     this.sessions.set(
       joinCode,
-      refreshStandings
-        ? await this.liveResultsRead.read(sessionToStore)
-        : sessionToStore,
+      await this.liveResultsRead.read(sessionToStore),
     );
     const stored = this.read(joinCode);
     return reportLeagueTablesChange(
       started,
       stored,
-      refreshStandings,
       reportDeadlineChange(started, stored, outcome),
     );
   }

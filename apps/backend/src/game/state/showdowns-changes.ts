@@ -85,7 +85,6 @@ export class ShowdownsChanges {
           }
         : session,
       outcome: BROADCAST_STATE_OUTCOME,
-      touchedScores: false,
     };
   }
 
@@ -118,7 +117,6 @@ export class ShowdownsChanges {
     return {
       session: withActiveShowdownRound(session, round),
       outcome: BROADCAST_STATE_OUTCOME,
-      touchedScores: false,
     };
   }
 

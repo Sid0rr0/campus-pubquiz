@@ -78,7 +78,6 @@ export class AnswersChanges {
     });
     return {
       session: refreshed.session,
-      touchedScores: refreshed.touchedScores,
       outcome: {
         ...refreshed.outcome,
         replies: [
@@ -193,7 +192,6 @@ export class AnswersChanges {
         answerListQuestionIds: [questionId],
         changedTeamIds,
       },
-      touchedScores: true,
     };
   }
 }

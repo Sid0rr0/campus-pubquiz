@@ -209,7 +209,7 @@ describe('Live results — league tops refresh when a league table may have chan
     const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
     const held = game.holdAt('change', { joinCode: otherCode });
     const inProgress = game.sessionWrite.write(otherCode, (session) =>
-      Promise.resolve({ session, outcome: null, touchedScores: false }),
+      Promise.resolve({ session, outcome: null }),
     );
     await held.reached;
     const waiting = Promise.all([

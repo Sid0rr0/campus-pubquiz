@@ -102,7 +102,6 @@ export class TeamFeedbackChanges {
     return {
       session,
       outcome: NOTHING_TO_PUSH_OUTCOME,
-      touchedScores: false,
     };
   }
 }

@@ -142,7 +142,6 @@ export class TeamRosterChanges {
           changedTeamIds: drawnJoker ? [team.id] : [],
         },
       },
-      touchedScores: true,
     };
   }
 
@@ -171,14 +170,13 @@ export class TeamRosterChanges {
     const teamId = seatOfSocket(session, socketId);
     return Promise.resolve(
       teamId === null
-        ? { session, outcome: null, touchedScores: false }
+        ? { session, outcome: null }
         : {
             session: {
               ...session,
               connectedTeamSockets: withoutSeat(session, teamId),
             },
             outcome: BROADCAST_STATE_OUTCOME,
-            touchedScores: false,
           },
     );
   }
@@ -248,7 +246,6 @@ export class TeamRosterChanges {
         notices,
         socketsToClose: notices.map((notice) => notice.socketId),
       },
-      touchedScores: true,
     };
   }
 }

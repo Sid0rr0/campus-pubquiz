@@ -88,7 +88,6 @@ export class TeamSideChanges {
         ...BROADCAST_STATE_OUTCOME,
         changedTeamIds: [teamId],
       },
-      touchedScores: false,
     };
   }
 }

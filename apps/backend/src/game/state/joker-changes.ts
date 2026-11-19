@@ -186,7 +186,6 @@ export class JokerChanges {
         ...broadcast,
         changedTeamIds: [teamId],
       },
-      touchedScores: true,
     };
   }
 

@@ -75,7 +75,6 @@ export function quizEditChange(
         answerListQuestionIds: regradedQuestionIds,
         changedTeamIds,
       },
-      touchedScores: true,
     };
   };
 }

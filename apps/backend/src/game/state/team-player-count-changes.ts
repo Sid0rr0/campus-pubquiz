@@ -92,7 +92,6 @@ export class TeamPlayerCountChanges {
         shouldBroadcastAdminState: true,
         changedTeamIds: [teamId],
       },
-      touchedScores: false,
     };
   }
 }

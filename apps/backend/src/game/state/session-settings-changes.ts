@@ -45,7 +45,6 @@ export class SessionSettingsChanges {
     return Promise.resolve({
       session: { ...session, breakEndsAt },
       outcome: BROADCAST_STATE_OUTCOME,
-      touchedScores: false,
     });
   }
 
@@ -57,7 +56,6 @@ export class SessionSettingsChanges {
     return Promise.resolve({
       session: { ...session, displayTextScale },
       outcome: BROADCAST_STATE_OUTCOME,
-      touchedScores: false,
     });
   }
 
@@ -69,7 +67,6 @@ export class SessionSettingsChanges {
     return Promise.resolve({
       session: { ...session, isDisplaySoundMuted },
       outcome: BROADCAST_STATE_OUTCOME,
-      touchedScores: false,
     });
   }
 
@@ -84,7 +81,6 @@ export class SessionSettingsChanges {
         seededGame: { ...session.seededGame, customName },
       },
       outcome: undefined,
-      touchedScores: false,
     });
   }
 
@@ -139,8 +135,6 @@ export class SessionSettingsChanges {
         seededGame: { ...session.seededGame, settings },
       },
       outcome: undefined,
-      // Stryker disable next-line BooleanLiteral: equivalent, the only caller (the league change module's settingsAndLeagues) reads just `.session` and returns its own touchedScores, so this flag is never consulted.
-      touchedScores: false,
     };
   }
 

@@ -735,7 +735,7 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
   });
 });
 
-describe('GameGateway — session write: events that do not touch scores', () => {
+describe('GameGateway — session write: events that change no scores', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
   let admin: MockSocket;
@@ -832,7 +832,7 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     expect(lastAdminSnapshot().displayTextScale).toBe(1.5);
   });
 
-  it('does not read standings for a disconnect, a break end time or a display text size, and leaves the stored leaderboard as it was', async () => {
+  it('reads standings for a disconnect, a break end time or a display text size, and leaves the stored leaderboard as it was', async () => {
     const before = await game.snapshot();
     const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
 
@@ -844,11 +844,11 @@ describe('GameGateway — session write: events that do not touch scores', () =>
       displayTextScale: 1.25,
     });
 
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
   });
 
-  it('does not read standings when a socket that held no team drops', async () => {
+  it('reads standings when a socket that held no team drops', async () => {
     const stranger = await game.connectPlayer();
     const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
 
@@ -858,7 +858,7 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     );
 
     expect(outcome).toBeNull();
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
   });
 });
 
@@ -869,7 +869,7 @@ describe('GameGateway — session write: player counts and sound mute', () => {
     jest.restoreAllMocks();
   });
 
-  it('does not read standings for a team’s own player count, an admin-set player count or a sound mute', async () => {
+  it('reads standings for a team’s own player count, an admin-set player count or a sound mute', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const admin = await game.connectAdmin();
     const [team] = game.teams;
@@ -888,7 +888,7 @@ describe('GameGateway — session write: player counts and sound mute', () => {
       isDisplaySoundMuted: true,
     });
 
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
     const after = await game.snapshot();
     expect(after.isDisplaySoundMuted).toBe(true);
     expect(after.leaderboard).toEqual(before.leaderboard);
@@ -937,7 +937,7 @@ describe('GameGateway — session write: round rating and feedback', () => {
     throw new Error(`Never reached status "${status}"`);
   }
 
-  it('does not read standings for a round rating or for feedback', async () => {
+  it('reads standings for a round rating or for feedback', async () => {
     const game = await harness.createGateway({
       teamNames: ['The Quizzards'],
       rounds: ROUNDS,
@@ -952,7 +952,7 @@ describe('GameGateway — session write: round rating and feedback', () => {
       stars: 4,
     });
     expect(rated).toEqual({ success: true });
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
 
     await advanceUntilStatus(game, 'ended');
     leaderboard.mockClear();
@@ -962,7 +962,7 @@ describe('GameGateway — session write: round rating and feedback', () => {
     });
 
     expect(sent).toEqual({ success: true });
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
   });
 });
 
@@ -1146,7 +1146,7 @@ describe('GameGateway — session write: new showdown round', () => {
     jest.restoreAllMocks();
   });
 
-  it('does not read standings for a new showdown round or a guess', async () => {
+  it('reads standings for a new showdown round or a guess', async () => {
     const game = await harness.createGateway({
       teamNames: ['Team A', 'Team B'],
     });
@@ -1167,7 +1167,7 @@ describe('GameGateway — session write: new showdown round', () => {
       value: '95',
     });
 
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
   });
 });
@@ -1238,34 +1238,34 @@ describe('GameGateway — session write: lobby settings', () => {
     expectSettingsAndTeam(await game.snapshot());
   });
 
-  it('does not read standings for a settings change', async () => {
+  it('reads standings for a settings change', async () => {
     const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
     const before = await game.snapshot();
 
     await updateSettings();
 
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
   });
 
-  it('does not read standings when the stats page renames the session', async () => {
+  it('reads standings when the stats page renames the session', async () => {
     const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
 
     await game.inRequestContext(() =>
       game.gameState.renameHeldSession(game.gameSessionId, 'Quiz night'),
     );
 
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
   });
 
-  it('does not read standings for a leagues change', async () => {
+  it('reads standings for a leagues change', async () => {
     const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
 
     await game.inRequestContext(() =>
       game.gameState.updateSessionSettings(game.joinCode, {}, []),
     );
 
-    expect(leaderboard).not.toHaveBeenCalled();
+    expect(leaderboard).toHaveBeenCalled();
   });
 });
 
@@ -1358,8 +1358,7 @@ describe('GameGateway — session write: what a write may return and a held writ
   });
 
   function unchanged(outcome = 'done') {
-    return (session: SessionState) =>
-      Promise.resolve({ session, outcome, touchedScores: false });
+    return (session: SessionState) => Promise.resolve({ session, outcome });
   }
 
   it('throws when a write moved an auto-lock deadline but returned no session outcome to carry it', async () => {
@@ -1368,7 +1367,6 @@ describe('GameGateway — session write: what a write may return and a held writ
         Promise.resolve({
           session: { ...session, questionLockAt: 1_000 },
           outcome: 'not an outcome',
-          touchedScores: false,
         }),
       ),
     ).rejects.toThrow(
@@ -1381,7 +1379,6 @@ describe('GameGateway — session write: what a write may return and a held writ
       Promise.resolve({
         session: { ...session, jokerPickEndsAt: 5_000 },
         outcome: NOTHING_TO_PUSH_OUTCOME,
-        touchedScores: false,
       }),
     );
 
@@ -1398,19 +1395,119 @@ describe('GameGateway — session write: what a write may return and a held writ
     ).resolves.toBe('a join’s team');
   });
 
-  it('does not reach the standings step for a write that did not touch scores', async () => {
+  it('reaches the standings step for every write, even one that changed no scores', async () => {
     const held = game.holdAt('standings');
 
-    await expect(
-      game.sessionWrite.write(game.joinCode, unchanged('no scores')),
-    ).resolves.toBe('no scores');
-
-    const scored = game.sessionWrite.write(game.joinCode, (session) =>
-      Promise.resolve({ session, outcome: 'scores', touchedScores: true }),
+    const unscored = game.sessionWrite.write(
+      game.joinCode,
+      unchanged('no scores'),
     );
     await held.reached;
     held.release();
-    await expect(scored).resolves.toBe('scores');
+    await expect(unscored).resolves.toBe('no scores');
+  });
+
+  function awardShot(session: SessionState) {
+    return game.inRequestContext(() =>
+      game.bonusService.award(
+        session.seededGame.gameSessionId,
+        game.teams[0].teamId,
+        'shot',
+        1,
+      ),
+    );
+  }
+
+  it('stores a bonus award written by a change that returns only the session and outcome with the fresh leaderboard', async () => {
+    await game.sessionWrite.write(game.joinCode, async (session) => {
+      await awardShot(session);
+      return { session, outcome: 'awarded' };
+    });
+
+    expect(game.sessionWrite.read(game.joinCode).leaderboard[0]).toMatchObject({
+      totalPoints: 1,
+    });
+  });
+
+  it('stores the write with the earlier results when the live results read fails', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    jest
+      .spyOn(game.standingsService, 'leaderboard')
+      .mockRejectedValueOnce(new Error('standings unavailable'));
+    const before = game.sessionWrite.read(game.joinCode);
+
+    await expect(
+      game.sessionWrite.write(game.joinCode, async (session) => {
+        await awardShot(session);
+        return {
+          session: { ...session, displayTextScale: 1.5 },
+          outcome: 'awarded',
+        };
+      }),
+    ).resolves.toBe('awarded');
+
+    const stored = game.sessionWrite.read(game.joinCode);
+    expect(stored.displayTextScale).toBe(1.5);
+    expect(stored.leaderboard).toEqual(before.leaderboard);
+  });
+
+  describe('league tables flag', () => {
+    function write(
+      change: (session: SessionState) => SessionState,
+      beforeStore: (session: SessionState) => Promise<unknown> = () =>
+        Promise.resolve(),
+    ) {
+      return game.sessionWrite.write(game.joinCode, async (session) => {
+        await beforeStore(session);
+        return { session: change(session), outcome: NOTHING_TO_PUSH_OUTCOME };
+      });
+    }
+
+    const toStatus =
+      (status: 'ended' | 'lobby') =>
+      (session: SessionState): SessionState => ({
+        ...session,
+        progress: { ...session.progress, status },
+      });
+
+    it('flags entering and leaving ended', async () => {
+      const entering = await write(toStatus('ended'));
+      const leaving = await write(toStatus('lobby'));
+
+      expect(entering.leagueTablesChanged).toBe(true);
+      expect(leaving.leagueTablesChanged).toBe(true);
+    });
+
+    it('flags a write in an ended session that changes the leaderboard', async () => {
+      await write(toStatus('ended'));
+
+      const outcome = await write((session) => session, awardShot);
+
+      expect(outcome.leagueTablesChanged).toBe(true);
+    });
+
+    it('flags a write in an ended session that changes the departed teams', async () => {
+      await write(toStatus('ended'));
+      const [entry] = game.sessionWrite.read(game.joinCode).leaderboard;
+      jest
+        .spyOn(game.standingsService, 'departedTeams')
+        .mockResolvedValueOnce([{ ...entry }]);
+
+      const outcome = await write((session) => session);
+
+      expect(outcome.leagueTablesChanged).toBe(true);
+    });
+
+    it('does not flag a write in an ended session that changes neither, such as a text-scale change', async () => {
+      await write(toStatus('ended'));
+
+      const outcome = await write((session) => ({
+        ...session,
+        displayTextScale: 1.5,
+      }));
+
+      expect(outcome.leagueTablesChanged).toBeUndefined();
+    });
   });
 
   it('reaches a multi-code hold one join code at a time in sorted order', async () => {
