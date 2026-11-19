@@ -24,6 +24,8 @@ import {
   type EventContext,
   type EventResult,
 } from '@/game/socket/guarded-dispatch.util';
+import { LiveChangeModules } from '@/game/state/live-change-modules';
+import { SessionWrite } from '@/game/state/session-write';
 import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import {
   SOCKET_EVENT_DECLARATIONS,
@@ -53,6 +55,8 @@ export class GameGateway
     private readonly gameState: GameStateService,
     private readonly sessions: SessionService,
     private readonly broadcaster: SessionBroadcaster,
+    private readonly sessionWrite: SessionWrite,
+    private readonly changes: LiveChangeModules,
   ) {}
 
   /** Nest calls this once the Socket.IO server exists; the broadcaster needs it to emit. */
@@ -95,8 +99,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.adminAction,
       rawPayload,
       client,
-      ({ joinCode, payload }) =>
-        this.gameState.applyAdminAction(joinCode, payload.action),
     );
   }
 
@@ -438,11 +440,16 @@ export class GameGateway
     declaration: SocketEventDeclaration<S>,
     rawPayload: unknown,
     client: GameSocket,
-    body: (context: EventContext<z.infer<S>>) => Promise<EventResult>,
+    body?: (context: EventContext<z.infer<S>>) => Promise<EventResult>,
   ): Promise<AckResult> {
     return this.broadcaster.runInRequestContext(() =>
       dispatchSocketEvent(
-        { deliver: this.broadcaster.deliver, logger: this.logger },
+        {
+          deliver: this.broadcaster.deliver,
+          logger: this.logger,
+          sessionWrite: this.sessionWrite,
+          changes: this.changes,
+        },
         client,
         declaration,
         rawPayload,

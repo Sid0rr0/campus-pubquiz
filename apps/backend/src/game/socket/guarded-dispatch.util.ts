@@ -8,6 +8,8 @@ import { countEventAgainstLimit } from '@/game/socket/event-rate-limit.util';
 import type { DeliverFn } from '@/game/socket/outcome-delivery.util';
 import type { SocketEventDeclaration } from '@/game/socket/socket-event-declarations';
 import { parseSocketPayload } from '@/game/socket/socket-payload.schemas';
+import type { LiveChangeModules } from '@/game/state/live-change-modules';
+import type { SessionWrite } from '@/game/state/session-write';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionOutcome } from '@/game/state/session-outcome';
 
@@ -21,8 +23,25 @@ export interface EventContext<P> {
 /** What an event body hands back for delivery: its outcome, or nothing when it is only acknowledged. */
 export type EventResult = SessionOutcome | undefined;
 
+/** The body of an event whose declaration names its change: that change, run through the session write. */
+function declaredChange<S extends z.ZodType>(
+  deps: DispatchDeps,
+  declaration: SocketEventDeclaration<S>,
+): (context: EventContext<z.infer<S>>) => Promise<EventResult> {
+  const { change } = declaration;
+  if (!change) {
+    throw new Error(`${declaration.event} declares no change and has no body`);
+  }
+  return ({ joinCode, payload, client }) =>
+    deps.sessionWrite.write(joinCode, (session) =>
+      change(deps.changes, session, payload, client.id),
+    );
+}
+
 export interface DispatchDeps {
   logger: Logger;
+  sessionWrite: SessionWrite;
+  changes: LiveChangeModules;
   /** The Session broadcaster's delivery step. */
   deliver: DeliverFn;
 }
@@ -61,7 +80,7 @@ export async function dispatchSocketEvent<S extends z.ZodType>(
   client: GameSocket,
   declaration: SocketEventDeclaration<S>,
   rawPayload: unknown,
-  body: (context: EventContext<z.infer<S>>) => Promise<EventResult>,
+  body?: (context: EventContext<z.infer<S>>) => Promise<EventResult>,
 ): Promise<AckResult> {
   return acknowledge(client, deps.logger, declaration.event, async () => {
     countEventAgainstLimit(client);
@@ -72,10 +91,18 @@ export async function dispatchSocketEvent<S extends z.ZodType>(
     }
     logAccepted(deps.logger, client, declaration, payload);
 
-    const result = await body({ joinCode, payload, client }).catch(
+    const run = body ?? declaredChange(deps, declaration);
+    const result = await run({ joinCode, payload, client }).catch(
       (error: unknown) => {
         if (error instanceof SessionRefusal) {
           throw new WsException(error.message);
+        }
+        if (body === undefined && declaration.fallbackRefusal !== undefined) {
+          throw new WsException(
+            error instanceof Error
+              ? error.message
+              : declaration.fallbackRefusal,
+          );
         }
         throw error;
       },

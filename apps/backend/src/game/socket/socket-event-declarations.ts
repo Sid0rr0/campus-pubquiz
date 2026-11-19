@@ -6,6 +6,10 @@ import {
   type ClientToServerPayload,
   type SocketRoomName,
 } from '@campus-pubquiz/types';
+import type { SessionState } from '@campus-pubquiz/types';
+import type { LiveChangeModules } from '@/game/state/live-change-modules';
+import type { SessionChange } from '@/game/state/session-write';
+import type { SessionOutcome } from '@/game/state/session-outcome';
 import {
   adminActionPayloadSchema,
   awardBonusPayloadSchema,
@@ -41,6 +45,15 @@ export interface SocketEventDeclaration<S extends z.ZodType = z.ZodType> {
   readonly rejection: string;
   /** Payload fields named in the "accepted" log line. Never answer text. */
   readonly logFields: readonly (keyof z.infer<S> & string)[];
+  /** The session change this event makes; the dispatch step runs it through the session write. Absent for join, which the game state class handles. */
+  readonly change?: (
+    changes: LiveChangeModules,
+    session: SessionState,
+    payload: z.output<S>,
+    socketId: string,
+  ) => Promise<SessionChange<SessionOutcome>>;
+  /** Declaring it makes a failure of `change` that isn't a refusal one anyway: an Error's own message, else this text. Without it such a failure gets the generic error. */
+  readonly fallbackRefusal?: string;
 }
 
 /** `S` itself when its output and the event's protocol payload are assignable both ways, else `never` (so the declaration doesn't compile). */
@@ -75,6 +88,9 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.ADMIN,
     rejection: 'Only admin clients may perform game actions',
     logFields: ['action'],
+    change: (changes, session, { action }) =>
+      changes.moveCommitter.commit(session, action),
+    fallbackRefusal: 'Invalid game action',
   }),
   joinPlayers: declareSocketEvent({
     event: SOCKET_EVENTS.JOIN_PLAYERS,

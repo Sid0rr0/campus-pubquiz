@@ -10,7 +10,6 @@ import {
   type CreateShowdownRoundPayload,
   DEFAULT_SESSION_SETTINGS,
   freshSessionState,
-  type GameAction,
   isQuickfire,
   type JoinPlayersPayload,
   type BuyPowerUpPayload,
@@ -560,28 +559,6 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrite.write(joinCode, (session) =>
       this.changes.league.settingsAndLeagues(session, partial, leagueIds),
     );
-  }
-
-  /**
-   * Applies an admin action (or a timer expiry standing in for one) through
-   * the Move committer, inside a session write, so no other write that landed
-   * meanwhile is lost. A refused press (or failed save) leaves the session
-   * where it was and is refused with the commit's own message.
-   */
-  applyAdminAction(
-    joinCode: string,
-    action: GameAction,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite
-      .write(joinCode, (session) =>
-        this.changes.moveCommitter.commit(session, action),
-      )
-      .catch((error: unknown) => {
-        throw new SessionRefusal(
-          // Stryker disable next-line StringLiteral: unreachable defensive fallback, every failure on this path is an Error; the text only fills a refusal that is never produced.
-          error instanceof Error ? error.message : 'Invalid game action',
-        );
-      });
   }
 
   /**

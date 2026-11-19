@@ -117,8 +117,10 @@ describe('GameGateway — outcome delivery order', () => {
   it('turns a refused press into a socket error carrying the refusal message unchanged', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const admin = await game.connectAdmin();
-    const expected = await game.gameState
-      .applyAdminAction(game.joinCode, 'PREVIOUS')
+    const expected = await game.sessionWrite
+      .write(game.joinCode, (session) =>
+        game.liveChanges.moveCommitter.commit(session, 'PREVIOUS'),
+      )
       .then(
         () => undefined,
         (error: Error) => error.message,
