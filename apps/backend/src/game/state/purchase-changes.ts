@@ -17,7 +17,6 @@ import {
 import { AnswerService } from '@/answer/answer.service';
 import {
   PurchaseService,
-  toPurchaseViews,
   type NewPurchase,
   type PurchaseRecord,
 } from '@/purchase/purchase.service';
@@ -25,8 +24,6 @@ import { roundNowHolding, type RandomSource } from '@/game/state/joker-changes';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
-  type PurchaseSync,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
@@ -162,37 +159,7 @@ export class PurchaseChanges {
     }
     return await this.store(session, teamId, records, bought, {
       answerListQuestionIds: [questionId],
-      ...(isWider && { teamSyncs: connectedTeamSyncs(session, [teamId]) }),
     });
-  }
-
-  /** Every connected team's purchases and coins, as a refund may have moved them. */
-  private async connectedPurchaseSyncs(
-    reloaded: SessionState,
-  ): Promise<PurchaseSync[]> {
-    const { gameSessionId } = reloaded.seededGame;
-    const purchaseSyncs: PurchaseSync[] = [];
-    for (const sync of connectedTeamSyncs(
-      reloaded,
-      Object.keys(reloaded.connectedTeamSockets).map(Number),
-    )) {
-      const records = await this.purchaseService.listForTeam(
-        gameSessionId,
-        sync.teamId,
-      );
-      purchaseSyncs.push({
-        ...sync,
-        payload: {
-          purchases: toPurchaseViews(
-            records,
-            reloaded.seededGame,
-            reloaded.progress.status,
-          ),
-          coins: coinBalance(reloaded, sync.teamId, records),
-        },
-      });
-    }
-    return purchaseSyncs;
   }
 
   private async otherTeamsAnswers(
@@ -218,15 +185,6 @@ export class PurchaseChanges {
       teamId,
       ...bought,
     });
-    const all = [...records, bought];
-    const payload = {
-      purchases: toPurchaseViews(
-        all,
-        session.seededGame,
-        session.progress.status,
-      ),
-      coins: coinBalance(session, teamId, all),
-    };
     return {
       session,
       outcome: {
@@ -234,10 +192,7 @@ export class PurchaseChanges {
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
         ...outcome,
-        purchaseSyncs: connectedTeamSyncs(session, [teamId]).map((sync) => ({
-          ...sync,
-          payload,
-        })),
+        changedTeamIds: [teamId],
       },
       touchedScores: true,
     };
@@ -295,16 +250,16 @@ export class PurchaseChanges {
    * purchase is removed and its cost handed back, as the database already does
    * when the edit deletes the round row. A second extra joker that lands on a
    * round the team already doubles is refunded the same way. Runs before the
-   * jokers follow, which read these rows. Every connected team is told its
-   * purchases and coins, since a refund moves the balance.
+   * jokers follow, which read these rows. Every team that held an extra
+   * joker is listed as changed, since a refund moves its purchases and balance.
    */
   async followRoundsAfterEdit(
     started: SessionState,
     reloaded: SessionState,
-  ): Promise<{ session: SessionState; purchaseSyncs: PurchaseSync[] }> {
+  ): Promise<{ session: SessionState; changedTeamIds: number[] }> {
     const { gameSessionId, settings } = reloaded.seededGame;
     if (settings.powerUps.extra_joker.maxUses === 0) {
-      return { session: reloaded, purchaseSyncs: [] };
+      return { session: reloaded, changedTeamIds: [] };
     }
     const rebuilt = rebuiltExtraJokers(started, reloaded);
     // Added before the old rows go, so a failure in between never loses one.
@@ -314,7 +269,17 @@ export class PurchaseChanges {
 
     return {
       session: reloaded,
-      purchaseSyncs: await this.connectedPurchaseSyncs(reloaded),
+      // Only a team holding an extra joker can see a purchase or its refund move.
+      changedTeamIds: [
+        ...new Set(
+          started.funFactData.powerUps
+            .filter(
+              (bought) =>
+                bought.powerUp === 'extra_joker' && bought.roundId !== null,
+            )
+            .map((bought) => bought.teamId),
+        ),
+      ],
     };
   }
 }

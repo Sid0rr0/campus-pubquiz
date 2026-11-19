@@ -1,5 +1,4 @@
 import {
-  askTheRoomReady,
   findQuestionOpenForAnswering,
   NOT_YOUR_TEAM_ANSWER_ERROR,
   SOCKET_EVENTS,
@@ -16,8 +15,9 @@ import type { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
+  connectedTeamIds,
   type SessionOutcome,
+  unionTeamIds,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
 import {
@@ -76,7 +76,9 @@ export class AnswersChanges {
       throw error;
     }
 
-    const refreshed = await this.refreshAnswers(session, questionId);
+    const refreshed = await this.refreshAnswers(session, questionId, {
+      submitterTeamId: teamId,
+    });
     return {
       session: refreshed.session,
       touchedScores: refreshed.touchedScores,
@@ -144,7 +146,7 @@ export class AnswersChanges {
       }
       throw error;
     }
-    return await this.refreshAnswers(session, questionId);
+    return await this.refreshAnswers(session, questionId, 'hand grade');
   }
 
   /**
@@ -155,6 +157,7 @@ export class AnswersChanges {
   private async refreshAnswers(
     started: SessionState,
     questionId: number,
+    by: { submitterTeamId: number } | 'hand grade',
   ): Promise<SessionChange<SessionOutcome>> {
     const [answers, graded] = await Promise.all([
       this.answerService.listForQuestion(
@@ -163,34 +166,29 @@ export class AnswersChanges {
       ),
       this.grading.gradesChanged(started, [questionId]),
     ]);
-    // Each connected team hears only whether its own Ask the room is ready on
-    // this question, never how many teams answered.
-    const question = findQuestionOpenForAnswering(graded, questionId);
+    // While Ask the room is offered an answer may make it ready for any team;
+    // each team view carries only its own flag, never how many teams answered.
     const offersRoom =
       started.seededGame.settings.powerUps.ask_the_room.maxUses > 0;
-    const roomReadySyncs =
-      question && offersRoom
-        ? connectedTeamSyncs(
-            graded,
-            Object.keys(graded.connectedTeamSockets).map(Number),
-          ).map((sync) => ({
-            ...sync,
-            payload: {
-              questionId,
-              isReady: askTheRoomReady(question, answers, sync.teamId),
-            },
-          }))
+    const answeredTeamIds = answers.map((answer) => answer.teamId);
+    // A submitter's own other phones need the new answer even with Ask the room off.
+    const roomTeamIds =
+      findQuestionOpenForAnswering(graded, questionId) && offersRoom
+        ? connectedTeamIds(graded)
         : [];
+    // A hand grade changes the answering teams' grades.
+    const gradedTeamIds = by === 'hand grade' ? answeredTeamIds : [];
+    const changedTeamIds = unionTeamIds(
+      roomTeamIds,
+      gradedTeamIds,
+      by === 'hand grade' ? [] : [by.submitterTeamId],
+    );
     return {
-      session: withAnsweredTeamIds(
-        graded,
-        questionId,
-        answers.map((answer) => answer.teamId),
-      ),
+      session: withAnsweredTeamIds(graded, questionId, answeredTeamIds),
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
         answerListQuestionIds: [questionId],
-        roomReadySyncs,
+        changedTeamIds,
       },
       touchedScores: true,
     };

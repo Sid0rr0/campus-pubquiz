@@ -416,7 +416,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     expect(await storedPoints(game, questionId)).toEqual({ Pairs: 3 });
     const events = game.roomEmits().map((emit) => emit.event);
     expect(events).not.toContain(SOCKET_EVENTS.ANSWERS_UPDATED);
-    expect(events).not.toContain(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED);
+    expect(events).not.toContain(SOCKET_EVENTS.TEAM_VIEW);
     expect(lastAdminLeaderboard(game)).toEqual(leaderboardBefore);
   });
 

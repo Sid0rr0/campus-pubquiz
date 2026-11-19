@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { teamView } from '@/test-utils/team-view';
 import type { AuthUser } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import type { PlayerMenuState } from '@/app/lib/player-menu-context';
@@ -257,18 +258,7 @@ describe('SiteHeader', () => {
           teamToken: 'token-1',
           teamCode: 'QUICK-JADE-FOX',
           teamName: 'The Quizzards',
-          answers: [],
-          bonusAwards: [],
-          roundRatings: [],
-          feedback: { comment: '', topics: [] },
-          sessionRatings: { pacing: null, feltDifficulty: null },
-          playerCount: null,
-          joker: null,
-          coins: 0,
-          hasCarriedCoin: false,
-          purchases: [],
-          sideId: null,
-          roomReadyQuestionIds: [],
+          teamView: teamView(),
         },
         onLogOut,
       }),

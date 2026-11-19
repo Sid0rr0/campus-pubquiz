@@ -1,6 +1,5 @@
 import { act, screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
-import type { TeamJoker } from '@campus-pubquiz/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { AUTO_ADVANCE_STORAGE_KEY } from '@/app/lib/player-settings-storage';
@@ -74,7 +73,7 @@ describe('PlayPage — reveal verdict card', () => {
     options: {
       myAnswers?: Record<number, MyAnswer>;
       connectionError?: string | null;
-      myJoker?: TeamJoker | null;
+      myJokerExtras?: Record<number, number>;
     } = {},
   ) {
     mockUseTeamLink.mockReturnValue(
@@ -83,7 +82,7 @@ describe('PlayPage — reveal verdict card', () => {
         join: { team: TEAM, connectionError: options.connectionError ?? null },
         game: {
           myAnswers: options.myAnswers ?? MY_ANSWERS,
-          myJoker: options.myJoker ?? null,
+          myJokerExtras: options.myJokerExtras ?? {},
         },
       }),
     );
@@ -155,7 +154,8 @@ describe('PlayPage — reveal verdict card', () => {
   });
 
   describe('in the team’s joker round', () => {
-    const JOKER_ON_ROUND_1: TeamJoker = { roundId: 1, source: 'chosen' };
+    // The server doubles question 2's 1.5 points; question 3 earned nothing.
+    const EXTRAS = { 2: 1.5 };
     const jokerReveal = (revealIndex: number): SessionDescription => ({
       ...atReveal(revealIndex),
       settings: { showRoundOverview: true, jokersEnabled: true },
@@ -164,7 +164,7 @@ describe('PlayPage — reveal verdict card', () => {
     it('adds the joker’s extra points under the verdict', () => {
       const { rerender } = renderPhoneAt(jokerReveal(0));
 
-      showPhoneAt(jokerReveal(1), { myJoker: JOKER_ON_ROUND_1 });
+      showPhoneAt(jokerReveal(1), { myJokerExtras: EXTRAS });
       rerender(<PlayPage />);
 
       expect(screen.getByRole('status')).toHaveTextContent(
@@ -175,7 +175,7 @@ describe('PlayPage — reveal verdict card', () => {
     it('adds no joker line when the answer earned nothing', () => {
       const { rerender } = renderPhoneAt(jokerReveal(1));
 
-      showPhoneAt(jokerReveal(2), { myJoker: JOKER_ON_ROUND_1 });
+      showPhoneAt(jokerReveal(2), { myJokerExtras: EXTRAS });
       rerender(<PlayPage />);
 
       expect(screen.getByRole('status')).not.toHaveTextContent('Joker');

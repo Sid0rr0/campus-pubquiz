@@ -2,9 +2,12 @@ import {
   DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
   type TeamJoker,
-  type TeamJokerSyncedPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
 import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
 import {
   setupRealStoreGatewayTest,
@@ -47,19 +50,12 @@ describe('GameGateway — every team keeps exactly one joker', () => {
     return game.act('ADVANCE'); // -> joker_pick
   }
 
-  /** The joker syncs the server addressed to this team's socket, in emit order. */
-  function syncsTo(
+  /** The jokers the team views addressed to this team's socket carried, in emit order. */
+  function jokersTo(
     game: RealStoreGateway,
     team: Pick<JoinedTeam, 'socket'>,
-  ): TeamJokerSyncedPayload[] {
-    return game
-      .roomEmits()
-      .filter(
-        (emit) =>
-          emit.rooms.includes(team.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_JOKER_SYNCED,
-      )
-      .map((emit) => emit.payload as TeamJokerSyncedPayload);
+  ): (TeamJoker | null)[] {
+    return teamViewsTo(game, team).map((view) => view.joker);
   }
 
   async function adminJokers(game: RealStoreGateway) {
@@ -83,8 +79,8 @@ describe('GameGateway — every team keeps exactly one joker', () => {
   function joinedJoker(socket: JoinedTeam['socket']): TeamJoker | null {
     const accepted = socket.emit.mock.calls.find(
       ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-    ) as [string, { joker: TeamJoker | null }];
-    return accepted[1].joker;
+    ) as [string, { teamView: { joker: TeamJoker | null } }];
+    return accepted[1].teamView.joker;
   }
 
   describe('a team joining after the pick closed', () => {
@@ -105,8 +101,8 @@ describe('GameGateway — every team keeps exactly one joker', () => {
       expect(await storedJokers(game)).toMatchObject({
         [latecomer.teamId]: { roundId: game.rounds[1].id, source: 'drawn' },
       });
-      expect(syncsTo(game, latecomer)).toEqual([
-        { joker: { roundId: game.rounds[1].id, source: 'drawn' } },
+      expect(jokersTo(game, latecomer)).toEqual([
+        { roundId: game.rounds[1].id, source: 'drawn' },
       ]);
       // The reply is built before the draw reaches the phone, so the phone
       // sees the draw as a change (and toasts it), not as a joker it held.
@@ -137,7 +133,7 @@ describe('GameGateway — every team keeps exactly one joker', () => {
       const latecomer = await game.joinTeam('Charlie');
 
       expect(await storedJokers(game)).toEqual({});
-      expect(syncsTo(game, latecomer)).toEqual([]);
+      expect(jokersTo(game, latecomer)).toEqual([]);
       await game.act('ADVANCE'); // closes the pick
       expect((await adminJokers(game)).Charlie).toEqual([
         1,
@@ -156,7 +152,7 @@ describe('GameGateway — every team keeps exactly one joker', () => {
       const latecomer = await game.joinTeam('Charlie');
 
       expect(await storedJokers(game)).toEqual(before);
-      expect(syncsTo(game, latecomer)).toEqual([]);
+      expect(jokersTo(game, latecomer)).toEqual([]);
     });
 
     it('is not drawn a joker in a session played without jokers', async () => {
@@ -194,7 +190,7 @@ describe('GameGateway — every team keeps exactly one joker', () => {
       expect(
         game
           .roomEmits()
-          .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_JOKER_SYNCED),
+          .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_VIEW),
       ).toEqual([]);
     });
   });
@@ -227,8 +223,9 @@ describe('GameGateway — every team keeps exactly one joker', () => {
       });
       const stored = await storedJokers(game);
       expect(stored[alpha.teamId].source).toBe('drawn');
-      expect(syncsTo(game, alpha)).toEqual([{ joker: stored[alpha.teamId] }]);
-      expect(syncsTo(game, bravo)).toEqual([]);
+      expect(jokersTo(game, alpha).at(-1)).toEqual(stored[alpha.teamId]);
+      expect(jokersTo(game, bravo).at(-1)).toEqual(stored[bravo.teamId]);
+      await expectLiveEqualsResync(game, alpha);
     });
 
     it('redraws the joker of a round deleted from the middle', async () => {
@@ -251,7 +248,7 @@ describe('GameGateway — every team keeps exactly one joker', () => {
         Alpha: [2, 'Round 3', 'drawn'],
         Bravo: [2, 'Round 3', 'chosen'],
       });
-      expect(syncsTo(game, alpha)).toHaveLength(1);
+      expect(jokersTo(game, alpha)).toHaveLength(1);
     });
 
     it('never redraws a joker onto a round the team doubles with an extra joker', async () => {
@@ -329,7 +326,7 @@ describe('GameGateway — every team keeps exactly one joker', () => {
       await game.saveQuizEdit((rounds) => [rounds[0], rounds[2], rounds[1]]);
 
       expect((await adminJokers(game)).Alpha).toEqual([3, 'Round 2', 'chosen']);
-      expect(syncsTo(game, alpha)).toHaveLength(1);
+      expect(jokersTo(game, alpha)).toHaveLength(1);
     });
 
     describe('when the joker round’s questions are split across rounds', () => {
@@ -411,11 +408,6 @@ describe('GameGateway — every team keeps exactly one joker', () => {
       await game.saveQuizEdit((rounds) => rounds);
 
       expect(await storedJokers(game)).toEqual(before);
-      expect(
-        game
-          .roomEmits()
-          .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_JOKER_SYNCED),
-      ).toEqual([]);
     });
   });
 });

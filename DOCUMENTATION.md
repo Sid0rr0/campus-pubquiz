@@ -740,8 +740,8 @@ Coins are shown (`coinsShown`) when power-ups are on or the team's balance is ab
 Teams table whenever a phone would show coins, including carried coins with power-ups off.
 The starting coins, the carried coins, the coin awards and the purchases all count.
 The balance is sent as
-`coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
-`TEAM_PURCHASES_SYNCED` after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
+`coins` in `JOIN_ACCEPTED`'s `teamView` (so a reconnect or backend restart reads it again), in
+the team view after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
 "Power-ups are on: you start with N coins. If your team rated all rounds of the
 last pub quiz, you get 2 bonus coins. Earn more with shots and selfies." when
@@ -781,10 +781,10 @@ session keeps each team's coin award sum in a cache (`SessionState.coinAwards`,
 read from the table when the session is placed, so a restart gets it back) so the
 snapshot's `coins` stay synchronous. The awarded team's phone hears
 `COIN_AWARDED` (`{ coins, reason?, balance }`, a toast: the coins this award gave
-in all, with the new balance), and `TEAM_COINS_SYNCED` (`{ balance, hasCarriedCoin }`,
-no toast) when deleting a bonus award took its coin award with it, when the quiz
-leaves the lobby (carried coins were just decided) and when the lobby settings
-change. The balance never shows
+in all, with the new balance), beside a fresh team view. The team view alone
+(no toast) carries the coins when deleting a bonus award took its coin award with
+it, when the quiz leaves the lobby (carried coins were just decided) and when the
+lobby settings change. The balance never shows
 below 0, even when a removed award's coins were already spent. The quiz master sees a
 team's coin awards, oldest first with their reasons, under its bonus awards on
 `/control`: `GET /sessions/:joinCode/teams/:teamId/bonus-awards` carries them as
@@ -806,8 +806,8 @@ session, power-up, question or round, the cost paid, and the **stored effect** a
 JSON, parsed on read by `purchaseEffectSchema`): the effect is drawn once at
 purchase and never changes, so a reconnect or backend restart shows the same
 thing. The balance subtracts the sum of the `cost` column through the Coin ledger,
-nowhere else. The buying team's phones get `TEAM_PURCHASES_SYNCED`
-(`{ purchases, coins }`) and `JOIN_ACCEPTED` carries the same `purchases`; the admin
+nowhere else. The buying team's phones get a team view
+(`purchases` and `coins`, the same in `JOIN_ACCEPTED`'s `teamView`); the admin
 room is refreshed (the Coins column and the answer list). A later power-up adds a
 member to `PurchaseEffect`/`purchaseEffectSchema`, a case to the effect builder in
 `purchase-changes.ts` and the id to its question types' `powerUps`.
@@ -819,10 +819,11 @@ refused with "Waiting for more answers" (nothing charged) until 3 other teams ha
 current answer that matches an option (the server refusal stays as the backstop).
 The phone's button is greyed out as "Waiting for more answers" until the server
 says it is ready: every time an answer lands on an open question, each connected
-team gets `TEAM_ROOM_READY_SYNCED` (`{ questionId, isReady }`, its own phones
-only), `isReady` meaning 3 _other_ teams have a matching answer. The join reply
-carries `roomReadyQuestionIds` (the block in play's ready questions) so a
-reconnect restores it. Only that boolean travels; the phone never learns how many
+team gets a fresh `TEAM_VIEW` (its own phones only) whose
+`roomReadyQuestionIds` lists the block in play's questions with the room ready,
+ready meaning 3 _other_ teams have a matching answer. The join reply's team
+view carries the same list, so a reconnect restores it. Only that flag per
+question travels; the phone never learns how many
 teams answered. The phone shows the split under the question, with options its
 50/50 removed crossed out.
 
@@ -867,7 +868,7 @@ answer with `withWiderMargin` at submit, and on a key fix or quickfire speed sco
 (`StoredAnswerRow.hasWiderMargin`). The phone shows the doubled margin text instead
 of the question's. Buying after already submitting re-grades the team's answer at
 once (`AnswerService.regradeForWiderMargin`, which keeps a grade at or above the
-new score) and sends the team its answers (`TEAM_ANSWERS_SYNCED`), so there is
+new score) and sends the team a fresh team view (`TEAM_VIEW`), so there is
 nothing to resubmit. A **pin** bought after answering is different: the order sent
 stays as it was until the team submits again, so when the answer given has the pinned item off its place, the phone adds "Submit again to
 send the pinned order."
@@ -916,7 +917,7 @@ _A team's side._ The side a team picked is a nullable `side_id` on its
 kick or leave, and when Versus goes off). The `PICK_SIDE` event is covered under
 the client events below. Three settings rules depend on picks: turning Versus
 off clears every team's side in the same write (each connected phone gets
-`TEAM_SIDE_SYNCED` with `{ sideId: null }`); a settings change that removes a side
+a `TEAM_VIEW` with `sideId: null`); a settings change that removes a side
 a team is on is refused with "Can't remove a side while a team is on it"
 (`SessionSettingsInvalidError`); and turning Versus on in the lobby needs no event,
 since a phone with Versus on and no side shows the side picker. **Start quiz** (not End quiz) is
@@ -999,10 +1000,9 @@ is not stored on the roster row because a kick deletes that row and the joker
 must survive a kick and a rejoin. It goes through the session write as a change
 that touches scores. The players room is told nothing, and the big screen is sent
 a fresh view of itself with the team added to `pickedTeamIds` (never the round):
-the server sends `TEAM_JOKER_SYNCED` (`{ joker: { roundId, source } | null }`) to the
-team's own connected phones through the per-team sync, `JOIN_ACCEPTED` carries
-the team's `joker` (so a reconnect, a second phone or a rejoin after a kick
-restores it), and the admin room and the big screen alone get a fresh
+the server sends a `TEAM_VIEW` (its `joker` is `{ roundId, source } | null`) to the
+team's own connected phones, the join reply's team view carries the team's `joker`
+(so a reconnect, a second phone or a rejoin after a kick restores it), and the admin room and the big screen alone get a fresh
 `STATE_UPDATED`. A team's joker round is never sent to another team's phone or
 the big screen. The service that
 reads and writes it is `JokerService` (`apps/backend/src/joker/`), and the pure
@@ -1036,7 +1036,7 @@ round that has started or is not in the quiz, a session without Jokers, or a qui
 that has not reached the pick ("That round cannot be the joker: it has already
 started, or the joker pick has not opened", "Team N is not in this session"). It
 is a session write that touches scores, like `PICK_JOKER`, and is delivered the
-same way: `TEAM_JOKER_SYNCED` to that team's own connected phones and a fresh
+same way: a `TEAM_VIEW` to that team's own connected phones and a fresh
 `STATE_UPDATED` to the admin room alone. The team can pick again while the pick is
 still open, which replaces the quiz master's choice.
 
@@ -1070,7 +1070,7 @@ joker is optional, so it is removed and its cost handed back (the balance is
 worked out from the purchase rows). That also happens when two extra jokers of a
 team would land on one round. A round that survives keeps its extra jokers even
 when the row it sat on is deleted (the save stores them again from the session's
-cache of purchases, since the database drops a deleted row's purchases). Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
+cache of purchases, since the database drops a deleted row's purchases). Every team that held an extra joker is then sent a team view so its coins
 and purchases stay right.
 
 **One joker per team.** In a session with Jokers every team always holds exactly
@@ -1080,23 +1080,30 @@ one joker:
 - A team that joins after the pick closed (the status is past `joker_pick`) and
   holds no joker is drawn one with equal chance among the rounds with no opened
   question, stored as `drawn`. `JOIN_ACCEPTED` carries the joker the team held
-  before the draw (`null`), and `TEAM_JOKER_SYNCED` follows, so the phone toasts
-  "A joker was drawn for your team". A team that joins before the pick opens is
-  drawn one when the pick closes, like the rest.
+  before the draw (`null`), and a `TEAM_VIEW` with the drawn joker follows, so the
+  phone toasts "A joker was drawn for your team". A team that joins before the pick
+  opens is drawn one when the pick closes, like the rest.
 - A team that is kicked and rejoins with its name and code gets its joker back:
   the joker row is not the roster row.
 - A Live edit save keeps jokers on their rounds inside the same save. A round is
   recognised by its questions, so a round moved by a reorder takes its jokers with
   it, and a joker whose round is deleted (none of its questions is left) is
   redrawn from the rounds with no opened question, stored as `drawn`. Every team
-  whose joker moved or was redrawn gets `TEAM_JOKER_SYNCED`.
+  whose joker moved or was redrawn, and every team holding a joker (its round's
+  number or title may have shifted), gets a `TEAM_VIEW`.
 
-The phone shows a toast when `TEAM_JOKER_SYNCED` brings a joker the team did not
+The phone shows a toast when a live `TEAM_VIEW` brings a joker the team did not
 pick and does not already hold: "Your joker was changed by the quiz master"
 (`set_by_quiz_master`) or "A joker was drawn for your team" (`drawn`). The team's
 own pick (`chosen`), a joker it already holds (closing the pick re-sends every
-joker), and the joker `JOIN_ACCEPTED` carries on a reconnect or rejoin only update
-the joker line, never toast.
+joker), and the joker the join reply's team view carries on a reconnect or rejoin
+only update the joker line, never toast.
+
+The team view carries the rounds that count double for the team
+(`doubledRounds`: the joker round and any extra jokers, by round id, number and
+title, in quiz order; `""` for a round bought blind) and, per scored answer in
+one of them, the extra points the joker adds (`jokerExtras`, by question id). Both
+are worked out on the server; the phone only displays them.
 
 The phone screen for the pick is `{ kind: 'joker_pick', isOpen }`: the picker while
 `isOpen`, and the team's joker with "Look at the screen" once the pick has closed.
@@ -1154,7 +1161,8 @@ acknowledgement type or a listener typed against the wrong view is a compile
 error. `STATE_SYNC` and `STATE_UPDATED` are declared per room, so a socket
 connected as `players` receives `PlayersStatePayload` on them and nothing else.
 
-Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED`,
+Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED` (the team's identity: `teamId`, `teamToken`, `teamCode`,
+`teamName`, plus its `teamView`, and nothing else),
 `ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
 `PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview;
 `currentQuestionNotes`, the **Question notes** of the question the on-air
@@ -1162,20 +1170,17 @@ screen shows (asked, locking, break review or reveal), without the `{…}` setti
 group (`questionNotesOf`), and `currentRoundNote`, the **Round note** of the round
 whose intro, break round intro or reveal intro is on air; each `null` on every
 other screen, decided from the on-air screen in `screen-preview.util.ts`),
-`TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
-team's own phone only), `TEAM_JOKER_SYNCED` (`{ joker }`, to the team's own
-phones only; see Jokers above), `TEAM_SIDE_SYNCED` (`{ sideId }`, to the team's own
-phones only; see `PICK_SIDE`), `BONUS_AWARDED` (one fresh award, appended on the
-phone with a toast), `TEAM_BONUS_AWARDS_SYNCED` (`{ bonusAwards }`, the team's
-full list in award order as `TeamBonusAwardView[]`, to the awarded team's own
-phone only when the quiz master edits or deletes an award; it replaces the
-phone's list with no toast, and a disconnected team catches up on rejoin),
-`COIN_AWARDED` and `TEAM_COINS_SYNCED` (to the team's own phone; see Coin awards
-above),
-`TEAM_PURCHASES_SYNCED` (`{ purchases, coins }`, to the buying team's own phones
-only; see Buying a power-up above),
-`TEAM_ROOM_READY_SYNCED` (`{ questionId, isReady }`, to each connected team's own
-phones after an answer lands; see Ask the room above),
+`TEAM_VIEW` (the **Team view**, `OwnTeamView`, to a changed team's own socket
+only, after the room broadcasts; `JOIN_ACCEPTED` carries the same view as
+`teamView`, built by the same projection; it carries everything a team's phones
+may know about the team: answers, bonus awards, player count, joker, side,
+doubled rounds, coins, purchases and Ask the room readiness, see Jokers above,
+`PICK_SIDE` and Coin awards; a disconnected team catches up on rejoin; the
+grades of the block in play stay blank, with no points, verdict or graded time,
+until `reveal_intro` or `reveal` (or the quiz has ended), so no answer or grade
+change can reveal a verdict early),
+`BONUS_AWARDED` (one fresh award: a toast only, the award itself arrives in the
+team view sent beside it), `COIN_AWARDED` (a toast only; see Coin awards above),
 `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
@@ -1253,9 +1258,8 @@ it is not stored on the roster row because a kick deletes that row and the count
 survive a kick and a rejoin. Setting it again replaces the number (last write wins);
 there is no way to clear it back to unknown. It goes through the session write,
 declaring that it doesn't change scores, and broadcasts no room view: the display view
-and the players view are untouched. Instead the server sends `TEAM_PLAYER_COUNT_SYNCED`
-(`{ playerCount }`) to the team's connected phone through the per-team sync (the path
-that also carries the team's answers), so a team's count never reaches another team.
+and the players view are untouched. Instead the server sends a team view
+(`playerCount`) to the team's connected phone only, so a team's count never reaches another team.
 The service that reads and writes it is `PlayerCountService`
 (`apps/backend/src/player-count/`).
 
@@ -1267,9 +1271,9 @@ has started and the team has a side, with "That side is not in this session" for
 unknown id, "This session is not played with Versus" without Versus, and "Join a
 team before picking a side" for a socket with no team. It goes through the session
 write, declares that it doesn't change scores, and broadcasts a fresh view to all
-rooms (the roster shows the side). The server also sends `TEAM_SIDE_SYNCED`
-(`{ sideId: string | null }`) to the team's own connected phones, and
-`JOIN_ACCEPTED` carries `sideId` so a reconnect or rejoin restores it. Only the
+rooms (the roster shows the side). The team's own connected phones get a
+`TEAM_VIEW` carrying `sideId` (`string | null`), and the join reply's team view
+carries it too, so a reconnect or rejoin restores it. Only the
 admin view's `teams` entries (`AdminTeamView.sideId`) carry a team's side; the
 display and players views don't (they carry the side standings, below). The phone shows a side picker (not a
 status; it covers that phone only) while Versus is on and the team has no side, a
@@ -1281,8 +1285,8 @@ other) — moves a roster team to another side at any status, including mid-quiz
 to fix a team that tapped the wrong side. Refused with "That side is not in this
 session" for an unknown id, "This session is not played with Versus" without
 Versus, and "Team N is not in this session" for a team not on the roster. It
-goes through the session write and changes no scores; the team's phones get
-`TEAM_SIDE_SYNCED` and every room a fresh view, as for `PICK_SIDE`. `/control`
+goes through the session write and changes no scores; the team's phones get a
+`TEAM_VIEW` and every room a fresh view, as for `PICK_SIDE`. `/control`
 shows a side select on each roster row while Versus is on.
 
 **Side standings** (`describeSideStandings` in `shared/types/src/side-standings.ts`,
@@ -1330,8 +1334,7 @@ A team removed before it left any record is not recoverable and is refused. Both
 player count events are refused once the session is closed (its state is evicted, so the
 write fails with an unknown-session error). It writes the same per-team, per-session row as the
 phone's event (last write wins, so the team's later report overwrites the correction
-and vice versa) and reaches the team's phones through the same `TEAM_PLAYER_COUNT_SYNCED`
-per-team sync; a team with no connected phone gets the number on its next join. The
+and vice versa) and reaches the team's phones through the same team view; a team with no connected phone gets the number on its next join. The
 big screen and the players view are untouched. The admin room alone is sent a fresh
 `STATE_UPDATED` (the outcome's `shouldBroadcastAdminState`), after this event and
 after a team's own `SET_PLAYER_COUNT`, so an open `/control` shows the new number.
@@ -1412,7 +1415,7 @@ itself — the display and other players just see counts.
    every change and broadcast to all rooms; shown whenever the admin toggles
    it.
 
-A team's saved answers ride along on `JOIN_ACCEPTED`, so a phone that
+A team's saved answers ride along in `JOIN_ACCEPTED`'s `teamView`, so a phone that
 reconnects (or reopens the tab) restores its checkmarks and can still revise
 anything in the open block. So do its own round ratings (`roundRatings`, a list
 of `{ roundId, stars }`, never another team's): the phone draws its stars from

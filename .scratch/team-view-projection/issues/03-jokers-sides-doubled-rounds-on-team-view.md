@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The joker and side outcome fields, emit loops, socket events, payload types, phone listeners, reducer actions and their tests are gone
 - [ ] The play screen's doubled rounds and joker marks come from the team view; the phone no longer calls the shared doubled-rounds rule

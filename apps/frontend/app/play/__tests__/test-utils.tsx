@@ -9,6 +9,7 @@ import type {
 } from '@/app/lib/team-link';
 import type { TeamLinkGame, TeamLinkJoin } from '@/app/lib/use-team-link';
 import { roomView, type SessionDescription } from '@/test-utils/room-view';
+import { joinPayload } from '@/test-utils/team-view';
 
 /** The questions the Team link would have gathered from the one view a phone is sent for `session`. */
 export function seenQuestionsOf(session: SessionDescription) {
@@ -83,6 +84,8 @@ export function teamLinkResult({
         myPlayerCount: 3,
         setPlayerCount: vi.fn().mockResolvedValue({ success: true }),
         myJoker: null,
+        myDoubledRounds: [],
+        myJokerExtras: {},
         pickJoker: vi.fn().mockResolvedValue({ success: true }),
         // Most sessions are played without Versus, so no side is held.
         mySideId: null,
@@ -119,7 +122,12 @@ export function teamLinkResult({
     handleJoin: vi.fn(),
     handleLogOut: vi.fn(),
     ...joinOverrides,
-    team: (joinOverrides.team ?? null) as TeamLinkJoin['team'],
+    // A test's team may list its team data as plain fields; the phone reads them from the team view.
+    team: (joinOverrides.team && 'teamView' in joinOverrides.team
+      ? joinOverrides.team
+      : joinOverrides.team
+        ? joinPayload(joinOverrides.team)
+        : null) as TeamLinkJoin['team'],
   };
   const storedName = () => window.localStorage.getItem(TEAM_NAME_STORAGE_KEY);
   Object.defineProperties(join, {

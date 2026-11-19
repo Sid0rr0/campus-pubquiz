@@ -7,10 +7,11 @@ import {
   type AnswersUpdatedPayload,
   type PowerUpId,
   type PowerUpSettings,
+  type OwnTeamView,
   type SessionSettings,
-  type TeamPurchasesSyncedPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 import {
   setupRealStoreGatewayTest,
   type CreateGatewayOptions,
@@ -99,15 +100,8 @@ describe('GameGateway — buying a 50/50', () => {
   function syncsTo(
     game: RealStoreGateway,
     team: Pick<JoinedTeam, 'socket'>,
-  ): TeamPurchasesSyncedPayload[] {
-    return game
-      .roomEmits()
-      .filter(
-        (emit) =>
-          emit.rooms.includes(team.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_PURCHASES_SYNCED,
-      )
-      .map((emit) => emit.payload as TeamPurchasesSyncedPayload);
+  ): OwnTeamView[] {
+    return teamViewsTo(game, team);
   }
 
   function storedPurchases(game: RealStoreGateway, team: JoinedTeam) {
@@ -119,8 +113,17 @@ describe('GameGateway — buying a 50/50', () => {
   function joinedWith(socket: JoinedTeam['socket']) {
     const accepted = socket.emit.mock.calls.filter(
       ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-    ) as [string, { purchases: unknown; coins: number }][];
-    return accepted[accepted.length - 1][1];
+    ) as [
+      string,
+      {
+        teamView: {
+          purchases: unknown;
+          coins: number;
+          roomReadyQuestionIds: number[];
+        };
+      },
+    ][];
+    return accepted[accepted.length - 1][1].teamView;
   }
 
   describe('a purchase that goes through', () => {
@@ -351,27 +354,20 @@ describe('GameGateway — buying a 50/50', () => {
       const { game, france, answer, teams } = await room();
       const [a, b, c, d] = teams;
       const readyTo = (team: JoinedTeam) =>
-        game
-          .roomEmits()
-          .filter(
-            (emit) =>
-              emit.rooms.includes(team.socket.id) &&
-              emit.event === SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
-          )
-          .map((emit) => emit.payload);
+        teamViewsTo(game, team).at(-1)?.roomReadyQuestionIds;
 
       await answer(a, 'Paris'); // the buyer's own answer never counts
       await answer(b, 'Paris');
       await answer(c, 'Rome');
-      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: false });
+      expect(readyTo(a)).toEqual([]);
 
       await answer(d, 'Berlin');
-      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: true });
+      expect(readyTo(a)).toEqual([france]);
       // D hears it too: A, B and C are three other teams to D.
-      expect(readyTo(d).at(-1)).toEqual({ questionId: france, isReady: true });
+      expect(readyTo(d)).toEqual([france]);
 
       await answer(d, 'stale'); // last write wins: no longer an option
-      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: false });
+      expect(readyTo(a)).toEqual([]);
 
       await answer(d, 'Rome');
       const second = await game.connectPlayer();
@@ -422,6 +418,7 @@ describe('GameGateway — buying a 50/50', () => {
           { teamNames: ['A', 'B', 'C', 'D'] },
         );
         const { france } = ids(game);
+        game.clearEmits(); // leaving the lobby sent every team its coins
         for (const team of game.teams.slice(1)) {
           await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
             questionId: france,
@@ -431,13 +428,12 @@ describe('GameGateway — buying a 50/50', () => {
         }
 
         expect(await rejoinedReadyIds(game, game.teams[0])).toEqual([]);
-        expect(
-          game
-            .roomEmits()
-            .filter(
-              (emit) => emit.event === SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
-            ),
-        ).toEqual([]);
+        // Only each submitting team hears of its own answer; the team that has not answered gets nothing.
+        const [silent, ...submitters] = game.teams;
+        expect(teamViewsTo(game, silent)).toEqual([]);
+        for (const team of submitters) {
+          expect(teamViewsTo(game, team)).toHaveLength(1);
+        }
       });
     });
 

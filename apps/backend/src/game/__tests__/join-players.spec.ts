@@ -25,17 +25,16 @@ describe('GameGateway — join players', () => {
       joinCode: game.joinCode,
     });
 
-    expect(player.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.JOIN_ACCEPTED,
-      expect.objectContaining({
-        teamName: 'The Quizzards',
-        teamId: expect.any(Number) as number,
-        teamToken: expect.any(String) as string,
-        teamCode: expect.any(String) as string,
+    expect(player.emit).toHaveBeenCalledWith(SOCKET_EVENTS.JOIN_ACCEPTED, {
+      teamName: 'The Quizzards',
+      teamId: expect.any(Number) as number,
+      teamToken: expect.any(String) as string,
+      teamCode: expect.any(String) as string,
+      teamView: expect.objectContaining({
         answers: [],
         bonusAwards: [],
-      }),
-    );
+      }) as unknown,
+    });
   });
 
   it('sends the join reply to the joining socket before any room-wide update', async () => {
@@ -85,14 +84,18 @@ describe('GameGateway — join players', () => {
       SOCKET_EVENTS.JOIN_ACCEPTED,
       expect.objectContaining({
         teamId: first.teamId,
-        answers: [
-          expect.objectContaining({
-            questionId: game.questionIds.multipleChoice,
-            value: 'Paris',
-            pointsAwarded: 2,
-          }),
-        ],
-        bonusAwards: [expect.objectContaining({ category: 'shot', points: 1 })],
+        teamView: expect.objectContaining({
+          answers: [
+            expect.objectContaining({
+              questionId: game.questionIds.multipleChoice,
+              value: 'Paris',
+              pointsAwarded: 0, // the question is still open: no grade yet
+            }),
+          ],
+          bonusAwards: [
+            expect.objectContaining({ category: 'shot', points: 1 }),
+          ],
+        }) as unknown,
       }),
     );
   });

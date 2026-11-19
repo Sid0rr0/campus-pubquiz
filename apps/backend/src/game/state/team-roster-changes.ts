@@ -1,30 +1,15 @@
 import {
-  askTheRoomReady,
-  findQuestionOpenForAnswering,
-  getBlockInPlay,
-  powerUpApplies,
   type JoinPlayersPayload,
   SEAT_TAKEN_REFUSAL_MARKER,
   type SessionState,
   SOCKET_EVENTS,
-  coinBalance,
   type TeamJoker,
+  type OwnTeamView,
 } from '@campus-pubquiz/types';
-import {
-  toPurchaseViews,
-  type PurchaseService,
-} from '@/purchase/purchase.service';
-import { AnswerService } from '@/answer/answer.service';
 import type { CarriedCoinService } from '@/coins/carried-coin.service';
-import { BonusService } from '@/bonus/bonus.service';
-import { FeedbackService } from '@/feedback/feedback.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
-import {
-  type JokerChanges,
-  jokerSyncsFor,
-  withJoker,
-} from '@/game/state/joker-changes';
+import { type JokerChanges, withJoker } from '@/game/state/joker-changes';
 import {
   BROADCAST_STATE_OUTCOME,
   type SessionOutcome,
@@ -58,13 +43,9 @@ export interface JoinOutcome {
 export class TeamRosterChanges {
   constructor(
     private readonly teamService: TeamService,
-    private readonly answerService: AnswerService,
-    private readonly bonusService: BonusService,
-    private readonly feedbackService: FeedbackService,
     private readonly playerCountService: PlayerCountService,
     private readonly jokerChanges: JokerChanges,
     private readonly carriedCoinService: Pick<CarriedCoinService, 'decide'>,
-    private readonly purchases: Pick<PurchaseService, 'listForTeam'>,
   ) {}
 
   /**
@@ -141,45 +122,19 @@ export class TeamRosterChanges {
         joined: {
           ...BROADCAST_STATE_OUTCOME,
           socketsToClose: takenOver ? [takenOver] : [],
-          jokerSyncs: drawnJoker
-            ? jokerSyncsFor(joined, [team.id], { [team.id]: drawnJoker })
-            : [],
+          // A joker drawn for a late joiner reaches its phone as a team view after the reply.
+          changedTeamIds: drawnJoker ? [team.id] : [],
         },
       },
       touchedScores: true,
     };
   }
 
-  /** The JOIN_ACCEPTED reply for a joined team: its saved answers, bonus awards, round ratings, feedback, pacing and felt-difficulty answers and player count. Built after the join's write. */
-  async joinReply(
-    gameSessionId: number,
+  /** The JOIN_ACCEPTED reply for a joined team: its identity plus its team view. */
+  joinReply(
     team: TeamIdentity,
-    joker: TeamJoker | null,
-    session: SessionState,
-  ): Promise<SessionOutcome['replies'][number]> {
-    const { settings } = session.seededGame;
-    const carriedCoin = session.carriedCoins[team.id] ?? 0;
-    const purchases = await this.purchases.listForTeam(gameSessionId, team.id);
-    const roomReadyQuestionIds: number[] = [];
-    if (settings.powerUps.ask_the_room.maxUses > 0) {
-      for (const { questionId } of getBlockInPlay(
-        session.seededGame.rounds,
-        session.progress,
-      )) {
-        const question = findQuestionOpenForAnswering(session, questionId);
-        if (
-          question &&
-          powerUpApplies('ask_the_room', question) &&
-          askTheRoomReady(
-            question,
-            await this.answerService.listForQuestion(gameSessionId, questionId),
-            team.id,
-          )
-        ) {
-          roomReadyQuestionIds.push(questionId);
-        }
-      }
-    }
+    teamView: OwnTeamView,
+  ): SessionOutcome['replies'][number] {
     return {
       event: SOCKET_EVENTS.JOIN_ACCEPTED,
       payload: {
@@ -187,37 +142,7 @@ export class TeamRosterChanges {
         teamName: team.name,
         teamToken: team.token,
         teamCode: team.code,
-        answers: await this.answerService.listForTeam(gameSessionId, team.id),
-        bonusAwards: await this.bonusService.listForTeam(
-          gameSessionId,
-          team.id,
-        ),
-        roundRatings: await this.feedbackService.listRoundRatingsForTeam(
-          gameSessionId,
-          team.id,
-        ),
-        feedback: await this.feedbackService.getFeedbackForTeam(
-          gameSessionId,
-          team.id,
-        ),
-        sessionRatings: await this.feedbackService.getSessionRatingsForTeam(
-          gameSessionId,
-          team.id,
-        ),
-        playerCount: await this.playerCountService.getForTeam(
-          gameSessionId,
-          team.id,
-        ),
-        sideId: session.teamSides[team.id] ?? null,
-        joker,
-        coins: coinBalance(session, team.id, purchases),
-        hasCarriedCoin: carriedCoin > 0,
-        purchases: toPurchaseViews(
-          purchases,
-          session.seededGame,
-          session.progress.status,
-        ),
-        roomReadyQuestionIds,
+        teamView,
       },
     };
   }

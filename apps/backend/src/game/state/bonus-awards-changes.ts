@@ -21,8 +21,6 @@ import { InvalidBonusAwardRefusal } from '@/game/state/errors/invalid-bonus-awar
 import type { SessionChange } from '@/game/state/session-write';
 import {
   BROADCAST_STATE_OUTCOME,
-  coinSyncsFor,
-  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 
@@ -85,7 +83,7 @@ export class BonusAwardsChanges {
         },
       });
     }
-    return bonusChange(next, { notices });
+    return bonusChange(next, teamId, notices);
   }
 
   /**
@@ -108,7 +106,7 @@ export class BonusAwardsChanges {
         reason,
       ),
     );
-    return { ...bonusChange(session, { syncTeamId: teamId }), award };
+    return { ...bonusChange(session, teamId), award };
   }
 
   /** An admin deletes an award; a missing award is a BonusAwardNotFoundRefusal. Carries no BONUS_AWARDED notice; the awarded team's list is synced. */
@@ -139,10 +137,7 @@ export class BonusAwardsChanges {
         ),
       ));
     }
-    return bonusChange(withCoinTotal(session, teamId, coinTotal), {
-      syncTeamId: teamId,
-      syncsCoins: true,
-    });
+    return bonusChange(withCoinTotal(session, teamId, coinTotal), teamId);
   }
 
   /** Runs a bonus service call, turning its refusals into session refusals. */
@@ -181,34 +176,24 @@ function withCoinTotal(
 
 /**
  * The change a bonus award makes, shared by all three events and private to
- * this module. `notices` (a fresh award only) go to that team's socket, if it
- * is connected. `syncTeamId` (an edit or deletion) lists the team for a bonus
- * awards sync instead, if it is connected; `syncsCoins` (a deletion) also tells
- * it its new coins.
+ * this module. The awarded team is listed for a fresh team view (its awards
+ * and coins); `notices` (a fresh award only) go to that team's socket, if it
+ * is connected.
  */
 function bonusChange(
   session: SessionState,
-  {
-    notices = [],
-    syncTeamId,
-    syncsCoins = false,
-  }: { notices?: TeamNotice[]; syncTeamId?: number; syncsCoins?: boolean } = {},
+  teamId: number,
+  notices: TeamNotice[] = [],
 ): SessionChange<SessionOutcome> {
-  const bonusSyncs =
-    syncTeamId === undefined ? [] : connectedTeamSyncs(session, [syncTeamId]);
   return {
     session,
     outcome: {
       ...BROADCAST_STATE_OUTCOME,
-      notices: notices.flatMap(({ teamId, ...notice }) => {
-        const socketId = session.connectedTeamSockets[teamId];
+      notices: notices.flatMap(({ teamId: noticeTeamId, ...notice }) => {
+        const socketId = session.connectedTeamSockets[noticeTeamId];
         return socketId ? [{ socketId, ...notice }] : [];
       }),
-      bonusSyncs,
-      coinSyncs:
-        syncsCoins && syncTeamId !== undefined
-          ? coinSyncsFor(session, [syncTeamId])
-          : [],
+      changedTeamIds: [teamId],
     },
     touchedScores: true,
   };

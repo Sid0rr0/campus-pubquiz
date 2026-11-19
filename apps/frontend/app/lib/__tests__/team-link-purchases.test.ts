@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { JoinAcceptedPayload, PurchaseView } from '@campus-pubquiz/types';
 import { initialTeamLink, teamLink } from '@/app/lib/team-link';
+import { joinAccepted, teamView } from '@/test-utils/team-view';
 
 const BOUGHT: PurchaseView = {
   powerUp: 'fifty_fifty',
@@ -9,7 +10,7 @@ const BOUGHT: PurchaseView = {
   effect: { kind: 'fifty_fifty', removedOptions: ['B', 'C'] },
 };
 
-const ACCEPTED: JoinAcceptedPayload = {
+const ACCEPTED: JoinAcceptedPayload = joinAccepted({
   teamId: 31,
   teamName: 'The Quizzards',
   teamToken: 'token-2',
@@ -26,7 +27,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   purchases: [BOUGHT],
   sideId: null,
   roomReadyQuestionIds: [5],
-};
+});
 
 const start = () =>
   initialTeamLink({
@@ -48,22 +49,22 @@ describe('the Team link — power-up purchases', () => {
     expect(state.myPurchases).toEqual([BOUGHT]);
   });
 
-  it('takes the purchases and the coins left from a sync after a purchase', () => {
+  it('takes the purchases and the coins left from the team view sent after a purchase', () => {
     const joined = teamLink(start(), {
       type: 'joinAccepted',
-      payload: { ...ACCEPTED, purchases: [], coins: 2 },
+      payload: joinAccepted({ ...ACCEPTED, purchases: [], coins: 2 }),
     }).state;
 
     const { state } = teamLink(joined, {
-      type: 'purchasesSynced',
-      payload: { purchases: [BOUGHT], coins: 1 },
+      type: 'teamViewReceived',
+      view: teamView({ purchases: [BOUGHT], coins: 1 }),
     });
 
     expect(state.myPurchases).toEqual([BOUGHT]);
-    expect(state.team?.coins).toBe(1);
+    expect(state.team?.teamView.coins).toBe(1);
   });
 
-  it('restores the ready flag from a join and follows each sync, per question', () => {
+  it('restores the ready flag from a join and follows each team view, per question', () => {
     const joined = teamLink(start(), {
       type: 'joinAccepted',
       payload: ACCEPTED,
@@ -71,14 +72,14 @@ describe('the Team link — power-up purchases', () => {
     expect(joined.roomReadyQuestionIds).toEqual([5]);
 
     const second = teamLink(joined, {
-      type: 'roomReadySynced',
-      payload: { questionId: 6, isReady: true },
+      type: 'teamViewReceived',
+      view: teamView({ roomReadyQuestionIds: [5, 6] }),
     }).state;
     expect(second.roomReadyQuestionIds).toEqual([5, 6]);
 
     const { state } = teamLink(second, {
-      type: 'roomReadySynced',
-      payload: { questionId: 5, isReady: false },
+      type: 'teamViewReceived',
+      view: teamView({ roomReadyQuestionIds: [6] }),
     });
     expect(state.roomReadyQuestionIds).toEqual([6]);
   });

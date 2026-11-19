@@ -1,9 +1,4 @@
-import type { TeamAnswerView } from './answers';
-import type { TeamBonusAwardView } from './bonus';
-import type { PurchaseView } from './power-ups';
-import type { RoundRatingView, TeamFeedbackView } from './feedback';
-import type { TeamJoker } from './joker';
-import type { TeamSessionRatingsView } from './session-scales';
+import type { OwnTeamView } from './team-view';
 
 export interface JoinPlayersPayload {
   teamName: string;
@@ -32,30 +27,8 @@ export interface JoinAcceptedPayload {
   teamToken: string;
   teamCode: string;
   teamName: string;
-  /** The team's saved answers in this session, so reconnects restore them. */
-  answers: TeamAnswerView[];
-  /** The team's own bonus awards so far this session, so reconnects restore them. */
-  bonusAwards: TeamBonusAwardView[];
-  /** The team's own saved round ratings this session, so a reconnecting phone shows its stars again. */
-  roundRatings: RoundRatingView[];
-  /** The team's own saved comment and topic suggestions this session (empty when it sent none), so a reconnecting phone shows its final form again. */
-  feedback: TeamFeedbackView;
-  /** The team's own pacing and felt-difficulty answers this session (null on a scale it hasn't answered), so a reconnecting phone shows its choice. */
-  sessionRatings: TeamSessionRatingsView;
-  /** The team's own player count this session (null until reported), so a reconnect, a second phone or a rejoin after a kick shows it. */
-  playerCount: number | null;
-  /** The team's own joker this session (null until it has one), so a reconnect, a second phone or a rejoin after a kick restores it. Never another team's. */
-  joker: TeamJoker | null;
-  /** The id of the team's own side this session (null until it picks one, and always null without Versus), so a reconnect or a rejoin after a kick restores it. */
-  sideId: string | null;
-  /** The team's own coins, worked out by the server from its ledger, so a reconnect restores them. */
-  coins: number;
-  /** Whether one of those coins is the carried coin, earned by rating every round of the team's last night in the league, so the phone can say where it came from. */
-  hasCarriedCoin: boolean;
-  /** The team's own power-up purchases this session, so a reconnect shows the options a 50/50 removed. Never another team's. */
-  purchases: PurchaseView[];
-  /** The open questions on which the team's Ask the room is ready now, so a reconnect restores the button. No counts. */
-  roomReadyQuestionIds: number[];
+  /** Everything else the team's phone knows about it, built by the projection that also feeds the live updates. */
+  teamView: OwnTeamView;
 }
 
 export interface KickTeamPayload {

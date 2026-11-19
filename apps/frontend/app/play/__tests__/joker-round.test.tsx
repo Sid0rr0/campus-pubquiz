@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PurchaseView, TeamJoker } from '@campus-pubquiz/types';
+import type { DoubledRoundView } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import type { SessionDescription } from '@/test-utils/room-view';
 import { myAnswer, seenQuestionsOf, teamLinkResult } from './test-utils';
@@ -49,22 +49,35 @@ function night(
   };
 }
 
-const JOKER_ON_ROUND_2: TeamJoker = { roundId: 2, source: 'chosen' };
+/** What the team view says when round 2 counts double (a joker on it, or an extra joker). */
+const DOUBLED_ROUND_2: DoubledRoundView[] = [
+  { roundId: 2, roundNumber: 2, title: 'World Capitals' },
+];
 
-function mountPhone(myJoker: TeamJoker | null, session: SessionDescription) {
+function mountPhone(
+  myDoubledRounds: DoubledRoundView[],
+  session: SessionDescription,
+) {
   mockUseTeamLink.mockReturnValue(
-    teamLinkResult({ session, join: { team: JOINED_TEAM }, game: { myJoker } }),
+    teamLinkResult({
+      session,
+      join: { team: JOINED_TEAM },
+      game: { myDoubledRounds },
+    }),
   );
 }
 
-function renderPlay(myJoker: TeamJoker | null, session: SessionDescription) {
+function renderPlay(
+  myDoubledRounds: DoubledRoundView[],
+  session: SessionDescription,
+) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
-  mountPhone(myJoker, session);
+  mountPhone(myDoubledRounds, session);
   const view = renderWithQuery(<PlayPage />);
   return {
     /** The phone is then sent the view for `next`. */
     moveTo(next: SessionDescription) {
-      mountPhone(myJoker, next);
+      mountPhone(myDoubledRounds, next);
       view.rerender(<PlayPage />);
     },
   };
@@ -77,14 +90,14 @@ describe('PlayPage — the joker border', () => {
   });
 
   it('borders a joker-round question while answering', () => {
-    renderPlay(JOKER_ON_ROUND_2, night());
+    renderPlay(DOUBLED_ROUND_2, night());
 
     expect(screen.getByTestId('joker-border')).toBeInTheDocument();
   });
 
   it('borders it locked in the break', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({ progress: { status: 'break', roundIndex: 1, revealIndex: 1 } }),
     );
 
@@ -93,7 +106,7 @@ describe('PlayPage — the joker border', () => {
 
   it('borders it while revealing', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({ progress: { status: 'reveal', roundIndex: 1, revealIndex: 1 } }),
     );
 
@@ -102,7 +115,7 @@ describe('PlayPage — the joker border', () => {
 
   it('puts no border on a question of another round in the same block', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({ progress: { status: 'question_open', roundIndex: 0 } }),
     );
 
@@ -110,7 +123,7 @@ describe('PlayPage — the joker border', () => {
   });
 
   it('puts no border on any question without a joker', () => {
-    renderPlay(null, night());
+    renderPlay([], night());
 
     expect(screen.queryByTestId('joker-border')).not.toBeInTheDocument();
   });
@@ -124,7 +137,7 @@ describe('PlayPage — the joker round title cards', () => {
 
   it('plays the 2× POINTS card when the joker round’s intro comes on live', () => {
     const phone = renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({
         progress: { status: 'question_open', roundIndex: 0, questionIndex: 0 },
       }),
@@ -137,7 +150,7 @@ describe('PlayPage — the joker round title cards', () => {
 
   it('does not play it when the phone loads onto the intro', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({ progress: { status: 'round_intro', roundIndex: 1 } }),
     );
 
@@ -146,7 +159,7 @@ describe('PlayPage — the joker round title cards', () => {
 
   it('does not replay it on Previous back to the intro', () => {
     const phone = renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({
         progress: { status: 'question_open', roundIndex: 1, questionIndex: 0 },
       }),
@@ -159,7 +172,7 @@ describe('PlayPage — the joker round title cards', () => {
 
   it('does not play it for another round’s intro', () => {
     const phone = renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({ progress: { status: 'round_intro', roundIndex: 0 } }),
     );
     phone.moveTo(
@@ -174,7 +187,7 @@ describe('PlayPage — the joker round title cards', () => {
 
   it('shows a static joker badge on the break round intro of the joker round', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({
         progress: {
           status: 'break_round_intro',
@@ -189,7 +202,7 @@ describe('PlayPage — the joker round title cards', () => {
 
   it('shows it on the reveal intro of the joker round', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({
         progress: { status: 'reveal_intro', roundIndex: 1, revealIndex: 1 },
       }),
@@ -200,7 +213,7 @@ describe('PlayPage — the joker round title cards', () => {
 
   it('shows it on the early answers title card of the joker round', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({
         progress: { status: 'answers_intro', roundIndex: 1, revealIndex: 1 },
       }),
@@ -211,7 +224,7 @@ describe('PlayPage — the joker round title cards', () => {
 
   it('shows no badge on another round’s title card', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({
         progress: { status: 'reveal_intro', roundIndex: 1, revealIndex: 0 },
       }),
@@ -229,7 +242,7 @@ describe('PlayPage — the joker chip once played', () => {
 
   it('reads played once the joker round’s block has been revealed', () => {
     renderPlay(
-      JOKER_ON_ROUND_2,
+      DOUBLED_ROUND_2,
       night({
         progress: { status: 'question_open', roundIndex: 2, questionIndex: 0 },
       }),
@@ -241,7 +254,7 @@ describe('PlayPage — the joker chip once played', () => {
   });
 
   it('does not read played while the joker round’s block is still in play', () => {
-    renderPlay(JOKER_ON_ROUND_2, night());
+    renderPlay(DOUBLED_ROUND_2, night());
 
     expect(
       screen.getByText(/^Round 2 — .* scores double$/),
@@ -249,7 +262,7 @@ describe('PlayPage — the joker chip once played', () => {
   });
 
   it('reads played when the quiz has ended', () => {
-    renderPlay(JOKER_ON_ROUND_2, night({ progress: { status: 'ended' } }));
+    renderPlay(DOUBLED_ROUND_2, night({ progress: { status: 'ended' } }));
 
     expect(
       screen.getByText(/^Round 2 — .* scored double$/),
@@ -263,7 +276,7 @@ describe('PlayPage — the joker’s extra points on the reveal', () => {
     searchParamsRef.current = new URLSearchParams();
   });
 
-  function renderReveal(myJoker: TeamJoker | null) {
+  function renderReveal(myJokerExtras: Record<number, number>) {
     const session = night({
       progress: { status: 'reveal', roundIndex: 1, revealIndex: 1 },
     });
@@ -273,7 +286,8 @@ describe('PlayPage — the joker’s extra points on the reveal', () => {
         session,
         join: { team: JOINED_TEAM },
         game: {
-          myJoker,
+          myDoubledRounds: myJokerExtras[2] ? DOUBLED_ROUND_2 : [],
+          myJokerExtras,
           myAnswers: {
             2: myAnswer('Paris', {
               grade: { pointsAwarded: 1, verdict: 'correct' },
@@ -287,46 +301,24 @@ describe('PlayPage — the joker’s extra points on the reveal', () => {
   }
 
   it('shows the extra points next to the points in the joker round', () => {
-    renderReveal(JOKER_ON_ROUND_2);
+    renderReveal({ 2: 1 });
 
     expect(screen.getByText(/^1 \/ \d+ points/)).toHaveTextContent('🃏 +1');
   });
 
   it('shows no extra points outside the joker round', () => {
-    renderReveal(null);
+    renderReveal({});
 
     expect(screen.getByText(/^1 \/ \d+ points/)).not.toHaveTextContent('🃏');
   });
 });
 
 describe('PlayPage — the rounds doubled for the team', () => {
-  const extraJokerOn = (
+  const doubled = (
     roundId: number,
     roundNumber: number,
     title: string,
-  ): PurchaseView => ({
-    powerUp: 'extra_joker',
-    questionId: null,
-    roundId,
-    effect: { kind: 'extra_joker' },
-    round: { roundNumber, title },
-  });
-
-  function renderWithExtraJoker(
-    purchase: PurchaseView,
-    myJoker: TeamJoker | null = null,
-    session = night(),
-  ) {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
-    mockUseTeamLink.mockReturnValue(
-      teamLinkResult({
-        session,
-        join: { team: JOINED_TEAM },
-        game: { myJoker, myPurchases: [purchase] },
-      }),
-    );
-    renderWithQuery(<PlayPage />);
-  }
+  ): DoubledRoundView => ({ roundId, roundNumber, title });
 
   beforeEach(() => {
     window.localStorage.clear();
@@ -334,7 +326,7 @@ describe('PlayPage — the rounds doubled for the team', () => {
   });
 
   it('marks the joker round in the question picker’s heading, not the others', () => {
-    renderPlay(JOKER_ON_ROUND_2, night());
+    renderPlay(DOUBLED_ROUND_2, night());
 
     expect(screen.getByText('World Capitals · 2×')).toBeInTheDocument();
     expect(screen.getByText('Pop Music')).toBeInTheDocument();
@@ -343,7 +335,7 @@ describe('PlayPage — the rounds doubled for the team', () => {
 
   it('marks the heading even when the doubled round is the block’s only one', () => {
     renderPlay(
-      { roundId: 1, source: 'chosen' },
+      [doubled(1, 1, 'Pop Music')],
       night({
         rounds: [
           { title: 'Pop Music', breakAfter: true, questions: [{}, {}] },
@@ -357,7 +349,7 @@ describe('PlayPage — the rounds doubled for the team', () => {
   });
 
   it('treats an extra joker’s round like a joker round: line, heading and border', () => {
-    renderWithExtraJoker(extraJokerOn(2, 2, 'World Capitals'));
+    renderPlay(DOUBLED_ROUND_2, night());
 
     expect(
       screen.getByText('Round 2 — World Capitals scores double'),
@@ -367,7 +359,7 @@ describe('PlayPage — the rounds doubled for the team', () => {
   });
 
   it('names both the joker round and the extra joker’s, in quiz order', () => {
-    renderWithExtraJoker(extraJokerOn(3, 3, 'Sport'), JOKER_ON_ROUND_2);
+    renderPlay([...DOUBLED_ROUND_2, doubled(3, 3, 'Sport')], night());
 
     const lines = screen.getAllByText(/^Round \d — .* scores double$/);
     expect(lines.map((line) => line.textContent)).toEqual([
@@ -377,7 +369,7 @@ describe('PlayPage — the rounds doubled for the team', () => {
   });
 
   it('names a round bought blind by its number alone', () => {
-    renderWithExtraJoker(extraJokerOn(3, 3, ''));
+    renderPlay([doubled(3, 3, '')], night());
 
     expect(screen.getByText('Round 3 scores double')).toBeInTheDocument();
   });

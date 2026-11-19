@@ -41,7 +41,7 @@ function summarizeEmits(game: RealStoreGateway): string[] {
       const { progress } = payload as { progress: { status: GameStatus } };
       return `${target} ${event} ${progress.status}`;
     }
-    if (event === SOCKET_EVENTS.TEAM_ANSWERS_SYNCED) {
+    if (event === SOCKET_EVENTS.TEAM_VIEW) {
       const { answers } = payload as { answers: unknown[] };
       return `${target} ${event} x${answers.length}`;
     }
@@ -144,7 +144,7 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
       `display ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
       `admin ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
       `players ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
-      `player-0 ${SOCKET_EVENTS.TEAM_ANSWERS_SYNCED} x1`,
+      `player-0 ${SOCKET_EVENTS.TEAM_VIEW} x1`,
     ]);
   });
 

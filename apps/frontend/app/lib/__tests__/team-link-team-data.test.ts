@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { JoinAcceptedPayload } from '@campus-pubquiz/types';
+import type { TeamJoker } from '@campus-pubquiz/types';
 import {
   initialTeamLink,
   teamLink,
@@ -8,6 +8,7 @@ import {
   type TeamLinkState,
 } from '@/app/lib/team-link';
 import { NOT_CONNECTED_MESSAGE } from '@/app/lib/connection-messages';
+import { joinAccepted, teamView } from '@/test-utils/team-view';
 
 const GRADED = {
   questionId: 20,
@@ -35,7 +36,9 @@ const WAITING = {
   verdict: null,
 } as const;
 
-const ACCEPTED: JoinAcceptedPayload = {
+type AcceptedFields = Parameters<typeof joinAccepted>[0];
+
+const ACCEPTED: AcceptedFields = {
   teamId: 31,
   teamName: 'The Quizzards',
   teamToken: 'token-2',
@@ -79,8 +82,8 @@ function connected(connectionId: number) {
   } as const;
 }
 
-function accepted(payload: JoinAcceptedPayload = ACCEPTED) {
-  return { type: 'joinAccepted', payload } as const;
+function accepted(payload: AcceptedFields = ACCEPTED) {
+  return { type: 'joinAccepted', payload: joinAccepted(payload) } as const;
 }
 
 function submit(value = 'Banana', questionId = 21) {
@@ -220,10 +223,12 @@ describe('team link: the team data', () => {
     expect(cleared.myAnswers[21].clue).toBeNull();
   });
 
-  it('replaces answers and grades when the team answers are synced', () => {
+  it('replaces answers and grades when a team view arrives', () => {
     const { state } = run(linkedPhone(), {
-      type: 'teamAnswersSynced',
-      answers: [{ ...GRADED, questionId: 30, value: 'Oslo' }],
+      type: 'teamViewReceived',
+      view: teamView({
+        answers: [{ ...GRADED, questionId: 30, value: 'Oslo' }],
+      }),
     });
 
     expect(state.myAnswers).toEqual({
@@ -231,7 +236,7 @@ describe('team link: the team data', () => {
     });
   });
 
-  it('appends a live bonus award and toasts it; awards restored on join are not toasted', () => {
+  it('toasts a live bonus award without touching the list (the team view carries it); awards restored on join are not toasted', () => {
     const restored = run(
       initialTeamLink({ url: {}, stored: STORED }),
       accepted(),
@@ -242,7 +247,7 @@ describe('team link: the team data', () => {
       type: 'bonusAwarded',
       payload: { category: 'selfie', points: 2 },
     });
-    expect(live.state.myBonusAwards).toHaveLength(2);
+    expect(live.state.myBonusAwards).toEqual(linkedPhone().myBonusAwards);
     const toasts = ofType(live.commands, 'toast');
     expect(toasts).toHaveLength(1);
     expect(toasts[0]).toMatchObject({ tone: 'success' });
@@ -258,13 +263,16 @@ describe('team link: the team data', () => {
   });
 
   describe('the coins', () => {
-    it('toasts coins the quiz master gave and shows the new balance', () => {
-      const gained = run(linkedPhone(), {
+    it('toasts coins the quiz master gave and leaves the balance to the team view', () => {
+      const before = linkedPhone();
+      const gained = run(before, {
         type: 'coinAwarded',
         payload: { coins: 2, balance: 3, reason: 'Trivia hero' },
       });
 
-      expect(gained.state.team?.coins).toBe(3);
+      expect(gained.state.team?.teamView.coins).toBe(
+        before.team?.teamView.coins,
+      );
       expect(ofType(gained.commands, 'toast')).toEqual([
         expect.objectContaining({
           tone: 'success',
@@ -288,7 +296,6 @@ describe('team link: the team data', () => {
         type: 'coinAwarded',
         payload: { coins: -2, balance: 0 },
       });
-      expect(taken.state.team?.coins).toBe(0);
       expect(ofType(taken.commands, 'toast')[0]).toMatchObject({
         tone: 'neutral',
       });
@@ -319,24 +326,49 @@ describe('team link: the team data', () => {
       expect(ofType(taken.commands, 'toast')[0].message).toBe('-2 coins');
     });
 
-    it('updates the balance quietly when a sync says it changed', () => {
+    it('updates the balance quietly when a team view says it changed', () => {
       const synced = run(linkedPhone(), {
-        type: 'coinsSynced',
-        payload: { balance: 5, hasCarriedCoin: true },
+        type: 'teamViewReceived',
+        view: teamView({ coins: 5, hasCarriedCoin: true }),
       });
 
-      expect(synced.state.team?.coins).toBe(5);
-      expect(synced.state.team?.hasCarriedCoin).toBe(true);
+      expect(synced.state.team?.teamView.coins).toBe(5);
+      expect(synced.state.team?.teamView.hasCarriedCoin).toBe(true);
       expect(ofType(synced.commands, 'toast')).toEqual([]);
     });
   });
 
   describe('the joker', () => {
+    const viewWith = (joker: TeamJoker): TeamLinkInput => ({
+      type: 'teamViewReceived',
+      view: teamView({ joker }),
+    });
+
+    it('takes the doubled rounds and joker extras from a team view, on a join and a replace', () => {
+      const doubledRounds = [{ roundId: 12, roundNumber: 2, title: 'Music' }];
+      const view = teamView({ doubledRounds, jokerExtras: { 20: 2 } });
+
+      const replaced = run(linkedPhone(), {
+        type: 'teamViewReceived',
+        view,
+      }).state;
+      const joined = run(
+        initialTeamLink({ url: {}, stored: STORED }),
+        accepted({ ...ACCEPTED }),
+        { type: 'teamViewReceived', view },
+      ).state;
+
+      for (const state of [replaced, joined]) {
+        expect(state.myDoubledRounds).toEqual(doubledRounds);
+        expect(state.myJokerExtras).toEqual({ 20: 2 });
+      }
+    });
+
     it('toasts a joker the quiz master set, and one drawn for the team', () => {
-      const bySetting = run(linkedPhone(), {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'set_by_quiz_master' },
-      });
+      const bySetting = run(
+        linkedPhone(),
+        viewWith({ roundId: 12, source: 'set_by_quiz_master' }),
+      );
       expect(bySetting.state.myJoker).toEqual({
         roundId: 12,
         source: 'set_by_quiz_master',
@@ -347,33 +379,33 @@ describe('team link: the team data', () => {
         }),
       ]);
 
-      const byDraw = run(linkedPhone(), {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'drawn' },
-      });
+      const byDraw = run(
+        linkedPhone(),
+        viewWith({ roundId: 12, source: 'drawn' }),
+      );
       expect(ofType(byDraw.commands, 'toast')).toEqual([
         expect.objectContaining({ message: 'A joker was drawn for your team' }),
       ]);
     });
 
     it('does not toast the team’s own pick', () => {
-      const { commands } = run(linkedPhone(), {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'chosen' },
-      });
+      const { commands } = run(
+        linkedPhone(),
+        viewWith({ roundId: 12, source: 'chosen' }),
+      );
       expect(ofType(commands, 'toast')).toEqual([]);
     });
 
     it('does not toast a joker it already holds, as when the pick closes and re-sends every joker', () => {
-      const held = run(linkedPhone(), {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'set_by_quiz_master' },
-      }).state;
+      const held = run(
+        linkedPhone(),
+        viewWith({ roundId: 12, source: 'set_by_quiz_master' }),
+      ).state;
 
-      const { commands } = run(held, {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'set_by_quiz_master' },
-      });
+      const { commands } = run(
+        held,
+        viewWith({ roundId: 12, source: 'set_by_quiz_master' }),
+      );
       expect(ofType(commands, 'toast')).toEqual([]);
     });
 
@@ -465,8 +497,8 @@ describe('team link: the team data', () => {
     expect(joined.state.myPlayerCount).toBe(4);
 
     const synced = run(joined.state, {
-      type: 'playerCountSynced',
-      playerCount: 6,
+      type: 'teamViewReceived',
+      view: teamView({ playerCount: 6 }),
     });
     expect(synced.state.myPlayerCount).toBe(6);
 
@@ -654,6 +686,61 @@ describe('team link: the pending answer', () => {
     const { state } = run(linkedPhone(), submit(), { type: 'identityChanged' });
 
     expect(state.pendingAnswer).toBeNull();
+  });
+});
+
+describe('team link: a team view', () => {
+  it('replaces the team data wholesale, including coins, and fires nothing', () => {
+    const view = teamView({
+      answers: [WAITING],
+      playerCount: 5,
+      coins: 4,
+      hasCarriedCoin: true,
+      joker: { roundId: 3, source: 'chosen' },
+      sideId: 'red',
+    });
+
+    const { state, commands } = run(linkedPhone(), {
+      type: 'teamViewReceived',
+      view,
+    });
+
+    expect(Object.keys(state.myAnswers)).toEqual(['21']);
+    expect(state.myBonusAwards).toEqual([]);
+    expect(state.myPlayerCount).toBe(5);
+    expect(state.myJoker).toEqual({ roundId: 3, source: 'chosen' });
+    expect(state.mySideId).toBe('red');
+    expect(state.team?.teamView).toEqual(view);
+    expect(commands).toEqual([]);
+  });
+
+  it('keeps the pending answer and its attempt', () => {
+    const pending = run(linkedPhone(), submit()).state;
+
+    const { state } = run(pending, {
+      type: 'teamViewReceived',
+      view: teamView(),
+    });
+
+    expect(state.pendingAnswer).toEqual(pending.pendingAnswer);
+    expect(state.answerAttempt).toBe(pending.answerAttempt);
+  });
+
+  it('is where a join accepted takes its data from', () => {
+    const payload = {
+      ...joinAccepted(ACCEPTED),
+      answers: [],
+      teamView: teamView({ playerCount: 9 }),
+    };
+
+    const { state } = run(
+      initialTeamLink({ url: {}, stored: STORED }),
+      connected(1),
+      { type: 'joinAccepted', payload },
+    );
+
+    expect(state.myPlayerCount).toBe(9);
+    expect(state.myAnswers).toEqual({});
   });
 });
 

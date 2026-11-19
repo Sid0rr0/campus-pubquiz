@@ -1,49 +1,16 @@
-import {
-  doubledRoundIds,
-  jokerRoundPoints,
-  type GameStatus,
-  type PlayersStatePayload,
-  type PurchaseView,
+import type {
+  DoubledRoundView,
+  GameStatus,
+  PlayersStatePayload,
 } from '@campus-pubquiz/types';
 import type { OpenedQuestionEntry } from '@/app/play/opened-questions';
 
-/** A round that counts double for this team, by number and title ("" when the team bought it blind). */
-export interface DoubledRound {
-  roundNumber: number;
-  title: string;
-}
-
-/** The rounds doubled for this team, in quiz order: the module says which round ids, the joker round and the purchases name them. */
-export function doubledRoundsOf(
-  jokerRound: (DoubledRound & { roundId: number }) | undefined,
-  purchases: readonly PurchaseView[],
-): DoubledRound[] {
-  const named = new Map<number, DoubledRound>();
-  for (const purchase of purchases) {
-    if (purchase.roundId !== null && purchase.round) {
-      named.set(purchase.roundId, purchase.round);
-    }
-  }
-  if (jokerRound) named.set(jokerRound.roundId, jokerRound);
-  return doubledRoundIds(jokerRound?.roundId, purchases)
-    .flatMap((id) => named.get(id) ?? [])
-    .sort((a, b) => a.roundNumber - b.roundNumber);
-}
-
-/** The rounds this team's joker (and any extra joker) doubles, and whether the title card or the selected question is in one. */
+/** Whether the title card or the selected question is in a round the server says counts double for this team. */
 export function jokerMarksOf(
-  view: Pick<
-    PlayersStatePayload,
-    'jokerRounds' | 'phoneScreen' | 'blockQuestions'
-  >,
-  myJoker: { roundId: number } | null,
-  purchases: readonly PurchaseView[],
+  view: Pick<PlayersStatePayload, 'phoneScreen' | 'blockQuestions'>,
+  doubledRounds: readonly DoubledRoundView[],
   selectedQuestionId: number | undefined,
 ) {
-  const jokerRound = view.jokerRounds.find(
-    (round) => round.roundId === myJoker?.roundId,
-  );
-  const doubledRounds = doubledRoundsOf(jokerRound, purchases);
   const doubledRoundNumbers = doubledRounds.map((round) => round.roundNumber);
   const { phoneScreen } = view;
   const selectedRoundNumber = view.blockQuestions.find(
@@ -65,7 +32,7 @@ export function jokerMarksOf(
 export function selectedResultOf(
   openedQuestions: readonly OpenedQuestionEntry[],
   selectedQuestionId: number | undefined,
-  doubledRoundNumbers: readonly number[],
+  jokerExtras: Readonly<Record<number, number>>,
 ) {
   const entry =
     selectedQuestionId === undefined
@@ -76,29 +43,8 @@ export function selectedResultOf(
   return {
     points: entry?.pointsAwarded ?? null,
     verdict: entry?.verdict ?? null,
-    jokerExtra: entry
-      ? jokerExtraPoints(
-          entry.pointsAwarded,
-          entry.roundNumber,
-          doubledRoundNumbers,
-        )
-      : null,
+    jokerExtra: entry ? (jokerExtras[entry.id] ?? null) : null,
   };
-}
-
-/**
- * The extra points a joker adds to one revealed answer ("+1" on a 1-point
- * answer), or null when the question is not in a doubled round or earned
- * nothing to double.
- */
-export function jokerExtraPoints(
-  rawPoints: number | null,
-  questionRoundNumber: number,
-  doubledRoundNumbers: readonly number[],
-): number | null {
-  if (rawPoints === null || rawPoints <= 0) return null;
-  if (!doubledRoundNumbers.includes(questionRoundNumber)) return null;
-  return jokerRoundPoints(rawPoints) - rawPoints;
 }
 
 /**

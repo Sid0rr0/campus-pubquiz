@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
 import {
   coinsShown,
+  type DoubledRoundView,
   isShowingLastBreak,
   type PowerUpId,
 } from '@campus-pubquiz/types';
@@ -28,7 +29,6 @@ import { LockMoment } from '@/app/play/lock-moment';
 import { JokerMoment } from '@/app/play/joker-moment';
 import { SideBadge, SidePicker } from '@/app/play/side-picker';
 import {
-  doubledRoundsOf,
   isJokerRoundPlayed,
   jokerMarksOf,
   selectedResultOf,
@@ -201,8 +201,7 @@ function JoinedPlayScreen({
   });
   const jokerMarks = jokerMarksOf(
     view,
-    myJoker,
-    myPurchases,
+    game.myDoubledRounds,
     selectedQuestion?.id,
   );
   const isConnected = connectionError === null;
@@ -296,7 +295,7 @@ function JoinedPlayScreen({
         view={view}
         myAnswers={myAnswers}
         isConnected={isConnected}
-        doubledRoundNumbers={jokerMarks.doubledRoundNumbers}
+        jokerExtras={game.myJokerExtras}
       />
       <SavedConfirmation isVisible={isSaved} />
       <PowerUpMoment moment={powerUpMoment} />
@@ -369,7 +368,7 @@ function BlockBrowser({
   jokerMarks,
   onSubmitAnswer,
 }: {
-  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myPurchases'>;
+  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myPurchases' | 'myJokerExtras'>;
   team: JoinedTeam;
   selectedQuestion: SelectedQuestion;
   revealQuestion: BrowserState['revealQuestion'];
@@ -385,7 +384,7 @@ function BlockBrowser({
   const selectedResult = selectedResultOf(
     openedQuestions,
     selectedQuestion.id,
-    jokerMarks.doubledRoundNumbers,
+    game.myJokerExtras,
   );
   return (
     <div className="md:min-w-0 md:flex-1">
@@ -526,7 +525,8 @@ function powerUpsListOf({
   showMoment: PowerUpMomentState['showMoment'];
 }) {
   const { phoneScreen, settings } = view;
-  if (!team || !coinsShown(settings.powerUpsEnabled, team.coins)) return null;
+  if (!team || !coinsShown(settings.powerUpsEnabled, team.teamView.coins))
+    return null;
   // The activation buttons live in the power-ups cards: the question being answered right now, and the next round's extra joker.
   const answeringQuestion =
     phoneScreen.kind === 'block' &&
@@ -537,7 +537,7 @@ function powerUpsListOf({
   return {
     settings: settings.powerUps,
     purchases: myPurchases,
-    coins: team.coins,
+    coins: team.teamView.coins,
     question: answeringQuestion,
     roomReadyQuestionIds,
     onBuy: async (powerUp: PowerUpId, questionId: number) => {
@@ -572,7 +572,7 @@ function TeamHeader({
 }: {
   teamName: TeamLink['join']['teamName'];
   team: JoinedTeam;
-  doubledRounds: ReturnType<typeof doubledRoundsOf>;
+  doubledRounds: readonly DoubledRoundView[];
   status: PlayerView['progress']['status'];
   pastRevealedQuestions: PlayerView['pastRevealedQuestions'];
   side: {
@@ -723,11 +723,11 @@ function StatusSection({
         mySideId={game.mySideId}
         // A team's coins in a session with power-ups, or a carried coin in one without.
         coins={
-          coinsShown(settings.powerUpsEnabled, team?.coins ?? 0)
-            ? team?.coins
+          coinsShown(settings.powerUpsEnabled, team?.teamView.coins ?? 0)
+            ? team?.teamView.coins
             : undefined
         }
-        hasCarriedCoin={team?.hasCarriedCoin}
+        hasCarriedCoin={team?.teamView.hasCarriedCoin}
         phoneLeaderboard={phoneLeaderboard}
         isConnected={isConnected}
         teamName={teamName}

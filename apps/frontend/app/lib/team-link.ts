@@ -13,17 +13,16 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type CoinAwardedPayload,
+  type DoubledRoundView,
+  type OwnTeamView,
   type PurchaseView,
   type RateSessionPayload,
   type RoundRatingView,
   type SubmitAnswerPayload,
   type TeamAnswerView,
   type TeamBonusAwardView,
-  type TeamCoinsSyncedPayload,
   type TeamFeedbackView,
   type TeamJoker,
-  type TeamPurchasesSyncedPayload,
-  type TeamRoomReadySyncedPayload,
   type TeamSessionRatingsView,
   type Verdict,
 } from '@campus-pubquiz/types';
@@ -172,9 +171,13 @@ export interface TeamLinkState {
   mySessionRatings: TeamSessionRatingsView;
   /** How many players the server holds for this team, or null until one is reported. */
   myPlayerCount: number | null;
-  /** The team's own joker as the server last said it (the join, a sync, or an acknowledged pick), or null while it has none. */
+  /** The team's own joker as the server last said it (a team view, or an acknowledged pick), or null while it has none. */
   myJoker: TeamJoker | null;
-  /** The id of the team's own Versus side as the server last said it (the join, or a sync after a pick), or null while it has none. */
+  /** Every round that counts double for the team, as the server last said it (joker round and extra jokers), in quiz order. */
+  myDoubledRounds: DoubledRoundView[];
+  /** The extra points the joker adds to each scored answer, by question id, as the server last said it. */
+  myJokerExtras: Record<number, number>;
+  /** The id of the team's own Versus side as the server last said it, or null while it has none. */
   mySideId: string | null;
   /** The team's own power-up purchases as the server last said them (the join, or a sync after a purchase); a 50/50's removed options stay hidden through them. */
   myPurchases: PurchaseView[];
@@ -204,13 +207,10 @@ export type TeamLinkInput =
   // A new socket identity: the previous team's data and pending answer go.
   | { type: 'identityChanged' }
   | { type: 'answerReceived'; payload: AnswerReceivedPayload }
-  | { type: 'teamAnswersSynced'; answers: TeamAnswerView[] }
+  // A bonus award was given: a toast only, the list arrives in the team view.
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
-  // The quiz master gave (or took) coins: a toast and the new balance.
+  // The quiz master gave (or took) coins: a toast only, the balance arrives in the team view.
   | { type: 'coinAwarded'; payload: CoinAwardedPayload }
-  // The team's coins changed without a new award (a bonus award went, the quiz left the lobby, the lobby settings changed).
-  | { type: 'coinsSynced'; payload: TeamCoinsSyncedPayload }
-  | { type: 'bonusAwardsSynced'; bonusAwards: TeamBonusAwardView[] }
   | { type: 'answerResult'; attempt: number; result: AckResult }
   // The answer never left the socket (not connected, or no acknowledgement in time).
   | { type: 'answerNotDelivered'; attempt: number }
@@ -218,20 +218,12 @@ export type TeamLinkInput =
   | { type: 'ratingSaved'; roundId: number; stars: number }
   | { type: 'feedbackSaved'; feedback: TeamFeedbackView }
   | { type: 'sessionRatingSaved'; rating: RateSessionPayload }
-  // The server told the team's phones its count changed.
-  | { type: 'playerCountSynced'; playerCount: number }
   // The server acknowledged a count this phone sent.
   | { type: 'playerCountSaved'; playerCount: number }
-  // The server told the team's phones its joker changed.
-  | { type: 'jokerSynced'; joker: TeamJoker | null }
   // The server acknowledged a joker pick this phone sent.
   | { type: 'jokerSaved'; joker: TeamJoker }
-  // The server told the team's phones its side changed (a pick, or Versus turned off).
-  | { type: 'sideSynced'; sideId: string | null }
-  // The server told the team's phones its purchases and coins after a purchase.
-  | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
-  // The server said whether Ask the room is ready on a question, after another team's answer.
-  | { type: 'roomReadySynced'; payload: TeamRoomReadySyncedPayload }
+  // The server sent the team's whole view: it replaces the team's data.
+  | { type: 'teamViewReceived'; view: OwnTeamView }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
@@ -333,6 +325,8 @@ const EMPTY_TEAM_DATA = {
   mySessionRatings: NO_SESSION_RATINGS,
   myPlayerCount: null,
   myJoker: null,
+  myDoubledRounds: [],
+  myJokerExtras: {},
   mySideId: null,
   myPurchases: [],
   roomReadyQuestionIds: [],
@@ -621,7 +615,7 @@ function acceptJoin(
     teamCodeInput: payload.teamCode,
     team: payload,
     isLinked: true,
-    ...teamDataFromJoin(payload),
+    ...teamDataFromView(payload.teamView),
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -641,21 +635,39 @@ function acceptJoin(
   };
 }
 
-/** What the accepted join tells the phone about its team's answers, awards and choices so far. */
-function teamDataFromJoin(payload: JoinAcceptedPayload) {
-  const answers = payload.answers ?? [];
+/** What a team view tells the phone about its team's answers, awards and choices: the one mapping behind a join and a live replace. */
+function teamDataFromView(view: OwnTeamView) {
   return {
-    myAnswers: buildMyAnswers(answers),
-    myBonusAwards: payload.bonusAwards ?? [],
-    myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
-    myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
-    mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
-    myPlayerCount: payload.playerCount ?? null,
-    myJoker: payload.joker ?? null,
-    mySideId: payload.sideId,
-    myPurchases: payload.purchases,
-    roomReadyQuestionIds: payload.roomReadyQuestionIds,
+    myAnswers: buildMyAnswers(view.answers),
+    myBonusAwards: view.bonusAwards,
+    myRoundRatings: buildMyRoundRatings(view.roundRatings),
+    myFeedback: view.feedback,
+    mySessionRatings: view.sessionRatings,
+    myPlayerCount: view.playerCount,
+    myJoker: view.joker,
+    myDoubledRounds: view.doubledRounds,
+    myJokerExtras: view.jokerExtras,
+    mySideId: view.sideId,
+    myPurchases: view.purchases,
+    roomReadyQuestionIds: view.roomReadyQuestionIds,
   } satisfies Partial<TeamLinkState>;
+}
+
+/**
+ * A team view replaces the team's data wholesale. The pending answer and its
+ * attempt counter are not team data, so they survive; no command is returned,
+ * since a view replace never fires a one-off effect.
+ */
+function replaceTeamData(
+  state: TeamLinkState,
+  view: OwnTeamView,
+): TeamLinkStep {
+  return announceJokerChange(state.myJoker, {
+    ...state,
+    ...teamDataFromView(view),
+    team: state.team && { ...state.team, teamView: view },
+    roundRatingsEpoch: state.roundRatingsEpoch + 1,
+  });
 }
 
 function isSeatLostRefusal(result: AckResult): boolean {
@@ -732,27 +744,18 @@ function awardBonus(
           message,
           durationMs: BONUS_AWARD_TOAST_DURATION_MS,
         };
-  return {
-    state: { ...state, myBonusAwards: [...state.myBonusAwards, award] },
-    commands: [toast],
-  };
-}
-
-/** The state with the team's coin balance replaced (the balance rides on the joined team). */
-function withCoins(state: TeamLinkState, balance: number): TeamLinkState {
-  return state.team
-    ? { ...state, team: { ...state.team, coins: balance } }
-    : state;
+  // The award itself reaches the list in the team view sent beside this toast.
+  return { state, commands: [toast] };
 }
 
 function awardCoins(
   state: TeamLinkState,
-  { coins, reason, balance }: CoinAwardedPayload,
+  { coins, reason }: CoinAwardedPayload,
 ): TeamLinkStep {
   const amount = `${coins > 0 ? '+' : ''}${coins} ${Math.abs(coins) === 1 ? 'coin' : 'coins'}`;
   const message = reason ? `${amount}: ${reason}` : amount;
   return {
-    state: withCoins(state, balance),
+    state,
     commands: [
       {
         type: 'toast',
@@ -765,21 +768,21 @@ function awardCoins(
 }
 
 /**
- * The server told the team's phones its joker. A joker the team did not pick
- * itself (the quiz master's change, a draw) that differs from the one held is
- * announced once; the team's own pick, and a joker already held (the pick
- * closing re-sends every joker), change the joker line quietly.
+ * A team view replaced the joker `held`. A joker the team did not pick itself
+ * (the quiz master's change, a draw) that differs from the one held is
+ * announced once; the team's own pick, and a joker already held (any other
+ * team view), change the joker line quietly.
  */
-function syncJoker(
-  state: TeamLinkState,
-  joker: TeamJoker | null,
+function announceJokerChange(
+  held: TeamJoker | null,
+  next: TeamLinkState,
 ): TeamLinkStep {
-  const next = { ...state, myJoker: joker };
+  const joker = next.myJoker;
   const isChange =
     joker !== null &&
-    (joker.roundId !== state.myJoker?.roundId ||
+    (joker.roundId !== held?.roundId ||
       // Stryker disable next-line OptionalChaining: equivalent — roundId is always a number, so with no held joker the first comparison is already true and this one is never reached
-      joker.source !== state.myJoker?.source);
+      joker.source !== held?.source);
   if (!isChange || joker.source === 'chosen') return unchanged(next);
   const message =
     joker.source === 'drawn'
@@ -875,47 +878,6 @@ function connect(
   };
 }
 
-function syncCoins(
-  state: TeamLinkState,
-  input: InputOf<'coinsSynced'>,
-): TeamLinkStep {
-  return unchanged(
-    state.team
-      ? {
-          ...state,
-          team: {
-            ...state.team,
-            coins: input.payload.balance,
-            hasCarriedCoin: input.payload.hasCarriedCoin,
-          },
-        }
-      : state,
-  );
-}
-
-function syncPurchases(
-  state: TeamLinkState,
-  input: InputOf<'purchasesSynced'>,
-): TeamLinkStep {
-  return unchanged({
-    ...state,
-    myPurchases: input.payload.purchases,
-    team: state.team && { ...state.team, coins: input.payload.coins },
-  });
-}
-
-function syncRoomReady(
-  state: TeamLinkState,
-  input: InputOf<'roomReadySynced'>,
-): TeamLinkStep {
-  const { questionId, isReady } = input.payload;
-  const others = state.roomReadyQuestionIds.filter((id) => id !== questionId);
-  return unchanged({
-    ...state,
-    roomReadyQuestionIds: isReady ? [...others, questionId] : others,
-  });
-}
-
 /** Each input's handler. Events (what the connection and the server did) and intents (what the team did); the plain record-keeping ones inline. */
 const INPUT_HANDLERS: {
   [Type in TeamLinkInput['type']]: (
@@ -937,7 +899,6 @@ const INPUT_HANDLERS: {
     receiveAnswerResult(state, input.attempt, input.result),
   answerNotDelivered: (state, input) => keepAnswerPending(state, input.attempt),
   answerTimedOut: timeOutAnswer,
-  jokerSynced: (state, input) => syncJoker(state, input.joker),
   joinRefused: receiveJoinRefused,
   joinRetryDue: (state, input) => retryJoin(state, input.connectionId),
   statusSeen: (state, input) => seeStatus(state, input.status),
@@ -951,14 +912,6 @@ const INPUT_HANDLERS: {
       teamId: input.teamId,
       value: input.value,
     }),
-  teamAnswersSynced: (state, input) =>
-    unchanged({
-      ...state,
-      myAnswers: buildMyAnswers(input.answers),
-    }),
-  bonusAwardsSynced: (state, input) =>
-    unchanged({ ...state, myBonusAwards: input.bonusAwards }),
-  coinsSynced: syncCoins,
   ratingSaved: (state, input) =>
     unchanged({
       ...state,
@@ -974,14 +927,10 @@ const INPUT_HANDLERS: {
         [input.rating.scale]: input.rating.value,
       },
     }),
-  playerCountSynced: (state, input) =>
-    unchanged({ ...state, myPlayerCount: input.playerCount }),
   playerCountSaved: (state, input) =>
     unchanged({ ...state, myPlayerCount: input.playerCount }),
   jokerSaved: (state, input) => unchanged({ ...state, myJoker: input.joker }),
-  sideSynced: (state, input) => unchanged({ ...state, mySideId: input.sideId }),
-  purchasesSynced: syncPurchases,
-  roomReadySynced: syncRoomReady,
+  teamViewReceived: (state, input) => replaceTeamData(state, input.view),
   nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),
   gameCodeTyped: (state, input) =>
     unchanged({ ...state, codeInput: input.value }),

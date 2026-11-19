@@ -1,15 +1,10 @@
 import {
-  coinBalance,
   type GameStatus,
   isBreakExit,
   isRevealingStatus,
   type ServerToClientProtocol,
   type SessionState,
   SOCKET_EVENTS,
-  type TeamCoinsSyncedPayload,
-  type TeamJoker,
-  type TeamPurchasesSyncedPayload,
-  type TeamRoomReadySyncedPayload,
 } from '@campus-pubquiz/types';
 
 /** One server-to-client event paired with its protocol payload, so a mismatched pair doesn't compile. An event that carries no payload (`TEAM_KICKED`) takes `undefined`. */
@@ -30,40 +25,10 @@ export type SocketReply = EventEmit<
   typeof SOCKET_EVENTS.ANSWER_RECEIVED | typeof SOCKET_EVENTS.JOIN_ACCEPTED
 >;
 
-/** A connected team whose own graded-answer or bonus award list needs a sync, with the socket it is on. */
+/** A connected team and the socket it is on. */
 export interface TeamSync {
   teamId: number;
   socketId: string;
-}
-
-/** A connected team whose phone needs its new player count, with the socket it is on. */
-export interface PlayerCountSync extends TeamSync {
-  playerCount: number;
-}
-
-/** A connected team whose phone needs its joker (null: none), with the socket it is on. */
-export interface JokerSync extends TeamSync {
-  joker: TeamJoker | null;
-}
-
-/** A connected team whose phone needs its side (null: none), with the socket it is on. */
-export interface SideSync extends TeamSync {
-  sideId: string | null;
-}
-
-/** A connected team whose phone needs its new coins (no toast), with the socket it is on. */
-export interface CoinSync extends TeamSync {
-  payload: TeamCoinsSyncedPayload;
-}
-
-/** A connected team whose phone needs its power-up purchases and coins, with the socket it is on. */
-export interface PurchaseSync extends TeamSync {
-  payload: TeamPurchasesSyncedPayload;
-}
-
-/** A connected team whose phone needs to know whether Ask the room is ready on a question, with the socket it is on. */
-export interface RoomReadySync extends TeamSync {
-  payload: TeamRoomReadySyncedPayload;
 }
 
 /** The session's phase timer deadlines (epoch-ms, or null when none is due) after a write that moved any of them. */
@@ -111,22 +76,8 @@ export interface SessionOutcome {
   shouldBroadcastDisplayState: boolean;
   /** Questions whose answer list the admin room needs afresh. */
   answerListQuestionIds: readonly number[];
-  /** Connected teams whose own graded-answer list needs a per-team sync. */
-  teamSyncs: readonly TeamSync[];
-  /** Connected teams whose own player count changed, each told its new number (never sent room-wide). */
-  playerCountSyncs: readonly PlayerCountSync[];
-  /** Connected teams whose own joker changed (a pick, a draw when the pick closed), each told the joker it now holds (never sent room-wide). */
-  jokerSyncs: readonly JokerSync[];
-  /** Connected teams whose own side changed (a pick, Versus turned off), each told the side it is now on (never sent room-wide). */
-  sideSyncs: readonly SideSync[];
-  /** Connected teams whose own power-up purchases changed (a purchase), each told its purchases and coins (never sent room-wide). */
-  purchaseSyncs: readonly PurchaseSync[];
-  /** Connected teams told whether their Ask the room is ready on a question, after any team's answer landed there (a flag per team, never a count). */
-  roomReadySyncs: readonly RoomReadySync[];
-  /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
-  bonusSyncs: readonly TeamSync[];
-  /** Connected teams whose coins changed under them (a bonus award deleted took its coin award, the quiz left the lobby, the lobby settings changed), each told its new coins. */
-  coinSyncs: readonly CoinSync[];
+  /** Ids of the teams whose team view may have changed; delivery sends each connected one a fresh team view. Listing an unchanged team only costs a send. */
+  changedTeamIds: readonly number[];
   notices: readonly SocketNotice[];
   /** Sockets to disconnect, last of all, after the notices. */
   socketsToClose: readonly string[];
@@ -158,14 +109,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   shouldBroadcastAdminState: false,
   shouldBroadcastDisplayState: false,
   answerListQuestionIds: [],
-  teamSyncs: [],
-  playerCountSyncs: [],
-  jokerSyncs: [],
-  sideSyncs: [],
-  purchaseSyncs: [],
-  roomReadySyncs: [],
-  bonusSyncs: [],
-  coinSyncs: [],
+  changedTeamIds: [],
   notices: [],
   socketsToClose: [],
 };
@@ -199,6 +143,16 @@ export function isRevealEntry(
   );
 }
 
+/** The team ids in any of `lists`, each once. */
+export function unionTeamIds(...lists: Iterable<number>[]): number[] {
+  return [...new Set(lists.flatMap((list) => [...list]))];
+}
+
+/** The ids of the teams with a phone connected right now. */
+export function connectedTeamIds(session: SessionState): number[] {
+  return Object.keys(session.connectedTeamSockets).map(Number);
+}
+
 /**
  * The syncs for those of `teamIds` that are connected right now, each with the
  * socket it is on, so delivery never has to look a team's socket up.
@@ -211,20 +165,4 @@ export function connectedTeamSyncs(
     const socketId = session.connectedTeamSockets[teamId];
     return socketId ? [{ teamId, socketId }] : [];
   });
-}
-
-/** What the coins of `teamIds` (every connected team by default) now are, for those connected: the balance read from the session's caches. */
-export function coinSyncsFor(
-  session: SessionState,
-  teamIds: Iterable<number> = Object.keys(session.connectedTeamSockets).map(
-    Number,
-  ),
-): CoinSync[] {
-  return connectedTeamSyncs(session, teamIds).map((sync) => ({
-    ...sync,
-    payload: {
-      balance: coinBalance(session, sync.teamId),
-      hasCarriedCoin: (session.carriedCoins[sync.teamId] ?? 0) > 0,
-    },
-  }));
 }

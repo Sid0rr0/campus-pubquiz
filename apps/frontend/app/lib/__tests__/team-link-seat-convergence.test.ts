@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { teamView } from '@/test-utils/team-view';
 import {
   NOT_YOUR_TEAM_ANSWER_ERROR,
   SEAT_TAKEN_REFUSAL_MARKER,
@@ -34,18 +35,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   teamName: 'T',
   teamToken: 'token',
   teamCode: 'CODE',
-  answers: [],
-  bonusAwards: [],
-  roundRatings: [],
-  feedback: { comment: '', topics: [] },
-  sessionRatings: { pacing: null, feltDifficulty: null },
-  playerCount: null,
-  joker: null,
-  coins: 0,
-  hasCarriedCoin: false,
-  purchases: [],
-  sideId: null,
-  roomReadyQuestionIds: [],
+  teamView: teamView(),
 };
 
 const SEAT_TAKEN = `"T" ${SEAT_TAKEN_REFUSAL_MARKER} — ask the quiz master`;

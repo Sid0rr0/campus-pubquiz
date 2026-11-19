@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { TeamJoker } from '@campus-pubquiz/types';
+import type { DoubledRoundView } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import type { SessionDescription } from '@/test-utils/room-view';
 import { teamLinkResult } from './test-utils';
@@ -43,7 +43,7 @@ function jokerNight(
 }
 
 function renderPlay(
-  myJoker: TeamJoker | null,
+  myDoubledRounds: DoubledRoundView[],
   session: SessionDescription = jokerNight(),
 ) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
@@ -51,7 +51,7 @@ function renderPlay(
     teamLinkResult({
       session,
       join: { team: JOINED_TEAM },
-      game: { myJoker },
+      game: { myDoubledRounds },
     }),
   );
   renderWithQuery(<PlayPage />);
@@ -64,7 +64,7 @@ describe('PlayPage — the joker line', () => {
   });
 
   it('names the team’s joker round in full beside the team name', () => {
-    renderPlay({ roundId: 2, source: 'chosen' });
+    renderPlay([{ roundId: 2, roundNumber: 2, title: 'World Capitals' }]);
 
     expect(
       screen.getByText('Round 2 — World Capitals scores double'),
@@ -72,7 +72,7 @@ describe('PlayPage — the joker line', () => {
   });
 
   it('carries the line for a joker the quiz master set or the server drew', () => {
-    renderPlay({ roundId: 1, source: 'set_by_quiz_master' });
+    renderPlay([{ roundId: 1, roundNumber: 1, title: 'Pop Music' }]);
 
     expect(
       screen.getByText(/^Round 1 — .* scores double$/),
@@ -80,13 +80,13 @@ describe('PlayPage — the joker line', () => {
   });
 
   it('has no line while the team has no joker', () => {
-    renderPlay(null);
+    renderPlay([]);
 
     expect(screen.queryByText(/scores double$/)).not.toBeInTheDocument();
   });
 
   it('has no line when the session plays without jokers', () => {
-    renderPlay(null, jokerNight({ settings: { jokersEnabled: false } }));
+    renderPlay([], jokerNight({ settings: { jokersEnabled: false } }));
 
     expect(screen.queryByText(/scores double$/)).not.toBeInTheDocument();
   });
@@ -99,7 +99,7 @@ describe('PlayPage — the actions bar', () => {
   });
 
   it('offers the answer history from the start, with an empty drawer', async () => {
-    renderPlay(null, jokerNight({ progress: { status: 'lobby' } }));
+    renderPlay([], jokerNight({ progress: { status: 'lobby' } }));
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Answer history (0)' }),

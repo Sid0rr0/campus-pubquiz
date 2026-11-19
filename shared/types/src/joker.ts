@@ -33,11 +33,6 @@ export interface SetTeamJokerPayload {
   roundId: number;
 }
 
-/** Sent to a team's own phones after its joker changed, so every phone of the team shows the same one. */
-export interface TeamJokerSyncedPayload {
-  joker: TeamJoker | null;
-}
-
 /** One round on the joker pick: what a team needs to recognise it. */
 export interface JokerPickRound {
   roundId: number;

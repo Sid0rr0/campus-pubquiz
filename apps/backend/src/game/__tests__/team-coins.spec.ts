@@ -1,5 +1,10 @@
-import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import {
+  type OwnTeamView,
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+} from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { expectLiveEqualsResync } from '@/game/__tests__/team-view-test-utils';
 import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
@@ -28,12 +33,18 @@ describe('Team coins', () => {
     });
     expect(device.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.JOIN_ACCEPTED,
-      expect.objectContaining({ coins: expect.any(Number) as number }),
+      expect.objectContaining({
+        teamView: expect.objectContaining({
+          coins: expect.any(Number) as number,
+        }) as unknown,
+      }),
     );
-    const payloads = (device.emit.mock.calls as [string, { coins: number }][])
+    const payloads = (
+      device.emit.mock.calls as [string, { teamView: { coins: number } }][]
+    )
       .filter(([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED)
       .map(([, payload]) => payload);
-    return payloads[0].coins;
+    return payloads[0].teamView.coins;
   }
 
   it('gives a team the starting coins in its join reply and the admin view, again after a rejoin and a restart', async () => {
@@ -49,7 +60,7 @@ describe('Team coins', () => {
     expect(await joinReplyCoins(restarted, team.teamToken)).toBe(3);
   });
 
-  it('tells a phone already in the lobby its new coins when the quiz master changes the settings', async () => {
+  it('sends a phone already in the lobby a team view with its new coins when the quiz master changes the settings', async () => {
     const game = await harness.createGateway({
       settings: { powerUpsEnabled: false, startingCoins: 3 },
     });
@@ -66,14 +77,14 @@ describe('Team coins', () => {
     expect(
       game
         .roomEmits()
-        .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_COINS_SYNCED)
-        .map(({ rooms, payload }) => ({ rooms, payload })),
-    ).toEqual([
-      {
-        rooms: [team.socket.id],
-        payload: { balance: 3, hasCarriedCoin: false },
-      },
-    ]);
+        .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_VIEW)
+        .map(({ rooms, payload }) => ({
+          rooms,
+          coins: (payload as OwnTeamView).coins,
+          hasCarriedCoin: (payload as OwnTeamView).hasCarriedCoin,
+        })),
+    ).toEqual([{ rooms: [team.socket.id], coins: 3, hasCarriedCoin: false }]);
+    await expectLiveEqualsResync(game, team);
   });
 
   it('gives no coins in a session played without power-ups', async () => {

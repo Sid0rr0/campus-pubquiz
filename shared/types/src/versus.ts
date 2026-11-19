@@ -14,11 +14,6 @@ export interface SetTeamSidePayload extends PickSidePayload {
   teamId: number;
 }
 
-/** Sent to a team's own phones after its side changed (null: it has none), so every phone of the team shows the same one. */
-export interface TeamSideSyncedPayload {
-  sideId: string | null;
-}
-
 export const SIDE_REMOVAL_REFUSED_MESSAGE =
   "Can't remove a side while a team is on it";
 

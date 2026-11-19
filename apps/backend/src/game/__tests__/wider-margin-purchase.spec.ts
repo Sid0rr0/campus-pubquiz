@@ -105,11 +105,12 @@ describe('GameGateway — buying a wider margin', () => {
       .filter(
         (emit) =>
           emit.rooms.includes(wide.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
+          emit.event === SOCKET_EVENTS.TEAM_VIEW,
       )
       .map((emit) => (emit.payload as { answers: TeamAnswerView[] }).answers);
+    // The question is still open: the team view is sent, the grade withheld.
     expect(synced[0]).toEqual([
-      expect.objectContaining({ questionId: bones, pointsAwarded: 3 }),
+      expect.objectContaining({ questionId: bones, pointsAwarded: 0 }),
     ]);
   });
 

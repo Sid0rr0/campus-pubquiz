@@ -5,8 +5,8 @@ import type { PurchaseChanges } from '@/game/state/purchase-changes';
 import type { BlockGradingService } from '@/game/state/block-grading.service';
 import {
   BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
   type SessionOutcome,
+  unionTeamIds,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
 
@@ -47,35 +47,33 @@ export function quizEditChange(
     // deleted one, an extra joker refunded) before anything is graded, so the
     // regrade and every total see the final doubled rounds. The extra jokers go
     // first: a joker never lands on a round its team doubles that way.
-    const { session: reloadedQuiz, purchaseSyncs } =
+    const { session: reloadedQuiz, changedTeamIds: purchaseTeamIds } =
       await purchases.followRoundsAfterEdit(
         started,
         await withReloadedQuiz(seedService, started),
       );
-    const { session: reloaded, jokerSyncs } =
+    const { session: reloaded, changedTeamIds: jokerTeamIds } =
       await jokers.followRoundsAfterEdit(started, reloadedQuiz);
-    const broadcast = {
-      ...BROADCAST_STATE_OUTCOME,
-      jokerSyncs,
-      purchaseSyncs,
-    };
     // With nothing to regrade (or nothing re-scored) this comes back with the
     // session unchanged and no questions or teams, i.e. a plain broadcast.
     const { session, regradedQuestionIds, answeringTeamIds } =
       await grading.regradeForKeyFix(reloaded, started, regradeQuestionIds);
 
-    const teamSyncs = connectedTeamSyncs(
-      session,
+    // A joker that moved or was redrawn, and every team holding a joker: a round's number or title may have shifted under its doubled rounds.
+    const changedTeamIds = unionTeamIds(
       session.teams
         .filter((team) => answeringTeamIds.has(team.teamId))
         .map((team) => team.teamId),
+      purchaseTeamIds,
+      jokerTeamIds,
+      Object.keys(session.jokers).map(Number),
     );
     return {
       session,
       outcome: {
-        ...broadcast,
+        ...BROADCAST_STATE_OUTCOME,
         answerListQuestionIds: regradedQuestionIds,
-        teamSyncs,
+        changedTeamIds,
       },
       touchedScores: true,
     };

@@ -5,8 +5,10 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type AckResult,
+  type PurchaseView,
 } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
+import { joinPayload, teamView } from '@/test-utils/team-view';
 import {
   SUBMIT_CONFIRM_TIMEOUT_MS,
   useTeamLink,
@@ -82,7 +84,7 @@ function renderLinkedTeam(accepted: object = ACCEPTED) {
   act(() => hook.result.current.join.handleJoin(submitEvent()));
   const socket = latestSocket();
   act(() => socket.serverConnects());
-  act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, accepted));
+  act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(accepted)));
   return { ...hook, socket };
 }
 
@@ -161,7 +163,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     });
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers: [] }),
+      socket.trigger(SOCKET_EVENTS.TEAM_VIEW, teamView({ answers: [] })),
     );
     expect(result.current.game?.myAnswers).toEqual({});
   });
@@ -194,7 +196,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(mockToastSuccess.mock.calls[0][0]).toContain('+2 points');
   });
 
-  it('replaces the bonus list on a bonus awards sync, without a toast', () => {
+  it('replaces the bonus list on a team view, without a toast', () => {
     const { result, socket } = renderPlayingTeam();
     act(() =>
       socket.trigger(SOCKET_EVENTS.BONUS_AWARDED, {
@@ -205,9 +207,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
     mockToastSuccess.mockClear();
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED, {
-        bonusAwards: [{ category: 'selfie', points: 3 }],
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ bonusAwards: [{ category: 'selfie', points: 3 }] }),
+      ),
     );
 
     expect(result.current.game?.myBonusAwards).toEqual([
@@ -220,9 +223,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
     const { result, socket } = renderPlayingTeam();
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
-        joker: { roundId: 12, source: 'set_by_quiz_master' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ joker: { roundId: 12, source: 'set_by_quiz_master' } }),
+      ),
     );
     expect(mockToast).toHaveBeenCalledTimes(1);
     expect(mockToast.mock.calls[0][0]).toBe(
@@ -232,10 +236,13 @@ describe('useTeamLink: the team data and the pending answer', () => {
     mockToast.mockClear();
     act(() => socket.serverConnects());
     act(() =>
-      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
-        ...ACCEPTED,
-        joker: { roundId: 14, source: 'drawn' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.JOIN_ACCEPTED,
+        joinPayload({
+          ...ACCEPTED,
+          joker: { roundId: 14, source: 'drawn' },
+        }),
+      ),
     );
     act(() =>
       socket.trigger(
@@ -279,7 +286,9 @@ describe('useTeamLink: the team data and the pending answer', () => {
 
     act(() => socket.serverDisconnects());
     act(() => socket.serverConnects());
-    act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(ACCEPTED)),
+    );
     expect(socket.emitsOf(SOCKET_EVENTS.SUBMIT_ANSWER)).toHaveLength(1);
   });
 
@@ -299,7 +308,9 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(socket.connect).toHaveBeenCalledTimes(1);
 
     act(() => socket.serverConnects());
-    act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(ACCEPTED)),
+    );
     expect(socket.emitsOf(SOCKET_EVENTS.SUBMIT_ANSWER)).toHaveLength(2);
   });
 
@@ -316,7 +327,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(socket.emitsOf(SOCKET_EVENTS.SUBMIT_ANSWER)).toHaveLength(0);
   });
 
-  it('sends the player count, keeps it once acknowledged and follows the server when it syncs a change', async () => {
+  it('sends the player count, keeps it once acknowledged and follows the server when a team view carries a change', async () => {
     const { result, socket } = renderPlayingTeam();
     expect(result.current.game?.myPlayerCount).toBeNull();
 
@@ -333,9 +344,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(result.current.game?.myPlayerCount).toBe(4);
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, {
-        playerCount: 7,
-      }),
+      socket.trigger(SOCKET_EVENTS.TEAM_VIEW, teamView({ playerCount: 7 })),
     );
     expect(result.current.game?.myPlayerCount).toBe(7);
   });
@@ -344,10 +353,13 @@ describe('useTeamLink: the team data and the pending answer', () => {
     const { result, socket } = renderPlayingTeam();
     expect(result.current.game?.myJoker).toBeNull();
     act(() =>
-      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
-        ...ACCEPTED,
-        joker: { roundId: 12, source: 'chosen' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.JOIN_ACCEPTED,
+        joinPayload({
+          ...ACCEPTED,
+          joker: { roundId: 12, source: 'chosen' },
+        }),
+      ),
     );
     expect(result.current.game?.myJoker).toEqual({
       roundId: 12,
@@ -370,9 +382,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
     });
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
-        joker: { roundId: 14, source: 'drawn' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ joker: { roundId: 14, source: 'drawn' } }),
+      ),
     );
     expect(result.current.game?.myJoker).toEqual({
       roundId: 14,
@@ -383,9 +396,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
   it('keeps the old joker when the server refuses a pick', async () => {
     const { result, socket } = renderPlayingTeam();
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
-        joker: { roundId: 12, source: 'chosen' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ joker: { roundId: 12, source: 'chosen' } }),
+      ),
     );
 
     let sent!: Promise<AckResult>;
@@ -401,9 +415,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
   it('keeps the old count and resolves a refusal when the server refuses a new one', async () => {
     const { result, socket } = renderPlayingTeam();
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, {
-        playerCount: 5,
-      }),
+      socket.trigger(SOCKET_EVENTS.TEAM_VIEW, teamView({ playerCount: 5 })),
     );
 
     let sent!: Promise<AckResult>;
@@ -496,49 +508,44 @@ describe('useTeamLink: the power-up and coin syncs', () => {
     mockToastSuccess.mockReset();
   });
 
-  it('takes purchases and coins from a purchases sync', () => {
+  it('takes purchases and coins from a team view', () => {
     const { result, socket } = renderPlayingTeam(WITH_SHOP);
-    const purchases = [
+    const purchases: PurchaseView[] = [
       {
         powerUp: 'first_letter',
         questionId: 20,
-        cost: 1,
+        roundId: null,
         effect: { kind: 'first_letter', hint: 'P' },
       },
     ];
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, {
-        purchases,
-        coins: 4,
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ purchases, coins: 4 }),
+      ),
     );
 
     expect(joinedGame(result).myPurchases).toEqual(purchases);
-    expect(result.current.join.team?.coins).toBe(4);
+    expect(result.current.join.team?.teamView.coins).toBe(4);
   });
 
   it('tracks which questions have Ask the room ready', () => {
     const { result, socket } = renderPlayingTeam(WITH_SHOP);
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, {
-        questionId: 20,
-        isReady: true,
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ roomReadyQuestionIds: [20] }),
+      ),
     );
     expect(joinedGame(result).roomReadyQuestionIds).toEqual([20]);
 
-    act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, {
-        questionId: 20,
-        isReady: false,
-      }),
-    );
+    act(() => socket.trigger(SOCKET_EVENTS.TEAM_VIEW, teamView()));
     expect(joinedGame(result).roomReadyQuestionIds).toEqual([]);
   });
 
-  it('toasts a coin award and keeps the new balance', () => {
+  it('toasts a coin award and leaves the balance to the team view', () => {
     const { result, socket } = renderPlayingTeam(WITH_SHOP);
 
     act(() =>
@@ -547,20 +554,20 @@ describe('useTeamLink: the power-up and coin syncs', () => {
 
     expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(mockToastSuccess.mock.calls[0][0]).toContain('+2 coins');
-    expect(result.current.join.team?.coins).toBe(5);
+    expect(result.current.join.team?.teamView.coins).toBe(1);
   });
 
-  it('updates the balance on a coins sync, with no toast', () => {
+  it('updates the balance on a team view, with no toast', () => {
     const { result, socket } = renderPlayingTeam(WITH_SHOP);
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_COINS_SYNCED, {
-        balance: 7,
-        hasCarriedCoin: false,
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ coins: 7, hasCarriedCoin: false }),
+      ),
     );
 
-    expect(result.current.join.team?.coins).toBe(7);
+    expect(result.current.join.team?.teamView.coins).toBe(7);
     expect(mockToast).not.toHaveBeenCalled();
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });

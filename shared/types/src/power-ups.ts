@@ -188,18 +188,6 @@ export interface PurchaseView {
   round?: { roundNumber: number; title: string };
 }
 
-/** A team's own purchases, pushed to its phones alone after a purchase (and carried by the join reply), with the coins left. */
-export interface TeamPurchasesSyncedPayload {
-  purchases: PurchaseView[];
-  coins: number;
-}
-
-/** Whether the team's Ask the room is ready on one question, pushed to that team's phones alone whenever another team's answer lands (never a count of teams). */
-export interface TeamRoomReadySyncedPayload {
-  questionId: number;
-  isReady: boolean;
-}
-
 /** The single client-to-server event to buy a power-up: on a question, or (the extra joker) for a round. */
 export type BuyPowerUpPayload =
   | { powerUp: PowerUpId; questionId: number; roundId?: undefined }

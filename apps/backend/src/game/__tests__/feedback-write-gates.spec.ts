@@ -69,8 +69,8 @@ async function rejoinPayload(
   });
   const accepted = socket.emit.mock.calls.find(
     ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-  ) as [string, { roundRatings: unknown; feedback: unknown }];
-  return accepted[1];
+  ) as [string, { teamView: { roundRatings: unknown; feedback: unknown } }];
+  return accepted[1].teamView;
 }
 
 describe('GameGateway — rating and feedback are checked inside the session write', () => {

@@ -1,11 +1,10 @@
 import {
   DEFAULT_SESSION_SETTINGS,
-  SOCKET_EVENTS,
   type AckResult,
   type SessionSettings,
-  type TeamPurchasesSyncedPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 import {
   advanceToBlockBoard,
   advanceUntil,
@@ -92,15 +91,7 @@ describe('GameGateway — buying an extra joker', () => {
 
   describe('naming the doubled round to the buying team', () => {
     function lastSync(game: RealStoreGateway, team: JoinedTeam) {
-      return game
-        .roomEmits()
-        .filter(
-          (emit) =>
-            emit.rooms.includes(team.socket.id) &&
-            emit.event === SOCKET_EVENTS.TEAM_PURCHASES_SYNCED,
-        )
-        .map((emit) => emit.payload as TeamPurchasesSyncedPayload)
-        .at(-1);
+      return teamViewsTo(game, team).at(-1);
     }
 
     it('sends the round number and title with the round overview on air', async () => {

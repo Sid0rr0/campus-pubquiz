@@ -17,7 +17,6 @@ describe('SessionBroadcaster', () => {
     const unattached = new SessionBroadcaster(
       game.gameState,
       game.answerService,
-      game.bonusService,
       game.orm,
     );
     game.clearEmits();
@@ -42,7 +41,6 @@ describe('SessionBroadcaster', () => {
       const unattached = new SessionBroadcaster(
         game.gameState,
         game.answerService,
-        game.bonusService,
         game.orm,
       );
 
@@ -79,7 +77,7 @@ describe('SessionBroadcaster', () => {
       SOCKET_EVENTS.STATE_UPDATED,
       SOCKET_EVENTS.STATE_UPDATED,
       SOCKET_EVENTS.ANSWERS_UPDATED,
-      SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
+      SOCKET_EVENTS.TEAM_VIEW,
     ]);
   });
 
