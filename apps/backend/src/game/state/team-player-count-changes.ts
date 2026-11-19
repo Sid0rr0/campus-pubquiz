@@ -91,6 +91,7 @@ export class TeamPlayerCountChanges {
         ...BROADCAST_STATE_OUTCOME,
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
+        changedTeamIds: [teamId],
         playerCountSyncs: connectedTeamSyncs(session, [teamId]).map((sync) => ({
           ...sync,
           playerCount,

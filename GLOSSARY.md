@@ -318,6 +318,10 @@ _Avoid_: team profile, team stats page (that is the staff page at `/teams/[id]`)
 **Team link**:
 A phone's link to its team in a live session: who the team is, whether the server has this connection registered as the team's, and the team's own answers, grades, bonus awards, ratings and joker. The team's own bonus awards are kept current live, not only at join: a fresh award is appended with a toast, while an edited or deleted one replaces the whole list silently. It's made by a join, remade after every reconnect and after a session restart, and ended by a kick, the session closing or logging out. A phone is linked only while the server confirms this connection holds the team's seat; until then it offers no answer form, and a rejoin refused because an older socket still holds the seat is retried quietly rather than shown.
 
+**Team view**:
+The server-built picture of one team's own state (its answers and grades, bonus awards, ratings, feedback, player count, joker, side, coins, purchases, Ask the room readiness and the rounds that count double for it), sent to that team's phones on join and on every change to it. The phone replaces its team data with each one and never sends it to another team.
+_Avoid_: team sync, team state (the room views are the shared picture; this one is private to the team)
+
 **Reconnecting bar**:
 The full-width bar fixed to the top of a phone while its connection is down. After 10 seconds it offers "Tap to reconnect", which forces a fresh connection and so remakes the Team link.
 

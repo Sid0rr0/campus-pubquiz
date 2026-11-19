@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { teamView } from '@/test-utils/team-view';
 import {
   SEAT_TAKEN_REFUSAL_MARKER,
   type GameStatus,
@@ -38,6 +39,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   purchases: [],
   sideId: null,
   roomReadyQuestionIds: [],
+  teamView: teamView(),
 };
 
 const SEAT_TAKEN = `Team is ${SEAT_TAKEN_REFUSAL_MARKER}`;
@@ -375,6 +377,7 @@ describe('team link: a join accepted with the optional parts left out', () => {
       teamName: 'The Quizzards',
       teamToken: 'token-2',
       teamCode: 'ASSIGNED-CODE',
+      teamView: teamView(),
     } as JoinAcceptedPayload;
 
     const { state } = teamLink(linkedPhone().state, {

@@ -8,6 +8,7 @@ import {
   type AckResult,
 } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
+import { joinPayload } from '@/test-utils/team-view';
 import {
   BONUS_AWARD_TOAST_DURATION_MS,
   JOIN_RETRY_DELAY_MS,
@@ -89,7 +90,7 @@ function renderPlayingTeam() {
   const hook = renderHook(() => useTeamLink(''));
   const socket = joinGame(hook, 'The Quizzards', 'abcdef');
   act(() => socket.serverConnects());
-  act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+  act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(ACCEPTED)));
   act(() =>
     socket.trigger(
       SOCKET_EVENTS.STATE_SYNC,
@@ -325,7 +326,9 @@ describe('useTeamLink: adapter edges', () => {
       const { result } = renderHook(() => useTeamLink('ABCDEF'));
       const socket = latestSocket();
       act(() => socket.serverConnects());
-      act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+      act(() =>
+        socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(ACCEPTED)),
+      );
       act(() =>
         socket.trigger(
           SOCKET_EVENTS.STATE_SYNC,

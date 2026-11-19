@@ -9,6 +9,7 @@ import {
   type TeamLinkInput,
   type TeamLinkState,
 } from '@/app/lib/team-link';
+import { teamView } from '@/test-utils/team-view';
 
 const STORED: StoredIdentity = {
   teamName: 'The Quizzards',
@@ -34,6 +35,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   purchases: [],
   sideId: null,
   roomReadyQuestionIds: [],
+  teamView: teamView(),
 };
 
 /** Feeds inputs in order and returns the final state with every command emitted along the way. */

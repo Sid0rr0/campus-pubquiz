@@ -36,6 +36,7 @@ describe('SOCKET_EVENTS', () => {
       TEAM_PURCHASES_SYNCED: 'game:team_purchases_synced',
       TEAM_ROOM_READY_SYNCED: 'game:team_room_ready_synced',
       TEAM_SIDE_SYNCED: 'game:team_side_synced',
+      TEAM_VIEW: 'game:team_view',
       ADMIN_ACTION: 'game:admin_action',
       SUBMIT_ANSWER: 'game:submit_answer',
       JOIN_PLAYERS: 'game:join_players',

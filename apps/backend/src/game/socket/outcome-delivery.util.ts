@@ -88,6 +88,15 @@ async function deliverEmits(
     }
   }
   await emitStoredLists(deps, joinCode, outcome);
+  // Each connected changed team's own socket alone, never the players room.
+  if (outcome.changedTeamIds.length > 0) {
+    for (const { socketId, teamView } of await gameState.projectTeamViews(
+      joinCode,
+      outcome.changedTeamIds,
+    )) {
+      server.to(socketId).emit(SOCKET_EVENTS.TEAM_VIEW, teamView);
+    }
+  }
   emitTeamSyncs(server, outcome);
 }
 

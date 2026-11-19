@@ -6,6 +6,7 @@ export * from './question-views';
 export * from './room-views';
 export * from './answers';
 export * from './team-presence';
+export * from './team-view';
 export * from './session-settings';
 export * from './bonus';
 export * from './coin-ledger';

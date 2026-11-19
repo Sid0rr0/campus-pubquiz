@@ -4,6 +4,7 @@ import type { PurchaseView } from './power-ups';
 import type { RoundRatingView, TeamFeedbackView } from './feedback';
 import type { TeamJoker } from './joker';
 import type { TeamSessionRatingsView } from './session-scales';
+import type { OwnTeamView } from './team-view';
 
 export interface JoinPlayersPayload {
   teamName: string;
@@ -56,6 +57,8 @@ export interface JoinAcceptedPayload {
   purchases: PurchaseView[];
   /** The open questions on which the team's Ask the room is ready now, so a reconnect restores the button. No counts. */
   roomReadyQuestionIds: number[];
+  /** The same team data as one team view, built by the projection that also feeds the live updates; the phone takes its data from this. */
+  teamView: OwnTeamView;
 }
 
 export interface KickTeamPayload {

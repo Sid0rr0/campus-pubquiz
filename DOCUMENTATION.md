@@ -1162,6 +1162,10 @@ screen shows (asked, locking, break review or reveal), without the `{…}` setti
 group (`questionNotesOf`), and `currentRoundNote`, the **Round note** of the round
 whose intro, break round intro or reveal intro is on air; each `null` on every
 other screen, decided from the on-air screen in `screen-preview.util.ts`),
+`TEAM_VIEW` (the **Team view**, `OwnTeamView`, to a changed team's own socket
+only, after the room broadcasts; `JOIN_ACCEPTED` carries the same view as
+`teamView`, built by the same projection; the per-team sync events below are
+being folded into it),
 `TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
 team's own phone only), `TEAM_JOKER_SYNCED` (`{ joker }`, to the team's own
 phones only; see Jokers above), `TEAM_SIDE_SYNCED` (`{ sideId }`, to the team's own

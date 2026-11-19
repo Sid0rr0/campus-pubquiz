@@ -127,6 +127,8 @@ export interface SessionOutcome {
   bonusSyncs: readonly TeamSync[];
   /** Connected teams whose coins changed under them (a bonus award deleted took its coin award, the quiz left the lobby, the lobby settings changed), each told its new coins. */
   coinSyncs: readonly CoinSync[];
+  /** Ids of the teams whose team view may have changed; delivery sends each connected one a fresh team view. Listing an unchanged team only costs a send. */
+  changedTeamIds: readonly number[];
   notices: readonly SocketNotice[];
   /** Sockets to disconnect, last of all, after the notices. */
   socketsToClose: readonly string[];
@@ -166,6 +168,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   roomReadySyncs: [],
   bonusSyncs: [],
   coinSyncs: [],
+  changedTeamIds: [],
   notices: [],
   socketsToClose: [],
 };

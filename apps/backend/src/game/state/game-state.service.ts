@@ -38,7 +38,9 @@ import {
   type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
+  type OwnTeamView,
 } from '@campus-pubquiz/types';
+import { TeamViewProjection } from '@/game/state/team-view-projection';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
@@ -72,6 +74,7 @@ import { SessionCloseBlockedError } from '@/game/state/errors/session-close-bloc
 import { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
+  connectedTeamSyncs,
   type DeadlineChange,
   deadlinesOf,
   type SessionOutcome,
@@ -115,6 +118,7 @@ export class GameStateService implements OnModuleInit {
   private readonly answersChanges: AnswersChanges;
   private readonly bonusChanges: BonusAwardsChanges;
   private readonly rosterChanges: TeamRosterChanges;
+  private readonly teamViews: TeamViewProjection;
   private readonly feedbackChanges: TeamFeedbackChanges;
   private readonly playerCountChanges: TeamPlayerCountChanges;
   private readonly showdownsChanges: ShowdownsChanges;
@@ -163,12 +167,15 @@ export class GameStateService implements OnModuleInit {
     this.bonusChanges = new BonusAwardsChanges(this.bonusService);
     this.rosterChanges = new TeamRosterChanges(
       this.teamService,
+      this.playerCountService,
+      this.jokerChanges,
+      this.carriedCoinService,
+    );
+    this.teamViews = new TeamViewProjection(
       this.answerService,
       this.bonusService,
       this.feedbackService,
       this.playerCountService,
-      this.jokerChanges,
-      this.carriedCoinService,
       this.purchaseService,
     );
     this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
@@ -519,7 +526,6 @@ export class GameStateService implements OnModuleInit {
     socketId: string,
     isSocketLive: (socketId: string) => boolean,
   ): Promise<SessionOutcome> {
-    const gameSessionId = this.getGameSessionId(joinCode);
     try {
       const { team, heldJoker, joined } = await this.sessionWrite.write(
         joinCode,
@@ -527,16 +533,18 @@ export class GameStateService implements OnModuleInit {
           this.rosterChanges.join(session, { request, socketId, isSocketLive }),
       );
 
+      const session = this.sessionWrite.read(joinCode);
+      // The reply carries the joker held before any late draw, so the draw reaches the phone as a change.
+      const jokers = { ...session.jokers };
+      if (heldJoker) jokers[team.id] = heldJoker;
+      else delete jokers[team.id];
+      const asJoined = { ...session, jokers };
+      const teamView = (await this.teamViews.project(asJoined, [team.id])).get(
+        team.id,
+      )!;
       return {
         ...joined,
-        replies: [
-          await this.rosterChanges.joinReply(
-            gameSessionId,
-            team,
-            heldJoker,
-            this.sessionWrite.read(joinCode),
-          ),
-        ],
+        replies: [this.rosterChanges.joinReply(team, teamView)],
       };
     } catch (error) {
       if (error instanceof SessionRefusal) throw error;
@@ -545,6 +553,23 @@ export class GameStateService implements OnModuleInit {
         error instanceof Error ? error.message : 'Unable to join',
       );
     }
+  }
+
+  /** The team view of each of `teamIds` that is connected now, with the socket it is on, for delivery to emit. */
+  async projectTeamViews(
+    joinCode: string,
+    teamIds: readonly number[],
+  ): Promise<{ socketId: string; teamView: OwnTeamView }[]> {
+    const session = this.sessionWrite.read(joinCode);
+    const connected = connectedTeamSyncs(session, new Set(teamIds));
+    const views = await this.teamViews.project(
+      session,
+      connected.map(({ teamId }) => teamId),
+    );
+    return connected.map(({ teamId, socketId }) => ({
+      socketId,
+      teamView: views.get(teamId)!,
+    }));
   }
 
   /** A socket dropped: a session write (no standings read) that frees its team, if it held one. Null when the socket wasn't a team's — nothing to push. */

@@ -7,6 +7,7 @@ import {
   type AckResult,
 } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
+import { joinPayload } from '@/test-utils/team-view';
 import {
   SUBMIT_CONFIRM_TIMEOUT_MS,
   useTeamLink,
@@ -82,7 +83,7 @@ function renderLinkedTeam(accepted: object = ACCEPTED) {
   act(() => hook.result.current.join.handleJoin(submitEvent()));
   const socket = latestSocket();
   act(() => socket.serverConnects());
-  act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, accepted));
+  act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(accepted)));
   return { ...hook, socket };
 }
 
@@ -232,10 +233,13 @@ describe('useTeamLink: the team data and the pending answer', () => {
     mockToast.mockClear();
     act(() => socket.serverConnects());
     act(() =>
-      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
-        ...ACCEPTED,
-        joker: { roundId: 14, source: 'drawn' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.JOIN_ACCEPTED,
+        joinPayload({
+          ...ACCEPTED,
+          joker: { roundId: 14, source: 'drawn' },
+        }),
+      ),
     );
     act(() =>
       socket.trigger(
@@ -279,7 +283,9 @@ describe('useTeamLink: the team data and the pending answer', () => {
 
     act(() => socket.serverDisconnects());
     act(() => socket.serverConnects());
-    act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(ACCEPTED)),
+    );
     expect(socket.emitsOf(SOCKET_EVENTS.SUBMIT_ANSWER)).toHaveLength(1);
   });
 
@@ -299,7 +305,9 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(socket.connect).toHaveBeenCalledTimes(1);
 
     act(() => socket.serverConnects());
-    act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(ACCEPTED)),
+    );
     expect(socket.emitsOf(SOCKET_EVENTS.SUBMIT_ANSWER)).toHaveLength(2);
   });
 
@@ -344,10 +352,13 @@ describe('useTeamLink: the team data and the pending answer', () => {
     const { result, socket } = renderPlayingTeam();
     expect(result.current.game?.myJoker).toBeNull();
     act(() =>
-      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
-        ...ACCEPTED,
-        joker: { roundId: 12, source: 'chosen' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.JOIN_ACCEPTED,
+        joinPayload({
+          ...ACCEPTED,
+          joker: { roundId: 12, source: 'chosen' },
+        }),
+      ),
     );
     expect(result.current.game?.myJoker).toEqual({
       roundId: 12,

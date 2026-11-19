@@ -9,6 +9,7 @@ import {
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
+import { teamView } from '@/test-utils/team-view';
 import { JOIN_RETRY_DELAY_MS } from '@/app/lib/team-link';
 import { useTeamLink } from '@/app/lib/use-team-link';
 import {
@@ -82,6 +83,7 @@ describe('useTeamLink', () => {
         bonusAwards: [],
         roundRatings: [],
         feedback: { comment: '', topics: [] },
+        teamView: teamView(),
       }),
     );
 
@@ -134,6 +136,7 @@ describe('useTeamLink', () => {
         bonusAwards: [],
         roundRatings: [],
         feedback: { comment: '', topics: [] },
+        teamView: teamView(),
       }),
     );
 
@@ -221,6 +224,7 @@ describe('useTeamLink', () => {
       bonusAwards: [],
       roundRatings: [],
       feedback: { comment: '', topics: [] },
+      teamView: teamView(),
     };
 
     const OPEN_QUESTION = {
@@ -324,6 +328,7 @@ describe('useTeamLink', () => {
       bonusAwards: [],
       roundRatings: [],
       feedback: { comment: '', topics: [] },
+      teamView: teamView(),
     };
 
     function linkedTeam() {

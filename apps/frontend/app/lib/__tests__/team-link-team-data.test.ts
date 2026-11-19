@@ -8,6 +8,7 @@ import {
   type TeamLinkState,
 } from '@/app/lib/team-link';
 import { NOT_CONNECTED_MESSAGE } from '@/app/lib/connection-messages';
+import { joinAccepted, teamView } from '@/test-utils/team-view';
 
 const GRADED = {
   questionId: 20,
@@ -35,7 +36,7 @@ const WAITING = {
   verdict: null,
 } as const;
 
-const ACCEPTED: JoinAcceptedPayload = {
+const ACCEPTED: Omit<JoinAcceptedPayload, 'teamView'> = {
   teamId: 31,
   teamName: 'The Quizzards',
   teamToken: 'token-2',
@@ -79,8 +80,8 @@ function connected(connectionId: number) {
   } as const;
 }
 
-function accepted(payload: JoinAcceptedPayload = ACCEPTED) {
-  return { type: 'joinAccepted', payload } as const;
+function accepted(payload: Omit<JoinAcceptedPayload, 'teamView'> = ACCEPTED) {
+  return { type: 'joinAccepted', payload: joinAccepted(payload) } as const;
 }
 
 function submit(value = 'Banana', questionId = 21) {
@@ -654,6 +655,61 @@ describe('team link: the pending answer', () => {
     const { state } = run(linkedPhone(), submit(), { type: 'identityChanged' });
 
     expect(state.pendingAnswer).toBeNull();
+  });
+});
+
+describe('team link: a team view', () => {
+  it('replaces the team data wholesale, including coins, and fires nothing', () => {
+    const view = teamView({
+      answers: [WAITING],
+      playerCount: 5,
+      coins: 4,
+      hasCarriedCoin: true,
+      joker: { roundId: 3, source: 'drawn' },
+      sideId: 'red',
+    });
+
+    const { state, commands } = run(linkedPhone(), {
+      type: 'teamViewReceived',
+      view,
+    });
+
+    expect(Object.keys(state.myAnswers)).toEqual(['21']);
+    expect(state.myBonusAwards).toEqual([]);
+    expect(state.myPlayerCount).toBe(5);
+    expect(state.myJoker).toEqual({ roundId: 3, source: 'drawn' });
+    expect(state.mySideId).toBe('red');
+    expect(state.team).toMatchObject({ coins: 4, hasCarriedCoin: true });
+    expect(commands).toEqual([]);
+  });
+
+  it('keeps the pending answer and its attempt', () => {
+    const pending = run(linkedPhone(), submit()).state;
+
+    const { state } = run(pending, {
+      type: 'teamViewReceived',
+      view: teamView(),
+    });
+
+    expect(state.pendingAnswer).toEqual(pending.pendingAnswer);
+    expect(state.answerAttempt).toBe(pending.answerAttempt);
+  });
+
+  it('is where a join accepted takes its data from', () => {
+    const payload = {
+      ...joinAccepted(ACCEPTED),
+      answers: [],
+      teamView: teamView({ playerCount: 9 }),
+    };
+
+    const { state } = run(
+      initialTeamLink({ url: {}, stored: STORED }),
+      connected(1),
+      { type: 'joinAccepted', payload },
+    );
+
+    expect(state.myPlayerCount).toBe(9);
+    expect(state.myAnswers).toEqual({});
   });
 });
 

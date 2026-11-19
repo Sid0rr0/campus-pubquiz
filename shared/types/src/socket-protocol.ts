@@ -57,6 +57,7 @@ import type {
   LeaveSessionPayload,
   SessionClosedPayload,
 } from './team-presence';
+import type { OwnTeamView } from './team-view';
 
 /**
  * The socket protocol map: every event is declared once here, by its wire
@@ -147,6 +148,7 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.TEAM_PURCHASES_SYNCED]: TeamPurchasesSyncedPayload;
   [SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED]: TeamRoomReadySyncedPayload;
   [SOCKET_EVENTS.TEAM_SIDE_SYNCED]: TeamSideSyncedPayload;
+  [SOCKET_EVENTS.TEAM_VIEW]: OwnTeamView;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
   exception: ExceptionPayload | string;
 }

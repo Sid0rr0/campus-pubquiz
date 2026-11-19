@@ -409,6 +409,9 @@ export function useTeamLink(
       socket.on(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, (payload) =>
         dispatch({ type: 'teamAnswersSynced', answers: payload.answers }),
       );
+      socket.on(SOCKET_EVENTS.TEAM_VIEW, (view) =>
+        dispatch({ type: 'teamViewReceived', view }),
+      );
       socket.on(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, (payload) =>
         dispatch({
           type: 'playerCountSynced',

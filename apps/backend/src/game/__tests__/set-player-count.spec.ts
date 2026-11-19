@@ -187,6 +187,7 @@ describe('GameGateway — a team reports its player count', () => {
         .map((emit) => [emit.event, emit.rooms.includes(team.socket.id)]),
     ).toEqual([
       [SOCKET_EVENTS.STATE_UPDATED, false],
+      [SOCKET_EVENTS.TEAM_VIEW, true],
       [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, true],
     ]);
     expect(

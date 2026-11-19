@@ -13,6 +13,7 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type CoinAwardedPayload,
+  type OwnTeamView,
   type PurchaseView,
   type RateSessionPayload,
   type RoundRatingView,
@@ -232,6 +233,8 @@ export type TeamLinkInput =
   | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
   // The server said whether Ask the room is ready on a question, after another team's answer.
   | { type: 'roomReadySynced'; payload: TeamRoomReadySyncedPayload }
+  // The server sent the team's whole view: it replaces the team's data.
+  | { type: 'teamViewReceived'; view: OwnTeamView }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
@@ -621,7 +624,7 @@ function acceptJoin(
     teamCodeInput: payload.teamCode,
     team: payload,
     isLinked: true,
-    ...teamDataFromJoin(payload),
+    ...teamDataFromView(payload.teamView),
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -641,21 +644,41 @@ function acceptJoin(
   };
 }
 
-/** What the accepted join tells the phone about its team's answers, awards and choices so far. */
-function teamDataFromJoin(payload: JoinAcceptedPayload) {
-  const answers = payload.answers ?? [];
+/** What a team view tells the phone about its team's answers, awards and choices: the one mapping behind a join and a live replace. */
+function teamDataFromView(view: OwnTeamView) {
   return {
-    myAnswers: buildMyAnswers(answers),
-    myBonusAwards: payload.bonusAwards ?? [],
-    myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
-    myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
-    mySessionRatings: payload.sessionRatings ?? NO_SESSION_RATINGS,
-    myPlayerCount: payload.playerCount ?? null,
-    myJoker: payload.joker ?? null,
-    mySideId: payload.sideId,
-    myPurchases: payload.purchases,
-    roomReadyQuestionIds: payload.roomReadyQuestionIds,
+    myAnswers: buildMyAnswers(view.answers),
+    myBonusAwards: view.bonusAwards,
+    myRoundRatings: buildMyRoundRatings(view.roundRatings),
+    myFeedback: view.feedback,
+    mySessionRatings: view.sessionRatings,
+    myPlayerCount: view.playerCount,
+    myJoker: view.joker,
+    mySideId: view.sideId,
+    myPurchases: view.purchases,
+    roomReadyQuestionIds: view.roomReadyQuestionIds,
   } satisfies Partial<TeamLinkState>;
+}
+
+/**
+ * A team view replaces the team's data wholesale. The pending answer and its
+ * attempt counter are not team data, so they survive; no command is returned,
+ * since a view replace never fires a one-off effect.
+ */
+function replaceTeamData(
+  state: TeamLinkState,
+  view: OwnTeamView,
+): TeamLinkStep {
+  return unchanged({
+    ...state,
+    ...teamDataFromView(view),
+    team: state.team && {
+      ...state.team,
+      coins: view.coins,
+      hasCarriedCoin: view.hasCarriedCoin,
+    },
+    roundRatingsEpoch: state.roundRatingsEpoch + 1,
+  });
 }
 
 function isSeatLostRefusal(result: AckResult): boolean {
@@ -982,6 +1005,7 @@ const INPUT_HANDLERS: {
   sideSynced: (state, input) => unchanged({ ...state, mySideId: input.sideId }),
   purchasesSynced: syncPurchases,
   roomReadySynced: syncRoomReady,
+  teamViewReceived: (state, input) => replaceTeamData(state, input.view),
   nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),
   gameCodeTyped: (state, input) =>
     unchanged({ ...state, codeInput: input.value }),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { JoinAcceptedPayload, PurchaseView } from '@campus-pubquiz/types';
 import { initialTeamLink, teamLink } from '@/app/lib/team-link';
+import { joinAccepted } from '@/test-utils/team-view';
 
 const BOUGHT: PurchaseView = {
   powerUp: 'fifty_fifty',
@@ -9,7 +10,7 @@ const BOUGHT: PurchaseView = {
   effect: { kind: 'fifty_fifty', removedOptions: ['B', 'C'] },
 };
 
-const ACCEPTED: JoinAcceptedPayload = {
+const ACCEPTED: JoinAcceptedPayload = joinAccepted({
   teamId: 31,
   teamName: 'The Quizzards',
   teamToken: 'token-2',
@@ -26,7 +27,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   purchases: [BOUGHT],
   sideId: null,
   roomReadyQuestionIds: [5],
-};
+});
 
 const start = () =>
   initialTeamLink({
@@ -51,7 +52,7 @@ describe('the Team link — power-up purchases', () => {
   it('takes the purchases and the coins left from a sync after a purchase', () => {
     const joined = teamLink(start(), {
       type: 'joinAccepted',
-      payload: { ...ACCEPTED, purchases: [], coins: 2 },
+      payload: joinAccepted({ ...ACCEPTED, purchases: [], coins: 2 }),
     }).state;
 
     const { state } = teamLink(joined, {

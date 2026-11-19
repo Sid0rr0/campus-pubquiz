@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { teamView } from '@/test-utils/team-view';
 import type { AuthUser } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import type { PlayerMenuState } from '@/app/lib/player-menu-context';
@@ -269,6 +270,7 @@ describe('SiteHeader', () => {
           purchases: [],
           sideId: null,
           roomReadyQuestionIds: [],
+          teamView: teamView(),
         },
         onLogOut,
       }),
