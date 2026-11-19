@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The answers and Ask the room readiness outcome fields, emit loops, socket events, payload types, phone listeners, reducer actions and their tests are gone
 - [ ] The answer-submit path's own Ask the room readiness loop is gone; readiness comes from the projection

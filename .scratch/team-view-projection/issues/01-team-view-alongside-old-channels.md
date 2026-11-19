@@ -9,7 +9,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The team view type lives in shared types; the team view event is declared in the socket protocol
 - [ ] Session outcomes carry changed team ids; delivery emits a team view only to each listed, connected team's own socket

@@ -4,7 +4,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The coins, purchases, bonus award and player count outcome fields, emit loops, socket events, payload types, phone listeners, reducer actions and their tests are gone; a session outcome has no per-team sync fields left
 - [ ] Toasts and the player count acknowledgement still arrive, and a team view arriving fires no toast by itself
