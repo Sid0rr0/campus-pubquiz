@@ -5,6 +5,7 @@ import {
   doubledRoundIds,
   findQuestionOpenForAnswering,
   getBlockInPlay,
+  jokerRoundPoints,
   powerUpApplies,
   type DoubledRoundView,
   type SessionState,
@@ -103,6 +104,7 @@ export class TeamViewProjection {
       purchases: purchaseViews,
       roomReadyQuestionIds,
       doubledRounds: doubledRoundsOf(session, teamId, purchaseViews),
+      jokerExtras: jokerExtrasOf(session, teamId, purchaseViews, answers),
     };
   }
 
@@ -129,6 +131,32 @@ export class TeamViewProjection {
     }
     return ready;
   }
+}
+
+/** The extra points each doubled answer earns, by question id: only answers that scored something in a doubled round. */
+function jokerExtrasOf(
+  session: SessionState,
+  teamId: number,
+  purchases: OwnTeamView['purchases'],
+  answers: OwnTeamView['answers'],
+): Record<number, number> {
+  const doubled = doubledRoundIds(session.jokers[teamId]?.roundId, purchases);
+  const doubledQuestionIds = new Set(
+    session.seededGame.rounds
+      .filter((round) => doubled.includes(round.id))
+      .flatMap((round) => round.questions.map((question) => question.id)),
+  );
+  return Object.fromEntries(
+    answers
+      .filter(
+        (answer) =>
+          answer.pointsAwarded > 0 && doubledQuestionIds.has(answer.questionId),
+      )
+      .map((answer) => [
+        answer.questionId,
+        jokerRoundPoints(answer.pointsAwarded) - answer.pointsAwarded,
+      ]),
+  );
 }
 
 /** The rounds that count double for a team, in quiz order, named by the joker pick's round list and the purchases. */

@@ -8,6 +8,10 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
+import {
   advanceClockBy,
   freezeClockAt,
   restoreClock,
@@ -62,19 +66,12 @@ describe('GameGateway — the joker pick', () => {
     return game.gateway.handlePickJoker(asSocket(team.socket), { roundId });
   }
 
-  /** The joker syncs the server addressed to this team's socket, in emit order. */
-  function syncsTo(
+  /** The jokers the team views addressed to this team's socket carried, in emit order. */
+  function jokersTo(
     game: RealStoreGateway,
     team: Pick<JoinedTeam, 'socket'>,
-  ): unknown[] {
-    return game
-      .roomEmits()
-      .filter(
-        (emit) =>
-          emit.rooms.includes(team.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_JOKER_SYNCED,
-      )
-      .map((emit) => emit.payload);
+  ): (TeamJoker | null)[] {
+    return teamViewsTo(game, team).map((view) => view.joker);
   }
 
   /** Every team's joker as the quiz master sees it, by team name (round and source only). */
@@ -229,9 +226,10 @@ describe('GameGateway — the joker pick', () => {
         roundId: game.rounds[1].id,
         source: 'chosen',
       };
-      expect(syncsTo(game, alpha)).toEqual([{ joker: expected }]);
-      expect(syncsTo(game, bravo)).toEqual([]);
+      expect(jokersTo(game, alpha)).toEqual([expected]);
+      expect(jokersTo(game, bravo)).toEqual([]);
       expect(await storedJokers(game)).toEqual({ [alpha.teamId]: expected });
+      await expectLiveEqualsResync(game, alpha);
     });
 
     it('keeps the last pick when the team changes its mind', async () => {
@@ -427,12 +425,13 @@ describe('GameGateway — the joker pick', () => {
         Alpha: { roundId: game.rounds[0].id, source: 'chosen' },
         Bravo: { roundId: game.rounds[2].id, source: 'drawn' },
       });
-      expect(syncsTo(game, bravo)).toEqual([
-        { joker: { roundId: game.rounds[2].id, source: 'drawn' } },
+      expect(jokersTo(game, bravo)).toEqual([
+        { roundId: game.rounds[2].id, source: 'drawn' },
       ]);
-      expect(syncsTo(game, alpha)).toEqual([
-        { joker: { roundId: game.rounds[0].id, source: 'chosen' } },
+      expect(jokersTo(game, alpha)).toEqual([
+        { roundId: game.rounds[0].id, source: 'chosen' },
       ]);
+      await expectLiveEqualsResync(game, bravo);
     });
 
     it('draws when the deadline presses Advance too', async () => {
@@ -554,8 +553,9 @@ describe('GameGateway — the joker pick', () => {
 
       await reopen(game);
 
-      expect(syncsTo(game, bravo)).toEqual([{ joker: null }]);
-      expect(syncsTo(game, alpha)).toEqual([]);
+      expect(jokersTo(game, bravo)).toEqual([null]);
+      expect(jokersTo(game, alpha)).toEqual([]);
+      await expectLiveEqualsResync(game, bravo);
     });
 
     it('gives the teams that did not choose a fresh draw when it closes again', async () => {

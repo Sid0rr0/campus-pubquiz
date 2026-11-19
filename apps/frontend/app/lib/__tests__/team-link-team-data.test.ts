@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { JoinAcceptedPayload } from '@campus-pubquiz/types';
+import type { JoinAcceptedPayload, TeamJoker } from '@campus-pubquiz/types';
 import {
   initialTeamLink,
   teamLink,
@@ -335,11 +335,36 @@ describe('team link: the team data', () => {
   });
 
   describe('the joker', () => {
+    const viewWith = (joker: TeamJoker): TeamLinkInput => ({
+      type: 'teamViewReceived',
+      view: teamView({ joker }),
+    });
+
+    it('takes the doubled rounds and joker extras from a team view, on a join and a replace', () => {
+      const doubledRounds = [{ roundId: 12, roundNumber: 2, title: 'Music' }];
+      const view = teamView({ doubledRounds, jokerExtras: { 20: 2 } });
+
+      const replaced = run(linkedPhone(), {
+        type: 'teamViewReceived',
+        view,
+      }).state;
+      const joined = run(
+        initialTeamLink({ url: {}, stored: STORED }),
+        accepted({ ...ACCEPTED }),
+        { type: 'teamViewReceived', view },
+      ).state;
+
+      for (const state of [replaced, joined]) {
+        expect(state.myDoubledRounds).toEqual(doubledRounds);
+        expect(state.myJokerExtras).toEqual({ 20: 2 });
+      }
+    });
+
     it('toasts a joker the quiz master set, and one drawn for the team', () => {
-      const bySetting = run(linkedPhone(), {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'set_by_quiz_master' },
-      });
+      const bySetting = run(
+        linkedPhone(),
+        viewWith({ roundId: 12, source: 'set_by_quiz_master' }),
+      );
       expect(bySetting.state.myJoker).toEqual({
         roundId: 12,
         source: 'set_by_quiz_master',
@@ -350,33 +375,33 @@ describe('team link: the team data', () => {
         }),
       ]);
 
-      const byDraw = run(linkedPhone(), {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'drawn' },
-      });
+      const byDraw = run(
+        linkedPhone(),
+        viewWith({ roundId: 12, source: 'drawn' }),
+      );
       expect(ofType(byDraw.commands, 'toast')).toEqual([
         expect.objectContaining({ message: 'A joker was drawn for your team' }),
       ]);
     });
 
     it('does not toast the team’s own pick', () => {
-      const { commands } = run(linkedPhone(), {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'chosen' },
-      });
+      const { commands } = run(
+        linkedPhone(),
+        viewWith({ roundId: 12, source: 'chosen' }),
+      );
       expect(ofType(commands, 'toast')).toEqual([]);
     });
 
     it('does not toast a joker it already holds, as when the pick closes and re-sends every joker', () => {
-      const held = run(linkedPhone(), {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'set_by_quiz_master' },
-      }).state;
+      const held = run(
+        linkedPhone(),
+        viewWith({ roundId: 12, source: 'set_by_quiz_master' }),
+      ).state;
 
-      const { commands } = run(held, {
-        type: 'jokerSynced',
-        joker: { roundId: 12, source: 'set_by_quiz_master' },
-      });
+      const { commands } = run(
+        held,
+        viewWith({ roundId: 12, source: 'set_by_quiz_master' }),
+      );
       expect(ofType(commands, 'toast')).toEqual([]);
     });
 
@@ -667,7 +692,7 @@ describe('team link: a team view', () => {
       playerCount: 5,
       coins: 4,
       hasCarriedCoin: true,
-      joker: { roundId: 3, source: 'drawn' },
+      joker: { roundId: 3, source: 'chosen' },
       sideId: 'red',
     });
 
@@ -679,7 +704,7 @@ describe('team link: a team view', () => {
     expect(Object.keys(state.myAnswers)).toEqual(['21']);
     expect(state.myBonusAwards).toEqual([]);
     expect(state.myPlayerCount).toBe(5);
-    expect(state.myJoker).toEqual({ roundId: 3, source: 'drawn' });
+    expect(state.myJoker).toEqual({ roundId: 3, source: 'chosen' });
     expect(state.mySideId).toBe('red');
     expect(state.team).toMatchObject({ coins: 4, hasCarriedCoin: true });
     expect(commands).toEqual([]);

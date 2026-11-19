@@ -85,6 +85,46 @@ describe('GameGateway — the team view', () => {
     ]);
   });
 
+  it('names the extra points a scored answer in the joker round earns, equal live and on resync', async () => {
+    const game = await harness.createGateway({
+      rounds: [1, 2].map((number) => ({
+        title: `Round ${number}`,
+        breakAfter: true,
+        questions: [
+          {
+            type: 'multiple_choice' as const,
+            prompt: `Question of round ${number}?`,
+            answer: 'right',
+            points: 3,
+            payload: { options: ['right', 'wrong'] },
+          },
+        ],
+      })),
+      teamNames: ['Alpha'],
+      settings: { showRoundOverview: true, jokersEnabled: true },
+    });
+    await game.act('START_QUIZ');
+    await game.act('ADVANCE'); // -> round_overview
+    await game.act('ADVANCE'); // -> joker_pick
+    const [alpha] = game.teams;
+    await game.gateway.handlePickJoker(asSocket(alpha.socket), {
+      roundId: game.rounds[0].id,
+    });
+    await game.act('ADVANCE'); // -> round_intro
+    await game.act('ADVANCE'); // -> question_open
+    await game.gateway.handleSubmitAnswer(asSocket(alpha.socket), {
+      questionId: game.rounds[0].questionIds[0],
+      teamId: alpha.teamId,
+      value: 'right',
+    });
+    for (let i = 0; i < 4; i += 1) await game.act('ADVANCE'); // reveal entry sends the grades
+
+    expect(teamViewsTo(game, alpha).at(-1)?.jokerExtras).toEqual({
+      [game.rounds[0].questionIds[0]]: 3,
+    });
+    await expectLiveEqualsResync(game, alpha);
+  });
+
   it('carries the team view in the join reply next to its identity', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const [team] = game.teams;

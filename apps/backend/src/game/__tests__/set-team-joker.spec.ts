@@ -6,6 +6,10 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
+import {
   setupRealStoreGatewayTest,
   type CreateGatewayOptions,
   type JoinedTeam,
@@ -57,18 +61,11 @@ describe('GameGateway — the quiz master changing a team’s joker', () => {
     });
   }
 
-  function syncsTo(
+  function jokersTo(
     game: RealStoreGateway,
     team: Pick<JoinedTeam, 'socket'>,
-  ): unknown[] {
-    return game
-      .roomEmits()
-      .filter(
-        (emit) =>
-          emit.rooms.includes(team.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_JOKER_SYNCED,
-      )
-      .map((emit) => emit.payload);
+  ): (TeamJoker | null)[] {
+    return teamViewsTo(game, team).map((view) => view.joker);
   }
 
   async function adminJokers(game: RealStoreGateway) {
@@ -132,8 +129,8 @@ describe('GameGateway — the quiz master changing a team’s joker', () => {
       roundId: game.rounds[1].id,
       source: 'set_by_quiz_master',
     };
-    expect(syncsTo(game, alpha)).toEqual([{ joker: expected }]);
-    expect(syncsTo(game, bravo)).toEqual([]);
+    expect(jokersTo(game, alpha)).toEqual([expected]);
+    expect(jokersTo(game, bravo)).toEqual([]);
     expect(await adminJokers(game)).toEqual({
       Alpha: expected,
       Bravo: null,
@@ -142,6 +139,7 @@ describe('GameGateway — the quiz master changing a team’s joker', () => {
     expect(
       game.payloadsTo(SOCKET_ROOMS.PLAYERS, SOCKET_EVENTS.STATE_UPDATED),
     ).toEqual([]);
+    await expectLiveEqualsResync(game, alpha);
   });
 
   it('replaces a team’s own pick, and the team can pick again while the pick is open', async () => {
@@ -196,7 +194,7 @@ describe('GameGateway — the quiz master changing a team’s joker', () => {
       roundId: game.rounds[2].id,
       source: 'drawn',
     });
-    expect(syncsTo(game, alpha)).toEqual([]);
+    expect(jokersTo(game, alpha)).toEqual([]);
   });
 
   it('refreshes the admin room, not the big screen, and refreshes the standings', async () => {

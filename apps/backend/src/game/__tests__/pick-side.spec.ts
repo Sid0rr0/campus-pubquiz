@@ -6,6 +6,10 @@ import {
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
+import {
   setupRealStoreGatewayTest,
   type JoinedTeam,
   type RealStoreGateway,
@@ -65,18 +69,12 @@ async function rejoinSide(
   return accepted[1].sideId;
 }
 
-function sideSyncsTo(
+/** The side ids the team views addressed to this team's socket carried, in emit order. */
+function sidesTo(
   game: RealStoreGateway,
   team: Pick<JoinedTeam, 'socket'>,
-): unknown[] {
-  return game
-    .roomEmits()
-    .filter(
-      (emit) =>
-        emit.rooms.includes(team.socket.id) &&
-        emit.event === SOCKET_EVENTS.TEAM_SIDE_SYNCED,
-    )
-    .map((emit) => emit.payload);
+): (string | null)[] {
+  return teamViewsTo(game, team).map((view) => view.sideId);
 }
 
 describe('GameGateway — a team picks its side', () => {
@@ -96,12 +94,10 @@ describe('GameGateway — a team picks its side', () => {
       success: true,
     });
 
-    expect(sideSyncsTo(game, team)).toEqual([
-      { sideId: 'eng' },
-      { sideId: 'law' },
-    ]);
-    expect(sideSyncsTo(game, rival)).toEqual([]);
+    expect(sidesTo(game, team)).toEqual(['eng', 'law']);
+    expect(sidesTo(game, rival)).toEqual([]);
     expect(await rosterSides(game)).toEqual({ Quizzards: 'law', Rivals: null });
+    await expectLiveEqualsResync(game, team);
   });
 
   it('refuses an unknown side, and a pick without Versus', async () => {
@@ -207,14 +203,12 @@ describe('GameGateway — the quiz master moves a team', () => {
     await game.openFirstQuestion(admin);
     expect(await move(team.teamId, 'law')).toEqual({ success: true });
 
-    expect(sideSyncsTo(game, team)).toEqual([
-      { sideId: 'eng' },
-      { sideId: 'law' },
-    ]);
+    expect(sidesTo(game, team)).toEqual(['eng', 'law']);
     expect(await rosterSides(game)).toEqual({
       Quizzards: 'law',
       Rivals: 'law',
     });
+    await expectLiveEqualsResync(game, team);
   });
 
   it('moves a roster team after a restart, before its phone has rejoined', async () => {
@@ -344,14 +338,16 @@ describe('GameGateway — Start quiz and the Versus settings with sides picked',
     await pick(game, team, { sideId: 'eng' });
     game.clearEmits();
 
-    const outcome = await update(game, { versusEnabled: false });
+    await game.inRequestContext(() =>
+      game.rest.updateSettingsAndLeagues(game.joinCode, () => ({
+        partial: { versusEnabled: false },
+        leagueIds: undefined,
+      })),
+    );
 
     expect(await rosterSides(game)).toEqual({ Quizzards: null });
-    expect(outcome.sideSyncs).toEqual([
-      { teamId: team.teamId, socketId: team.socket.id, sideId: null },
-    ]);
-    await update(game, VERSUS);
-    expect(await rejoinSide(game, team)).toBeNull();
+    expect(sidesTo(game, team)).toEqual([null]);
+    await expectLiveEqualsResync(game, team);
   });
 
   it('does not save the Versus-off settings when clearing the picks fails', async () => {

@@ -9,7 +9,6 @@ import { SessionSettingsInvalidError } from '@/game/state/errors/session-setting
 import {
   BROADCAST_STATE_OUTCOME,
   coinSyncsFor,
-  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { SessionSettingsChanges } from '@/game/state/session-settings-changes';
@@ -121,12 +120,9 @@ export class LeagueChanges {
         // The settings decide the coins of a team already on its phone.
         coinSyncs: coinSyncsFor(change.session),
         // Turning Versus off cleared the picks: the phones that held one are told.
-        sideSyncs: connectedTeamSyncs(
-          change.session,
-          Object.keys(session.teamSides)
-            .map(Number)
-            .filter((teamId) => change.session.teamSides[teamId] === undefined),
-        ).map((sync) => ({ ...sync, sideId: null })),
+        changedTeamIds: Object.keys(session.teamSides)
+          .map(Number)
+          .filter((teamId) => change.session.teamSides[teamId] === undefined),
       },
     };
   }

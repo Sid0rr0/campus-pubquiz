@@ -1,3 +1,4 @@
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import { setupRealStoreGatewayTest } from '@/game/__tests__/real-store-test-utils';
 import {
@@ -24,6 +25,33 @@ describe('GameGateway — the team view carries answers and Ask the room readine
     expect(teamViewsTo(game, team).at(-1)?.answers).toEqual([
       expect.objectContaining({ value: 'Banana' }),
     ]);
+    await expectLiveEqualsResync(game, team);
+  });
+
+  it('sends the submitting team its team view even with Ask the room off', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['The Quizzards', 'The Rivals'],
+      settings: {
+        powerUps: {
+          ...DEFAULT_SESSION_SETTINGS.powerUps,
+          ask_the_room: { cost: 1, maxUses: 0 },
+        },
+      },
+    });
+    const [team, rival] = game.teams;
+    await game.openFirstQuestion(await game.connectAdmin());
+    game.clearEmits();
+
+    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId: game.questionIds.multipleChoice,
+      teamId: team.teamId,
+      value: 'Banana',
+    });
+
+    expect(teamViewsTo(game, team).at(-1)?.answers).toEqual([
+      expect.objectContaining({ value: 'Banana' }),
+    ]);
+    expect(teamViewsTo(game, rival)).toEqual([]);
     await expectLiveEqualsResync(game, team);
   });
 

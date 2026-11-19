@@ -13,9 +13,7 @@ export const SOCKET_EVENTS = {
   SESSION_CLOSED: 'game:session_closed',
   TEAM_KICKED: 'game:team_kicked',
   TEAM_PLAYER_COUNT_SYNCED: 'game:team_player_count_synced',
-  TEAM_JOKER_SYNCED: 'game:team_joker_synced',
   TEAM_PURCHASES_SYNCED: 'game:team_purchases_synced',
-  TEAM_SIDE_SYNCED: 'game:team_side_synced',
   TEAM_VIEW: 'game:team_view',
   // client -> server
   ADMIN_ACTION: 'game:admin_action',

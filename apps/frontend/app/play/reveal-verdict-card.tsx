@@ -6,7 +6,6 @@ import type { PlayersStatePayload } from '@campus-pubquiz/types';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import type { MyAnswer } from '@/app/lib/team-link';
 import { vibrate } from '@/app/lib/vibrate';
-import { jokerExtraPoints } from '@/app/play/joker-round';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import {
   describeVerdictCard,
@@ -24,8 +23,8 @@ interface RevealVerdictCardProps {
   >;
   myAnswers: Record<number, MyAnswer>;
   isConnected: boolean;
-  /** The numbers of the rounds doubled for the team. */
-  doubledRoundNumbers: readonly number[];
+  /** The extra points the joker adds to each scored answer, by question id, as the server says. */
+  jokerExtras: Readonly<Record<number, number>>;
 }
 
 /** The verdict plus the extra points the joker adds to it (null outside a doubled round). */
@@ -53,7 +52,7 @@ function revealedCount({
 function describeLandedQuestion({
   view,
   myAnswers,
-  doubledRoundNumbers,
+  jokerExtras,
 }: RevealVerdictCardProps): RevealedVerdict | null {
   const { progress, revealQuestions } = view;
   const landed = revealQuestions[progress.revealIndex];
@@ -67,11 +66,7 @@ function describeLandedQuestion({
   const [entry] = buildOpenedQuestions({ [landed.id]: landed }, myAnswers);
   return {
     ...describeVerdictCard(entry),
-    jokerExtra: jokerExtraPoints(
-      entry.pointsAwarded,
-      entry.roundNumber,
-      doubledRoundNumbers,
-    ),
+    jokerExtra: jokerExtras[landed.id] ?? null,
   };
 }
 

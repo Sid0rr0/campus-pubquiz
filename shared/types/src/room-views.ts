@@ -308,8 +308,8 @@ export interface PlayersStatePayload
   /**
    * The joker pick while the status is `joker_pick`: its deadline (null once
    * closed) and the rounds a team may still choose. Never any team's choice —
-   * a phone gets its own joker from its team data (`JOIN_ACCEPTED`,
-   * `TEAM_JOKER_SYNCED`). Null outside the pick.
+   * a phone gets its own joker from its team view (`JOIN_ACCEPTED`,
+   * `TEAM_VIEW`). Null outside the pick.
    */
   jokerPick: JokerPickPlayersView | null;
   /**

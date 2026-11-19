@@ -7,7 +7,6 @@ import {
   type SessionState,
   SOCKET_EVENTS,
   type TeamCoinsSyncedPayload,
-  type TeamJoker,
   type TeamPurchasesSyncedPayload,
 } from '@campus-pubquiz/types';
 
@@ -38,16 +37,6 @@ export interface TeamSync {
 /** A connected team whose phone needs its new player count, with the socket it is on. */
 export interface PlayerCountSync extends TeamSync {
   playerCount: number;
-}
-
-/** A connected team whose phone needs its joker (null: none), with the socket it is on. */
-export interface JokerSync extends TeamSync {
-  joker: TeamJoker | null;
-}
-
-/** A connected team whose phone needs its side (null: none), with the socket it is on. */
-export interface SideSync extends TeamSync {
-  sideId: string | null;
 }
 
 /** A connected team whose phone needs its new coins (no toast), with the socket it is on. */
@@ -107,10 +96,6 @@ export interface SessionOutcome {
   answerListQuestionIds: readonly number[];
   /** Connected teams whose own player count changed, each told its new number (never sent room-wide). */
   playerCountSyncs: readonly PlayerCountSync[];
-  /** Connected teams whose own joker changed (a pick, a draw when the pick closed), each told the joker it now holds (never sent room-wide). */
-  jokerSyncs: readonly JokerSync[];
-  /** Connected teams whose own side changed (a pick, Versus turned off), each told the side it is now on (never sent room-wide). */
-  sideSyncs: readonly SideSync[];
   /** Connected teams whose own power-up purchases changed (a purchase), each told its purchases and coins (never sent room-wide). */
   purchaseSyncs: readonly PurchaseSync[];
   /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
@@ -151,8 +136,6 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   shouldBroadcastDisplayState: false,
   answerListQuestionIds: [],
   playerCountSyncs: [],
-  jokerSyncs: [],
-  sideSyncs: [],
   purchaseSyncs: [],
   bonusSyncs: [],
   coinSyncs: [],

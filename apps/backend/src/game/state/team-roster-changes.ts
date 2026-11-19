@@ -9,11 +9,7 @@ import {
 import type { CarriedCoinService } from '@/coins/carried-coin.service';
 import { PlayerCountService } from '@/player-count/player-count.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
-import {
-  type JokerChanges,
-  jokerSyncsFor,
-  withJoker,
-} from '@/game/state/joker-changes';
+import { type JokerChanges, withJoker } from '@/game/state/joker-changes';
 import {
   BROADCAST_STATE_OUTCOME,
   type SessionOutcome,
@@ -35,19 +31,6 @@ export interface JoinOutcome {
   /** The joker the team held when it joined, before any draw: the reply carries this, so a drawn joker reaches the phone as a change. */
   heldJoker: TeamJoker | null;
   joined: SessionOutcome;
-}
-
-/** What a joker drawn for a late joiner tells its phone: the joker sync and a fresh team view. Nothing when no joker was drawn. */
-function lateDrawChanges(
-  session: SessionState,
-  teamId: number,
-  drawnJoker: TeamJoker | null,
-): Pick<SessionOutcome, 'jokerSyncs' | 'changedTeamIds'> {
-  if (!drawnJoker) return { jokerSyncs: [], changedTeamIds: [] };
-  return {
-    jokerSyncs: jokerSyncsFor(session, [teamId], { [teamId]: drawnJoker }),
-    changedTeamIds: [teamId],
-  };
 }
 
 /**
@@ -139,7 +122,8 @@ export class TeamRosterChanges {
         joined: {
           ...BROADCAST_STATE_OUTCOME,
           socketsToClose: takenOver ? [takenOver] : [],
-          ...lateDrawChanges(joined, team.id, drawnJoker),
+          // A joker drawn for a late joiner reaches its phone as a team view after the reply.
+          changedTeamIds: drawnJoker ? [team.id] : [],
         },
       },
       touchedScores: true,

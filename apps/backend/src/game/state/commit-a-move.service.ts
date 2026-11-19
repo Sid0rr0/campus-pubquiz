@@ -213,10 +213,14 @@ export class MoveCommitter {
         // The batch just graded these: /control's answer list for them still
         // shows the ungraded rows it was sent while they were open.
         answerListQuestionIds: staleAnswerListIds,
-        changedTeamIds: isRevealEntry(session.progress.status, progress.status)
-          ? committed.teams.map((team) => team.teamId)
-          : [],
-        jokerSyncs: closedPick?.jokerSyncs ?? [],
+        changedTeamIds: [
+          ...new Set([
+            ...(isRevealEntry(session.progress.status, progress.status)
+              ? committed.teams.map((team) => team.teamId)
+              : []),
+            ...(closedPick?.changedTeamIds ?? []),
+          ]),
+        ],
         // A phone joined in the lobby knows its coins from before they were decided.
         coinSyncs: isLeavingLobby ? coinSyncsFor(committed) : [],
       },

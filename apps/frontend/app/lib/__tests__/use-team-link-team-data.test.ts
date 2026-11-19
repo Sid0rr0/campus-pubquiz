@@ -221,9 +221,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
     const { result, socket } = renderPlayingTeam();
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
-        joker: { roundId: 12, source: 'set_by_quiz_master' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ joker: { roundId: 12, source: 'set_by_quiz_master' } }),
+      ),
     );
     expect(mockToast).toHaveBeenCalledTimes(1);
     expect(mockToast.mock.calls[0][0]).toBe(
@@ -381,9 +382,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
     });
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
-        joker: { roundId: 14, source: 'drawn' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ joker: { roundId: 14, source: 'drawn' } }),
+      ),
     );
     expect(result.current.game?.myJoker).toEqual({
       roundId: 14,
@@ -394,9 +396,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
   it('keeps the old joker when the server refuses a pick', async () => {
     const { result, socket } = renderPlayingTeam();
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
-        joker: { roundId: 12, source: 'chosen' },
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ joker: { roundId: 12, source: 'chosen' } }),
+      ),
     );
 
     let sent!: Promise<AckResult>;

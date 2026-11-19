@@ -51,21 +51,24 @@ export function quizEditChange(
         started,
         await withReloadedQuiz(seedService, started),
       );
-    const { session: reloaded, jokerSyncs } =
+    const { session: reloaded, changedTeamIds: jokerTeamIds } =
       await jokers.followRoundsAfterEdit(started, reloadedQuiz);
-    const broadcast = {
-      ...BROADCAST_STATE_OUTCOME,
-      jokerSyncs,
-      purchaseSyncs,
-    };
+    const broadcast = { ...BROADCAST_STATE_OUTCOME, purchaseSyncs };
     // With nothing to regrade (or nothing re-scored) this comes back with the
     // session unchanged and no questions or teams, i.e. a plain broadcast.
     const { session, regradedQuestionIds, answeringTeamIds } =
       await grading.regradeForKeyFix(reloaded, started, regradeQuestionIds);
 
-    const changedTeamIds = session.teams
-      .filter((team) => answeringTeamIds.has(team.teamId))
-      .map((team) => team.teamId);
+    // A joker that moved or was redrawn, and every team holding a joker: a round's number or title may have shifted under its doubled rounds.
+    const changedTeamIds = [
+      ...new Set([
+        ...session.teams
+          .filter((team) => answeringTeamIds.has(team.teamId))
+          .map((team) => team.teamId),
+        ...jokerTeamIds,
+        ...Object.keys(session.jokers).map(Number),
+      ]),
+    ];
     return {
       session,
       outcome: {

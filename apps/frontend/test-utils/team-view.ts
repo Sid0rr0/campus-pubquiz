@@ -16,6 +16,7 @@ export function teamView(overrides: Partial<OwnTeamView> = {}): OwnTeamView {
     purchases: [],
     roomReadyQuestionIds: [],
     doubledRounds: [],
+    jokerExtras: {},
     ...overrides,
   };
 }

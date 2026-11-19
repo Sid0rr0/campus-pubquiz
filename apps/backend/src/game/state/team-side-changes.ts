@@ -6,7 +6,6 @@ import type {
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
@@ -87,10 +86,7 @@ export class TeamSideChanges {
       },
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
-        sideSyncs: connectedTeamSyncs(session, [teamId]).map((sync) => ({
-          ...sync,
-          sideId,
-        })),
+        changedTeamIds: [teamId],
       },
       touchedScores: false,
     };

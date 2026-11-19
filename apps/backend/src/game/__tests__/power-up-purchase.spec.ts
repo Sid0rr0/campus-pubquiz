@@ -425,11 +425,12 @@ describe('GameGateway — buying a 50/50', () => {
         }
 
         expect(await rejoinedReadyIds(game, game.teams[0])).toEqual([]);
-        expect(
-          game
-            .roomEmits()
-            .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_VIEW),
-        ).toEqual([]);
+        // Only each submitting team hears of its own answer; the team that has not answered gets nothing.
+        const [silent, ...submitters] = game.teams;
+        expect(teamViewsTo(game, silent)).toEqual([]);
+        for (const team of submitters) {
+          expect(teamViewsTo(game, team)).toHaveLength(1);
+        }
       });
     });
 

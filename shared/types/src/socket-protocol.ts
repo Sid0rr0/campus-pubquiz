@@ -24,11 +24,7 @@ import type {
 } from './bonus';
 import type { RateRoundPayload, SendFeedbackPayload } from './feedback';
 import type { RateSessionPayload } from './session-scales';
-import type {
-  PickJokerPayload,
-  SetTeamJokerPayload,
-  TeamJokerSyncedPayload,
-} from './joker';
+import type { PickJokerPayload, SetTeamJokerPayload } from './joker';
 import type {
   BuyPowerUpPayload,
   TeamPurchasesSyncedPayload,
@@ -38,11 +34,7 @@ import type {
   SetTeamPlayerCountPayload,
   TeamPlayerCountSyncedPayload,
 } from './player-count';
-import type {
-  PickSidePayload,
-  SetTeamSidePayload,
-  TeamSideSyncedPayload,
-} from './versus';
+import type { PickSidePayload, SetTeamSidePayload } from './versus';
 import type { PresenterContextPayload, StateViewByRoom } from './room-views';
 import type {
   CreateShowdownRoundPayload,
@@ -141,9 +133,7 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.TEAM_COINS_SYNCED]: TeamCoinsSyncedPayload;
   [SOCKET_EVENTS.SESSION_CLOSED]: SessionClosedPayload;
   [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
-  [SOCKET_EVENTS.TEAM_JOKER_SYNCED]: TeamJokerSyncedPayload;
   [SOCKET_EVENTS.TEAM_PURCHASES_SYNCED]: TeamPurchasesSyncedPayload;
-  [SOCKET_EVENTS.TEAM_SIDE_SYNCED]: TeamSideSyncedPayload;
   [SOCKET_EVENTS.TEAM_VIEW]: OwnTeamView;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
   exception: ExceptionPayload | string;

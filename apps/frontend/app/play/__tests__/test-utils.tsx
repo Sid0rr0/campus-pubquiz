@@ -83,6 +83,8 @@ export function teamLinkResult({
         myPlayerCount: 3,
         setPlayerCount: vi.fn().mockResolvedValue({ success: true }),
         myJoker: null,
+        myDoubledRounds: [],
+        myJokerExtras: {},
         pickJoker: vi.fn().mockResolvedValue({ success: true }),
         // Most sessions are played without Versus, so no side is held.
         mySideId: null,

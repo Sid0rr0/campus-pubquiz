@@ -74,7 +74,7 @@ export class AnswersChanges {
       throw error;
     }
 
-    const refreshed = await this.refreshAnswers(session, questionId);
+    const refreshed = await this.refreshAnswers(session, questionId, teamId);
     return {
       session: refreshed.session,
       touchedScores: refreshed.touchedScores,
@@ -142,7 +142,7 @@ export class AnswersChanges {
       }
       throw error;
     }
-    return await this.refreshAnswers(session, questionId, true);
+    return await this.refreshAnswers(session, questionId, null);
   }
 
   /**
@@ -153,7 +153,7 @@ export class AnswersChanges {
   private async refreshAnswers(
     started: SessionState,
     questionId: number,
-    isGrade = false,
+    submitterTeamId: number | null,
   ): Promise<SessionChange<SessionOutcome>> {
     const [answers, graded] = await Promise.all([
       this.answerService.listForQuestion(
@@ -167,12 +167,17 @@ export class AnswersChanges {
     const offersRoom =
       started.seededGame.settings.powerUps.ask_the_room.maxUses > 0;
     const answeredTeamIds = answers.map((answer) => answer.teamId);
-    const changedTeamIds =
-      findQuestionOpenForAnswering(graded, questionId) && offersRoom
-        ? Object.keys(graded.connectedTeamSockets).map(Number)
-        : isGrade
-          ? answeredTeamIds // a hand grade changes the answering teams' grades
-          : [];
+    // A submitter's own other phones need the new answer even with Ask the room off.
+    const changedTeamIds = [
+      ...new Set([
+        ...(findQuestionOpenForAnswering(graded, questionId) && offersRoom
+          ? Object.keys(graded.connectedTeamSockets).map(Number)
+          : submitterTeamId === null
+            ? answeredTeamIds // a hand grade changes the answering teams' grades
+            : []),
+        ...(submitterTeamId === null ? [] : [submitterTeamId]),
+      ]),
+    ];
     return {
       session: withAnsweredTeamIds(graded, questionId, answeredTeamIds),
       outcome: {

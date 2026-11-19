@@ -35,4 +35,6 @@ export interface OwnTeamView {
   roomReadyQuestionIds: number[];
   /** Every round that counts double for the team (joker round and extra jokers), in quiz order. */
   doubledRounds: DoubledRoundView[];
+  /** The extra points the joker adds to each scored answer in a doubled round, by question id ("+1" on a 1-point answer). Absent for an answer that earned nothing or sits outside a doubled round. */
+  jokerExtras: Record<number, number>;
 }

@@ -917,7 +917,7 @@ _A team's side._ The side a team picked is a nullable `side_id` on its
 kick or leave, and when Versus goes off). The `PICK_SIDE` event is covered under
 the client events below. Three settings rules depend on picks: turning Versus
 off clears every team's side in the same write (each connected phone gets
-`TEAM_SIDE_SYNCED` with `{ sideId: null }`); a settings change that removes a side
+a `TEAM_VIEW` with `sideId: null`); a settings change that removes a side
 a team is on is refused with "Can't remove a side while a team is on it"
 (`SessionSettingsInvalidError`); and turning Versus on in the lobby needs no event,
 since a phone with Versus on and no side shows the side picker. **Start quiz** (not End quiz) is
@@ -1000,10 +1000,9 @@ is not stored on the roster row because a kick deletes that row and the joker
 must survive a kick and a rejoin. It goes through the session write as a change
 that touches scores. The players room is told nothing, and the big screen is sent
 a fresh view of itself with the team added to `pickedTeamIds` (never the round):
-the server sends `TEAM_JOKER_SYNCED` (`{ joker: { roundId, source } | null }`) to the
-team's own connected phones through the per-team sync, `JOIN_ACCEPTED` carries
-the team's `joker` (so a reconnect, a second phone or a rejoin after a kick
-restores it), and the admin room and the big screen alone get a fresh
+the server sends a `TEAM_VIEW` (its `joker` is `{ roundId, source } | null`) to the
+team's own connected phones, the join reply's team view carries the team's `joker`
+(so a reconnect, a second phone or a rejoin after a kick restores it), and the admin room and the big screen alone get a fresh
 `STATE_UPDATED`. A team's joker round is never sent to another team's phone or
 the big screen. The service that
 reads and writes it is `JokerService` (`apps/backend/src/joker/`), and the pure
@@ -1037,7 +1036,7 @@ round that has started or is not in the quiz, a session without Jokers, or a qui
 that has not reached the pick ("That round cannot be the joker: it has already
 started, or the joker pick has not opened", "Team N is not in this session"). It
 is a session write that touches scores, like `PICK_JOKER`, and is delivered the
-same way: `TEAM_JOKER_SYNCED` to that team's own connected phones and a fresh
+same way: a `TEAM_VIEW` to that team's own connected phones and a fresh
 `STATE_UPDATED` to the admin room alone. The team can pick again while the pick is
 still open, which replaces the quiz master's choice.
 
@@ -1081,23 +1080,30 @@ one joker:
 - A team that joins after the pick closed (the status is past `joker_pick`) and
   holds no joker is drawn one with equal chance among the rounds with no opened
   question, stored as `drawn`. `JOIN_ACCEPTED` carries the joker the team held
-  before the draw (`null`), and `TEAM_JOKER_SYNCED` follows, so the phone toasts
-  "A joker was drawn for your team". A team that joins before the pick opens is
-  drawn one when the pick closes, like the rest.
+  before the draw (`null`), and a `TEAM_VIEW` with the drawn joker follows, so the
+  phone toasts "A joker was drawn for your team". A team that joins before the pick
+  opens is drawn one when the pick closes, like the rest.
 - A team that is kicked and rejoins with its name and code gets its joker back:
   the joker row is not the roster row.
 - A Live edit save keeps jokers on their rounds inside the same save. A round is
   recognised by its questions, so a round moved by a reorder takes its jokers with
   it, and a joker whose round is deleted (none of its questions is left) is
   redrawn from the rounds with no opened question, stored as `drawn`. Every team
-  whose joker moved or was redrawn gets `TEAM_JOKER_SYNCED`.
+  whose joker moved or was redrawn, and every team holding a joker (its round's
+  number or title may have shifted), gets a `TEAM_VIEW`.
 
-The phone shows a toast when `TEAM_JOKER_SYNCED` brings a joker the team did not
+The phone shows a toast when a live `TEAM_VIEW` brings a joker the team did not
 pick and does not already hold: "Your joker was changed by the quiz master"
 (`set_by_quiz_master`) or "A joker was drawn for your team" (`drawn`). The team's
 own pick (`chosen`), a joker it already holds (closing the pick re-sends every
-joker), and the joker `JOIN_ACCEPTED` carries on a reconnect or rejoin only update
-the joker line, never toast.
+joker), and the joker the join reply's team view carries on a reconnect or rejoin
+only update the joker line, never toast.
+
+The team view carries the rounds that count double for the team
+(`doubledRounds`: the joker round and any extra jokers, by round id, number and
+title, in quiz order; `""` for a round bought blind) and, per scored answer in
+one of them, the extra points the joker adds (`jokerExtras`, by question id). Both
+are worked out on the server; the phone only displays them.
 
 The phone screen for the pick is `{ kind: 'joker_pick', isOpen }`: the picker while
 `isOpen`, and the team's joker with "Look at the screen" once the pick has closed.
@@ -1166,11 +1172,10 @@ other screen, decided from the on-air screen in `screen-preview.util.ts`),
 `TEAM_VIEW` (the **Team view**, `OwnTeamView`, to a changed team's own socket
 only, after the room broadcasts; `JOIN_ACCEPTED` carries the same view as
 `teamView`, built by the same projection; the per-team sync events below are
-being folded into it),
+being folded into it; it carries the team's joker, side and doubled rounds, see
+Jokers above and `PICK_SIDE`),
 `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
-team's own phone only), `TEAM_JOKER_SYNCED` (`{ joker }`, to the team's own
-phones only; see Jokers above), `TEAM_SIDE_SYNCED` (`{ sideId }`, to the team's own
-phones only; see `PICK_SIDE`), `BONUS_AWARDED` (one fresh award, appended on the
+team's own phone only), `BONUS_AWARDED` (one fresh award, appended on the
 phone with a toast), `TEAM_BONUS_AWARDS_SYNCED` (`{ bonusAwards }`, the team's
 full list in award order as `TeamBonusAwardView[]`, to the awarded team's own
 phone only when the quiz master edits or deletes an award; it replaces the
@@ -1270,9 +1275,9 @@ has started and the team has a side, with "That side is not in this session" for
 unknown id, "This session is not played with Versus" without Versus, and "Join a
 team before picking a side" for a socket with no team. It goes through the session
 write, declares that it doesn't change scores, and broadcasts a fresh view to all
-rooms (the roster shows the side). The server also sends `TEAM_SIDE_SYNCED`
-(`{ sideId: string | null }`) to the team's own connected phones, and
-`JOIN_ACCEPTED` carries `sideId` so a reconnect or rejoin restores it. Only the
+rooms (the roster shows the side). The team's own connected phones get a
+`TEAM_VIEW` carrying `sideId` (`string | null`), and the join reply's team view
+carries it too, so a reconnect or rejoin restores it. Only the
 admin view's `teams` entries (`AdminTeamView.sideId`) carry a team's side; the
 display and players views don't (they carry the side standings, below). The phone shows a side picker (not a
 status; it covers that phone only) while Versus is on and the team has no side, a
@@ -1284,8 +1289,8 @@ other) — moves a roster team to another side at any status, including mid-quiz
 to fix a team that tapped the wrong side. Refused with "That side is not in this
 session" for an unknown id, "This session is not played with Versus" without
 Versus, and "Team N is not in this session" for a team not on the roster. It
-goes through the session write and changes no scores; the team's phones get
-`TEAM_SIDE_SYNCED` and every room a fresh view, as for `PICK_SIDE`. `/control`
+goes through the session write and changes no scores; the team's phones get a
+`TEAM_VIEW` and every room a fresh view, as for `PICK_SIDE`. `/control`
 shows a side select on each roster row while Versus is on.
 
 **Side standings** (`describeSideStandings` in `shared/types/src/side-standings.ts`,

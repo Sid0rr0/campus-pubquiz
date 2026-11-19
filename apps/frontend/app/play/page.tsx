@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
 import {
   coinsShown,
+  type DoubledRoundView,
   isShowingLastBreak,
   type PowerUpId,
 } from '@campus-pubquiz/types';
@@ -28,7 +29,6 @@ import { LockMoment } from '@/app/play/lock-moment';
 import { JokerMoment } from '@/app/play/joker-moment';
 import { SideBadge, SidePicker } from '@/app/play/side-picker';
 import {
-  doubledRoundsOf,
   isJokerRoundPlayed,
   jokerMarksOf,
   selectedResultOf,
@@ -201,8 +201,7 @@ function JoinedPlayScreen({
   });
   const jokerMarks = jokerMarksOf(
     view,
-    myJoker,
-    myPurchases,
+    game.myDoubledRounds,
     selectedQuestion?.id,
   );
   const isConnected = connectionError === null;
@@ -296,7 +295,7 @@ function JoinedPlayScreen({
         view={view}
         myAnswers={myAnswers}
         isConnected={isConnected}
-        doubledRoundNumbers={jokerMarks.doubledRoundNumbers}
+        jokerExtras={game.myJokerExtras}
       />
       <SavedConfirmation isVisible={isSaved} />
       <PowerUpMoment moment={powerUpMoment} />
@@ -369,7 +368,7 @@ function BlockBrowser({
   jokerMarks,
   onSubmitAnswer,
 }: {
-  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myPurchases'>;
+  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myPurchases' | 'myJokerExtras'>;
   team: JoinedTeam;
   selectedQuestion: SelectedQuestion;
   revealQuestion: BrowserState['revealQuestion'];
@@ -385,7 +384,7 @@ function BlockBrowser({
   const selectedResult = selectedResultOf(
     openedQuestions,
     selectedQuestion.id,
-    jokerMarks.doubledRoundNumbers,
+    game.myJokerExtras,
   );
   return (
     <div className="md:min-w-0 md:flex-1">
@@ -572,7 +571,7 @@ function TeamHeader({
 }: {
   teamName: TeamLink['join']['teamName'];
   team: JoinedTeam;
-  doubledRounds: ReturnType<typeof doubledRoundsOf>;
+  doubledRounds: readonly DoubledRoundView[];
   status: PlayerView['progress']['status'];
   pastRevealedQuestions: PlayerView['pastRevealedQuestions'];
   side: {

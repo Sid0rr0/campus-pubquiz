@@ -4,6 +4,7 @@ import {
   SEAT_TAKEN_REFUSAL_MARKER,
   type GameStatus,
   type JoinAcceptedPayload,
+  type TeamJoker,
 } from '@campus-pubquiz/types';
 import {
   initialTeamLink,
@@ -420,11 +421,17 @@ describe('team link: joker changes from the server', () => {
     }).state;
   }
 
+  /** A team view that holds `joker`. */
+  const viewWith = (joker: TeamJoker | null): TeamLinkInput => ({
+    type: 'teamViewReceived',
+    view: teamView({ joker }),
+  });
+
   it('announces a drawn joker that moved to another round', () => {
-    const { commands } = teamLink(withJoker(1, 'drawn'), {
-      type: 'jokerSynced',
-      joker: { roundId: 2, source: 'drawn' },
-    });
+    const { commands } = teamLink(
+      withJoker(1, 'drawn'),
+      viewWith({ roundId: 2, source: 'drawn' }),
+    );
 
     expect(commands).toEqual([
       expect.objectContaining({
@@ -435,10 +442,10 @@ describe('team link: joker changes from the server', () => {
   });
 
   it('announces a joker whose source changed on the same round', () => {
-    const { commands } = teamLink(withJoker(1, 'chosen'), {
-      type: 'jokerSynced',
-      joker: { roundId: 1, source: 'set_by_quiz_master' },
-    });
+    const { commands } = teamLink(
+      withJoker(1, 'chosen'),
+      viewWith({ roundId: 1, source: 'set_by_quiz_master' }),
+    );
 
     expect(commands).toEqual([
       expect.objectContaining({
@@ -449,10 +456,10 @@ describe('team link: joker changes from the server', () => {
   });
 
   it('stays quiet for the joker already held', () => {
-    const { commands } = teamLink(withJoker(1, 'drawn'), {
-      type: 'jokerSynced',
-      joker: { roundId: 1, source: 'drawn' },
-    });
+    const { commands } = teamLink(
+      withJoker(1, 'drawn'),
+      viewWith({ roundId: 1, source: 'drawn' }),
+    );
 
     expect(commands).toEqual([]);
   });
@@ -461,21 +468,16 @@ describe('team link: joker changes from the server', () => {
     const held = withJoker(1, 'drawn');
 
     expect(
-      teamLink(held, {
-        type: 'jokerSynced',
-        joker: { roundId: 2, source: 'chosen' },
-      }).commands,
+      teamLink(held, viewWith({ roundId: 2, source: 'chosen' })).commands,
     ).toEqual([]);
-    expect(
-      teamLink(held, { type: 'jokerSynced', joker: null }).commands,
-    ).toEqual([]);
+    expect(teamLink(held, viewWith(null)).commands).toEqual([]);
   });
 
   it('announces a drawn joker for a team that held none', () => {
-    const { commands } = teamLink(linkedPhone().state, {
-      type: 'jokerSynced',
-      joker: { roundId: 1, source: 'drawn' },
-    });
+    const { commands } = teamLink(
+      linkedPhone().state,
+      viewWith({ roundId: 1, source: 'drawn' }),
+    );
 
     expect(commands).toHaveLength(1);
   });

@@ -15,6 +15,7 @@ import {
   type AckResult,
   type JoinAcceptedPayload,
   type LeaveSessionPayload,
+  type DoubledRoundView,
   type PickJokerPayload,
   type PickSidePayload,
   type PowerUpId,
@@ -142,11 +143,15 @@ export interface TeamLinkGame {
   setPlayerCount: (playerCount: number) => Promise<AckResult>;
   /** The team's own joker as the server last said it, or null while it has none. */
   myJoker: TeamJoker | null;
+  /** Every round that counts double for the team, as the server last said it. */
+  myDoubledRounds: DoubledRoundView[];
+  /** The extra points the joker adds to each scored answer, by question id, as the server last said it. */
+  myJokerExtras: Record<number, number>;
   /** Resolves to the server's verdict on a joker pick; the picker shows it ("Saved ✓", or the reason), so nothing is toasted here. */
   pickJoker: (roundId: number) => Promise<AckResult>;
   /** The id of the team's own Versus side as the server last said it, or null while it has none. */
   mySideId: string | null;
-  /** Resolves to the server's verdict on a side pick; the new side arrives as a sync, so nothing is dispatched here. */
+  /** Resolves to the server's verdict on a side pick; the new side arrives in a team view, so nothing is dispatched here. */
   pickSide: (sideId: string) => Promise<AckResult>;
   /** The team's own power-up purchases as the server last said them. */
   myPurchases: PurchaseView[];
@@ -415,12 +420,6 @@ export function useTeamLink(
           playerCount: payload.playerCount,
         }),
       );
-      socket.on(SOCKET_EVENTS.TEAM_JOKER_SYNCED, (payload) =>
-        dispatch({ type: 'jokerSynced', joker: payload.joker }),
-      );
-      socket.on(SOCKET_EVENTS.TEAM_SIDE_SYNCED, (payload) =>
-        dispatch({ type: 'sideSynced', sideId: payload.sideId }),
-      );
       socket.on(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, (payload) =>
         dispatch({ type: 'purchasesSynced', payload }),
       );
@@ -580,6 +579,8 @@ function teamGameFields(
     myPlayerCount: link.myPlayerCount,
     roundRatingsEpoch: link.roundRatingsEpoch,
     myJoker: link.myJoker,
+    myDoubledRounds: link.myDoubledRounds,
+    myJokerExtras: link.myJokerExtras,
     mySideId: link.mySideId,
     myPurchases: link.myPurchases,
     roomReadyQuestionIds: link.roomReadyQuestionIds,

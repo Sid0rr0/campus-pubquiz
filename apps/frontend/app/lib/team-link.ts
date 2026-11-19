@@ -13,6 +13,7 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type CoinAwardedPayload,
+  type DoubledRoundView,
   type OwnTeamView,
   type PurchaseView,
   type RateSessionPayload,
@@ -172,9 +173,13 @@ export interface TeamLinkState {
   mySessionRatings: TeamSessionRatingsView;
   /** How many players the server holds for this team, or null until one is reported. */
   myPlayerCount: number | null;
-  /** The team's own joker as the server last said it (the join, a sync, or an acknowledged pick), or null while it has none. */
+  /** The team's own joker as the server last said it (a team view, or an acknowledged pick), or null while it has none. */
   myJoker: TeamJoker | null;
-  /** The id of the team's own Versus side as the server last said it (the join, or a sync after a pick), or null while it has none. */
+  /** Every round that counts double for the team, as the server last said it (joker round and extra jokers), in quiz order. */
+  myDoubledRounds: DoubledRoundView[];
+  /** The extra points the joker adds to each scored answer, by question id, as the server last said it. */
+  myJokerExtras: Record<number, number>;
+  /** The id of the team's own Versus side as the server last said it, or null while it has none. */
   mySideId: string | null;
   /** The team's own power-up purchases as the server last said them (the join, or a sync after a purchase); a 50/50's removed options stay hidden through them. */
   myPurchases: PurchaseView[];
@@ -221,12 +226,8 @@ export type TeamLinkInput =
   | { type: 'playerCountSynced'; playerCount: number }
   // The server acknowledged a count this phone sent.
   | { type: 'playerCountSaved'; playerCount: number }
-  // The server told the team's phones its joker changed.
-  | { type: 'jokerSynced'; joker: TeamJoker | null }
   // The server acknowledged a joker pick this phone sent.
   | { type: 'jokerSaved'; joker: TeamJoker }
-  // The server told the team's phones its side changed (a pick, or Versus turned off).
-  | { type: 'sideSynced'; sideId: string | null }
   // The server told the team's phones its purchases and coins after a purchase.
   | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
   // The server sent the team's whole view: it replaces the team's data.
@@ -332,6 +333,8 @@ const EMPTY_TEAM_DATA = {
   mySessionRatings: NO_SESSION_RATINGS,
   myPlayerCount: null,
   myJoker: null,
+  myDoubledRounds: [],
+  myJokerExtras: {},
   mySideId: null,
   myPurchases: [],
   roomReadyQuestionIds: [],
@@ -650,6 +653,8 @@ function teamDataFromView(view: OwnTeamView) {
     mySessionRatings: view.sessionRatings,
     myPlayerCount: view.playerCount,
     myJoker: view.joker,
+    myDoubledRounds: view.doubledRounds,
+    myJokerExtras: view.jokerExtras,
     mySideId: view.sideId,
     myPurchases: view.purchases,
     roomReadyQuestionIds: view.roomReadyQuestionIds,
@@ -665,7 +670,7 @@ function replaceTeamData(
   state: TeamLinkState,
   view: OwnTeamView,
 ): TeamLinkStep {
-  return unchanged({
+  return announceJokerChange(state.myJoker, {
     ...state,
     ...teamDataFromView(view),
     team: state.team && {
@@ -784,21 +789,21 @@ function awardCoins(
 }
 
 /**
- * The server told the team's phones its joker. A joker the team did not pick
- * itself (the quiz master's change, a draw) that differs from the one held is
- * announced once; the team's own pick, and a joker already held (the pick
- * closing re-sends every joker), change the joker line quietly.
+ * A team view replaced the joker `held`. A joker the team did not pick itself
+ * (the quiz master's change, a draw) that differs from the one held is
+ * announced once; the team's own pick, and a joker already held (any other
+ * team view), change the joker line quietly.
  */
-function syncJoker(
-  state: TeamLinkState,
-  joker: TeamJoker | null,
+function announceJokerChange(
+  held: TeamJoker | null,
+  next: TeamLinkState,
 ): TeamLinkStep {
-  const next = { ...state, myJoker: joker };
+  const joker = next.myJoker;
   const isChange =
     joker !== null &&
-    (joker.roundId !== state.myJoker?.roundId ||
+    (joker.roundId !== held?.roundId ||
       // Stryker disable next-line OptionalChaining: equivalent — roundId is always a number, so with no held joker the first comparison is already true and this one is never reached
-      joker.source !== state.myJoker?.source);
+      joker.source !== held?.source);
   if (!isChange || joker.source === 'chosen') return unchanged(next);
   const message =
     joker.source === 'drawn'
@@ -944,7 +949,6 @@ const INPUT_HANDLERS: {
     receiveAnswerResult(state, input.attempt, input.result),
   answerNotDelivered: (state, input) => keepAnswerPending(state, input.attempt),
   answerTimedOut: timeOutAnswer,
-  jokerSynced: (state, input) => syncJoker(state, input.joker),
   joinRefused: receiveJoinRefused,
   joinRetryDue: (state, input) => retryJoin(state, input.connectionId),
   statusSeen: (state, input) => seeStatus(state, input.status),
@@ -981,7 +985,6 @@ const INPUT_HANDLERS: {
   playerCountSaved: (state, input) =>
     unchanged({ ...state, myPlayerCount: input.playerCount }),
   jokerSaved: (state, input) => unchanged({ ...state, myJoker: input.joker }),
-  sideSynced: (state, input) => unchanged({ ...state, mySideId: input.sideId }),
   purchasesSynced: syncPurchases,
   teamViewReceived: (state, input) => replaceTeamData(state, input.view),
   nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),

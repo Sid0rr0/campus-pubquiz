@@ -8,7 +8,7 @@ import {
   type AckResult,
 } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
-import { joinPayload } from '@/test-utils/team-view';
+import { joinPayload, teamView } from '@/test-utils/team-view';
 import {
   BONUS_AWARD_TOAST_DURATION_MS,
   JOIN_RETRY_DELAY_MS,
@@ -187,9 +187,10 @@ describe('useTeamLink: adapter edges', () => {
       const { socket } = renderPlayingTeam();
 
       act(() =>
-        socket.trigger(SOCKET_EVENTS.TEAM_JOKER_SYNCED, {
-          joker: { roundId: 12, source: 'drawn' },
-        }),
+        socket.trigger(
+          SOCKET_EVENTS.TEAM_VIEW,
+          teamView({ joker: { roundId: 12, source: 'drawn' } }),
+        ),
       );
 
       expect(mockToast).toHaveBeenCalledWith(expect.any(String), {

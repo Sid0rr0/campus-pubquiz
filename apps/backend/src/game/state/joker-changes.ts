@@ -19,8 +19,6 @@ import type { SessionChange } from '@/game/state/session-write';
 import { requireSeat } from '@/game/state/session-updates.util';
 import {
   BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
-  type JokerSync,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 
@@ -30,10 +28,10 @@ export type RandomSource = () => number;
 /** Injection token for swapping the draw's random source; nothing provides it in production, so draws use `Math.random`. */
 export const JOKER_RANDOM = Symbol('JOKER_RANDOM');
 
-/** The jokers of a session once the pick closed, and the connected teams whose phones must be told theirs. */
+/** The jokers of a session once the pick closed, and the teams whose team view changed with them. */
 export interface ClosedJokerPick {
   session: SessionState;
-  jokerSyncs: JokerSync[];
+  changedTeamIds: number[];
 }
 
 /**
@@ -186,7 +184,7 @@ export class JokerChanges {
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
         ...broadcast,
-        jokerSyncs: jokerSyncsFor(session, [teamId], { [teamId]: joker }),
+        changedTeamIds: [teamId],
       },
       touchedScores: true,
     };
@@ -218,11 +216,7 @@ export class JokerChanges {
     }
     return {
       session: { ...session, jokers },
-      jokerSyncs: jokerSyncsFor(
-        session,
-        roster.map(({ teamId }) => teamId),
-        jokers,
-      ),
+      changedTeamIds: roster.map(({ teamId }) => teamId),
     };
   }
 
@@ -244,7 +238,7 @@ export class JokerChanges {
     );
     return {
       session: { ...session, jokers },
-      jokerSyncs: jokerSyncsFor(session, clearedTeamIds, jokers),
+      changedTeamIds: clearedTeamIds,
     };
   }
 
@@ -294,10 +288,10 @@ export class JokerChanges {
   async followRoundsAfterEdit(
     started: SessionState,
     reloaded: SessionState,
-  ): Promise<{ session: SessionState; jokerSyncs: JokerSync[] }> {
+  ): Promise<{ session: SessionState; changedTeamIds: number[] }> {
     const held = Object.entries(started.jokers);
-    // Stryker disable next-line ConditionalExpression: a pure shortcut; without it the loop below runs zero times and returns the same syncs and an empty jokers cache
-    if (held.length === 0) return { session: reloaded, jokerSyncs: [] };
+    // Stryker disable next-line ConditionalExpression: a pure shortcut; without it the loop below runs zero times and returns the same ids and an empty jokers cache
+    if (held.length === 0) return { session: reloaded, changedTeamIds: [] };
 
     const { gameSessionId } = reloaded.seededGame;
     const pickableRoundIds = pickableRoundIdsOf(reloaded);
@@ -320,7 +314,7 @@ export class JokerChanges {
     }
     return {
       session: { ...reloaded, jokers },
-      jokerSyncs: jokerSyncsFor(reloaded, changedTeamIds, jokers),
+      changedTeamIds,
     };
   }
 
@@ -410,16 +404,4 @@ export function roundNowHolding(
     }
   }
   return best?.roundId ?? null;
-}
-
-/** A sync per connected team of `teamIds`, telling it its joker in `jokers` (null when it has none). */
-export function jokerSyncsFor(
-  session: SessionState,
-  teamIds: readonly number[],
-  jokers: Record<number, TeamJoker>,
-): JokerSync[] {
-  return connectedTeamSyncs(session, teamIds).map((sync) => ({
-    ...sync,
-    joker: jokers[sync.teamId] ?? null,
-  }));
 }
