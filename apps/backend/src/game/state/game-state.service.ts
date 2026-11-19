@@ -3,34 +3,20 @@ import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   type ActiveSessionSummary,
   type AdminQuestionContext,
-  type AwardBonusPayload,
   type BonusAwardAdminView,
   buildAdminQuestionContext,
   buildSnapshot,
-  type CreateShowdownRoundPayload,
   DEFAULT_SESSION_SETTINGS,
   freshSessionState,
   isQuickfire,
   type JoinPlayersPayload,
-  type BuyPowerUpPayload,
-  type PickJokerPayload,
-  type SetTeamJokerPayload,
   type PresenterContextPayload,
   projectScreen,
-  type RateRoundPayload,
-  type RateSessionPayload,
-  type SendFeedbackPayload,
   type SessionSettings,
   type SessionState,
-  type PickSidePayload,
-  type SetPlayerCountPayload,
-  type SetTeamPlayerCountPayload,
-  type SetTeamSidePayload,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
-  type SubmitAnswerPayload,
-  type SubmitShowdownGuessPayload,
   type OwnTeamView,
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
@@ -295,113 +281,6 @@ export class GameStateService implements OnModuleInit {
     return seededGame.joinCode;
   }
 
-  /** A team picks its joker round from `socketId` during the joker pick; refused otherwise. Only the team's own phones and the admin room are told. */
-  jokerPicked(
-    joinCode: string,
-    payload: PickJokerPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.joker.pick(session, payload, socketId),
-    );
-  }
-
-  /** A team picks or switches its Versus side from `socketId`; see the team side change module. */
-  sidePicked(
-    joinCode: string,
-    payload: PickSidePayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.side.sidePicked(session, payload, socketId),
-    );
-  }
-
-  /** The quiz master moves a roster team to another Versus side, at any status; see the team side change module. */
-  teamSideSet(
-    joinCode: string,
-    payload: SetTeamSidePayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.side.teamSideSet(session, payload),
-    );
-  }
-
-  /** A team buys a power-up from `socketId`; refused unless the shared purchase rule allows it. Only the team's own phones and the admin room are told. */
-  powerUpBought(
-    joinCode: string,
-    payload: BuyPowerUpPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.purchase.buy(session, payload, socketId),
-    );
-  }
-
-  /** The quiz master sets a team's joker round; refused for a round that has started or a team not in the session. Only that team's phones and the admin room are told. */
-  teamJokerSet(
-    joinCode: string,
-    payload: SetTeamJokerPayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.joker.setTeamJoker(session, payload),
-    );
-  }
-
-  /** A team rates a round of the break card. Changes no scores and pushes nothing. */
-  roundRated(
-    joinCode: string,
-    payload: RateRoundPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.feedback.roundRated(session, payload, socketId),
-    );
-  }
-
-  /** A team reports how many players it has. Changes no scores and broadcasts nothing; only the team's own phones are told. */
-  playerCountSet(
-    joinCode: string,
-    payload: SetPlayerCountPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.playerCount.playerCountSet(session, payload, socketId),
-    );
-  }
-
-  /** The quiz master or a moderator sets or corrects a team's player count. Like `playerCountSet`, plus the admin room's view is refreshed. */
-  teamPlayerCountSet(
-    joinCode: string,
-    payload: SetTeamPlayerCountPayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.playerCount.teamPlayerCountSet(session, payload),
-    );
-  }
-
-  /** A team sends its comment and topic suggestions from the final form. Like `roundRated`. */
-  feedbackSent(
-    joinCode: string,
-    payload: SendFeedbackPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.feedback.feedbackSent(session, payload, socketId),
-    );
-  }
-
-  /** A team answers pacing or felt difficulty on the final form. Like `feedbackSent`, and leaves the comment and topics alone. */
-  sessionRated(
-    joinCode: string,
-    payload: RateSessionPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.feedback.sessionRated(session, payload, socketId),
-    );
-  }
-
   /**
    * A team joins (or rejoins) from `socketId`; see the team roster change
    * module for the seat takeover rule. The join reply goes to the sender
@@ -495,57 +374,6 @@ export class GameStateService implements OnModuleInit {
     return deadlinesOf(this.sessionWrite.read(joinCode));
   }
 
-  /** Admin-set/clear the epoch-ms time the break is expected to end — see StateSnapshotPayload.breakEndsAt. */
-  breakEndTimeSet(
-    joinCode: string,
-    breakEndsAt: number | null,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.settings.breakEndTime(session, breakEndsAt),
-    );
-  }
-
-  /** Admin-set text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
-  displayTextScaleSet(
-    joinCode: string,
-    displayTextScale: number,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.settings.displayTextScale(session, displayTextScale),
-    );
-  }
-
-  /** Admin-set mute for the big screen's sounds — see StateSnapshotPayload.isDisplaySoundMuted. */
-  displaySoundMutedSet(
-    joinCode: string,
-    isDisplaySoundMuted: boolean,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.settings.displaySoundMuted(session, isDisplaySoundMuted),
-    );
-  }
-
-  /** A showdown guess from `socketId`; checked against the session the write holds, so a guess sent as the reveal starts is counted or refused. */
-  submitShowdownGuess(
-    joinCode: string,
-    payload: SubmitShowdownGuessPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.showdowns.guess(session, payload, socketId),
-    );
-  }
-
-  /** Starts a showdown round for the teams tied for first, read from the session the write holds. Leaves isLeaderboardVisible alone. */
-  createShowdownRound(
-    joinCode: string,
-    payload: CreateShowdownRoundPayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.showdowns.newRound(session, payload),
-    );
-  }
-
   /**
    * Merges `partial` over the session's settings, lobby-only, and/or replaces
    * the session's leagues when `leagueIds` is given. The checks run against
@@ -574,56 +402,6 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
       this.changes.timerExpiry.advanceOnExpiry(session, deadline, dueAt),
-    );
-  }
-
-  /** A team's answer from `socketId`: refused when the question is closed or the seat isn't the socket's; see the answers change module. */
-  submitAnswer(
-    joinCode: string,
-    payload: SubmitAnswerPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.answers.submit(session, payload, socketId),
-    );
-  }
-
-  /** An admin grades an answer by hand; runs the same refresh as submitAnswer. */
-  async gradeAnswer(
-    joinCode: string,
-    answerId: number,
-    pointsAwarded: number,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.answers.grade(session, answerId, pointsAwarded),
-    );
-  }
-
-  /** An admin awards a bonus; a refusal carries the bonus service's message. */
-  awardBonus(
-    joinCode: string,
-    payload: AwardBonusPayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.bonus.award(session, payload),
-    );
-  }
-
-  /** A team leaves from `socketId`; refused unless that socket owns the seat. */
-  teamLeft(
-    joinCode: string,
-    teamId: number,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.roster.leave(session, { teamId, socketId }),
-    );
-  }
-
-  /** The admin kicks a team, even one with no socket; the team's socket, if any, gets TEAM_KICKED and is closed. */
-  kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.changes.roster.kick(session, teamId),
     );
   }
 

@@ -33,7 +33,7 @@ describe('GameGateway — an unexpected failure during an event', () => {
     const admin = await game.connectAdmin();
     const [{ teamId }] = game.teams;
     jest
-      .spyOn(game.gameState, 'awardBonus')
+      .spyOn(game.liveChanges.bonus, 'award')
       .mockRejectedValueOnce(new Error('database is down'));
 
     const ack = await game.gateway.handleAwardBonus(asSocket(admin), {

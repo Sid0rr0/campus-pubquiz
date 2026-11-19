@@ -1290,11 +1290,13 @@ describe('GameGateway — session write: closing a session', () => {
 
   function bonusChanged() {
     return game.inRequestContext(() =>
-      game.gameState.awardBonus(game.joinCode, {
-        teamId: game.teams[0].teamId,
-        category: 'shot',
-        points: 1,
-      }),
+      game.sessionWrite.write(game.joinCode, (session) =>
+        game.liveChanges.bonus.award(session, {
+          teamId: game.teams[0].teamId,
+          category: 'shot',
+          points: 1,
+        }),
+      ),
     );
   }
 

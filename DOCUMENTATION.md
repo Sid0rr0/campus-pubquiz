@@ -1205,9 +1205,10 @@ close) now go over REST (`/quizzes`, `/sessions`) rather than sockets — see
 Each event's declaration (`socket-event-declarations.ts`) can name the session
 change the event makes (`change`) and a `fallbackRefusal`; the gateway's
 dispatch step runs a declared change through the session write after
-validation, session lookup and room authorization. So far only `ADMIN_ACTION`
-is declared this way (its change is the move pipeline's commit); the other
-events still call the game state class from their handlers.
+validation, session lookup and room authorization. Every gateway-dispatched
+event except `JOIN_PLAYERS` is declared this way (`ADMIN_ACTION`'s change is the
+move pipeline's commit); join's handler still calls the game state class,
+which writes, then builds the join reply. No protocol change.
 
 **Rate limit.** Every client-to-server event counts against its connection's
 window of 60 events per 10 seconds (`event-rate-limit.util.ts`, run first in

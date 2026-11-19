@@ -133,8 +133,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.submitAnswer,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.submitAnswer(joinCode, payload, client.id),
     );
   }
 
@@ -147,8 +145,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.rateRound,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.roundRated(joinCode, payload, client.id),
     );
   }
 
@@ -161,8 +157,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.sendFeedback,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.feedbackSent(joinCode, payload, client.id),
     );
   }
 
@@ -175,8 +169,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.rateSession,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.sessionRated(joinCode, payload, client.id),
     );
   }
 
@@ -189,8 +181,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.setPlayerCount,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.playerCountSet(joinCode, payload, client.id),
     );
   }
 
@@ -203,8 +193,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.setTeamPlayerCount,
       rawPayload,
       client,
-      ({ joinCode, payload }) =>
-        this.gameState.teamPlayerCountSet(joinCode, payload),
     );
   }
 
@@ -217,7 +205,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.setTeamSide,
       rawPayload,
       client,
-      ({ joinCode, payload }) => this.gameState.teamSideSet(joinCode, payload),
     );
   }
 
@@ -230,8 +217,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.pickJoker,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.jokerPicked(joinCode, payload, client.id),
     );
   }
 
@@ -244,8 +229,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.pickSide,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.sidePicked(joinCode, payload, client.id),
     );
   }
 
@@ -258,8 +241,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.buyPowerUp,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.powerUpBought(joinCode, payload, client.id),
     );
   }
 
@@ -272,7 +253,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.setTeamJoker,
       rawPayload,
       client,
-      ({ joinCode, payload }) => this.gameState.teamJokerSet(joinCode, payload),
     );
   }
 
@@ -285,12 +265,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.gradeAnswer,
       rawPayload,
       client,
-      ({ joinCode, payload }) =>
-        this.gameState.gradeAnswer(
-          joinCode,
-          payload.answerId,
-          payload.pointsAwarded,
-        ),
     );
   }
 
@@ -303,8 +277,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.kickTeam,
       rawPayload,
       client,
-      ({ joinCode, payload }) =>
-        this.gameState.kickTeam(joinCode, payload.teamId),
     );
   }
 
@@ -325,8 +297,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.leaveSession,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.teamLeft(joinCode, payload.teamId, client.id),
     );
   }
 
@@ -339,8 +309,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.setBreakEndTime,
       rawPayload,
       client,
-      ({ joinCode, payload }) =>
-        this.gameState.breakEndTimeSet(joinCode, payload.breakEndsAt),
     );
   }
 
@@ -353,8 +321,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.setDisplayTextScale,
       rawPayload,
       client,
-      ({ joinCode, payload }) =>
-        this.gameState.displayTextScaleSet(joinCode, payload.displayTextScale),
     );
   }
 
@@ -367,11 +333,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.setDisplaySoundMuted,
       rawPayload,
       client,
-      ({ joinCode, payload }) =>
-        this.gameState.displaySoundMutedSet(
-          joinCode,
-          payload.isDisplaySoundMuted,
-        ),
     );
   }
 
@@ -384,7 +345,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.awardBonus,
       rawPayload,
       client,
-      ({ joinCode, payload }) => this.gameState.awardBonus(joinCode, payload),
     );
   }
 
@@ -397,8 +357,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.createShowdownRound,
       rawPayload,
       client,
-      ({ joinCode, payload }) =>
-        this.gameState.createShowdownRound(joinCode, payload),
     );
   }
 
@@ -411,8 +369,6 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.submitShowdownGuess,
       rawPayload,
       client,
-      ({ joinCode, payload, client }) =>
-        this.gameState.submitShowdownGuess(joinCode, payload, client.id),
     );
   }
 
