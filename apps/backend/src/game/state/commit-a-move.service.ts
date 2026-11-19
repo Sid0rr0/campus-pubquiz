@@ -21,10 +21,13 @@ import type {
 import {
   BROADCAST_STATE_OUTCOME,
   connectedTeamIds,
-  isRevealEntry,
   unionTeamIds,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
+import {
+  transitionFacts,
+  type TransitionFacts,
+} from '@/game/state/transition-rules';
 import type { ClosedJokerPick, JokerChanges } from '@/game/state/joker-changes';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { LiveResultsRead } from '@/game/state/live-results-read';
@@ -184,13 +187,14 @@ export class MoveCommitter {
     step: ProgressMoveStep,
   ): Promise<CommittedMove> {
     const { progress } = step;
-    assertEveryTeamHasSideToStart(session, pressed);
-    const closedPick = await this.crossJokerPick(session, progress);
+    const facts = transitionFacts(session, progress, pressed);
+    if (facts.startNeedsEverySide) assertEveryTeamHasSide(session);
+    const closedPick = await this.crossJokerPick(session, facts);
     // Leaving the lobby decides every rostered team's carried coin, once.
-    const isLeavingLobby =
-      session.progress.status === 'lobby' && progress.status !== 'lobby';
     const base = closedPick?.session ?? session;
-    const started = isLeavingLobby ? await this.decideCarriedCoins(base) : base;
+    const started = facts.leavesLobby
+      ? await this.decideCarriedCoins(base)
+      : base;
 
     const { session: refreshed, staleAnswerListIds } =
       await this.grading.gradeForMove(started, progress, pressed);
@@ -212,11 +216,11 @@ export class MoveCommitter {
         // shows the ungraded rows it was sent while they were open.
         answerListQuestionIds: staleAnswerListIds,
         changedTeamIds: unionTeamIds(
-          isRevealEntry(session.progress.status, progress.status)
+          facts.gradesBecomeVisible
             ? committed.teams.map((team) => team.teamId)
             : [],
           // A phone joined in the lobby knows its coins from before they were decided.
-          isLeavingLobby ? connectedTeamIds(committed) : [],
+          facts.leavesLobby ? connectedTeamIds(committed) : [],
           closedPick?.changedTeamIds ?? [],
         ),
       },
@@ -231,14 +235,11 @@ export class MoveCommitter {
    */
   private async crossJokerPick(
     session: SessionState,
-    progress: GameProgress,
+    facts: TransitionFacts,
   ): Promise<ClosedJokerPick | null> {
-    const wasPicking = session.progress.status === 'joker_pick';
-    const isPicking = progress.status === 'joker_pick';
-    if (wasPicking === isPicking) return null;
-    return wasPicking
-      ? this.jokers.closePick(session)
-      : this.jokers.reopenPick(session);
+    if (facts.jokerPickCloses) return this.jokers.closePick(session);
+    if (facts.jokerPickReopens) return this.jokers.reopenPick(session);
+    return null;
   }
 
   private async decideCarriedCoins(
@@ -276,21 +277,12 @@ export class MoveCommitter {
 }
 
 /**
- * Refuses Start quiz (not End quiz) while Versus is on and a roster team has no side.
- * The leaderboard lists every roster team (re-read with each write), so it
- * covers teams that have not rejoined since a restart, unlike `session.teams`.
+ * Refuses the move while a roster team has no side (the caller checks the
+ * start-needs-every-side fact). The leaderboard lists every roster team
+ * (re-read with each write), so it covers teams that have not rejoined since
+ * a restart, unlike `session.teams`.
  */
-function assertEveryTeamHasSideToStart(
-  session: SessionState,
-  pressed: GameAction,
-): void {
-  if (
-    pressed !== 'START_QUIZ' ||
-    session.progress.status !== 'lobby' ||
-    !session.seededGame.settings.versusEnabled
-  ) {
-    return;
-  }
+function assertEveryTeamHasSide(session: SessionState): void {
   if (session.leaderboard.some((entry) => !session.teamSides[entry.teamId])) {
     throw new SessionRefusal(
       'Every team needs a side before the quiz can start',

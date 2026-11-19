@@ -405,6 +405,9 @@ lobby → rules → round_overview
 
 ## Moving through the quiz
 
+**Transition fact**:
+A named consequence of a move between two statuses (for example "grades become visible", "leaves the lobby", "joker pick closes"), decided in one place from the session before the move, the status after it and the press. A fact says only that something must happen; the module that owns the effect carries it out.
+
 **Move plan**:
 What one press of an admin action does right now. Advance and Previous: reveal the next leaderboard rank, hide the leaderboard, take a step of the **Stepped reveal** on air (the showdown or a closest-guess reveal), move the quiz to its next status, wait for grading (Advance out of the break while an answer is ungraded — pressable, but refused with the ungraded questions), or nothing. Any other action (Start quiz in the lobby, Toggle leaderboard, …) is a plain transition, or blocked when illegal. The Move plan also owns "the next press": Start quiz in the lobby, Advance everywhere else. While the leaderboard is up, a press only works the leaderboard; while the join overlay is up, Advance or Previous only hides it. Neither ever moves the quiz underneath. Previous on the rules goes back to the lobby.
 \_Avoid\*: next step, action result
