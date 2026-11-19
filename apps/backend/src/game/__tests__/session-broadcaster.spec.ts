@@ -17,7 +17,6 @@ describe('SessionBroadcaster', () => {
     const unattached = new SessionBroadcaster(
       game.gameState,
       game.answerService,
-      game.bonusService,
       game.orm,
     );
     game.clearEmits();
@@ -42,7 +41,6 @@ describe('SessionBroadcaster', () => {
       const unattached = new SessionBroadcaster(
         game.gameState,
         game.answerService,
-        game.bonusService,
         game.orm,
       );
 

@@ -13,7 +13,6 @@ import {
 } from '@/game/state/session-updates.util';
 import {
   BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 
@@ -92,10 +91,6 @@ export class TeamPlayerCountChanges {
         shouldBroadcastState: false,
         shouldBroadcastAdminState: true,
         changedTeamIds: [teamId],
-        playerCountSyncs: connectedTeamSyncs(session, [teamId]).map((sync) => ({
-          ...sync,
-          playerCount,
-        })),
       },
       touchedScores: false,
     };

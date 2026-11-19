@@ -4,6 +4,7 @@ import {
   type AckResult,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 import {
   setupRealStoreGatewayTest,
   type JoinedTeam,
@@ -18,19 +19,12 @@ function setCount(
   return game.gateway.handleSetPlayerCount(asSocket(team.socket), payload);
 }
 
-/** The player count syncs the server addressed to this team's socket, in emit order. */
+/** The player counts of the team views the server addressed to this team's socket, in emit order. */
 function syncsTo(
   game: RealStoreGateway,
   team: Pick<JoinedTeam, 'socket'>,
 ): unknown[] {
-  return game
-    .roomEmits()
-    .filter(
-      (emit) =>
-        emit.rooms.includes(team.socket.id) &&
-        emit.event === SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED,
-    )
-    .map((emit) => emit.payload);
+  return teamViewsTo(game, team).map(({ playerCount }) => ({ playerCount }));
 }
 
 /** Rejoins the team on a fresh socket, as a phone reconnecting would, and returns the player count JOIN_ACCEPTED carried. */
@@ -188,7 +182,6 @@ describe('GameGateway — a team reports its player count', () => {
     ).toEqual([
       [SOCKET_EVENTS.STATE_UPDATED, false],
       [SOCKET_EVENTS.TEAM_VIEW, true],
-      [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, true],
     ]);
     expect(
       game.payloadsTo(SOCKET_ROOMS.DISPLAY, SOCKET_EVENTS.STATE_UPDATED),

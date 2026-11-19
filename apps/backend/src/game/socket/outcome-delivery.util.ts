@@ -5,7 +5,6 @@ import {
   sessionRoom,
 } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
-import type { BonusService } from '@/bonus/bonus.service';
 import { buildAnswersUpdatedPayload } from '@/game/socket/answers-updated-payload.util';
 import {
   broadcastAdminState,
@@ -24,7 +23,6 @@ import type {
 export interface OutcomeDeliveryDeps {
   gameState: GameStateService;
   answerService: AnswerService;
-  bonusService: BonusService;
   server: GameServer;
   rearmTimers: (joinCode: string, deadlines: DeadlineChange) => void;
 }
@@ -42,8 +40,7 @@ export type DeliverFn = (
  * one), so a failed emit can't leave them out of step with a session that was
  * already stored. Then, always in the same order:
  * replies to the sender, presenter context to admin, the state snapshot to
- * all three rooms, admin answer lists, per-team bonus award syncs, team views,
- * per-team player count, joker, side, purchase and coin syncs, per-socket notices, then the sockets to close.
+ * all three rooms, admin answer lists, team views, per-socket notices, then the sockets to close.
  * The closes run even if an earlier step fails, since the event was already
  * applied by then. `sender` is absent for events no socket sent (timer
  * expiries), which have no replies.
@@ -87,7 +84,7 @@ async function deliverEmits(
       broadcastDisplayState(server, joinCode, gameState);
     }
   }
-  await emitStoredLists(deps, joinCode, outcome);
+  await emitAnswerLists(deps, joinCode, outcome);
   // Each connected changed team's own socket alone, never the players room.
   if (outcome.changedTeamIds.length > 0) {
     for (const { socketId, teamView } of await gameState.projectTeamViews(
@@ -97,12 +94,14 @@ async function deliverEmits(
       server.to(socketId).emit(SOCKET_EVENTS.TEAM_VIEW, teamView);
     }
   }
-  emitTeamSyncs(server, outcome);
+  for (const notice of outcome.notices) {
+    emitNotice(server.to(notice.socketId), notice);
+  }
 }
 
-/** The syncs that read stored answers or bonus awards before they go out. */
-async function emitStoredLists(
-  { gameState, answerService, bonusService, server }: OutcomeDeliveryDeps,
+/** The admin room's answer lists, read from storage before they go out. */
+async function emitAnswerLists(
+  { gameState, answerService, server }: OutcomeDeliveryDeps,
   joinCode: string,
   outcome: SessionOutcome,
 ): Promise<void> {
@@ -117,40 +116,6 @@ async function emitStoredLists(
         SOCKET_EVENTS.ANSWERS_UPDATED,
         buildAnswersUpdatedPayload(gameState, joinCode, questionId, answers),
       );
-  }
-
-  for (const { teamId, socketId } of outcome.bonusSyncs) {
-    const bonusAwards = await bonusService.listForTeam(
-      gameState.getGameSessionId(joinCode),
-      teamId,
-    );
-    server
-      .to(socketId)
-      .emit(SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED, { bonusAwards });
-  }
-}
-
-/** The syncs whose payload the outcome already carries. */
-function emitTeamSyncs(
-  server: OutcomeDeliveryDeps['server'],
-  outcome: SessionOutcome,
-): void {
-  for (const { socketId, playerCount } of outcome.playerCountSyncs) {
-    server
-      .to(socketId)
-      .emit(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, { playerCount });
-  }
-
-  for (const { socketId, payload } of outcome.purchaseSyncs) {
-    server.to(socketId).emit(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, payload);
-  }
-
-  for (const { socketId, payload } of outcome.coinSyncs) {
-    server.to(socketId).emit(SOCKET_EVENTS.TEAM_COINS_SYNCED, payload);
-  }
-
-  for (const notice of outcome.notices) {
-    emitNotice(server.to(notice.socketId), notice);
   }
 }
 

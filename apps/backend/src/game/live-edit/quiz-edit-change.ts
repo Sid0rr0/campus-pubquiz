@@ -46,14 +46,13 @@ export function quizEditChange(
     // deleted one, an extra joker refunded) before anything is graded, so the
     // regrade and every total see the final doubled rounds. The extra jokers go
     // first: a joker never lands on a round its team doubles that way.
-    const { session: reloadedQuiz, purchaseSyncs } =
+    const { session: reloadedQuiz, changedTeamIds: purchaseTeamIds } =
       await purchases.followRoundsAfterEdit(
         started,
         await withReloadedQuiz(seedService, started),
       );
     const { session: reloaded, changedTeamIds: jokerTeamIds } =
       await jokers.followRoundsAfterEdit(started, reloadedQuiz);
-    const broadcast = { ...BROADCAST_STATE_OUTCOME, purchaseSyncs };
     // With nothing to regrade (or nothing re-scored) this comes back with the
     // session unchanged and no questions or teams, i.e. a plain broadcast.
     const { session, regradedQuestionIds, answeringTeamIds } =
@@ -65,6 +64,7 @@ export function quizEditChange(
         ...session.teams
           .filter((team) => answeringTeamIds.has(team.teamId))
           .map((team) => team.teamId),
+        ...purchaseTeamIds,
         ...jokerTeamIds,
         ...Object.keys(session.jokers).map(Number),
       ]),
@@ -72,7 +72,7 @@ export function quizEditChange(
     return {
       session,
       outcome: {
-        ...broadcast,
+        ...BROADCAST_STATE_OUTCOME,
         answerListQuestionIds: regradedQuestionIds,
         changedTeamIds,
       },

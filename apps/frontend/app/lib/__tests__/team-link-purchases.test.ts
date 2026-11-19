@@ -49,15 +49,15 @@ describe('the Team link — power-up purchases', () => {
     expect(state.myPurchases).toEqual([BOUGHT]);
   });
 
-  it('takes the purchases and the coins left from a sync after a purchase', () => {
+  it('takes the purchases and the coins left from the team view sent after a purchase', () => {
     const joined = teamLink(start(), {
       type: 'joinAccepted',
       payload: joinAccepted({ ...ACCEPTED, purchases: [], coins: 2 }),
     }).state;
 
     const { state } = teamLink(joined, {
-      type: 'purchasesSynced',
-      payload: { purchases: [BOUGHT], coins: 1 },
+      type: 'teamViewReceived',
+      view: teamView({ purchases: [BOUGHT], coins: 1 }),
     });
 
     expect(state.myPurchases).toEqual([BOUGHT]);

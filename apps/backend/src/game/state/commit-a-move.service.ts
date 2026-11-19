@@ -20,7 +20,6 @@ import type {
 } from '@/game/state/game-progress.repository';
 import {
   BROADCAST_STATE_OUTCOME,
-  coinSyncsFor,
   isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
@@ -218,11 +217,13 @@ export class MoveCommitter {
             ...(isRevealEntry(session.progress.status, progress.status)
               ? committed.teams.map((team) => team.teamId)
               : []),
+            // A phone joined in the lobby knows its coins from before they were decided.
+            ...(isLeavingLobby
+              ? Object.keys(committed.connectedTeamSockets).map(Number)
+              : []),
             ...(closedPick?.changedTeamIds ?? []),
           ]),
         ],
-        // A phone joined in the lobby knows its coins from before they were decided.
-        coinSyncs: isLeavingLobby ? coinSyncsFor(committed) : [],
       },
       touchedScores: true,
     };

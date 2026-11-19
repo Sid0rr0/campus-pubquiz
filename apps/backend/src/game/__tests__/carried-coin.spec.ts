@@ -1,5 +1,6 @@
 import {
   CARRIED_COINS,
+  type OwnTeamView,
   SOCKET_EVENTS,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
@@ -181,7 +182,7 @@ describe('Carried coin', () => {
     expect(adminCoins()).toEqual({ Quizzards: CARRIED_COINS });
   });
 
-  it('tells a phone that joined in the lobby its carried coins when the quiz starts', async () => {
+  it('sends a phone that joined in the lobby a team view with its carried coins when the quiz starts', async () => {
     await putCurrentSessionInLeague();
     const team = await seedTeam('Quizzards');
     await playNight(team, { inLeague: true, ratedRounds: [0, 1] });
@@ -193,12 +194,17 @@ describe('Carried coin', () => {
     expect(
       game
         .roomEmits()
-        .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_COINS_SYNCED)
-        .map(({ rooms, payload }) => ({ rooms, payload })),
+        .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_VIEW)
+        .map(({ rooms, payload }) => ({
+          rooms,
+          coins: (payload as OwnTeamView).coins,
+          hasCarriedCoin: (payload as OwnTeamView).hasCarriedCoin,
+        })),
     ).toEqual([
       {
         rooms: [lastDevice.get(team.id)],
-        payload: { balance: CARRIED_COINS, hasCarriedCoin: true },
+        coins: CARRIED_COINS,
+        hasCarriedCoin: true,
       },
     ]);
   });

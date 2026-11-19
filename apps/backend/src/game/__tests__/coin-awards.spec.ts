@@ -1,6 +1,10 @@
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
+import {
   setupRealStoreGatewayTest,
   type JoinedTeam,
   type RealStoreGateway,
@@ -87,13 +91,13 @@ describe('Coin awards', () => {
     );
 
     expect(adminCoins()).toBe(1);
-    expect(emitted(SOCKET_EVENTS.TEAM_COINS_SYNCED)).toEqual([
-      {
-        rooms: [team.socket.id],
-        payload: { balance: 1, hasCarriedCoin: false },
-      },
-    ]);
+    expect(teamViewsTo(game, team).at(-1)).toMatchObject({
+      coins: 1,
+      hasCarriedCoin: false,
+      bonusAwards: [],
+    });
     expect(emitted(SOCKET_EVENTS.COIN_AWARDED)).toEqual([]);
+    await expectLiveEqualsResync(game, team);
   });
 
   it('lets a deleted shot take no more coins than the team has left, so a later award is not swallowed', async () => {
@@ -149,7 +153,7 @@ describe('Coin awards', () => {
     );
 
     expect(adminCoins()).toBe(3);
-    expect(emitted(SOCKET_EVENTS.TEAM_COINS_SYNCED)).toEqual([]);
+    expect(teamViewsTo(game, team).at(-1)?.coins).toBe(3);
   });
 
   it('gives no coin for a shot award that takes points away', async () => {

@@ -1,9 +1,9 @@
-import {
-  DEFAULT_SESSION_SETTINGS,
-  SOCKET_EVENTS,
-  type TeamPurchasesSyncedPayload,
-} from '@campus-pubquiz/types';
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
 import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
 import {
   advanceUntil,
@@ -62,14 +62,7 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
   }
 
   function syncsTo(game: RealStoreGateway, team: Pick<JoinedTeam, 'socket'>) {
-    return game
-      .roomEmits()
-      .filter(
-        (emit) =>
-          emit.rooms.includes(team.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_PURCHASES_SYNCED,
-      )
-      .map((emit) => emit.payload as TeamPurchasesSyncedPayload);
+    return teamViewsTo(game, team);
   }
 
   it('follows the round it was bought for when the rounds are reordered', async () => {
@@ -97,7 +90,11 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
     await game.saveQuizEdit((rounds) => [rounds[1], rounds[2]]);
 
     expect(await stored(game, alpha)).toEqual([]);
-    expect(syncsTo(game, alpha).at(-1)).toEqual({ purchases: [], coins: 5 });
+    expect(syncsTo(game, alpha).at(-1)).toMatchObject({
+      purchases: [],
+      coins: 5,
+    });
+    await expectLiveEqualsResync(game, alpha);
   });
 
   // The edit deletes the row the round sat on (the last one), and the database takes the purchase with it.

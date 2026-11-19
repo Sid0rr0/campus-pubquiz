@@ -203,7 +203,8 @@ describe('GameGateway — the quiz master moves a team', () => {
     await game.openFirstQuestion(admin);
     expect(await move(team.teamId, 'law')).toEqual({ success: true });
 
-    expect(sidesTo(game, team)).toEqual(['eng', 'law']);
+    // The middle one is leaving the lobby, which sends every team its coins.
+    expect(sidesTo(game, team)).toEqual(['eng', 'eng', 'law']);
     expect(await rosterSides(game)).toEqual({
       Quizzards: 'law',
       Rivals: 'law',

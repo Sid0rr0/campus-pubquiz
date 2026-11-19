@@ -125,6 +125,74 @@ describe('GameGateway — the team view', () => {
     await expectLiveEqualsResync(game, alpha);
   });
 
+  it('after leaving the lobby, the last team view carries the starting coins, equal to a rejoin', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Alpha'],
+      settings: { powerUpsEnabled: true, startingCoins: 3 },
+    });
+    const [alpha] = game.teams;
+    await game.act('START_QUIZ');
+
+    expect(teamViewsTo(game, alpha).at(-1)?.coins).toBe(3);
+    await expectLiveEqualsResync(game, alpha);
+  });
+
+  it('after a power-up purchase, the last team view carries the purchase and the coins left, equal to a rejoin', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Alpha', 'Bravo'],
+      settings: { powerUpsEnabled: true, startingCoins: 3 },
+    });
+    await game.openFirstQuestion(await game.connectAdmin());
+    const [alpha, bravo] = game.teams;
+    game.clearEmits();
+
+    await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
+      powerUp: 'fifty_fifty',
+      questionId: game.questionIds.multipleChoice,
+    });
+
+    const view = teamViewsTo(game, alpha).at(-1);
+    expect(view?.coins).toBe(1); // 3 starting coins, a 50/50 costs 2
+    expect(view?.purchases).toHaveLength(1);
+    expect(teamViewsTo(game, bravo)).toEqual([]);
+    await expectLiveEqualsResync(game, alpha);
+  });
+
+  it('after an extra joker purchase, the last team view lists the bought round as doubled, equal to a rejoin', async () => {
+    const game = await harness.createGateway({
+      rounds: [1, 2].map((number) => ({
+        title: `Round ${number}`,
+        breakAfter: true,
+        questions: [
+          {
+            type: 'multiple_choice' as const,
+            prompt: `Question of round ${number}?`,
+            answer: 'right',
+            points: 1,
+            payload: { options: ['right', 'wrong'] },
+          },
+        ],
+      })),
+      teamNames: ['Alpha'],
+      settings: { powerUpsEnabled: true, startingCoins: 10 },
+    });
+    await game.act('START_QUIZ');
+    const [alpha] = game.teams;
+    game.clearEmits();
+
+    await game.gateway.handleBuyPowerUp(asSocket(alpha.socket), {
+      powerUp: 'extra_joker',
+      roundId: game.rounds[0].id,
+    });
+
+    const view = teamViewsTo(game, alpha).at(-1);
+    expect(view?.purchases).toHaveLength(1);
+    expect(view?.doubledRounds).toEqual([
+      expect.objectContaining({ roundId: game.rounds[0].id }),
+    ]);
+    await expectLiveEqualsResync(game, alpha);
+  });
+
   it('carries the team view in the join reply next to its identity', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const [team] = game.teams;

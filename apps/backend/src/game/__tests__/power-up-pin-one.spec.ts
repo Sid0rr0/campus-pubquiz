@@ -1,9 +1,6 @@
-import {
-  SOCKET_EVENTS,
-  type AckResult,
-  type TeamPurchasesSyncedPayload,
-} from '@campus-pubquiz/types';
+import type { AckResult } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 import {
   setupRealStoreGatewayTest,
   type JoinedTeam,
@@ -88,14 +85,7 @@ describe('GameGateway — buying a pin one', () => {
       item: 'Dog',
       position: 2,
     });
-    const sync = game
-      .roomEmits()
-      .filter(
-        (emit) =>
-          emit.rooms.includes(alpha.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_PURCHASES_SYNCED,
-      )
-      .map((emit) => emit.payload as TeamPurchasesSyncedPayload);
+    const sync = teamViewsTo(game, alpha);
     expect(sync[0].purchases[0].effect).toEqual(purchase.effect);
     expect(sync[0].coins).toBe(1);
   });

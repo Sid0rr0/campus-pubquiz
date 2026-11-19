@@ -12,6 +12,10 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
+import {
   BonusAwardNotFoundError,
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
@@ -108,48 +112,39 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     expect(bonusOf(scorer.teamId)).toBe(0);
   });
 
-  function bonusSyncs() {
-    return game
-      .roomEmits()
-      .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED);
-  }
-
-  it('syncs an edited award to the awarded team’s socket only, without a toast', async () => {
+  it('sends an edited award to the awarded team’s socket only, as a team view without a toast', async () => {
     const awardId = await awardShot(1);
 
     await game.inRequestContext(() =>
       game.rest.editBonus(game.joinCode, awardId, 3, undefined),
     );
 
-    expect(bonusSyncs()).toEqual([
+    expect(teamViewsTo(game, scorer)).toEqual([
       expect.objectContaining({
-        rooms: [scorer.socket.id],
-        payload: {
-          bonusAwards: [{ category: 'shot', points: 3, reason: null }],
-        },
+        bonusAwards: [{ category: 'shot', points: 3, reason: null }],
       }),
     ]);
+    expect(teamViewsTo(game, idle)).toEqual([]);
     expect(game.roomEmits().map((emit) => emit.event)).not.toContain(
       SOCKET_EVENTS.BONUS_AWARDED,
     );
+    await expectLiveEqualsResync(game, scorer);
   });
 
-  it('syncs a deletion to the awarded team’s socket with the award gone', async () => {
+  it('sends a deletion to the awarded team’s socket as a team view with the award gone', async () => {
     const awardId = await awardShot(1);
 
     await game.inRequestContext(() =>
       game.rest.removeBonus(game.joinCode, awardId),
     );
 
-    expect(bonusSyncs()).toEqual([
-      expect.objectContaining({
-        rooms: [scorer.socket.id],
-        payload: { bonusAwards: [] },
-      }),
+    expect(teamViewsTo(game, scorer)).toEqual([
+      expect.objectContaining({ bonusAwards: [] }),
     ]);
+    await expectLiveEqualsResync(game, scorer);
   });
 
-  it('sends a disconnected team no sync, and its rejoin carries the current list', async () => {
+  it('sends a disconnected team no team view, and its rejoin carries the current list', async () => {
     const awardId = await awardShot(1);
     await game.gateway.handleDisconnect(asSocket(scorer.socket));
     game.clearEmits();
@@ -157,7 +152,7 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     await game.inRequestContext(() =>
       game.rest.editBonus(game.joinCode, awardId, 3, undefined),
     );
-    expect(bonusSyncs()).toEqual([]);
+    expect(teamViewsTo(game, scorer)).toEqual([]);
 
     const rejoined = await game.connectPlayer();
     await game.gateway.handleJoinPlayers(asSocket(rejoined), {
@@ -168,12 +163,14 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     expect(rejoined.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.JOIN_ACCEPTED,
       expect.objectContaining({
-        bonusAwards: [{ category: 'shot', points: 3, reason: null }],
+        teamView: expect.objectContaining({
+          bonusAwards: [{ category: 'shot', points: 3, reason: null }],
+        }) as unknown,
       }),
     );
   });
 
-  it('keeps the toast and sends no sync for a fresh award', async () => {
+  it('keeps the toast and sends the fresh award in a team view too', async () => {
     await game.gateway.handleAwardBonus(asSocket(admin), {
       teamId: scorer.teamId,
       category: 'shot',
@@ -183,7 +180,10 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     expect(game.roomEmits().map((emit) => emit.event)).toContain(
       SOCKET_EVENTS.BONUS_AWARDED,
     );
-    expect(bonusSyncs()).toEqual([]);
+    expect(teamViewsTo(game, scorer).at(-1)?.bonusAwards).toEqual([
+      { category: 'shot', points: 1, reason: null },
+    ]);
+    await expectLiveEqualsResync(game, scorer);
   });
 
   it('applies a REST bonus edit queued behind a held write after that write, and the next snapshot reflects both', async () => {

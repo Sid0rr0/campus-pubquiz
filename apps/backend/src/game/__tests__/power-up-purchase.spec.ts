@@ -7,8 +7,8 @@ import {
   type AnswersUpdatedPayload,
   type PowerUpId,
   type PowerUpSettings,
+  type OwnTeamView,
   type SessionSettings,
-  type TeamPurchasesSyncedPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
@@ -100,15 +100,8 @@ describe('GameGateway — buying a 50/50', () => {
   function syncsTo(
     game: RealStoreGateway,
     team: Pick<JoinedTeam, 'socket'>,
-  ): TeamPurchasesSyncedPayload[] {
-    return game
-      .roomEmits()
-      .filter(
-        (emit) =>
-          emit.rooms.includes(team.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_PURCHASES_SYNCED,
-      )
-      .map((emit) => emit.payload as TeamPurchasesSyncedPayload);
+  ): OwnTeamView[] {
+    return teamViewsTo(game, team);
   }
 
   function storedPurchases(game: RealStoreGateway, team: JoinedTeam) {
@@ -416,6 +409,7 @@ describe('GameGateway — buying a 50/50', () => {
           { teamNames: ['A', 'B', 'C', 'D'] },
         );
         const { france } = ids(game);
+        game.clearEmits(); // leaving the lobby sent every team its coins
         for (const team of game.teams.slice(1)) {
           await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
             questionId: france,

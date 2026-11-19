@@ -19,20 +19,14 @@ import type {
   AwardBonusPayload,
   BonusAwardedPayload,
   CoinAwardedPayload,
-  TeamBonusAwardsSyncedPayload,
-  TeamCoinsSyncedPayload,
 } from './bonus';
 import type { RateRoundPayload, SendFeedbackPayload } from './feedback';
 import type { RateSessionPayload } from './session-scales';
 import type { PickJokerPayload, SetTeamJokerPayload } from './joker';
-import type {
-  BuyPowerUpPayload,
-  TeamPurchasesSyncedPayload,
-} from './power-ups';
+import type { BuyPowerUpPayload } from './power-ups';
 import type {
   SetPlayerCountPayload,
   SetTeamPlayerCountPayload,
-  TeamPlayerCountSyncedPayload,
 } from './player-count';
 import type { PickSidePayload, SetTeamSidePayload } from './versus';
 import type { PresenterContextPayload, StateViewByRoom } from './room-views';
@@ -128,12 +122,8 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.ANSWERS_UPDATED]: AnswersUpdatedPayload;
   [SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED]: PresenterContextPayload;
   [SOCKET_EVENTS.BONUS_AWARDED]: BonusAwardedPayload;
-  [SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED]: TeamBonusAwardsSyncedPayload;
   [SOCKET_EVENTS.COIN_AWARDED]: CoinAwardedPayload;
-  [SOCKET_EVENTS.TEAM_COINS_SYNCED]: TeamCoinsSyncedPayload;
   [SOCKET_EVENTS.SESSION_CLOSED]: SessionClosedPayload;
-  [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
-  [SOCKET_EVENTS.TEAM_PURCHASES_SYNCED]: TeamPurchasesSyncedPayload;
   [SOCKET_EVENTS.TEAM_VIEW]: OwnTeamView;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
   exception: ExceptionPayload | string;

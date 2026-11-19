@@ -4,6 +4,7 @@ import {
   type AckResult,
 } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 import {
   setupRealStoreGatewayTest,
   tieOnFirstQuestion,
@@ -29,19 +30,12 @@ function teamSetCount(
   });
 }
 
-/** The player count syncs the server addressed to this team's socket, in emit order. */
+/** The player counts of the team views the server addressed to this team's socket, in emit order. */
 function syncsTo(
   game: RealStoreGateway,
   team: Pick<JoinedTeam, 'socket'>,
 ): unknown[] {
-  return game
-    .roomEmits()
-    .filter(
-      (emit) =>
-        emit.rooms.includes(team.socket.id) &&
-        emit.event === SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED,
-    )
-    .map((emit) => emit.payload);
+  return teamViewsTo(game, team).map(({ playerCount }) => ({ playerCount }));
 }
 
 /** The count stored for a team, read straight from the database. */

@@ -234,7 +234,7 @@ describe('team link: the team data', () => {
     });
   });
 
-  it('appends a live bonus award and toasts it; awards restored on join are not toasted', () => {
+  it('toasts a live bonus award without touching the list (the team view carries it); awards restored on join are not toasted', () => {
     const restored = run(
       initialTeamLink({ url: {}, stored: STORED }),
       accepted(),
@@ -245,7 +245,7 @@ describe('team link: the team data', () => {
       type: 'bonusAwarded',
       payload: { category: 'selfie', points: 2 },
     });
-    expect(live.state.myBonusAwards).toHaveLength(2);
+    expect(live.state.myBonusAwards).toEqual(linkedPhone().myBonusAwards);
     const toasts = ofType(live.commands, 'toast');
     expect(toasts).toHaveLength(1);
     expect(toasts[0]).toMatchObject({ tone: 'success' });
@@ -261,13 +261,14 @@ describe('team link: the team data', () => {
   });
 
   describe('the coins', () => {
-    it('toasts coins the quiz master gave and shows the new balance', () => {
-      const gained = run(linkedPhone(), {
+    it('toasts coins the quiz master gave and leaves the balance to the team view', () => {
+      const before = linkedPhone();
+      const gained = run(before, {
         type: 'coinAwarded',
         payload: { coins: 2, balance: 3, reason: 'Trivia hero' },
       });
 
-      expect(gained.state.team?.coins).toBe(3);
+      expect(gained.state.team?.coins).toBe(before.team?.coins);
       expect(ofType(gained.commands, 'toast')).toEqual([
         expect.objectContaining({
           tone: 'success',
@@ -291,7 +292,6 @@ describe('team link: the team data', () => {
         type: 'coinAwarded',
         payload: { coins: -2, balance: 0 },
       });
-      expect(taken.state.team?.coins).toBe(0);
       expect(ofType(taken.commands, 'toast')[0]).toMatchObject({
         tone: 'neutral',
       });
@@ -322,10 +322,10 @@ describe('team link: the team data', () => {
       expect(ofType(taken.commands, 'toast')[0].message).toBe('-2 coins');
     });
 
-    it('updates the balance quietly when a sync says it changed', () => {
+    it('updates the balance quietly when a team view says it changed', () => {
       const synced = run(linkedPhone(), {
-        type: 'coinsSynced',
-        payload: { balance: 5, hasCarriedCoin: true },
+        type: 'teamViewReceived',
+        view: teamView({ coins: 5, hasCarriedCoin: true }),
       });
 
       expect(synced.state.team?.coins).toBe(5);
@@ -493,8 +493,8 @@ describe('team link: the team data', () => {
     expect(joined.state.myPlayerCount).toBe(4);
 
     const synced = run(joined.state, {
-      type: 'playerCountSynced',
-      playerCount: 6,
+      type: 'teamViewReceived',
+      view: teamView({ playerCount: 6 }),
     });
     expect(synced.state.myPlayerCount).toBe(6);
 

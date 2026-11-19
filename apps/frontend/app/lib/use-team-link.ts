@@ -414,29 +414,11 @@ export function useTeamLink(
       socket.on(SOCKET_EVENTS.TEAM_VIEW, (view) =>
         dispatch({ type: 'teamViewReceived', view }),
       );
-      socket.on(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, (payload) =>
-        dispatch({
-          type: 'playerCountSynced',
-          playerCount: payload.playerCount,
-        }),
-      );
-      socket.on(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, (payload) =>
-        dispatch({ type: 'purchasesSynced', payload }),
-      );
       socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload) =>
         dispatch({ type: 'bonusAwarded', payload }),
       );
-      socket.on(SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED, (payload) =>
-        dispatch({
-          type: 'bonusAwardsSynced',
-          bonusAwards: payload.bonusAwards,
-        }),
-      );
       socket.on(SOCKET_EVENTS.COIN_AWARDED, (payload) =>
         dispatch({ type: 'coinAwarded', payload }),
-      );
-      socket.on(SOCKET_EVENTS.TEAM_COINS_SYNCED, (payload) =>
-        dispatch({ type: 'coinsSynced', payload }),
       );
       socket.on(SOCKET_EVENTS.SESSION_CLOSED, () =>
         dispatch({ type: 'sessionClosed' }),

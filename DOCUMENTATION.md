@@ -741,7 +741,7 @@ Teams table whenever a phone would show coins, including carried coins with powe
 The starting coins, the carried coins, the coin awards and the purchases all count.
 The balance is sent as
 `coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
-`TEAM_PURCHASES_SYNCED` after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
+the team view after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
 "Power-ups are on: you start with N coins. If your team rated all rounds of the
 last pub quiz, you get 2 bonus coins. Earn more with shots and selfies." when
@@ -781,10 +781,10 @@ session keeps each team's coin award sum in a cache (`SessionState.coinAwards`,
 read from the table when the session is placed, so a restart gets it back) so the
 snapshot's `coins` stay synchronous. The awarded team's phone hears
 `COIN_AWARDED` (`{ coins, reason?, balance }`, a toast: the coins this award gave
-in all, with the new balance), and `TEAM_COINS_SYNCED` (`{ balance, hasCarriedCoin }`,
-no toast) when deleting a bonus award took its coin award with it, when the quiz
-leaves the lobby (carried coins were just decided) and when the lobby settings
-change. The balance never shows
+in all, with the new balance), beside a fresh team view. The team view alone
+(no toast) carries the coins when deleting a bonus award took its coin award with
+it, when the quiz leaves the lobby (carried coins were just decided) and when the
+lobby settings change. The balance never shows
 below 0, even when a removed award's coins were already spent. The quiz master sees a
 team's coin awards, oldest first with their reasons, under its bonus awards on
 `/control`: `GET /sessions/:joinCode/teams/:teamId/bonus-awards` carries them as
@@ -806,8 +806,8 @@ session, power-up, question or round, the cost paid, and the **stored effect** a
 JSON, parsed on read by `purchaseEffectSchema`): the effect is drawn once at
 purchase and never changes, so a reconnect or backend restart shows the same
 thing. The balance subtracts the sum of the `cost` column through the Coin ledger,
-nowhere else. The buying team's phones get `TEAM_PURCHASES_SYNCED`
-(`{ purchases, coins }`) and `JOIN_ACCEPTED` carries the same `purchases`; the admin
+nowhere else. The buying team's phones get a team view
+(`purchases` and `coins`, the same in `JOIN_ACCEPTED`'s `teamView`); the admin
 room is refreshed (the Coins column and the answer list). A later power-up adds a
 member to `PurchaseEffect`/`purchaseEffectSchema`, a case to the effect builder in
 `purchase-changes.ts` and the id to its question types' `powerUps`.
@@ -1070,7 +1070,7 @@ joker is optional, so it is removed and its cost handed back (the balance is
 worked out from the purchase rows). That also happens when two extra jokers of a
 team would land on one round. A round that survives keeps its extra jokers even
 when the row it sat on is deleted (the save stores them again from the session's
-cache of purchases, since the database drops a deleted row's purchases). Every connected team is then sent `TEAM_PURCHASES_SYNCED` so its coins
+cache of purchases, since the database drops a deleted row's purchases). Every team that held an extra joker is then sent a team view so its coins
 and purchases stay right.
 
 **One joker per team.** In a session with Jokers every team always holds exactly
@@ -1171,19 +1171,12 @@ whose intro, break round intro or reveal intro is on air; each `null` on every
 other screen, decided from the on-air screen in `screen-preview.util.ts`),
 `TEAM_VIEW` (the **Team view**, `OwnTeamView`, to a changed team's own socket
 only, after the room broadcasts; `JOIN_ACCEPTED` carries the same view as
-`teamView`, built by the same projection; the per-team sync events below are
-being folded into it; it carries the team's joker, side and doubled rounds, see
-Jokers above and `PICK_SIDE`),
-`TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
-team's own phone only), `BONUS_AWARDED` (one fresh award, appended on the
-phone with a toast), `TEAM_BONUS_AWARDS_SYNCED` (`{ bonusAwards }`, the team's
-full list in award order as `TeamBonusAwardView[]`, to the awarded team's own
-phone only when the quiz master edits or deletes an award; it replaces the
-phone's list with no toast, and a disconnected team catches up on rejoin),
-`COIN_AWARDED` and `TEAM_COINS_SYNCED` (to the team's own phone; see Coin awards
-above),
-`TEAM_PURCHASES_SYNCED` (`{ purchases, coins }`, to the buying team's own phones
-only; see Buying a power-up above),
+`teamView`, built by the same projection; it carries everything a team's phones
+may know about the team: answers, bonus awards, player count, joker, side,
+doubled rounds, coins, purchases and Ask the room readiness, see Jokers above,
+`PICK_SIDE` and Coin awards; a disconnected team catches up on rejoin),
+`BONUS_AWARDED` (one fresh award: a toast only, the award itself arrives in the
+team view sent beside it), `COIN_AWARDED` (a toast only; see Coin awards above),
 `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
@@ -1261,9 +1254,8 @@ it is not stored on the roster row because a kick deletes that row and the count
 survive a kick and a rejoin. Setting it again replaces the number (last write wins);
 there is no way to clear it back to unknown. It goes through the session write,
 declaring that it doesn't change scores, and broadcasts no room view: the display view
-and the players view are untouched. Instead the server sends `TEAM_PLAYER_COUNT_SYNCED`
-(`{ playerCount }`) to the team's connected phone through the per-team sync (the path
-that also carries the team's answers), so a team's count never reaches another team.
+and the players view are untouched. Instead the server sends a team view
+(`playerCount`) to the team's connected phone only, so a team's count never reaches another team.
 The service that reads and writes it is `PlayerCountService`
 (`apps/backend/src/player-count/`).
 
@@ -1338,8 +1330,7 @@ A team removed before it left any record is not recoverable and is refused. Both
 player count events are refused once the session is closed (its state is evicted, so the
 write fails with an unknown-session error). It writes the same per-team, per-session row as the
 phone's event (last write wins, so the team's later report overwrites the correction
-and vice versa) and reaches the team's phones through the same `TEAM_PLAYER_COUNT_SYNCED`
-per-team sync; a team with no connected phone gets the number on its next join. The
+and vice versa) and reaches the team's phones through the same team view; a team with no connected phone gets the number on its next join. The
 big screen and the players view are untouched. The admin room alone is sent a fresh
 `STATE_UPDATED` (the outcome's `shouldBroadcastAdminState`), after this event and
 after a team's own `SET_PLAYER_COUNT`, so an open `/control` shows the new number.

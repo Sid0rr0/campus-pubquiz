@@ -22,8 +22,3 @@ export interface SetPlayerCountPayload {
 export interface SetTeamPlayerCountPayload extends SetPlayerCountPayload {
   teamId: number;
 }
-
-/** Sent to a team's own phone after its player count changed, so every phone of the team shows the same number. */
-export interface TeamPlayerCountSyncedPayload {
-  playerCount: number;
-}

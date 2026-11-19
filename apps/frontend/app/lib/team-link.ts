@@ -21,10 +21,8 @@ import {
   type SubmitAnswerPayload,
   type TeamAnswerView,
   type TeamBonusAwardView,
-  type TeamCoinsSyncedPayload,
   type TeamFeedbackView,
   type TeamJoker,
-  type TeamPurchasesSyncedPayload,
   type TeamSessionRatingsView,
   type Verdict,
 } from '@campus-pubquiz/types';
@@ -209,12 +207,10 @@ export type TeamLinkInput =
   // A new socket identity: the previous team's data and pending answer go.
   | { type: 'identityChanged' }
   | { type: 'answerReceived'; payload: AnswerReceivedPayload }
+  // A bonus award was given: a toast only, the list arrives in the team view.
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
-  // The quiz master gave (or took) coins: a toast and the new balance.
+  // The quiz master gave (or took) coins: a toast only, the balance arrives in the team view.
   | { type: 'coinAwarded'; payload: CoinAwardedPayload }
-  // The team's coins changed without a new award (a bonus award went, the quiz left the lobby, the lobby settings changed).
-  | { type: 'coinsSynced'; payload: TeamCoinsSyncedPayload }
-  | { type: 'bonusAwardsSynced'; bonusAwards: TeamBonusAwardView[] }
   | { type: 'answerResult'; attempt: number; result: AckResult }
   // The answer never left the socket (not connected, or no acknowledgement in time).
   | { type: 'answerNotDelivered'; attempt: number }
@@ -222,14 +218,10 @@ export type TeamLinkInput =
   | { type: 'ratingSaved'; roundId: number; stars: number }
   | { type: 'feedbackSaved'; feedback: TeamFeedbackView }
   | { type: 'sessionRatingSaved'; rating: RateSessionPayload }
-  // The server told the team's phones its count changed.
-  | { type: 'playerCountSynced'; playerCount: number }
   // The server acknowledged a count this phone sent.
   | { type: 'playerCountSaved'; playerCount: number }
   // The server acknowledged a joker pick this phone sent.
   | { type: 'jokerSaved'; joker: TeamJoker }
-  // The server told the team's phones its purchases and coins after a purchase.
-  | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
   // The server sent the team's whole view: it replaces the team's data.
   | { type: 'teamViewReceived'; view: OwnTeamView }
   // Intents
@@ -756,27 +748,18 @@ function awardBonus(
           message,
           durationMs: BONUS_AWARD_TOAST_DURATION_MS,
         };
-  return {
-    state: { ...state, myBonusAwards: [...state.myBonusAwards, award] },
-    commands: [toast],
-  };
-}
-
-/** The state with the team's coin balance replaced (the balance rides on the joined team). */
-function withCoins(state: TeamLinkState, balance: number): TeamLinkState {
-  return state.team
-    ? { ...state, team: { ...state.team, coins: balance } }
-    : state;
+  // The award itself reaches the list in the team view sent beside this toast.
+  return { state, commands: [toast] };
 }
 
 function awardCoins(
   state: TeamLinkState,
-  { coins, reason, balance }: CoinAwardedPayload,
+  { coins, reason }: CoinAwardedPayload,
 ): TeamLinkStep {
   const amount = `${coins > 0 ? '+' : ''}${coins} ${Math.abs(coins) === 1 ? 'coin' : 'coins'}`;
   const message = reason ? `${amount}: ${reason}` : amount;
   return {
-    state: withCoins(state, balance),
+    state,
     commands: [
       {
         type: 'toast',
@@ -899,35 +882,6 @@ function connect(
   };
 }
 
-function syncCoins(
-  state: TeamLinkState,
-  input: InputOf<'coinsSynced'>,
-): TeamLinkStep {
-  return unchanged(
-    state.team
-      ? {
-          ...state,
-          team: {
-            ...state.team,
-            coins: input.payload.balance,
-            hasCarriedCoin: input.payload.hasCarriedCoin,
-          },
-        }
-      : state,
-  );
-}
-
-function syncPurchases(
-  state: TeamLinkState,
-  input: InputOf<'purchasesSynced'>,
-): TeamLinkStep {
-  return unchanged({
-    ...state,
-    myPurchases: input.payload.purchases,
-    team: state.team && { ...state.team, coins: input.payload.coins },
-  });
-}
-
 /** Each input's handler. Events (what the connection and the server did) and intents (what the team did); the plain record-keeping ones inline. */
 const INPUT_HANDLERS: {
   [Type in TeamLinkInput['type']]: (
@@ -962,9 +916,6 @@ const INPUT_HANDLERS: {
       teamId: input.teamId,
       value: input.value,
     }),
-  bonusAwardsSynced: (state, input) =>
-    unchanged({ ...state, myBonusAwards: input.bonusAwards }),
-  coinsSynced: syncCoins,
   ratingSaved: (state, input) =>
     unchanged({
       ...state,
@@ -980,12 +931,9 @@ const INPUT_HANDLERS: {
         [input.rating.scale]: input.rating.value,
       },
     }),
-  playerCountSynced: (state, input) =>
-    unchanged({ ...state, myPlayerCount: input.playerCount }),
   playerCountSaved: (state, input) =>
     unchanged({ ...state, myPlayerCount: input.playerCount }),
   jokerSaved: (state, input) => unchanged({ ...state, myJoker: input.joker }),
-  purchasesSynced: syncPurchases,
   teamViewReceived: (state, input) => replaceTeamData(state, input.view),
   nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),
   gameCodeTyped: (state, input) =>
