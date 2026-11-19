@@ -197,7 +197,7 @@ export class MoveCommitter {
       : base;
 
     const { session: refreshed, staleAnswerListIds } =
-      await this.grading.gradeForMove(started, progress, pressed);
+      await this.grading.gradeForMove(started, progress, facts);
     // settleMove carries a raw ADVANCE under the leaderboard out as the action
     // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
     // reveal count, the quickfire timer and everything else downstream treat it
