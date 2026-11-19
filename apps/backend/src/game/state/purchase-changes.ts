@@ -194,7 +194,6 @@ export class PurchaseChanges {
         ...outcome,
         changedTeamIds: [teamId],
       },
-      touchedScores: true,
     };
   }
 

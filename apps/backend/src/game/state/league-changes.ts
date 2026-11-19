@@ -63,7 +63,6 @@ export class LeagueChanges {
         leagueTop: await this.table.topFor(session.seededGame.gameSessionId),
       },
       outcome: undefined,
-      touchedScores: false,
     };
   }
 
@@ -112,7 +111,7 @@ export class LeagueChanges {
     }
     const change = leagueIds
       ? await this.setLeagues(current, leagueIds)
-      : { session: current, touchedScores: false };
+      : { session: current };
     return {
       ...change,
       outcome: {

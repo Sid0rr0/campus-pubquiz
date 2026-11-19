@@ -15,7 +15,6 @@ import type { SessionChange } from '@/game/state/session-write';
 import {
   requireSeat,
   withActiveShowdownRound,
-  withShowdownGuess,
 } from '@/game/state/session-updates.util';
 import {
   InvalidShowdownError,
@@ -70,9 +69,22 @@ export class ShowdownsChanges {
       this.showdownService.submitGuess(showdownRoundId, teamId, value),
     );
     return {
-      session: withShowdownGuess(session, teamId, value),
+      // Overwrite semantics: a resubmitted guess replaces the previous one. No-op without an active round (a stale submit after the round moved on).
+      session: session.activeShowdownRound
+        ? {
+            ...session,
+            activeShowdownRound: {
+              ...session.activeShowdownRound,
+              participants: session.activeShowdownRound.participants.map(
+                (participant) =>
+                  participant.teamId === teamId
+                    ? { ...participant, guess: value }
+                    : participant,
+              ),
+            },
+          }
+        : session,
       outcome: BROADCAST_STATE_OUTCOME,
-      touchedScores: false,
     };
   }
 
@@ -105,7 +117,6 @@ export class ShowdownsChanges {
     return {
       session: withActiveShowdownRound(session, round),
       outcome: BROADCAST_STATE_OUTCOME,
-      touchedScores: false,
     };
   }
 

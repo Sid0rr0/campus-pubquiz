@@ -34,8 +34,6 @@ import type { ShowdownService } from '@/showdown/showdown.service';
 export interface CommittedMove {
   session: SessionState;
   outcome: SessionOutcome;
-  /** Always true: a press can grade at the lock, so its standings are always re-read. */
-  touchedScores: true;
 }
 
 /**
@@ -104,7 +102,6 @@ export class MoveCommitter {
         return {
           session: await this.resolveShowdownIfFinished(step),
           outcome: BROADCAST_STATE_OUTCOME,
-          touchedScores: true,
         };
       }
       case 'transition':
@@ -223,7 +220,6 @@ export class MoveCommitter {
           closedPick?.changedTeamIds ?? [],
         ),
       },
-      touchedScores: true,
     };
   }
 

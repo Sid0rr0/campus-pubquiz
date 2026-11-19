@@ -195,6 +195,5 @@ function bonusChange(
       }),
       changedTeamIds: [teamId],
     },
-    touchedScores: true,
   };
 }

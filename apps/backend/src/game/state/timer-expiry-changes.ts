@@ -26,8 +26,6 @@ export class TimerExpiryChanges {
       : Promise.resolve({
           session,
           outcome: NOTHING_TO_PUSH_OUTCOME,
-          // Stryker disable next-line BooleanLiteral: equivalent, a true flag only refreshes the standings again.
-          touchedScores: false,
         });
   }
 }

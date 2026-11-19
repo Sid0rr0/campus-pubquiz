@@ -20,10 +20,7 @@ import {
   unionTeamIds,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
-import {
-  requireSeat,
-  withAnsweredTeamIds,
-} from '@/game/state/session-updates.util';
+import { requireSeat } from '@/game/state/session-updates.util';
 
 /**
  * The answers change module: builds the changes for a team submitting an
@@ -81,7 +78,6 @@ export class AnswersChanges {
     });
     return {
       session: refreshed.session,
-      touchedScores: refreshed.touchedScores,
       outcome: {
         ...refreshed.outcome,
         replies: [
@@ -184,13 +180,18 @@ export class AnswersChanges {
       by === 'hand grade' ? [] : [by.submitterTeamId],
     );
     return {
-      session: withAnsweredTeamIds(graded, questionId, answeredTeamIds),
+      session: {
+        ...graded,
+        answeredTeamIdsByQuestion: {
+          ...graded.answeredTeamIdsByQuestion,
+          [questionId]: answeredTeamIds,
+        },
+      },
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
         answerListQuestionIds: [questionId],
         changedTeamIds,
       },
-      touchedScores: true,
     };
   }
 }
