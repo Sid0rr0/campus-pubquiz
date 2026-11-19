@@ -257,7 +257,7 @@ sequenceDiagram
   GS-->>GW: SessionOutcome (or SessionRefusal)
   GW->>B: deliver(outcome) — re-arms the auto-lock timers if it carries a deadline change
   B->>R: PRESENTER_CONTEXT_UPDATED (admin) + STATE_UPDATED (per room)
-  B->>R: TEAM_ANSWERS_SYNCED (each team, on reveal entry)
+  B->>R: TEAM_VIEW (each changed team, e.g. on reveal entry)
 ```
 
 ## Game status machine

@@ -7,7 +7,7 @@ import {
   type AckResult,
 } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
-import { joinPayload } from '@/test-utils/team-view';
+import { joinPayload, teamView } from '@/test-utils/team-view';
 import {
   SUBMIT_CONFIRM_TIMEOUT_MS,
   useTeamLink,
@@ -162,7 +162,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     });
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers: [] }),
+      socket.trigger(SOCKET_EVENTS.TEAM_VIEW, teamView({ answers: [] })),
     );
     expect(result.current.game?.myAnswers).toEqual({});
   });
@@ -533,19 +533,14 @@ describe('useTeamLink: the power-up and coin syncs', () => {
     const { result, socket } = renderPlayingTeam(WITH_SHOP);
 
     act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, {
-        questionId: 20,
-        isReady: true,
-      }),
+      socket.trigger(
+        SOCKET_EVENTS.TEAM_VIEW,
+        teamView({ roomReadyQuestionIds: [20] }),
+      ),
     );
     expect(joinedGame(result).roomReadyQuestionIds).toEqual([20]);
 
-    act(() =>
-      socket.trigger(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, {
-        questionId: 20,
-        isReady: false,
-      }),
-    );
+    act(() => socket.trigger(SOCKET_EVENTS.TEAM_VIEW, teamView()));
     expect(joinedGame(result).roomReadyQuestionIds).toEqual([]);
   });
 

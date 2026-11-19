@@ -406,9 +406,6 @@ export function useTeamLink(
       socket.on(SOCKET_EVENTS.ANSWER_RECEIVED, (payload) =>
         dispatch({ type: 'answerReceived', payload }),
       );
-      socket.on(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, (payload) =>
-        dispatch({ type: 'teamAnswersSynced', answers: payload.answers }),
-      );
       socket.on(SOCKET_EVENTS.TEAM_VIEW, (view) =>
         dispatch({ type: 'teamViewReceived', view }),
       );
@@ -426,9 +423,6 @@ export function useTeamLink(
       );
       socket.on(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, (payload) =>
         dispatch({ type: 'purchasesSynced', payload }),
-      );
-      socket.on(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, (payload) =>
-        dispatch({ type: 'roomReadySynced', payload }),
       );
       socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload) =>
         dispatch({ type: 'bonusAwarded', payload }),

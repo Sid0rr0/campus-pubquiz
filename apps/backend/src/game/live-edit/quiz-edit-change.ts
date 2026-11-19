@@ -5,7 +5,6 @@ import type { PurchaseChanges } from '@/game/state/purchase-changes';
 import type { BlockGradingService } from '@/game/state/block-grading.service';
 import {
   BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
@@ -64,18 +63,15 @@ export function quizEditChange(
     const { session, regradedQuestionIds, answeringTeamIds } =
       await grading.regradeForKeyFix(reloaded, started, regradeQuestionIds);
 
-    const teamSyncs = connectedTeamSyncs(
-      session,
-      session.teams
-        .filter((team) => answeringTeamIds.has(team.teamId))
-        .map((team) => team.teamId),
-    );
+    const changedTeamIds = session.teams
+      .filter((team) => answeringTeamIds.has(team.teamId))
+      .map((team) => team.teamId);
     return {
       session,
       outcome: {
         ...broadcast,
         answerListQuestionIds: regradedQuestionIds,
-        teamSyncs,
+        changedTeamIds,
       },
       touchedScores: true,
     };

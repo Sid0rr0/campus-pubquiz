@@ -14,7 +14,6 @@ import type {
   AnswersUpdatedPayload,
   GradeAnswerPayload,
   SubmitAnswerPayload,
-  TeamAnswersSyncedPayload,
 } from './answers';
 import type {
   AwardBonusPayload,
@@ -33,7 +32,6 @@ import type {
 import type {
   BuyPowerUpPayload,
   TeamPurchasesSyncedPayload,
-  TeamRoomReadySyncedPayload,
 } from './power-ups';
 import type {
   SetPlayerCountPayload,
@@ -137,7 +135,6 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.JOIN_ACCEPTED]: JoinAcceptedPayload;
   [SOCKET_EVENTS.ANSWERS_UPDATED]: AnswersUpdatedPayload;
   [SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED]: PresenterContextPayload;
-  [SOCKET_EVENTS.TEAM_ANSWERS_SYNCED]: TeamAnswersSyncedPayload;
   [SOCKET_EVENTS.BONUS_AWARDED]: BonusAwardedPayload;
   [SOCKET_EVENTS.TEAM_BONUS_AWARDS_SYNCED]: TeamBonusAwardsSyncedPayload;
   [SOCKET_EVENTS.COIN_AWARDED]: CoinAwardedPayload;
@@ -146,7 +143,6 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
   [SOCKET_EVENTS.TEAM_JOKER_SYNCED]: TeamJokerSyncedPayload;
   [SOCKET_EVENTS.TEAM_PURCHASES_SYNCED]: TeamPurchasesSyncedPayload;
-  [SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED]: TeamRoomReadySyncedPayload;
   [SOCKET_EVENTS.TEAM_SIDE_SYNCED]: TeamSideSyncedPayload;
   [SOCKET_EVENTS.TEAM_VIEW]: OwnTeamView;
   [SOCKET_EVENTS.TEAM_KICKED]: void;

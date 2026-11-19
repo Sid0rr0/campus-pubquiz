@@ -221,10 +221,12 @@ describe('team link: the team data', () => {
     expect(cleared.myAnswers[21].clue).toBeNull();
   });
 
-  it('replaces answers and grades when the team answers are synced', () => {
+  it('replaces answers and grades when a team view arrives', () => {
     const { state } = run(linkedPhone(), {
-      type: 'teamAnswersSynced',
-      answers: [{ ...GRADED, questionId: 30, value: 'Oslo' }],
+      type: 'teamViewReceived',
+      view: teamView({
+        answers: [{ ...GRADED, questionId: 30, value: 'Oslo' }],
+      }),
     });
 
     expect(state.myAnswers).toEqual({

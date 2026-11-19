@@ -819,10 +819,11 @@ refused with "Waiting for more answers" (nothing charged) until 3 other teams ha
 current answer that matches an option (the server refusal stays as the backstop).
 The phone's button is greyed out as "Waiting for more answers" until the server
 says it is ready: every time an answer lands on an open question, each connected
-team gets `TEAM_ROOM_READY_SYNCED` (`{ questionId, isReady }`, its own phones
-only), `isReady` meaning 3 _other_ teams have a matching answer. The join reply
-carries `roomReadyQuestionIds` (the block in play's ready questions) so a
-reconnect restores it. Only that boolean travels; the phone never learns how many
+team gets a fresh `TEAM_VIEW` (its own phones only) whose
+`roomReadyQuestionIds` lists the block in play's questions with the room ready,
+ready meaning 3 _other_ teams have a matching answer. The join reply's team
+view carries the same list, so a reconnect restores it. Only that flag per
+question travels; the phone never learns how many
 teams answered. The phone shows the split under the question, with options its
 50/50 removed crossed out.
 
@@ -867,7 +868,7 @@ answer with `withWiderMargin` at submit, and on a key fix or quickfire speed sco
 (`StoredAnswerRow.hasWiderMargin`). The phone shows the doubled margin text instead
 of the question's. Buying after already submitting re-grades the team's answer at
 once (`AnswerService.regradeForWiderMargin`, which keeps a grade at or above the
-new score) and sends the team its answers (`TEAM_ANSWERS_SYNCED`), so there is
+new score) and sends the team a fresh team view (`TEAM_VIEW`), so there is
 nothing to resubmit. A **pin** bought after answering is different: the order sent
 stays as it was until the team submits again, so when the answer given has the pinned item off its place, the phone adds "Submit again to
 send the pinned order."
@@ -1166,7 +1167,7 @@ other screen, decided from the on-air screen in `screen-preview.util.ts`),
 only, after the room broadcasts; `JOIN_ACCEPTED` carries the same view as
 `teamView`, built by the same projection; the per-team sync events below are
 being folded into it),
-`TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
+`TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
 team's own phone only), `TEAM_JOKER_SYNCED` (`{ joker }`, to the team's own
 phones only; see Jokers above), `TEAM_SIDE_SYNCED` (`{ sideId }`, to the team's own
 phones only; see `PICK_SIDE`), `BONUS_AWARDED` (one fresh award, appended on the
@@ -1178,8 +1179,6 @@ phone's list with no toast, and a disconnected team catches up on rejoin),
 above),
 `TEAM_PURCHASES_SYNCED` (`{ purchases, coins }`, to the buying team's own phones
 only; see Buying a power-up above),
-`TEAM_ROOM_READY_SYNCED` (`{ questionId, isReady }`, to each connected team's own
-phones after an answer lands; see Ask the room above),
 `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 

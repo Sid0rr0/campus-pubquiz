@@ -105,7 +105,7 @@ describe('GameGateway — buying a wider margin', () => {
       .filter(
         (emit) =>
           emit.rooms.includes(wide.socket.id) &&
-          emit.event === SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
+          emit.event === SOCKET_EVENTS.TEAM_VIEW,
       )
       .map((emit) => (emit.payload as { answers: TeamAnswerView[] }).answers);
     expect(synced[0]).toEqual([

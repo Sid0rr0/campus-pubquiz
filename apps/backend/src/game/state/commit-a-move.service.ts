@@ -21,7 +21,6 @@ import type {
 import {
   BROADCAST_STATE_OUTCOME,
   coinSyncsFor,
-  connectedTeamSyncs,
   isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
@@ -214,11 +213,8 @@ export class MoveCommitter {
         // The batch just graded these: /control's answer list for them still
         // shows the ungraded rows it was sent while they were open.
         answerListQuestionIds: staleAnswerListIds,
-        teamSyncs: isRevealEntry(session.progress.status, progress.status)
-          ? connectedTeamSyncs(
-              committed,
-              committed.teams.map((team) => team.teamId),
-            )
+        changedTeamIds: isRevealEntry(session.progress.status, progress.status)
+          ? committed.teams.map((team) => team.teamId)
           : [],
         jokerSyncs: closedPick?.jokerSyncs ?? [],
         // A phone joined in the lobby knows its coins from before they were decided.

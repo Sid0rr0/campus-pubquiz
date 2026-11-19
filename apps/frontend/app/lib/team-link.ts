@@ -24,7 +24,6 @@ import {
   type TeamFeedbackView,
   type TeamJoker,
   type TeamPurchasesSyncedPayload,
-  type TeamRoomReadySyncedPayload,
   type TeamSessionRatingsView,
   type Verdict,
 } from '@campus-pubquiz/types';
@@ -205,7 +204,6 @@ export type TeamLinkInput =
   // A new socket identity: the previous team's data and pending answer go.
   | { type: 'identityChanged' }
   | { type: 'answerReceived'; payload: AnswerReceivedPayload }
-  | { type: 'teamAnswersSynced'; answers: TeamAnswerView[] }
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
   // The quiz master gave (or took) coins: a toast and the new balance.
   | { type: 'coinAwarded'; payload: CoinAwardedPayload }
@@ -231,8 +229,6 @@ export type TeamLinkInput =
   | { type: 'sideSynced'; sideId: string | null }
   // The server told the team's phones its purchases and coins after a purchase.
   | { type: 'purchasesSynced'; payload: TeamPurchasesSyncedPayload }
-  // The server said whether Ask the room is ready on a question, after another team's answer.
-  | { type: 'roomReadySynced'; payload: TeamRoomReadySyncedPayload }
   // The server sent the team's whole view: it replaces the team's data.
   | { type: 'teamViewReceived'; view: OwnTeamView }
   // Intents
@@ -927,18 +923,6 @@ function syncPurchases(
   });
 }
 
-function syncRoomReady(
-  state: TeamLinkState,
-  input: InputOf<'roomReadySynced'>,
-): TeamLinkStep {
-  const { questionId, isReady } = input.payload;
-  const others = state.roomReadyQuestionIds.filter((id) => id !== questionId);
-  return unchanged({
-    ...state,
-    roomReadyQuestionIds: isReady ? [...others, questionId] : others,
-  });
-}
-
 /** Each input's handler. Events (what the connection and the server did) and intents (what the team did); the plain record-keeping ones inline. */
 const INPUT_HANDLERS: {
   [Type in TeamLinkInput['type']]: (
@@ -974,11 +958,6 @@ const INPUT_HANDLERS: {
       teamId: input.teamId,
       value: input.value,
     }),
-  teamAnswersSynced: (state, input) =>
-    unchanged({
-      ...state,
-      myAnswers: buildMyAnswers(input.answers),
-    }),
   bonusAwardsSynced: (state, input) =>
     unchanged({ ...state, myBonusAwards: input.bonusAwards }),
   coinsSynced: syncCoins,
@@ -1004,7 +983,6 @@ const INPUT_HANDLERS: {
   jokerSaved: (state, input) => unchanged({ ...state, myJoker: input.joker }),
   sideSynced: (state, input) => unchanged({ ...state, mySideId: input.sideId }),
   purchasesSynced: syncPurchases,
-  roomReadySynced: syncRoomReady,
   teamViewReceived: (state, input) => replaceTeamData(state, input.view),
   nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),
   gameCodeTyped: (state, input) =>

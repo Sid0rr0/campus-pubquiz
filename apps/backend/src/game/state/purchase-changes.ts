@@ -162,7 +162,7 @@ export class PurchaseChanges {
     }
     return await this.store(session, teamId, records, bought, {
       answerListQuestionIds: [questionId],
-      ...(isWider && { teamSyncs: connectedTeamSyncs(session, [teamId]) }),
+      ...(isWider && { changedTeamIds: [teamId] }),
     });
   }
 

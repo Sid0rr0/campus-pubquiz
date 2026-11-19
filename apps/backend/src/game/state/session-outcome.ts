@@ -9,7 +9,6 @@ import {
   type TeamCoinsSyncedPayload,
   type TeamJoker,
   type TeamPurchasesSyncedPayload,
-  type TeamRoomReadySyncedPayload,
 } from '@campus-pubquiz/types';
 
 /** One server-to-client event paired with its protocol payload, so a mismatched pair doesn't compile. An event that carries no payload (`TEAM_KICKED`) takes `undefined`. */
@@ -61,11 +60,6 @@ export interface PurchaseSync extends TeamSync {
   payload: TeamPurchasesSyncedPayload;
 }
 
-/** A connected team whose phone needs to know whether Ask the room is ready on a question, with the socket it is on. */
-export interface RoomReadySync extends TeamSync {
-  payload: TeamRoomReadySyncedPayload;
-}
-
 /** The session's phase timer deadlines (epoch-ms, or null when none is due) after a write that moved any of them. */
 export interface DeadlineChange {
   questionLockAt: number | null;
@@ -111,8 +105,6 @@ export interface SessionOutcome {
   shouldBroadcastDisplayState: boolean;
   /** Questions whose answer list the admin room needs afresh. */
   answerListQuestionIds: readonly number[];
-  /** Connected teams whose own graded-answer list needs a per-team sync. */
-  teamSyncs: readonly TeamSync[];
   /** Connected teams whose own player count changed, each told its new number (never sent room-wide). */
   playerCountSyncs: readonly PlayerCountSync[];
   /** Connected teams whose own joker changed (a pick, a draw when the pick closed), each told the joker it now holds (never sent room-wide). */
@@ -121,8 +113,6 @@ export interface SessionOutcome {
   sideSyncs: readonly SideSync[];
   /** Connected teams whose own power-up purchases changed (a purchase), each told its purchases and coins (never sent room-wide). */
   purchaseSyncs: readonly PurchaseSync[];
-  /** Connected teams told whether their Ask the room is ready on a question, after any team's answer landed there (a flag per team, never a count). */
-  roomReadySyncs: readonly RoomReadySync[];
   /** Connected teams whose own bonus award list changed under them (an award edited or deleted), each told its full list; a fresh award is a notice instead. */
   bonusSyncs: readonly TeamSync[];
   /** Connected teams whose coins changed under them (a bonus award deleted took its coin award, the quiz left the lobby, the lobby settings changed), each told its new coins. */
@@ -160,12 +150,10 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   shouldBroadcastAdminState: false,
   shouldBroadcastDisplayState: false,
   answerListQuestionIds: [],
-  teamSyncs: [],
   playerCountSyncs: [],
   jokerSyncs: [],
   sideSyncs: [],
   purchaseSyncs: [],
-  roomReadySyncs: [],
   bonusSyncs: [],
   coinSyncs: [],
   changedTeamIds: [],

@@ -88,7 +88,7 @@ describe('GameGateway — quiz edited (live answer-key fix)', () => {
       [londonTeam, 5],
       [parisTeam, 0],
     ] as const) {
-      const [sync] = emitsTo(team.socket.id, SOCKET_EVENTS.TEAM_ANSWERS_SYNCED);
+      const [sync] = emitsTo(team.socket.id, SOCKET_EVENTS.TEAM_VIEW);
       expect(
         (sync.payload as { answers: { pointsAwarded: number | null }[] })
           .answers,
@@ -111,7 +111,7 @@ describe('GameGateway — quiz edited (live answer-key fix)', () => {
     ).toHaveLength(1);
     const events = game.roomEmits().map((emit) => emit.event);
     expect(events).not.toContain(SOCKET_EVENTS.ANSWERS_UPDATED);
-    expect(events).not.toContain(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED);
+    expect(events).not.toContain(SOCKET_EVENTS.TEAM_VIEW);
   });
 });
 
@@ -196,18 +196,14 @@ describe('GameGateway — quiz edited, which teams and questions a key fix reach
       points: 5,
     });
 
-    expect(
-      emitsTo(game, gone.socket.id, SOCKET_EVENTS.TEAM_ANSWERS_SYNCED),
-    ).toHaveLength(0);
+    expect(emitsTo(game, gone.socket.id, SOCKET_EVENTS.TEAM_VIEW)).toHaveLength(
+      0,
+    );
     for (const [team, points] of [
       [paris, 0],
       [london, 5],
     ] as const) {
-      const syncs = emitsTo(
-        game,
-        team.socket.id,
-        SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-      );
+      const syncs = emitsTo(game, team.socket.id, SOCKET_EVENTS.TEAM_VIEW);
       expect(syncs).toHaveLength(1);
       expect(
         (syncs[0].payload as { answers: { pointsAwarded: number | null }[] })
@@ -270,11 +266,7 @@ describe('GameGateway — quiz edited, which teams and questions a key fix reach
       [tune, { [multipleChoice]: 0, [audio]: 0 }],
       [abba, { [multipleChoice]: 4, [audio]: 6 }],
     ] as const) {
-      const syncs = emitsTo(
-        game,
-        team.socket.id,
-        SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-      );
+      const syncs = emitsTo(game, team.socket.id, SOCKET_EVENTS.TEAM_VIEW);
       expect(syncs).toHaveLength(1);
       const answers = (
         syncs[0].payload as {

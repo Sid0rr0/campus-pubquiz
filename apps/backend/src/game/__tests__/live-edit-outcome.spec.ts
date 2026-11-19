@@ -47,8 +47,6 @@ describe('Live edit module — what a save reports', () => {
 
     const [[, outcome]] = deliver.mock.calls;
     expect(outcome.answerListQuestionIds).toEqual([game.questionIds.freeText]);
-    expect(outcome.teamSyncs).toEqual([
-      { teamId: answered.teamId, socketId: answered.socket.id },
-    ]);
+    expect(outcome.changedTeamIds).toEqual([answered.teamId]);
   });
 });

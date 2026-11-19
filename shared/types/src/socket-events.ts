@@ -6,7 +6,6 @@ export const SOCKET_EVENTS = {
   JOIN_ACCEPTED: 'game:join_accepted',
   ANSWERS_UPDATED: 'game:answers_updated',
   PRESENTER_CONTEXT_UPDATED: 'game:presenter_context_updated',
-  TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
   BONUS_AWARDED: 'game:bonus_awarded',
   TEAM_BONUS_AWARDS_SYNCED: 'game:team_bonus_awards_synced',
   COIN_AWARDED: 'game:coin_awarded',
@@ -16,7 +15,6 @@ export const SOCKET_EVENTS = {
   TEAM_PLAYER_COUNT_SYNCED: 'game:team_player_count_synced',
   TEAM_JOKER_SYNCED: 'game:team_joker_synced',
   TEAM_PURCHASES_SYNCED: 'game:team_purchases_synced',
-  TEAM_ROOM_READY_SYNCED: 'game:team_room_ready_synced',
   TEAM_SIDE_SYNCED: 'game:team_side_synced',
   TEAM_VIEW: 'game:team_view',
   // client -> server

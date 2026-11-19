@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { JoinAcceptedPayload, PurchaseView } from '@campus-pubquiz/types';
 import { initialTeamLink, teamLink } from '@/app/lib/team-link';
-import { joinAccepted } from '@/test-utils/team-view';
+import { joinAccepted, teamView } from '@/test-utils/team-view';
 
 const BOUGHT: PurchaseView = {
   powerUp: 'fifty_fifty',
@@ -64,7 +64,7 @@ describe('the Team link — power-up purchases', () => {
     expect(state.team?.coins).toBe(1);
   });
 
-  it('restores the ready flag from a join and follows each sync, per question', () => {
+  it('restores the ready flag from a join and follows each team view, per question', () => {
     const joined = teamLink(start(), {
       type: 'joinAccepted',
       payload: ACCEPTED,
@@ -72,14 +72,14 @@ describe('the Team link — power-up purchases', () => {
     expect(joined.roomReadyQuestionIds).toEqual([5]);
 
     const second = teamLink(joined, {
-      type: 'roomReadySynced',
-      payload: { questionId: 6, isReady: true },
+      type: 'teamViewReceived',
+      view: teamView({ roomReadyQuestionIds: [5, 6] }),
     }).state;
     expect(second.roomReadyQuestionIds).toEqual([5, 6]);
 
     const { state } = teamLink(second, {
-      type: 'roomReadySynced',
-      payload: { questionId: 5, isReady: false },
+      type: 'teamViewReceived',
+      view: teamView({ roomReadyQuestionIds: [6] }),
     });
     expect(state.roomReadyQuestionIds).toEqual([6]);
   });

@@ -11,6 +11,7 @@ import {
   type TeamPurchasesSyncedPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 import {
   setupRealStoreGatewayTest,
   type CreateGatewayOptions,
@@ -351,27 +352,20 @@ describe('GameGateway — buying a 50/50', () => {
       const { game, france, answer, teams } = await room();
       const [a, b, c, d] = teams;
       const readyTo = (team: JoinedTeam) =>
-        game
-          .roomEmits()
-          .filter(
-            (emit) =>
-              emit.rooms.includes(team.socket.id) &&
-              emit.event === SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
-          )
-          .map((emit) => emit.payload);
+        teamViewsTo(game, team).at(-1)?.roomReadyQuestionIds;
 
       await answer(a, 'Paris'); // the buyer's own answer never counts
       await answer(b, 'Paris');
       await answer(c, 'Rome');
-      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: false });
+      expect(readyTo(a)).toEqual([]);
 
       await answer(d, 'Berlin');
-      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: true });
+      expect(readyTo(a)).toEqual([france]);
       // D hears it too: A, B and C are three other teams to D.
-      expect(readyTo(d).at(-1)).toEqual({ questionId: france, isReady: true });
+      expect(readyTo(d)).toEqual([france]);
 
       await answer(d, 'stale'); // last write wins: no longer an option
-      expect(readyTo(a).at(-1)).toEqual({ questionId: france, isReady: false });
+      expect(readyTo(a)).toEqual([]);
 
       await answer(d, 'Rome');
       const second = await game.connectPlayer();
@@ -434,9 +428,7 @@ describe('GameGateway — buying a 50/50', () => {
         expect(
           game
             .roomEmits()
-            .filter(
-              (emit) => emit.event === SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED,
-            ),
+            .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_VIEW),
         ).toEqual([]);
       });
     });

@@ -42,8 +42,8 @@ export type DeliverFn = (
  * one), so a failed emit can't leave them out of step with a session that was
  * already stored. Then, always in the same order:
  * replies to the sender, presenter context to admin, the state snapshot to
- * all three rooms, admin answer lists, per-team answer syncs, per-team player
- * count, joker, purchase and bonus award syncs, per-socket notices, then the sockets to close.
+ * all three rooms, admin answer lists, per-team bonus award syncs, team views,
+ * per-team player count, joker, side, purchase and coin syncs, per-socket notices, then the sockets to close.
  * The closes run even if an earlier step fails, since the event was already
  * applied by then. `sender` is absent for events no socket sent (timer
  * expiries), which have no replies.
@@ -119,14 +119,6 @@ async function emitStoredLists(
       );
   }
 
-  for (const { teamId, socketId } of outcome.teamSyncs) {
-    const answers = await answerService.listForTeam(
-      gameState.getGameSessionId(joinCode),
-      teamId,
-    );
-    server.to(socketId).emit(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers });
-  }
-
   for (const { teamId, socketId } of outcome.bonusSyncs) {
     const bonusAwards = await bonusService.listForTeam(
       gameState.getGameSessionId(joinCode),
@@ -159,10 +151,6 @@ function emitTeamSyncs(
 
   for (const { socketId, payload } of outcome.purchaseSyncs) {
     server.to(socketId).emit(SOCKET_EVENTS.TEAM_PURCHASES_SYNCED, payload);
-  }
-
-  for (const { socketId, payload } of outcome.roomReadySyncs) {
-    server.to(socketId).emit(SOCKET_EVENTS.TEAM_ROOM_READY_SYNCED, payload);
   }
 
   for (const { socketId, payload } of outcome.coinSyncs) {

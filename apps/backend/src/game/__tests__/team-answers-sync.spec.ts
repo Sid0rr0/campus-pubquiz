@@ -8,6 +8,10 @@ import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
 
 const MAX_ADVANCES = 20;
 
@@ -24,18 +28,8 @@ async function advanceUntilStatus(
   throw new Error(`Never reached status "${status}"`);
 }
 
-describe('GameGateway — team answers sync on reveal entry', () => {
+describe('GameGateway — team view carries answers and grades on reveal entry', () => {
   const harness = setupRealStoreGatewayTest();
-
-  function teamSyncs(game: RealStoreGateway, socketId: string) {
-    return game
-      .roomEmits()
-      .filter(
-        (emit) =>
-          emit.rooms.includes(socketId) &&
-          emit.event === SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-      );
-  }
 
   /** Starts the quiz and has the first team submit a wrong answer to the first question. */
   async function startWithAnswer(game: RealStoreGateway): Promise<void> {
@@ -52,21 +46,19 @@ describe('GameGateway — team answers sync on reveal entry', () => {
 
   it("pushes the team's own answers privately once the block reaches reveal_intro", async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
-    const [{ socket }] = game.teams;
+    const [team] = game.teams;
     await startWithAnswer(game);
 
     await advanceUntilStatus(game, 'reveal_intro');
 
-    const [sync] = teamSyncs(game, socket.id);
-    expect(sync.payload).toEqual({
-      answers: [
-        expect.objectContaining({
-          questionId: game.questionIds.multipleChoice,
-          value: 'Banana',
-          pointsAwarded: 0,
-        }),
-      ],
-    });
+    expect(teamViewsTo(game, team).at(-1)?.answers).toEqual([
+      expect.objectContaining({
+        questionId: game.questionIds.multipleChoice,
+        value: 'Banana',
+        pointsAwarded: 0,
+      }),
+    ]);
+    await expectLiveEqualsResync(game, team);
   });
 
   it('includes the graded closest_guess points and verdict, so phones needn’t look themselves up in the reveal list', async () => {
@@ -103,24 +95,20 @@ describe('GameGateway — team answers sync on reveal entry', () => {
 
     await advanceUntilStatus(game, 'reveal_intro');
 
-    expect(teamSyncs(game, near.socket.id)[0].payload).toEqual({
-      answers: [
-        expect.objectContaining({
-          questionId,
-          pointsAwarded: 3,
-          verdict: 'correct',
-        }),
-      ],
-    });
-    expect(teamSyncs(game, far.socket.id)[0].payload).toEqual({
-      answers: [
-        expect.objectContaining({
-          questionId,
-          pointsAwarded: 0,
-          verdict: 'incorrect',
-        }),
-      ],
-    });
+    expect(teamViewsTo(game, near).at(-1)?.answers).toEqual([
+      expect.objectContaining({
+        questionId,
+        pointsAwarded: 3,
+        verdict: 'correct',
+      }),
+    ]);
+    expect(teamViewsTo(game, far).at(-1)?.answers).toEqual([
+      expect.objectContaining({
+        questionId,
+        pointsAwarded: 0,
+        verdict: 'incorrect',
+      }),
+    ]);
   });
 
   it('does not push to a team that is not currently connected', async () => {
@@ -128,17 +116,18 @@ describe('GameGateway — team answers sync on reveal entry', () => {
     const [{ socket }] = game.teams;
     await startWithAnswer(game);
     await game.gateway.handleDisconnect(asSocket(socket));
+    game.clearEmits();
 
     await advanceUntilStatus(game, 'reveal_intro');
 
     expect(game.roomEmits().map((emit) => emit.event)).not.toContain(
-      SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
+      SOCKET_EVENTS.TEAM_VIEW,
     );
   });
 
   it('does not push again on a later ADVANCE while already revealing', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
-    const [{ socket }] = game.teams;
+    const [team] = game.teams;
     await startWithAnswer(game);
     await advanceUntilStatus(game, 'reveal_intro');
     game.clearEmits();
@@ -146,32 +135,28 @@ describe('GameGateway — team answers sync on reveal entry', () => {
     const revealing = await game.act('ADVANCE'); // -> reveal
 
     expect(revealing.progress.status).toBe('reveal');
-    expect(teamSyncs(game, socket.id)).toEqual([]);
+    expect(teamViewsTo(game, team)).toEqual([]);
   });
 
   // quickfire collapses 'locking' straight into 'reveal', skipping
-  // 'reveal_intro' entirely (see getNextGameState) — without a matching
-  // branch in syncTeamAnswersOnRevealEntry, a quickfire team's reveal
-  // screen would keep showing the pre-speed-scoring grade cached from
-  // ANSWER_RECEIVED at submit time instead of the rescaled points.
+  // 'reveal_intro' entirely (see getNextGameState): the rescaled speed points
+  // reach the phone only through that move's team view.
   it("pushes the team's own answers privately when a quickfire question collapses locking straight into reveal", async () => {
     const game = await harness.createGateway({
       teamNames: ['The Quizzards'],
       quickfire: true,
     });
-    const [{ socket }] = game.teams;
+    const [team] = game.teams;
     await startWithAnswer(game);
 
     await advanceUntilStatus(game, 'reveal');
 
-    const [sync] = teamSyncs(game, socket.id);
-    expect(sync.payload).toEqual({
-      answers: [
-        expect.objectContaining({
-          questionId: game.questionIds.multipleChoice,
-          value: 'Banana',
-        }),
-      ],
-    });
+    expect(teamViewsTo(game, team).at(-1)?.answers).toEqual([
+      expect.objectContaining({
+        questionId: game.questionIds.multipleChoice,
+        value: 'Banana',
+      }),
+    ]);
+    await expectLiveEqualsResync(game, team);
   });
 });
