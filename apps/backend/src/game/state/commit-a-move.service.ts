@@ -215,6 +215,7 @@ export class MoveCommitter {
         // The batch just graded these: /control's answer list for them still
         // shows the ungraded rows it was sent while they were open.
         answerListQuestionIds: staleAnswerListIds,
+        leagueTablesMayChange: facts.leagueTablesMayChange,
         changedTeamIds: unionTeamIds(
           facts.gradesBecomeVisible
             ? committed.teams.map((team) => team.teamId)

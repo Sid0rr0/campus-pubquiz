@@ -89,8 +89,11 @@ export interface SessionOutcome {
    * reports nothing.
    */
   deadlineChange?: DeadlineChange;
+  /** The move's *league tables may change* transition fact (entering or leaving ended); only the move pipeline sets it. The Session write's league report reads it. */
+  leagueTablesMayChange?: boolean;
   /**
-   * True when the write may have changed a league table: the session entered
+   * True when the write may have changed a league table: the move's
+   * `leagueTablesMayChange` fact, or the session entered
    * or left `ended`, or it was `ended` before and after and refreshed
    * standings. Like `deadlineChange`, only the Session write's commit step
    * sets it, from a before/after comparison of the stored session, so no event

@@ -71,25 +71,27 @@ function reportDeadlineChange<T>(
 
 /**
  * The Session write's league report: `outcome` flagged `leagueTablesChanged`
- * when the write entered or left `ended`, or the session was `ended` before
- * and after and the write changed the leaderboard or departed teams (a grade,
- * bonus or showdown result after the end). Results that aren't a
- * SessionOutcome pass through: a join's team has no delivery to carry the flag.
+ * when the move's *league tables may change* transition fact is set (see
+ * transition-rules.ts: entering or leaving `ended`), or the session was
+ * `ended` before and after and the write changed the leaderboard or departed
+ * teams (a grade, bonus or showdown result after the end). A write that isn't
+ * a move has no transition. Results that aren't a SessionOutcome pass
+ * through: a join's team has no delivery to carry the flag.
  */
 function reportLeagueTablesChange<T>(
   started: SessionState,
   stored: SessionState,
   outcome: T,
 ): T {
-  const wasEnded = started.progress.status === 'ended';
-  const isEnded = stored.progress.status === 'ended';
+  if (!isSessionOutcome(outcome)) return outcome;
+  const isEndedThroughout =
+    started.progress.status === 'ended' && stored.progress.status === 'ended';
   const changed =
-    wasEnded !== isEnded ||
-    (wasEnded &&
+    outcome.leagueTablesMayChange === true ||
+    (isEndedThroughout &&
       (!isDeepStrictEqual(started.leaderboard, stored.leaderboard) ||
         !isDeepStrictEqual(started.departedTeams, stored.departedTeams)));
-  if (!changed || !isSessionOutcome(outcome)) return outcome;
-  return { ...outcome, leagueTablesChanged: true };
+  return changed ? { ...outcome, leagueTablesChanged: true } : outcome;
 }
 
 /**

@@ -4,7 +4,7 @@
 
 **Blocked by:** 01, and session-change-cleanup (all tickets), which rewrites the same league report
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The league report has no entering-or-leaving-ended check of its own; it reads the fact
 - [ ] Existing specs pass without changing their expectations: entering and leaving ended flag league tables; a result-changing write after the end flags them; a write that changes nothing doesn't
