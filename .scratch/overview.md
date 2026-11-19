@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
-| transition-rules | [One transition rules module for what a move sets off](transition-rules/spec.md) | 4 | team-view-projection |
 | doubled-points-one-step | [Joker doubling goes through one shared step](doubled-points-one-step/spec.md) | 1 | — |
 | declared-socket-changes | [Each socket event declaration names its session change](declared-socket-changes/spec.md) | 3 | session-change-cleanup |
 

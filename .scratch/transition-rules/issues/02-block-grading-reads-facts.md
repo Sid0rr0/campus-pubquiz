@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Block grading's move entry has no break-exit, locking-exit or graded-status conditions of its own; it reads the facts
 - [ ] Placement grading is unchanged

@@ -1456,10 +1456,14 @@ describe('GameGateway — session write: what a write may return and a held writ
       change: (session: SessionState) => SessionState,
       beforeStore: (session: SessionState) => Promise<unknown> = () =>
         Promise.resolve(),
+      leagueTablesMayChange = false,
     ) {
       return game.sessionWrite.write(game.joinCode, async (session) => {
         await beforeStore(session);
-        return { session: change(session), outcome: NOTHING_TO_PUSH_OUTCOME };
+        return {
+          session: change(session),
+          outcome: { ...NOTHING_TO_PUSH_OUTCOME, leagueTablesMayChange },
+        };
       });
     }
 
@@ -1471,11 +1475,17 @@ describe('GameGateway — session write: what a write may return and a held writ
       });
 
     it('flags entering and leaving ended', async () => {
-      const entering = await write(toStatus('ended'));
-      const leaving = await write(toStatus('lobby'));
+      const entering = await write(toStatus('ended'), undefined, true);
+      const leaving = await write(toStatus('lobby'), undefined, true);
 
       expect(entering.leagueTablesChanged).toBe(true);
       expect(leaving.leagueTablesChanged).toBe(true);
+    });
+
+    it('does not flag a write that is not a move, even if its status changes', async () => {
+      const outcome = await write(toStatus('ended'));
+
+      expect(outcome.leagueTablesChanged).toBeUndefined();
     });
 
     it('flags a write in an ended session that changes the leaderboard', async () => {

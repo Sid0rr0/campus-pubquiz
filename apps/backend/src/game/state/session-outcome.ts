@@ -1,7 +1,4 @@
 import {
-  type GameStatus,
-  isBreakExit,
-  isRevealingStatus,
   type ServerToClientProtocol,
   type SessionState,
   SOCKET_EVENTS,
@@ -92,8 +89,11 @@ export interface SessionOutcome {
    * reports nothing.
    */
   deadlineChange?: DeadlineChange;
+  /** The move's *league tables may change* transition fact (entering or leaving ended); only the move pipeline sets it. The Session write's league report reads it. */
+  leagueTablesMayChange?: boolean;
   /**
-   * True when the write may have changed a league table: the session entered
+   * True when the write may have changed a league table: the move's
+   * `leagueTablesMayChange` fact, or the session entered
    * or left `ended`, or it was `ended` before and after and refreshed
    * standings. Like `deadlineChange`, only the Session write's commit step
    * sets it, from a before/after comparison of the stored session, so no event
@@ -119,29 +119,6 @@ export const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
   ...BROADCAST_STATE_OUTCOME,
   shouldBroadcastState: false,
 };
-
-/**
- * Whether a transition is the one moment a team's cached grades go stale:
- * entering reveal_intro, or quickfire's collapsed lock-to-reveal, which skips
- * reveal_intro but is where ensureQuickfireSpeedScored rescales points.
- */
-export function isRevealEntry(
-  previousStatus: GameStatus,
-  newStatus: GameStatus,
-): boolean {
-  const entersRevealIntro =
-    previousStatus !== 'reveal_intro' && newStatus === 'reveal_intro';
-  const entersCollapsedQuickfireReveal =
-    previousStatus === 'locking' && newStatus === 'reveal';
-  // With Early answer reveal the break exit is where the verdicts first reach the phones.
-  const leavesBreakIntoResults =
-    isBreakExit(previousStatus, newStatus) && !isRevealingStatus(newStatus);
-  return (
-    entersRevealIntro ||
-    entersCollapsedQuickfireReveal ||
-    leavesBreakIntoResults
-  );
-}
 
 /** The team ids in any of `lists`, each once. */
 export function unionTeamIds(...lists: Iterable<number>[]): number[] {

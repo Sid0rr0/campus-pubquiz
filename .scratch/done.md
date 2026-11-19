@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| transition-rules | [One transition rules module for what a move sets off](transition-rules/spec.md) | 4 |
 | session-change-cleanup | [Every session write reads live results; one-caller session updates inlined](session-change-cleanup/spec.md) | 2 |
 | team-view-projection | [One team view projection for the phone](team-view-projection/spec.md) | 5 |
 | leaderboard-rank-callouts | [Rank callouts on the admin console and presenter remote](leaderboard-rank-callouts/spec.md) | 6 |

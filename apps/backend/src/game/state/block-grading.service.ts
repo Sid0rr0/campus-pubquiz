@@ -1,12 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
-  type GameAction,
   type GameProgress,
-  isBreakExit,
   isBreakStatus,
   isEarlyAnswersStatus,
-  isGradedStatus,
-  isRevealingStatus,
   type ScoredQuestion,
   type SessionState,
   summarizeClosestGuess,
@@ -16,6 +12,10 @@ import {
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
+import {
+  isBlockGradedStatus,
+  type TransitionFacts,
+} from '@/game/state/transition-rules';
 import { canBeUngraded, gradesAtLock } from '@/answer/grading-policy';
 
 /**
@@ -70,18 +70,17 @@ export class BlockGradingService {
   async gradeForMove(
     session: SessionState,
     toProgress: GameProgress,
-    pressed: GameAction,
+    facts: TransitionFacts,
   ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
-    // Only the Advance press leaves the break for good; Previous and End Quiz never need grading done.
-    if (pressed === 'ADVANCE') {
-      await this.assertNothingUngradedLeavingBreak(session, toProgress);
+    if (facts.leavingBreakNeedsBlockGraded) {
+      await this.assertNothingUngradedLeavingBreak(session);
     }
-    const speedScored = await this.ensureQuickfireSpeedScored(
-      session,
-      toProgress,
-    );
-    const { session: graded, staleAnswerListIds } =
-      await this.ensureBlockGraded(speedScored, toProgress);
+    const speedScored = facts.quickfireQuestionSpeedScored
+      ? await this.scoreQuickfireSpeed(session)
+      : session;
+    const { session: graded, staleAnswerListIds } = facts.blockIsGraded
+      ? await this.ensureBlockGraded(speedScored, toProgress)
+      : { session: speedScored, staleAnswerListIds: [] };
     return {
       session: await this.refreshUngradedQuestionIds(graded, toProgress),
       staleAnswerListIds,
@@ -100,15 +99,16 @@ export class BlockGradingService {
     session: SessionState,
     progress: GameProgress,
   ): Promise<SessionState> {
-    const { session: summarized } = await this.ensureBlockGraded(
-      session,
-      progress,
-    );
+    // The early answer reveal airs the answers (closest_guess steps included) before the break.
+    const { session: summarized } = isBlockGradedStatus(progress.status)
+      ? await this.ensureBlockGraded(session, progress)
+      : { session };
     // The post-break board shows the block before this fresh round intro, whose summaries the batch above cannot see.
     const boardBlock = getPostBreakBoardBlock({ ...summarized, progress });
-    const { session: withBoardBlock } = boardBlock
-      ? await this.ensureBlockGraded(summarized, boardBlock)
-      : { session: summarized };
+    const { session: withBoardBlock } =
+      boardBlock && isBlockGradedStatus(boardBlock.status)
+        ? await this.ensureBlockGraded(summarized, boardBlock)
+        : { session: summarized };
     return this.refreshUngradedQuestionIds(withBoardBlock, progress);
   }
 
@@ -119,10 +119,7 @@ export class BlockGradingService {
    */
   private async assertNothingUngradedLeavingBreak(
     session: SessionState,
-    toProgress: GameProgress,
   ): Promise<void> {
-    if (!isBreakExit(session.progress.status, toProgress.status)) return;
-
     const ungradedQuestionIds = await this.getUngradedBlockQuestionIds(session);
     if (ungradedQuestionIds.length > 0) {
       throw new UngradedAnswersError(ungradedQuestionIds);
@@ -143,14 +140,6 @@ export class BlockGradingService {
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
-    // The early answer reveal airs the answers (closest_guess steps included) before the break.
-    if (
-      !isGradedStatus(newProgress.status) &&
-      !isRevealingStatus(newProgress.status)
-    ) {
-      return { session, staleAnswerListIds: [] };
-    }
-
     const blockQuestions = getBlockInPlay(
       session.seededGame.rounds,
       newProgress,
@@ -208,19 +197,10 @@ export class BlockGradingService {
    * ungraded entry for the scored question through the grading refresh, like
    * the other steps; the leaderboard is read afterward by the session write.
    */
-  private async ensureQuickfireSpeedScored(
+  private async scoreQuickfireSpeed(
     session: SessionState,
-    newProgress: GameProgress,
   ): Promise<SessionState> {
-    if (
-      session.progress.status !== 'locking' ||
-      newProgress.status === 'locking'
-    ) {
-      return session;
-    }
     const round = session.seededGame.rounds[session.progress.roundIndex];
-    if (!round?.quickfire) return session;
-
     const question = round.questions[session.progress.questionIndex];
     await this.answerService.speedScoreAtLock(
       session.seededGame.gameSessionId,

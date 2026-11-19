@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The screen preview has no break-exit rule of its own; it reads the fact
 - [ ] Screen preview tests still show "Results, then Round N intro" and "Results, then final standings" for the Early answer reveal's break exit, and the plain screen description otherwise
