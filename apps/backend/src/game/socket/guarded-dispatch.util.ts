@@ -97,6 +97,7 @@ export async function dispatchSocketEvent<S extends z.ZodType>(
         if (error instanceof SessionRefusal) {
           throw new WsException(error.message);
         }
+        // The fallback applies only to declared changes, not to inline bodies.
         if (body === undefined && declaration.fallbackRefusal !== undefined) {
           throw new WsException(
             error instanceof Error

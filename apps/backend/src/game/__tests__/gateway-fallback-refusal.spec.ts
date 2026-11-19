@@ -28,6 +28,20 @@ describe('GameGateway — an unexpected failure during an event', () => {
     expect(ack).toEqual({ success: false, error: 'database is down' });
   });
 
+  it('arrives as the fallback refusal when an admin action throws a non-Error', async () => {
+    const game = await harness.createGateway();
+    const admin = await game.connectAdmin();
+    jest
+      .spyOn(game.liveChanges.moveCommitter, 'commit')
+      .mockRejectedValueOnce('database is down');
+
+    const ack = await game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'START_QUIZ',
+    });
+
+    expect(ack).toEqual({ success: false, error: 'Invalid game action' });
+  });
+
   it('gets the generic error for an event without a fallback refusal', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const admin = await game.connectAdmin();
