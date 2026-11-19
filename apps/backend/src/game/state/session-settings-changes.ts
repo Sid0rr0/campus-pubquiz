@@ -13,11 +13,6 @@ import { SessionSettingsInvalidError } from '@/game/state/errors/session-setting
 import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 import type { SessionChange } from '@/game/state/session-write';
 import {
-  withBreakEndTime,
-  withDisplaySoundMuted,
-  withDisplayTextScale,
-} from '@/game/state/session-updates.util';
-import {
   BROADCAST_STATE_OUTCOME,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
@@ -48,7 +43,7 @@ export class SessionSettingsChanges {
     breakEndsAt: number | null,
   ): Promise<SessionChange<SessionOutcome>> {
     return Promise.resolve({
-      session: withBreakEndTime(session, breakEndsAt),
+      session: { ...session, breakEndsAt },
       outcome: BROADCAST_STATE_OUTCOME,
       touchedScores: false,
     });
@@ -60,7 +55,7 @@ export class SessionSettingsChanges {
     displayTextScale: number,
   ): Promise<SessionChange<SessionOutcome>> {
     return Promise.resolve({
-      session: withDisplayTextScale(session, displayTextScale),
+      session: { ...session, displayTextScale },
       outcome: BROADCAST_STATE_OUTCOME,
       touchedScores: false,
     });
@@ -72,7 +67,7 @@ export class SessionSettingsChanges {
     isDisplaySoundMuted: boolean,
   ): Promise<SessionChange<SessionOutcome>> {
     return Promise.resolve({
-      session: withDisplaySoundMuted(session, isDisplaySoundMuted),
+      session: { ...session, isDisplaySoundMuted },
       outcome: BROADCAST_STATE_OUTCOME,
       touchedScores: false,
     });

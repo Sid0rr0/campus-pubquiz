@@ -18,12 +18,21 @@ import {
   requireSeat,
   seatOfSocket,
   withPlayerCount,
-  withTeamConnected,
-  withTeams,
-  withoutTeamConnection,
 } from '@/game/state/session-updates.util';
 import type { SessionChange } from '@/game/state/session-write';
 import { TeamService, type TeamIdentity } from '@/team/team.service';
+
+/** The connected sockets without `teamId`'s seat. */
+function withoutSeat(
+  session: SessionState,
+  teamId: number,
+): SessionState['connectedTeamSockets'] {
+  return Object.fromEntries(
+    Object.entries(session.connectedTeamSockets).filter(
+      ([connectedTeamId]) => connectedTeamId !== String(teamId),
+    ),
+  );
+}
 
 /** What a join's write yields: the resolved team, and the outcome to deliver once the reply is built. */
 export interface JoinOutcome {
@@ -102,18 +111,25 @@ export class TeamRosterChanges {
       session.progress.status === 'lobby'
         ? session.carriedCoins
         : await this.carriedCoinService.decide(gameSessionId, [team.id]);
-    const joined = withTeams(
-      withJoker(
+    const joined = {
+      ...withJoker(
         withPlayerCount(
-          withTeamConnected({ ...session, carriedCoins }, team.id, socketId),
+          {
+            ...session,
+            carriedCoins,
+            connectedTeamSockets: {
+              ...session.connectedTeamSockets,
+              [team.id]: socketId,
+            },
+          },
           team.id,
           playerCount,
         ),
         team.id,
         drawnJoker ?? heldJoker,
       ),
-      await this.teamService.listForSession(gameSessionId),
-    );
+      teams: await this.teamService.listForSession(gameSessionId),
+    };
     return {
       session: joined,
       outcome: {
@@ -157,7 +173,10 @@ export class TeamRosterChanges {
       teamId === null
         ? { session, outcome: null, touchedScores: false }
         : {
-            session: withoutTeamConnection(session, teamId),
+            session: {
+              ...session,
+              connectedTeamSockets: withoutSeat(session, teamId),
+            },
             outcome: BROADCAST_STATE_OUTCOME,
             touchedScores: false,
           },
@@ -218,10 +237,12 @@ export class TeamRosterChanges {
     const teamSides = { ...session.teamSides };
     delete teamSides[teamId];
     return {
-      session: withTeams(
-        { ...withoutTeamConnection(session, teamId), teamSides },
-        await this.teamService.listForSession(gameSessionId),
-      ),
+      session: {
+        ...session,
+        connectedTeamSockets: withoutSeat(session, teamId),
+        teamSides,
+        teams: await this.teamService.listForSession(gameSessionId),
+      },
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
         notices,
