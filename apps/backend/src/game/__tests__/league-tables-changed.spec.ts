@@ -159,7 +159,9 @@ describe('Live results — league tops refresh when a league table may have chan
 
   it('behaves the same for an end delivered with no sender, as a phase timer does', async () => {
     const outcome = await game.inRequestContext(() =>
-      game.gameState.applyAdminAction(game.joinCode, 'END_QUIZ'),
+      game.sessionWrite.write(game.joinCode, (session) =>
+        game.liveChanges.moveCommitter.commit(session, 'END_QUIZ'),
+      ),
     );
     await game.inRequestContext(() =>
       game.broadcaster.deliver(game.joinCode, outcome),

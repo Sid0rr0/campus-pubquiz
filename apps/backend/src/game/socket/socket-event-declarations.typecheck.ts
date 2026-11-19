@@ -21,6 +21,16 @@ declareSocketEvent({
   schema: adminActionPayloadSchema,
 });
 
+// A change is typed against the parsed payload.
+declareSocketEvent({
+  ...base,
+  event: SOCKET_EVENTS.ADMIN_ACTION,
+  schema: adminActionPayloadSchema,
+  change: (changes, session, payload) =>
+    // @ts-expect-error `action` is a game action, not a number
+    changes.moveCommitter.commit(session, payload.action satisfies number),
+});
+
 // A schema that loses a field its payload has is rejected.
 declareSocketEvent({
   ...base,

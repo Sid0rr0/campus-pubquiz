@@ -54,10 +54,16 @@ describe('SessionBroadcaster', () => {
     const [{ socket, teamId }] = game.teams;
     await game.openFirstQuestion(admin);
     const outcome = await game.inRequestContext(() =>
-      game.gameState.submitAnswer(
-        game.joinCode,
-        { questionId: game.questionIds.multipleChoice, teamId, value: 'Paris' },
-        socket.id,
+      game.sessionWrite.write(game.joinCode, (session) =>
+        game.liveChanges.answers.submit(
+          session,
+          {
+            questionId: game.questionIds.multipleChoice,
+            teamId,
+            value: 'Paris',
+          },
+          socket.id,
+        ),
       ),
     );
     expect(outcome.replies.length).toBeGreaterThan(0);

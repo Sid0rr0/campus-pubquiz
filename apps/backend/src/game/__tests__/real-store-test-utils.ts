@@ -52,6 +52,7 @@ import {
 } from '@/game/socket/phase-timers';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
+import { LiveChangeModules } from '@/game/state/live-change-modules';
 import { SessionWrite } from '@/game/state/session-write';
 import { WRITE_GATE, type WriteStep } from '@/game/state/write-gate';
 import {
@@ -284,6 +285,8 @@ export interface RealStoreGateway extends PlayableQuiz {
    * close a session, update settings) — game events go through the gateway.
    */
   gameState: GameStateService;
+  /** The change modules the gateway's dispatch step runs declared changes with. */
+  liveChanges: LiveChangeModules;
   /**
    * Resolves once every session write in flight for the seeded session has
    * finished (stored, refused or thrown) and the broadcasts sent at the end
@@ -824,6 +827,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         ),
       server,
       gameState,
+      liveChanges: moduleRef.get(LiveChangeModules),
       roomEmits: () => emits,
       payloadsTo: <T>(room: SocketRoomName, event: string) => {
         const fullRoom = sessionRoom(quiz.joinCode, room);

@@ -1,4 +1,5 @@
 import { GameStateService } from '@/game/state/game-state.service';
+import { LiveChangeModules } from '@/game/state/live-change-modules';
 import { SessionWrite } from '@/game/state/session-write';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { asSocket } from '@/game/__tests__/test-utils';
@@ -17,28 +18,34 @@ describe('GameStateService — core snapshot', () => {
   });
 
   it('throws if used before onModuleInit resolves the seeded game', async () => {
+    const sessionWrite = new SessionWrite(game.standingsService);
     const uninitialized = new GameStateService(
       game.seedService,
       game.progressRepository,
       game.orm,
-      game.answerService,
-      game.standingsService,
-      game.showdownService,
-      game.teamService,
-      game.bonusService,
-      game.feedbackService,
-      game.playerCountService,
-      new SessionWrite(game.standingsService),
-      new BlockGradingService(game.answerService),
-      game.leagueTableService,
-      game.leagueService,
-      game.jokerService,
-      game.carriedCoinService,
-      game.purchaseService,
+      sessionWrite,
+      new LiveChangeModules(
+        game.progressRepository,
+        game.seedService,
+        game.answerService,
+        game.standingsService,
+        game.showdownService,
+        game.teamService,
+        game.bonusService,
+        game.feedbackService,
+        game.playerCountService,
+        sessionWrite,
+        new BlockGradingService(game.answerService),
+        game.leagueTableService,
+        game.leagueService,
+        game.jokerService,
+        game.carriedCoinService,
+        game.purchaseService,
+      ),
     );
 
     await expect(
-      uninitialized.applyAdminAction(game.joinCode, 'START_QUIZ'),
+      uninitialized.updateSessionSettings(game.joinCode, {}),
     ).rejects.toThrow(/before initialization/i);
   });
 

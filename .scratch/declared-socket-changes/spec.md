@@ -1,6 +1,6 @@
 # Spec: Each socket event declaration names its session change; the game state pass-throughs go
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: session-change-cleanup. It removes `touchedScores` from the session change every declared change returns, so this spec writes the declared changes once, in their final shape.
 

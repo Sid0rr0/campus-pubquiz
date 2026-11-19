@@ -5,6 +5,7 @@ import {
   type AckResult,
   type SocketRoomName,
 } from '@campus-pubquiz/types';
+import { Logger } from '@nestjs/common';
 import type { GameGateway } from '@/game/game.gateway';
 import { SOCKET_EVENT_DECLARATIONS } from '@/game/socket/socket-event-declarations';
 import {
@@ -234,6 +235,26 @@ describe('GameGateway — socket event authorization', () => {
     expect(clientEvents).toHaveLength(EVENT_CASES.length);
     expect(Object.keys(SENDERS).sort()).toEqual(Object.keys(D).sort());
   });
+
+  it.each(eventRows)(
+    'runs %s from its own room with a body or a declared change',
+    async (_name, event) => {
+      const logged = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+
+      await event.send(
+        game.gateway,
+        sockets[event.allowedRoom],
+        event.payload(ids),
+      );
+
+      expect(logged).not.toHaveBeenCalledWith(
+        expect.stringContaining('declares no change'),
+      );
+      logged.mockRestore();
+    },
+  );
 
   it.each(wrongRoomRows)(
     'rejects %s sent from the %s room',

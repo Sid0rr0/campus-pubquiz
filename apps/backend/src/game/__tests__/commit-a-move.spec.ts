@@ -1,4 +1,6 @@
 import { Logger } from '@nestjs/common';
+import { asSocket } from '@/game/__tests__/test-utils';
+import type { SessionOutcome } from '@/game/state/session-outcome';
 import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
@@ -116,9 +118,7 @@ describe('GameStateService — committing a move', () => {
       await game.act('ADVANCE'); // -> break_intro
 
       // Act
-      const outcome = await game.inRequestContext(() =>
-        game.gameState.applyAdminAction(game.joinCode, 'ADVANCE'),
-      );
+      const outcome = await pressAdvance();
 
       // Assert
       expect(outcome.changedTeamIds).toEqual([teamId]);
@@ -126,13 +126,23 @@ describe('GameStateService — committing a move', () => {
 
     it('names nobody for a press that does not enter the reveal', async () => {
       // Act
-      const outcome = await game.inRequestContext(() =>
-        game.gameState.applyAdminAction(game.joinCode, 'ADVANCE'),
-      );
+      const outcome = await pressAdvance();
 
       // Assert
       expect(outcome.changedTeamIds).toEqual([]);
     });
+
+    /** Presses Advance through the gateway and returns the outcome it delivered. */
+    async function pressAdvance(): Promise<SessionOutcome> {
+      const deliver = jest.spyOn(game.broadcaster, 'deliver');
+      await game.gateway.handleAdminAction(
+        asSocket(await game.connectAdmin()),
+        {
+          action: 'ADVANCE',
+        },
+      );
+      return deliver.mock.calls[0][1];
+    }
   });
 
   describe('the presenter preview, a dry run of the next press', () => {

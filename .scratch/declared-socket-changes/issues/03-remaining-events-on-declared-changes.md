@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] All 20 declarations name their change; all 20 game state methods are gone
 - [ ] Every gateway handler except join's is one dispatch call with no inline function

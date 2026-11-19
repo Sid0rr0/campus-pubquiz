@@ -9,11 +9,11 @@ describe('GameGateway — request context', () => {
     const game = await harness.createGateway();
     const admin = await game.connectAdmin();
     const seen: unknown[] = [];
-    const { gameState } = game;
-    const original = gameState.applyAdminAction.bind(gameState) as (
-      ...args: Parameters<typeof gameState.applyAdminAction>
-    ) => ReturnType<typeof gameState.applyAdminAction>;
-    jest.spyOn(gameState, 'applyAdminAction').mockImplementation((...args) => {
+    const committer = game.liveChanges.moveCommitter;
+    const original = committer.commit.bind(committer) as (
+      ...args: Parameters<typeof committer.commit>
+    ) => ReturnType<typeof committer.commit>;
+    jest.spyOn(committer, 'commit').mockImplementation((...args) => {
       seen.push(RequestContext.getEntityManager());
       return original(...args);
     });

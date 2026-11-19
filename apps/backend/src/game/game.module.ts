@@ -12,6 +12,7 @@ import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
+import { LiveChangeModules } from '@/game/state/live-change-modules';
 import { SessionWrite } from '@/game/state/session-write';
 import { CarriedCoinService } from '@/coins/carried-coin.service';
 import { JokerService } from '@/joker/joker.service';
@@ -58,6 +59,7 @@ import { TeamService } from '@/team/team.service';
     GameProgressRepository,
     SessionWrite,
     BlockGradingService,
+    LiveChangeModules,
     GameStateService,
     SessionBroadcaster,
     GameGateway,

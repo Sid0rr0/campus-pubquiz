@@ -357,11 +357,13 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
     await game.act('END_QUIZ');
     const held = game.holdAt('standings');
     const awarding = game.inRequestContext(() =>
-      game.gameState.awardBonus(game.joinCode, {
-        teamId: idle.teamId,
-        category: 'shot',
-        points: 2,
-      }),
+      game.sessionWrite.write(game.joinCode, (session) =>
+        game.liveChanges.bonus.award(session, {
+          teamId: idle.teamId,
+          category: 'shot',
+          points: 2,
+        }),
+      ),
     );
     await held.reached;
 

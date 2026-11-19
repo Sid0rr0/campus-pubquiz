@@ -1,74 +1,28 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  Optional,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   type ActiveSessionSummary,
   type AdminQuestionContext,
-  type AwardBonusPayload,
   type BonusAwardAdminView,
   buildAdminQuestionContext,
   buildSnapshot,
-  type CreateShowdownRoundPayload,
   DEFAULT_SESSION_SETTINGS,
   freshSessionState,
-  type GameAction,
   isQuickfire,
   type JoinPlayersPayload,
-  type BuyPowerUpPayload,
-  type PickJokerPayload,
-  type SetTeamJokerPayload,
   type PresenterContextPayload,
   projectScreen,
-  type RateRoundPayload,
-  type RateSessionPayload,
-  type SendFeedbackPayload,
   type SessionSettings,
   type SessionState,
-  type PickSidePayload,
-  type SetPlayerCountPayload,
-  type SetTeamPlayerCountPayload,
-  type SetTeamSidePayload,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
-  type SubmitAnswerPayload,
-  type SubmitShowdownGuessPayload,
   type OwnTeamView,
 } from '@campus-pubquiz/types';
-import { TeamViewProjection } from '@/game/state/team-view-projection';
-import { AnswerService } from '@/answer/answer.service';
-import { BonusService } from '@/bonus/bonus.service';
-import { FeedbackService } from '@/feedback/feedback.service';
-import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
-import { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionWrite } from '@/game/state/session-write';
-import { AnswersChanges } from '@/game/state/answers-changes';
-import { BonusAwardsChanges } from '@/game/state/bonus-awards-changes';
-import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
-import {
-  JOKER_RANDOM,
-  JokerChanges,
-  type RandomSource,
-} from '@/game/state/joker-changes';
-import { CarriedCoinService } from '@/coins/carried-coin.service';
-import { JokerService } from '@/joker/joker.service';
-import { PurchaseChanges } from '@/game/state/purchase-changes';
-import { PurchaseService } from '@/purchase/purchase.service';
-import { TimerExpiryChanges } from '@/game/state/timer-expiry-changes';
-import { TeamRosterChanges } from '@/game/state/team-roster-changes';
-import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
-import { TeamSideChanges } from '@/game/state/team-side-changes';
-import { TeamPlayerCountChanges } from '@/game/state/team-player-count-changes';
-import { PlayerCountService } from '@/player-count/player-count.service';
-import { ShowdownsChanges } from '@/game/state/showdowns-changes';
-import { MoveCommitter } from '@/game/state/commit-a-move.service';
+import { LiveChangeModules } from '@/game/state/live-change-modules';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 import { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
@@ -79,11 +33,6 @@ import {
   deadlinesOf,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import { LeagueChanges } from '@/game/state/league-changes';
-import { LeagueTableService } from '@/league/league-table.service';
-import { LeagueService } from '@/league/league.service';
-import { ShowdownService } from '@/showdown/showdown.service';
-import { TeamService } from '@/team/team.service';
 import { sessionDisplayName } from '@/ended-sessions-read/session-display-name';
 
 export { QuizHasEmptyRoundError } from '@/game/state/errors/quiz-has-empty-round.error';
@@ -112,96 +61,14 @@ export class GameStateService implements OnModuleInit {
   // A string, not `GameStateService.name`: `nest build` crashes with
   // "reading 'checkJsDirective'" on that self-reference in this file.
   private readonly logger = new Logger('GameStateService');
-  private readonly moveCommitter: MoveCommitter;
-  private readonly settingsChanges: SessionSettingsChanges;
-  private readonly sideChanges: TeamSideChanges;
-  private readonly answersChanges: AnswersChanges;
-  private readonly bonusChanges: BonusAwardsChanges;
-  private readonly rosterChanges: TeamRosterChanges;
-  private readonly teamViews: TeamViewProjection;
-  private readonly feedbackChanges: TeamFeedbackChanges;
-  private readonly playerCountChanges: TeamPlayerCountChanges;
-  private readonly showdownsChanges: ShowdownsChanges;
-  private readonly leagueChanges: LeagueChanges;
-  private readonly jokerChanges: JokerChanges;
-  private readonly purchaseChanges: PurchaseChanges;
-  private readonly timerExpiryChanges: TimerExpiryChanges;
 
   constructor(
     private readonly seedService: SeedService,
     private readonly progressRepository: GameProgressRepository,
     private readonly orm: MikroORM,
-    private readonly answerService: AnswerService,
-    private readonly standingsService: StandingsService,
-    private readonly showdownService: ShowdownService,
-    private readonly teamService: TeamService,
-    private readonly bonusService: BonusService,
-    private readonly feedbackService: FeedbackService,
-    private readonly playerCountService: PlayerCountService,
     private readonly sessionWrite: SessionWrite,
-    private readonly grading: BlockGradingService,
-    private readonly leagueTableService: LeagueTableService,
-    private readonly leagueService: LeagueService,
-    private readonly jokerService: JokerService,
-    private readonly carriedCoinService: CarriedCoinService,
-    private readonly purchaseService: PurchaseService,
-    @Optional() @Inject(JOKER_RANDOM) random?: RandomSource,
-  ) {
-    this.purchaseChanges = new PurchaseChanges(
-      this.purchaseService,
-      random ?? Math.random,
-      this.answerService,
-    );
-    this.jokerChanges = new JokerChanges(
-      this.jokerService,
-      this.teamService,
-      this.purchaseService,
-      random ?? Math.random,
-    );
-    this.settingsChanges = new SessionSettingsChanges(
-      this.seedService,
-      this.teamService,
-    );
-    this.sideChanges = new TeamSideChanges(this.teamService);
-    this.answersChanges = new AnswersChanges(this.answerService, this.grading);
-    this.bonusChanges = new BonusAwardsChanges(this.bonusService);
-    this.rosterChanges = new TeamRosterChanges(
-      this.teamService,
-      this.playerCountService,
-      this.jokerChanges,
-      this.carriedCoinService,
-    );
-    this.teamViews = new TeamViewProjection(
-      this.answerService,
-      this.bonusService,
-      this.feedbackService,
-      this.playerCountService,
-      this.purchaseService,
-    );
-    this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
-    this.playerCountChanges = new TeamPlayerCountChanges(
-      this.playerCountService,
-      this.standingsService,
-    );
-    this.showdownsChanges = new ShowdownsChanges(this.showdownService);
-    this.leagueChanges = new LeagueChanges(
-      this.leagueService,
-      this.leagueTableService,
-      this.settingsChanges,
-    );
-    this.moveCommitter = new MoveCommitter(
-      this.grading,
-      this.progressRepository,
-      this.sessionWrite.liveResultsRead,
-      this.showdownService,
-      (gameSessionId) => this.leagueChanges.topOrNull(gameSessionId),
-      this.jokerChanges,
-      this.carriedCoinService,
-      (gameSessionId) => this.bonusService.coinAwardTotals(gameSessionId),
-      (gameSessionId) => this.teamService.listSides(gameSessionId),
-    );
-    this.timerExpiryChanges = new TimerExpiryChanges(this.moveCommitter);
-  }
+    private readonly changes: LiveChangeModules,
+  ) {}
 
   /**
    * Re-reads the lobby league of every live session after an admin edited or
@@ -219,7 +86,7 @@ export class GameStateService implements OnModuleInit {
       try {
         const before = this.sessionWrite.read(joinCode).leagueTop;
         await this.sessionWrite.write(joinCode, (session) =>
-          this.leagueChanges.refreshTop(session),
+          this.changes.league.refreshTop(session),
         );
         const after = this.sessionWrite.read(joinCode).leagueTop;
         if (JSON.stringify(before) !== JSON.stringify(after)) {
@@ -247,7 +114,10 @@ export class GameStateService implements OnModuleInit {
       );
       this.sessionWrite.place(
         seededGame.joinCode,
-        await this.moveCommitter.place(freshSessionState(seededGame), saved),
+        await this.changes.moveCommitter.place(
+          freshSessionState(seededGame),
+          saved,
+        ),
       );
     }
     this.sessionWrite.markInitialized();
@@ -300,7 +170,7 @@ export class GameStateService implements OnModuleInit {
     const { joinCode } = held.seededGame;
     try {
       await this.sessionWrite.write(joinCode, (session) =>
-        this.settingsChanges.customName(session, customName),
+        this.changes.settings.customName(session, customName),
       );
     } catch (error) {
       // Closed between the lookup and the write: nothing left to update.
@@ -398,121 +268,17 @@ export class GameStateService implements OnModuleInit {
     // no progress to persist here.
     this.sessionWrite.place(
       seededGame.joinCode,
-      await this.moveCommitter.place(freshSessionState(seededGame), null),
+      await this.changes.moveCommitter.place(
+        freshSessionState(seededGame),
+        null,
+      ),
     );
     if (leagueIds.length > 0) {
       await this.sessionWrite.write(seededGame.joinCode, (session) =>
-        this.leagueChanges.setLeagues(session, leagueIds),
+        this.changes.league.setLeagues(session, leagueIds),
       );
     }
     return seededGame.joinCode;
-  }
-
-  /** A team picks its joker round from `socketId` during the joker pick; refused otherwise. Only the team's own phones and the admin room are told. */
-  jokerPicked(
-    joinCode: string,
-    payload: PickJokerPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.jokerChanges.pick(session, payload, socketId),
-    );
-  }
-
-  /** A team picks or switches its Versus side from `socketId`; see the team side change module. */
-  sidePicked(
-    joinCode: string,
-    payload: PickSidePayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.sideChanges.sidePicked(session, payload, socketId),
-    );
-  }
-
-  /** The quiz master moves a roster team to another Versus side, at any status; see the team side change module. */
-  teamSideSet(
-    joinCode: string,
-    payload: SetTeamSidePayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.sideChanges.teamSideSet(session, payload),
-    );
-  }
-
-  /** A team buys a power-up from `socketId`; refused unless the shared purchase rule allows it. Only the team's own phones and the admin room are told. */
-  powerUpBought(
-    joinCode: string,
-    payload: BuyPowerUpPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.purchaseChanges.buy(session, payload, socketId),
-    );
-  }
-
-  /** The quiz master sets a team's joker round; refused for a round that has started or a team not in the session. Only that team's phones and the admin room are told. */
-  teamJokerSet(
-    joinCode: string,
-    payload: SetTeamJokerPayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.jokerChanges.setTeamJoker(session, payload),
-    );
-  }
-
-  /** A team rates a round of the break card. Changes no scores and pushes nothing. */
-  roundRated(
-    joinCode: string,
-    payload: RateRoundPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.feedbackChanges.roundRated(session, payload, socketId),
-    );
-  }
-
-  /** A team reports how many players it has. Changes no scores and broadcasts nothing; only the team's own phones are told. */
-  playerCountSet(
-    joinCode: string,
-    payload: SetPlayerCountPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.playerCountChanges.playerCountSet(session, payload, socketId),
-    );
-  }
-
-  /** The quiz master or a moderator sets or corrects a team's player count. Like `playerCountSet`, plus the admin room's view is refreshed. */
-  teamPlayerCountSet(
-    joinCode: string,
-    payload: SetTeamPlayerCountPayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.playerCountChanges.teamPlayerCountSet(session, payload),
-    );
-  }
-
-  /** A team sends its comment and topic suggestions from the final form. Like `roundRated`. */
-  feedbackSent(
-    joinCode: string,
-    payload: SendFeedbackPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.feedbackChanges.feedbackSent(session, payload, socketId),
-    );
-  }
-
-  /** A team answers pacing or felt difficulty on the final form. Like `feedbackSent`, and leaves the comment and topics alone. */
-  sessionRated(
-    joinCode: string,
-    payload: RateSessionPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.feedbackChanges.sessionRated(session, payload, socketId),
-    );
   }
 
   /**
@@ -530,7 +296,11 @@ export class GameStateService implements OnModuleInit {
       const { team, heldJoker, joined } = await this.sessionWrite.write(
         joinCode,
         (session) =>
-          this.rosterChanges.join(session, { request, socketId, isSocketLive }),
+          this.changes.roster.join(session, {
+            request,
+            socketId,
+            isSocketLive,
+          }),
       );
 
       const session = this.sessionWrite.read(joinCode);
@@ -539,12 +309,12 @@ export class GameStateService implements OnModuleInit {
       if (heldJoker) jokers[team.id] = heldJoker;
       else delete jokers[team.id];
       const asJoined = { ...session, jokers };
-      const teamView = (await this.teamViews.project(asJoined, [team.id])).get(
-        team.id,
-      )!;
+      const teamView = (
+        await this.changes.teamViews.project(asJoined, [team.id])
+      ).get(team.id)!;
       return {
         ...joined,
-        replies: [this.rosterChanges.joinReply(team, teamView)],
+        replies: [this.changes.roster.joinReply(team, teamView)],
       };
     } catch (error) {
       if (error instanceof SessionRefusal) throw error;
@@ -562,7 +332,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<{ socketId: string; teamView: OwnTeamView }[]> {
     const session = this.sessionWrite.read(joinCode);
     const connected = connectedTeamSyncs(session, new Set(teamIds));
-    const views = await this.teamViews.project(
+    const views = await this.changes.teamViews.project(
       session,
       connected.map(({ teamId }) => teamId),
     );
@@ -578,7 +348,7 @@ export class GameStateService implements OnModuleInit {
     socketId: string,
   ): Promise<SessionOutcome | null> {
     return this.sessionWrite.write<SessionOutcome | null>(joinCode, (session) =>
-      this.rosterChanges.disconnect(session, socketId),
+      this.changes.roster.disconnect(session, socketId),
     );
   }
 
@@ -604,57 +374,6 @@ export class GameStateService implements OnModuleInit {
     return deadlinesOf(this.sessionWrite.read(joinCode));
   }
 
-  /** Admin-set/clear the epoch-ms time the break is expected to end — see StateSnapshotPayload.breakEndsAt. */
-  breakEndTimeSet(
-    joinCode: string,
-    breakEndsAt: number | null,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.settingsChanges.breakEndTime(session, breakEndsAt),
-    );
-  }
-
-  /** Admin-set text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
-  displayTextScaleSet(
-    joinCode: string,
-    displayTextScale: number,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.settingsChanges.displayTextScale(session, displayTextScale),
-    );
-  }
-
-  /** Admin-set mute for the big screen's sounds — see StateSnapshotPayload.isDisplaySoundMuted. */
-  displaySoundMutedSet(
-    joinCode: string,
-    isDisplaySoundMuted: boolean,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.settingsChanges.displaySoundMuted(session, isDisplaySoundMuted),
-    );
-  }
-
-  /** A showdown guess from `socketId`; checked against the session the write holds, so a guess sent as the reveal starts is counted or refused. */
-  submitShowdownGuess(
-    joinCode: string,
-    payload: SubmitShowdownGuessPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.showdownsChanges.guess(session, payload, socketId),
-    );
-  }
-
-  /** Starts a showdown round for the teams tied for first, read from the session the write holds. Leaves isLeaderboardVisible alone. */
-  createShowdownRound(
-    joinCode: string,
-    payload: CreateShowdownRoundPayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.showdownsChanges.newRound(session, payload),
-    );
-  }
-
   /**
    * Merges `partial` over the session's settings, lobby-only, and/or replaces
    * the session's leagues when `leagueIds` is given. The checks run against
@@ -666,28 +385,8 @@ export class GameStateService implements OnModuleInit {
     leagueIds?: number[],
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      this.leagueChanges.settingsAndLeagues(session, partial, leagueIds),
+      this.changes.league.settingsAndLeagues(session, partial, leagueIds),
     );
-  }
-
-  /**
-   * Applies an admin action (or a timer expiry standing in for one) through
-   * the Move committer, inside a session write, so no other write that landed
-   * meanwhile is lost. A refused press (or failed save) leaves the session
-   * where it was and is refused with the commit's own message.
-   */
-  applyAdminAction(
-    joinCode: string,
-    action: GameAction,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite
-      .write(joinCode, (session) => this.moveCommitter.commit(session, action))
-      .catch((error: unknown) => {
-        throw new SessionRefusal(
-          // Stryker disable next-line StringLiteral: unreachable defensive fallback, every failure on this path is an Error; the text only fills a refusal that is never produced.
-          error instanceof Error ? error.message : 'Invalid game action',
-        );
-      });
   }
 
   /**
@@ -702,57 +401,7 @@ export class GameStateService implements OnModuleInit {
     dueAt: number,
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      this.timerExpiryChanges.advanceOnExpiry(session, deadline, dueAt),
-    );
-  }
-
-  /** A team's answer from `socketId`: refused when the question is closed or the seat isn't the socket's; see the answers change module. */
-  submitAnswer(
-    joinCode: string,
-    payload: SubmitAnswerPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.answersChanges.submit(session, payload, socketId),
-    );
-  }
-
-  /** An admin grades an answer by hand; runs the same refresh as submitAnswer. */
-  async gradeAnswer(
-    joinCode: string,
-    answerId: number,
-    pointsAwarded: number,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.answersChanges.grade(session, answerId, pointsAwarded),
-    );
-  }
-
-  /** An admin awards a bonus; a refusal carries the bonus service's message. */
-  awardBonus(
-    joinCode: string,
-    payload: AwardBonusPayload,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.bonusChanges.award(session, payload),
-    );
-  }
-
-  /** A team leaves from `socketId`; refused unless that socket owns the seat. */
-  teamLeft(
-    joinCode: string,
-    teamId: number,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.rosterChanges.leave(session, { teamId, socketId }),
-    );
-  }
-
-  /** The admin kicks a team, even one with no socket; the team's socket, if any, gets TEAM_KICKED and is closed. */
-  kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (session) =>
-      this.rosterChanges.kick(session, teamId),
+      this.changes.timerExpiry.advanceOnExpiry(session, deadline, dueAt),
     );
   }
 
@@ -769,7 +418,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<{ outcome: SessionOutcome; award: BonusAwardAdminView }> {
     let award: BonusAwardAdminView | undefined;
     const outcome = await this.sessionWrite.write(joinCode, async (session) => {
-      const change = await this.bonusChanges.edit(
+      const change = await this.changes.bonus.edit(
         session,
         awardId,
         points,
@@ -786,7 +435,7 @@ export class GameStateService implements OnModuleInit {
   /** An admin deletes a bonus award; refreshes standings. A missing award is a BonusAwardNotFoundRefusal. */
   removeBonus(joinCode: string, awardId: number): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      this.bonusChanges.remove(session, awardId),
+      this.changes.bonus.remove(session, awardId),
     );
   }
 
