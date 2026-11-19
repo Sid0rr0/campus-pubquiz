@@ -3,8 +3,6 @@ import {
   type GameProgress,
   isBreakStatus,
   isEarlyAnswersStatus,
-  isGradedStatus,
-  isRevealingStatus,
   type ScoredQuestion,
   type SessionState,
   summarizeClosestGuess,
@@ -14,7 +12,10 @@ import {
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
-import type { TransitionFacts } from '@/game/state/transition-rules';
+import {
+  isBlockGradedStatus,
+  type TransitionFacts,
+} from '@/game/state/transition-rules';
 import { canBeUngraded, gradesAtLock } from '@/answer/grading-policy';
 
 /**
@@ -99,15 +100,13 @@ export class BlockGradingService {
     progress: GameProgress,
   ): Promise<SessionState> {
     // The early answer reveal airs the answers (closest_guess steps included) before the break.
-    const gradedAt = (at: GameProgress) =>
-      isGradedStatus(at.status) || isRevealingStatus(at.status);
-    const { session: summarized } = gradedAt(progress)
+    const { session: summarized } = isBlockGradedStatus(progress.status)
       ? await this.ensureBlockGraded(session, progress)
       : { session };
     // The post-break board shows the block before this fresh round intro, whose summaries the batch above cannot see.
     const boardBlock = getPostBreakBoardBlock({ ...summarized, progress });
     const { session: withBoardBlock } =
-      boardBlock && gradedAt(boardBlock)
+      boardBlock && isBlockGradedStatus(boardBlock.status)
         ? await this.ensureBlockGraded(summarized, boardBlock)
         : { session: summarized };
     return this.refreshUngradedQuestionIds(withBoardBlock, progress);

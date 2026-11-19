@@ -285,8 +285,8 @@ reopening, leaving the lobby, start needing every side, leaving the break
 needing the block graded, a quickfire question being speed-scored, the block
 being graded, grades becoming visible, leaving the break into results, league
 tables possibly changing) is decided in one place as named transition facts,
-`apps/backend/src/game/state/transition-rules.ts`. The move pipeline and the
-screen preview read those facts.
+`apps/backend/src/game/state/transition-rules.ts`. The move pipeline, block
+grading, the league report and the screen preview read those facts.
 
 ## Real-Time Protocol (Socket.IO)
 

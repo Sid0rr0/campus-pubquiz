@@ -67,11 +67,16 @@ export function transitionFacts(
     quickfireQuestionSpeedScored:
       leaves(from, next, 'locking') &&
       !!session.seededGame.rounds[roundIndex]?.quickfire,
-    blockIsGraded: isGradedStatus(next) || isRevealingStatus(next),
+    blockIsGraded: isBlockGradedStatus(next),
     gradesBecomeVisible: gradesBecomeVisible(from, next),
     leavesBreakIntoResults: isBreakExit(from, next) && next !== 'reveal_intro',
     leagueTablesMayChange: (from === 'ended') !== (next === 'ended'),
   };
+}
+
+/** A status whose block is graded: a graded status, or a revealing one (the Early answer reveal airs answers before the break). */
+export function isBlockGradedStatus(status: GameStatus): boolean {
+  return isGradedStatus(status) || isRevealingStatus(status);
 }
 
 /** Whether a move is on `status` before and not after. */

@@ -6,7 +6,7 @@ The move pipeline works out the facts once per move and uses them to decide the 
 
 **Blocked by:** None within this spec. The spec as a whole waits on team-view-projection, whose changed-team-ids contract this ticket uses.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The transition rules module returns all nine facts and does no database reads or writes
 - [ ] Table test without a database: every from × to status pair the state machine allows, for each press, with quickfire, Early answer reveal and Versus each on and off, asserts the full fact record
