@@ -1,7 +1,7 @@
 import { act, screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { TeamFeedbackView } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import { teamLinkResult } from './test-utils';
@@ -33,7 +33,7 @@ const MAX_TOPICS = 10;
 interface EndedOverrides {
   isFeedbackCollected?: boolean;
   myFeedback?: TeamFeedbackView;
-  sendFeedback?: ReturnType<typeof vi.fn>;
+  sendFeedback?: Mock;
   roundRatingsEpoch?: number;
 }
 

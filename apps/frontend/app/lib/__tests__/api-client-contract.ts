@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 /** One API client function: the exact request it sends and the error it throws on a non-ok reply. */
 export interface ApiCase {
@@ -34,7 +34,7 @@ function isSessionWrite(c: ApiCase): boolean {
   );
 }
 
-function stub(reply: Record<string, unknown>): ReturnType<typeof vi.fn> {
+function stub(reply: Record<string, unknown>): Mock {
   const fetchMock = vi.fn().mockResolvedValue(reply);
   global.fetch = fetchMock as unknown as typeof fetch;
   return fetchMock;

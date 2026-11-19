@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import { useMediaPause } from '@/app/display/use-media-pause';
 
 function fakeIframe() {
@@ -10,7 +10,7 @@ function fakeIframe() {
   return { iframe, postMessage };
 }
 
-function commandsSent(postMessage: ReturnType<typeof vi.fn>): string[] {
+function commandsSent(postMessage: Mock): string[] {
   return postMessage.mock.calls.map(
     ([message]) => (JSON.parse(message as string) as { func: string }).func,
   );

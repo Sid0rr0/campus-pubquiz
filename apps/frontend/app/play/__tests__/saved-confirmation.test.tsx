@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithQuery } from '@/test-utils/query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { teamLinkResult } from './test-utils';
 
@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-function renderOpenFreeTextQuestion(submitAnswer: ReturnType<typeof vi.fn>) {
+function renderOpenFreeTextQuestion(submitAnswer: Mock) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
   mockUseTeamLink.mockReturnValue(
     teamLinkResult({

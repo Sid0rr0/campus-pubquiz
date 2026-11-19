@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithQuery } from '@/test-utils/query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { TeamJoker } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import type { SessionDescription } from '@/test-utils/room-view';
@@ -51,7 +51,7 @@ function renderPick({
 }: {
   session?: SessionDescription;
   myJoker?: TeamJoker | null;
-  pickJoker?: ReturnType<typeof vi.fn>;
+  pickJoker?: Mock;
 } = {}) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
   mockUseTeamLink.mockReturnValue(

@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { TeamSessionRatingsView } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import { teamLinkResult } from './test-utils';
@@ -43,7 +43,7 @@ function renderPhone(
   overrides: {
     progress?: Record<string, unknown>;
     isFeedbackCollected?: boolean;
-    rateSession?: ReturnType<typeof vi.fn>;
+    rateSession?: Mock;
     mySessionRatings?: TeamSessionRatingsView;
     roundRatingsEpoch?: number;
   } = {},

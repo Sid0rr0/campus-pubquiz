@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { teamLinkResult } from './test-utils';
 
@@ -39,7 +39,7 @@ function endedSession(isFeedbackCollected: boolean) {
 function renderEnded(
   overrides: {
     isFeedbackCollected?: boolean;
-    rateRound?: ReturnType<typeof vi.fn>;
+    rateRound?: Mock;
     myRoundRatings?: Record<number, number>;
   } = {},
 ) {

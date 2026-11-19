@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { MotionGlobalConfig } from 'motion/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import {
   defaultPowerUpSettings,
   type PurchaseView,
@@ -58,7 +58,7 @@ function phone({
   coins?: number;
   purchases?: PurchaseView[];
   question?: Record<string, unknown>;
-  buyPowerUp?: ReturnType<typeof vi.fn>;
+  buyPowerUp?: Mock;
 } = {}) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
   mockUseTeamLink.mockReturnValue(

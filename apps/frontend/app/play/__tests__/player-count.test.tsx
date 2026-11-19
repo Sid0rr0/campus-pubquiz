@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithQuery } from '@/test-utils/query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { PlayerCountCard } from '@/app/play/player-count-card';
 import { SettingsModal } from '@/app/play/settings-modal';
@@ -32,7 +32,7 @@ function renderPhone({
 }: {
   status: 'lobby' | 'rules';
   myPlayerCount: number | null;
-  setPlayerCount?: ReturnType<typeof vi.fn>;
+  setPlayerCount?: Mock;
 }) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
   mockUseTeamLink.mockReturnValue(
