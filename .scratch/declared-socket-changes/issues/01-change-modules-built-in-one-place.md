@@ -4,7 +4,7 @@
 
 **Blocked by:** None within this spec. The spec as a whole waits on session-change-cleanup.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] One provider builds every change module and the move pipeline; the game state class's constructor no longer builds them
 - [ ] The joker random source can still be injected for tests, as today

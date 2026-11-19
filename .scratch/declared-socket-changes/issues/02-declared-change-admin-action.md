@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Declarations accept an optional change and an optional fallback refusal; a change whose payload type doesn't match the declaration's schema fails typecheck
 - [ ] The admin action handler body is one dispatch call with no inline function; the game state class has no admin action method
