@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { JoinAcceptedPayload, TeamJoker } from '@campus-pubquiz/types';
+import type { TeamJoker } from '@campus-pubquiz/types';
 import {
   initialTeamLink,
   teamLink,
@@ -36,7 +36,9 @@ const WAITING = {
   verdict: null,
 } as const;
 
-const ACCEPTED: Omit<JoinAcceptedPayload, 'teamView'> = {
+type AcceptedFields = Parameters<typeof joinAccepted>[0];
+
+const ACCEPTED: AcceptedFields = {
   teamId: 31,
   teamName: 'The Quizzards',
   teamToken: 'token-2',
@@ -80,7 +82,7 @@ function connected(connectionId: number) {
   } as const;
 }
 
-function accepted(payload: Omit<JoinAcceptedPayload, 'teamView'> = ACCEPTED) {
+function accepted(payload: AcceptedFields = ACCEPTED) {
   return { type: 'joinAccepted', payload: joinAccepted(payload) } as const;
 }
 
@@ -268,7 +270,9 @@ describe('team link: the team data', () => {
         payload: { coins: 2, balance: 3, reason: 'Trivia hero' },
       });
 
-      expect(gained.state.team?.coins).toBe(before.team?.coins);
+      expect(gained.state.team?.teamView.coins).toBe(
+        before.team?.teamView.coins,
+      );
       expect(ofType(gained.commands, 'toast')).toEqual([
         expect.objectContaining({
           tone: 'success',
@@ -328,8 +332,8 @@ describe('team link: the team data', () => {
         view: teamView({ coins: 5, hasCarriedCoin: true }),
       });
 
-      expect(synced.state.team?.coins).toBe(5);
-      expect(synced.state.team?.hasCarriedCoin).toBe(true);
+      expect(synced.state.team?.teamView.coins).toBe(5);
+      expect(synced.state.team?.teamView.hasCarriedCoin).toBe(true);
       expect(ofType(synced.commands, 'toast')).toEqual([]);
     });
   });
@@ -706,7 +710,7 @@ describe('team link: a team view', () => {
     expect(state.myPlayerCount).toBe(5);
     expect(state.myJoker).toEqual({ roundId: 3, source: 'chosen' });
     expect(state.mySideId).toBe('red');
-    expect(state.team).toMatchObject({ coins: 4, hasCarriedCoin: true });
+    expect(state.team?.teamView).toEqual(view);
     expect(commands).toEqual([]);
   });
 

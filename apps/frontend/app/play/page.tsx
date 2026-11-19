@@ -525,7 +525,8 @@ function powerUpsListOf({
   showMoment: PowerUpMomentState['showMoment'];
 }) {
   const { phoneScreen, settings } = view;
-  if (!team || !coinsShown(settings.powerUpsEnabled, team.coins)) return null;
+  if (!team || !coinsShown(settings.powerUpsEnabled, team.teamView.coins))
+    return null;
   // The activation buttons live in the power-ups cards: the question being answered right now, and the next round's extra joker.
   const answeringQuestion =
     phoneScreen.kind === 'block' &&
@@ -536,7 +537,7 @@ function powerUpsListOf({
   return {
     settings: settings.powerUps,
     purchases: myPurchases,
-    coins: team.coins,
+    coins: team.teamView.coins,
     question: answeringQuestion,
     roomReadyQuestionIds,
     onBuy: async (powerUp: PowerUpId, questionId: number) => {
@@ -722,11 +723,11 @@ function StatusSection({
         mySideId={game.mySideId}
         // A team's coins in a session with power-ups, or a carried coin in one without.
         coins={
-          coinsShown(settings.powerUpsEnabled, team?.coins ?? 0)
-            ? team?.coins
+          coinsShown(settings.powerUpsEnabled, team?.teamView.coins ?? 0)
+            ? team?.teamView.coins
             : undefined
         }
-        hasCarriedCoin={team?.hasCarriedCoin}
+        hasCarriedCoin={team?.teamView.hasCarriedCoin}
         phoneLeaderboard={phoneLeaderboard}
         isConnected={isConnected}
         teamName={teamName}

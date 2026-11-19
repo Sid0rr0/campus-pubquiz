@@ -33,12 +33,18 @@ describe('Team coins', () => {
     });
     expect(device.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.JOIN_ACCEPTED,
-      expect.objectContaining({ coins: expect.any(Number) as number }),
+      expect.objectContaining({
+        teamView: expect.objectContaining({
+          coins: expect.any(Number) as number,
+        }) as unknown,
+      }),
     );
-    const payloads = (device.emit.mock.calls as [string, { coins: number }][])
+    const payloads = (
+      device.emit.mock.calls as [string, { teamView: { coins: number } }][]
+    )
       .filter(([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED)
       .map(([, payload]) => payload);
-    return payloads[0].coins;
+    return payloads[0].teamView.coins;
   }
 
   it('gives a team the starting coins in its join reply and the admin view, again after a rejoin and a restart', async () => {

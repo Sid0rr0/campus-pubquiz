@@ -65,8 +65,8 @@ async function rejoinSide(
   expect(ack).toEqual({ success: true });
   const accepted = socket.emit.mock.calls.find(
     ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-  ) as [string, { sideId: string | null }];
-  return accepted[1].sideId;
+  ) as [string, { teamView: { sideId: string | null } }];
+  return accepted[1].teamView.sideId;
 }
 
 /** The side ids the team views addressed to this team's socket carried, in emit order. */

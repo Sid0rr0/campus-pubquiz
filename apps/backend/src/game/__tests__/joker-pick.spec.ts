@@ -104,8 +104,8 @@ describe('GameGateway — the joker pick', () => {
   function joinedJoker(socket: JoinedTeam['socket']): TeamJoker | null {
     const accepted = socket.emit.mock.calls.find(
       ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-    ) as [string, { joker: TeamJoker | null }];
-    return accepted[1].joker;
+    ) as [string, { teamView: { joker: TeamJoker | null } }];
+    return accepted[1].teamView.joker;
   }
 
   describe('moving through it', () => {

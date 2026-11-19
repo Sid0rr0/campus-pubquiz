@@ -3,6 +3,7 @@ import {
   type AckResult,
   type GameStatus,
   type JoinAcceptedPayload,
+  type OwnTeamView,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
@@ -62,7 +63,7 @@ async function rejoin(
   game: RealStoreGateway,
   team: JoinedTeam,
   teamName: string,
-): Promise<Pick<JoinAcceptedPayload, 'sessionRatings' | 'feedback'>> {
+): Promise<Pick<OwnTeamView, 'sessionRatings' | 'feedback'>> {
   const socket = await game.connectPlayer();
   await game.gateway.handleJoinPlayers(asSocket(socket), {
     teamName,
@@ -73,7 +74,7 @@ async function rejoin(
   const accepted = socket.emit.mock.calls.find(
     ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
   ) as [string, JoinAcceptedPayload];
-  return accepted[1];
+  return accepted[1].teamView;
 }
 
 describe('GameGateway — pacing and felt difficulty on the final form', () => {

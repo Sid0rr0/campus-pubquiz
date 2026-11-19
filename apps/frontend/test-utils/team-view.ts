@@ -23,17 +23,20 @@ export function teamView(overrides: Partial<OwnTeamView> = {}): OwnTeamView {
 
 const IDENTITY_FIELDS = ['teamId', 'teamToken', 'teamCode', 'teamName'];
 
-/** A partial join payload (as socket-level tests write them) with a team view built from its team data fields. */
+/** A partial join payload (as socket-level tests write them): identity fields stay, every other field goes into the team view. */
 export function joinPayload(fields: object): object {
   const data = Object.fromEntries(
     Object.entries(fields).filter(([key]) => !IDENTITY_FIELDS.includes(key)),
   );
-  return { ...fields, teamView: teamView(data) };
+  const identity = Object.fromEntries(
+    Object.entries(fields).filter(([key]) => IDENTITY_FIELDS.includes(key)),
+  );
+  return { ...identity, teamView: teamView(data) };
 }
 
-/** A join payload whose embedded team view carries the same team data as its own fields, as the server builds it. */
+/** A join payload from a team's identity plus any team view fields it cares about. */
 export function joinAccepted(
-  payload: Omit<JoinAcceptedPayload, 'teamView'>,
+  payload: Omit<JoinAcceptedPayload, 'teamView'> & Partial<OwnTeamView>,
 ): JoinAcceptedPayload {
   return joinPayload(payload) as JoinAcceptedPayload;
 }

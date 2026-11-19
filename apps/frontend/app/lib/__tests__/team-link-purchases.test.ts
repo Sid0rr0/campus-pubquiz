@@ -61,7 +61,7 @@ describe('the Team link — power-up purchases', () => {
     });
 
     expect(state.myPurchases).toEqual([BOUGHT]);
-    expect(state.team?.coins).toBe(1);
+    expect(state.team?.teamView.coins).toBe(1);
   });
 
   it('restores the ready flag from a join and follows each team view, per question', () => {

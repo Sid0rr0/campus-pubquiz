@@ -46,8 +46,8 @@ async function rejoinCount(
 function joinedCount(socket: JoinedTeam['socket']): number | null {
   const accepted = socket.emit.mock.calls.find(
     ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-  ) as [string, { playerCount: number | null }];
-  return accepted[1].playerCount;
+  ) as [string, { teamView: { playerCount: number | null } }];
+  return accepted[1].teamView.playerCount;
 }
 
 describe('GameGateway — a team reports its player count', () => {

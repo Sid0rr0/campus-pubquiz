@@ -150,11 +150,11 @@ describe('Carried coin', () => {
     const [, payload] = (
       device.emit.mock.calls as [
         string,
-        { coins: number; hasCarriedCoin: boolean },
+        { teamView: { coins: number; hasCarriedCoin: boolean } },
       ][]
     ).find(([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED)!;
-    lastJoinHasCarriedCoin = payload.hasCarriedCoin;
-    return payload.coins;
+    lastJoinHasCarriedCoin = payload.teamView.hasCarriedCoin;
+    return payload.teamView.coins;
   }
 
   function adminCoins(on: RealStoreGateway = game): Record<string, number> {

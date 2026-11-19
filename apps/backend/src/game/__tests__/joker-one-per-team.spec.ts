@@ -79,8 +79,8 @@ describe('GameGateway — every team keeps exactly one joker', () => {
   function joinedJoker(socket: JoinedTeam['socket']): TeamJoker | null {
     const accepted = socket.emit.mock.calls.find(
       ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-    ) as [string, { joker: TeamJoker | null }];
-    return accepted[1].joker;
+    ) as [string, { teamView: { joker: TeamJoker | null } }];
+    return accepted[1].teamView.joker;
   }
 
   describe('a team joining after the pick closed', () => {

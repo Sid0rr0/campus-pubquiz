@@ -527,7 +527,7 @@ describe('useTeamLink: the power-up and coin syncs', () => {
     );
 
     expect(joinedGame(result).myPurchases).toEqual(purchases);
-    expect(result.current.join.team?.coins).toBe(4);
+    expect(result.current.join.team?.teamView.coins).toBe(4);
   });
 
   it('tracks which questions have Ask the room ready', () => {
@@ -554,7 +554,7 @@ describe('useTeamLink: the power-up and coin syncs', () => {
 
     expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(mockToastSuccess.mock.calls[0][0]).toContain('+2 coins');
-    expect(result.current.join.team?.coins).toBe(1);
+    expect(result.current.join.team?.teamView.coins).toBe(1);
   });
 
   it('updates the balance on a team view, with no toast', () => {
@@ -567,7 +567,7 @@ describe('useTeamLink: the power-up and coin syncs', () => {
       ),
     );
 
-    expect(result.current.join.team?.coins).toBe(7);
+    expect(result.current.join.team?.teamView.coins).toBe(7);
     expect(mockToast).not.toHaveBeenCalled();
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });

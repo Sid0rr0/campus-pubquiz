@@ -62,8 +62,8 @@ async function rejoin(
   });
   const accepted = socket.emit.mock.calls.find(
     ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-  ) as [string, { feedback: unknown }];
-  return accepted[1].feedback;
+  ) as [string, { teamView: { feedback: unknown } }];
+  return accepted[1].teamView.feedback;
 }
 
 describe('GameGateway — the comment and topic suggestions on the final form', () => {

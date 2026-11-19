@@ -10,6 +10,7 @@ import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 
 describe('GameGateway — team removed (kick / leave)', () => {
   const harness = setupRealStoreGatewayTest();
@@ -133,6 +134,29 @@ describe('GameGateway — team removed (kick / leave)', () => {
       }),
     );
     expect(scorer.socket.disconnect).toHaveBeenCalledWith(true);
+  });
+
+  it('restores the team view of a kicked team that rejoins with its team code (live equals resync)', async () => {
+    await game.gateway.handleSetPlayerCount(asSocket(scorer.socket), {
+      playerCount: 4,
+    });
+    const live = teamViewsTo(game, scorer).at(-1);
+    expect(live?.answers).toHaveLength(1);
+    await game.gateway.handleKickTeam(asSocket(admin), {
+      teamId: scorer.teamId,
+    });
+
+    const phone = await game.connectPlayer();
+    await game.gateway.handleJoinPlayers(asSocket(phone), {
+      teamName: 'The Quizzards',
+      joinCode: game.joinCode,
+      teamCode: (game.teams[0] as { teamCode: string }).teamCode,
+    });
+
+    const accepted = phone.emit.mock.calls.find(
+      ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
+    ) as [string, { teamView: unknown }] | undefined;
+    expect(accepted?.[1].teamView).toEqual(live);
   });
 
   it('does not tell a leaving team it was kicked, nor disconnect its socket', async () => {

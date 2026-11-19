@@ -35,18 +35,6 @@ const ACCEPTED: JoinAcceptedPayload = {
   teamName: 'T',
   teamToken: 'token',
   teamCode: 'CODE',
-  answers: [],
-  bonusAwards: [],
-  roundRatings: [],
-  feedback: { comment: '', topics: [] },
-  sessionRatings: { pacing: null, feltDifficulty: null },
-  playerCount: null,
-  joker: null,
-  coins: 0,
-  hasCarriedCoin: false,
-  purchases: [],
-  sideId: null,
-  roomReadyQuestionIds: [],
   teamView: teamView(),
 };
 

@@ -665,11 +665,7 @@ function replaceTeamData(
   return announceJokerChange(state.myJoker, {
     ...state,
     ...teamDataFromView(view),
-    team: state.team && {
-      ...state.team,
-      coins: view.coins,
-      hasCarriedCoin: view.hasCarriedCoin,
-    },
+    team: state.team && { ...state.team, teamView: view },
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   });
 }

@@ -130,7 +130,7 @@ export class TeamRosterChanges {
     };
   }
 
-  /** The JOIN_ACCEPTED reply for a joined team: its identity plus its team view (the old per-field copies stay until the phone's channels move over). */
+  /** The JOIN_ACCEPTED reply for a joined team: its identity plus its team view. */
   joinReply(
     team: TeamIdentity,
     teamView: OwnTeamView,
@@ -142,7 +142,6 @@ export class TeamRosterChanges {
         teamName: team.name,
         teamToken: team.token,
         teamCode: team.code,
-        ...teamView,
         teamView,
       },
     };

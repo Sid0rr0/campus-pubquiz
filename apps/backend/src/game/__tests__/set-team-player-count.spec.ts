@@ -275,8 +275,8 @@ describe('GameGateway — SET_TEAM_PLAYER_COUNT', () => {
     });
     const accepted = socket.emit.mock.calls.find(
       ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-    ) as [string, { playerCount: number | null }];
-    expect(accepted[1].playerCount).toBe(6);
+    ) as [string, { teamView: { playerCount: number | null } }];
+    expect(accepted[1].teamView.playerCount).toBe(6);
   });
 
   it('refuses a socket outside the admin room, changing nothing', async () => {

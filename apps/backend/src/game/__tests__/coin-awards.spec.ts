@@ -261,7 +261,9 @@ describe('Coin awards', () => {
     expect(adminCoins(restarted)).toBe(3);
     expect(device.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.JOIN_ACCEPTED,
-      expect.objectContaining({ coins: 3 }),
+      expect.objectContaining({
+        teamView: expect.objectContaining({ coins: 3 }) as unknown,
+      }),
     );
   });
 

@@ -740,7 +740,7 @@ Coins are shown (`coinsShown`) when power-ups are on or the team's balance is ab
 Teams table whenever a phone would show coins, including carried coins with power-ups off.
 The starting coins, the carried coins, the coin awards and the purchases all count.
 The balance is sent as
-`coins` in `JOIN_ACCEPTED` (so a reconnect or backend restart reads it again), in
+`coins` in `JOIN_ACCEPTED`'s `teamView` (so a reconnect or backend restart reads it again), in
 the team view after a purchase and in each `AdminTeamView`; the phone shows it beside its points on the leaderboard
 screen, `/control`'s Teams table has a Coins column, and the rules screen adds
 "Power-ups are on: you start with N coins. If your team rated all rounds of the
@@ -1161,7 +1161,8 @@ acknowledgement type or a listener typed against the wrong view is a compile
 error. `STATE_SYNC` and `STATE_UPDATED` are declared per room, so a socket
 connected as `players` receives `PlayersStatePayload` on them and nothing else.
 
-Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED`,
+Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED` (the team's identity: `teamId`, `teamToken`, `teamCode`,
+`teamName`, plus its `teamView`, and nothing else),
 `ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
 `PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview;
 `currentQuestionNotes`, the **Question notes** of the question the on-air
@@ -1411,7 +1412,7 @@ itself — the display and other players just see counts.
    every change and broadcast to all rooms; shown whenever the admin toggles
    it.
 
-A team's saved answers ride along on `JOIN_ACCEPTED`, so a phone that
+A team's saved answers ride along in `JOIN_ACCEPTED`'s `teamView`, so a phone that
 reconnects (or reopens the tab) restores its checkmarks and can still revise
 anything in the open block. So do its own round ratings (`roundRatings`, a list
 of `{ roundId, stars }`, never another team's): the phone draws its stars from

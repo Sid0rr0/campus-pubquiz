@@ -113,8 +113,17 @@ describe('GameGateway — buying a 50/50', () => {
   function joinedWith(socket: JoinedTeam['socket']) {
     const accepted = socket.emit.mock.calls.filter(
       ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-    ) as [string, { purchases: unknown; coins: number }][];
-    return accepted[accepted.length - 1][1];
+    ) as [
+      string,
+      {
+        teamView: {
+          purchases: unknown;
+          coins: number;
+          roomReadyQuestionIds: number[];
+        };
+      },
+    ][];
+    return accepted[accepted.length - 1][1].teamView;
   }
 
   describe('a purchase that goes through', () => {
