@@ -67,7 +67,8 @@ function inSessions<Q extends { whereIn(column: string, ids: number[]): Q }>(
  * session (`game_session_id`, `round_id`, `team_id`, `total`). Every figure
  * built from answers' points (round points, quiz points, the winner's total)
  * reads this query, so a rule that changes what an answer counts for (the
- * joker, ADR 0004) is applied here and nowhere else.
+ * joker, ADR 0004) is applied here and nowhere else. It is the set-based
+ * twin of `countedPoints`, which the parity spec checks it against.
  */
 function roundPointsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
   return (

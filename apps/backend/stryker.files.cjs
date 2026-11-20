@@ -107,7 +107,6 @@ const LOGIC_DIRS = [
 /** Individual files `mutate:db` mutates that no directory or suffix rule picks. */
 const LOGIC_FILES = [
   'game/game.gateway.ts',
-  'standings/cell-points.ts',
   'auth/password-hash.ts',
   'feedback/feedback-off-reason.ts',
 ];

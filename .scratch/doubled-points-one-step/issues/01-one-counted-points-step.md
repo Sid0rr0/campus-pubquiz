@@ -6,11 +6,11 @@ Nobody sees a difference: totals, cells and their joker marks, fun facts and the
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `countedPoints` lives in the Doubled rounds module, and a pure `shared/types` test covers doubled, not doubled, zero and negative points. `JOKER_MULTIPLIER` stays exported for the SQL.
-- [ ] `cellPoints` and `jokerRoundPoints` no longer exist. The scoresheet, session detail and team history pass each answer's existing `isJoker` to `countedPoints`, and their specs still pass unchanged.
-- [ ] Fun facts' best-joker and backfired figures come from `countedPoints` (extra points = counted minus stored), and the existing fun-facts tests pass, including a case with an extra joker.
-- [ ] The phone's "+N" joker bonus uses `countedPoints`. It still shows nothing on a zero or ungraded answer, and its tests pass.
-- [ ] The doubled-rounds parity spec compares, for every existing case, each team's standings round total from SQL with the sum of `countedPoints` over that team's answers, where `isDoubled` comes from `doubledRoundIds`.
-- [ ] `pnpm crap:changed` and `pnpm mutate:changed` are clean on the touched files.
+- [x] `countedPoints` lives in the Doubled rounds module, and a pure `shared/types` test covers doubled, not doubled, zero and negative points. `JOKER_MULTIPLIER` stays exported for the SQL.
+- [x] `cellPoints` and `jokerRoundPoints` no longer exist. The scoresheet, session detail and team history pass each answer's existing `isJoker` to `countedPoints`, and their specs still pass unchanged.
+- [x] Fun facts' best-joker and backfired figures come from `countedPoints` (extra points = counted minus stored), and the existing fun-facts tests pass, including a case with an extra joker.
+- [x] The phone's "+N" joker bonus uses `countedPoints`. It still shows nothing on a zero or ungraded answer, and its tests pass.
+- [x] The doubled-rounds parity spec compares, for every existing case, each team's standings round total from SQL with the sum of `countedPoints` over that team's answers, where `isDoubled` comes from `doubledRoundIds`.
+- [x] `pnpm crap:changed` and `pnpm mutate:changed` are clean on the touched files.

@@ -1024,7 +1024,7 @@ everywhere scores are summed; bonus awards never do, and an answer's stored
 `roundPointsQuery` in `StandingsService` (SQL: an answer whose round is the
 team's joker round counts twice) feeds the standings, round points, quiz
 points, the Session result, the sessions list's winner total and the league
-table and team page, and `cellPoints` doubles the cells of the Scoresheet
+table and team page, and `countedPoints` doubles the cells of the Scoresheet
 and the team's night (`Night` answers carry `isJoker`). Hand grades, key fixes
 and joker changes therefore move the totals with no rewrite. Ties, placings and
 showdowns are decided on the doubled totals; the showdown guess itself is not a

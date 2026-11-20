@@ -1085,6 +1085,20 @@ describe('describeFunFacts', () => {
       expect(kinds(fine)).not.toContain('joker_backfired');
     });
 
+    it('counts the joker round doubled when judging a backfire', () => {
+      const session = withJokers(
+        sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+          answers: [
+            // Bravo's joker round scored 600 (counts 1200), above the 1000 of round 2.
+            answer(1, 1, 'correct', { pointsAwarded: 600 }),
+            answer(3, 1, 'correct'),
+          ],
+        }),
+        jokers,
+      );
+      expect(kinds(session)).not.toContain('joker_backfired');
+    });
+
     it('breaks a best-joker tie by name order, not by the leaderboard order', () => {
       const session = withJokers(
         sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {

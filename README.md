@@ -257,7 +257,7 @@ are gitignored.
   In: `game/state/` (except `errors/`), every `*.service.ts` (except
   `app.service.ts`), `game/game.gateway.ts`, the logic modules under
   `game/socket/`, `game/live-edit/` and `game/rest/`, `ended-sessions-read/`,
-  `standings/cell-points.ts`, `auth/password-hash.ts` and
+  `auth/password-hash.ts` and
   `feedback/feedback-off-reason.ts`. Out: controllers, modules, guards,
   decorators, `db/`, `mikro-orm.config.ts`, the `*-http*.ts` error mappers,
   Zod schema files, socket types and event declarations, and anything the

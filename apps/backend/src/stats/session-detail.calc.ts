@@ -16,8 +16,8 @@ import {
   type SessionDetailRoundRow,
   type SessionDetailStandingRow,
   type SessionDetailStats,
+  countedPoints,
 } from '@campus-pubquiz/types';
-import { cellPoints } from '@/standings/cell-points';
 import { sessionResult, type TeamResult } from '@/standings/session-result';
 import type { SessionStandings } from '@/standings/standings.service';
 import { summarisePlayerCounts } from '@/stats/player-count.calc';
@@ -574,7 +574,7 @@ export function computeSessionDetail(
     scoresheet: answers.map((a) => ({
       teamId: a.teamId,
       questionId: a.questionId,
-      pointsAwarded: cellPoints(a),
+      pointsAwarded: countedPoints(a.pointsAwarded, a.isJoker === true),
       isJoker: a.isJoker === true,
       verdict: a.verdict,
       answer: a.answer,

@@ -1,4 +1,4 @@
-import type { TeamJoker } from './joker';
+import { JOKER_MULTIPLIER, type TeamJoker } from './joker';
 import type { PowerUpId } from './power-ups';
 import { QUESTION_KINDS } from './question-kind';
 import type { QuestionType } from './question-types';
@@ -72,4 +72,17 @@ export function doubledRoundIdsOfTeam(
     jokers[teamId]?.roundId,
     purchases.filter((purchase) => purchase.teamId === teamId),
   );
+}
+
+/**
+ * An answer's points as they count towards a team's total: the stored points,
+ * times `JOKER_MULTIPLIER` when the answer is in a Doubled round (ADR 0004).
+ * The standings SQL (`standings.service.ts`) is its set-based twin; the parity
+ * spec checks the two agree.
+ */
+export function countedPoints(
+  pointsAwarded: number,
+  isDoubled: boolean,
+): number {
+  return isDoubled ? pointsAwarded * JOKER_MULTIPLIER : pointsAwarded;
 }

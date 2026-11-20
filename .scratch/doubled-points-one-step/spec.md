@@ -1,6 +1,6 @@
 # Joker doubling goes through one shared step
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-11-18, candidate 4 ("Make ADR 0004's 'one shared step' for joker doubling actually one", rated "worth exploring"). Candidate 1's spec, `team-view-projection`, takes the phone half of candidate 4 (the phone reads its doubled rounds from the team view). This spec is the rest: the counted-points step on the server and in `shared/types`.
 

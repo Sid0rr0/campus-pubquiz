@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canBeDoubled,
+  countedPoints,
   doubledRoundIds,
   doubledRoundIdsOfSession,
   doubledRoundIdsOfTeam,
@@ -119,5 +120,17 @@ describe('playsJokers', () => {
   it('plays without jokers when Jokers is off, or every round has a Clue question', () => {
     expect(playsJokers(game(false, [plain]))).toBe(false);
     expect(playsJokers(game(true, [withClue, withClue]))).toBe(false);
+  });
+});
+
+describe('countedPoints', () => {
+  it.each([
+    [3, true, 6],
+    [3, false, 3],
+    [0, true, 0],
+    [-2, true, -4],
+    [-2, false, -2],
+  ])('%i points, doubled %s → %i', (points, isDoubled, expected) => {
+    expect(countedPoints(points, isDoubled)).toBe(expected);
   });
 });

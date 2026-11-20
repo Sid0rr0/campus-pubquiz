@@ -1,8 +1,11 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import { formatAnswer, type Verdict } from './answer-kind';
-import { canBeDoubled, doubledRoundIdsOfTeam } from './doubled-rounds';
-import { jokerRoundPoints } from './joker';
+import {
+  canBeDoubled,
+  countedPoints,
+  doubledRoundIdsOfTeam,
+} from './doubled-rounds';
 import { countPerfectRounds } from './perfect-rounds';
 import { powerUpHits } from './power-up-hits';
 import { POWER_UP_IDS, type PowerUpId } from './power-ups';
@@ -530,7 +533,7 @@ function revealedJokerFacts(
       team,
       round,
       extra:
-        jokerRoundPoints(rawPoints(team.teamId, round.questionIds)) -
+        countedPoints(rawPoints(team.teamId, round.questionIds), true) -
         rawPoints(team.teamId, round.questionIds),
     })),
     ({ extra }) => -extra,
@@ -538,8 +541,9 @@ function revealedJokerFacts(
   // Backfired: the joker round, as it counts, scored less than every other revealed round.
   const backfired = revealedJokers.find(({ team, round }) => {
     const others = revealedRounds.filter((r) => r !== round);
-    const jokerPoints = jokerRoundPoints(
+    const jokerPoints = countedPoints(
       rawPoints(team.teamId, round.questionIds),
+      true,
     );
     return (
       others.length > 0 &&

@@ -1,4 +1,10 @@
-import { doubledRoundIds, type PowerUpId } from '@campus-pubquiz/types';
+import {
+  countedPoints,
+  doubledRoundIds,
+  type PowerUpId,
+} from '@campus-pubquiz/types';
+import { Answer } from '@/db/entities/answer.entity';
+import { Question } from '@/db/entities/question.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Purchase } from '@/db/entities/purchase.entity';
 import { Round } from '@/db/entities/round.entity';
@@ -44,6 +50,19 @@ describe('Doubled rounds: SQL fragment and in-memory rule agree (Postgres integr
         }),
       );
     }
+    const questions = [state.question];
+    for (const round of rounds.slice(1)) {
+      questions.push(
+        state.em.create(Question, {
+          round,
+          orderIndex: 0,
+          type: 'free_text',
+          prompt: 'Name a vegetable',
+          answer: 'Leek',
+          points: 1,
+        }),
+      );
+    }
     const team = await insertTeam('Case', 'token-case');
     if (jokerIndex !== undefined) {
       state.em.create(SessionTeamJoker, {
@@ -83,6 +102,42 @@ describe('Doubled rounds: SQL fragment and in-memory rule agree (Postgres integr
 
     expect(new Set(fromSql)).toEqual(new Set(fromRule));
     expect(fromSql).toHaveLength(fromRule.length);
+
+    // The step's two forms agree: the standings' round totals (SQL) equal the
+    // stored points run through `countedPoints` (TypeScript).
+    for (const [index, question] of questions.entries()) {
+      const { answerId } = await state.answerService.submit(
+        state.session.id,
+        gradable(question),
+        team.id,
+        'guess',
+      );
+      await state.answerService.grade(
+        state.session.id,
+        answerId,
+        gradable(question),
+        index + 1,
+      );
+    }
+    const answers = await state.em.find(
+      Answer,
+      { gameSession: state.session.id, team: team.id },
+      { populate: ['question'] },
+    );
+    const { leaderboard } = await buildStandingsService(state.em).forSession(
+      state.session.id,
+    );
+    const row = leaderboard.find((r) => r.teamName === 'Case');
+    for (const [index, round] of rounds.entries()) {
+      const expected = answers
+        .filter((a) => a.question.round.id === round.id)
+        .reduce(
+          (sum, a) =>
+            sum + countedPoints(a.pointsAwarded, fromRule.includes(round.id)),
+          0,
+        );
+      expect(row?.roundPoints[index].points).toBe(expected);
+    }
   });
 
   it('doubles only the team holding a joker and an extra joker on one round, in the standings round points', async () => {

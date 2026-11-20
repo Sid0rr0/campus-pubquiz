@@ -5,7 +5,7 @@ import {
   doubledRoundIds,
   findQuestionOpenForAnswering,
   getBlockInPlay,
-  jokerRoundPoints,
+  countedPoints,
   powerUpApplies,
   type DoubledRoundView,
   type SessionState,
@@ -180,7 +180,7 @@ function jokerExtrasOf(
       )
       .map((answer) => [
         answer.questionId,
-        jokerRoundPoints(answer.pointsAwarded) - answer.pointsAwarded,
+        countedPoints(answer.pointsAwarded, true) - answer.pointsAwarded,
       ]),
   );
 }

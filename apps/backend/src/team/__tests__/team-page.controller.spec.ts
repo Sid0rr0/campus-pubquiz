@@ -13,6 +13,7 @@ import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
+import { SessionTeamJoker } from '@/db/entities/session-team-joker.entity';
 import { Team } from '@/db/entities/team.entity';
 import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
@@ -321,6 +322,33 @@ describe('TeamPageController (Postgres integration)', () => {
         },
       ]);
       expect(JSON.stringify(detail)).not.toContain('Lyon-secret-beta');
+    });
+
+    it("shows an answer in the team's joker round at its counted (doubled) points", async () => {
+      const night = await createNight();
+      const alpha = await joinTeam('Alpha', night.session);
+      em.create(SessionTeamJoker, {
+        gameSession: night.session,
+        team: alpha,
+        round: night.text.round,
+        source: 'chosen',
+      });
+      em.create(Answer, {
+        gameSession: night.session,
+        question: night.text,
+        team: alpha,
+        value: 'Paris',
+        pointsAwarded: 10,
+        gradedAt: new Date(),
+        verdict: 'correct',
+      });
+      await em.flush();
+
+      const detail = await controller.night(night.session.id, {
+        teamCode: alpha.code,
+      });
+
+      expect(detail.questions[0].pointsAwarded).toBe(20);
     });
 
     it('answers a session that has not ended with a 404', async () => {
