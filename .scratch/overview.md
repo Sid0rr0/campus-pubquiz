@@ -6,6 +6,12 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec | Title | Tickets | Blocked by |
 | ---- | ----- | ------- | ---------- |
+| scoring-records | [Name the Scoring records; one purchase source for the Coin ledger](scoring-records/spec.md) | 2 | — |
+| team-view-held-once | [The phone holds the team view as it arrives](team-view-held-once/spec.md) | 3 | — |
+| answer-list-module | [One Answer list module for /control and /remote](answer-list-module/spec.md) | 2 | — |
+| bonus-award-policy | [One Bonus award policy; the bonus service only stores](bonus-award-policy/spec.md) | 2 | — |
+| selected-question-view | [The selected question as the team sees it](selected-question-view/spec.md) | not yet split | team-view-held-once |
+| round-identity | [One Round identity rule for a live edit](round-identity/spec.md) | 1 | — |
 
 ## Won't do
 
