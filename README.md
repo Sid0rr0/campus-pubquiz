@@ -300,13 +300,15 @@ check: not in `pnpm test`, the pre-commit hook or CI.
 
 ```bash
 pnpm crap           # rerun coverage in every workspace, rank every function (about 2 min)
-pnpm crap:changed   # only the uncommitted source files; coverage from only the tests that import them
+pnpm crap:changed   # only the uncommitted source files; coverage from the tests that import them (backend: its whole suite)
 ```
 
 Both exit 2 when a scored function is above 10. With `crap:changed` that's
 every function in a touched file, not just the lines you edited: touching a
 file with an offender means fixing it first. Backend coverage needs Docker
-(Testcontainers). A failing test stops the run with exit 1, since a
+(Testcontainers), and always reruns the whole backend suite: a backend
+file's related tests took as long as the full suite, so the one run also
+serves as the full-suite check. A failing test stops the run with exit 1, since a
 workspace whose tests fail has no coverage report and would score 0%. The
 last line is always `crap: exit <code>`: wait on that line for a run in the
 background.

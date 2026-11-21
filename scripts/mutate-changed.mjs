@@ -9,6 +9,7 @@
 // backend's stryker.files.cjs lists. Runs one at a time (each Stryker run uses 8 workers), each
 // logged to .logs/mutate-changed/<run>.log. Results go to their own `*-changed.json` incremental
 // files, so a subset run never wipes the full runs' results. The backend's DB-backed run needs Docker.
+// Always ends on a `mutate: exit <code>` line (wait on that line for a backgrounded run).
 import { execFileSync, spawn } from 'node:child_process';
 import {
   createWriteStream,
@@ -31,6 +32,11 @@ const lastRun = existsSync(LAST_RUN)
   : null;
 const base =
   args.find((a) => !a.startsWith('--')) ?? lastRun?.sha ?? 'origin/main';
+
+function exit(code) {
+  console.log(`mutate: exit ${code}`);
+  process.exit(code);
+}
 
 const git = (...a) =>
   execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
@@ -123,11 +129,11 @@ console.log(
 if (runs.length === 0) {
   console.log(`No mutated source file changed since ${base}.`);
   if (!listOnly) recordRun();
-  process.exit(0);
+  exit(0);
 }
 if (listOnly) {
   for (const run of runs) console.log(`${run.name}: ${run.files.join(' ')}`);
-  process.exit(0);
+  exit(0);
 }
 
 function runStryker(run) {
@@ -167,4 +173,4 @@ if (reports.length > 0)
   );
 // A failed run (e.g. Docker down for backend-db) keeps the old base, so its files are retried.
 if (!failed) recordRun();
-process.exit(failed ? 1 : 0);
+exit(failed ? 1 : 0);

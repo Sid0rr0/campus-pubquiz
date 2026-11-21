@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // CRAP score report (complexity × missing coverage) via unclebob/crapper.
 //   node scripts/crap.mjs            every workspace: rerun coverage, rank all functions
-//   node scripts/crap.mjs --changed  only uncommitted source files; coverage from only the tests that import them
+//   node scripts/crap.mjs --changed  only uncommitted source files; coverage from only the tests that import them,
+//                                    except the backend, which always runs its whole suite
 // Exits 2 when any scored function is above THRESHOLD, and always ends on a `crap: exit <code>` line
 // (wait on that line for a backgrounded run). Backend coverage needs Docker (Testcontainers).
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -20,7 +21,7 @@ const VENV_OK = join(TOOL, '.venv', '.installed');
 const zeroThresholds = ['lines', 'functions', 'branches', 'statements'].map(
   (k) => `--coverage.thresholds.${k}=0`,
 );
-// `related` (Vitest) and --findRelatedTests (Jest) follow the import graph, so every test that can reach a file runs.
+// `related` (Vitest) follows the import graph, so every test that can reach a file runs.
 const vitest = (name) => (related) => [
   'vitest',
   ...(related
@@ -43,11 +44,10 @@ const WORKSPACES = [
     name: 'backend',
     dir: 'apps/backend',
     src: 'apps/backend/src',
-    cmd: (related) => [
+    // Always the whole suite: a backend file's related tests took as long as the full suite (median 87s vs 83s),
+    // so one run gives both the coverage and the full-suite result implementers need.
+    cmd: () => [
       'jest',
-      ...(related
-        ? ['--passWithNoTests', '--findRelatedTests', ...related]
-        : []),
       '--maxWorkers=2',
       '--coverage',
       '--coverageReporters=lcov',
