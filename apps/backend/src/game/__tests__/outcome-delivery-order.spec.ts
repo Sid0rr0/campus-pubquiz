@@ -44,7 +44,7 @@ function recordDeliveryOrder(
 describe('GameGateway — outcome delivery order', () => {
   const harness = setupRealStoreGatewayTest();
 
-  it('sends the answer reply to the sender before any room push, then the admin answer list', async () => {
+  it('pushes the rooms, then the admin answer list, then the submitter its team view', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const admin = await game.connectAdmin();
     const [{ socket, teamId }] = game.teams;
@@ -58,7 +58,6 @@ describe('GameGateway — outcome delivery order', () => {
     });
 
     expect(log).toEqual([
-      SOCKET_EVENTS.ANSWER_RECEIVED,
       ...ROOM_PUSH,
       SOCKET_EVENTS.ANSWERS_UPDATED,
       SOCKET_EVENTS.TEAM_VIEW,

@@ -10,7 +10,6 @@ import type {
   SetDisplayTextScalePayload,
 } from './admin-actions';
 import type {
-  AnswerReceivedPayload,
   AnswersUpdatedPayload,
   GradeAnswerPayload,
   SubmitAnswerPayload,
@@ -117,7 +116,6 @@ export interface ExceptionPayload {
 
 /** Server-to-client events that don't depend on the room, each with its payload (`void` for none). `STATE_SYNC` and `STATE_UPDATED` are per room — see `ServerToClientProtocolByRoom`. */
 export interface ServerToClientProtocol {
-  [SOCKET_EVENTS.ANSWER_RECEIVED]: AnswerReceivedPayload;
   [SOCKET_EVENTS.JOIN_ACCEPTED]: JoinAcceptedPayload;
   [SOCKET_EVENTS.ANSWERS_UPDATED]: AnswersUpdatedPayload;
   [SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED]: PresenterContextPayload;

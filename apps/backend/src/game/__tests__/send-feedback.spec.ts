@@ -11,6 +11,10 @@ import {
   type QuizRoundSpec,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
 
 const MAX_ADVANCES = 40;
 const NOT_OPEN_REASON = "Feedback can't be sent right now";
@@ -268,14 +272,23 @@ describe('GameGateway — the comment and topic suggestions on the final form', 
     });
   });
 
-  it('broadcasts nothing', async () => {
+  it('sends only the sending team a team view, equal to what a rejoin gets', async () => {
     const { game, team } = await atEnded();
+    const rival = await game.joinTeam('The Rivals');
     game.clearEmits();
 
     await send(game, team, { comment: 'quiet', topics: ['A'] });
     await game.settled();
 
-    expect(game.roomEmits()).toEqual([]);
+    expect(game.roomEmits().map((emit) => emit.event)).toEqual([
+      SOCKET_EVENTS.TEAM_VIEW,
+    ]);
+    expect(teamViewsTo(game, team).at(-1)?.feedback).toEqual({
+      comment: 'quiet',
+      topics: ['A'],
+    });
+    expect(teamViewsTo(game, rival)).toEqual([]);
+    await expectLiveEqualsResync(game, team);
   });
 
   it('refuses feedback from an admin socket', async () => {

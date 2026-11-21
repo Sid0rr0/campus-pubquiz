@@ -13,9 +13,9 @@ export const kicked: SocketNotice = {
 };
 
 export const mismatchedReply: SocketReply = {
-  event: SOCKET_EVENTS.ANSWER_RECEIVED,
-  // @ts-expect-error a join-accepted payload is not an answer-received payload
-  payload: { teamToken: 'x' },
+  event: SOCKET_EVENTS.JOIN_ACCEPTED,
+  // @ts-expect-error a join-accepted reply carries a join payload, not a bare id
+  payload: { questionId: 1 },
 };
 
 const sendReply = (reply: SocketReply): SocketReply => reply;

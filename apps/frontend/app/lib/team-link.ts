@@ -8,7 +8,6 @@ import {
   NOT_YOUR_TEAM_ANSWER_ERROR,
   isSeatTakenRefusal,
   type AckResult,
-  type AnswerReceivedPayload,
   type GameStatus,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
@@ -16,7 +15,6 @@ import {
   type DoubledRoundView,
   type OwnTeamView,
   type PurchaseView,
-  type RateSessionPayload,
   type RoundRatingView,
   type SubmitAnswerPayload,
   type TeamAnswerView,
@@ -76,7 +74,7 @@ export interface MyAnswer {
   clue: MyAnswerClue | null;
 }
 
-/** Builds the record from a `TeamAnswerView` or an `AnswerReceivedPayload`. */
+/** Builds the record from a `TeamAnswerView`. */
 function toMyAnswer(
   answer: Pick<
     TeamAnswerView,
@@ -204,7 +202,6 @@ export type TeamLinkInput =
   | { type: 'sessionClosed' }
   // A new socket identity: the previous team's data and pending answer go.
   | { type: 'identityChanged' }
-  | { type: 'answerReceived'; payload: AnswerReceivedPayload }
   // A bonus award was given: a toast only, the list arrives in the team view.
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
   // The quiz master gave (or took) coins: a toast only, the balance arrives in the team view.
@@ -213,13 +210,6 @@ export type TeamLinkInput =
   // The answer never left the socket (not connected, or no acknowledgement in time).
   | { type: 'answerNotDelivered'; attempt: number }
   | { type: 'answerTimedOut'; attempt: number }
-  | { type: 'ratingSaved'; roundId: number; stars: number }
-  | { type: 'feedbackSaved'; feedback: TeamFeedbackView }
-  | { type: 'sessionRatingSaved'; rating: RateSessionPayload }
-  // The server acknowledged a count this phone sent.
-  | { type: 'playerCountSaved'; playerCount: number }
-  // The server acknowledged a joker pick this phone sent.
-  | { type: 'jokerSaved'; joker: TeamJoker }
   // The server sent the team's whole view: it replaces the team's data.
   | { type: 'teamViewReceived'; view: OwnTeamView }
   // Intents
@@ -706,19 +696,6 @@ function keepAnswerPending(
   return { state, commands: [CLEAR_TIMER] };
 }
 
-function receiveAnswer(
-  state: TeamLinkState,
-  payload: AnswerReceivedPayload,
-): TeamLinkStep {
-  return unchanged({
-    ...state,
-    myAnswers: {
-      ...state.myAnswers,
-      [payload.questionId]: toMyAnswer(payload),
-    },
-  });
-}
-
 function awardBonus(
   state: TeamLinkState,
   award: TeamBonusAwardView,
@@ -886,7 +863,6 @@ const INPUT_HANDLERS: {
   connectionRefused: (state) => unchanged({ ...state, isJoinInFlight: false }),
   joinAccepted: receiveJoinAccepted,
   identityChanged: changeIdentity,
-  answerReceived: (state, input) => receiveAnswer(state, input.payload),
   bonusAwarded: (state, input) => awardBonus(state, input.payload),
   coinAwarded: (state, input) => awardCoins(state, input.payload),
   answerResult: (state, input) =>
@@ -906,24 +882,6 @@ const INPUT_HANDLERS: {
       teamId: input.teamId,
       value: input.value,
     }),
-  ratingSaved: (state, input) =>
-    unchanged({
-      ...state,
-      myRoundRatings: { ...state.myRoundRatings, [input.roundId]: input.stars },
-    }),
-  feedbackSaved: (state, input) =>
-    unchanged({ ...state, myFeedback: input.feedback }),
-  sessionRatingSaved: (state, input) =>
-    unchanged({
-      ...state,
-      mySessionRatings: {
-        ...state.mySessionRatings,
-        [input.rating.scale]: input.rating.value,
-      },
-    }),
-  playerCountSaved: (state, input) =>
-    unchanged({ ...state, myPlayerCount: input.playerCount }),
-  jokerSaved: (state, input) => unchanged({ ...state, myJoker: input.joker }),
   teamViewReceived: (state, input) => replaceTeamData(state, input.view),
   nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),
   gameCodeTyped: (state, input) =>

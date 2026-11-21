@@ -119,19 +119,9 @@ async function emitAnswerLists(
   }
 }
 
-/** A reply goes to the sender as its event with that event's payload; the switch keeps each pair checked. */
+/** A reply goes to the sender as its event with that event's payload (the join reply is the only one). */
 function emitReply(sender: Pick<GameSocket, 'emit'>, reply: SocketReply): void {
-  switch (reply.event) {
-    case SOCKET_EVENTS.ANSWER_RECEIVED:
-      sender.emit(reply.event, reply.payload);
-      return;
-    case SOCKET_EVENTS.JOIN_ACCEPTED:
-      sender.emit(reply.event, reply.payload);
-      return;
-    // Stryker disable next-line ConditionalExpression: equivalent — unreachable, the cases above cover every reply (the `satisfies never` is the compile-time guard).
-    default:
-      return reply satisfies never;
-  }
+  sender.emit(reply.event, reply.payload);
 }
 
 /** A notice goes to one socket as its event; `TEAM_KICKED` carries no payload. */

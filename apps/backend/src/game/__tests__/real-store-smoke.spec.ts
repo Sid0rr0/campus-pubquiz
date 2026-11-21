@@ -7,6 +7,7 @@ import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 
 interface AnswersUpdated {
   questionId: number;
@@ -75,10 +76,9 @@ describe('GameGateway — real-store harness smoke', () => {
     expect(submitted.answers).toEqual([
       expect.objectContaining({ teamId, pointsAwarded: 2 }),
     ]);
-    expect(team.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.ANSWER_RECEIVED,
-      expect.objectContaining({ value: 'Paris', pointsAwarded: 2 }),
-    );
+    expect(teamViewsTo(game, { socket: team }).at(-1)?.answers).toEqual([
+      expect.objectContaining({ value: 'Paris' }),
+    ]);
 
     game.clearEmits();
     await game.gateway.handleGradeAnswer(asSocket(admin), {

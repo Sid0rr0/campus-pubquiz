@@ -1,7 +1,6 @@
 import {
   findQuestionOpenForAnswering,
   NOT_YOUR_TEAM_ANSWER_ERROR,
-  SOCKET_EVENTS,
   type SessionState,
   type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
@@ -38,8 +37,8 @@ export class AnswersChanges {
    * A team's answer arrived from `socketId`. Refuses it when the question is
    * no longer open or the socket doesn't own the team's seat (both checked
    * before the answer is stored); otherwise measures the quickfire response time
-   * from the phase start, stores the answer, runs the answer refresh and
-   * replies "answer received" to the sender.
+   * from the phase start, stores the answer and runs the answer refresh, which
+   * lists the submitting team so its phones get the saved answer in a team view.
    */
   async submit(
     session: SessionState,
@@ -56,9 +55,8 @@ export class AnswersChanges {
       session.phaseStartedAt === null
         ? null
         : Date.now() - session.phaseStartedAt;
-    let submitted: Awaited<ReturnType<AnswerService['submit']>>;
     try {
-      submitted = await this.answerService.submit(
+      await this.answerService.submit(
         session.seededGame.gameSessionId,
         question,
         teamId,
@@ -76,28 +74,7 @@ export class AnswersChanges {
     const refreshed = await this.refreshAnswers(session, questionId, {
       submitterTeamId: teamId,
     });
-    return {
-      session: refreshed.session,
-      outcome: {
-        ...refreshed.outcome,
-        replies: [
-          {
-            event: SOCKET_EVENTS.ANSWER_RECEIVED,
-            payload: {
-              questionId,
-              teamId: submitted.teamId,
-              teamName: submitted.teamName,
-              value: submitted.value,
-              pointsAwarded: submitted.pointsAwarded,
-              gradedAt: submitted.gradedAt,
-              verdict: submitted.verdict,
-              clue: submitted.clue,
-              clueValue: submitted.clueValue,
-            },
-          },
-        ],
-      },
-    };
+    return refreshed;
   }
 
   /**

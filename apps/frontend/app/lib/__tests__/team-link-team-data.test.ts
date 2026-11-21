@@ -113,7 +113,6 @@ describe('team link: the team data', () => {
   it('restores answers, grades, bonus awards, ratings and feedback wholesale on join accepted', () => {
     const { state } = run(
       linkedPhone(),
-      { type: 'ratingSaved', roundId: 99, stars: 1 },
       accepted({ ...ACCEPTED, answers: [GRADED], bonusAwards: [] }),
     );
 
@@ -136,57 +135,20 @@ describe('team link: the team data', () => {
     });
   });
 
-  it('updates just that answer on answer received, with its grade when graded automatically', () => {
-    const received = {
-      questionId: 22,
-      teamId: 31,
-      teamName: 'The Quizzards',
-      value: 'Rome',
-      pointsAwarded: 1,
-      gradedAt: '2026-10-01T11:00:00.000Z',
-      clue: null,
-      clueValue: null,
-      verdict: 'correct',
-    } as const;
-
-    const graded = run(linkedPhone(), {
-      type: 'answerReceived',
-      payload: received,
-    }).state;
-    expect(graded.myAnswers[22]).toEqual({
-      value: 'Rome',
-      grade: {
-        pointsAwarded: 1,
-        gradedAt: received.gradedAt,
-        verdict: 'correct',
-      },
-      clue: null,
-    });
-    expect(Object.keys(graded.myAnswers)).toEqual(['20', '21', '22']);
-
-    const waiting = run(linkedPhone(), {
-      type: 'answerReceived',
-      payload: { ...received, gradedAt: null, verdict: null, pointsAwarded: 0 },
-    }).state;
-    expect(waiting.myAnswers[22]).toEqual({
-      value: 'Rome',
-      grade: null,
-      clue: null,
-    });
-  });
-
-  it('drops the old grade when a revised answer comes back ungraded', () => {
+  it('drops the old grade when a team view brings a revised answer ungraded', () => {
     const { state } = run(linkedPhone(), {
-      type: 'answerReceived',
-      payload: {
-        ...GRADED,
-        teamId: 31,
-        teamName: 'The Quizzards',
-        value: 'Lyon',
-        pointsAwarded: 0,
-        gradedAt: null,
-        verdict: null,
-      },
+      type: 'teamViewReceived',
+      view: teamView({
+        answers: [
+          {
+            ...GRADED,
+            value: 'Lyon',
+            pointsAwarded: 0,
+            gradedAt: null,
+            verdict: null,
+          },
+        ],
+      }),
     });
 
     expect(state.myAnswers[20]).toEqual({
@@ -196,18 +158,11 @@ describe('team link: the team data', () => {
     });
   });
 
-  it('carries a Clue answer’s recorded clue and its worth, and drops it when the receipt has none', () => {
-    const received = {
-      ...WAITING,
-      teamId: 31,
-      teamName: 'The Quizzards',
-      value: 'Curie',
-      clue: 2,
-      clueValue: 1,
-    };
+  it('carries a Clue answer’s recorded clue and its worth from a team view, and drops it when the view has none', () => {
+    const answer = { ...WAITING, value: 'Curie', clue: 2, clueValue: 1 };
     const clued = run(linkedPhone(), {
-      type: 'answerReceived',
-      payload: received,
+      type: 'teamViewReceived',
+      view: teamView({ answers: [answer] }),
     }).state;
     expect(clued.myAnswers[21]).toEqual({
       value: 'Curie',
@@ -216,8 +171,10 @@ describe('team link: the team data', () => {
     });
 
     const cleared = run(clued, {
-      type: 'answerReceived',
-      payload: { ...received, value: '', clue: null, clueValue: null },
+      type: 'teamViewReceived',
+      view: teamView({
+        answers: [{ ...answer, value: '', clue: null, clueValue: null }],
+      }),
     }).state;
     expect(cleared.myAnswers[21].clue).toBeNull();
   });
@@ -424,20 +381,7 @@ describe('team link: the team data', () => {
     });
   });
 
-  it('keeps an acknowledged rating and feedback, but not one the server never saw, across a rejoin', () => {
-    const { state } = run(
-      linkedPhone(),
-      { type: 'ratingSaved', roundId: 12, stars: 5 },
-      {
-        type: 'feedbackSaved',
-        feedback: { comment: 'Great', topics: ['Music'] },
-      },
-    );
-    expect(state.myRoundRatings).toEqual({ 11: 4, 12: 5 });
-    expect(state.myFeedback).toEqual({ comment: 'Great', topics: ['Music'] });
-
-    // A tap that never reached the server sends no event, so a rejoin shows
-    // only what the server holds.
+  it('shows only what the server holds after a rejoin', () => {
     const rejoined = run(
       linkedPhone(),
       { type: 'disconnected' },
@@ -447,7 +391,7 @@ describe('team link: the team data', () => {
     expect(rejoined.state.myRoundRatings).toEqual({ 11: 4 });
   });
 
-  it('restores the pacing and felt-difficulty answers on join, and keeps an acknowledged one on its own scale', () => {
+  it('restores the pacing and felt-difficulty answers on join', () => {
     const joined = run(
       linkedPhone(),
       accepted({
@@ -459,26 +403,10 @@ describe('team link: the team data', () => {
       pacing: 'too_slow',
       feltDifficulty: null,
     });
-
-    const saved = run(joined.state, {
-      type: 'sessionRatingSaved',
-      rating: { scale: 'feltDifficulty', value: 'too_hard' },
-    });
-    expect(saved.state.mySessionRatings).toEqual({
-      pacing: 'too_slow',
-      feltDifficulty: 'too_hard',
-    });
   });
 
   it('has no pacing or felt-difficulty answer before a join or after the identity changes', () => {
-    const { state } = run(
-      linkedPhone(),
-      {
-        type: 'sessionRatingSaved',
-        rating: { scale: 'pacing', value: 'too_fast' },
-      },
-      { type: 'identityChanged' },
-    );
+    const { state } = run(linkedPhone(), { type: 'identityChanged' });
 
     expect(state.mySessionRatings).toEqual({
       pacing: null,
@@ -486,7 +414,7 @@ describe('team link: the team data', () => {
     });
   });
 
-  it('has no player count until the join carries one, then follows the server: join, sync and a saved send', () => {
+  it('has no player count until the join carries one, then follows the server: join and sync', () => {
     expect(linkedPhone().myPlayerCount).toBeNull();
 
     const joined = run(
@@ -500,20 +428,10 @@ describe('team link: the team data', () => {
       view: teamView({ playerCount: 6 }),
     });
     expect(synced.state.myPlayerCount).toBe(6);
-
-    const saved = run(linkedPhone(), {
-      type: 'playerCountSaved',
-      playerCount: 3,
-    });
-    expect(saved.state.myPlayerCount).toBe(3);
   });
 
   it('clears the previous team data on a new connection identity until the new join answers', () => {
-    const { state } = run(
-      linkedPhone(),
-      { type: 'playerCountSaved', playerCount: 3 },
-      { type: 'identityChanged' },
-    );
+    const { state } = run(linkedPhone(), { type: 'identityChanged' });
 
     expect(state).toMatchObject({
       myPlayerCount: null,

@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (without it, every feedback team view would remount the rating card after each tap)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Live equals resync holds after a round rating, a feedback send and a session rating (backend socket specs, real Postgres)
 - [ ] A feedback team view reaches only the rating team's sockets

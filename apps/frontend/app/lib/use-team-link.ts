@@ -406,9 +406,6 @@ export function useTeamLink(
       socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload) =>
         dispatch({ type: 'joinAccepted', payload }),
       );
-      socket.on(SOCKET_EVENTS.ANSWER_RECEIVED, (payload) =>
-        dispatch({ type: 'answerReceived', payload }),
-      );
       socket.on(SOCKET_EVENTS.TEAM_VIEW, (view) =>
         dispatch({ type: 'teamViewReceived', view }),
       );
@@ -461,7 +458,7 @@ export function useTeamLink(
     dispatch,
     setSeenQuestions,
   });
-  const actions = useTeamLinkActions(emitWithAck, dispatch);
+  const actions = useTeamLinkActions(emitWithAck);
 
   const submitAnswer = useCallback(
     (questionId: number, teamId: number, value: string) => {
@@ -651,68 +648,47 @@ function useLinkFollowsConnection({
 }
 
 /** The team's requests that wait for the server's verdict. */
-function useTeamLinkActions(
-  emitWithAck: EmitWithAck,
-  dispatch: (input: TeamLinkInput) => void,
-) {
+function useTeamLinkActions(emitWithAck: EmitWithAck) {
   const rateRound = useCallback(
-    async (roundId: number, stars: number) => {
-      const payload: RateRoundPayload = { roundId, stars };
-      const result = await emitWithAck(SOCKET_EVENTS.RATE_ROUND, payload);
-      if (result.success) dispatch({ type: 'ratingSaved', roundId, stars });
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `rateRound` is the same function either way
-    [emitWithAck, dispatch],
+    (roundId: number, stars: number) =>
+      emitWithAck(SOCKET_EVENTS.RATE_ROUND, {
+        roundId,
+        stars,
+      } satisfies RateRoundPayload),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const sendFeedback = useCallback(
-    async (feedback: SendFeedbackPayload) => {
-      const result = await emitWithAck(SOCKET_EVENTS.SEND_FEEDBACK, feedback);
-      if (result.success) {
-        dispatch({
-          type: 'feedbackSaved',
-          feedback: { comment: feedback.comment, topics: feedback.topics },
-        });
-      }
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `sendFeedback` is the same function either way
-    [emitWithAck, dispatch],
+    (feedback: SendFeedbackPayload) =>
+      emitWithAck(SOCKET_EVENTS.SEND_FEEDBACK, feedback),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const rateSession = useCallback(
-    async (rating: RateSessionPayload) => {
-      const result = await emitWithAck(SOCKET_EVENTS.RATE_SESSION, rating);
-      if (result.success) dispatch({ type: 'sessionRatingSaved', rating });
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `rateSession` is the same function either way
-    [emitWithAck, dispatch],
+    (rating: RateSessionPayload) =>
+      emitWithAck(SOCKET_EVENTS.RATE_SESSION, rating),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const setPlayerCount = useCallback(
-    async (playerCount: number) => {
-      const payload: SetPlayerCountPayload = { playerCount };
-      const result = await emitWithAck(SOCKET_EVENTS.SET_PLAYER_COUNT, payload);
-      if (result.success) dispatch({ type: 'playerCountSaved', playerCount });
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `setPlayerCount` is the same function either way
-    [emitWithAck, dispatch],
+    (playerCount: number) =>
+      emitWithAck(SOCKET_EVENTS.SET_PLAYER_COUNT, {
+        playerCount,
+      } satisfies SetPlayerCountPayload),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const pickJoker = useCallback(
-    async (roundId: number) => {
-      const payload: PickJokerPayload = { roundId };
-      const result = await emitWithAck(SOCKET_EVENTS.PICK_JOKER, payload);
-      if (result.success) {
-        dispatch({ type: 'jokerSaved', joker: { roundId, source: 'chosen' } });
-      }
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `pickJoker` is the same function either way
-    [emitWithAck, dispatch],
+    (roundId: number) =>
+      emitWithAck(SOCKET_EVENTS.PICK_JOKER, {
+        roundId,
+      } satisfies PickJokerPayload),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const pickSide = useCallback(

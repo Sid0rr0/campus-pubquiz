@@ -13,6 +13,10 @@ import {
   type QuizRoundSpec,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import {
+  expectLiveEqualsResync,
+  teamViewsTo,
+} from '@/game/__tests__/team-view-test-utils';
 
 const MAX_ADVANCES = 40;
 
@@ -186,14 +190,20 @@ describe('GameGateway — rating the rounds in the break', () => {
       });
     });
 
-    it('broadcasts nothing', async () => {
+    it('sends only the rating team a team view, equal to what a rejoin gets', async () => {
       const { game, team } = await atBreakIntro();
+      const rival = await game.joinTeam('The Rivals');
       game.clearEmits();
 
       await rate(game, team, { roundId: game.rounds[0].id, stars: 4 });
       await game.settled();
 
-      expect(game.roomEmits()).toEqual([]);
+      expect(game.roomEmits().map((emit) => emit.event)).toEqual([
+        SOCKET_EVENTS.TEAM_VIEW,
+      ]);
+      expect(teamViewsTo(game, team)).toHaveLength(1);
+      expect(teamViewsTo(game, rival)).toEqual([]);
+      await expectLiveEqualsResync(game, team);
     });
 
     it('refuses a round outside the current block, with a reason', async () => {

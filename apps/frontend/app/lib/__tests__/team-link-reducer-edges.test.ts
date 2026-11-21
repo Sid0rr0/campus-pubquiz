@@ -404,8 +404,8 @@ describe('team link: bonus award toasts', () => {
 describe('team link: joker changes from the server', () => {
   function withJoker(roundId: number, source: 'chosen' | 'drawn') {
     return run(linkedPhone().state, {
-      type: 'jokerSaved',
-      joker: { roundId, source },
+      type: 'teamViewReceived',
+      view: teamView({ joker: { roundId, source } }),
     }).state;
   }
 

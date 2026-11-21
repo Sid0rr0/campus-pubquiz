@@ -141,26 +141,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
     });
   });
 
-  it('feeds join accepted, answer received and team answers synced into the team data', () => {
+  it('feeds join accepted and team answers synced into the team data', () => {
     const { result, socket } = renderPlayingTeam();
     expect(result.current.join.team?.teamId).toBe(31);
     expect(Object.keys(result.current.game?.myAnswers ?? {})).toEqual(['20']);
-
-    act(() =>
-      socket.trigger(SOCKET_EVENTS.ANSWER_RECEIVED, {
-        questionId: 21,
-        teamId: 31,
-        teamName: 'The Quizzards',
-        value: 'Rome',
-        pointsAwarded: 0,
-        gradedAt: null,
-        verdict: null,
-      }),
-    );
-    expect(result.current.game?.myAnswers).toMatchObject({
-      20: { value: 'Paris' },
-      21: { value: 'Rome', grade: null },
-    });
 
     act(() =>
       socket.trigger(SOCKET_EVENTS.TEAM_VIEW, teamView({ answers: [] })),
@@ -327,7 +311,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(socket.emitsOf(SOCKET_EVENTS.SUBMIT_ANSWER)).toHaveLength(0);
   });
 
-  it('sends the player count, keeps it once acknowledged and follows the server when a team view carries a change', async () => {
+  it('sends the player count and follows the server through the team view, not the acknowledgement', async () => {
     const { result, socket } = renderPlayingTeam();
     expect(result.current.game?.myPlayerCount).toBeNull();
 
@@ -341,7 +325,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(result.current.game?.myPlayerCount).toBeNull();
     await act(async () => socket.acknowledge(SOCKET_EVENTS.SET_PLAYER_COUNT));
     await expect(sent).resolves.toMatchObject({ success: true });
-    expect(result.current.game?.myPlayerCount).toBe(4);
+    expect(result.current.game?.myPlayerCount).toBeNull();
 
     act(() =>
       socket.trigger(SOCKET_EVENTS.TEAM_VIEW, teamView({ playerCount: 7 })),
@@ -349,7 +333,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(result.current.game?.myPlayerCount).toBe(7);
   });
 
-  it('restores the joker the join carried, sends a pick, keeps it once acknowledged and follows the server when it syncs a change', async () => {
+  it('restores the joker the join carried, sends a pick and follows the server through the team view, not the acknowledgement', async () => {
     const { result, socket } = renderPlayingTeam();
     expect(result.current.game?.myJoker).toBeNull();
     act(() =>
@@ -376,10 +360,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(result.current.game?.myJoker?.roundId).toBe(12);
     await act(async () => socket.acknowledge(SOCKET_EVENTS.PICK_JOKER));
     await expect(sent).resolves.toMatchObject({ success: true });
-    expect(result.current.game?.myJoker).toEqual({
-      roundId: 13,
-      source: 'chosen',
-    });
+    expect(result.current.game?.myJoker?.roundId).toBe(12);
 
     act(() =>
       socket.trigger(
@@ -430,8 +411,9 @@ describe('useTeamLink: the team data and the pending answer', () => {
     expect(result.current.game?.myPlayerCount).toBe(5);
   });
 
-  it('keeps an acknowledged rating after a rejoin only when the server held it', async () => {
+  it('leaves the ratings to the team view when a rating is acknowledged', async () => {
     const { result, socket } = renderPlayingTeam();
+    expect(result.current.game?.myRoundRatings).toEqual({});
 
     let rated!: Promise<AckResult>;
     act(() => {
@@ -440,10 +422,10 @@ describe('useTeamLink: the team data and the pending answer', () => {
     await act(async () => socket.acknowledge(SOCKET_EVENTS.RATE_ROUND));
     await rated;
 
-    expect(result.current.game?.myRoundRatings).toEqual({ 11: 4 });
+    expect(result.current.game?.myRoundRatings).toEqual({});
   });
 
-  it('sends a pacing answer and keeps it once the server acknowledges it', async () => {
+  it('sends a pacing answer and leaves the saved answer to the team view', async () => {
     const { result, socket } = renderPlayingTeam();
 
     let rated!: Promise<AckResult>;
@@ -461,7 +443,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
 
     await expect(rated).resolves.toEqual({ success: true });
     expect(result.current.game?.mySessionRatings).toEqual({
-      pacing: 'too_fast',
+      pacing: null,
       feltDifficulty: null,
     });
   });

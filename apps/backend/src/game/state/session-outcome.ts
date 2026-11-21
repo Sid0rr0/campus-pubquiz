@@ -17,10 +17,8 @@ export type SocketNotice = { socketId: string } & EventEmit<
   | typeof SOCKET_EVENTS.COIN_AWARDED
 >;
 
-/** A direct emit to the socket that sent the event (answer received, join accepted), delivered before any room push. */
-export type SocketReply = EventEmit<
-  typeof SOCKET_EVENTS.ANSWER_RECEIVED | typeof SOCKET_EVENTS.JOIN_ACCEPTED
->;
+/** A direct emit to the socket that sent the event (join accepted), delivered before any room push. */
+export type SocketReply = EventEmit<typeof SOCKET_EVENTS.JOIN_ACCEPTED>;
 
 /** A connected team and the socket it is on. */
 export interface TeamSync {

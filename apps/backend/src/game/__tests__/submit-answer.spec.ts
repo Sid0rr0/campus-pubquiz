@@ -8,6 +8,7 @@ import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 
 describe('GameGateway — submit answer', () => {
   const harness = setupRealStoreGatewayTest();
@@ -71,22 +72,19 @@ describe('GameGateway — submit answer', () => {
     ]);
   });
 
-  it('acknowledges the submitting player with ANSWER_RECEIVED', async () => {
+  it('sends the submitting team a team view carrying its answer', async () => {
     await game.openFirstQuestion(admin);
     game.clearEmits();
 
     await submit(team.socket, team.teamId);
 
-    expect(team.socket.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.ANSWER_RECEIVED,
+    expect(teamViewsTo(game, team).at(-1)?.answers).toEqual([
       expect.objectContaining({
         questionId: game.questionIds.multipleChoice,
-        teamId: team.teamId,
-        teamName: 'The Quizzards',
         value: 'Banana',
         pointsAwarded: 0,
       }),
-    );
+    ]);
   });
 
   it('broadcasts STATE_UPDATED with the answered team ids after a submit', async () => {

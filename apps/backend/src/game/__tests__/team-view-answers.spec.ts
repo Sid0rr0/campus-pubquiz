@@ -55,23 +55,6 @@ describe('GameGateway — the team view carries answers and Ask the room readine
     await expectLiveEqualsResync(game, team);
   });
 
-  it('keeps the answer-received acknowledgement going to the sending phone', async () => {
-    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
-    const [team] = game.teams;
-    await game.openFirstQuestion(await game.connectAdmin());
-
-    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
-      questionId: game.questionIds.multipleChoice,
-      teamId: team.teamId,
-      value: 'Banana',
-    });
-
-    expect(team.socket.emit).toHaveBeenCalledWith(
-      'game:answer_received',
-      expect.objectContaining({ value: 'Banana' }),
-    );
-  });
-
   it('gives each team only its own answers and a readiness list of question ids, never a count', async () => {
     const game = await harness.createGateway({
       teamNames: ['A', 'B', 'C', 'D'],
