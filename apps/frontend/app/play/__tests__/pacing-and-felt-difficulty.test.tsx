@@ -45,7 +45,6 @@ function renderPhone(
     isFeedbackCollected?: boolean;
     rateSession?: Mock;
     mySessionRatings?: TeamSessionRatingsView;
-    roundRatingsEpoch?: number;
   } = {},
 ) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
@@ -63,7 +62,6 @@ function renderPhone(
       game: {
         rateSession,
         mySessionRatings: overrides.mySessionRatings ?? NOTHING_ANSWERED,
-        roundRatingsEpoch: overrides.roundRatingsEpoch ?? 0,
       },
     });
   mockUseTeamLink.mockReturnValue(result());
@@ -191,13 +189,87 @@ describe('PlayPage — pacing and felt difficulty on the final form', () => {
         },
         game: {
           mySessionRatings: { pacing: 'too_slow', feltDifficulty: null },
-          roundRatingsEpoch: 1,
         },
       }),
     );
     rendered.rerender(<PlayPage />);
 
     expect(choice(pace(), 'Too slow')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  describe('when a team view arrives', () => {
+    function receive(
+      rendered: ReturnType<typeof renderPhone>['rendered'],
+      rateSession: Mock,
+      mySessionRatings: TeamSessionRatingsView,
+    ) {
+      mockUseTeamLink.mockReturnValue(
+        teamLinkResult({
+          session: session({ status: 'ended' }),
+          join: {
+            team: {
+              teamId: 7,
+              teamName: 'The Quizzards',
+              teamToken: 'token-7',
+            },
+          },
+          game: { rateSession, mySessionRatings },
+        }),
+      );
+      rendered.rerender(<PlayPage />);
+    }
+
+    it('keeps a tap that is saving and shows "Saved ✓" once acknowledged', async () => {
+      const user = userEvent.setup();
+      let acknowledge!: (ack: { success: true }) => void;
+      const rateSession = vi.fn(
+        () =>
+          new Promise<{ success: true }>((resolve) => {
+            acknowledge = resolve;
+          }),
+      );
+      const { rendered } = renderPhone({ rateSession });
+      await user.click(choice(pace(), 'Too fast'));
+
+      receive(rendered, rateSession, NOTHING_ANSWERED);
+      expect(choice(pace(), 'Too fast')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      acknowledge({ success: true });
+
+      expect(await within(pace()).findByText('Saved ✓')).toBeVisible();
+    });
+
+    it('fills an idle row with the answer from the team other phone', () => {
+      const { rendered, rateSession } = renderPhone();
+
+      receive(rendered, rateSession, {
+        pacing: null,
+        feltDifficulty: 'too_hard',
+      });
+
+      expect(choice(difficulty(), 'Too hard')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    });
+
+    it("keeps a failed row's retry prompt", async () => {
+      const user = userEvent.setup();
+      const rateSession = vi
+        .fn()
+        .mockResolvedValue({ success: false, error: 'nope' });
+      const { rendered } = renderPhone({ rateSession });
+      await user.click(choice(pace(), 'Too fast'));
+      await within(pace()).findByText('Not saved — tap to retry');
+
+      receive(rendered, rateSession, NOTHING_ANSWERED);
+
+      expect(
+        within(pace()).getByText('Not saved — tap to retry'),
+      ).toBeVisible();
+    });
   });
 
   it('asks neither question while the session does not collect feedback', () => {

@@ -14,10 +14,8 @@ interface FinalFeedbackFormProps {
   rounds: readonly RatableRound[];
   /** The ratings the server holds for this team, by round id. */
   savedRatings: Readonly<Record<number, number>>;
-  /** Counts join payloads: when it changes the star rows start afresh from `savedRatings`, dropping a tap still waiting on the old connection's ack. The text below is never reset by it, so a reconnect can't wipe a half-typed comment. */
-  ratingsEpoch: number;
   onRate: (roundId: number, stars: number) => Promise<AckResult>;
-  /** The pacing and felt-difficulty answers the server holds for this team; reset with the star rows by `ratingsEpoch`. */
+  /** The pacing and felt-difficulty answers the server holds for this team. */
   savedSessionRatings: TeamSessionRatingsView;
   onRateSession: (rating: RateSessionPayload) => Promise<AckResult>;
   /** The comment and topics the server holds for this team. */
@@ -31,7 +29,7 @@ interface FinalRatingRowsProps {
   onRate: (roundId: number, stars: number) => Promise<AckResult>;
 }
 
-/** The star rows, with their state read once from the saved ratings when they mount. */
+/** The star rows, following the saved ratings except where a tap is waiting. */
 function FinalRatingRows({
   rounds,
   savedRatings,
@@ -51,7 +49,6 @@ function FinalRatingRows({
 export function FinalFeedbackForm({
   rounds,
   savedRatings,
-  ratingsEpoch,
   onRate,
   savedSessionRatings,
   onRateSession,
@@ -63,16 +60,11 @@ export function FinalFeedbackForm({
       aria-labelledby="final-feedback-heading"
       className="mx-auto mt-6 flex w-full max-w-md flex-col gap-3 rounded-lg border border-foreground/15 p-4"
     >
-      <SessionScaleRows
-        key={`scales-${ratingsEpoch}`}
-        saved={savedSessionRatings}
-        onRate={onRateSession}
-      />
+      <SessionScaleRows saved={savedSessionRatings} onRate={onRateSession} />
       <h2 id="final-feedback-heading" className="font-display text-lg">
         Rate the rounds
       </h2>
       <FinalRatingRows
-        key={`stars-${ratingsEpoch}`}
         rounds={rounds}
         savedRatings={savedRatings}
         onRate={onRate}

@@ -434,7 +434,6 @@ type StatusGame = Pick<
   | 'mySideId'
   | 'pickJoker'
   | 'submitShowdownGuess'
-  | 'roundRatingsEpoch'
   | 'myRoundRatings'
   | 'rateRound'
   | 'mySessionRatings'
@@ -755,19 +754,12 @@ function StatusSection({
 function BreakRatingCard({
   game,
 }: {
-  game: Pick<
-    TeamGame,
-    'view' | 'roundRatingsEpoch' | 'myRoundRatings' | 'rateRound'
-  >;
+  game: Pick<TeamGame, 'view' | 'myRoundRatings' | 'rateRound'>;
 }) {
   const { feedback } = game.view;
   if (feedback?.kind !== 'break_card') return null;
   return (
-    // A join payload replaces the saved ratings, so a reconnect starts
-    // the card afresh: a tap still waiting on the old connection's ack
-    // is dropped rather than shown as saved.
     <RoundRatingCard
-      key={game.roundRatingsEpoch}
       rounds={feedback.rounds}
       savedRatings={game.myRoundRatings}
       onRate={game.rateRound}
@@ -782,7 +774,6 @@ function FinalFeedback({
     TeamGame,
     | 'view'
     | 'myRoundRatings'
-    | 'roundRatingsEpoch'
     | 'rateRound'
     | 'mySessionRatings'
     | 'rateSession'
@@ -796,7 +787,6 @@ function FinalFeedback({
     <FinalFeedbackForm
       rounds={feedback.rounds}
       savedRatings={game.myRoundRatings}
-      ratingsEpoch={game.roundRatingsEpoch}
       onRate={game.rateRound}
       savedSessionRatings={game.mySessionRatings}
       onRateSession={game.rateSession}

@@ -119,8 +119,6 @@ export interface TeamLinkGame {
   myRoundRatings: Record<number, number>;
   /** The team's saved comment and topics, kept the same way as the ratings. */
   myFeedback: TeamFeedbackView;
-  /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale and anything drawn from older taps is out of date. */
-  roundRatingsEpoch: number;
   /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the view only ever covers the current block. */
   seenQuestions: SeenQuestions;
   /** Refuses with a "not connected" toast while unlinked; otherwise keeps the answer pending (and resends it after a rejoin) until the server acknowledges it. */
@@ -559,7 +557,6 @@ function teamGameFields(
     myFeedback: link.myFeedback,
     mySessionRatings: link.mySessionRatings,
     myPlayerCount: link.myPlayerCount,
-    roundRatingsEpoch: link.roundRatingsEpoch,
     myJoker: link.myJoker,
     myDoubledRounds: link.myDoubledRounds,
     myJokerExtras: link.myJokerExtras,

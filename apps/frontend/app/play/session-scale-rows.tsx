@@ -20,7 +20,7 @@ interface RowState {
 }
 
 interface SessionScaleRowsProps {
-  /** The answers the server holds for this team; read once, so the owner remounts the rows when a new join payload replaces them. */
+  /** The answers the server holds for this team; a row not waiting on a tap of its own follows them. */
   saved: TeamSessionRatingsView;
   onRate: (rating: RateSessionPayload) => Promise<AckResult>;
 }
@@ -32,10 +32,22 @@ interface SessionScaleRowsProps {
  * changed but not cleared.
  */
 export function SessionScaleRows({ saved, onRate }: SessionScaleRowsProps) {
-  const [rows, setRows] = useState<Record<SessionScale, RowState>>(() => ({
-    pacing: { value: saved.pacing, status: 'idle' },
-    feltDifficulty: { value: saved.feltDifficulty, status: 'idle' },
-  }));
+  const [taps, setTaps] = useState<
+    Partial<Record<SessionScale, RowState & { base: SessionScaleValue | null }>>
+  >({});
+  // Every row not waiting on a tap of its own takes the server's value; a row
+  // that saved or failed keeps its status until the server's value changes.
+  const rows = Object.fromEntries(
+    SCALES.map((scale) => {
+      const tap = taps[scale];
+      const isTapShown =
+        tap && (tap.status === 'saving' || saved[scale] === tap.base);
+      const row: RowState = isTapShown
+        ? { value: tap.value, status: tap.status }
+        : { value: saved[scale], status: 'idle' };
+      return [scale, row];
+    }),
+  ) as Record<SessionScale, RowState>;
   // Identifies the latest tap per scale, so a slow ack for an earlier tap
   // can't overwrite a newer one.
   const latestTapRef = useRef<Record<SessionScale, number>>({
@@ -47,15 +59,16 @@ export function SessionScaleRows({ saved, onRate }: SessionScaleRowsProps) {
     const { scale, value } = rating;
     const tap = latestTapRef.current[scale] + 1;
     latestTapRef.current[scale] = tap;
-    setRows((current) => ({
+    const base = saved[scale];
+    setTaps((current) => ({
       ...current,
-      [scale]: { value, status: 'saving' },
+      [scale]: { value, status: 'saving', base },
     }));
     const result = await onRate(rating);
     if (latestTapRef.current[scale] !== tap) return;
-    setRows((current) => ({
+    setTaps((current) => ({
       ...current,
-      [scale]: { value, status: result.success ? 'saved' : 'failed' },
+      [scale]: { value, status: result.success ? 'saved' : 'failed', base },
     }));
   }
 

@@ -110,7 +110,7 @@ function ofType<T extends TeamLinkCommand['type']>(
 }
 
 describe('team link: the team data', () => {
-  it('restores answers, grades, bonus awards, ratings and feedback wholesale on join accepted, and bumps the ratings epoch', () => {
+  it('restores answers, grades, bonus awards, ratings and feedback wholesale on join accepted', () => {
     const { state } = run(
       linkedPhone(),
       { type: 'ratingSaved', roundId: 99, stars: 1 },
@@ -127,7 +127,6 @@ describe('team link: the team data', () => {
       comment: 'Loved it',
       topics: ['Geography'],
     });
-    expect(state.roundRatingsEpoch).toBe(2);
   });
 
   it('grades only the answers that were graded', () => {
@@ -777,19 +776,5 @@ describe('team link: leaving a session drops the team data', () => {
     );
 
     expect(ofType(commands, 'sendAnswer')).toHaveLength(1);
-  });
-
-  it('never repeats a ratings epoch, so a clear and the next join always change it', () => {
-    const epochs = [linkedPhone()].flatMap((linked) => {
-      const left = run(linked, { type: 'identityChanged' }).state;
-      const rejoined = run(left, connected(2), accepted()).state;
-      return [
-        linked.roundRatingsEpoch,
-        left.roundRatingsEpoch,
-        rejoined.roundRatingsEpoch,
-      ];
-    });
-
-    expect(new Set(epochs).size).toBe(epochs.length);
   });
 });

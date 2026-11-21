@@ -25,37 +25,58 @@ function rowsFromSaved(
   );
 }
 
+/** A row's own tap, with the server's value for the row when it was made. */
+interface Tap extends RowState {
+  base: number | undefined;
+}
+
+/** The server's rows, except where a tap is saving, or its row's server value hasn't changed since the tap. */
+function showRows(
+  savedRatings: Readonly<Record<number, number>>,
+  taps: Readonly<Record<number, Tap>>,
+): Record<number, RowState> {
+  const rows = rowsFromSaved(savedRatings);
+  for (const [roundId, { base, ...row }] of Object.entries(taps)) {
+    if (row.status === 'saving' || savedRatings[Number(roundId)] === base) {
+      rows[Number(roundId)] = row;
+    }
+  }
+  return rows;
+}
+
 /**
  * The star rows' state, shared by the break card and the final form. A tap
- * saves at once and the row shows what the server said. `savedRatings` is read
- * once, so the page remounts the owner when a new join payload replaces them.
+ * saves at once and the row shows what the server said. Every row not waiting
+ * on a tap of its own takes the server's value from `savedRatings`.
  */
 export function useRoundRatings(
   savedRatings: Readonly<Record<number, number>>,
   onRate: (roundId: number, stars: number) => Promise<AckResult>,
 ) {
-  const [rows, setRows] = useState(() => rowsFromSaved(savedRatings));
+  const [taps, setTaps] = useState<Record<number, Tap>>({});
   // Identifies the latest tap per round, so a slow ack for an earlier tap
   // can't overwrite a newer one.
   const latestTapRef = useRef<Record<number, number>>({});
 
-  function setRow(roundId: number, row: RowState): void {
-    setRows((current) => ({ ...current, [roundId]: row }));
+  function setTap(roundId: number, tap: Tap): void {
+    setTaps((current) => ({ ...current, [roundId]: tap }));
   }
 
   async function rate(roundId: number, stars: number): Promise<void> {
     const tap = (latestTapRef.current[roundId] ?? 0) + 1;
     latestTapRef.current[roundId] = tap;
-    setRow(roundId, { stars, status: 'saving' });
+    const base = savedRatings[roundId];
+    setTap(roundId, { stars, status: 'saving', base });
     const result = await onRate(roundId, stars);
     if (latestTapRef.current[roundId] !== tap) return;
-    setRow(roundId, {
+    setTap(roundId, {
       stars,
       status: result.success ? 'saved' : 'failed',
+      base,
     });
   }
 
-  return { rows, rate };
+  return { rows: showRows(savedRatings, taps), rate };
 }
 
 interface RoundStarRowsProps {

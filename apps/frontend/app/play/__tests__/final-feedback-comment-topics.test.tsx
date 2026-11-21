@@ -34,7 +34,6 @@ interface EndedOverrides {
   isFeedbackCollected?: boolean;
   myFeedback?: TeamFeedbackView;
   sendFeedback?: Mock;
-  roundRatingsEpoch?: number;
 }
 
 function endedHook(overrides: EndedOverrides) {
@@ -46,7 +45,6 @@ function endedHook(overrides: EndedOverrides) {
     game: {
       myFeedback: overrides.myFeedback ?? { comment: '', topics: [] },
       sendFeedback: overrides.sendFeedback,
-      roundRatingsEpoch: overrides.roundRatingsEpoch ?? 0,
     },
   });
 }
@@ -57,15 +55,10 @@ function renderEnded(overrides: EndedOverrides = {}) {
     overrides.sendFeedback ?? vi.fn().mockResolvedValue({ success: true });
   mockUseTeamLink.mockReturnValue(endedHook({ ...overrides, sendFeedback }));
   const { rerender } = renderWithQuery(<PlayPage />);
-  /** A join payload arriving: a new epoch and a fresh saved-feedback object, as the hook produces. */
-  function receiveJoinPayload(myFeedback: TeamFeedbackView, epoch: number) {
+  /** A join payload arriving: a fresh saved-feedback object, as the hook produces. */
+  function receiveJoinPayload(myFeedback: TeamFeedbackView) {
     mockUseTeamLink.mockReturnValue(
-      endedHook({
-        ...overrides,
-        sendFeedback,
-        myFeedback,
-        roundRatingsEpoch: epoch,
-      }),
+      endedHook({ ...overrides, sendFeedback, myFeedback }),
     );
     rerender(<PlayPage />);
   }
@@ -211,7 +204,7 @@ describe('PlayPage — the comment and topic suggestions on the final form', () 
     await user.type(comment(), 'Half-typed thoughts');
     await user.type(topicLines()[0], 'Space');
 
-    receiveJoinPayload({ comment: '', topics: [] }, 1);
+    receiveJoinPayload({ comment: '', topics: [] });
 
     expect(comment()).toHaveValue('Half-typed thoughts');
     expect(topicLines()[0]).toHaveValue('Space');
@@ -221,7 +214,7 @@ describe('PlayPage — the comment and topic suggestions on the final form', () 
     const { receiveJoinPayload } = renderEnded();
     expect(comment()).toHaveValue('');
 
-    receiveJoinPayload({ comment: 'Loved it', topics: ['Geography'] }, 1);
+    receiveJoinPayload({ comment: 'Loved it', topics: ['Geography'] });
 
     expect(comment()).toHaveValue('Loved it');
     expect(topicLines()[0]).toHaveValue('Geography');

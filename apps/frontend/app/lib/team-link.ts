@@ -183,8 +183,6 @@ export interface TeamLinkState {
   myPurchases: PurchaseView[];
   /** The questions on which the server says this team's Ask the room is ready (the join, then a sync as other teams answer). A flag only, never a count. */
   roomReadyQuestionIds: number[];
-  /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
-  roundRatingsEpoch: number;
   /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
   pendingAnswer: SubmitAnswerPayload | null;
   /** Identifies the latest send, so a result for a superseded send is ignored. */
@@ -333,12 +331,11 @@ const EMPTY_TEAM_DATA = {
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
 
-/** Forgets the team's data. The epoch only ever counts up, so the clear itself changes it and a later join can't land back on a value already used. */
+/** Forgets the team's data. */
 function clearTeamData(state: TeamLinkState): TeamLinkState {
   return {
     ...state,
     ...EMPTY_TEAM_DATA,
-    roundRatingsEpoch: state.roundRatingsEpoch + 1,
     // A result or timeout for a send made before the clear says nothing now.
     answerAttempt: state.answerAttempt + 1,
   };
@@ -369,7 +366,6 @@ export function initialTeamLink(entry: TeamLinkEntry): TeamLinkState {
     confirmedTeamId: null,
     lastStatus: null,
     ...EMPTY_TEAM_DATA,
-    roundRatingsEpoch: 0,
     answerAttempt: 0,
   };
   return entry.stored ? withStoredIdentity(base, entry.stored) : base;
@@ -616,7 +612,6 @@ function acceptJoin(
     team: payload,
     isLinked: true,
     ...teamDataFromView(payload.teamView),
-    roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
     type: 'writeIdentity',
@@ -666,7 +661,6 @@ function replaceTeamData(
     ...state,
     ...teamDataFromView(view),
     team: state.team && { ...state.team, teamView: view },
-    roundRatingsEpoch: state.roundRatingsEpoch + 1,
   });
 }
 
