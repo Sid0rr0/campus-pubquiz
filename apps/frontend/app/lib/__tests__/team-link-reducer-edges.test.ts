@@ -374,9 +374,7 @@ describe('team link: a join accepted with the optional parts left out', () => {
       payload: bare,
     });
 
-    expect(state.myAnswers).toEqual({});
-    expect(state.myBonusAwards).toEqual([]);
-    expect(Object.keys(state.myRoundRatings)).toEqual([]);
+    expect(state.team?.teamView).toEqual(bare.teamView);
   });
 });
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { TeamJoker } from '@campus-pubquiz/types';
 import {
+  buildMyAnswers,
+  buildMyRoundRatings,
   initialTeamLink,
   teamLink,
   type TeamLinkCommand,
@@ -99,6 +101,15 @@ function linkedPhone() {
   ).state;
 }
 
+/** The team view the phone holds. */
+function held(state: TeamLinkState) {
+  return state.team?.teamView;
+}
+
+function answersOf(state: TeamLinkState) {
+  return buildMyAnswers(held(state)?.answers ?? []);
+}
+
 function ofType<T extends TeamLinkCommand['type']>(
   commands: TeamLinkCommand[],
   type: T,
@@ -117,19 +128,21 @@ describe('team link: the team data', () => {
     );
 
     expect(state.team?.teamId).toBe(31);
-    expect(state.myAnswers).toEqual({
+    expect(answersOf(state)).toEqual({
       20: { value: 'Paris', grade: PARIS_GRADE, clue: null },
     });
-    expect(state.myBonusAwards).toEqual([]);
-    expect(state.myRoundRatings).toEqual({ 11: 4 });
-    expect(state.myFeedback).toEqual({
+    expect(held(state)?.bonusAwards).toEqual([]);
+    expect(buildMyRoundRatings(held(state)?.roundRatings ?? [])).toEqual({
+      11: 4,
+    });
+    expect(held(state)?.feedback).toEqual({
       comment: 'Loved it',
       topics: ['Geography'],
     });
   });
 
   it('grades only the answers that were graded', () => {
-    expect(linkedPhone().myAnswers).toEqual({
+    expect(answersOf(linkedPhone())).toEqual({
       20: { value: 'Paris', grade: PARIS_GRADE, clue: null },
       21: { value: 'Banana', grade: null, clue: null },
     });
@@ -151,7 +164,7 @@ describe('team link: the team data', () => {
       }),
     });
 
-    expect(state.myAnswers[20]).toEqual({
+    expect(answersOf(state)[20]).toEqual({
       value: 'Lyon',
       grade: null,
       clue: null,
@@ -164,7 +177,7 @@ describe('team link: the team data', () => {
       type: 'teamViewReceived',
       view: teamView({ answers: [answer] }),
     }).state;
-    expect(clued.myAnswers[21]).toEqual({
+    expect(answersOf(clued)[21]).toEqual({
       value: 'Curie',
       grade: null,
       clue: { clue: 2, value: 1 },
@@ -176,7 +189,7 @@ describe('team link: the team data', () => {
         answers: [{ ...answer, value: '', clue: null, clueValue: null }],
       }),
     }).state;
-    expect(cleared.myAnswers[21].clue).toBeNull();
+    expect(answersOf(cleared)[21].clue).toBeNull();
   });
 
   it('replaces answers and grades when a team view arrives', () => {
@@ -187,7 +200,7 @@ describe('team link: the team data', () => {
       }),
     });
 
-    expect(state.myAnswers).toEqual({
+    expect(answersOf(state)).toEqual({
       30: { value: 'Oslo', grade: PARIS_GRADE, clue: null },
     });
   });
@@ -203,7 +216,7 @@ describe('team link: the team data', () => {
       type: 'bonusAwarded',
       payload: { category: 'selfie', points: 2 },
     });
-    expect(live.state.myBonusAwards).toEqual(linkedPhone().myBonusAwards);
+    expect(live.state.team).toEqual(linkedPhone().team);
     const toasts = ofType(live.commands, 'toast');
     expect(toasts).toHaveLength(1);
     expect(toasts[0]).toMatchObject({ tone: 'success' });
@@ -315,8 +328,8 @@ describe('team link: the team data', () => {
       ).state;
 
       for (const state of [replaced, joined]) {
-        expect(state.myDoubledRounds).toEqual(doubledRounds);
-        expect(state.myJokerExtras).toEqual({ 20: 2 });
+        expect(held(state)?.doubledRounds).toEqual(doubledRounds);
+        expect(held(state)?.jokerExtras).toEqual({ 20: 2 });
       }
     });
 
@@ -325,7 +338,7 @@ describe('team link: the team data', () => {
         linkedPhone(),
         viewWith({ roundId: 12, source: 'set_by_quiz_master' }),
       );
-      expect(bySetting.state.myJoker).toEqual({
+      expect(held(bySetting.state)?.joker).toEqual({
         roundId: 12,
         source: 'set_by_quiz_master',
       });
@@ -373,7 +386,7 @@ describe('team link: the team data', () => {
           joker: { roundId: 12, source: 'set_by_quiz_master' },
         }),
       );
-      expect(state.myJoker).toEqual({
+      expect(held(state)?.joker).toEqual({
         roundId: 12,
         source: 'set_by_quiz_master',
       });
@@ -388,7 +401,9 @@ describe('team link: the team data', () => {
       connected(2),
       accepted(),
     );
-    expect(rejoined.state.myRoundRatings).toEqual({ 11: 4 });
+    expect(held(rejoined.state)?.roundRatings).toEqual([
+      { roundId: 11, stars: 4 },
+    ]);
   });
 
   it('restores the pacing and felt-difficulty answers on join', () => {
@@ -399,49 +414,32 @@ describe('team link: the team data', () => {
         sessionRatings: { pacing: 'too_slow', feltDifficulty: null },
       }),
     );
-    expect(joined.state.mySessionRatings).toEqual({
+    expect(held(joined.state)?.sessionRatings).toEqual({
       pacing: 'too_slow',
       feltDifficulty: null,
     });
   });
 
-  it('has no pacing or felt-difficulty answer before a join or after the identity changes', () => {
-    const { state } = run(linkedPhone(), { type: 'identityChanged' });
-
-    expect(state.mySessionRatings).toEqual({
-      pacing: null,
-      feltDifficulty: null,
-    });
-  });
-
   it('has no player count until the join carries one, then follows the server: join and sync', () => {
-    expect(linkedPhone().myPlayerCount).toBeNull();
+    expect(held(linkedPhone())?.playerCount).toBeNull();
 
     const joined = run(
       linkedPhone(),
       accepted({ ...ACCEPTED, playerCount: 4 }),
     );
-    expect(joined.state.myPlayerCount).toBe(4);
+    expect(held(joined.state)?.playerCount).toBe(4);
 
     const synced = run(joined.state, {
       type: 'teamViewReceived',
       view: teamView({ playerCount: 6 }),
     });
-    expect(synced.state.myPlayerCount).toBe(6);
+    expect(held(synced.state)?.playerCount).toBe(6);
   });
 
-  it('clears the previous team data on a new connection identity until the new join answers', () => {
+  it('drops the held team view on a new connection identity until the new join answers', () => {
     const { state } = run(linkedPhone(), { type: 'identityChanged' });
 
-    expect(state).toMatchObject({
-      myPlayerCount: null,
-      team: null,
-      isLinked: false,
-      myAnswers: {},
-      myBonusAwards: [],
-      myRoundRatings: {},
-      myFeedback: { comment: '', topics: [] },
-    });
+    expect(state).toMatchObject({ team: null, isLinked: false });
   });
 });
 
@@ -622,13 +620,26 @@ describe('team link: a team view', () => {
       view,
     });
 
-    expect(Object.keys(state.myAnswers)).toEqual(['21']);
-    expect(state.myBonusAwards).toEqual([]);
-    expect(state.myPlayerCount).toBe(5);
-    expect(state.myJoker).toEqual({ roundId: 3, source: 'chosen' });
-    expect(state.mySideId).toBe('red');
     expect(state.team?.teamView).toEqual(view);
     expect(commands).toEqual([]);
+  });
+
+  it('is not held before a join has been accepted', () => {
+    const { state } = run(initialTeamLink({ url: {}, stored: STORED }), {
+      type: 'teamViewReceived',
+      view: teamView({ playerCount: 5 }),
+    });
+
+    expect(state.team).toBeNull();
+  });
+
+  it('keeps the join reply identity when the view replaces', () => {
+    const { state } = run(linkedPhone(), {
+      type: 'teamViewReceived',
+      view: teamView(),
+    });
+
+    expect(state.team).toMatchObject({ teamId: 31, teamToken: 'token-2' });
   });
 
   it('keeps the pending answer and its attempt', () => {
@@ -656,8 +667,7 @@ describe('team link: a team view', () => {
       { type: 'joinAccepted', payload },
     );
 
-    expect(state.myPlayerCount).toBe(9);
-    expect(state.myAnswers).toEqual({});
+    expect(state.team?.teamView).toEqual(payload.teamView);
   });
 });
 
@@ -673,9 +683,6 @@ describe('team link: leaving a session drops the team data', () => {
         linkedSocketId: null,
         lastStatus: null,
         pendingAnswer: null,
-        myAnswers: {},
-        myBonusAwards: [],
-        myRoundRatings: {},
       });
       expect(commands).toContainEqual({ type: 'clearConfirmTimer' });
     },

@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type SubmitEvent,
@@ -15,6 +16,7 @@ import {
   type AckResult,
   type JoinAcceptedPayload,
   type LeaveSessionPayload,
+  type OwnTeamView,
   type DoubledRoundView,
   type PickJokerPayload,
   type PickSidePayload,
@@ -41,6 +43,8 @@ import {
   type SeenQuestions,
 } from '@/app/lib/seen-questions';
 import {
+  buildMyAnswers,
+  buildMyRoundRatings,
   initialTeamLink,
   teamLink,
   type MyAnswer,
@@ -499,6 +503,7 @@ export function useTeamLink(
     [dispatch],
   );
 
+  const teamFields = useTeamViewFields(link.team?.teamView);
   const connectionError =
     link.joinError ?? link.kickNotice ?? socketConnectionError;
 
@@ -532,7 +537,8 @@ export function useTeamLink(
     },
     game: snapshot
       ? {
-          ...teamGameFields(link, snapshot),
+          view: viewWithSeat(snapshot, link.isLinked),
+          ...teamFields,
           seenQuestions,
           submitAnswer,
           ...actions,
@@ -541,26 +547,43 @@ export function useTeamLink(
   };
 }
 
-/** What the Team link state gives a joined phone to play with. */
-function teamGameFields(
-  link: TeamLinkState,
-  snapshot: StateViewByRoom['players'],
-) {
-  return {
-    view: viewWithSeat(snapshot, link.isLinked),
-    myAnswers: link.myAnswers,
-    myBonusAwards: link.myBonusAwards,
-    myRoundRatings: link.myRoundRatings,
-    myFeedback: link.myFeedback,
-    mySessionRatings: link.mySessionRatings,
-    myPlayerCount: link.myPlayerCount,
-    myJoker: link.myJoker,
-    myDoubledRounds: link.myDoubledRounds,
-    myJokerExtras: link.myJokerExtras,
-    mySideId: link.mySideId,
-    myPurchases: link.myPurchases,
-    roomReadyQuestionIds: link.roomReadyQuestionIds,
-  } satisfies Partial<TeamLinkGame>;
+/** What a phone shows of its team before any join answers. */
+const EMPTY_TEAM_VIEW: OwnTeamView = {
+  answers: [],
+  bonusAwards: [],
+  roundRatings: [],
+  feedback: { comment: '', topics: [] },
+  sessionRatings: { pacing: null, feltDifficulty: null },
+  playerCount: null,
+  joker: null,
+  doubledRounds: [],
+  jokerExtras: {},
+  sideId: null,
+  purchases: [],
+  roomReadyQuestionIds: [],
+  coins: 0,
+  hasCarriedCoin: false,
+};
+
+/** What the held team view gives a joined phone to play with; the keyed shapes are worked out here, once per team view. */
+function useTeamViewFields(view: OwnTeamView | undefined) {
+  return useMemo(() => {
+    const held = view ?? EMPTY_TEAM_VIEW;
+    return {
+      myAnswers: buildMyAnswers(held.answers),
+      myBonusAwards: held.bonusAwards,
+      myRoundRatings: buildMyRoundRatings(held.roundRatings),
+      myFeedback: held.feedback,
+      mySessionRatings: held.sessionRatings,
+      myPlayerCount: held.playerCount,
+      myJoker: held.joker,
+      myDoubledRounds: held.doubledRounds,
+      myJokerExtras: held.jokerExtras,
+      mySideId: held.sideId,
+      myPurchases: held.purchases,
+      roomReadyQuestionIds: held.roomReadyQuestionIds,
+    } satisfies Partial<TeamLinkGame>;
+  }, [view]);
 }
 
 function useClearTimersOnUnmount(
