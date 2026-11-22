@@ -28,7 +28,7 @@ function session(
     },
     carriedCoins: { 1: over.carried ?? 0 },
     coinAwards: { 1: over.awards ?? 0 },
-    funFactData: { powerUps: over.purchases ?? [] },
+    scoringRecords: { powerUps: over.purchases ?? [] },
   };
 }
 
@@ -145,12 +145,5 @@ describe('coin ledger', () => {
     [false, 0, false],
   ])('coins shown: power-ups %s, balance %s', (on, balance, shown) => {
     expect(coinsShown(on, balance)).toBe(shown);
-  });
-
-  it('passed-in purchases replace the cached ones for that team only', () => {
-    const s = session({ purchases: [{ teamId: 1, cost: 3 }] });
-    expect(coinBalance(s, 1, [{ cost: 1 }])).toBe(2);
-    expect(coinDebt(s, 1, [{ cost: 5 }])).toBe(2);
-    expect(coinBalance(s, 1)).toBe(0);
   });
 });

@@ -519,7 +519,7 @@ describe('StandingsService (Postgres integration)', () => {
     });
     await state.em.flush();
 
-    const { answers } = await standings.funFactData(state.session.id);
+    const { answers } = await standings.scoringRecords(state.session.id);
 
     expect(answers.map((a) => [a.teamName, a.responseMs]).sort()).toEqual([
       ['Fast', 1234],

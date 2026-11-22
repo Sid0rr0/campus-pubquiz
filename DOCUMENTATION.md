@@ -318,8 +318,8 @@ against that session and stores nothing when it is refused: a team's last-second
 answer is either stored (and seen by the press that follows, so a closest_guess
 answer is graded by the break) or refused with "Answers are locked for this
 question", never stored unseen. Sessions don't wait for
-each other. The final read covers every **live result** (the leaderboard and
-fun fact data; see Live results in the glossary). If a read fails,
+each other. The final read covers every **live result** (the leaderboard, the
+Scoring records, took part and departed teams; see Live results in the glossary). If a read fails,
 the write still counts as done (a press has already saved its progress, so
 memory must match the database and clients must hear about it): the failure is
 logged, that figure keeps its earlier value (the others still update), and the
@@ -627,7 +627,7 @@ teamCount }` for that question, and `/display` draws it as a count-up "7 of 12
 teams" with "+2 close" when `partial` is above 0. `correct` and `partial` count
 the roster teams whose answer has that verdict (see Verdict in the glossary);
 `teamCount` is every roster team, so teams that did not answer are in the
-total. The counts come from the session's fun fact data (one of its **Live
+total. The counts come from the session's Scoring records (one of its **Live
 results**; see the glossary for when they are read), so they follow hand
 grades, lock grading and key fixes. It is `null` outside a reveal and on a
 question whose type has no correct rate (today only closest_guess, whose
@@ -685,7 +685,7 @@ bonus was awarded and Jokers is off). The joker facts that name a team
 all revealed, so no pick leaks before its leaderboard; the other three count
 the roster's jokers and give no pick away. A bought extra joker counts as a
 joker on its round in all five joker facts (a team may hold several). The
-session holds the answers, bonus awards and power-up purchases (`funFactData`)
+session holds the answers, bonus awards and power-up purchases (the Scoring records)
 and re-reads them with the standings
 at the end of every session write and when a session is placed, so the facts
 follow hand grades and key fixes. A bonus award records its block when it is
@@ -694,7 +694,7 @@ intro, still showing the previous board) the block played just before it (read
 from the progress, so also after a backend restart), else (before the
 first block) the quiz's first block. Only awards made before this was recorded are
 empty. The bonus awards in
-`funFactData` carry their team and that block.
+Scoring records carry their team and that block.
 
 The **`funFactsEnabled`** session setting (a boolean, default `true`, validated
 by the partial-settings Zod schema, editable in the lobby only like every other

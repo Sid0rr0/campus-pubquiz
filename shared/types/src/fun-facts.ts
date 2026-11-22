@@ -1,6 +1,6 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
-import { formatAnswer, type Verdict } from './answer-kind';
+import { formatAnswer } from './answer-kind';
 import {
   canBeDoubled,
   countedPoints,
@@ -14,53 +14,8 @@ import { QUESTION_KINDS } from './question-kind';
 import { questionOutcome } from './question-outcome';
 import type { QuestionType } from './question-types';
 import { compareTeamNames } from './ranking-rule';
+import type { ScoringAnswer, ScoringRecords } from './scoring-records';
 import type { SessionState } from './session-state';
-
-/** One submitted answer, as far as fun facts need it. */
-export interface FunFactAnswer {
-  questionId: number;
-  teamId: number;
-  teamName: string;
-  /** Null while the answer is ungraded. */
-  verdict: Verdict | null;
-  pointsAwarded: number;
-  /** Final submission time minus the question's open time; null when untracked. */
-  responseMs: number | null;
-  /** Clue question only: the clue (1-based) on air when the answer was locked in; null or absent otherwise. */
-  clue?: number | null;
-}
-
-/** One bonus award, as far as fun facts need it. */
-export interface FunFactBonusAward {
-  teamId: number;
-  category: BonusCategory;
-  points: number;
-  /** First question id of the block in play when awarded; null for awards made before it was recorded. */
-  blockFirstQuestionId: number | null;
-}
-
-/** One power-up purchase, as far as the live views need it: the reveal's power-up count and each team's coins. */
-export interface FunFactPowerUp {
-  teamId: number;
-  powerUp: PowerUpId;
-  /** The question it was bought for; null for a round power-up. */
-  questionId: number | null;
-  /** The round an extra joker was bought for; null otherwise. */
-  roundId: number | null;
-  cost: number;
-}
-
-/**
- * The session's stored answers, bonus awards and power-up purchases that fun
- * facts are built from, and the reveal's teams-correct and power-up counts read
- * it too. A cache filled with the standings, so the display view stays
- * synchronous.
- */
-export interface FunFactData {
-  answers: FunFactAnswer[];
-  bonusAwards: FunFactBonusAward[];
-  powerUps: FunFactPowerUp[];
-}
 
 /** The question a fun fact is about, as the big screen words it ("Round 2 · Q3"). */
 export interface FunFactQuestion {
@@ -217,7 +172,7 @@ function toFunFactQuestion({
 
 function fastestCorrectAnswer(
   revealed: readonly RevealedQuestion[],
-  answers: readonly FunFactAnswer[],
+  answers: readonly ScoringAnswer[],
 ): FunFact | null {
   const quickfireById = new Map(
     revealed.filter((q) => q.isQuickfire).map((q) => [q.questionId, q]),
@@ -250,7 +205,7 @@ interface QuestionOutcome {
 
 function outcomesOf(
   revealed: readonly RevealedQuestion[],
-  answers: readonly FunFactAnswer[],
+  answers: readonly ScoringAnswer[],
   teamCount: number,
 ): QuestionOutcome[] {
   return revealed.flatMap((question) => {
@@ -274,7 +229,7 @@ function outcomesOf(
 /** The first revealed Clue question whose earliest correct answer satisfies `qualifies`, as a fact; answers without a clue are ignored. */
 function firstClueFact(
   revealed: readonly RevealedQuestion[],
-  answers: readonly FunFactAnswer[],
+  answers: readonly ScoringAnswer[],
   qualifies: (clue: number, clueCount: number) => boolean,
   toFact: (
     question: FunFactQuestion,
@@ -305,7 +260,7 @@ function firstClueFact(
 function cleanSweep(
   session: SessionState,
   revealed: readonly RevealedQuestion[],
-  answers: readonly FunFactAnswer[],
+  answers: readonly ScoringAnswer[],
 ): FunFact | null {
   // Types with no correct rate don't count: only the closest team gets a
   // closest guess right.
@@ -336,7 +291,7 @@ function cleanSweep(
 function perfectRounds(
   session: SessionState,
   pastIds: ReadonlySet<number>,
-  answers: readonly FunFactAnswer[],
+  answers: readonly ScoringAnswer[],
 ): FunFact | null {
   const rounds = session.seededGame.rounds.filter((round) =>
     round.questions.every(({ id }) => pastIds.has(id)),
@@ -350,7 +305,7 @@ function perfectRounds(
 }
 
 function bonusAwardsSoFar(
-  data: FunFactData,
+  data: ScoringRecords,
 ): Extract<FunFact, { kind: 'bonus_awards_so_far' }> | null {
   const counts = BONUS_CATEGORIES.map((category) => ({
     category,
@@ -371,7 +326,7 @@ function powerUpFacts(
   const pointsById = new Map(revealed.map((q) => [q.questionId, q.points]));
   // The extra joker has no question, so it never counts: the joker facts cover it.
   // Roster teams only, like the answers: a kicked team's answer is gone, so its use would read as a miss.
-  const purchases = session.funFactData.powerUps.filter(
+  const purchases = session.scoringRecords.powerUps.filter(
     (p) =>
       p.questionId !== null &&
       pointsById.has(p.questionId) &&
@@ -381,7 +336,11 @@ function powerUpFacts(
     powerUp,
     count: purchases.filter((p) => p.powerUp === powerUp).length,
   })).filter(({ count }) => count > 0);
-  const best = powerUpHits(purchases, session.funFactData.answers, pointsById)
+  const best = powerUpHits(
+    purchases,
+    session.scoringRecords.answers,
+    pointsById,
+  )
     .filter(({ uses, hits }) => uses >= PAID_OFF_MIN_USES && hits > 0)
     // Stable sort: a tie on rate goes to more uses, then power-up order.
     .sort((a, b) => b.hits / b.uses - a.hits / a.uses || b.uses - a.uses)[0];
@@ -405,7 +364,7 @@ interface JokerRound {
  */
 function jokerFacts(
   session: SessionState,
-  answers: readonly FunFactAnswer[],
+  answers: readonly ScoringAnswer[],
   pastIds: ReadonlySet<number>,
 ): (FunFact | null)[] {
   if (!session.seededGame.settings.jokersEnabled) return [];
@@ -450,7 +409,7 @@ function jokerHolders(
       const joker = session.jokers[team.teamId];
       return doubledRoundIdsOfTeam(
         session.jokers,
-        session.funFactData.powerUps,
+        session.scoringRecords.powerUps,
         team.teamId,
       ).flatMap((roundId) => {
         const round = roundById.get(roundId);
@@ -512,7 +471,7 @@ function jokerCountFacts(
 
 /** The two facts that name a team, read only from fully revealed joker rounds. */
 function revealedJokerFacts(
-  answers: readonly FunFactAnswer[],
+  answers: readonly ScoringAnswer[],
   rounds: readonly QuizJokerRound[],
   holders: readonly JokerHolder[],
   pastIds: ReadonlySet<number>,
@@ -582,7 +541,7 @@ function revealedJokerFacts(
  * yields only the bonus awards (or nothing).
  */
 export function describeFunFacts(session: SessionState): FunFact[] {
-  const { answers } = session.funFactData;
+  const { answers } = session.scoringRecords;
   const pastIds = new Set(
     getPastBlockIds(session.seededGame.rounds, session.progress),
   );
@@ -649,7 +608,7 @@ export function describeFunFacts(session: SessionState): FunFact[] {
     cleanSweep(session, revealed, answers),
     perfectRounds(session, pastIds, answers),
     ...jokerFacts(session, answers, pastIds),
-    bonusAwardsSoFar(session.funFactData),
+    bonusAwardsSoFar(session.scoringRecords),
     ...powerUpFacts(session, revealed),
   ];
   return facts.filter((fact): fact is FunFact => fact !== null);

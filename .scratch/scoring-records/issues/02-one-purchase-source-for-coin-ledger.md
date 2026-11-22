@@ -11,7 +11,7 @@ See the spec's "The Coin ledger" and "Writes that hold fresher purchase rows".
 
 **Blocked by:** 01 (Rename the cache to Scoring records).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `coinBalance` and `coinDebt` take only a session and a team; no caller passes purchases
 - [ ] A team buys a power-up and the read after that write fails: the coins in its Team view and in the admin snapshot are equal and both are lower by the cost

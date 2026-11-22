@@ -69,7 +69,7 @@ describe('GameGateway — award bonus', () => {
     });
 
     const stored = await game.inRequestContext(() =>
-      game.standingsService.funFactData(game.gameSessionId),
+      game.standingsService.scoringRecords(game.gameSessionId),
     );
     expect(stored.bonusAwards).toEqual([
       {
@@ -80,7 +80,7 @@ describe('GameGateway — award bonus', () => {
       },
     ]);
     expect(
-      game.sessionWrite.read(game.joinCode).funFactData.bonusAwards,
+      game.sessionWrite.read(game.joinCode).scoringRecords.bonusAwards,
     ).toEqual(stored.bonusAwards);
   });
 
@@ -92,7 +92,7 @@ describe('GameGateway — award bonus', () => {
     });
 
     const stored = await game.inRequestContext(() =>
-      game.standingsService.funFactData(game.gameSessionId),
+      game.standingsService.scoringRecords(game.gameSessionId),
     );
     expect(stored.bonusAwards).toEqual([
       expect.objectContaining({
@@ -265,7 +265,7 @@ describe('GameGateway — bonus in a fresh round intro, the previous block’s b
       points: 1,
     });
     const stored = await game.inRequestContext(() =>
-      game.standingsService.funFactData(game.gameSessionId),
+      game.standingsService.scoringRecords(game.gameSessionId),
     );
     return { stored, playedBlockId: game.rounds[1].questionIds[0] };
   }

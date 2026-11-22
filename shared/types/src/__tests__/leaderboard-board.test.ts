@@ -322,7 +322,7 @@ describe('describeLeaderboardBoard', () => {
         sessionWith(rounds, progress, {
           leaderboard: current,
           priorStandings: { board: [], blockFirstQuestionId: 1 },
-          funFactData: { answers, bonusAwards: [], powerUps: [] },
+          scoringRecords: { answers, bonusAwards: [], powerUps: [] },
           ...overrides,
         }),
       ).perfectRounds;
@@ -603,7 +603,7 @@ describe('describeLeaderboardBoard', () => {
       const result = describeLeaderboardBoard(
         withBoard(leaderboardOn, teams, {
           priorStandings: onBlockOne,
-          funFactData: {
+          scoringRecords: {
             answers: [],
             bonusAwards: [],
             powerUps: [

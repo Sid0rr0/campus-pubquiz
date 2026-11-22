@@ -27,7 +27,7 @@ export class LiveResultsRead {
 
   async read(session: SessionState): Promise<SessionState> {
     const { gameSessionId } = session.seededGame;
-    const [leaderboard, funFactData, tookPartTeamIds, departedTeams] =
+    const [leaderboard, scoringRecords, tookPartTeamIds, departedTeams] =
       await Promise.all([
         this.readOrKeep(
           session,
@@ -37,9 +37,9 @@ export class LiveResultsRead {
         ),
         this.readOrKeep(
           session,
-          'Fun fact data',
-          () => this.standingsService.funFactData(gameSessionId),
-          session.funFactData,
+          'Scoring records',
+          () => this.standingsService.scoringRecords(gameSessionId),
+          session.scoringRecords,
         ),
         this.readOrKeep(
           session,
@@ -57,7 +57,7 @@ export class LiveResultsRead {
     return {
       ...session,
       leaderboard,
-      funFactData,
+      scoringRecords,
       tookPartTeamIds,
       departedTeams,
     };

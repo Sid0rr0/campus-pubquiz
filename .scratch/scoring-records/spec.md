@@ -1,6 +1,6 @@
 # Spec: Name the Scoring records; one purchase source for the Coin ledger
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-11-21, candidate 4 ("Name the Live results cache; one purchase source for the Coin ledger").
 

@@ -1,5 +1,5 @@
 import { playsJokers } from './doubled-rounds';
-import type { FunFactData } from './fun-facts';
+import type { ScoringRecords } from './scoring-records';
 import type { GameContext, GameProgress } from './game-state-types';
 import type { TeamJoker } from './joker';
 import type { LeagueTop } from './league';
@@ -154,14 +154,12 @@ export interface SessionState {
    */
   priorStandings: PriorStandings | null;
   /**
-   * The session's stored answers and bonus awards, the input to the fun facts
-   * the big screen shows during a break and to the reveal's teams-correct
-   * count. Read with the standings at the end of
-   * every session write and on placement, so it always matches what is stored.
-   * Never sent as it is: the display view carries only the facts built from it.
-   * Ephemeral.
+   * The session's stored answers, bonus awards and power-up purchases (see
+   * GLOSSARY "Scoring records"). Read with the standings at the end of every
+   * session write and on placement, so it always matches what is stored.
+   * Never sent as it is: views carry only what is built from it. Ephemeral.
    */
-  funFactData: FunFactData;
+  scoringRecords: ScoringRecords;
   /**
    * Ids of the roster teams that took part (see GLOSSARY "Took part"): all of
    * them while the session runs, only those with an answer or bonus once it has
@@ -266,7 +264,7 @@ export function freshSessionState(
     leaderboard: [],
     leaderboardRevealCount: 0,
     priorStandings: null,
-    funFactData: { answers: [], bonusAwards: [], powerUps: [] },
+    scoringRecords: { answers: [], bonusAwards: [], powerUps: [] },
     tookPartTeamIds: [],
     departedTeams: [],
     leagueTop: null,

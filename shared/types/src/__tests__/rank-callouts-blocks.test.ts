@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FunFactBonusAward } from '../fun-facts';
+import type { ScoringBonusAward } from '../fun-facts';
 import { describeBlockBoards, describeLiveRankBoard } from '../rank-callouts';
 import { rankTeams } from '../ranking-rule';
 import { projectScreen } from '../screen-projection';
@@ -32,7 +32,7 @@ const award = (
   teamId: number,
   points: number,
   blockFirstQuestionId: number | null,
-): FunFactBonusAward => ({
+): ScoringBonusAward => ({
   teamId,
   category: 'shot',
   points,
@@ -146,7 +146,7 @@ describe('describeBlockBoards', () => {
   it('counts bonuses by block and unstamped awards in the latest board only', () => {
     const [first, second] = describeBlockBoards(
       session({
-        funFactData: {
+        scoringRecords: {
           answers: [],
           powerUps: [],
           bonusAwards: [award(1, 3, 1), award(1, -2, 4), award(3, 1, null)],
@@ -185,7 +185,7 @@ describe('describeBlockBoards', () => {
     }));
     const [first] = describeBlockBoards(
       session({
-        funFactData: { answers, bonusAwards: [], powerUps: [] },
+        scoringRecords: { answers, bonusAwards: [], powerUps: [] },
         jokers: {
           1: { roundId: 2, source: 'drawn' },
         } as SessionState['jokers'],
@@ -362,7 +362,7 @@ describe('describeBlockBoards', () => {
         },
         leaderboard: now,
         leaderboardRevealCount: 3,
-        funFactData: {
+        scoringRecords: {
           answers: [],
           powerUps: [],
           bonusAwards: [award(1, 3, 1)],

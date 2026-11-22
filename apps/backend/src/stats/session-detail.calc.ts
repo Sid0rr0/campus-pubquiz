@@ -2,7 +2,7 @@ import {
   BONUS_CATEGORIES,
   POWER_UP_IDS,
   powerUpHits,
-  type FunFactPowerUp,
+  type ScoringPurchase,
   type PowerUpId,
   type SessionDetailPowerUps,
   type BonusCategory,
@@ -109,7 +109,7 @@ export interface SessionDetailInput {
   /** Power-ups the session offered; empty when it had power-ups off. */
   offeredPowerUps: readonly PowerUpId[];
   /** Every stored purchase, whatever team made it. */
-  purchases: readonly FunFactPowerUp[];
+  purchases: readonly ScoringPurchase[];
 }
 
 /**
@@ -391,7 +391,7 @@ function computePowerUps({
   answers,
 }: {
   offeredPowerUps: readonly PowerUpId[];
-  purchases: readonly FunFactPowerUp[];
+  purchases: readonly ScoringPurchase[];
   participantIds: ReadonlySet<number>;
   questions: readonly DetailQuestion[];
   answers: readonly DetailAnswer[];

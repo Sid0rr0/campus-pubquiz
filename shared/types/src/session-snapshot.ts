@@ -98,7 +98,7 @@ function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
   const teamCount = session.leaderboard.length;
   const { correctCount, partialCount } = questionOutcome(
     question,
-    session.funFactData.answers.filter(
+    session.scoringRecords.answers.filter(
       (answer) => answer.questionId === question.id,
     ),
     teamCount,
@@ -117,7 +117,7 @@ function describePowerUpCounts(session: SessionState): PowerUpCount[] {
   const question =
     getBlockSeededQuestions(session)[session.progress.revealIndex];
   return question
-    ? powerUpCountsFor(question.id, session.funFactData.powerUps)
+    ? powerUpCountsFor(question.id, session.scoringRecords.powerUps)
     : [];
 }
 

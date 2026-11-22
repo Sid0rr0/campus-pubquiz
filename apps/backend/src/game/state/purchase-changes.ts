@@ -11,6 +11,7 @@ import {
   type BuyPowerUpPayload,
   type PowerUpId,
   type PurchaseEffect,
+  type ScoringPurchase,
   type SeededQuestion,
   type SessionState,
 } from '@campus-pubquiz/types';
@@ -128,6 +129,7 @@ export class PurchaseChanges {
       gameSessionId,
       teamId,
     );
+    const synced = withTeamPurchases(session, teamId, records);
     // Stryker disable ConditionalExpression,LogicalOperator,ArrayDeclaration: equivalent, only Ask the room reads the other answers, and it is refused without an open question.
     const otherAnswers =
       powerUp === 'ask_the_room' && question
@@ -135,7 +137,7 @@ export class PurchaseChanges {
         : [];
     // Stryker restore ConditionalExpression,LogicalOperator,ArrayDeclaration
     assertQuestionPurchaseAllowed(
-      session,
+      synced,
       request,
       { teamId, records, otherAnswers },
       question,
@@ -158,7 +160,7 @@ export class PurchaseChanges {
         teamId,
       );
     }
-    return await this.store(session, teamId, records, bought, {
+    return await this.store(synced, teamId, bought, {
       answerListQuestionIds: [questionId],
     });
   }
@@ -173,11 +175,10 @@ export class PurchaseChanges {
       .map((answer) => answer.value);
   }
 
-  /** Stores `bought`, then tells the team's own phones its purchases and coins and refreshes the admin room. */
+  /** Stores `bought` and adds it to the returned session's Scoring records, then tells the team's own phones its purchases and coins and refreshes the admin room. */
   private async store(
     session: SessionState,
     teamId: number,
-    records: readonly PurchaseRecord[],
     bought: PurchaseRecord,
     outcome: Partial<SessionOutcome>,
   ): Promise<SessionChange<SessionOutcome>> {
@@ -187,7 +188,7 @@ export class PurchaseChanges {
       ...bought,
     });
     return {
-      session,
+      session: withPurchases(session, [{ teamId, ...bought }]),
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
         shouldBroadcastState: false,
@@ -219,10 +220,11 @@ export class PurchaseChanges {
       gameSessionId,
       teamId,
     );
+    const synced = withTeamPurchases(session, teamId, records);
     const refusal = extraJokerPurchaseRefusal({
       settings: settings.powerUps,
       purchases: records,
-      balance: coinBalance(session, teamId, records),
+      balance: coinBalance(synced, teamId),
       jokerRoundId: session.jokers[teamId]?.roundId,
       roundId,
       offered: extraJokerOfferedRound(session),
@@ -236,7 +238,7 @@ export class PurchaseChanges {
       cost: settings.powerUps.extra_joker.cost,
       effect: { kind: 'extra_joker' },
     };
-    return await this.store(session, teamId, records, bought, {});
+    return await this.store(synced, teamId, bought, {});
   }
 
   /**
@@ -268,15 +270,23 @@ export class PurchaseChanges {
     await this.purchaseService.remove(old.map((row) => row.id));
 
     return {
-      session: reloaded,
+      session: withPurchases(
+        {
+          ...reloaded,
+          scoringRecords: {
+            ...reloaded.scoringRecords,
+            powerUps: reloaded.scoringRecords.powerUps.filter(
+              (bought) => !isRoundPurchase(bought),
+            ),
+          },
+        },
+        rebuilt,
+      ),
       // Only a team holding an extra joker can see a purchase or its refund move.
       changedTeamIds: [
         ...new Set(
-          started.funFactData.powerUps
-            .filter(
-              (bought) =>
-                bought.powerUp === 'extra_joker' && bought.roundId !== null,
-            )
+          started.scoringRecords.powerUps
+            .filter(isRoundPurchase)
             .map((bought) => bought.teamId),
         ),
       ],
@@ -302,7 +312,7 @@ function assertQuestionPurchaseAllowed(
   const refusal = questionPurchaseRefusal({
     settings: session.seededGame.settings.powerUps,
     purchases: records,
-    balance: coinBalance(session, teamId, records),
+    balance: coinBalance(session, teamId),
     question: question ?? null,
     // Stryker disable ConditionalExpression,ArrayDeclaration: equivalent, only Ask the room reads this, and it is refused without an open question.
     isRoomReady:
@@ -318,6 +328,56 @@ function assertQuestionPurchaseAllowed(
   if (question === undefined) throw new Error('Question missing');
 }
 
+/** An extra joker bought for a round. */
+function isRoundPurchase(
+  bought: ScoringPurchase,
+): bought is ScoringPurchase & { roundId: number } {
+  return bought.powerUp === 'extra_joker' && bought.roundId !== null;
+}
+
+/** `session` with `added` appended to its Scoring records, so the ledger and every reader see them even if the next Live results read fails. */
+function withPurchases(
+  session: SessionState,
+  added: readonly ScoringPurchase[],
+): SessionState {
+  return {
+    ...session,
+    scoringRecords: {
+      ...session.scoringRecords,
+      powerUps: [
+        ...session.scoringRecords.powerUps,
+        ...added.map(({ teamId, powerUp, questionId, roundId, cost }) => ({
+          teamId,
+          powerUp,
+          questionId,
+          roundId,
+          cost,
+        })),
+      ],
+    },
+  };
+}
+
+/** `session` with the team's Scoring records purchases replaced by its freshly stored `rows`. */
+function withTeamPurchases(
+  session: SessionState,
+  teamId: number,
+  rows: readonly PurchaseRecord[],
+): SessionState {
+  return withPurchases(
+    {
+      ...session,
+      scoringRecords: {
+        ...session.scoringRecords,
+        powerUps: session.scoringRecords.powerUps.filter(
+          (bought) => bought.teamId !== teamId,
+        ),
+      },
+    },
+    rows.map((row) => ({ teamId, ...row })),
+  );
+}
+
 /** The extra jokers that still stand after a live edit, each moved to the round now holding its questions. */
 function rebuiltExtraJokers(
   started: SessionState,
@@ -329,9 +389,8 @@ function rebuiltExtraJokers(
   // lives on in another row.
   const kept = new Set<string>();
   const rebuilt: NewPurchase[] = [];
-  for (const bought of started.funFactData.powerUps) {
-    // Stryker disable next-line ConditionalExpression: equivalent, only extra jokers have a round id, so `roundId === null` alone skips the rest.
-    if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
+  for (const bought of started.scoringRecords.powerUps) {
+    if (!isRoundPurchase(bought)) continue;
     const next = roundIdAfterEdit(started, reloaded, bought.roundId);
     const key = `${bought.teamId}:${next}`;
     if (next === null || kept.has(key)) continue;

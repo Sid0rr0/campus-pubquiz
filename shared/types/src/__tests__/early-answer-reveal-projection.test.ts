@@ -56,11 +56,11 @@ describe('Early answer reveal — the display on answers', () => {
 
   it('carries the power-up use counts but no correct-rate figures', () => {
     const session = at('answers', 0, {
-      funFactData: {
+      scoringRecords: {
         answers: [],
         bonusAwards: [],
         powerUps: [{ powerUp: 'fifty_fifty', questionId: 10 }],
-      } as unknown as SessionState['funFactData'],
+      } as unknown as SessionState['scoringRecords'],
     });
     const answers = projectScreen(session, SOCKET_ROOMS.DISPLAY);
     expect(answers.powerUpCounts).toEqual([
