@@ -14,12 +14,9 @@ import type {
   BlockMode,
   BlockQuestionView,
   PlayersRevealQuestionView,
-  JoinAcceptedPayload,
-  PurchaseView,
-  QuestionView,
-  Verdict,
 } from '@campus-pubquiz/types';
 import type { MyAnswer, MyAnswerClue } from '@/app/lib/team-link';
+import type { SelectedQuestionView } from '@/app/play/selected-question-view';
 import { yourAnswerTextClass } from '@/app/play/verdict-card';
 import { ClueList } from '@/app/components/clue-list';
 import { NumberMarginText } from '@/app/components/number-margin-text';
@@ -52,38 +49,29 @@ interface QuestionNavigation {
 interface QuestionBrowserProps {
   /** The block Phone screen's mode: the only thing that picks the reveal body, the answer form and the locked/revealing lines. */
   mode: BlockMode;
-  /** False while the phone isn't linked to a team, whatever the mode. */
-  isAnswerable: boolean;
-  team: JoinAcceptedPayload | null;
+  /** The selected question as this team sees it: its answer, result, joker round, purchases and whether it is answered now. */
+  selected: SelectedQuestionView;
   pickerRounds: PickerRound[];
   totalPickerSlots: number;
-  selectedQuestion: QuestionView | BlockQuestionView;
-  /** selectedQuestion as the reveal has shown it so far — set only while reveal is showing this question; a closest_guess question has no answer until its answer step. */
+  /** The selected question as the reveal has shown it so far — set only while reveal is showing this question; a closest_guess question has no answer until its answer step. */
   revealQuestion?: PlayersRevealQuestionView;
   /** Active round's quickfire speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
   isQuickfireMode: boolean;
+  /** The team's answers, for the picker's answered marks. */
   myAnswers: Record<number, MyAnswer>;
-  /** Points awarded for the selected question's answer, null until graded. */
-  myAnswerPoints: number | null;
-  /** How the selected question's answer was judged, null until graded; colours "Your answer" on the reveal. */
-  myAnswerVerdict: Verdict | null;
-  /** The extra points the joker adds to this answer ("+1"), null outside the joker round. */
-  myAnswerJokerExtra?: number | null;
   onSelectQuestion: (questionId: BlockQuestionView['id']) => void;
-  onSubmitAnswer: (
-    questionId: BlockQuestionView['id'],
-    teamId: number,
-    value: string,
-  ) => void;
+  /** Sends the team's answer; null while the phone has no team, so there is no answer form. */
+  onSubmitAnswer:
+    | ((questionId: BlockQuestionView['id'], value: string) => void)
+    | null;
   /** Set only when the team has turned off auto-advance — renders Prev/Next controls bounded to questions already opened. */
   navigation?: QuestionNavigation;
-  /** Whether the selected question belongs to the team's joker round — its answers count double, so the browser wears a joker border. */
-  isJokerQuestion?: boolean;
   /** The numbers of the rounds doubled for the team, marked in the picker. */
   doubledRoundNumbers?: readonly number[];
-  /** The team's own power-up purchases: their effects show on the question, whatever the coins left. */
-  purchases?: PurchaseView[];
 }
+
+type BrowsedQuestion = SelectedQuestionView['question'];
+type QuestionPurchases = SelectedQuestionView['purchases'];
 
 interface RevealBodyProps {
   revealQuestion: PlayersRevealQuestionView;
@@ -121,46 +109,37 @@ function RevealBody({ revealQuestion, myAnswer }: RevealBodyProps) {
   }
 }
 
-/** The text and recorded clue of a team's answer to a question: undefined text while unanswered, a null clue when none is recorded. */
-function valueAndClueOf(answer: MyAnswer | undefined) {
-  return { value: answer?.value, clue: answer?.clue ?? null };
-}
-
 /** The block question picker + prompt + answer form, shown while a question is open and, unless the leaderboard overlay is on, through break/reveal so teams can browse back. */
 export function QuestionBrowser({
   mode,
-  isAnswerable,
-  team,
+  selected,
   pickerRounds,
   totalPickerSlots,
-  selectedQuestion,
   revealQuestion,
   isQuickfireMode,
   myAnswers,
-  myAnswerPoints,
-  myAnswerVerdict,
-  myAnswerJokerExtra = null,
   onSelectQuestion,
   onSubmitAnswer,
   navigation,
-  isJokerQuestion = false,
   doubledRoundNumbers = [],
-  purchases = [],
 }: QuestionBrowserProps) {
-  const { value: myAnswer, clue: myAnswerClue } = valueAndClueOf(
-    myAnswers[selectedQuestion.id],
-  );
+  const {
+    question: selectedQuestion,
+    answer: myAnswer,
+    clue: myAnswerClue,
+    isDoubledRound,
+  } = selected;
   const verdictTextClass = yourAnswerTextClass({
     myAnswer: myAnswer || null,
-    pointsAwarded: myAnswerPoints,
-    verdict: myAnswerVerdict,
+    pointsAwarded: selected.points,
+    verdict: selected.verdict,
   });
 
   return (
     <div
-      data-testid={isJokerQuestion ? 'joker-border' : undefined}
+      data-testid={isDoubledRound ? 'joker-border' : undefined}
       className={`flex flex-col gap-6 ${
-        isJokerQuestion ? 'rounded-2xl border-4 border-yellow p-4' : ''
+        isDoubledRound ? 'rounded-2xl border-4 border-yellow p-4' : ''
       }`}
     >
       {navigation && <PrevNextNav navigation={navigation} />}
@@ -182,21 +161,20 @@ export function QuestionBrowser({
           myAnswerClue={myAnswerClue}
           // The early answer reveal shows the answers before grading is done: no verdict colours, marks or points.
           isVerdictShown={mode === 'revealing'}
-          myAnswerPoints={myAnswerPoints}
-          myAnswerJokerExtra={myAnswerJokerExtra}
+          myAnswerPoints={selected.points}
+          myAnswerJokerExtra={selected.jokerExtra}
           verdictTextClass={verdictTextClass}
         />
       ) : (
         <OpenQuestion
           mode={mode}
-          isAnswerable={isAnswerable}
-          team={team}
+          isAnsweringNow={selected.isAnsweringNow}
           question={selectedQuestion}
           myAnswer={myAnswer}
           myAnswerClue={myAnswerClue}
           isQuickfireMode={isQuickfireMode}
           onSubmitAnswer={onSubmitAnswer}
-          purchases={purchases}
+          purchases={selected.purchases}
         />
       )}
     </div>
@@ -204,11 +182,7 @@ export function QuestionBrowser({
 }
 
 /** A Clue question's clues shown so far and what an answer is worth now. */
-function CluesShown({
-  question,
-}: {
-  question: QuestionBrowserProps['selectedQuestion'];
-}) {
+function CluesShown({ question }: { question: BrowsedQuestion }) {
   return (
     <>
       {question.clues && <ClueList clues={question.clues} />}
@@ -242,7 +216,7 @@ function AnswerArea({
   myAnswer,
   onSubmit,
 }: {
-  question: QuestionBrowserProps['selectedQuestion'];
+  question: BrowsedQuestion;
   isAnswerable: boolean;
   initialValue: string;
   removedOptions: ReturnType<typeof removedOptionsOf>;
@@ -301,28 +275,24 @@ function AnswerArea({
 /** The selected question as asked: its prompt, notes, power-up hints and, while answering, the answer form. */
 function OpenQuestion({
   mode,
-  isAnswerable,
-  team,
+  isAnsweringNow,
   question,
   myAnswer,
   myAnswerClue,
   isQuickfireMode,
   onSubmitAnswer,
   purchases,
-}: Pick<
-  QuestionBrowserProps,
-  'mode' | 'isAnswerable' | 'team' | 'isQuickfireMode' | 'onSubmitAnswer'
-> & {
-  question: QuestionBrowserProps['selectedQuestion'];
+}: Pick<QuestionBrowserProps, 'mode' | 'isQuickfireMode' | 'onSubmitAnswer'> & {
+  isAnsweringNow: boolean;
+  question: BrowsedQuestion;
   myAnswer: string | undefined;
   myAnswerClue: MyAnswerClue | null;
-  purchases: NonNullable<QuestionBrowserProps['purchases']>;
+  purchases: QuestionPurchases;
 }) {
   const hasWiderMargin = purchases.some(
-    (p) => p.effect.kind === 'wider_margin' && p.questionId === question.id,
+    (p) => p.effect.kind === 'wider_margin',
   );
   const pin = pinFor(question.id, purchases);
-  const isAnswering = mode === 'answering' && isAnswerable;
   return (
     <>
       <h1 className="text-balance font-display text-2xl leading-tight">
@@ -341,24 +311,24 @@ function OpenQuestion({
         question={question}
         myAnswer={myAnswer}
         pin={pin}
-        isAnswering={isAnswering}
+        isAnswering={isAnsweringNow}
       />
       <PowerUpEffects
         question={question}
         purchases={purchases}
-        isRoomSplitShown={isAnswering && team !== null}
+        isRoomSplitShown={isAnsweringNow}
       />
-      {mode === 'answering' && team && (
+      {mode === 'answering' && onSubmitAnswer && (
         <AnswerArea
           question={question}
-          isAnswerable={isAnswerable}
+          isAnswerable={isAnsweringNow}
           initialValue={myAnswer ?? ''}
           removedOptions={removedOptionsOf(question.id, purchases)}
           isQuickfireMode={isQuickfireMode}
           pin={pin}
           myAnswerClue={myAnswerClue}
           myAnswer={myAnswer}
-          onSubmit={(value) => onSubmitAnswer(question.id, team.teamId, value)}
+          onSubmit={(value) => onSubmitAnswer(question.id, value)}
         />
       )}
       <ModeNote mode={mode} />
@@ -373,7 +343,7 @@ function QuestionNotes({
   pin,
   isAnswering,
 }: {
-  question: QuestionBrowserProps['selectedQuestion'];
+  question: BrowsedQuestion;
   myAnswer: string | undefined;
   pin: ReturnType<typeof pinFor>;
   isAnswering: boolean;
@@ -464,8 +434,8 @@ function RevealedAnswer({
   myAnswer: string | undefined;
   myAnswerClue: MyAnswerClue | null;
   isVerdictShown: boolean;
-  myAnswerPoints: QuestionBrowserProps['myAnswerPoints'];
-  myAnswerJokerExtra: QuestionBrowserProps['myAnswerJokerExtra'];
+  myAnswerPoints: SelectedQuestionView['points'];
+  myAnswerJokerExtra: SelectedQuestionView['jokerExtra'];
   verdictTextClass: string;
 }) {
   return (
@@ -514,8 +484,8 @@ function PowerUpEffects({
   purchases,
   isRoomSplitShown,
 }: {
-  question: QuestionBrowserProps['selectedQuestion'];
-  purchases: NonNullable<QuestionBrowserProps['purchases']>;
+  question: BrowsedQuestion;
+  purchases: QuestionPurchases;
   isRoomSplitShown: boolean;
 }) {
   return (
@@ -523,8 +493,7 @@ function PowerUpEffects({
       {/* Keyed by question and initial={false}: only an effect bought here and now eases in, never one already there on a load or when moving between questions. */}
       <AnimatePresence key={question.id} initial={false}>
         {purchases.map(
-          ({ questionId, effect }) =>
-            questionId === question.id &&
+          ({ effect }) =>
             'hint' in effect && (
               <motion.p
                 key={effect.kind}
@@ -536,10 +505,7 @@ function PowerUpEffects({
             ),
         )}
         {isRoomSplitShown &&
-          purchases.some(
-            (p) =>
-              p.questionId === question.id && p.effect.kind === 'ask_the_room',
-          ) && (
+          purchases.some((p) => p.effect.kind === 'ask_the_room') && (
             <motion.div key="room-split" {...POWER_UP_EFFECT_ARRIVAL}>
               <RoomSplit question={question} purchases={purchases} />
             </motion.div>

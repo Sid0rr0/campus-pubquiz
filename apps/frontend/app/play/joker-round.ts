@@ -3,47 +3,20 @@ import type {
   GameStatus,
   PlayersStatePayload,
 } from '@campus-pubquiz/types';
-import type { OpenedQuestionEntry } from '@/app/play/opened-questions';
 
-/** Whether the title card or the selected question is in a round the server says counts double for this team. */
+/** The rounds the server says count double for this team, and whether the title card is one of them. */
 export function jokerMarksOf(
-  view: Pick<PlayersStatePayload, 'phoneScreen' | 'blockQuestions'>,
+  view: Pick<PlayersStatePayload, 'phoneScreen'>,
   doubledRounds: readonly DoubledRoundView[],
-  selectedQuestionId: number | undefined,
 ) {
   const doubledRoundNumbers = doubledRounds.map((round) => round.roundNumber);
   const { phoneScreen } = view;
-  const selectedRoundNumber = view.blockQuestions.find(
-    (question) => question.id === selectedQuestionId,
-  )?.roundNumber;
   return {
     doubledRounds,
     doubledRoundNumbers,
     isJokerTitleCard:
       phoneScreen.kind === 'round_title' &&
       doubledRoundNumbers.includes(phoneScreen.roundNumber),
-    isJokerQuestion:
-      selectedRoundNumber !== undefined &&
-      doubledRoundNumbers.includes(selectedRoundNumber),
-  };
-}
-
-/** The selected question's points, verdict and joker bonus, once graded (all null with no selection or no graded entry). */
-export function selectedResultOf(
-  openedQuestions: readonly OpenedQuestionEntry[],
-  selectedQuestionId: number | undefined,
-  jokerExtras: Readonly<Record<number, number>>,
-) {
-  const entry =
-    selectedQuestionId === undefined
-      ? undefined
-      : openedQuestions.find(
-          (candidate) => candidate.id === selectedQuestionId,
-        );
-  return {
-    points: entry?.pointsAwarded ?? null,
-    verdict: entry?.verdict ?? null,
-    jokerExtra: entry ? (jokerExtras[entry.id] ?? null) : null,
   };
 }
 

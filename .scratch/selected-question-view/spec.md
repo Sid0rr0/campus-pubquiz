@@ -1,6 +1,6 @@
 # Spec: The selected question as the team sees it
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: team-view-held-once. This spec reads the team's data from the one **team view** the phone holds once that spec lands. Built before it, this would project from the copied team fields that spec deletes.
 

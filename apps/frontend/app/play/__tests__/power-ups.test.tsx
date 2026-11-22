@@ -108,6 +108,46 @@ describe('PlayPage — the power-up bar', () => {
     expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
   });
 
+  it('offers power-ups for an earlier question browsed back to while the block is still open, as its answer form is', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const buy = vi.fn().mockResolvedValue({ success: true });
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: {
+          rounds: [
+            {
+              questions: [
+                FRANCE,
+                { type: 'free_text', prompt: 'Capital of Italy?', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open', questionIndex: 1 },
+          settings: { powerUps: defaultPowerUpSettings(false) },
+        } as never,
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+            coins: 2,
+          },
+        },
+        game: { buyPowerUp: buy },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Question 1' }));
+
+    expect(screen.getByText('Capital of France?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Paris' })).toBeVisible();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Activate 50/50' }),
+    );
+    expect(buy).toHaveBeenCalledWith('fifty_fifty', 1);
+  });
+
   it('lists a power-up that does not apply to the question under "Not available now"', () => {
     phone({
       question: { type: 'closest_guess', prompt: 'How many?', points: 1 },

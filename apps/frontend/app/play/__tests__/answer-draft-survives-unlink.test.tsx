@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { JoinAcceptedPayload, QuestionView } from '@campus-pubquiz/types';
+import type { QuestionView } from '@campus-pubquiz/types';
 import { QuestionBrowser } from '@/app/play/question-browser';
 
 const QUESTION = {
@@ -15,15 +15,21 @@ function browser(isAnswerable: boolean) {
   return (
     <QuestionBrowser
       mode="answering"
-      isAnswerable={isAnswerable}
-      team={{ teamId: 7 } as JoinAcceptedPayload}
+      selected={{
+        question: QUESTION,
+        answer: undefined,
+        clue: null,
+        points: null,
+        verdict: null,
+        jokerExtra: null,
+        isDoubledRound: false,
+        purchases: [],
+        isAnsweringNow: isAnswerable,
+      }}
       pickerRounds={[]}
       totalPickerSlots={0}
-      selectedQuestion={QUESTION}
       isQuickfireMode={false}
       myAnswers={{}}
-      myAnswerPoints={null}
-      myAnswerVerdict={null}
       onSelectQuestion={vi.fn()}
       onSubmitAnswer={vi.fn()}
     />

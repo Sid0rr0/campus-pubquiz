@@ -28,11 +28,11 @@ import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
 import { JokerMoment } from '@/app/play/joker-moment';
 import { SideBadge, SidePicker } from '@/app/play/side-picker';
+import { isJokerRoundPlayed, jokerMarksOf } from '@/app/play/joker-round';
 import {
-  isJokerRoundPlayed,
-  jokerMarksOf,
-  selectedResultOf,
-} from '@/app/play/joker-round';
+  type SelectedQuestionView,
+  selectedQuestionViewOf,
+} from '@/app/play/selected-question-view';
 import { ReconnectingBar } from '@/app/play/reconnecting-bar';
 import {
   SavedConfirmation,
@@ -188,10 +188,19 @@ function JoinedPlayScreen({
           showAvailability: !isShowingLastBreak(progress, quizStructure),
         }
       : null;
+  const selected = selectedQuestionViewOf({
+    view,
+    myAnswers,
+    myJokerExtras: game.myJokerExtras,
+    myDoubledRounds: game.myDoubledRounds,
+    myPurchases,
+    openedQuestions,
+    selectedQuestion,
+  });
   const powerUpsList = powerUpsListOf({
     view,
     team,
-    selectedQuestion,
+    selected,
     myPurchases,
     roomReadyQuestionIds: game.roomReadyQuestionIds,
     jokerRoundId: myJoker?.roundId ?? null,
@@ -199,11 +208,7 @@ function JoinedPlayScreen({
     buyExtraJoker: game.buyExtraJoker,
     showMoment,
   });
-  const jokerMarks = jokerMarksOf(
-    view,
-    game.myDoubledRounds,
-    selectedQuestion?.id,
-  );
+  const jokerMarks = jokerMarksOf(view, game.myDoubledRounds);
   const isConnected = connectionError === null;
   const { mySideId } = game;
 
@@ -257,14 +262,14 @@ function JoinedPlayScreen({
       />
       <div className="order-3 md:order-4 flex flex-col items-center gap-6 lg:flex-row lg:items-start">
         <BlockBrowser
-          game={game}
+          view={view}
+          myAnswers={myAnswers}
           team={team}
-          selectedQuestion={selectedQuestion}
+          selected={selected}
           revealQuestion={revealQuestion}
           navigation={navigation}
           onSelectQuestion={selectQuestion}
-          openedQuestions={openedQuestions}
-          jokerMarks={jokerMarks}
+          doubledRoundNumbers={jokerMarks.doubledRoundNumbers}
           onSubmitAnswer={onSubmitAnswer}
         />
         <div className="flex flex-col gap-6 md:flex-row">
@@ -358,55 +363,47 @@ function ConnectionNotices({
 
 /** The block browser, on the `block` phone screen once there is a question to show. */
 function BlockBrowser({
-  game,
+  view,
+  myAnswers,
   team,
-  selectedQuestion,
+  selected,
   revealQuestion,
   navigation,
   onSelectQuestion,
-  openedQuestions,
-  jokerMarks,
+  doubledRoundNumbers,
   onSubmitAnswer,
 }: {
-  game: Pick<TeamGame, 'view' | 'myAnswers' | 'myPurchases' | 'myJokerExtras'>;
+  view: PlayerView;
+  myAnswers: TeamGame['myAnswers'];
   team: JoinedTeam;
-  selectedQuestion: SelectedQuestion;
+  selected: SelectedQuestionView | null;
   revealQuestion: BrowserState['revealQuestion'];
   navigation: BrowserState['navigation'];
   onSelectQuestion: BrowserState['selectQuestion'];
-  openedQuestions: ReturnType<typeof buildOpenedQuestions>;
-  jokerMarks: ReturnType<typeof jokerMarksOf>;
+  doubledRoundNumbers: readonly number[];
   onSubmitAnswer: SubmitAndConfirm;
 }) {
-  const { view, myAnswers, myPurchases } = game;
   const { phoneScreen, blockQuestions, upcomingQuestions } = view;
-  if (phoneScreen.kind !== 'block' || !selectedQuestion) return null;
-  const selectedResult = selectedResultOf(
-    openedQuestions,
-    selectedQuestion.id,
-    game.myJokerExtras,
-  );
+  if (phoneScreen.kind !== 'block' || !selected) return null;
   return (
     <div className="md:min-w-0 md:flex-1">
       <QuestionBrowser
         mode={phoneScreen.mode}
-        isAnswerable={view.isAnswerable}
-        team={team}
+        selected={selected}
         pickerRounds={buildPickerRounds(blockQuestions, upcomingQuestions)}
         totalPickerSlots={blockQuestions.length + upcomingQuestions.length}
-        selectedQuestion={selectedQuestion}
         revealQuestion={revealQuestion}
         isQuickfireMode={view.isCurrentRoundQuickfire}
         myAnswers={myAnswers}
-        myAnswerPoints={selectedResult.points}
-        myAnswerVerdict={selectedResult.verdict}
-        myAnswerJokerExtra={selectedResult.jokerExtra}
         onSelectQuestion={onSelectQuestion}
-        onSubmitAnswer={onSubmitAnswer}
+        onSubmitAnswer={
+          team
+            ? (questionId, value) =>
+                onSubmitAnswer(questionId, team.teamId, value)
+            : null
+        }
         navigation={navigation}
-        isJokerQuestion={jokerMarks.isJokerQuestion}
-        doubledRoundNumbers={jokerMarks.doubledRoundNumbers}
-        purchases={myPurchases}
+        doubledRoundNumbers={doubledRoundNumbers}
       />
     </div>
   );
@@ -505,7 +502,7 @@ function ConnectingScreen({
 function powerUpsListOf({
   view,
   team,
-  selectedQuestion,
+  selected,
   myPurchases,
   roomReadyQuestionIds,
   jokerRoundId,
@@ -515,7 +512,7 @@ function powerUpsListOf({
 }: {
   view: PlayerView;
   team: JoinedTeam;
-  selectedQuestion: SelectedQuestion;
+  selected: SelectedQuestionView | null;
   myPurchases: TeamGame['myPurchases'];
   roomReadyQuestionIds: TeamGame['roomReadyQuestionIds'];
   jokerRoundId: number | null;
@@ -523,21 +520,15 @@ function powerUpsListOf({
   buyExtraJoker: TeamGame['buyExtraJoker'];
   showMoment: PowerUpMomentState['showMoment'];
 }) {
-  const { phoneScreen, settings } = view;
+  const { settings } = view;
   if (!team || !coinsShown(settings.powerUpsEnabled, team.teamView.coins))
     return null;
   // The activation buttons live in the power-ups cards: the question being answered right now, and the next round's extra joker.
-  const answeringQuestion =
-    phoneScreen.kind === 'block' &&
-    phoneScreen.mode === 'answering' &&
-    view.isAnswerable
-      ? selectedQuestion
-      : null;
   return {
     settings: settings.powerUps,
     purchases: myPurchases,
     coins: team.teamView.coins,
-    question: answeringQuestion,
+    question: selected?.isAnsweringNow ? selected.question : null,
     roomReadyQuestionIds,
     onBuy: async (powerUp: PowerUpId, questionId: number) => {
       const result = await buyPowerUp(powerUp, questionId);
