@@ -3,7 +3,6 @@
     - /url: /
   - button "Open menu"
 - main:
-  - paragraph: 0 correct
   - region "On display":
     - heading "On display" [level=2]
     - text: Revealing R1 Q1
