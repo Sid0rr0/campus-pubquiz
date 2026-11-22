@@ -100,7 +100,7 @@ export class TeamViewProjection {
       playerCount,
       joker: session.jokers[teamId] ?? null,
       sideId: session.teamSides[teamId] ?? null,
-      coins: coinBalance(session, teamId, purchases),
+      coins: coinBalance(session, teamId),
       hasCarriedCoin: (session.carriedCoins[teamId] ?? 0) > 0,
       purchases: purchaseViews,
       roomReadyQuestionIds,

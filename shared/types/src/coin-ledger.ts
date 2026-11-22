@@ -19,21 +19,13 @@ export interface CoinLedgerSession {
 /**
  * What a team has coming in minus its purchase costs, before the zero floor:
  * starting coins (only with power-ups on) + carried coins + coin awards - costs.
- * `purchases`, when given, are the team's stored purchases and replace the
- * cached ones (for a caller mid-write that holds fresher rows than the cache).
+ * Costs come only from the session's Scoring records.
  */
-function rawBalance(
-  session: CoinLedgerSession,
-  teamId: number,
-  purchases?: readonly { cost: number }[],
-): number {
+function rawBalance(session: CoinLedgerSession, teamId: number): number {
   const { powerUpsEnabled, startingCoins } = session.seededGame.settings;
-  const spent = (
-    purchases ??
-    session.scoringRecords.powerUps.filter(
-      (purchase) => purchase.teamId === teamId,
-    )
-  ).reduce((sum, { cost }) => sum + cost, 0);
+  const spent = session.scoringRecords.powerUps
+    .filter((purchase) => purchase.teamId === teamId)
+    .reduce((sum, { cost }) => sum + cost, 0);
   return (
     (powerUpsEnabled ? startingCoins : 0) +
     (session.carriedCoins[teamId] ?? 0) +
@@ -46,18 +38,13 @@ function rawBalance(
 export function coinBalance(
   session: CoinLedgerSession,
   teamId: number,
-  purchases?: readonly { cost: number }[],
 ): number {
-  return Math.max(0, rawBalance(session, teamId, purchases));
+  return Math.max(0, rawBalance(session, teamId));
 }
 
 /** The coins a team has spent beyond what it has coming in: the debt `coinBalance`'s floor at 0 hides. */
-export function coinDebt(
-  session: CoinLedgerSession,
-  teamId: number,
-  purchases?: readonly { cost: number }[],
-): number {
-  return Math.max(0, -rawBalance(session, teamId, purchases));
+export function coinDebt(session: CoinLedgerSession, teamId: number): number {
+  return Math.max(0, -rawBalance(session, teamId));
 }
 
 /** The refusal for a coin award that needs power-ups on; undefined when allowed or when no coins are given. */

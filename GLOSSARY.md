@@ -235,7 +235,7 @@ What a team spends on power-ups. Coins are never points: they count towards no s
 _Avoid_: points, credits, token (that's the team's reconnect credential)
 
 **Coin ledger**:
-The one module that answers a team's **Coin** balance from the session's cached state: starting coins (only with power-ups on) + carried coins + coin awards − purchase costs, never below zero, and the debt that floor hides. A caller mid-write that holds stored purchases fresher than the cache passes them in, and they replace the cached purchases for that team only.
+The one module that answers a team's **Coin** balance from the session's cached state: starting coins (only with power-ups on) + carried coins + coin awards − purchase costs, never below zero, and the debt that floor hides. The purchase costs come only from the session's **Scoring records**: a write that holds fresher stored purchases puts them there (and adds a purchase it stores) before asking the ledger, so the control panel and every team's phone show the same coins.
 
 **Coin award**:
 Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award with positive points comes with a two-coin award in a session played with power-ups.

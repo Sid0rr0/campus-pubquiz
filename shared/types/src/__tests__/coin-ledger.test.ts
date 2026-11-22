@@ -146,11 +146,4 @@ describe('coin ledger', () => {
   ])('coins shown: power-ups %s, balance %s', (on, balance, shown) => {
     expect(coinsShown(on, balance)).toBe(shown);
   });
-
-  it('passed-in purchases replace the cached ones for that team only', () => {
-    const s = session({ purchases: [{ teamId: 1, cost: 3 }] });
-    expect(coinBalance(s, 1, [{ cost: 1 }])).toBe(2);
-    expect(coinDebt(s, 1, [{ cost: 5 }])).toBe(2);
-    expect(coinBalance(s, 1)).toBe(0);
-  });
 });
