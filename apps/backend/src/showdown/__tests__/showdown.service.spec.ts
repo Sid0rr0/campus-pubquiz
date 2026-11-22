@@ -1,7 +1,5 @@
 import { GameSession } from '@/db/entities/game-session.entity';
-import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { ShowdownRound } from '@/db/entities/showdown-round.entity';
-import { InvalidBonusAwardError } from '@/bonus/bonus.service';
 import { InvalidShowdownError } from '@/showdown/showdown.service';
 import { setupShowdownServiceTest } from '@/showdown/__tests__/showdown-service-test-utils';
 
@@ -192,7 +190,7 @@ describe('ShowdownService (Postgres integration)', () => {
     expect(awards).toHaveLength(1);
   });
 
-  it('a resolve whose bonus is refused leaves the round open, so a retry still awards the winner', async () => {
+  it('a resolve whose bonus fails to store leaves the round open, so a retry still awards the winner', async () => {
     const teamA = await insertTeam('Team A', 'token-a');
     const teamB = await insertTeam('Team B', 'token-b');
     const round = await state.showdownService.createRound(
@@ -207,24 +205,11 @@ describe('ShowdownService (Postgres integration)', () => {
     );
     await state.showdownService.submitGuess(round.id, teamA.id, '990');
     await state.showdownService.submitGuess(round.id, teamB.id, '1200');
-    // The closest team leaves the roster before the reveal, so its bonus is refused.
-    await state.em.nativeDelete(GameSessionTeam, {
-      gameSession: state.session.id,
-      team: teamA.id,
-    });
-    state.em.clear();
+    const failure = new Error('storing the bonus failed');
+    jest.spyOn(state.bonusService, 'award').mockRejectedValueOnce(failure);
 
-    await expect(state.showdownService.resolve(round.id)).rejects.toThrow(
-      InvalidBonusAwardError,
-    );
+    await expect(state.showdownService.resolve(round.id)).rejects.toBe(failure);
 
-    const now = new Date();
-    await state.em.insert(GameSessionTeam, {
-      gameSession: state.session.id,
-      team: teamA.id,
-      createdAt: now,
-      updatedAt: now,
-    });
     state.em.clear();
     await expect(state.showdownService.resolve(round.id)).resolves.toEqual({
       winnerTeamId: teamA.id,

@@ -9,6 +9,7 @@ export * from './team-presence';
 export * from './team-view';
 export * from './session-settings';
 export * from './bonus';
+export * from './bonus-award-policy';
 export * from './coin-ledger';
 export * from './power-ups';
 export * from './power-up-offer';

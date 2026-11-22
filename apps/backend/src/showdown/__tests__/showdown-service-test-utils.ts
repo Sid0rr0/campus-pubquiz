@@ -9,10 +9,10 @@ import { Quiz } from '@/db/entities/quiz.entity';
 import { Team } from '@/db/entities/team.entity';
 import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
 import { CoinAwardRepository } from '@/db/repositories/coin-award.repository';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { ShowdownRoundRepository } from '@/db/repositories/showdown-round.repository';
 import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-team.repository';
 import { BonusService } from '@/bonus/bonus.service';
+import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { useTestDatabase } from '@/test-db/test-database';
 

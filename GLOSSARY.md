@@ -74,7 +74,7 @@ One line of a clue question, shown to the room by the quiz master. Showing the n
 _Avoid_: hint (that's what a free-text power-up gives one team)
 
 **Showdown**:
-A tiebreak played between teams tied on the leaderboard, in which every tied team guesses at once and the guesses are then revealed one by one in a fixed seat order, then the answer and the winner. A **Stepped reveal** that holds at both ends, and whose first Advance waits until every team has guessed.
+A tiebreak played between teams tied on the leaderboard, in which every tied team guesses at once and the guesses are then revealed one by one in a fixed seat order, then the answer and the winner. A **Stepped reveal** that holds at both ends, and whose first Advance waits until every team has guessed. The winner's points are stored as a custom bonus award that ignores the session's bonus categories and caps, so a showdown always pays out.
 _Avoid_: tiebreaker round, sudden death
 
 **Grading**:
@@ -199,6 +199,9 @@ A phone setting, on by default and remembered on that phone. On, the block brows
 **Bonus award**:
 Points the quiz master gives a team outside question grading, under one bonus category. The points can be negative, as a penalty. "Bonus points" means the points a bonus award carries.
 _Avoid_: bonus (on its own), extra points
+
+**Bonus award policy**:
+The pure rules for whether the quiz master may give a bonus award (and the coin award given with it) or edit one, and what is then stored: the category and points, the reason, the shot/selfie coins and manual coins, and the block. The bonus service only stores what it allows.
 
 **Bonus category**:
 What a bonus award was given for: shot, selfie, or custom. A custom award carries a reason the quiz master writes.
