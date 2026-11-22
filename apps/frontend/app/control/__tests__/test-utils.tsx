@@ -56,8 +56,6 @@ export function adminGameResult(
     connectionIssue: null,
     reconnectedAt: null,
     liveAnswers: null,
-    setLiveAnswers: vi.fn(),
-    focusAnswersQuestionId: vi.fn(),
     presenterContext: null,
     sendAction: vi.fn(ok),
     gradeAnswer: vi.fn(ok),

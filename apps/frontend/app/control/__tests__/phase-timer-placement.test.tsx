@@ -49,8 +49,6 @@ describe('AdminPage — phase timer placement', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
   });

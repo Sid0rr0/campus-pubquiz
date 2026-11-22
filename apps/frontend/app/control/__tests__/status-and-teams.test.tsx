@@ -60,20 +60,6 @@ describe('AdminPage — status and teams', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      liveAnswers: {
-        questionId: 1,
-        question: {
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-          correctAnswer: 'Banana',
-          roundTitle: 'Round 1',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [],
-      },
       gradeAnswer: vi.fn(),
     });
     renderWithQuery(<AdminPage />);

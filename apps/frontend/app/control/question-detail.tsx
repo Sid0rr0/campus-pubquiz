@@ -16,7 +16,7 @@ import { NotesLine } from '@/app/control/notes-line';
 interface QuestionDetailProps {
   questionId: number | null;
   rounds: QuizSummaryRound[];
-  liveAnswers: AnswersUpdatedPayload | null;
+  answerList: AnswersUpdatedPayload | null;
   /**
    * Questions from the live snapshot (current + just-locked block) — a
    * prompt source for the loading gap before the round list or the
@@ -48,12 +48,11 @@ const OPTION_HEADINGS: Partial<Record<AnswerKind, [string, string?]>> = {
 function resolveDetail({
   questionId,
   rounds,
-  liveAnswers,
+  answerList,
   fallbackQuestions,
 }: QuestionDetailProps): DetailData | null {
   if (questionId === null) return null;
-  const live =
-    liveAnswers?.questionId === questionId ? liveAnswers.question : undefined;
+  const live = answerList?.question;
   const stored = findStoredQuestion(rounds, questionId);
   const prompt = promptOf(
     live ?? stored?.question,

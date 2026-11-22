@@ -92,7 +92,7 @@ const LIVE_ANSWERS = {
   ],
 };
 
-function mockStatus(status: string, roundIndex: number, liveAnswers = null) {
+function mockStatus(status: string, roundIndex: number) {
   mockUseAdminGame.mockReturnValue({
     session: {
       joinCode: 'TESTCODE',
@@ -102,21 +102,16 @@ function mockStatus(status: string, roundIndex: number, liveAnswers = null) {
         { questions: [{ prompt: 'Sport?', points: 1 }] },
       ],
     },
-    liveAnswers,
   });
 }
 
-function renderStatus(
-  status: string,
-  roundIndex = 0,
-  liveAnswers: unknown = null,
-) {
-  mockStatus(status, roundIndex, liveAnswers as null);
+function renderStatus(status: string, roundIndex = 0) {
+  mockStatus(status, roundIndex);
   const result = renderWithQuery(<AdminPage />);
   return {
     // Brings the big screen to another status, as Advance/Previous would.
     moveTo(next: string, nextRound: number) {
-      mockStatus(next, nextRound, liveAnswers as null);
+      mockStatus(next, nextRound);
       result.rerender(<AdminPage />);
     },
   };
@@ -208,7 +203,8 @@ describe('AdminPage — on-air title and break cards', () => {
   });
 
   it('shows no grading list while a browsed card is shown', async () => {
-    renderStatus('round_intro', 0, LIVE_ANSWERS);
+    mockFetchAnswers.mockResolvedValue(LIVE_ANSWERS);
+    renderStatus('round_intro');
     await screen.findByRole('region', { name: 'Title card' });
 
     await userEvent.click(

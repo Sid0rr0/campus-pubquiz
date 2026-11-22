@@ -57,7 +57,7 @@ describe('AdminPage — grading live answers', () => {
     mockFetchAnswers.mockResolvedValue(null);
   });
 
-  it('shows live answers for the current question with team name and value', () => {
+  it('shows live answers for the current question with team name and value', async () => {
     mockUseAdminGame.mockReturnValue({
       session: {
         joinCode: 'TESTCODE',
@@ -67,41 +67,40 @@ describe('AdminPage — grading live answers', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: {
-        questionId: 1,
-        question: {
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-          correctAnswer: 'Banana',
-          roundTitle: 'Round 1',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 'answer-1',
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Banana',
-            pointsAwarded: 0,
-            gradedAt: null,
-            gradingState: 'ungraded',
-            powerUps: [],
-          },
-        ],
-      },
       gradeAnswer: vi.fn(),
+    });
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 1,
+      question: {
+        type: 'free_text',
+        prompt: 'Name a fruit',
+        points: 1,
+        correctAnswer: 'Banana',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: 0,
+          gradedAt: null,
+          gradingState: 'ungraded',
+          powerUps: [],
+        },
+      ],
     });
     renderWithQuery(<AdminPage />);
 
+    expect(await screen.findByText('Banana')).toBeInTheDocument();
     expect(screen.getAllByText('The Quizzards').length).toBeGreaterThan(0);
-    expect(screen.getByText('Banana')).toBeInTheDocument();
   });
 
-  it('shows every team even if it has not answered yet, and the round, question number and correct answer', () => {
+  it('shows every team even if it has not answered yet, and the round, question number and correct answer', async () => {
     mockUseAdminGame.mockReturnValue({
       session: {
         joinCode: 'TESTCODE',
@@ -114,39 +113,38 @@ describe('AdminPage — grading live answers', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: {
-        questionId: 1,
-        question: {
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-          correctAnswer: 'Banana',
-          roundTitle: 'Fruit & Veg',
-          roundNumber: 2,
-          questionNumberInRound: 3,
-          totalQuestionsInRound: 4,
-        },
-        answers: [
-          {
-            answerId: 'answer-1',
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Banana',
-            pointsAwarded: 0,
-            gradedAt: null,
-            gradingState: 'ungraded',
-            powerUps: [],
-          },
-        ],
-      },
       gradeAnswer: vi.fn(),
+    });
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 1,
+      question: {
+        type: 'free_text',
+        prompt: 'Name a fruit',
+        points: 1,
+        correctAnswer: 'Banana',
+        roundTitle: 'Fruit & Veg',
+        roundNumber: 2,
+        questionNumberInRound: 3,
+        totalQuestionsInRound: 4,
+      },
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: 0,
+          gradedAt: null,
+          gradingState: 'ungraded',
+          powerUps: [],
+        },
+      ],
     });
     renderWithQuery(<AdminPage />);
 
-    expect(screen.getByText(/round 2 \(fruit & veg\)/i)).toHaveTextContent(
-      'Q3 of 4',
-    );
+    expect(
+      await screen.findByText(/round 2 \(fruit & veg\)/i),
+    ).toHaveTextContent('Q3 of 4');
     expect(screen.getByText(/correct answer: banana/i)).toBeInTheDocument();
     expect(screen.getByText('No answer yet')).toBeInTheDocument();
 

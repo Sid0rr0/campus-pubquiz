@@ -74,8 +74,6 @@ describe('AdminPage — grading question browsing', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
     renderWithQuery(<AdminPage />);
@@ -87,6 +85,31 @@ describe('AdminPage — grading question browsing', () => {
   });
 
   it('keeps showing the last question answers for grading once the quiz has ended', async () => {
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 1,
+      question: {
+        type: 'free_text',
+        prompt: 'Name a fruit',
+        points: 2,
+        correctAnswer: 'Banana',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: 0,
+          gradedAt: null,
+          gradingState: 'ungraded',
+          powerUps: [],
+        },
+      ],
+    });
     mockUseAdminGame.mockReturnValue({
       session: {
         joinCode: 'TESTCODE',
@@ -96,37 +119,11 @@ describe('AdminPage — grading question browsing', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: {
-        questionId: 1,
-        question: {
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 2,
-          correctAnswer: 'Banana',
-          roundTitle: 'Round 1',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 'answer-1',
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Banana',
-            pointsAwarded: 0,
-            gradedAt: null,
-            gradingState: 'ungraded',
-            powerUps: [],
-          },
-        ],
-      },
       gradeAnswer: vi.fn(),
     });
     renderWithQuery(<AdminPage />);
 
-    expect(screen.getByText('Banana')).toBeInTheDocument();
+    expect(await screen.findByText('Banana')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /grade the quizzards full points/i }),
     ).toBeInTheDocument();
@@ -167,8 +164,6 @@ describe('AdminPage — grading question browsing', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
     renderWithQuery(<AdminPage />);
@@ -185,7 +180,7 @@ describe('AdminPage — grading question browsing', () => {
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
   });
 
-  it('tells the socket which question is focused, so a live update for a different one is ignored', async () => {
+  it('shows only the picked question’s answers after browsing to another', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: 'quiz-1',
       quizzes: [
@@ -205,7 +200,22 @@ describe('AdminPage — grading question browsing', () => {
         },
       ],
     });
-    const focusAnswersQuestionId = vi.fn();
+    mockFetchAnswers.mockImplementation((_code: string, id: number) =>
+      Promise.resolve({
+        questionId: id,
+        question: {
+          type: 'free_text',
+          prompt: id === 1 ? 'Name a fruit' : 'Name a planet',
+          points: 1,
+          correctAnswer: id === 1 ? 'Banana' : 'Mars',
+          roundTitle: 'Round 1',
+          roundNumber: 1,
+          questionNumberInRound: id,
+          totalQuestionsInRound: 2,
+        },
+        answers: [],
+      }),
+    );
     mockUseAdminGame.mockReturnValue({
       session: {
         joinCode: 'TESTCODE',
@@ -221,16 +231,11 @@ describe('AdminPage — grading question browsing', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      focusAnswersQuestionId,
-      liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
     renderWithQuery(<AdminPage />);
 
-    await vi.waitFor(() =>
-      expect(focusAnswersQuestionId).toHaveBeenCalledWith(1),
-    );
+    expect(await screen.findByText(/correct answer: banana/i)).toBeVisible();
 
     await userEvent.click(
       await screen.findByRole('button', {
@@ -238,9 +243,8 @@ describe('AdminPage — grading question browsing', () => {
       }),
     );
 
-    await vi.waitFor(() =>
-      expect(focusAnswersQuestionId).toHaveBeenCalledWith(2),
-    );
+    expect(await screen.findByText(/correct answer: mars/i)).toBeVisible();
+    expect(screen.queryByText(/correct answer: banana/i)).toBeNull();
   });
 
   it('shows a not-yet-graded dot only on questions listed in ungradedQuestionIds', async () => {
@@ -279,8 +283,6 @@ describe('AdminPage — grading question browsing', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
     renderWithQuery(<AdminPage />);
@@ -332,8 +334,6 @@ describe('AdminPage — grading question browsing', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
     renderWithQuery(<AdminPage />);
