@@ -97,7 +97,6 @@ function mockBoard(liveRankBoard: unknown) {
   });
   mockUseAdminGame.mockReturnValue({
     snapshot: { ...view, ...(liveRankBoard ? { liveRankBoard } : {}) },
-    liveAnswers: null,
   });
 }
 

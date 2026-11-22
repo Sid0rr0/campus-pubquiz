@@ -106,7 +106,6 @@ function mockBoards(blockBoards: unknown[]) {
   });
   mockUseAdminGame.mockReturnValue({
     snapshot: { ...view, blockBoards },
-    liveAnswers: null,
   });
 }
 

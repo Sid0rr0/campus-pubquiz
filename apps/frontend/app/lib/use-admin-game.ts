@@ -7,7 +7,6 @@ import {
   SOCKET_EVENTS,
   type AckResult,
   type AdminActionPayload,
-  type AnswersUpdatedPayload,
   type AwardBonusPayload,
   type BonusCategory,
   type ClientToServerAck,
@@ -41,8 +40,6 @@ export interface UseAdminGameResult {
   connectionIssue: ConnectionIssue | null;
   /** Timestamp of the most recent successful (re)connection; add it to an effect's dependencies to re-fetch REST data after a drop. */
   reconnectedAt: number | null;
-  /** The latest answers broadcast, whichever question it was for. Only /remote reads it; /control reads a question's list from useAnswerList. */
-  liveAnswers: AnswersUpdatedPayload | null;
   /** Host notes for the open question + a preview of the next — see PresenterContextPayload. */
   presenterContext: PresenterContextPayload | null;
   sendAction: (action: GameAction) => Promise<AckResult>;
@@ -87,9 +84,6 @@ export function useAdminGame(
   enabled: boolean,
   joinCode: string | undefined,
 ): UseAdminGameResult {
-  const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(
-    null,
-  );
   const [presenterContext, setPresenterContext] =
     useState<PresenterContextPayload | null>(null);
   const queryClient = useQueryClient();
@@ -99,7 +93,6 @@ export function useAdminGame(
   const bindSocket = useCallback(
     (socket: RoomSocket<'admin'>) => {
       socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload) => {
-        setLiveAnswers(payload);
         queryClient.setQueryData(
           queryKeys.answers.forQuestion(joinCode ?? '', payload.questionId),
           payload,
@@ -133,7 +126,6 @@ export function useAdminGame(
   if (identityKey !== prevIdentityKey) {
     setPrevIdentityKey(identityKey);
     if (enabled) {
-      setLiveAnswers(null);
       setPresenterContext(null);
     }
   }
@@ -269,7 +261,6 @@ export function useAdminGame(
     connectionError,
     connectionIssue,
     reconnectedAt,
-    liveAnswers,
     presenterContext,
     sendAction,
     gradeAnswer,

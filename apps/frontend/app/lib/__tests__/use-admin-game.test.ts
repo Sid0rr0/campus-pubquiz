@@ -278,15 +278,6 @@ describe('useAdminGame', () => {
       ).toEqual(payload);
     });
 
-    it('keeps the latest broadcast for /remote, whichever question it was for', () => {
-      const { result, socket } = renderConnectedAdmin();
-      const payload = { questionId: 5, answers: [] };
-
-      act(() => socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, payload));
-
-      expect(result.current.liveAnswers).toEqual(payload);
-    });
-
     it('adopts the presenter context', () => {
       const { result, socket } = renderConnectedAdmin();
       const context = { notes: 'Ask twice' };
@@ -300,7 +291,7 @@ describe('useAdminGame', () => {
   });
 
   describe('identity', () => {
-    it('resets the snapshot, live answers and presenter context on a session change', () => {
+    it('resets the snapshot and presenter context on a session change', () => {
       const { result, rerender } = renderHook(
         ({ code }) => useAdminGame(true, code),
         { initialProps: { code: 'AAAAAA' }, wrapper },
@@ -320,29 +311,25 @@ describe('useAdminGame', () => {
       rerender({ code: 'BBBBBB' });
 
       expect(result.current.snapshot).toBeNull();
-      expect(result.current.liveAnswers).toBeNull();
       expect(result.current.presenterContext).toBeNull();
       expect(socket.disconnect).toHaveBeenCalled();
       expect(mockIo).toHaveBeenCalledTimes(2);
     });
 
-    it('keeps live answers and presenter context when the hook is switched off', () => {
+    it('keeps the presenter context when the hook is switched off', () => {
       const { result, rerender } = renderHook(
         ({ enabled }) => useAdminGame(enabled, 'AAAAAA'),
         { initialProps: { enabled: true }, wrapper },
       );
       const socket = latestSocket();
-      const answers = { questionId: 1, answers: [] };
       const context = { notes: 'x' };
       act(() => {
         socket.serverConnects();
-        socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, answers);
         socket.trigger(SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED, context);
       });
 
       rerender({ enabled: false });
 
-      expect(result.current.liveAnswers).toEqual(answers);
       expect(result.current.presenterContext).toEqual(context);
     });
 

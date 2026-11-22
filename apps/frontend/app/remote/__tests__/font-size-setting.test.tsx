@@ -23,6 +23,10 @@ vi.mock('@/app/lib/use-admin-game', async () => {
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
+vi.mock('@/app/lib/answer-api', async () =>
+  (await import('@/test-utils/answer-api-offline')).createOfflineAnswerApi(),
+);
+
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParamsRef.current,
   useRouter: () => routerRef,

@@ -83,7 +83,7 @@ describe('useAnswerList', () => {
 
     act(() => socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, list(1, 'live')));
 
-    expect(result.current).toEqual(list(1, 'live'));
+    await waitFor(() => expect(result.current).toEqual(list(1, 'live')));
   });
 
   it('leaves its list alone for a broadcast about another question', async () => {
@@ -124,7 +124,7 @@ describe('useAnswerList', () => {
 
     await act(async () => finishRead(list(1, 'late read')));
 
-    expect(result.current).toEqual(list(1, 'live'));
+    await waitFor(() => expect(result.current).toEqual(list(1, 'live')));
   });
 
   it('reads again after a reconnect', async () => {
