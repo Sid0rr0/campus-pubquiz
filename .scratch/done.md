@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| answer-list-module | [One Answer list module for /control and /remote](answer-list-module/spec.md) | 2 |
 | team-view-held-once | [The phone holds the team view as it arrives](team-view-held-once/spec.md) | 3 |
 | doubled-points-one-step | [Joker doubling goes through one shared step](doubled-points-one-step/spec.md) | 1 |
 | declared-socket-changes | [Each socket event declaration names its session change](declared-socket-changes/spec.md) | 3 |
