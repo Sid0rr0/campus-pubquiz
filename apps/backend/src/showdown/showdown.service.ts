@@ -222,15 +222,16 @@ export class ShowdownService {
     await this.showdownRounds.getEntityManager().flush();
 
     if (winnerTeamId !== null) {
-      await this.bonusService.award(
-        round.gameSession.id,
-        winnerTeamId,
-        'custom',
-        round.points,
-        `Showdown: "${round.question}"`,
-        ['custom'],
-        {},
-      );
+      // Not a quiz master award: the session's bonus categories and caps don't apply.
+      await this.bonusService.award(round.gameSession.id, winnerTeamId, {
+        bonus: {
+          category: 'custom',
+          points: round.points,
+          reason: `Showdown: "${round.question}"`,
+        },
+        linkedCoins: 0,
+        manualCoins: 0,
+      });
     }
 
     return { winnerTeamId, isTie };

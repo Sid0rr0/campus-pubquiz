@@ -1414,8 +1414,11 @@ describe('GameGateway — session write: what a write may return and a held writ
       game.bonusService.award(
         session.seededGame.gameSessionId,
         game.teams[0].teamId,
-        'shot',
-        1,
+        {
+          bonus: { category: 'shot', points: 1 },
+          linkedCoins: 0,
+          manualCoins: 0,
+        },
       ),
     );
   }

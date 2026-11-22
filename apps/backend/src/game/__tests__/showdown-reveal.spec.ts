@@ -13,7 +13,11 @@ describe('GameGateway — showdown reveal-step gating', () => {
   let game: RealStoreGateway;
 
   beforeEach(async () => {
-    game = await harness.createGateway({ teamNames: ['Team A', 'Team B'] });
+    // Custom awards are off, yet the showdown win still pays out its custom award.
+    game = await harness.createGateway({
+      teamNames: ['Team A', 'Team B'],
+      settings: { enabledBonusCategories: ['shot'] },
+    });
     await tieOnFirstQuestion(game, game.teams);
   });
 

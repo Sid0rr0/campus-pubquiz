@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
-  BONUS_CATEGORIES,
-  bonusCoinsEarned,
-  coinsNeedPowerUpsRefusal,
+  type AwardToStore,
   type BonusAwardAdminView,
   type BonusCategory,
   type CoinAwardAdminView,
@@ -16,6 +14,7 @@ import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
 import { CoinAwardRepository } from '@/db/repositories/coin-award.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
+/** Not thrown by the store: the REST layer maps the change module's invalid-award refusal back to it for a 400. */
 export class InvalidBonusAwardError extends Error {
   constructor(message: string) {
     super(message);
@@ -39,13 +38,6 @@ export interface AwardedBonus {
   coinTotal: number;
 }
 
-/** What the session's power-ups setting and the form's coins field add to an award. */
-export interface AwardCoins {
-  powerUpsEnabled: boolean;
-  /** The form's manual coins (may be negative, absent or 0 for none). */
-  manual?: number;
-}
-
 function toAdminView(award: BonusAward): BonusAwardAdminView {
   return {
     id: award.id,
@@ -67,137 +59,79 @@ export class BonusService {
     private readonly gameSessionTeams: GameSessionTeamRepository,
   ) {}
 
+  /** Whether the stored roster of the session holds the team (the session's cached roster misses teams not rejoined since a restart). */
+  async isOnRoster(gameSessionId: number, teamId: number): Promise<boolean> {
+    return !!(await this.gameSessionTeams.findOne({
+      gameSession: gameSessionId,
+      team: teamId,
+    }));
+  }
+
+  /** Stores what the Bonus award policy allowed (the bonus award, its linked coins and any manual coins) in one flush. Decides nothing. */
   async award(
     gameSessionId: number,
     teamId: number,
-    category: BonusCategory,
-    points: number,
-    reason?: string,
-    enabledCategories: readonly BonusCategory[] = BONUS_CATEGORIES,
-    maxAwardsPerCategory: Partial<Record<BonusCategory, number>> = {},
-    coins: AwardCoins = { powerUpsEnabled: false },
-    blockFirstQuestionId?: number,
+    { bonus, linkedCoins, manualCoins, manualCoinsReason }: AwardToStore,
   ): Promise<AwardedBonus> {
-    const manualCoins = coins.manual ?? 0;
-    // Points of 0 give coins alone: no bonus award is stored.
-    const givesPoints = points !== 0;
-    assertAwardAmounts(points, manualCoins, coins.powerUpsEnabled);
-    const trimmedReason = reason?.trim();
-    if (givesPoints) {
-      assertAwardCategory(category, trimmedReason, enabledCategories);
-    }
-    await this.assertOnRoster(gameSessionId, teamId);
-    if (givesPoints) {
-      await this.assertUnderCap(
-        gameSessionId,
-        teamId,
-        category,
-        maxAwardsPerCategory[category],
-      );
-    }
-
     const em = this.bonusAwards.getEntityManager();
-    let coinsGiven = givesPoints
-      ? this.persistBonusAward(gameSessionId, teamId, {
-          category,
-          points,
-          trimmedReason,
-          powerUpsEnabled: coins.powerUpsEnabled,
-          blockFirstQuestionId,
-        })
-      : 0;
+    if (bonus) {
+      const bonusAward = this.bonusAwards.create({
+        gameSession: gameSessionId,
+        team: teamId,
+        ...bonus,
+      });
+      em.persist(bonusAward);
+      if (linkedCoins !== 0) {
+        em.persist(
+          this.coinAwards.create({
+            gameSession: gameSessionId,
+            team: teamId,
+            coins: linkedCoins,
+            bonusAward,
+          }),
+        );
+      }
+    }
     if (manualCoins !== 0) {
       em.persist(
         this.coinAwards.create({
           gameSession: gameSessionId,
           team: teamId,
           coins: manualCoins,
-          reason: trimmedReason || undefined,
+          reason: manualCoinsReason,
         }),
       );
-      coinsGiven += manualCoins;
     }
     await em.flush();
 
     return {
       teamId,
-      coinsGiven,
+      coinsGiven: (bonus ? linkedCoins : 0) + manualCoins,
       coinTotal: await this.coinAwardTotal(gameSessionId, teamId),
     };
   }
 
-  private async assertOnRoster(
+  /** Stores a coin award of `coins` with `reason` and no bonus award (covering coins a deleted award had given and the team already spent). */
+  coverSpentCoins(
     gameSessionId: number,
     teamId: number,
-  ): Promise<void> {
-    const isOnRoster = await this.gameSessionTeams.findOne({
-      gameSession: gameSessionId,
-      team: teamId,
+    coins: number,
+    reason: string,
+  ): Promise<AwardedBonus> {
+    return this.award(gameSessionId, teamId, {
+      linkedCoins: 0,
+      manualCoins: coins,
+      manualCoinsReason: reason,
     });
-    if (!isOnRoster) {
-      throw new InvalidBonusAwardError('Team is not part of this game session');
-    }
   }
 
-  private async assertUnderCap(
+  /** How many awards of the category the team has in the session. */
+  awardCount(
     gameSessionId: number,
     teamId: number,
     category: BonusCategory,
-    cap: number | undefined,
-  ): Promise<void> {
-    if (cap === undefined) return;
-    const awardedCount = await this.bonusAwards.countAwards(
-      gameSessionId,
-      teamId,
-      category,
-    );
-    if (awardedCount >= cap) {
-      throw new InvalidBonusAwardError(
-        `This team has already been awarded the "${category}" bonus the maximum ${cap} time(s)`,
-      );
-    }
-  }
-
-  /** Persists (unflushed) the bonus award and any coins it earns; returns those coins. */
-  private persistBonusAward(
-    gameSessionId: number,
-    teamId: number,
-    {
-      category,
-      points,
-      trimmedReason,
-      powerUpsEnabled,
-      blockFirstQuestionId,
-    }: {
-      category: BonusCategory;
-      points: number;
-      trimmedReason: string | undefined;
-      powerUpsEnabled: boolean;
-      blockFirstQuestionId: number | undefined;
-    },
-  ): number {
-    const em = this.bonusAwards.getEntityManager();
-    const bonusAward = this.bonusAwards.create({
-      gameSession: gameSessionId,
-      team: teamId,
-      category,
-      reason: category === 'custom' ? trimmedReason : undefined,
-      points,
-      blockFirstQuestionId,
-    });
-    em.persist(bonusAward);
-    // A shot or selfie earns coins of its own, which go with the award.
-    const earned = bonusCoinsEarned(powerUpsEnabled, category, points);
-    if (earned === 0) return 0;
-    em.persist(
-      this.coinAwards.create({
-        gameSession: gameSessionId,
-        team: teamId,
-        coins: earned,
-        bonusAward,
-      }),
-    );
-    return earned;
+  ): Promise<number> {
+    return this.bonusAwards.countAwards(gameSessionId, teamId, category);
   }
 
   /** The sum of each team's coin awards in the session, by team id (teams with none are absent). */
@@ -245,7 +179,8 @@ export class BonusService {
     }));
   }
 
-  private async findOwnedAward(
+  /** The award with this id in this session; BonusAwardNotFoundError otherwise. */
+  async findOwnedAward(
     gameSessionId: number,
     awardId: number,
   ): Promise<BonusAward> {
@@ -261,37 +196,16 @@ export class BonusService {
     return award;
   }
 
-  /** Edits an existing award's points/reason and returns its admin view with the id of the team that holds it. Category is not editable — see UpdateBonusAwardRequest. */
+  /** Stores an edit's decided points/reason and returns the award's admin view with the id of the team that holds it. Category is not editable — see UpdateBonusAwardRequest. */
   async update(
     gameSessionId: number,
     awardId: number,
     points: number,
-    reason?: string,
+    reason: string | undefined,
   ): Promise<{ award: BonusAwardAdminView; teamId: number }> {
     const award = await this.findOwnedAward(gameSessionId, awardId);
-
-    if (!Number.isFinite(points) || points === 0) {
-      throw new InvalidBonusAwardError(
-        'Bonus points must be a non-zero number',
-      );
-    }
-    const trimmedReason = reason?.trim();
-    if (award.category === 'custom' && !trimmedReason) {
-      throw new InvalidBonusAwardError('A custom bonus needs a reason');
-    }
-    // A shot or selfie bonus brings coins and a penalty brings none, so the
-    // linked coin award would go stale if the sign flipped.
-    if (
-      award.category !== 'custom' &&
-      Math.sign(points) !== Math.sign(award.points)
-    ) {
-      throw new InvalidBonusAwardError(
-        'A shot or selfie award cannot change between a bonus and a penalty — delete it and give a new one',
-      );
-    }
-
     award.points = points;
-    award.reason = award.category === 'custom' ? trimmedReason : undefined;
+    award.reason = reason;
     await this.bonusAwards.getEntityManager().flush();
 
     return { award: toAdminView(award), teamId: award.team.id };
@@ -309,32 +223,5 @@ export class BonusService {
       teamId,
       coinTotal: await this.coinAwardTotal(gameSessionId, teamId),
     };
-  }
-}
-
-function assertAwardAmounts(
-  points: number,
-  manualCoins: number,
-  powerUpsEnabled: boolean,
-): void {
-  if (!Number.isFinite(points) || (points === 0 && manualCoins === 0)) {
-    throw new InvalidBonusAwardError('Bonus points must be a non-zero number');
-  }
-  const refusal = coinsNeedPowerUpsRefusal(powerUpsEnabled, manualCoins);
-  if (refusal) throw new InvalidBonusAwardError(refusal);
-}
-
-function assertAwardCategory(
-  category: BonusCategory,
-  trimmedReason: string | undefined,
-  enabledCategories: readonly BonusCategory[],
-): void {
-  if (!enabledCategories.includes(category)) {
-    throw new InvalidBonusAwardError(
-      `"${category}" is not enabled for this session`,
-    );
-  }
-  if (category === 'custom' && !trimmedReason) {
-    throw new InvalidBonusAwardError('A custom bonus needs a reason');
   }
 }

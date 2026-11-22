@@ -280,11 +280,20 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
   });
 
   it('refuses an invalid bonus edit with an InvalidBonusAwardRefusal, not a not-found one', async () => {
-    jest
-      .spyOn(game.bonusService, 'update')
-      .mockRejectedValue(new InvalidBonusAwardError('Nope'));
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: game.teams[0].teamId,
+      category: 'custom',
+      points: 1,
+      reason: 'Best costume',
+    });
+    const [award] = await game.inRequestContext(() =>
+      game.bonusService.listForTeamAdmin(
+        game.gameSessionId,
+        game.teams[0].teamId,
+      ),
+    );
     const refused = game.inRequestContext(() =>
-      game.gameState.editBonus(game.joinCode, 1, 0, 'Best costume'),
+      game.gameState.editBonus(game.joinCode, award.id, 0, 'Best costume'),
     );
 
     await expect(refused).rejects.toBeInstanceOf(InvalidBonusAwardRefusal);
@@ -293,7 +302,7 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
 
   it('lets an unrelated error from the bonus service pass through an edit unchanged', async () => {
     const failure = new Error('database is down');
-    jest.spyOn(game.bonusService, 'update').mockRejectedValue(failure);
+    jest.spyOn(game.bonusService, 'findOwnedAward').mockRejectedValue(failure);
 
     await expect(
       game.inRequestContext(() =>

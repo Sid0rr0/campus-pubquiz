@@ -5,17 +5,12 @@ import {
   type SessionState,
   SOCKET_EVENTS,
   type TeamBonusAwardView,
-  coinAwardRefusal,
   coinBalance,
   coinDebtCover,
-  coinTakeRefusal,
-  getBlockForNewAward,
+  decideBonusAward,
+  decideBonusEdit,
 } from '@campus-pubquiz/types';
-import {
-  BonusAwardNotFoundError,
-  BonusService,
-  InvalidBonusAwardError,
-} from '@/bonus/bonus.service';
+import { BonusAwardNotFoundError, BonusService } from '@/bonus/bonus.service';
 import { BonusAwardNotFoundRefusal } from '@/game/state/errors/bonus-award-not-found-refusal.error';
 import { InvalidBonusAwardRefusal } from '@/game/state/errors/invalid-bonus-award-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
@@ -34,32 +29,30 @@ export class BonusAwardsChanges {
   constructor(private readonly bonusService: BonusService) {}
 
   /**
-   * An admin awards a bonus. The session's own enabled categories and
-   * per-category limit decide whether it is allowed (a refusal carries the
-   * bonus service's message); the awarded team's socket, if connected, gets
-   * the BONUS_AWARDED notice.
+   * An admin awards a bonus. The Bonus award policy decides whether it is
+   * allowed (a refusal carries its message) and what is stored; the awarded
+   * team's socket, if connected, gets the BONUS_AWARDED notice.
    */
   async award(
     session: SessionState,
-    { teamId, category, points, reason, coins }: AwardBonusPayload,
+    payload: AwardBonusPayload,
   ): Promise<SessionChange<SessionOutcome>> {
-    const { settings } = session.seededGame;
-    const refusal =
-      coinAwardRefusal(session, coins) ??
-      coinTakeRefusal(session, teamId, coins);
-    if (refusal) throw new InvalidBonusAwardRefusal(refusal);
-    const { coinsGiven, coinTotal } = await this.refusing(() =>
-      this.bonusService.award(
-        session.seededGame.gameSessionId,
-        teamId,
-        category,
-        points,
-        reason,
-        settings.enabledBonusCategories,
-        settings.maxBonusAwardsPerCategory,
-        { powerUpsEnabled: settings.powerUpsEnabled, manual: coins },
-        getBlockForNewAward(session.seededGame.rounds, session.progress),
-      ),
+    const { teamId, category, points, reason, coins } = payload;
+    const { gameSessionId } = session.seededGame;
+    const decision = decideBonusAward(session, payload, {
+      isOnRoster: await this.bonusService.isOnRoster(gameSessionId, teamId),
+      existingCount:
+        points === 0
+          ? 0
+          : await this.bonusService.awardCount(gameSessionId, teamId, category),
+    });
+    if ('refusal' in decision) {
+      throw new InvalidBonusAwardRefusal(decision.refusal);
+    }
+    const { coinsGiven, coinTotal } = await this.bonusService.award(
+      gameSessionId,
+      teamId,
+      decision.award,
     );
     const notices: TeamNotice[] = [];
     // Coins alone give no bonus award, so there is no bonus toast.
@@ -87,10 +80,11 @@ export class BonusAwardsChanges {
   }
 
   /**
-   * An admin edits an award's points and reason. The bonus service checks the
-   * award belongs to this session; a refusal carries its message, and a missing
-   * award is a BonusAwardNotFoundRefusal. Carries the updated admin view
-   * beside the change, and no BONUS_AWARDED notice.
+   * An admin edits an award's points and reason. The bonus store checks the
+   * award belongs to this session (a missing award is a
+   * BonusAwardNotFoundRefusal) and the Bonus award policy decides whether the
+   * edit is allowed. Carries the updated admin view beside the change, and no
+   * BONUS_AWARDED notice.
    */
   async edit(
     session: SessionState,
@@ -98,12 +92,20 @@ export class BonusAwardsChanges {
     points: number,
     reason: string | undefined,
   ): Promise<SessionChange<SessionOutcome> & { award: BonusAwardAdminView }> {
+    const { gameSessionId } = session.seededGame;
+    const stored = await this.refusing(() =>
+      this.bonusService.findOwnedAward(gameSessionId, awardId),
+    );
+    const decision = decideBonusEdit(stored, points, reason);
+    if ('refusal' in decision) {
+      throw new InvalidBonusAwardRefusal(decision.refusal);
+    }
     const { award, teamId } = await this.refusing(() =>
       this.bonusService.update(
-        session.seededGame.gameSessionId,
+        gameSessionId,
         awardId,
-        points,
-        reason,
+        decision.points,
+        decision.reason,
       ),
     );
     return { ...bonusChange(session, teamId), award };
@@ -114,7 +116,7 @@ export class BonusAwardsChanges {
     session: SessionState,
     awardId: number,
   ): Promise<SessionChange<SessionOutcome>> {
-    const { gameSessionId, settings } = session.seededGame;
+    const { gameSessionId } = session.seededGame;
     const removed = await this.refusing(() =>
       this.bonusService.remove(gameSessionId, awardId),
     );
@@ -124,32 +126,23 @@ export class BonusAwardsChanges {
     // a hidden debt (the balance shows 0, not less), so a coin award covers them.
     const shortfall = coinDebtCover(session, teamId, coinTotal);
     if (shortfall > 0) {
-      ({ coinTotal } = await this.refusing(() =>
-        this.bonusService.award(
-          gameSessionId,
-          teamId,
-          'custom',
-          0,
-          'Coins already spent when an award was deleted',
-          settings.enabledBonusCategories,
-          settings.maxBonusAwardsPerCategory,
-          { powerUpsEnabled: settings.powerUpsEnabled, manual: shortfall },
-        ),
+      ({ coinTotal } = await this.bonusService.coverSpentCoins(
+        gameSessionId,
+        teamId,
+        shortfall,
+        'Coins already spent when an award was deleted',
       ));
     }
     return bonusChange(withCoinTotal(session, teamId, coinTotal), teamId);
   }
 
-  /** Runs a bonus service call, turning its refusals into session refusals. */
+  /** Runs a bonus store lookup, turning its not-found into a session refusal. */
   private async refusing<T>(run: () => Promise<T>): Promise<T> {
     try {
       return await run();
     } catch (error) {
       if (error instanceof BonusAwardNotFoundError) {
         throw new BonusAwardNotFoundRefusal(error.message);
-      }
-      if (error instanceof InvalidBonusAwardError) {
-        throw new InvalidBonusAwardRefusal(error.message);
       }
       throw error;
     }
