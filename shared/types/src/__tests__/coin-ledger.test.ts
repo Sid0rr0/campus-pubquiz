@@ -28,7 +28,7 @@ function session(
     },
     carriedCoins: { 1: over.carried ?? 0 },
     coinAwards: { 1: over.awards ?? 0 },
-    funFactData: { powerUps: over.purchases ?? [] },
+    scoringRecords: { powerUps: over.purchases ?? [] },
   };
 }
 

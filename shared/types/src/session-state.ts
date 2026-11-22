@@ -1,5 +1,5 @@
 import { playsJokers } from './doubled-rounds';
-import type { FunFactData } from './fun-facts';
+import type { ScoringRecords } from './fun-facts';
 import type { GameContext, GameProgress } from './game-state-types';
 import type { TeamJoker } from './joker';
 import type { LeagueTop } from './league';
@@ -161,7 +161,7 @@ export interface SessionState {
    * Never sent as it is: the display view carries only the facts built from it.
    * Ephemeral.
    */
-  funFactData: FunFactData;
+  scoringRecords: ScoringRecords;
   /**
    * Ids of the roster teams that took part (see GLOSSARY "Took part"): all of
    * them while the session runs, only those with an answer or bonus once it has
@@ -266,7 +266,7 @@ export function freshSessionState(
     leaderboard: [],
     leaderboardRevealCount: 0,
     priorStandings: null,
-    funFactData: { answers: [], bonusAwards: [], powerUps: [] },
+    scoringRecords: { answers: [], bonusAwards: [], powerUps: [] },
     tookPartTeamIds: [],
     departedTeams: [],
     leagueTop: null,

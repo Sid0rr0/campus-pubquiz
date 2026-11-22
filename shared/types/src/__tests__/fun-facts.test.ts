@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeFunFacts,
-  type FunFactAnswer,
-  type FunFactData,
+  type ScoringAnswer,
+  type ScoringRecords,
 } from '../fun-facts';
 import type { GameProgress } from '../game-state-types';
 import type { DisplayStatePayload, LeaderboardEntry } from '../room-views';
@@ -70,9 +70,9 @@ function leaderboardOf(names: string[]): LeaderboardEntry[] {
 function answer(
   questionId: number,
   teamIndex: number,
-  verdict: FunFactAnswer['verdict'],
-  extra: Partial<FunFactAnswer> = {},
-): FunFactAnswer {
+  verdict: ScoringAnswer['verdict'],
+  extra: Partial<ScoringAnswer> = {},
+): ScoringAnswer {
   return {
     questionId,
     teamId: teamIndex + 1,
@@ -102,7 +102,7 @@ function breakProgress(
 function sessionOf(
   specs: RoundSpec[],
   progress: GameProgress,
-  data: Partial<FunFactData>,
+  data: Partial<ScoringRecords>,
 ): SessionState {
   return {
     ...freshSessionState(
@@ -116,7 +116,7 @@ function sessionOf(
       progress,
     ),
     leaderboard: leaderboardOf(TEAM_NAMES),
-    funFactData: { answers: [], bonusAwards: [], powerUps: [], ...data },
+    scoringRecords: { answers: [], bonusAwards: [], powerUps: [], ...data },
   };
 }
 
@@ -469,7 +469,7 @@ describe('describeFunFacts', () => {
 
   describe('clue questions', () => {
     // Question 1 is a 4-clue Clue question; round 1 is revealed, round 2 is in play.
-    function clueSession(answers: FunFactAnswer[]): SessionState {
+    function clueSession(answers: ScoringAnswer[]): SessionState {
       const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, { answers });
       const [first, ...rest] = session.seededGame.rounds[0].questions;
       session.seededGame.rounds[0].questions = [
@@ -487,7 +487,7 @@ describe('describeFunFacts', () => {
       questionId: number,
       team: number,
       clue: number,
-      verdict: FunFactAnswer['verdict'] = 'correct',
+      verdict: ScoringAnswer['verdict'] = 'correct',
     ) => answer(questionId, team, verdict, { clue });
 
     it('names the teams with the earliest correct answer, which came before the last clue', () => {
@@ -1219,7 +1219,7 @@ describe('describeFunFacts', () => {
     });
 
     it('is left out with Early answer reveal on too: its answers have aired but its results have not', () => {
-      const data: Partial<FunFactData> = {
+      const data: Partial<ScoringRecords> = {
         answers: [
           answer(1, 0, 'correct'),
           answer(2, 0, 'correct'),
@@ -1272,7 +1272,7 @@ describe('describeFunFacts', () => {
         answer(8, 0, 'incorrect'),
         answer(8, 1, 'incorrect'),
       ];
-      const withJokers = (data: FunFactAnswer[]): SessionState => {
+      const withJokers = (data: ScoringAnswer[]): SessionState => {
         const session = sessionOf(specs, breakProgress(2, 1), {
           answers: data,
         });
@@ -1334,7 +1334,7 @@ describe('describeFunFacts', () => {
       return view.screen.kind === 'break_intro' ? view.screen.funFacts : [];
     }
 
-    const data: Partial<FunFactData> = {
+    const data: Partial<ScoringRecords> = {
       answers: [answer(1, 0, 'correct'), answer(2, 1, 'incorrect')],
     };
 

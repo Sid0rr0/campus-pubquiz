@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FunFactAnswer } from '../fun-facts';
+import type { ScoringAnswer } from '../fun-facts';
 import { describeLiveRankBoard } from '../rank-callouts';
 import { projectScreen } from '../screen-projection';
 import { SOCKET_ROOMS } from '../socket-events';
@@ -23,7 +23,7 @@ function entry(
   return { ...leaderboardEntry(teamId, name, points), ...extra };
 }
 
-function answer(questionId: number, teamId: number): FunFactAnswer {
+function answer(questionId: number, teamId: number): ScoringAnswer {
   return {
     questionId,
     teamId,
@@ -96,7 +96,7 @@ describe('the final board', () => {
 
   it('counts perfect rounds over the whole quiz', () => {
     const session = final({
-      funFactData: {
+      scoringRecords: {
         answers: [1, 2, 3, 4].map((q) => answer(q, 2)),
         bonusAwards: [],
         powerUps: [],
@@ -271,7 +271,7 @@ describe('describeLiveRankBoard', () => {
 
     it('names the perfect round of the block, not of an earlier one', () => {
       const session = live(NOW, PRIOR, 0, {
-        funFactData: {
+        scoringRecords: {
           answers: [answer(1, 2), answer(2, 2), answer(4, 2), answer(4, 1)],
           bonusAwards: [],
           powerUps: [],

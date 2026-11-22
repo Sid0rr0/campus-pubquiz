@@ -272,7 +272,7 @@ export class PurchaseChanges {
       // Only a team holding an extra joker can see a purchase or its refund move.
       changedTeamIds: [
         ...new Set(
-          started.funFactData.powerUps
+          started.scoringRecords.powerUps
             .filter(
               (bought) =>
                 bought.powerUp === 'extra_joker' && bought.roundId !== null,
@@ -329,7 +329,7 @@ function rebuiltExtraJokers(
   // lives on in another row.
   const kept = new Set<string>();
   const rebuilt: NewPurchase[] = [];
-  for (const bought of started.funFactData.powerUps) {
+  for (const bought of started.scoringRecords.powerUps) {
     // Stryker disable next-line ConditionalExpression: equivalent, only extra jokers have a round id, so `roundId === null` alone skips the rest.
     if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
     const next = roundIdAfterEdit(started, reloaded, bought.roundId);

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
-  FunFactAnswer,
-  FunFactBonusAward,
-  FunFactData,
-  FunFactPowerUp,
+  ScoringAnswer,
+  ScoringBonusAward,
+  ScoringRecords,
+  ScoringPurchase,
   LeaderboardEntry,
 } from '@campus-pubquiz/types';
 import {
@@ -159,7 +159,7 @@ export class StandingsService {
    * roster stays out of the fun facts and the reveal's teams-correct count)
    * and bonus awards, in the shape both are built from.
    */
-  async funFactData(gameSessionId: number): Promise<FunFactData> {
+  async scoringRecords(gameSessionId: number): Promise<ScoringRecords> {
     const knex = this.gameSessionTeams.getKnex();
     const [answerRows, bonusRows, powerUpRows] = await Promise.all([
       knex('answers as a')
@@ -177,19 +177,19 @@ export class StandingsService {
           'a.points_awarded as pointsAwarded',
           'a.response_ms as responseMs',
           'a.clue as clue',
-        ) as Promise<FunFactAnswer[]>,
+        ) as Promise<ScoringAnswer[]>,
       knex('bonus_awards')
         .where('game_session_id', gameSessionId)
         .select('team_id as teamId', 'category', 'points')
         .select('block_first_question_id as blockFirstQuestionId') as Promise<
-        FunFactBonusAward[]
+        ScoringBonusAward[]
       >,
       knex('purchases')
         .where('game_session_id', gameSessionId)
         .orderBy('id')
         .select('team_id as teamId', 'power_up as powerUp')
         .select('question_id as questionId', 'round_id as roundId')
-        .select('cost') as Promise<FunFactPowerUp[]>,
+        .select('cost') as Promise<ScoringPurchase[]>,
     ]);
     return {
       powerUps: powerUpRows,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FunFactAnswer } from '../fun-facts';
+import type { ScoringAnswer } from '../fun-facts';
 import type { LeaderboardEntry } from '../room-views';
 import {
   buildAdminFields,
@@ -41,9 +41,9 @@ function standing(teamId: number): LeaderboardEntry {
 function answer(
   questionId: number,
   teamId: number,
-  verdict: FunFactAnswer['verdict'],
+  verdict: ScoringAnswer['verdict'],
   pointsAwarded = 0,
-): FunFactAnswer {
+): ScoringAnswer {
   return {
     questionId,
     teamId,
@@ -183,7 +183,7 @@ describe('the teams-correct count on the display view', () => {
   const withBoard = (session: SessionState): SessionState => ({
     ...session,
     leaderboard: [1, 2, 3, 4].map(standing),
-    funFactData: {
+    scoringRecords: {
       bonusAwards: [],
       powerUps: [],
       answers: [
@@ -254,7 +254,7 @@ describe('the power-up count on the display view', () => {
   });
   const withPurchases = (session: SessionState): SessionState => ({
     ...session,
-    funFactData: {
+    scoringRecords: {
       answers: [],
       bonusAwards: [],
       powerUps: [bought(1, 2), bought(2, 2), bought(3, 1)],
@@ -275,7 +275,7 @@ describe('the power-up count on the display view', () => {
     const session = withPurchases(
       sessionOver(rounds, { ...reveal, questionIndex: 0, revealIndex: 0 }),
     );
-    session.funFactData.powerUps = [bought(1, 2)];
+    session.scoringRecords.powerUps = [bought(1, 2)];
 
     expect(buildDisplayFields(session).powerUpCounts).toEqual([]);
   });
@@ -301,7 +301,7 @@ describe('the coins on the admin view', () => {
         { teamId: 1, teamName: 'Alpha' },
         { teamId: 2, teamName: 'Bravo' },
       ],
-      funFactData: {
+      scoringRecords: {
         answers: [],
         bonusAwards: [],
         powerUps: [

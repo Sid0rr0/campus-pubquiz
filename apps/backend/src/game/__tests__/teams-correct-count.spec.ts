@@ -101,15 +101,15 @@ describe('Display view — teams-correct count on the reveal', () => {
     });
   });
 
-  it('keeps the earlier count while the leaderboard still updates when the fun fact data read fails', async () => {
+  it('keeps the earlier count while the leaderboard still updates when the Scoring records read fails', async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    // Team 2's first answer is wrong; the fun fact data read is still healthy then.
+    // Team 2's first answer is wrong; the Scoring records read is still healthy then.
     const game = await startAt(MATCH_ROUND, ['Paris|Rome', 'Rome|Paris']);
     const admin = await game.connectAdmin();
 
     jest
-      .spyOn(game.standingsService, 'funFactData')
-      .mockRejectedValue(new Error('fun fact data unavailable'));
+      .spyOn(game.standingsService, 'scoringRecords')
+      .mockRejectedValue(new Error('Scoring records unavailable'));
     // Later writes: team 2 revises to the right answer and a bonus is awarded.
     const { socket, teamId } = game.teams[1];
     await game.gateway.handleSubmitAnswer(asSocket(socket), {
@@ -126,7 +126,7 @@ describe('Display view — teams-correct count on the reveal', () => {
     await walk(game, TO_REVEAL);
     const display = await game.resync('display');
     expect(display.progress.status).toBe('reveal');
-    // Only team 1 was right when the fun fact data last read; team 2's fix is not counted.
+    // Only team 1 was right when the Scoring records last read; team 2's fix is not counted.
     expect(display.teamsCorrect).toEqual({
       correct: 1,
       partial: 0,

@@ -13,7 +13,7 @@ export interface CoinLedgerSession {
   };
   carriedCoins: Readonly<Record<number, number>>;
   coinAwards: Readonly<Record<number, number>>;
-  funFactData: { powerUps: readonly { teamId: number; cost: number }[] };
+  scoringRecords: { powerUps: readonly { teamId: number; cost: number }[] };
 }
 
 /**
@@ -30,7 +30,7 @@ function rawBalance(
   const { powerUpsEnabled, startingCoins } = session.seededGame.settings;
   const spent = (
     purchases ??
-    session.funFactData.powerUps.filter(
+    session.scoringRecords.powerUps.filter(
       (purchase) => purchase.teamId === teamId,
     )
   ).reduce((sum, { cost }) => sum + cost, 0);

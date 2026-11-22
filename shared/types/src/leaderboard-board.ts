@@ -179,7 +179,7 @@ function describeJokerTeamIds(
     .filter(({ teamId }) =>
       doubledRoundIdsOfTeam(
         session.jokers,
-        session.funFactData.powerUps,
+        session.scoringRecords.powerUps,
         teamId,
       ).some((roundId) => blockRoundIds.has(roundId)),
     )
@@ -221,14 +221,14 @@ function describePerfectRounds(
   session: SessionState,
   entries: LeaderboardEntry[],
 ): Record<number, number> {
-  const { priorStandings, seededGame, funFactData } = session;
+  const { priorStandings, seededGame, scoringRecords } = session;
   if (!priorStandings) return {};
   const { rounds } = seededGame;
   const counts = countPerfectRounds(
     getBlockRoundIndexes(rounds, priorStandings.blockFirstQuestionId).map(
       (roundIndex) => rounds[roundIndex],
     ),
-    funFactData.answers,
+    scoringRecords.answers,
   );
   return Object.fromEntries(
     entries.flatMap(({ teamId }) => {

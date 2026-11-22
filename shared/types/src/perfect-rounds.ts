@@ -7,7 +7,7 @@ import type { QuestionType } from './question-types';
  * verdict on every question of the round whose type has a meaningful correct
  * rate (closest guess is left out, as in the clean sweep). A round with no such
  * question is never perfect; a partial, incorrect or missing answer breaks it.
- * Teams with 0 are left out. Pure: reads verdicts from the fun fact data.
+ * Teams with 0 are left out. Pure: reads verdicts from the Scoring records.
  */
 export function countPerfectRounds(
   rounds: readonly {

@@ -300,7 +300,7 @@ export class LiveEditService {
 /** Every round a team doubles in `session` (a joker, chosen during the pick or held, or a bought extra joker), with its questions and its Clue questions. */
 function doubledRoundQuestions(session: SessionState): DoubledRoundQuestions[] {
   const doubledIds = new Set(
-    doubledRoundIdsOfSession(session.jokers, session.funFactData.powerUps),
+    doubledRoundIdsOfSession(session.jokers, session.scoringRecords.powerUps),
   );
   return session.seededGame.rounds
     .filter((round) => doubledIds.has(round.id))

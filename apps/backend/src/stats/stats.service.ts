@@ -333,7 +333,7 @@ export class StatsService {
       .select('team_id as teamId', 'category', 'points')) as SessionBonusRow[];
 
     const { powerUps: purchases } =
-      await this.standings.funFactData(gameSessionId);
+      await this.standings.scoringRecords(gameSessionId);
 
     return {
       session: {

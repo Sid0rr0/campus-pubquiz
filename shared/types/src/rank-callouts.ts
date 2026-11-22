@@ -105,7 +105,7 @@ function perfectTonightLine(count: number): string[] {
 /** "Joker 2× on Sport": the block's rounds the team doubled. */
 function jokerLine(
   jokers: SessionState['jokers'],
-  powerUps: SessionState['funFactData']['powerUps'],
+  powerUps: SessionState['scoringRecords']['powerUps'],
   teamId: number,
   blockRounds: readonly SeededRound[],
 ): string[] {
@@ -188,7 +188,7 @@ export function describeBlockCallouts(
   const isFirstBlock =
     rounds.flatMap((r) => r.questions)[0]?.id === blockFirstQuestionId;
   const biggest = Math.max(0, ...ranked.map((e) => gainOf(e, previousById)));
-  const { answers, powerUps } = session.funFactData;
+  const { answers, powerUps } = session.scoringRecords;
   const wholeQuizPerfect = isFinal
     ? countPerfectRounds(rounds, answers)
     : new Map<number, number>();
@@ -328,7 +328,7 @@ function entriesAfterBlock(
         0,
         units[unitIndex].lastRoundIndex + 1,
       );
-      const awards = session.funFactData.bonusAwards.filter(
+      const awards = session.scoringRecords.bonusAwards.filter(
         (a) =>
           a.teamId === team.teamId &&
           unitOfAward(a.blockFirstQuestionId) <= unitIndex,
