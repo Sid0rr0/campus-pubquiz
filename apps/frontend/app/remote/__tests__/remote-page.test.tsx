@@ -5,13 +5,24 @@ import type { PresenterContextPayload } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import RemotePage from '@/app/remote/page';
 
-const { mockUseAdminGame, mockUseAuth, searchParamsRef, routerRef } =
-  vi.hoisted(() => ({
-    mockUseAdminGame: vi.fn(),
-    mockUseAuth: vi.fn(),
-    searchParamsRef: { current: new URLSearchParams('code=ABCDEF') },
-    routerRef: { push: vi.fn(), replace: vi.fn() },
-  }));
+const {
+  mockUseAdminGame,
+  mockUseAuth,
+  mockFetchAnswers,
+  searchParamsRef,
+  routerRef,
+} = vi.hoisted(() => ({
+  mockUseAdminGame: vi.fn(),
+  mockUseAuth: vi.fn(),
+  mockFetchAnswers: vi.fn(),
+  searchParamsRef: { current: new URLSearchParams('code=ABCDEF') },
+  routerRef: { push: vi.fn(), replace: vi.fn() },
+}));
+
+vi.mock('@/app/lib/answer-api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/lib/answer-api')>()),
+  fetchAnswers: mockFetchAnswers,
+}));
 
 vi.mock('@/app/lib/use-admin-game', async () => {
   const { adminGameResult } =
@@ -65,6 +76,8 @@ describe('RemotePage — content', () => {
     mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
+    mockFetchAnswers.mockReset();
+    mockFetchAnswers.mockResolvedValue(null);
   });
 
   it('wires the Advance button to sendAction', () => {
@@ -513,7 +526,7 @@ describe('RemotePage — content', () => {
     expect(states(upNext)).toEqual([undefined, undefined, undefined]);
   });
 
-  it('shows how many teams answered correctly once graded', () => {
+  it('shows how many teams answered correctly once graded', async () => {
     mockUseAdminGame.mockReturnValue({
       session: {
         progress: { status: 'question_open' },
@@ -538,46 +551,47 @@ describe('RemotePage — content', () => {
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
-      liveAnswers: {
-        questionId: 55,
-        question: {
-          type: 'multiple_choice',
-          prompt: 'Capital of France?',
-          points: 2,
-          correctAnswer: 'Paris',
-          roundTitle: 'Geography',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 1,
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Paris',
-            pointsAwarded: 2,
-            gradedAt: '2026-01-01T00:00:00.000Z',
-            verdict: 'correct',
-          },
-          {
-            answerId: 2,
-            teamId: 2,
-            teamName: 'Beer Necessities',
-            value: 'London',
-            pointsAwarded: 0,
-            gradedAt: '2026-01-01T00:00:00.000Z',
-            verdict: 'incorrect',
-          },
-        ],
+    });
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 55,
+      question: {
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        points: 2,
+        correctAnswer: 'Paris',
+        roundTitle: 'Geography',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
       },
+      answers: [
+        {
+          answerId: 1,
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Paris',
+          pointsAwarded: 2,
+          gradedAt: '2026-01-01T00:00:00.000Z',
+          verdict: 'correct',
+        },
+        {
+          answerId: 2,
+          teamId: 2,
+          teamName: 'Beer Necessities',
+          value: 'London',
+          pointsAwarded: 0,
+          gradedAt: '2026-01-01T00:00:00.000Z',
+          verdict: 'incorrect',
+        },
+      ],
     });
     renderWithQuery(<RemotePage />);
 
-    expect(screen.getByText(/1 correct/i)).toBeInTheDocument();
+    expect(await screen.findByText(/1 correct/i)).toBeInTheDocument();
+    expect(mockFetchAnswers).toHaveBeenCalledWith('ABCDEF', 55);
   });
 
-  it('counts a speed-scaled quickfire answer with fewer than full points as correct', () => {
+  it('counts a speed-scaled quickfire answer with fewer than full points as correct', async () => {
     mockUseAdminGame.mockReturnValue({
       session: {
         progress: { status: 'question_open' },
@@ -602,99 +616,59 @@ describe('RemotePage — content', () => {
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
-      liveAnswers: {
-        questionId: 55,
-        question: {
-          type: 'multiple_choice',
-          prompt: 'Capital of France?',
-          points: 1000,
-          correctAnswer: 'Paris',
-          roundTitle: 'Speed Round',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 1,
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Paris',
-            pointsAwarded: 870,
-            gradedAt: '2026-01-01T00:00:00.000Z',
-            verdict: 'correct',
-          },
-          {
-            answerId: 2,
-            teamId: 2,
-            teamName: 'Beer Necessities',
-            value: 'Paris',
-            pointsAwarded: 520,
-            gradedAt: '2026-01-01T00:00:00.000Z',
-            verdict: 'correct',
-          },
-        ],
+    });
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 55,
+      question: {
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        points: 1000,
+        correctAnswer: 'Paris',
+        roundTitle: 'Speed Round',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
       },
+      answers: [
+        {
+          answerId: 1,
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Paris',
+          pointsAwarded: 870,
+          gradedAt: '2026-01-01T00:00:00.000Z',
+          verdict: 'correct',
+        },
+        {
+          answerId: 2,
+          teamId: 2,
+          teamName: 'Beer Necessities',
+          value: 'Paris',
+          pointsAwarded: 520,
+          gradedAt: '2026-01-01T00:00:00.000Z',
+          verdict: 'correct',
+        },
+      ],
     });
     renderWithQuery(<RemotePage />);
 
-    expect(screen.getByText(/2 correct/i)).toBeInTheDocument();
+    expect(await screen.findByText(/2 correct/i)).toBeInTheDocument();
   });
 
-  it('keeps showing the correct count once grading moves the question into break', () => {
-    // The count is most useful once the admin is actually grading in
-    // /control, which happens during 'break' — after the question has
-    // closed and answeredTeamIds/currentQuestion have already cleared. It
-    // must not be tied to showAnswerStatus the way the teams-answered line
-    // is, or it disappears exactly when it becomes meaningful.
+  it('hides the correct count and reads nothing when no question is on air', () => {
     mockUseAdminGame.mockReturnValue({
       session: {
         progress: { status: 'break' },
-        teams: [
-          { teamId: 1, teamName: 'The Quizzards' },
-          { teamId: 2, teamName: 'Beer Necessities' },
-        ],
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
       },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
-      liveAnswers: {
-        questionId: 55,
-        question: {
-          type: 'free_text',
-          prompt: 'Capital of France?',
-          points: 2,
-          correctAnswer: 'Paris',
-          roundTitle: 'Geography',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 1,
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Paris',
-            pointsAwarded: 2,
-            gradedAt: '2026-01-01T00:00:00.000Z',
-            verdict: 'correct',
-          },
-          {
-            answerId: 2,
-            teamId: 2,
-            teamName: 'Beer Necessities',
-            value: 'London',
-            pointsAwarded: 0,
-            gradedAt: '2026-01-01T00:00:00.000Z',
-            verdict: 'incorrect',
-          },
-        ],
-      },
     });
     renderWithQuery(<RemotePage />);
 
-    expect(screen.getByText(/1 correct/i)).toBeInTheDocument();
+    expect(screen.queryByText(/correct/i)).not.toBeInTheDocument();
+    expect(mockFetchAnswers).not.toHaveBeenCalled();
   });
 
   it('omits the correct count when nothing has been submitted or graded yet', () => {
@@ -718,7 +692,6 @@ describe('RemotePage — content', () => {
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
-      liveAnswers: null,
     });
     renderWithQuery(<RemotePage />);
 

@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   SOCKET_EVENTS,
   type AckResult,
   type AdminActionPayload,
-  type AnswersUpdatedPayload,
   type AwardBonusPayload,
   type BonusCategory,
   type ClientToServerAck,
@@ -30,6 +30,7 @@ import {
   type ConnectionIssue,
   type RoomSocket,
 } from '@/app/lib/use-game-connection';
+import { queryKeys } from '@/app/lib/query-keys';
 
 export interface UseAdminGameResult {
   snapshot: StateViewByRoom['admin'] | null;
@@ -39,11 +40,6 @@ export interface UseAdminGameResult {
   connectionIssue: ConnectionIssue | null;
   /** Timestamp of the most recent successful (re)connection; add it to an effect's dependencies to re-fetch REST data after a drop. */
   reconnectedAt: number | null;
-  liveAnswers: AnswersUpdatedPayload | null;
-  /** Lets the page fold a REST-fetched payload into the same slot live ANSWERS_UPDATED broadcasts write to. */
-  setLiveAnswers: (payload: AnswersUpdatedPayload | null) => void;
-  /** Tells the hook which question's answers are on screen, so a broadcast for another question doesn't replace them. Null accepts whatever arrives. */
-  focusAnswersQuestionId: (questionId: number | null) => void;
   /** Host notes for the open question + a preview of the next — see PresenterContextPayload. */
   presenterContext: PresenterContextPayload | null;
   sendAction: (action: GameAction) => Promise<AckResult>;
@@ -88,35 +84,26 @@ export function useAdminGame(
   enabled: boolean,
   joinCode: string | undefined,
 ): UseAdminGameResult {
-  const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(
-    null,
-  );
   const [presenterContext, setPresenterContext] =
     useState<PresenterContextPayload | null>(null);
-  // A ref (not state) since it only filters an event handler and must never
-  // trigger the connect Effect.
-  const focusedAnswersQuestionIdRef = useRef<number | null>(null);
+  const queryClient = useQueryClient();
 
-  // A range, not next-line: Stryker only honours a comment that leads a node, and nothing leads the `[]` after this callback's closing brace. Equivalent — the callback reads only a ref and state setters, so a padded list never changes how it behaves.
+  // A range, not next-line: Stryker only honours a comment that leads a node, and nothing leads the `[]` after this callback's closing brace. Equivalent — `queryClient` and the state setters never change, so a padded list never changes how it behaves.
   // Stryker disable ArrayDeclaration: see above
-  const bindSocket = useCallback((socket: RoomSocket<'admin'>) => {
-    focusedAnswersQuestionIdRef.current = null;
-    socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload) => {
-      const focusedQuestionId = focusedAnswersQuestionIdRef.current;
-      // A late broadcast for a question the admin isn't grading would
-      // replace the panel's data with the wrong question's.
-      if (
-        focusedQuestionId !== null &&
-        payload.questionId !== focusedQuestionId
-      ) {
-        return;
-      }
-      setLiveAnswers(payload);
-    });
-    socket.on(SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED, (payload) =>
-      setPresenterContext(payload),
-    );
-  }, []);
+  const bindSocket = useCallback(
+    (socket: RoomSocket<'admin'>) => {
+      socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload) => {
+        queryClient.setQueryData(
+          queryKeys.answers.forQuestion(joinCode ?? '', payload.questionId),
+          payload,
+        );
+      });
+      socket.on(SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED, (payload) =>
+        setPresenterContext(payload),
+      );
+    },
+    [queryClient, joinCode],
+  );
   // Stryker restore ArrayDeclaration
 
   const {
@@ -128,11 +115,17 @@ export function useAdminGame(
     reconnectedAt,
   } = useGameConnection('admin', enabled, joinCode, bindSocket);
 
+  useEffect(() => {
+    // The answers aren't part of the STATE_SYNC the server resends on
+    // reconnect, so re-read whichever Answer lists are on screen.
+    if (reconnectedAt === null) return;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.answers.all });
+  }, [reconnectedAt, queryClient]);
+
   const [prevIdentityKey, setPrevIdentityKey] = useState(identityKey);
   if (identityKey !== prevIdentityKey) {
     setPrevIdentityKey(identityKey);
     if (enabled) {
-      setLiveAnswers(null);
       setPresenterContext(null);
     }
   }
@@ -263,21 +256,11 @@ export function useAdminGame(
     [emitAction],
   );
 
-  // A range, not next-line, for the same reason as `bindSocket`. Equivalent — the callback only writes a ref, so a padded list never changes how it behaves.
-  // Stryker disable ArrayDeclaration: see above
-  const focusAnswersQuestionId = useCallback((questionId: number | null) => {
-    focusedAnswersQuestionIdRef.current = questionId;
-  }, []);
-  // Stryker restore ArrayDeclaration
-
   return {
     snapshot,
     connectionError,
     connectionIssue,
     reconnectedAt,
-    liveAnswers,
-    setLiveAnswers,
-    focusAnswersQuestionId,
     presenterContext,
     sendAction,
     gradeAnswer,

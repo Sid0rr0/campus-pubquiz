@@ -11,7 +11,7 @@ import {
   coinsShown,
 } from '@campus-pubquiz/types';
 import { useAdminSession } from '@/app/lib/use-admin-session';
-import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
+import { useAnswerList } from '@/app/lib/use-answer-list';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
@@ -51,6 +51,7 @@ const NO_INDICATORS: AdminIndicators = {
 
 type AdminSession = ReturnType<typeof useAdminSession>;
 type AdminSnapshot = AdminSession['snapshot'];
+type AnswerList = ReturnType<typeof useAnswerList>;
 
 /** The quiz the session is running, from the quiz list (null until it loads). */
 function activeQuizOf(
@@ -113,7 +114,6 @@ function AdminPageContent() {
     snapshot,
     connectionError,
     sendAction,
-    liveAnswers,
     gradeAnswer,
     kickTeam,
     setTeamPlayerCount,
@@ -124,21 +124,12 @@ function AdminPageContent() {
     setDisplayTextScale,
     setDisplaySoundMuted,
     createShowdownRound,
-    setLiveAnswers,
-    focusAnswersQuestionId,
-    reconnectedAt,
     auth,
     isLoading,
   } = useAdminSession('/control');
   const quizzes = useControlQuizzes(snapshot);
   const detail = useDetailItem(snapshot);
-  useQuestionAnswers({
-    joinCode: snapshot?.joinCode,
-    questionId: detail.questionId,
-    setLiveAnswers,
-    focusAnswersQuestionId,
-    reconnectedAt,
-  });
+  const answerList = useAnswerList(snapshot?.joinCode, detail.questionId);
   const {
     id: activeQuizId,
     title: activeQuizTitle,
@@ -207,7 +198,7 @@ function AdminPageContent() {
             isManualPick={detail.isManualPick}
             indicators={detail.indicators}
             onSelect={detail.select}
-            liveAnswers={liveAnswers}
+            answerList={answerList}
             onGrade={gradeAnswer}
             onAwardBonus={awardBonus}
           />
@@ -328,67 +319,6 @@ function useDetailItem(snapshot: AdminSnapshot) {
   };
 }
 
-/** Loads the detail question's answers into the live answers slot, and re-reads them after a reconnect. */
-function useQuestionAnswers({
-  joinCode,
-  questionId,
-  setLiveAnswers,
-  focusAnswersQuestionId,
-  reconnectedAt,
-}: {
-  joinCode: string | undefined;
-  questionId: number | null;
-  setLiveAnswers: AdminSession['setLiveAnswers'];
-  focusAnswersQuestionId: AdminSession['focusAnswersQuestionId'];
-  reconnectedAt: AdminSession['reconnectedAt'];
-}) {
-  const queryClient = useQueryClient();
-  const answersQuery = useQuery({
-    queryKey: queryKeys.answers.forQuestion(joinCode ?? '', questionId ?? -1),
-    queryFn: () => fetchAnswers(joinCode as string, questionId as number),
-    enabled: Boolean(joinCode) && questionId !== null,
-    // Transient, request-driven data — never serve a previous block's
-    // answers from cache, and don't keep them around once the admin moves
-    // on to a different question.
-    gcTime: 0,
-  });
-  useToastOnError(
-    apiErrorMessage(
-      answersQuery.error,
-      AnswerApiError,
-      'Could not load answers',
-    ),
-  );
-
-  useEffect(() => {
-    // Folds the REST load into the same state slot the live ANSWERS_UPDATED
-    // broadcasts (SUBMIT_ANSWER/GRADE_ANSWER) already write to.
-    if (!answersQuery.data) return;
-    setLiveAnswers(answersQuery.data);
-  }, [answersQuery.data, setLiveAnswers]);
-
-  useEffect(() => {
-    // Keeps the socket from folding a live ANSWERS_UPDATED broadcast for a
-    // different question (e.g. a team answering the still-open current
-    // question while the admin browses an earlier one to grade it) into
-    // `liveAnswers` — without this, that broadcast replaces the answers
-    // panel's data with the wrong question's, which then fails the
-    // `liveAnswers.questionId === selectedQuestionId` check below and makes
-    // the whole grading panel disappear until something else refreshes it.
-    focusAnswersQuestionId(questionId);
-  }, [questionId, focusAnswersQuestionId]);
-
-  useEffect(() => {
-    // `liveAnswers` isn't part of the STATE_SYNC snapshot the server resends
-    // on reconnect, so a dropped connection has to re-trigger this read
-    // explicitly (e.g. a phone/laptop losing Wi-Fi mid-grading). Invalidating
-    // — rather than folding `reconnectedAt` into the query key — avoids
-    // minting a new cache entry per reconnect.
-    if (reconnectedAt === null) return;
-    void queryClient.invalidateQueries({ queryKey: queryKeys.answers.all });
-  }, [reconnectedAt, queryClient]);
-}
-
 /** Closes the session and goes back to the session picker. */
 function useCloseSession(snapshot: AdminSnapshot) {
   const router = useRouter();
@@ -441,14 +371,14 @@ function DetailPane({
   item,
   questionId,
   isManualPick,
-  liveAnswers,
+  answerList,
 }: {
   view: NonNullable<AdminSnapshot>;
   rounds: typeof EMPTY_ROUNDS;
   item: DetailItem | null;
   questionId: number | null;
   isManualPick: boolean;
-  liveAnswers: AdminSession['liveAnswers'];
+  answerList: AnswerList;
 }) {
   const boardCard = rankBoardCard(view, item);
   if (boardCard) return boardCard;
@@ -468,7 +398,7 @@ function DetailPane({
       view={view}
       rounds={rounds}
       questionId={questionId}
-      liveAnswers={liveAnswers}
+      answerList={answerList}
     />
   );
 }
@@ -477,18 +407,18 @@ function QuestionPane({
   view: { currentQuestion, blockQuestions },
   rounds,
   questionId,
-  liveAnswers,
+  answerList,
 }: {
   view: NonNullable<AdminSnapshot>;
   rounds: typeof EMPTY_ROUNDS;
   questionId: number | null;
-  liveAnswers: AdminSession['liveAnswers'];
+  answerList: AnswerList;
 }) {
   return (
     <QuestionDetail
       questionId={questionId}
       rounds={rounds}
-      liveAnswers={liveAnswers}
+      answerList={answerList}
       fallbackQuestions={
         currentQuestion ? [currentQuestion, ...blockQuestions] : blockQuestions
       }
@@ -510,7 +440,7 @@ function SessionWorkspace({
   isManualPick,
   indicators,
   onSelect,
-  liveAnswers,
+  answerList,
   onGrade,
   onAwardBonus,
 }: {
@@ -521,7 +451,7 @@ function SessionWorkspace({
   isManualPick: boolean;
   indicators: AdminIndicators;
   onSelect: (item: DetailItem | null) => void;
-  liveAnswers: AdminSession['liveAnswers'];
+  answerList: AnswerList;
   onGrade: AdminSession['gradeAnswer'];
   onAwardBonus: AdminSession['awardBonus'];
 }) {
@@ -559,13 +489,13 @@ function SessionWorkspace({
               item={item}
               questionId={questionId}
               isManualPick={isManualPick}
-              liveAnswers={liveAnswers}
+              answerList={answerList}
             />
           </div>
         </div>
-        {liveAnswers && liveAnswers.questionId === questionId && (
+        {answerList && (
           <AnswersPanel
-            liveAnswers={liveAnswers}
+            liveAnswers={answerList}
             teams={teams}
             onGrade={onGrade}
           />

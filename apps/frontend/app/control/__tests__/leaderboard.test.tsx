@@ -250,7 +250,6 @@ describe('AdminPage — leaderboard', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
     renderWithQuery(<AdminPage />);

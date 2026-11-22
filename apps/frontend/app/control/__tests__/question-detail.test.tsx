@@ -17,14 +17,14 @@ function roundWith(...questions: QuizSummaryQuestion[]): QuizSummaryRound[] {
 function renderDetail(
   questionId: number | null,
   rounds: QuizSummaryRound[],
-  liveAnswers: AnswersUpdatedPayload | null = null,
+  answerList: AnswersUpdatedPayload | null = null,
   fallbackPrompt?: string,
 ) {
   render(
     <QuestionDetail
       questionId={questionId}
       rounds={rounds}
-      liveAnswers={liveAnswers}
+      answerList={answerList}
       fallbackQuestions={
         fallbackPrompt
           ? [
@@ -214,7 +214,7 @@ describe('QuestionDetail', () => {
           options: ['Born in Ulm', 'Patent clerk'],
           answer: 'Einstein',
         })}
-        liveAnswers={null}
+        answerList={null}
         fallbackQuestions={[]}
         highestClue={1}
       />,

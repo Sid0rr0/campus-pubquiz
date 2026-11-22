@@ -1,7 +1,10 @@
+import { createElement, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCKET_EVENTS, type AckResult } from '@campus-pubquiz/types';
 import { useAdminGame } from '@/app/lib/use-admin-game';
+import { queryKeys } from '@/app/lib/query-keys';
 import { ACK_TIMEOUT_MS } from '@/app/lib/use-game-connection';
 import { NOT_CONNECTED_MESSAGE } from '@/app/lib/connection-messages';
 import {
@@ -24,8 +27,12 @@ function latestSocket(): FakeSocket {
 const SNAPSHOT = { joinCode: 'TESTCODE', progress: { status: 'lobby' } };
 const BONUS_CAP_MESSAGE = 'This team has reached the "shot" bonus cap';
 
+const queryClient = new QueryClient();
+const wrapper = ({ children }: { children: ReactNode }) =>
+  createElement(QueryClientProvider, { client: queryClient }, children);
+
 function renderConnectedAdmin() {
-  const hook = renderHook(() => useAdminGame(true, 'TESTCODE'));
+  const hook = renderHook(() => useAdminGame(true, 'TESTCODE'), { wrapper });
   const socket = latestSocket();
   act(() => socket.serverConnects());
   return { ...hook, socket };
@@ -260,53 +267,15 @@ describe('useAdminGame', () => {
   });
 
   describe('live answers and presenter context', () => {
-    it('ignores a broadcast for a question other than the focused one', () => {
-      const { result, socket } = renderConnectedAdmin();
-      const focused = { questionId: 1, answers: [] };
-
-      act(() => {
-        result.current.focusAnswersQuestionId(1);
-        socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, focused);
-      });
-      act(() =>
-        socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, {
-          questionId: 2,
-          answers: [],
-        }),
-      );
-
-      expect(result.current.liveAnswers).toEqual(focused);
-    });
-
-    it('accepts a broadcast for any question while none is focused', () => {
-      const { result, socket } = renderConnectedAdmin();
+    it('an answers broadcast reaches the Answer list of its question', () => {
+      const { socket } = renderConnectedAdmin();
       const payload = { questionId: 5, answers: [] };
 
       act(() => socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, payload));
 
-      expect(result.current.liveAnswers).toEqual(payload);
-    });
-
-    it('accepts broadcasts for any question again once the focus is cleared', () => {
-      const { result, socket } = renderConnectedAdmin();
-      const payload = { questionId: 2, answers: [] };
-
-      act(() => {
-        result.current.focusAnswersQuestionId(1);
-        result.current.focusAnswersQuestionId(null);
-        socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, payload);
-      });
-
-      expect(result.current.liveAnswers).toEqual(payload);
-    });
-
-    it('folds a REST-fetched payload in through setLiveAnswers', () => {
-      const { result } = renderConnectedAdmin();
-      const payload = { questionId: 1, answers: [] };
-
-      act(() => result.current.setLiveAnswers(payload as never));
-
-      expect(result.current.liveAnswers).toEqual(payload);
+      expect(
+        queryClient.getQueryData(queryKeys.answers.forQuestion('TESTCODE', 5)),
+      ).toEqual(payload);
     });
 
     it('adopts the presenter context', () => {
@@ -322,10 +291,10 @@ describe('useAdminGame', () => {
   });
 
   describe('identity', () => {
-    it('resets the snapshot, live answers and presenter context on a session change', () => {
+    it('resets the snapshot and presenter context on a session change', () => {
       const { result, rerender } = renderHook(
         ({ code }) => useAdminGame(true, code),
-        { initialProps: { code: 'AAAAAA' } },
+        { initialProps: { code: 'AAAAAA' }, wrapper },
       );
       const socket = latestSocket();
       act(() => {
@@ -342,29 +311,25 @@ describe('useAdminGame', () => {
       rerender({ code: 'BBBBBB' });
 
       expect(result.current.snapshot).toBeNull();
-      expect(result.current.liveAnswers).toBeNull();
       expect(result.current.presenterContext).toBeNull();
       expect(socket.disconnect).toHaveBeenCalled();
       expect(mockIo).toHaveBeenCalledTimes(2);
     });
 
-    it('keeps live answers and presenter context when the hook is switched off', () => {
+    it('keeps the presenter context when the hook is switched off', () => {
       const { result, rerender } = renderHook(
         ({ enabled }) => useAdminGame(enabled, 'AAAAAA'),
-        { initialProps: { enabled: true } },
+        { initialProps: { enabled: true }, wrapper },
       );
       const socket = latestSocket();
-      const answers = { questionId: 1, answers: [] };
       const context = { notes: 'x' };
       act(() => {
         socket.serverConnects();
-        socket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, answers);
         socket.trigger(SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED, context);
       });
 
       rerender({ enabled: false });
 
-      expect(result.current.liveAnswers).toEqual(answers);
       expect(result.current.presenterContext).toEqual(context);
     });
 

@@ -69,38 +69,39 @@ describe('AdminPage — grading quick point buttons', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: {
-        questionId: 1,
-        question: {
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 2,
-          correctAnswer: 'Banana',
-          roundTitle: 'Round 1',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 'answer-1',
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Banana',
-            pointsAwarded: 0,
-            gradedAt: null,
-            gradingState: 'ungraded',
-            powerUps: [],
-          },
-        ],
-      },
       gradeAnswer,
+    });
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 1,
+      question: {
+        type: 'free_text',
+        prompt: 'Name a fruit',
+        points: 2,
+        correctAnswer: 'Banana',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: 0,
+          gradedAt: null,
+          gradingState: 'ungraded',
+          powerUps: [],
+        },
+      ],
     });
     renderWithQuery(<AdminPage />);
 
     await userEvent.click(
-      screen.getByRole('button', { name: /grade the quizzards full points/i }),
+      await screen.findByRole('button', {
+        name: /grade the quizzards full points/i,
+      }),
     );
 
     expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 2);
@@ -117,44 +118,46 @@ describe('AdminPage — grading quick point buttons', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: {
-        questionId: 1,
-        question: {
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 2,
-          correctAnswer: 'Banana',
-          roundTitle: 'Round 1',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 'answer-1',
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Banana',
-            pointsAwarded: 0,
-            gradedAt: null,
-            gradingState: 'ungraded',
-            powerUps: [],
-          },
-        ],
-      },
       gradeAnswer,
+    });
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 1,
+      question: {
+        type: 'free_text',
+        prompt: 'Name a fruit',
+        points: 2,
+        correctAnswer: 'Banana',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: 0,
+          gradedAt: null,
+          gradingState: 'ungraded',
+          powerUps: [],
+        },
+      ],
     });
     renderWithQuery(<AdminPage />);
 
     await userEvent.click(
-      screen.getByRole('button', { name: /grade the quizzards half points/i }),
+      await screen.findByRole('button', {
+        name: /grade the quizzards half points/i,
+      }),
     );
 
     expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 1);
   });
 
-  it('shows the awarded grade as a checked quick button that stays enabled for an already-graded answer', () => {
+  it('shows the awarded grade as a checked quick button that stays enabled for an already-graded answer', async () => {
+    const gradeAnswer = vi.fn();
     mockUseAdminGame.mockReturnValue({
       session: {
         joinCode: 'TESTCODE',
@@ -164,37 +167,36 @@ describe('AdminPage — grading quick point buttons', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: {
-        questionId: 1,
-        question: {
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 2,
-          correctAnswer: 'Banana',
-          roundTitle: 'Round 1',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 'answer-1',
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Banana',
-            pointsAwarded: 2,
-            gradedAt: '2026-01-01T00:00:00.000Z',
-            gradingState: 'graded',
-            powerUps: [],
-          },
-        ],
+      gradeAnswer,
+    });
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 1,
+      question: {
+        type: 'free_text',
+        prompt: 'Name a fruit',
+        points: 2,
+        correctAnswer: 'Banana',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
       },
-      gradeAnswer: vi.fn(),
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: 2,
+          gradedAt: '2026-01-01T00:00:00.000Z',
+          gradingState: 'graded',
+          powerUps: [],
+        },
+      ],
     });
     renderWithQuery(<AdminPage />);
 
-    const fullPointsButton = screen.getByRole('button', {
+    const fullPointsButton = await screen.findByRole('button', {
       name: /grade the quizzards full points/i,
     });
     expect(fullPointsButton).toHaveTextContent('✓ Full (2)');
@@ -219,38 +221,39 @@ describe('AdminPage — grading quick point buttons', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      setLiveAnswers: vi.fn(),
-      liveAnswers: {
-        questionId: 1,
-        question: {
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 2,
-          correctAnswer: 'Banana',
-          roundTitle: 'Round 1',
-          roundNumber: 1,
-          questionNumberInRound: 1,
-          totalQuestionsInRound: 1,
-        },
-        answers: [
-          {
-            answerId: 'answer-1',
-            teamId: 1,
-            teamName: 'The Quizzards',
-            value: 'Banana',
-            pointsAwarded: 2,
-            gradedAt: '2026-01-01T00:00:00.000Z',
-            gradingState: 'graded',
-            powerUps: [],
-          },
-        ],
-      },
       gradeAnswer,
+    });
+    mockFetchAnswers.mockResolvedValue({
+      questionId: 1,
+      question: {
+        type: 'free_text',
+        prompt: 'Name a fruit',
+        points: 2,
+        correctAnswer: 'Banana',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: 2,
+          gradedAt: '2026-01-01T00:00:00.000Z',
+          gradingState: 'graded',
+          powerUps: [],
+        },
+      ],
     });
     renderWithQuery(<AdminPage />);
 
     await user.click(
-      screen.getByRole('button', { name: /grade the quizzards 0 points/i }),
+      await screen.findByRole('button', {
+        name: /grade the quizzards 0 points/i,
+      }),
     );
 
     expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 0);

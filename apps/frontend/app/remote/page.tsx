@@ -21,6 +21,7 @@ import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { useAdminMediaPauseShortcut } from '@/app/control/use-admin-keyboard-shortcuts';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
+import { useAnswerList } from '@/app/lib/use-answer-list';
 
 function NextQuestionPreview({
   question,
@@ -115,16 +116,26 @@ function NotesBody({
   );
 }
 
+/** The Answer list of the question on air, or null when there is none. */
+function useOnAirAnswerList(
+  snapshot: { joinCode: string; currentQuestion: { id: number } | null } | null,
+) {
+  return useAnswerList(
+    snapshot?.joinCode,
+    snapshot?.currentQuestion?.id ?? null,
+  );
+}
+
 function RemotePageContent() {
   const {
     snapshot,
     connectionError,
     sendAction,
     presenterContext,
-    liveAnswers,
     setDisplayTextScale,
     isLoading,
   } = useAdminSession('/remote');
+  const answerList = useOnAirAnswerList(snapshot);
   const canPauseMedia = snapshot?.controlAvailability.canPauseMedia ?? false;
   useAdminMediaPauseShortcut({ canPauseMedia, sendAction });
 
@@ -150,7 +161,7 @@ function RemotePageContent() {
           {connectionError}
         </p>
       )}
-      <RemoteStatusBar snapshot={snapshot} liveAnswers={liveAnswers} />
+      <RemoteStatusBar snapshot={snapshot} answerList={answerList} />
       <OnDisplaySection
         presenterContext={presenterContext}
         currentQuestion={snapshot.currentQuestion}
@@ -222,10 +233,10 @@ function RemoteNotReady({
 
 function RemoteStatusBar({
   snapshot,
-  liveAnswers,
+  answerList,
 }: {
   snapshot: RemoteSnapshot;
-  liveAnswers: RemoteSession['liveAnswers'];
+  answerList: ReturnType<typeof useAnswerList>;
 }) {
   const {
     teams = [],
@@ -243,9 +254,9 @@ function RemoteStatusBar({
           </p>
         )}
         <ClueStatus question={snapshot.currentQuestion} />
-        {liveAnswers && (
+        {answerList && (
           <p className="text-sm font-bold text-cyan">
-            {countCorrectAnswers(liveAnswers)} correct
+            {countCorrectAnswers(answerList)} correct
           </p>
         )}
         <PhaseTimer
