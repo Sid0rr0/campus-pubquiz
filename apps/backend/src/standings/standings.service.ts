@@ -155,9 +155,9 @@ export class StandingsService {
   }
 
   /**
-   * The session's answers (roster teams only, so a team that has left the
-   * roster stays out of the fun facts and the reveal's teams-correct count)
-   * and bonus awards, in the shape both are built from.
+   * The session's Scoring records: answers (roster teams only, so a team that
+   * has left the roster stays out of every figure built from them), bonus
+   * awards and power-up purchases.
    */
   async scoringRecords(gameSessionId: number): Promise<ScoringRecords> {
     const knex = this.gameSessionTeams.getKnex();

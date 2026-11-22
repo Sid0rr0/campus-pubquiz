@@ -448,7 +448,7 @@ The leaderboard, the **Scoring records**, took part and departed teams a live se
 _Avoid_: standings cache
 
 **Scoring records**:
-The session's stored answers (roster teams only), bonus awards and power-up purchases (in purchase order), in the shape the live views read. One of the session's **Live results**: re-read with them and kept at its earlier value when the read fails. Read by fun facts, doubled rounds, the leaderboard board, rank callouts, the reveal's teams-correct and power-up counts, the **Coin ledger**, the live edit and the extra-joker rebuild. Fun facts are one reader of it, not its owner.
+The session's stored answers (roster teams only), bonus awards and power-up purchases (kept in purchase order per team; a write may put a team's rows after other teams' until the next read), in the shape the live views read. One of the session's **Live results**: re-read with them and kept at its earlier value when the read fails. Read by fun facts, doubled rounds, the leaderboard board, rank callouts, the reveal's teams-correct and power-up counts, the **Coin ledger**, the live edit and the extra-joker rebuild. Fun facts are one reader of it, not its owner.
 _Avoid_: fun fact data
 
 **Prior standings**:

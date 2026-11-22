@@ -71,6 +71,7 @@ export * from './margin';
 export * from './answer-key';
 export * from './session-state';
 export * from './fun-facts';
+export * from './scoring-records';
 export * from './question-view-conversions';
 export * from './block-in-play';
 export * from './block-questions';

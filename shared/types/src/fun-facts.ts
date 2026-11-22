@@ -1,6 +1,6 @@
 import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
-import { formatAnswer, type Verdict } from './answer-kind';
+import { formatAnswer } from './answer-kind';
 import {
   canBeDoubled,
   countedPoints,
@@ -14,53 +14,8 @@ import { QUESTION_KINDS } from './question-kind';
 import { questionOutcome } from './question-outcome';
 import type { QuestionType } from './question-types';
 import { compareTeamNames } from './ranking-rule';
+import type { ScoringAnswer, ScoringRecords } from './scoring-records';
 import type { SessionState } from './session-state';
-
-/** One submitted answer, as far as fun facts need it. */
-export interface ScoringAnswer {
-  questionId: number;
-  teamId: number;
-  teamName: string;
-  /** Null while the answer is ungraded. */
-  verdict: Verdict | null;
-  pointsAwarded: number;
-  /** Final submission time minus the question's open time; null when untracked. */
-  responseMs: number | null;
-  /** Clue question only: the clue (1-based) on air when the answer was locked in; null or absent otherwise. */
-  clue?: number | null;
-}
-
-/** One bonus award, as far as fun facts need it. */
-export interface ScoringBonusAward {
-  teamId: number;
-  category: BonusCategory;
-  points: number;
-  /** First question id of the block in play when awarded; null for awards made before it was recorded. */
-  blockFirstQuestionId: number | null;
-}
-
-/** One power-up purchase, as far as the live views need it: the reveal's power-up count and each team's coins. */
-export interface ScoringPurchase {
-  teamId: number;
-  powerUp: PowerUpId;
-  /** The question it was bought for; null for a round power-up. */
-  questionId: number | null;
-  /** The round an extra joker was bought for; null otherwise. */
-  roundId: number | null;
-  cost: number;
-}
-
-/**
- * The session's stored answers, bonus awards and power-up purchases that fun
- * facts are built from, and the reveal's teams-correct and power-up counts read
- * it too. A cache filled with the standings, so the display view stays
- * synchronous.
- */
-export interface ScoringRecords {
-  answers: ScoringAnswer[];
-  bonusAwards: ScoringBonusAward[];
-  powerUps: ScoringPurchase[];
-}
 
 /** The question a fun fact is about, as the big screen words it ("Round 2 · Q3"). */
 export interface FunFactQuestion {
