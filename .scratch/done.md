@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                            | Title                                                                                                                                                                      | Tickets |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| bonus-award-policy | [One Bonus award policy; the bonus service only stores](bonus-award-policy/spec.md) | 2 |
 | scoring-records | [Name the Scoring records; one purchase source for the Coin ledger](scoring-records/spec.md) | 2 |
 | round-identity | [One Round identity rule for a live edit](round-identity/spec.md) | 1 |
 | answer-list-module | [One Answer list module for /control and /remote](answer-list-module/spec.md) | 2 |
