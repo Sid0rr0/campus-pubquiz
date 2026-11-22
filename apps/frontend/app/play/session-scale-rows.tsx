@@ -10,6 +10,8 @@ import {
   type TeamSessionRatingsView,
 } from '@campus-pubquiz/types';
 
+import { liveTaps } from '@/app/play/live-taps';
+
 const SCALES = Object.keys(SESSION_SCALE_VALUES) as SessionScale[];
 
 type RowStatus = 'idle' | 'saving' | 'saved' | 'failed';
@@ -32,17 +34,17 @@ interface SessionScaleRowsProps {
  * changed but not cleared.
  */
 export function SessionScaleRows({ saved, onRate }: SessionScaleRowsProps) {
-  const [taps, setTaps] = useState<
-    Partial<Record<SessionScale, RowState & { base: SessionScaleValue | null }>>
+  const [allTaps, setTaps] = useState<
+    Record<string, RowState & { base: SessionScaleValue | null }>
   >({});
   // Every row not waiting on a tap of its own takes the server's value; a row
   // that saved or failed keeps its status until the server's value changes.
+  const taps = liveTaps(allTaps, (scale) => saved[scale as SessionScale]);
+  if (taps !== allTaps) setTaps(taps);
   const rows = Object.fromEntries(
     SCALES.map((scale) => {
       const tap = taps[scale];
-      const isTapShown =
-        tap && (tap.status === 'saving' || saved[scale] === tap.base);
-      const row: RowState = isTapShown
+      const row: RowState = tap
         ? { value: tap.value, status: tap.status }
         : { value: saved[scale], status: 'idle' };
       return [scale, row];

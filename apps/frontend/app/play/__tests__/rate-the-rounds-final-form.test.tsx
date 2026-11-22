@@ -159,6 +159,33 @@ describe('PlayPage — the final feedback form', () => {
     expect(screen.getByText('Not saved — tap to retry')).toBeInTheDocument();
   });
 
+  it('shows the join reply ratings after a reconnect and never shows a tap still waiting on the old connection as saved', async () => {
+    const user = userEvent.setup();
+    const rateRound = vi.fn(() => new Promise<never>(() => {}));
+    const { receiveRatings } = renderEnded({ rateRound });
+    await user.click(star('Music', 5));
+
+    receiveRatings({ [FILM_ID]: 4 });
+
+    expect(star('Film', 4)).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText('Saved ✓')).toHaveLength(1);
+  });
+
+  it('drops a saved tap for good once the server moves off it, even if the server swings back', async () => {
+    const user = userEvent.setup();
+    const { receiveRatings } = renderEnded({
+      myRoundRatings: { [MUSIC_ID]: 3 },
+    });
+    await user.click(star('Music', 4));
+    await screen.findByText('Saved ✓');
+
+    receiveRatings({ [MUSIC_ID]: 4 });
+    receiveRatings({ [MUSIC_ID]: 3 });
+
+    expect(star('Music', 3)).toHaveAttribute('aria-pressed', 'true');
+    expect(star('Music', 4)).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('keeps every row open once all are rated, unlike the break card', async () => {
     const user = userEvent.setup();
     renderEnded({

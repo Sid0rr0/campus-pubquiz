@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { AckResult, RatableRound } from '@campus-pubquiz/types';
+import { liveTaps } from '@/app/play/live-taps';
 
 const STAR_COUNT = 5;
 const STARS = Array.from({ length: STAR_COUNT }, (_, index) => index + 1);
@@ -30,16 +31,14 @@ interface Tap extends RowState {
   base: number | undefined;
 }
 
-/** The server's rows, except where a tap is saving, or its row's server value hasn't changed since the tap. */
+/** The server's rows, with the team's own live taps laid over them. */
 function showRows(
   savedRatings: Readonly<Record<number, number>>,
-  taps: Readonly<Record<number, Tap>>,
+  taps: Readonly<Record<string, Tap>>,
 ): Record<number, RowState> {
   const rows = rowsFromSaved(savedRatings);
-  for (const [roundId, { base, ...row }] of Object.entries(taps)) {
-    if (row.status === 'saving' || savedRatings[Number(roundId)] === base) {
-      rows[Number(roundId)] = row;
-    }
+  for (const [roundId, { stars, status }] of Object.entries(taps)) {
+    rows[Number(roundId)] = { stars, status };
   }
   return rows;
 }
@@ -53,7 +52,9 @@ export function useRoundRatings(
   savedRatings: Readonly<Record<number, number>>,
   onRate: (roundId: number, stars: number) => Promise<AckResult>,
 ) {
-  const [taps, setTaps] = useState<Record<number, Tap>>({});
+  const [allTaps, setTaps] = useState<Record<string, Tap>>({});
+  const taps = liveTaps(allTaps, (roundId) => savedRatings[Number(roundId)]);
+  if (taps !== allTaps) setTaps(taps);
   // Identifies the latest tap per round, so a slow ack for an earlier tap
   // can't overwrite a newer one.
   const latestTapRef = useRef<Record<number, number>>({});

@@ -250,6 +250,21 @@ describe('PlayPage — rating the rounds in the break', () => {
     expect(screen.getAllByText('Saved ✓')).toHaveLength(1);
   });
 
+  it('drops a saved tap for good once the server moves off it, even if the server swings back', async () => {
+    const user = userEvent.setup();
+    const { receiveRatings } = renderBreak({
+      myRoundRatings: { [MUSIC_ID]: 3 },
+    });
+    await user.click(star('Music', 4));
+    await screen.findByText('Saved ✓');
+
+    receiveRatings({ [MUSIC_ID]: 4 });
+    receiveRatings({ [MUSIC_ID]: 3 });
+
+    expect(star('Music', 3)).toHaveAttribute('aria-pressed', 'true');
+    expect(star('Music', 4)).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('renders nothing about feedback when the session does not collect it', () => {
     renderBreak({ isFeedbackCollected: false });
 

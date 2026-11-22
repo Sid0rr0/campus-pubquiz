@@ -255,6 +255,33 @@ describe('PlayPage — pacing and felt difficulty on the final form', () => {
       );
     });
 
+    it('drops a saved tap for good once the server moves off it, even if the server swings back', async () => {
+      const user = userEvent.setup();
+      const { rendered, rateSession } = renderPhone({
+        mySessionRatings: { pacing: 'too_slow', feltDifficulty: null },
+      });
+      await user.click(choice(pace(), 'Too fast'));
+      await within(pace()).findByText('Saved ✓');
+
+      receive(rendered, rateSession, {
+        pacing: 'too_fast',
+        feltDifficulty: null,
+      });
+      receive(rendered, rateSession, {
+        pacing: 'too_slow',
+        feltDifficulty: null,
+      });
+
+      expect(choice(pace(), 'Too slow')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(choice(pace(), 'Too fast')).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
     it("keeps a failed row's retry prompt", async () => {
       const user = userEvent.setup();
       const rateSession = vi
