@@ -11,7 +11,7 @@ Every reader (fun facts, doubled rounds, the leaderboard board, rank callouts, t
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] No source, spec or doc uses `funFactData`, `FunFactData`, `FunFactAnswer`, `FunFactBonusAward` or `FunFactPowerUp` for the cache (check with `rg -uu`)
 - [ ] The failed-read log line names Scoring records, and the live results placement spec expects the new line
