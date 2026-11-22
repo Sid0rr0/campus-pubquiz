@@ -3,7 +3,6 @@
     - /url: /
   - button "Open menu"
 - main:
-  - paragraph: 0 correct
   - text: /0:\d+/
   - region "On display":
     - heading "On display" [level=2]
