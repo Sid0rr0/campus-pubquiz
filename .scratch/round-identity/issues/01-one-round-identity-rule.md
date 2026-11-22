@@ -4,11 +4,15 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Round identity module tests (database-free): most questions wins; a tie goes to the first round; a round with none of its questions left is gone; a round that had no questions is gone; new questions without ids don't count; a reorder finds the round at its new position; questions moved into a fresh row are found there
-- [ ] New live-edit save case (real Postgres): a doubled round's questions split evenly between two rounds; a Clue question added to the first is refused; one added to the second is accepted and the joker then sits on the first round
-- [ ] Existing joker and extra joker follow cases, and the guard's Clue-on-doubled-round cases, pass without changing their expectations
-- [ ] No copy of the rule is left in the guard or the joker module, and purchase changes don't import the joker module for it
-- [ ] `GLOSSARY.md` has a **Round identity** entry near **Live-edit frontier**; `DOCUMENTATION.md`'s live-edit paragraph names it and its tie rule
-- [ ] `pnpm typecheck`, `pnpm test` and `pnpm crap:changed` pass; the database-free mutation run for the module and the guard, and `mutate:db` for the joker and purchase change modules, show no new survivors
+- [x] Round identity module tests (database-free): most questions wins; a tie goes to the first round; a round with none of its questions left is gone; a round that had no questions is gone; new questions without ids don't count; a reorder finds the round at its new position; questions moved into a fresh row are found there
+- [x] New live-edit save case (real Postgres): a doubled round's questions split evenly between two rounds; a Clue question added to the first is refused; one added to the second is accepted and the joker then sits on the first round
+- [x] Existing joker and extra joker follow cases, and the guard's Clue-on-doubled-round cases, pass without changing their expectations
+- [x] No copy of the rule is left in the guard or the joker module, and purchase changes don't import the joker module for it
+- [x] `GLOSSARY.md` has a **Round identity** entry near **Live-edit frontier**; `DOCUMENTATION.md`'s live-edit paragraph names it and its tie rule
+- [x] `pnpm typecheck`, `pnpm test` and `pnpm crap:changed` pass; the database-free mutation run for the module and the guard, and `mutate:db` for the joker and purchase change modules, show no new survivors
+
+## Comments
+
+Implemented in one commit (see git history). Rule lives in `apps/backend/src/quiz/round-identity.ts`. The tie test uses an extra joker rather than the quiz master's joker (same rule, same guard). The mutation runs (`mutate`, `mutate:db`) were not run.

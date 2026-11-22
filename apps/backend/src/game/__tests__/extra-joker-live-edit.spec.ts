@@ -1,4 +1,7 @@
-import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type ImportRoundPreview,
+} from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   expectLiveEqualsResync,
@@ -190,6 +193,53 @@ describe('GameGateway — a live edit and the extra jokers bought', () => {
         rounds[2],
       ]),
     ).rejects.toThrow(QuizLiveEditBlockedError);
+    expect(await stored(game, alpha)).toMatchObject([
+      { roundId: game.rounds[0].id },
+    ]);
+  });
+
+  it('checks the round the extra joker lands on when its questions split evenly', async () => {
+    const { game, alpha } = await withExtraOnRoundOne();
+    const clue = {
+      type: 'clues' as const,
+      prompt: 'Who am I?',
+      answer: 'Einstein',
+      points: 1,
+      options: ['Physicist', 'Relativity'],
+    };
+    // Round 1 now holds two questions, then splits one into each of two rounds: a tie.
+    await game.saveQuizEdit((rounds) => [
+      {
+        ...rounds[0],
+        questions: [...rounds[0].questions, ...rounds[1].questions],
+      },
+      rounds[2],
+    ]);
+    const split = (rounds: ImportRoundPreview[]) => [
+      { ...rounds[0], questions: [rounds[0].questions[0]] },
+      { ...rounds[0], title: 'Split', questions: [rounds[0].questions[1]] },
+      rounds[1],
+    ];
+
+    await expect(
+      game.saveQuizEdit((rounds) => {
+        const [first, second, last] = split(rounds);
+        return [
+          { ...first, questions: [...first.questions, clue] },
+          second,
+          last,
+        ];
+      }),
+    ).rejects.toThrow(QuizLiveEditBlockedError);
+
+    await game.saveQuizEdit((rounds) => {
+      const [first, second, last] = split(rounds);
+      return [
+        first,
+        { ...second, questions: [...second.questions, clue] },
+        last,
+      ];
+    });
     expect(await stored(game, alpha)).toMatchObject([
       { roundId: game.rounds[0].id },
     ]);

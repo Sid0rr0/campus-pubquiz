@@ -20,7 +20,8 @@ import {
   type NewPurchase,
   type PurchaseRecord,
 } from '@/purchase/purchase.service';
-import { roundNowHolding, type RandomSource } from '@/game/state/joker-changes';
+import type { RandomSource } from '@/game/state/joker-changes';
+import { roundIdentity } from '@/quiz/round-identity';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
@@ -331,7 +332,7 @@ function rebuiltExtraJokers(
   for (const bought of started.funFactData.powerUps) {
     // Stryker disable next-line ConditionalExpression: equivalent, only extra jokers have a round id, so `roundId === null` alone skips the rest.
     if (bought.powerUp !== 'extra_joker' || bought.roundId === null) continue;
-    const next = roundNowHolding(started, reloaded, bought.roundId);
+    const next = roundIdAfterEdit(started, reloaded, bought.roundId);
     const key = `${bought.teamId}:${next}`;
     if (next === null || kept.has(key)) continue;
     kept.add(key);
@@ -346,4 +347,21 @@ function rebuiltExtraJokers(
     });
   }
   return rebuilt;
+}
+
+/** The id of the round in `reloaded` that the round `roundId` of `started` became (Round identity), or null when gone. */
+function roundIdAfterEdit(
+  started: SessionState,
+  reloaded: SessionState,
+  roundId: number,
+): number | null {
+  const before = started.seededGame.rounds.find(({ id }) => id === roundId);
+  if (!before) return null;
+  const position = roundIdentity(
+    before.questions.map(({ id }) => id),
+    reloaded.seededGame.rounds.map((round) =>
+      round.questions.map(({ id }) => id),
+    ),
+  );
+  return position === null ? null : reloaded.seededGame.rounds[position].id;
 }

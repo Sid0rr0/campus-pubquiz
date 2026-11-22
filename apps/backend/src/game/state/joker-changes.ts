@@ -15,6 +15,7 @@ import { JokerService } from '@/joker/joker.service';
 import { PurchaseService } from '@/purchase/purchase.service';
 import { TeamService } from '@/team/team.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
+import { roundIdentity } from '@/quiz/round-identity';
 import type { SessionChange } from '@/game/state/session-write';
 import { requireSeat } from '@/game/state/session-updates.util';
 import {
@@ -379,11 +380,8 @@ function refuseClueRound(session: SessionState, roundId: number): void {
   }
 }
 
-/**
- * The id of the round in `reloaded` that now holds most of the questions the
- * round `roundId` held in `started`, or null when none of them is left.
- */
-export function roundNowHolding(
+/** The id of the round in `reloaded` that is the round `roundId` was in `started` (Round identity), or null when gone. */
+function roundNowHolding(
   started: SessionState,
   reloaded: SessionState,
   roundId: number,
@@ -392,15 +390,11 @@ export function roundNowHolding(
     (round) => round.id === roundId,
   );
   if (!before) return null;
-  const questionIds = new Set(before.questions.map((question) => question.id));
-  let best: { roundId: number; kept: number } | null = null;
-  for (const round of reloaded.seededGame.rounds) {
-    const kept = round.questions.filter((question) =>
-      questionIds.has(question.id),
-    ).length;
-    if (kept > 0 && (best === null || kept > best.kept)) {
-      best = { roundId: round.id, kept };
-    }
-  }
-  return best?.roundId ?? null;
+  const position = roundIdentity(
+    before.questions.map((question) => question.id),
+    reloaded.seededGame.rounds.map((round) =>
+      round.questions.map((question) => question.id),
+    ),
+  );
+  return position === null ? null : reloaded.seededGame.rounds[position].id;
 }

@@ -39,6 +39,9 @@ _Avoid_: shown question, locked question (locked means no longer accepting answe
 **Live-edit frontier**:
 Where the live sessions on a quiz have got to — their opened questions, the current round of the furthest-on one, and whether that round's block has started locking. The rounds after the current round can be added, deleted and reordered, and their break-after can change (which moves where the current block ends); the current round and earlier ones keep their place and break-after. Questions in rounds after the current round can be added, reordered, moved between those rounds and deleted. In the current round the questions after the last opened one can too, until its block starts locking; from then on its rounds are frozen. Rounds before it are always frozen. It is checked and applied while the live sessions are held, so the game can't move past it during a save.
 
+**Round identity**:
+Across a live edit, a round is the round now holding most of the questions it held (the first one on a tie). It's gone when none of them is left, and newly added questions don't count. Jokers and extra jokers follow it, and the live-edit guard predicts with it.
+
 **Question type**:
 What a question asks teams to do (free text, number, multiple choice, sort, match, closest guess), which fixes how its answers are graded and whether it can appear in a quickfire quiz. Media is not a question type.
 _Avoid_: question kind, question format

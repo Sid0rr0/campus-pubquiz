@@ -1071,7 +1071,7 @@ a joker round gets on that team's phone: the joker line and picker heading, the 
 moment on its intro, the joker border and the extra points on the reveal.
 
 A Live edit save moves an extra joker with its round the way it moves the quiz
-master's joker (a round is known by its questions; the extra jokers are
+master's joker (a round is known by its questions, its **Round identity**: the round now holding most of them, the first on a tie; the extra jokers are
 re-pointed before the jokers, inside the same save). The two differ when the
 round is gone: a joker is redrawn because every team must hold one, but an extra
 joker is optional, so it is removed and its cost handed back (the balance is

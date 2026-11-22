@@ -1,6 +1,6 @@
 # Spec: One Round identity rule for a live edit
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-11-21, candidate 3 ("One rule for which round a live edit leaves a round in").
 

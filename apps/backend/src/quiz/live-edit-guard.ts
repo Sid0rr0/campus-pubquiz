@@ -1,3 +1,4 @@
+import { roundIdentity } from '@/quiz/round-identity';
 import {
   OPENED_QUESTION_FIXED_FIELDS,
   QUESTION_KINDS,
@@ -215,8 +216,8 @@ export interface DoubledRoundQuestions {
  * Issues for Clue questions a save would add to a round a team doubles (its
  * joker round or a round it bought an extra joker for): a new one, a question
  * changed to Clue, or one moved in. A round is known by its questions, as the
- * jokers follow it: the incoming round holding most of the doubled round's
- * questions. A round with none of them left is gone, and its doubling with it.
+ * jokers follow it (see `roundIdentity`). A round that is gone takes its
+ * doubling with it.
  */
 export function findCluesOnDoubledRounds(
   incoming: readonly ImportRoundPreview[],
@@ -224,8 +225,11 @@ export function findCluesOnDoubledRounds(
 ): QuizDraftIssue[] {
   const checked = new Set<number>();
   return doubledRounds.flatMap(({ questionIds, clueQuestionIds }) => {
-    const roundIndex = roundHolding(incoming, questionIds);
-    if (roundIndex === -1 || checked.has(roundIndex)) return [];
+    const roundIndex = roundIdentity(
+      questionIds,
+      incoming.map((round) => round.questions.map((q) => q.questionId)),
+    );
+    if (roundIndex === null || checked.has(roundIndex)) return [];
     checked.add(roundIndex);
     return incoming[roundIndex].questions.flatMap(
       ({ type, questionId }, questionIndex) =>
@@ -242,22 +246,6 @@ export function findCluesOnDoubledRounds(
           : [],
     );
   });
-}
-
-/** The index of the round holding most of `questionIds`, or -1 when none of them is left. */
-function roundHolding(
-  rounds: readonly ImportRoundPreview[],
-  questionIds: readonly number[],
-): number {
-  const keptCounts = rounds.map(
-    (round) =>
-      round.questions.filter(
-        ({ questionId }) =>
-          questionId !== undefined && questionIds.includes(questionId),
-      ).length,
-  );
-  const most = Math.max(0, ...keptCounts);
-  return most === 0 ? -1 : keptCounts.indexOf(most);
 }
 
 const MOVED_ANSWERED_MESSAGE =
