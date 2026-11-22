@@ -323,25 +323,7 @@ describe('useTeamLink: adapter edges', () => {
       expect(result.current.join.team).toBeNull();
     });
 
-    it('does not wipe the first join of a page that opened with a game code', () => {
-      const { result } = renderHook(() => useTeamLink('ABCDEF'));
-      const socket = latestSocket();
-      act(() => socket.serverConnects());
-      act(() =>
-        socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, joinPayload(ACCEPTED)),
-      );
-      act(() =>
-        socket.trigger(
-          SOCKET_EVENTS.STATE_SYNC,
-          roomView(SOCKET_ROOMS.PLAYERS, {}),
-        ),
-      );
-
-      // Counts join payloads: the page's own mount is not an identity change.
-      expect(gameOf(result).roundRatingsEpoch).toBe(1);
-    });
-
-    it('does not count logging out as a second wipe, and keeps the questions the screen still shows', () => {
+    it('keeps the questions the screen still shows when logging out', () => {
       const { result, socket } = renderPlayingTeam();
       act(() =>
         socket.trigger(SOCKET_EVENTS.STATE_UPDATED, {
@@ -349,11 +331,9 @@ describe('useTeamLink: adapter edges', () => {
           blockQuestions: [{ id: 5 }],
         }),
       );
-      const epochBefore = gameOf(result).roundRatingsEpoch;
 
       act(() => result.current.join.handleLogOut());
 
-      expect(gameOf(result).roundRatingsEpoch).toBe(epochBefore + 1);
       expect(gameOf(result).seenQuestions).toEqual({ 5: { id: 5 } });
     });
   });
@@ -428,19 +408,8 @@ describe('useTeamLink: adapter edges', () => {
       expect(gameOf(result).myRoundRatings).toEqual({});
     });
 
-    it('records the comment and topics only once the server accepts them', async () => {
+    it('takes the comment and topics from the team view, not from the acknowledgement', async () => {
       const { result, socket } = renderPlayingTeam();
-
-      let refused!: Promise<AckResult>;
-      act(() => {
-        refused = gameOf(result).sendFeedback({
-          comment: 'Great',
-          topics: ['Films'],
-        });
-      });
-      await act(async () => socket.reject(SOCKET_EVENTS.SEND_FEEDBACK, 'No'));
-      await refused;
-      expect(gameOf(result).myFeedback).toEqual({ comment: '', topics: [] });
 
       let accepted!: Promise<AckResult>;
       act(() => {
@@ -450,7 +419,15 @@ describe('useTeamLink: adapter edges', () => {
         });
       });
       await act(async () => socket.acknowledge(SOCKET_EVENTS.SEND_FEEDBACK));
-      await accepted;
+      await expect(accepted).resolves.toEqual({ success: true });
+      expect(gameOf(result).myFeedback).toEqual({ comment: '', topics: [] });
+
+      act(() =>
+        socket.trigger(
+          SOCKET_EVENTS.TEAM_VIEW,
+          teamView({ feedback: { comment: 'Great', topics: ['Films'] } }),
+        ),
+      );
       expect(gameOf(result).myFeedback).toEqual({
         comment: 'Great',
         topics: ['Films'],

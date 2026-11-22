@@ -1171,7 +1171,7 @@ connected as `players` receives `PlayersStatePayload` on them and nothing else.
 
 Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED` (the team's identity: `teamId`, `teamToken`, `teamCode`,
 `teamName`, plus its `teamView`, and nothing else),
-`ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
+`ANSWERS_UPDATED` (admin only — contains answer values),
 `PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview;
 `currentQuestionNotes`, the **Question notes** of the question the on-air
 screen shows (asked, locking, break review or reveal), without the `{…}` settings
@@ -1181,8 +1181,12 @@ other screen, decided from the on-air screen in `screen-preview.util.ts`),
 `TEAM_VIEW` (the **Team view**, `OwnTeamView`, to a changed team's own socket
 only, after the room broadcasts; `JOIN_ACCEPTED` carries the same view as
 `teamView`, built by the same projection; it carries everything a team's phones
-may know about the team: answers, bonus awards, player count, joker, side,
-doubled rounds, coins, purchases and Ask the room readiness, see Jokers above,
+may know about the team: answers, bonus awards, round ratings, feedback,
+session ratings, player count, joker, side, doubled rounds, coins, purchases
+and Ask the room readiness; every change lists its team, so a round rating,
+a feedback send and a session rating send the rating team's phones a team view
+too, and the acknowledgements of those writes (and of the player count and
+joker pick) only report success; see Jokers above,
 `PICK_SIDE` and Coin awards; a disconnected team catches up on rejoin; the
 grades of the block in play stay blank, with no points, verdict or graded time,
 until `reveal_intro` or `reveal` (or the quiz has ended), so no answer or grade
@@ -1393,9 +1397,11 @@ itself — the display and other players just see counts.
    never freezes: the phone's "Clear my answer" button (shown while a clue is
    left to show) submits a blank, and the team can answer again on a later
    clue at that clue's value.
-3. **Acknowledge** — the submitter gets `ANSWER_RECEIVED`, which the phone
-   uses to tick its checkmarks and flash a short "Saved ✓" (an accepted
-   submit only, never a refused one); the admin room gets the full `ANSWERS_UPDATED`
+3. **Acknowledge** — the submit acknowledgement settles the phone's pending
+   answer (a refused submit shows its reason); the saved answer itself reaches
+   every phone of the submitting team, the submitting one included, in the
+   `TEAM_VIEW` sent right after, which drives the phone's checkmarks and its
+   short "Saved ✓" (an accepted submit only, never a refused one); the admin room gets the full `ANSWERS_UPDATED`
    list; everyone gets a fresh snapshot whose `answeredTeamIds` drives the
    admin's per-team ✓ marks and the display's "X of Y teams answered" counter.
 4. **Grade** — the admin can grade an answer as soon as it arrives (0 / half
@@ -1745,8 +1751,8 @@ grading behavior. Media is not a type: any question can carry a
   next clue is shown, you can't change this answer."; a frozen answer shows
   read-only as "Locked in on clue N · worth X points"; the reveal adds "You
   answered on clue N". The team's own clue number rides on `TeamAnswerView.clue`
-  and `AnswerReceivedPayload.clue`; `/control`'s `AnswerView.clue` shows
-  "Clue N" on each answer. All three also carry `clueValue`, what a right
+  (and so the team view); `/control`'s `AnswerView.clue` shows
+  "Clue N" on each answer. Both also carry `clueValue`, what a right
   answer is worth at that clue (null for other types), so no client recomputes
   it; `/control` grades a Clue answer only 0 or that value (no custom amount).
 

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { AckResult, RatableRound } from '@campus-pubquiz/types';
+import { liveTaps } from '@/app/play/live-taps';
 
 const STAR_COUNT = 5;
 const STARS = Array.from({ length: STAR_COUNT }, (_, index) => index + 1);
@@ -25,37 +26,58 @@ function rowsFromSaved(
   );
 }
 
+/** A row's own tap, with the server's value for the row when it was made. */
+interface Tap extends RowState {
+  base: number | undefined;
+}
+
+/** The server's rows, with the team's own live taps laid over them. */
+function showRows(
+  savedRatings: Readonly<Record<number, number>>,
+  taps: Readonly<Record<string, Tap>>,
+): Record<number, RowState> {
+  const rows = rowsFromSaved(savedRatings);
+  for (const [roundId, { stars, status }] of Object.entries(taps)) {
+    rows[Number(roundId)] = { stars, status };
+  }
+  return rows;
+}
+
 /**
  * The star rows' state, shared by the break card and the final form. A tap
- * saves at once and the row shows what the server said. `savedRatings` is read
- * once, so the page remounts the owner when a new join payload replaces them.
+ * saves at once and the row shows what the server said. Every row not waiting
+ * on a tap of its own takes the server's value from `savedRatings`.
  */
 export function useRoundRatings(
   savedRatings: Readonly<Record<number, number>>,
   onRate: (roundId: number, stars: number) => Promise<AckResult>,
 ) {
-  const [rows, setRows] = useState(() => rowsFromSaved(savedRatings));
+  const [allTaps, setTaps] = useState<Record<string, Tap>>({});
+  const taps = liveTaps(allTaps, (roundId) => savedRatings[Number(roundId)]);
+  if (taps !== allTaps) setTaps(taps);
   // Identifies the latest tap per round, so a slow ack for an earlier tap
   // can't overwrite a newer one.
   const latestTapRef = useRef<Record<number, number>>({});
 
-  function setRow(roundId: number, row: RowState): void {
-    setRows((current) => ({ ...current, [roundId]: row }));
+  function setTap(roundId: number, tap: Tap): void {
+    setTaps((current) => ({ ...current, [roundId]: tap }));
   }
 
   async function rate(roundId: number, stars: number): Promise<void> {
     const tap = (latestTapRef.current[roundId] ?? 0) + 1;
     latestTapRef.current[roundId] = tap;
-    setRow(roundId, { stars, status: 'saving' });
+    const base = savedRatings[roundId];
+    setTap(roundId, { stars, status: 'saving', base });
     const result = await onRate(roundId, stars);
     if (latestTapRef.current[roundId] !== tap) return;
-    setRow(roundId, {
+    setTap(roundId, {
       stars,
       status: result.success ? 'saved' : 'failed',
+      base,
     });
   }
 
-  return { rows, rate };
+  return { rows: showRows(savedRatings, taps), rate };
 }
 
 interface RoundStarRowsProps {

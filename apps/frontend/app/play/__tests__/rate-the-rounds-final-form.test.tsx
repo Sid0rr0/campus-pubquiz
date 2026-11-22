@@ -46,17 +46,22 @@ function renderEnded(
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
   const rateRound =
     overrides.rateRound ?? vi.fn().mockResolvedValue({ success: true });
-  mockUseTeamLink.mockReturnValue(
+  const hook = (myRoundRatings: Record<number, number>) =>
     teamLinkResult({
       session: endedSession(overrides.isFeedbackCollected ?? true),
       join: {
         team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
       },
-      game: { rateRound, myRoundRatings: overrides.myRoundRatings ?? {} },
-    }),
-  );
-  renderWithQuery(<PlayPage />);
-  return { rateRound };
+      game: { rateRound, myRoundRatings },
+    });
+  mockUseTeamLink.mockReturnValue(hook(overrides.myRoundRatings ?? {}));
+  const { rerender } = renderWithQuery(<PlayPage />);
+  /** A team view arriving: a fresh ratings object, as the hook produces. */
+  function receiveRatings(myRoundRatings: Record<number, number>) {
+    mockUseTeamLink.mockReturnValue(hook(myRoundRatings));
+    rerender(<PlayPage />);
+  }
+  return { rateRound, receiveRatings };
 }
 
 function star(roundTitle: string, stars: number) {
@@ -112,6 +117,73 @@ describe('PlayPage — the final feedback form', () => {
     expect(
       await screen.findByText('Not saved — tap to retry'),
     ).toBeInTheDocument();
+  });
+
+  it('keeps a tap that is saving when a team view arrives, and shows "Saved ✓" once acknowledged', async () => {
+    const user = userEvent.setup();
+    let acknowledge!: (ack: { success: true }) => void;
+    const rateRound = vi.fn(
+      () =>
+        new Promise<{ success: true }>((resolve) => {
+          acknowledge = resolve;
+        }),
+    );
+    const { receiveRatings } = renderEnded({ rateRound });
+    await user.click(star('Music', 5));
+
+    receiveRatings({});
+    expect(star('Music', 5)).toHaveAttribute('aria-pressed', 'true');
+    acknowledge({ success: true });
+
+    expect(await screen.findByText('Saved ✓')).toBeInTheDocument();
+  });
+
+  it('fills an idle row from a team view carrying a new rating', () => {
+    const { receiveRatings } = renderEnded();
+
+    receiveRatings({ [FILM_ID]: 4 });
+
+    expect(star('Film', 4)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps "Not saved — tap to retry" when an unrelated team view arrives', async () => {
+    const user = userEvent.setup();
+    const { receiveRatings } = renderEnded({
+      rateRound: vi.fn().mockResolvedValue({ success: false, error: 'nope' }),
+    });
+    await user.click(star('Music', 3));
+    await screen.findByText('Not saved — tap to retry');
+
+    receiveRatings({});
+
+    expect(screen.getByText('Not saved — tap to retry')).toBeInTheDocument();
+  });
+
+  it('shows the join reply ratings after a reconnect and never shows a tap still waiting on the old connection as saved', async () => {
+    const user = userEvent.setup();
+    const rateRound = vi.fn(() => new Promise<never>(() => {}));
+    const { receiveRatings } = renderEnded({ rateRound });
+    await user.click(star('Music', 5));
+
+    receiveRatings({ [FILM_ID]: 4 });
+
+    expect(star('Film', 4)).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText('Saved ✓')).toHaveLength(1);
+  });
+
+  it('drops a saved tap for good once the server moves off it, even if the server swings back', async () => {
+    const user = userEvent.setup();
+    const { receiveRatings } = renderEnded({
+      myRoundRatings: { [MUSIC_ID]: 3 },
+    });
+    await user.click(star('Music', 4));
+    await screen.findByText('Saved ✓');
+
+    receiveRatings({ [MUSIC_ID]: 4 });
+    receiveRatings({ [MUSIC_ID]: 3 });
+
+    expect(star('Music', 3)).toHaveAttribute('aria-pressed', 'true');
+    expect(star('Music', 4)).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('keeps every row open once all are rated, unlike the break card', async () => {

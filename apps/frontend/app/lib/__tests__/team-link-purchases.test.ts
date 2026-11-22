@@ -46,7 +46,7 @@ describe('the Team link — power-up purchases', () => {
       payload: ACCEPTED,
     });
 
-    expect(state.myPurchases).toEqual([BOUGHT]);
+    expect(state.team?.teamView.purchases).toEqual([BOUGHT]);
   });
 
   it('takes the purchases and the coins left from the team view sent after a purchase', () => {
@@ -60,7 +60,7 @@ describe('the Team link — power-up purchases', () => {
       view: teamView({ purchases: [BOUGHT], coins: 1 }),
     });
 
-    expect(state.myPurchases).toEqual([BOUGHT]);
+    expect(state.team?.teamView.purchases).toEqual([BOUGHT]);
     expect(state.team?.teamView.coins).toBe(1);
   });
 
@@ -69,19 +69,19 @@ describe('the Team link — power-up purchases', () => {
       type: 'joinAccepted',
       payload: ACCEPTED,
     }).state;
-    expect(joined.roomReadyQuestionIds).toEqual([5]);
+    expect(joined.team?.teamView.roomReadyQuestionIds).toEqual([5]);
 
     const second = teamLink(joined, {
       type: 'teamViewReceived',
       view: teamView({ roomReadyQuestionIds: [5, 6] }),
     }).state;
-    expect(second.roomReadyQuestionIds).toEqual([5, 6]);
+    expect(second.team?.teamView.roomReadyQuestionIds).toEqual([5, 6]);
 
     const { state } = teamLink(second, {
       type: 'teamViewReceived',
       view: teamView({ roomReadyQuestionIds: [6] }),
     });
-    expect(state.roomReadyQuestionIds).toEqual([6]);
+    expect(state.team?.teamView.roomReadyQuestionIds).toEqual([6]);
   });
 
   it('forgets the purchases with the rest of the team data', () => {
@@ -92,6 +92,6 @@ describe('the Team link — power-up purchases', () => {
 
     const { state } = teamLink(joined, { type: 'identityChanged' });
 
-    expect(state.myPurchases).toEqual([]);
+    expect(state.team).toBeNull();
   });
 });

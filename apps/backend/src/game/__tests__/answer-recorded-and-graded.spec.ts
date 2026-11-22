@@ -10,6 +10,7 @@ import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+import { teamViewsTo } from '@/game/__tests__/team-view-test-utils';
 
 interface AnswersUpdated {
   questionId: number;
@@ -176,18 +177,15 @@ describe('GameGateway — answer recorded / answer graded', () => {
     ]);
   });
 
-  it('acknowledges the submitting team with its own answer', async () => {
+  it('sends the submitting team its own answer in a team view', async () => {
     await submit(game.questionIds.multipleChoice, 'Paris');
 
-    expect(team.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.ANSWER_RECEIVED,
+    expect(teamViewsTo(game, { socket: team }).at(-1)?.answers).toEqual([
       expect.objectContaining({
         questionId: game.questionIds.multipleChoice,
-        teamId,
         value: 'Paris',
-        pointsAwarded: 2,
       }),
-    );
+    ]);
   });
 
   it('pushes the question’s answer list to the admin room after every submit and grade', async () => {

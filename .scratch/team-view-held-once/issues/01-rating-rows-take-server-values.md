@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A team view arriving while a round rating is saving keeps the tap; its "Saved ✓" appears once the acknowledgement lands
 - [ ] A team view carrying a new saved rating fills an idle row

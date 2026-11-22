@@ -374,9 +374,7 @@ describe('team link: a join accepted with the optional parts left out', () => {
       payload: bare,
     });
 
-    expect(state.myAnswers).toEqual({});
-    expect(state.myBonusAwards).toEqual([]);
-    expect(Object.keys(state.myRoundRatings)).toEqual([]);
+    expect(state.team?.teamView).toEqual(bare.teamView);
   });
 });
 
@@ -404,8 +402,8 @@ describe('team link: bonus award toasts', () => {
 describe('team link: joker changes from the server', () => {
   function withJoker(roundId: number, source: 'chosen' | 'drawn') {
     return run(linkedPhone().state, {
-      type: 'jokerSaved',
-      joker: { roundId, source },
+      type: 'teamViewReceived',
+      view: teamView({ joker: { roundId, source } }),
     }).state;
   }
 

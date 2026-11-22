@@ -37,7 +37,7 @@ const FINAL_FORM_RULES: Omit<FeedbackRules, 'store'> = {
  * the write holds and always before the feedback is stored: the socket belongs
  * to a team, feedback is collected, and the round (or the final form) is open.
  * So a rating sent as the break ends is either stored or refused, never stored
- * late. None of them changes scores or pushes anything.
+ * late. None of them changes scores; each lists the rating team as changed.
  */
 export class TeamFeedbackChanges {
   constructor(private readonly feedbackService: FeedbackService) {}
@@ -99,9 +99,10 @@ export class TeamFeedbackChanges {
       throw new SessionRefusal(rules.closedReason);
     }
     await rules.store(session.seededGame.gameSessionId, teamId);
+    // The rating team's other phones learn of the write through a team view.
     return {
       session,
-      outcome: NOTHING_TO_PUSH_OUTCOME,
+      outcome: { ...NOTHING_TO_PUSH_OUTCOME, changedTeamIds: [teamId] },
     };
   }
 }

@@ -97,7 +97,6 @@ export function teamLinkResult({
         sendFeedback: vi.fn().mockResolvedValue({ success: true }),
         mySessionRatings: { pacing: null, feltDifficulty: null },
         rateSession: vi.fn().mockResolvedValue({ success: true }),
-        roundRatingsEpoch: 0,
         rateRound: vi.fn().mockResolvedValue({ success: true }),
         seenQuestions: {},
         ...gameOverrides,

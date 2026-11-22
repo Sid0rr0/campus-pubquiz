@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type SubmitEvent,
@@ -15,6 +16,7 @@ import {
   type AckResult,
   type JoinAcceptedPayload,
   type LeaveSessionPayload,
+  type OwnTeamView,
   type DoubledRoundView,
   type PickJokerPayload,
   type PickSidePayload,
@@ -41,6 +43,8 @@ import {
   type SeenQuestions,
 } from '@/app/lib/seen-questions';
 import {
+  buildMyAnswers,
+  buildMyRoundRatings,
   initialTeamLink,
   teamLink,
   type MyAnswer,
@@ -119,8 +123,6 @@ export interface TeamLinkGame {
   myRoundRatings: Record<number, number>;
   /** The team's saved comment and topics, kept the same way as the ratings. */
   myFeedback: TeamFeedbackView;
-  /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale and anything drawn from older taps is out of date. */
-  roundRatingsEpoch: number;
   /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the view only ever covers the current block. */
   seenQuestions: SeenQuestions;
   /** Refuses with a "not connected" toast while unlinked; otherwise keeps the answer pending (and resends it after a rejoin) until the server acknowledges it. */
@@ -408,9 +410,6 @@ export function useTeamLink(
       socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload) =>
         dispatch({ type: 'joinAccepted', payload }),
       );
-      socket.on(SOCKET_EVENTS.ANSWER_RECEIVED, (payload) =>
-        dispatch({ type: 'answerReceived', payload }),
-      );
       socket.on(SOCKET_EVENTS.TEAM_VIEW, (view) =>
         dispatch({ type: 'teamViewReceived', view }),
       );
@@ -463,7 +462,7 @@ export function useTeamLink(
     dispatch,
     setSeenQuestions,
   });
-  const actions = useTeamLinkActions(emitWithAck, dispatch);
+  const actions = useTeamLinkActions(emitWithAck);
 
   const submitAnswer = useCallback(
     (questionId: number, teamId: number, value: string) => {
@@ -504,6 +503,7 @@ export function useTeamLink(
     [dispatch],
   );
 
+  const teamFields = useTeamViewFields(link.team?.teamView);
   const connectionError =
     link.joinError ?? link.kickNotice ?? socketConnectionError;
 
@@ -537,7 +537,8 @@ export function useTeamLink(
     },
     game: snapshot
       ? {
-          ...teamGameFields(link, snapshot),
+          view: viewWithSeat(snapshot, link.isLinked),
+          ...teamFields,
           seenQuestions,
           submitAnswer,
           ...actions,
@@ -546,27 +547,43 @@ export function useTeamLink(
   };
 }
 
-/** What the Team link state gives a joined phone to play with. */
-function teamGameFields(
-  link: TeamLinkState,
-  snapshot: StateViewByRoom['players'],
-) {
-  return {
-    view: viewWithSeat(snapshot, link.isLinked),
-    myAnswers: link.myAnswers,
-    myBonusAwards: link.myBonusAwards,
-    myRoundRatings: link.myRoundRatings,
-    myFeedback: link.myFeedback,
-    mySessionRatings: link.mySessionRatings,
-    myPlayerCount: link.myPlayerCount,
-    roundRatingsEpoch: link.roundRatingsEpoch,
-    myJoker: link.myJoker,
-    myDoubledRounds: link.myDoubledRounds,
-    myJokerExtras: link.myJokerExtras,
-    mySideId: link.mySideId,
-    myPurchases: link.myPurchases,
-    roomReadyQuestionIds: link.roomReadyQuestionIds,
-  } satisfies Partial<TeamLinkGame>;
+/** What a phone shows of its team before any join answers. */
+const EMPTY_TEAM_VIEW: OwnTeamView = {
+  answers: [],
+  bonusAwards: [],
+  roundRatings: [],
+  feedback: { comment: '', topics: [] },
+  sessionRatings: { pacing: null, feltDifficulty: null },
+  playerCount: null,
+  joker: null,
+  doubledRounds: [],
+  jokerExtras: {},
+  sideId: null,
+  purchases: [],
+  roomReadyQuestionIds: [],
+  coins: 0,
+  hasCarriedCoin: false,
+};
+
+/** What the held team view gives a joined phone to play with; the keyed shapes are worked out here, once per team view. */
+function useTeamViewFields(view: OwnTeamView | undefined) {
+  return useMemo(() => {
+    const held = view ?? EMPTY_TEAM_VIEW;
+    return {
+      myAnswers: buildMyAnswers(held.answers),
+      myBonusAwards: held.bonusAwards,
+      myRoundRatings: buildMyRoundRatings(held.roundRatings),
+      myFeedback: held.feedback,
+      mySessionRatings: held.sessionRatings,
+      myPlayerCount: held.playerCount,
+      myJoker: held.joker,
+      myDoubledRounds: held.doubledRounds,
+      myJokerExtras: held.jokerExtras,
+      mySideId: held.sideId,
+      myPurchases: held.purchases,
+      roomReadyQuestionIds: held.roomReadyQuestionIds,
+    } satisfies Partial<TeamLinkGame>;
+  }, [view]);
 }
 
 function useClearTimersOnUnmount(
@@ -654,68 +671,47 @@ function useLinkFollowsConnection({
 }
 
 /** The team's requests that wait for the server's verdict. */
-function useTeamLinkActions(
-  emitWithAck: EmitWithAck,
-  dispatch: (input: TeamLinkInput) => void,
-) {
+function useTeamLinkActions(emitWithAck: EmitWithAck) {
   const rateRound = useCallback(
-    async (roundId: number, stars: number) => {
-      const payload: RateRoundPayload = { roundId, stars };
-      const result = await emitWithAck(SOCKET_EVENTS.RATE_ROUND, payload);
-      if (result.success) dispatch({ type: 'ratingSaved', roundId, stars });
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `rateRound` is the same function either way
-    [emitWithAck, dispatch],
+    (roundId: number, stars: number) =>
+      emitWithAck(SOCKET_EVENTS.RATE_ROUND, {
+        roundId,
+        stars,
+      } satisfies RateRoundPayload),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const sendFeedback = useCallback(
-    async (feedback: SendFeedbackPayload) => {
-      const result = await emitWithAck(SOCKET_EVENTS.SEND_FEEDBACK, feedback);
-      if (result.success) {
-        dispatch({
-          type: 'feedbackSaved',
-          feedback: { comment: feedback.comment, topics: feedback.topics },
-        });
-      }
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `sendFeedback` is the same function either way
-    [emitWithAck, dispatch],
+    (feedback: SendFeedbackPayload) =>
+      emitWithAck(SOCKET_EVENTS.SEND_FEEDBACK, feedback),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const rateSession = useCallback(
-    async (rating: RateSessionPayload) => {
-      const result = await emitWithAck(SOCKET_EVENTS.RATE_SESSION, rating);
-      if (result.success) dispatch({ type: 'sessionRatingSaved', rating });
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `rateSession` is the same function either way
-    [emitWithAck, dispatch],
+    (rating: RateSessionPayload) =>
+      emitWithAck(SOCKET_EVENTS.RATE_SESSION, rating),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const setPlayerCount = useCallback(
-    async (playerCount: number) => {
-      const payload: SetPlayerCountPayload = { playerCount };
-      const result = await emitWithAck(SOCKET_EVENTS.SET_PLAYER_COUNT, payload);
-      if (result.success) dispatch({ type: 'playerCountSaved', playerCount });
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `setPlayerCount` is the same function either way
-    [emitWithAck, dispatch],
+    (playerCount: number) =>
+      emitWithAck(SOCKET_EVENTS.SET_PLAYER_COUNT, {
+        playerCount,
+      } satisfies SetPlayerCountPayload),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const pickJoker = useCallback(
-    async (roundId: number) => {
-      const payload: PickJokerPayload = { roundId };
-      const result = await emitWithAck(SOCKET_EVENTS.PICK_JOKER, payload);
-      if (result.success) {
-        dispatch({ type: 'jokerSaved', joker: { roundId, source: 'chosen' } });
-      }
-      return result;
-    },
-    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` and `dispatch` never change, so `pickJoker` is the same function either way
-    [emitWithAck, dispatch],
+    (roundId: number) =>
+      emitWithAck(SOCKET_EVENTS.PICK_JOKER, {
+        roundId,
+      } satisfies PickJokerPayload),
+    // Stryker disable next-line ArrayDeclaration: equivalent — `emitWithAck` never changes, so the callback is the same function either way
+    [emitWithAck],
   );
 
   const pickSide = useCallback(

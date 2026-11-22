@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The team-link state has no team data outside the held team view
 - [ ] Reducer tests: join accept holds the embedded team view; a team view replaces it wholesale; the pending answer and attempt survive a replace; clearing drops it; joker notices fire on drawn/moved, not chosen

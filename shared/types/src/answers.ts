@@ -28,23 +28,6 @@ export function isNonAnswer(value: string): boolean {
   return value === '' || value === IDK_ANSWER_VALUE;
 }
 
-export interface AnswerReceivedPayload {
-  questionId: number;
-  teamId: number;
-  teamName: string;
-  value: string;
-  /** Set when the answer is graded at submit (always for multiple_choice/sort/match, only on a match for free_text/audio/youtube); 0 for an answer waiting on admin grading until GRADE_ANSWER fires. */
-  pointsAwarded: number;
-  /** Set the instant an answer is graded at submit; null until the admin grades a free_text/audio/youtube answer that missed the key. */
-  gradedAt: string | null;
-  /** Set together with gradedAt; null until graded. */
-  verdict: Verdict | null;
-  /** Clue question only: the clue (1-based) the answer was locked in on; null for every other type. */
-  clue: number | null;
-  /** Clue question only: what a right answer is worth at that clue; null for every other type. */
-  clueValue: number | null;
-}
-
 export interface TeamAnswerView {
   questionId: number;
   value: string;

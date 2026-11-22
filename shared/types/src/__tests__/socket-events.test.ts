@@ -20,7 +20,6 @@ describe('SOCKET_EVENTS', () => {
     expect(SOCKET_EVENTS).toEqual({
       STATE_SYNC: 'game:state_sync',
       STATE_UPDATED: 'game:state_updated',
-      ANSWER_RECEIVED: 'game:answer_received',
       JOIN_ACCEPTED: 'game:join_accepted',
       ANSWERS_UPDATED: 'game:answers_updated',
       PRESENTER_CONTEXT_UPDATED: 'game:presenter_context_updated',

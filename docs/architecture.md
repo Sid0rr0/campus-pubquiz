@@ -222,9 +222,9 @@ sequenceDiagram
   ST->>DB: read standings
   Q-->>GS: store new SessionState
   GS-->>D: SessionOutcome
-  D->>P: ANSWER_RECEIVED (sender only)
   D->>R: STATE_UPDATED (each room its own view)
   D->>R: ANSWERS_UPDATED (admin room only)
+  D->>P: TEAM_VIEW (the submitting team's phones only)
   D-->>P: ack
 ```
 

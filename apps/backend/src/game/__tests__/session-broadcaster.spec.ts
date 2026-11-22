@@ -66,17 +66,12 @@ describe('SessionBroadcaster', () => {
         ),
       ),
     );
-    expect(outcome.replies.length).toBeGreaterThan(0);
     game.clearEmits();
 
     await game.inRequestContext(() =>
       game.broadcaster.deliver(game.joinCode, outcome),
     );
 
-    expect(socket.emit).not.toHaveBeenCalledWith(
-      SOCKET_EVENTS.ANSWER_RECEIVED,
-      expect.anything(),
-    );
     expect(game.roomEmits().map((emit) => emit.event)).toEqual([
       SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
       SOCKET_EVENTS.STATE_UPDATED,

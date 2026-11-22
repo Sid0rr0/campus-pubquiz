@@ -3,7 +3,7 @@ import { RoundStarRows, useRoundRatings } from '@/app/play/round-star-rows';
 
 interface RoundRatingCardProps {
   rounds: readonly RatableRound[];
-  /** The ratings the server holds for this team, by round id — read once when the card mounts, so the page remounts it when a new join payload replaces them. */
+  /** The ratings the server holds for this team, by round id — every row not waiting on a tap follows them. */
   savedRatings: Readonly<Record<number, number>>;
   onRate: (roundId: number, stars: number) => Promise<AckResult>;
 }

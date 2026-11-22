@@ -8,22 +8,16 @@ import {
   NOT_YOUR_TEAM_ANSWER_ERROR,
   isSeatTakenRefusal,
   type AckResult,
-  type AnswerReceivedPayload,
   type GameStatus,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type CoinAwardedPayload,
-  type DoubledRoundView,
   type OwnTeamView,
-  type PurchaseView,
-  type RateSessionPayload,
   type RoundRatingView,
   type SubmitAnswerPayload,
   type TeamAnswerView,
   type TeamBonusAwardView,
-  type TeamFeedbackView,
   type TeamJoker,
-  type TeamSessionRatingsView,
   type Verdict,
 } from '@campus-pubquiz/types';
 
@@ -57,12 +51,6 @@ export interface MyAnswerGrade {
   verdict: Verdict | null;
 }
 
-const EMPTY_FEEDBACK: TeamFeedbackView = { comment: '', topics: [] };
-const NO_SESSION_RATINGS: TeamSessionRatingsView = {
-  pacing: null,
-  feltDifficulty: null,
-};
-
 /** The clue a Clue question answer was locked in on and what it is worth there. */
 export interface MyAnswerClue {
   clue: number;
@@ -76,7 +64,7 @@ export interface MyAnswer {
   clue: MyAnswerClue | null;
 }
 
-/** Builds the record from a `TeamAnswerView` or an `AnswerReceivedPayload`. */
+/** Builds the record from a `TeamAnswerView`. */
 function toMyAnswer(
   answer: Pick<
     TeamAnswerView,
@@ -91,13 +79,17 @@ function toMyAnswer(
   };
 }
 
-function buildMyAnswers(answers: TeamAnswerView[]): Record<number, MyAnswer> {
+/** The team's saved answers by question id, worked out from the held team view. */
+export function buildMyAnswers(
+  answers: TeamAnswerView[],
+): Record<number, MyAnswer> {
   return Object.fromEntries(
     answers.map((answer) => [answer.questionId, toMyAnswer(answer)]),
   );
 }
 
-function buildMyRoundRatings(
+/** The team's saved round ratings by round id, worked out from the held team view. */
+export function buildMyRoundRatings(
   ratings: RoundRatingView[],
 ): Record<number, number> {
   return Object.fromEntries(
@@ -160,31 +152,6 @@ export interface TeamLinkState {
   team: JoinAcceptedPayload | null;
   /** True while the server has this connection registered as the team's — false while disconnected or mid-rejoin, when answers can't be accepted. */
   isLinked: boolean;
-  /** The team's own saved answers by question id: the server's last word on each. */
-  myAnswers: Record<number, MyAnswer>;
-  /** Every bonus award this team has received so far this session, in award order. */
-  myBonusAwards: TeamBonusAwardView[];
-  /** What the join carried plus every rating the server acknowledged since. */
-  myRoundRatings: Record<number, number>;
-  myFeedback: TeamFeedbackView;
-  /** The team's pacing and felt-difficulty answers: what the join carried plus every answer the server acknowledged since. */
-  mySessionRatings: TeamSessionRatingsView;
-  /** How many players the server holds for this team, or null until one is reported. */
-  myPlayerCount: number | null;
-  /** The team's own joker as the server last said it (a team view, or an acknowledged pick), or null while it has none. */
-  myJoker: TeamJoker | null;
-  /** Every round that counts double for the team, as the server last said it (joker round and extra jokers), in quiz order. */
-  myDoubledRounds: DoubledRoundView[];
-  /** The extra points the joker adds to each scored answer, by question id, as the server last said it. */
-  myJokerExtras: Record<number, number>;
-  /** The id of the team's own Versus side as the server last said it, or null while it has none. */
-  mySideId: string | null;
-  /** The team's own power-up purchases as the server last said them (the join, or a sync after a purchase); a 50/50's removed options stay hidden through them. */
-  myPurchases: PurchaseView[];
-  /** The questions on which the server says this team's Ask the room is ready (the join, then a sync as other teams answer). A flag only, never a count. */
-  roomReadyQuestionIds: number[];
-  /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
-  roundRatingsEpoch: number;
   /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
   pendingAnswer: SubmitAnswerPayload | null;
   /** Identifies the latest send, so a result for a superseded send is ignored. */
@@ -206,7 +173,6 @@ export type TeamLinkInput =
   | { type: 'sessionClosed' }
   // A new socket identity: the previous team's data and pending answer go.
   | { type: 'identityChanged' }
-  | { type: 'answerReceived'; payload: AnswerReceivedPayload }
   // A bonus award was given: a toast only, the list arrives in the team view.
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
   // The quiz master gave (or took) coins: a toast only, the balance arrives in the team view.
@@ -215,13 +181,6 @@ export type TeamLinkInput =
   // The answer never left the socket (not connected, or no acknowledgement in time).
   | { type: 'answerNotDelivered'; attempt: number }
   | { type: 'answerTimedOut'; attempt: number }
-  | { type: 'ratingSaved'; roundId: number; stars: number }
-  | { type: 'feedbackSaved'; feedback: TeamFeedbackView }
-  | { type: 'sessionRatingSaved'; rating: RateSessionPayload }
-  // The server acknowledged a count this phone sent.
-  | { type: 'playerCountSaved'; playerCount: number }
-  // The server acknowledged a joker pick this phone sent.
-  | { type: 'jokerSaved'; joker: TeamJoker }
   // The server sent the team's whole view: it replaces the team's data.
   | { type: 'teamViewReceived'; view: OwnTeamView }
   // Intents
@@ -318,27 +277,14 @@ function withStoredTeam(
 const EMPTY_TEAM_DATA = {
   team: null,
   isLinked: false,
-  myAnswers: {},
-  myBonusAwards: [],
-  myRoundRatings: {},
-  myFeedback: EMPTY_FEEDBACK,
-  mySessionRatings: NO_SESSION_RATINGS,
-  myPlayerCount: null,
-  myJoker: null,
-  myDoubledRounds: [],
-  myJokerExtras: {},
-  mySideId: null,
-  myPurchases: [],
-  roomReadyQuestionIds: [],
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
 
-/** Forgets the team's data. The epoch only ever counts up, so the clear itself changes it and a later join can't land back on a value already used. */
+/** Forgets the team's data. */
 function clearTeamData(state: TeamLinkState): TeamLinkState {
   return {
     ...state,
     ...EMPTY_TEAM_DATA,
-    roundRatingsEpoch: state.roundRatingsEpoch + 1,
     // A result or timeout for a send made before the clear says nothing now.
     answerAttempt: state.answerAttempt + 1,
   };
@@ -369,7 +315,6 @@ export function initialTeamLink(entry: TeamLinkEntry): TeamLinkState {
     confirmedTeamId: null,
     lastStatus: null,
     ...EMPTY_TEAM_DATA,
-    roundRatingsEpoch: 0,
     answerAttempt: 0,
   };
   return entry.stored ? withStoredIdentity(base, entry.stored) : base;
@@ -615,8 +560,6 @@ function acceptJoin(
     teamCodeInput: payload.teamCode,
     team: payload,
     isLinked: true,
-    ...teamDataFromView(payload.teamView),
-    roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
     type: 'writeIdentity',
@@ -635,38 +578,18 @@ function acceptJoin(
   };
 }
 
-/** What a team view tells the phone about its team's answers, awards and choices: the one mapping behind a join and a live replace. */
-function teamDataFromView(view: OwnTeamView) {
-  return {
-    myAnswers: buildMyAnswers(view.answers),
-    myBonusAwards: view.bonusAwards,
-    myRoundRatings: buildMyRoundRatings(view.roundRatings),
-    myFeedback: view.feedback,
-    mySessionRatings: view.sessionRatings,
-    myPlayerCount: view.playerCount,
-    myJoker: view.joker,
-    myDoubledRounds: view.doubledRounds,
-    myJokerExtras: view.jokerExtras,
-    mySideId: view.sideId,
-    myPurchases: view.purchases,
-    roomReadyQuestionIds: view.roomReadyQuestionIds,
-  } satisfies Partial<TeamLinkState>;
-}
-
 /**
- * A team view replaces the team's data wholesale. The pending answer and its
- * attempt counter are not team data, so they survive; no command is returned,
- * since a view replace never fires a one-off effect.
+ * A team view replaces the held one wholesale. The pending answer and its
+ * attempt counter are not team data, so they survive; the only command is the
+ * joker notice.
  */
 function replaceTeamData(
   state: TeamLinkState,
   view: OwnTeamView,
 ): TeamLinkStep {
-  return announceJokerChange(state.myJoker, {
+  return announceJokerChange(state.team?.teamView.joker ?? null, {
     ...state,
-    ...teamDataFromView(view),
     team: state.team && { ...state.team, teamView: view },
-    roundRatingsEpoch: state.roundRatingsEpoch + 1,
   });
 }
 
@@ -710,19 +633,6 @@ function keepAnswerPending(
 ): TeamLinkStep {
   if (attempt !== state.answerAttempt) return unchanged(state);
   return { state, commands: [CLEAR_TIMER] };
-}
-
-function receiveAnswer(
-  state: TeamLinkState,
-  payload: AnswerReceivedPayload,
-): TeamLinkStep {
-  return unchanged({
-    ...state,
-    myAnswers: {
-      ...state.myAnswers,
-      [payload.questionId]: toMyAnswer(payload),
-    },
-  });
 }
 
 function awardBonus(
@@ -777,7 +687,7 @@ function announceJokerChange(
   held: TeamJoker | null,
   next: TeamLinkState,
 ): TeamLinkStep {
-  const joker = next.myJoker;
+  const joker = next.team?.teamView.joker ?? null;
   const isChange =
     joker !== null &&
     (joker.roundId !== held?.roundId ||
@@ -892,7 +802,6 @@ const INPUT_HANDLERS: {
   connectionRefused: (state) => unchanged({ ...state, isJoinInFlight: false }),
   joinAccepted: receiveJoinAccepted,
   identityChanged: changeIdentity,
-  answerReceived: (state, input) => receiveAnswer(state, input.payload),
   bonusAwarded: (state, input) => awardBonus(state, input.payload),
   coinAwarded: (state, input) => awardCoins(state, input.payload),
   answerResult: (state, input) =>
@@ -912,24 +821,6 @@ const INPUT_HANDLERS: {
       teamId: input.teamId,
       value: input.value,
     }),
-  ratingSaved: (state, input) =>
-    unchanged({
-      ...state,
-      myRoundRatings: { ...state.myRoundRatings, [input.roundId]: input.stars },
-    }),
-  feedbackSaved: (state, input) =>
-    unchanged({ ...state, myFeedback: input.feedback }),
-  sessionRatingSaved: (state, input) =>
-    unchanged({
-      ...state,
-      mySessionRatings: {
-        ...state.mySessionRatings,
-        [input.rating.scale]: input.rating.value,
-      },
-    }),
-  playerCountSaved: (state, input) =>
-    unchanged({ ...state, myPlayerCount: input.playerCount }),
-  jokerSaved: (state, input) => unchanged({ ...state, myJoker: input.joker }),
   teamViewReceived: (state, input) => replaceTeamData(state, input.view),
   nameTyped: (state, input) => unchanged({ ...state, nameInput: input.value }),
   gameCodeTyped: (state, input) =>
