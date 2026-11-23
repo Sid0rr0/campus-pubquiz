@@ -606,7 +606,10 @@ describe('TeamsTable coins', () => {
   });
 
   describe('the bonus award form’s coins field', () => {
-    const renderAwarding = (coinsByTeamId?: Record<number, number>) => {
+    const renderAwarding = (
+      coinsByTeamId?: Record<number, number>,
+      powerUpsEnabled = false,
+    ) => {
       const onAwardBonus = vi.fn().mockResolvedValue({ success: true });
       renderWithQuery(
         <TeamsTable
@@ -616,6 +619,7 @@ describe('TeamsTable coins', () => {
           onAwardBonus={onAwardBonus}
           enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
           coinsByTeamId={coinsByTeamId}
+          powerUpsEnabled={powerUpsEnabled}
         />,
       );
       return onAwardBonus;
@@ -659,6 +663,30 @@ describe('TeamsTable coins', () => {
       await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
 
       expect(onAwardBonus).toHaveBeenCalledWith(1, 'shot', 1, undefined, 2);
+    });
+
+    it('pre-fills the 2 coins a shot earns with power-ups on, and sends the total', async () => {
+      const onAwardBonus = renderAwarding({ 1: 1, 2: 1 }, true);
+      await openBonusModalFor('The Quizzards');
+
+      expect(screen.getByLabelText('Coin award')).toHaveValue(2);
+      await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
+
+      expect(onAwardBonus).toHaveBeenCalledWith(1, 'shot', 1, undefined, 2);
+    });
+
+    it('keeps the points when the total is raised, and sends 0 when it is lowered to none', async () => {
+      const onAwardBonus = renderAwarding({ 1: 1, 2: 1 }, true);
+      await openBonusModalFor('The Quizzards');
+
+      await userEvent.clear(screen.getByLabelText('Coin award'));
+      await userEvent.type(screen.getByLabelText('Coin award'), '3');
+      expect(screen.getByLabelText('Bonus points')).toHaveValue(1);
+      await userEvent.clear(screen.getByLabelText('Coin award'));
+      await userEvent.type(screen.getByLabelText('Coin award'), '0');
+      await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
+
+      expect(onAwardBonus).toHaveBeenCalledWith(1, 'shot', 1, undefined, 0);
     });
 
     it('can be used alone, with 0 points, and can be negative', async () => {

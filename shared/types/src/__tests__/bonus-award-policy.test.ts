@@ -102,6 +102,22 @@ describe('decideBonusAward', () => {
     });
   });
 
+  it.each([
+    [undefined, 2, 0],
+    [0, 0, 0],
+    [1, 1, 0],
+    [3, 2, 1],
+    [-1, 0, -1],
+  ])(
+    'splits %p total coins on a shot into %p linked and %p manual',
+    (coins, linkedCoins, manualCoins) => {
+      const on = session({ powerUpsEnabled: true, awards: 5 });
+      expect(decideBonusAward(on, request({ coins }), 0)).toMatchObject({
+        award: { linkedCoins, manualCoins },
+      });
+    },
+  );
+
   it('gives coins alone for zero points, skipping category, reason and cap', () => {
     const decision = decideBonusAward(
       session({ powerUpsEnabled: true, enabled: [], caps: { custom: 0 } }),

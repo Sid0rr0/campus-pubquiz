@@ -173,7 +173,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'A stuck phone offers "Tap to reconnect" after 10 seconds; the big screen shows "Reconnecting…".',
       'Each team shows its player count, flagged as over the player cap above "max players per team"; nothing is deducted, so give a negative bonus.',
       'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
-      "Bonus points: in the team's menu choose Award bonus, pick category and points, press Award. With power-ups on, a shot or selfie also gives 2 coins; the Coins field gives or takes more (zeroes untouched points); the list shows both.",
+      "Bonus points: in the team's menu choose Award bonus, pick category and points, press Award. With power-ups on, a shot or selfie also gives 2 coins, pre-filled in the Coins field (the total); edit it, or go negative to take.",
       'A team forgot its code: open /teams, choose Show team code in its actions menu, and have it rejoin with its name and code. If it joined anew, press "Merge with…" on that team\'s page after the night; a merge can\'t be undone.',
     ],
   },

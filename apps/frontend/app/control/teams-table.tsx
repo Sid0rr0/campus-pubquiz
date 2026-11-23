@@ -45,6 +45,8 @@ interface TeamsTableProps {
   enabledBonusCategories: BonusCategory[];
   /** Each team's coins; the Coins column shows only when this is given (power-ups on). */
   coinsByTeamId?: Record<number, number>;
+  /** Whether the session has power-ups: the award form then pre-fills a shot's or selfie's coins. */
+  powerUpsEnabled?: boolean;
 }
 
 // Rows keep the server's ranking until a round column header is clicked.
@@ -68,6 +70,7 @@ export function TeamsTable({
   onAwardBonus,
   enabledBonusCategories,
   coinsByTeamId,
+  powerUpsEnabled = false,
 }: TeamsTableProps) {
   const [awardingTeamId, setAwardingTeamId] = useState<number | null>(null);
   const [viewingAwardsTeamId, setViewingAwardsTeamId] = useState<number | null>(
@@ -120,6 +123,7 @@ export function TeamsTable({
         }
         enabledBonusCategories={enabledBonusCategories}
         isCoinsEnabled={hasCoins}
+        powerUpsEnabled={powerUpsEnabled}
         onAwardBonus={onAwardBonus}
         onClose={() => setAwardingTeamId(null)}
       />
@@ -252,12 +256,14 @@ function AwardBonusDialog({
   awardingTeam,
   enabledBonusCategories,
   isCoinsEnabled,
+  powerUpsEnabled,
   onAwardBonus,
   onClose,
 }: {
   awardingTeam: TeamsTableProps['leaderboard'][number] | null;
   enabledBonusCategories: TeamsTableProps['enabledBonusCategories'];
   isCoinsEnabled: boolean;
+  powerUpsEnabled: boolean;
   onAwardBonus: TeamsTableProps['onAwardBonus'];
   onClose: () => void;
 }) {
@@ -280,6 +286,7 @@ function AwardBonusDialog({
             <BonusAwardForm
               enabledCategories={enabledBonusCategories}
               isCoinsEnabled={isCoinsEnabled}
+              powerUpsEnabled={powerUpsEnabled}
               onAward={async (category, points, reason, coins) => {
                 if (isAwardInFlightRef.current) return;
                 isAwardInFlightRef.current = true;

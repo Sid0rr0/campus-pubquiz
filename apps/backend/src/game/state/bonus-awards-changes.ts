@@ -37,7 +37,7 @@ export class BonusAwardsChanges {
     session: SessionState,
     payload: AwardBonusPayload,
   ): Promise<SessionChange<SessionOutcome>> {
-    const { teamId, category, points, reason, coins } = payload;
+    const { teamId, category, points, reason } = payload;
     const { gameSessionId } = session.seededGame;
     const decision = decideBonusAward(session, payload, {
       isOnRoster: await this.bonusService.isOnRoster(gameSessionId, teamId),
@@ -71,7 +71,9 @@ export class BonusAwardsChanges {
         payload: {
           coins: coinsGiven,
           // Only the quiz master's own coins carry the reason typed in the form.
-          reason: coins ? reason?.trim() || undefined : undefined,
+          reason: decision.award.manualCoins
+            ? reason?.trim() || undefined
+            : undefined,
           balance: coinBalance(next, teamId),
         },
       });

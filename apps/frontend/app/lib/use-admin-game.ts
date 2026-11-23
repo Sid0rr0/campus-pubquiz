@@ -59,7 +59,7 @@ export interface UseAdminGameResult {
     category: BonusCategory,
     points: number,
     reason?: string,
-    /** A manual coin award apart from the points; only in a session with power-ups. */
+    /** The total coins the award gives (its own shot/selfie coins included); only in a session with power-ups. */
     coins?: number,
   ) => Promise<AckResult>;
   /** Sets/clears the epoch-ms "back at HH:MM" time on the display's break screen — null clears it. */

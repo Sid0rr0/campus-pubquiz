@@ -509,6 +509,7 @@ function SessionWorkspace({
             roundTitles={roundTitles}
             onAwardBonus={onAwardBonus}
             enabledBonusCategories={settings.enabledBonusCategories}
+            powerUpsEnabled={settings.powerUpsEnabled}
             coinsByTeamId={
               teams.some((team) =>
                 coinsShown(settings.powerUpsEnabled, team.coins),

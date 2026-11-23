@@ -201,7 +201,7 @@ Points the quiz master gives a team outside question grading, under one bonus ca
 _Avoid_: bonus (on its own), extra points
 
 **Bonus award policy**:
-The pure rules for whether the quiz master may give a bonus award (and the coin award given with it) or edit one, and what is then stored: the category and points, the reason, the shot/selfie coins and manual coins, and the block. The bonus service only stores what it allows.
+The pure rules for whether the quiz master may give a bonus award (and the coin award given with it) or edit one, and what is then stored: the category and points, the reason, the block, and the coins given in the same step, split into the award's own shot/selfie coins and any coins beyond them. The bonus service only stores what it allows.
 
 **Bonus category**:
 What a bonus award was given for: shot, selfie, or custom. A custom award carries a reason the quiz master writes.
@@ -241,7 +241,7 @@ _Avoid_: points, credits, token (that's the team's reconnect credential)
 The one module that answers a team's **Coin** balance from the session's cached state: starting coins (only with power-ups on) + carried coins + coin awards − purchase costs, never below zero, and the debt that floor hides. The purchase costs come only from the session's **Scoring records**: a write that holds fresher stored purchases puts them there (and adds a purchase it stores) before asking the ledger, so the control panel and every team's phone show the same coins.
 
 **Coin award**:
-Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award with positive points comes with a two-coin award in a session played with power-ups.
+Coins the quiz master gives or takes from a team during a session, separate from any bonus award even when given in the same step. A shot or selfie bonus award with positive points comes with two coins in a session played with power-ups, unless the quiz master gives fewer in the same step; any coins given beyond those are a separate coin award.
 _Avoid_: bonus coins, coin bonus
 
 **Carried coins**:

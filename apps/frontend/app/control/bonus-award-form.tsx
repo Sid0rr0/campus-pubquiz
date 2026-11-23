@@ -2,7 +2,7 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { Cross2Icon, StarIcon } from '@radix-ui/react-icons';
-import type { BonusCategory } from '@campus-pubquiz/types';
+import { bonusCoinsEarned, type BonusCategory } from '@campus-pubquiz/types';
 import {
   BONUS_CATEGORY_LABELS,
   DEFAULT_BONUS_POINTS,
@@ -10,7 +10,7 @@ import {
 import { Button } from '@/app/components/button';
 
 interface BonusAwardFormProps {
-  /** `coins` is passed only when the form gave some (a manual coin award, apart from the points; may be negative). */
+  /** `coins` is the total coins the award gives (its own shot/selfie coins included; may be negative), passed only when the field shows and the total isn't 0 (or 0 where the award would earn some). */
   onAward: (
     category: BonusCategory,
     points: number,
@@ -20,6 +20,8 @@ interface BonusAwardFormProps {
   onCancel: () => void;
   /** Whether the session has power-ups: shows the coins field. */
   isCoinsEnabled?: boolean;
+  /** Whether the session has power-ups: a shot or selfie then comes with coins, pre-filled in the coins field. */
+  powerUpsEnabled?: boolean;
   /** This session's enabled bonus categories — hides any predefined button not in the list, and the "Custom" button unless 'custom' is included. */
   enabledCategories: BonusCategory[];
 }
@@ -35,6 +37,7 @@ export function BonusAwardForm({
   onCancel,
   enabledCategories,
   isCoinsEnabled = false,
+  powerUpsEnabled = false,
 }: BonusAwardFormProps) {
   const availablePredefined = PREDEFINED_CATEGORIES.filter((option) =>
     enabledCategories.includes(option.value),
@@ -48,11 +51,14 @@ export function BonusAwardForm({
   const [typedPoints, setTypedPoints] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
-  const [coinsInput, setCoinsInput] = useState('');
-  // Until points are typed: the default, or none once coins are, so taking a coin never also gives points and a shot's coins.
-  const pointsInput = pointsInputOf(typedPoints, coinsInput);
+  const [typedCoins, setTypedCoins] = useState<string | null>(null);
+  // Until points are typed: the default, or none once coins taken are typed, so taking a coin never also gives points and a shot's coins.
+  const pointsInput = pointsInputOf(typedPoints, typedCoins);
 
   const points = Number(pointsInput);
+  const earned = bonusCoinsEarned(powerUpsEnabled, category, points);
+  // Until coins are typed: what the award earns by itself.
+  const coinsInput = typedCoins ?? (earned > 0 ? String(earned) : '');
   const coins = coinsInput === '' ? 0 : Number(coinsInput);
   const isCustom = category === 'custom';
   const canSubmit = canSubmitAward(points, coins, isCustom ? reason : null);
@@ -61,8 +67,9 @@ export function BonusAwardForm({
     event.preventDefault();
     if (!canSubmit) return;
     const trimmed = isCustom ? reason.trim() : undefined;
-    if (coins === 0) onAward(category, points, trimmed);
-    else onAward(category, points, trimmed, coins);
+    if (coins === 0 && (earned === 0 || !isCoinsEnabled)) {
+      onAward(category, points, trimmed);
+    } else onAward(category, points, trimmed, coins);
   }
 
   return (
@@ -109,7 +116,7 @@ export function BonusAwardForm({
         />
       </label>
       {isCoinsEnabled && (
-        <CoinsField value={coinsInput} onChange={setCoinsInput} />
+        <CoinsField value={coinsInput} onChange={setTypedCoins} />
       )}
       <div className="flex gap-2">
         <Button
@@ -140,11 +147,13 @@ function initialCategory(
   return availablePredefined[0]?.value ?? (isCustomEnabled ? 'custom' : 'shot');
 }
 
-/** Until points are typed: the default, or none once coins are, so taking a coin never also gives points and a shot's coins. */
-function pointsInputOf(typedPoints: string | null, coinsInput: string): string {
-  return (
-    typedPoints ?? (coinsInput === '' ? String(DEFAULT_BONUS_POINTS) : '0')
-  );
+/** Until points are typed: the default, or none once coins are taken (negative), so a take-away never also gives points. */
+function pointsInputOf(
+  typedPoints: string | null,
+  typedCoins: string | null,
+): string {
+  const isTake = typedCoins !== null && Number(typedCoins) < 0;
+  return typedPoints ?? (isTake ? '0' : String(DEFAULT_BONUS_POINTS));
 }
 
 /** `customReason` is null for a predefined category. Coins alone (0 points) are a coin award, which needs no reason. */

@@ -25,7 +25,7 @@ export interface BonusAwardRequest {
   category: BonusCategory;
   points: number;
   reason?: string;
-  /** The form's manual coins (may be negative, absent or 0 for none). */
+  /** The total coins this award gives (may be negative). Absent: just what the award earns by itself. */
   coins?: number;
 }
 
@@ -77,9 +77,10 @@ function awardRefusal(
   const trimmedReason = reason?.trim();
   // Category, reason and cap apply only to a bonus award, not to coins alone.
   const givesPoints = points !== 0;
+  const { manualCoins } = splitCoins(session, category, points, coins);
   const rules: (() => string | undefined)[] = [
     () => coinAwardRefusal(session, coins),
-    () => coinTakeRefusal(session, teamId, coins),
+    () => coinTakeRefusal(session, teamId, manualCoins || undefined),
     () => amountsRefusal(points, coins ?? 0),
     () =>
       givesPoints
@@ -109,6 +110,12 @@ function awardToStore(
   const trimmedReason = reason?.trim();
   // Points of 0 give coins alone: no bonus award is stored.
   const givesPoints = points !== 0;
+  const { linkedCoins, manualCoins } = splitCoins(
+    session,
+    category,
+    points,
+    coins,
+  );
   return {
     bonus: givesPoints
       ? {
@@ -121,16 +128,34 @@ function awardToStore(
           ),
         }
       : undefined,
-    linkedCoins: givesPoints
-      ? bonusCoinsEarned(
+    linkedCoins,
+    manualCoins,
+    manualCoinsReason: trimmedReason || undefined,
+  };
+}
+
+/**
+ * Splits the coins given into the award's own (linked to it, at most what it earns, never negative)
+ * and the rest (a separate coin award, or a take-away when negative). A shot set to fewer coins than
+ * it earns links just those, so no +2/-2 pair is stored.
+ */
+function splitCoins(
+  session: BonusAwardSession,
+  category: BonusCategory,
+  points: number,
+  coins: number | undefined,
+): { linkedCoins: number; manualCoins: number } {
+  const earned =
+    points === 0
+      ? 0
+      : bonusCoinsEarned(
           session.seededGame.settings.powerUpsEnabled,
           category,
           points,
-        )
-      : 0,
-    manualCoins: coins ?? 0,
-    manualCoinsReason: trimmedReason || undefined,
-  };
+        );
+  const total = coins ?? earned;
+  const linkedCoins = Math.min(Math.max(total, 0), earned);
+  return { linkedCoins, manualCoins: total - linkedCoins };
 }
 
 function amountsRefusal(

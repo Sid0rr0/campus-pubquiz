@@ -777,10 +777,12 @@ has already spent those coins, an unlinked coin award covers them, so the
 balance never hides a debt), and editing its
 points leaves it alone. Because the coins depend on the sign, an edit that turns a
 shot or selfie bonus into a penalty, or the reverse, is refused (delete the award and
-give a new one); a custom bonus never carries coins and can change sign. The bonus award form's optional **coins** field (any
-non-zero integer, negative takes coins, up to 100 either way) is sent as `coins`
-on `AWARD_BONUS` and stored as its own unlinked coin award, with the form's
-reason if one was typed. With `points` 0 and `coins` set, only the coin award is
+give a new one); a custom bonus never carries coins and can change sign. The bonus award form's **coins** field (an integer,
+negative takes coins, up to 100 either way) shows the **total** coins the award gives and is
+sent as `coins` on `AWARD_BONUS`; it is pre-filled with the 2 a shot or selfie earns, and left
+out, `coins` means just what the award earns by itself. The Bonus award policy splits the total:
+up to the earned 2 are the linked coin award (so a shot set to 0 coins stores none), the rest
+is stored as its own unlinked coin award, with the form's reason if one was typed. With `points` 0 and `coins` set, only the coin award is
 stored (no bonus award, no bonus toast, no category limit check). A coins value
 in a session without power-ups is refused, and the form hides the field. A take of
 more coins than the team has is refused whole, with its points: "That team has only N
